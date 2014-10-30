@@ -48,23 +48,16 @@ object UserValueName {
   val SHOW_DELIGHTED_QUESTION = UserValueName("show_delighted_question")
   val LAST_ACTIVE = UserValueName("last_active")
   val GENDER = UserValueName("gender")
-  val USER_SEGMENT = UserValueName("userSegment")
-  val EXTENSION_VERSION = UserValueName("extensionVersion")
   val USER_COLLECTION_ORDERING = UserValueName("user_collection_ordering")
   val BOOKMARK_IMPORT_LAST_START = UserValueName("bookmark_import_last_start")
   val BOOKMARK_IMPORT_DONE = UserValueName("bookmark_import_done")
   val BOOKMARK_IMPORT_TOTAL = UserValueName("bookmark_import_total")
   val USER_DESCRIPTION = UserValueName("user_description")
   val PENDING_PRIMARY_EMAIL = UserValueName("pending_primary_email")
-  val FRIENDS_NOTIFIED_ABOUT_JOINING = UserValueName("friendsNotifiedAboutJoining")
+  val FRIENDS_NOTIFIED_ABOUT_JOINING = UserValueName("friendsNotifiedAboutJoining") // no longer in use
   val CONTACTS_NOTIFIED_ABOUT_JOINING = UserValueName("contactsNotifiedAboutJoining")
   val UPDATED_USER_CONNECTIONS = UserValueName("updated_user_connections")
-  val SITE_LEFT_COL_WIDTH = UserValueName("site_left_col_width")
-  val SITE_WELCOMED = UserValueName("site_welcomed")
   val SITE_SHOW_LIBRARY_INTRO = UserValueName("site_show_library_intro")
-  val ONBOARDING_SEEN = UserValueName("onboarding_seen")
-  val NON_USER_IDENTIFIER = UserValueName("nonUserIdentifier")
-  val NON_USER_KIND = UserValueName("nonUserKind")
   val RECENT_INTERACTION = UserValueName("recent_interaction")
   val KIFI_CAMPAIGN_ID = UserValueName("kifi_campaign_id")
   val LAST_DIGEST_EMAIL_SCHEDULED_AT = UserValueName("last_digest_email_scheduled_at")
@@ -77,6 +70,8 @@ object UserValueName {
   val LIBRARY_CALLOUT_SHOWN = UserValueName("library_callout_shown")
   val TAG_CALLOUT_SHOWN = UserValueName("tag_callout_shown")
   val GUIDE_CALLOUT_SHOWN = UserValueName("guide_callout_shown")
+
+  val AUTO_SHOW_GUIDE = UserValueName("auto_show_guide")
 
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 

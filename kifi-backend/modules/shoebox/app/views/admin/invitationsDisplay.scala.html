@@ -1,5 +1,6 @@
 @(invitesWithSocial: Seq[(Option[(Invitation, Option[User])], SocialUserInfo)],
-    page: Int, count: Int, numPages: Int, showing: String = "all")
+    page: Int, count: Int, numPages: Int, showing: String = "all"
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 @import com.keepit.model.InvitationStates
 
 @pagination(page: Int, pageCount: Int) = {

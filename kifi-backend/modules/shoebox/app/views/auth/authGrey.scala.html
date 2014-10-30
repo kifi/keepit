@@ -119,7 +119,7 @@
   }
 </div>
 
-<form class="login" data-title="Log in" action="@routes.logInWithUserPass()" novalidate@if(view == "login") { style="display:block"} data-track-source="login">
+<form class="login" data-title="Log in" action="@routes.logInWithUserPass()" novalidate@if(view == "login") { style="display:block"} data-track-source="login" method="POST">
   <div class="form-sides">
     <div class="form-l">
       <h3>Use a social network</h3>

@@ -24,7 +24,7 @@
           <ul class="manage-tag-list">
             <li class="manage-tag-row" ng-repeat="tag in tagsToShow">
               <div class="manage-tag-row-name-section">
-                <a class="manage-tag-row-name" title="{{tag.name}}" ng-href="{{tag.href}}">{{tag.name}}</a>
+                <a class="manage-tag-row-name" title="{{tag.name}}" ng-href="{{tag.href}}" ng-class="{'selected-tag': tag.selected}">{{tag.name}}</a>
               </div>
               <span class="manage-tag-row-num-keeps-section">
                 <ng-pluralize count="tag.keeps | number:0"

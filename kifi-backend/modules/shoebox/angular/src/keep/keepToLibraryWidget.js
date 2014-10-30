@@ -15,11 +15,17 @@ angular.module('kifi')
        *  librarySelection - an object whose 'library' property will be the selected library.
        *
        *  Optional properties on parent scope:
-       *   excludeLibraries - an array of libraries to exclude from libraries when populating the widget.
+       *   readOnlyLibraries - an array of libraries that the user cannot take action against
        *   keptToLibraries - an array of library ids that are already keeping the keep.
        *   clickAction() - a function that can be called once a library is selected;
        *                   called with the element that this widget is on.
-       *   libSelectTopOffset - amount to shift up relative to the element that has this directive as an attribute.
+       *   exitAction() - a function that is called once the widget exits (includes when the widget exits after an action).
+       *
+       *   Positioning properties:
+       *   ----------------------
+       *   libSelectDownOffset - shift the bottom of the widget this much below the element.
+       *   libSelectMaxUpOffset - maximum amount to shift up the top of the widget above the element.
+       *   libSelectLeftOffset - shift the left edge of the widget this much to the left of the element.
        */
       link: function (scope, element/*, attrs*/) {
         //
@@ -43,8 +49,6 @@ angular.module('kifi')
         scope.showCreate = false;
         scope.newLibrary = {};
         scope.widgetLibraries = [];
-        scope.excludeLibraries = scope.excludeLibraries || [];
-        scope.keptToLibraries = scope.keptToLibraries || [];
 
 
         //
@@ -68,6 +72,10 @@ angular.module('kifi')
 
           if (widget) {
             widget.remove();
+          }
+
+          if (_.isFunction(scope.exitAction)) {
+            scope.exitAction();
           }
         }
 
@@ -129,35 +137,83 @@ angular.module('kifi')
           }
         }
 
+        function mutateReadOnlyLibraries(libraries, readOnlyLibraries) {
+          libraries.forEach(function (library) {
+            library.isReadOnly = !!_.find(readOnlyLibraries, { 'id': library.id });
+          });
+        }
+
 
         //
         // Scope methods.
         //
         scope.showWidget = function () {
+          var readOnlyLibraries = scope.readOnlyLibraries || [];
+          var keptToLibraries = scope.keptToLibraries || [];
+
           // Create widget.
           widget = angular.element($templateCache.get('keep/keepToLibraryWidget.tpl.html'));
           $rootElement.find('html').append(widget);
           $compile(widget)(scope);
 
-          // Set position.
-          // By default, if there is enough room at the bottom, drop the widget down.
-          // If there isn't enough room, scoot up just enough to fit the widget.
-          // If scope.libSelectTopOffset is set, that overrides the default position.
+          //
+          // Position widget.
+          //
           widget.hide();
+
+          var desiredShiftDownDistance = scope.libSelectDownOffset || 0;
+          var desiredMaxUpDistance = scope.libSelectMaxUpOffset || 1000;
+          var desiredShiftLeftDistance = scope.libSelectLeftOffset || 0;
+
           var scrollTop = angular.element($window).scrollTop();
-          var elementOffset = element.offset().top;
-          var distanceFromBottom = $window.innerHeight - elementOffset + scrollTop;
+          var elementOffsetTop = element.offset().top;
+          var distanceFromBottom = $window.innerHeight - elementOffsetTop + scrollTop;
+          var distanceFromTop = elementOffsetTop - scrollTop;
+
+          var scrollLeft = angular.element($window).scrollLeft();
+          var elementOffsetLeft = element.offset().left;
+          var distanceFromRight = $window.innerWidth - elementOffsetLeft + scrollLeft;
 
           // Wait for Angular to render the widget so we can grab its height.
           $timeout(function () {
+            // Shift the widget left based on passed in desired shift left distance.
+            // If the widget is cut off on the right, shift left some more so that the widget's
+            // width is entirely visible.
+            var widgetWidth = widget.width();
+            var shiftLeftDistance = (distanceFromRight - widgetWidth + desiredShiftLeftDistance > 0) ?
+              desiredShiftLeftDistance :
+              widgetWidth - distanceFromRight;
+
+            var left = element.offset().left - shiftLeftDistance;
+
+            // Shift the widget up or down.
+            var shiftUpDistance ;
             var widgetHeight = widget.height();
 
-            // If there is enough room at the bottom, drop the widget down.
-            // Otherwise, scoot up just enough to fit the widget.
-            var widgetOffset = (distanceFromBottom - widgetHeight > 0) ? 0 : widgetHeight - distanceFromBottom;
+            // First, shift the widget down based on the passed in desired shift down distance.
+            // After that, if the widget's top exceeds the passed in maximum top distance,
+            // then shift the widget down enough so that the maximum top distance is not exceeded.
+            if (widgetHeight - desiredShiftDownDistance <= desiredMaxUpDistance) {
+              shiftUpDistance = widgetHeight - desiredShiftDownDistance;
+            } else {
+              shiftUpDistance = desiredMaxUpDistance;
+            }
 
-            var top = element.offset().top - (scope.libSelectTopOffset || widgetOffset);
-            var left = element.offset().left;
+            // Second, check that the widget is not cut off on the bottom. If it's cut off,
+            // shift it up enough so that the widget's bottom is visible.
+            shiftUpDistance = (distanceFromBottom - widgetHeight + shiftUpDistance > 0) ?
+              shiftUpDistance :
+              widgetHeight - distanceFromBottom;
+
+            // Third, check that the widget is not cut off on the top. If it's cut off,
+            // shift it down enough so that the widget's top is visible.
+            shiftUpDistance = (distanceFromTop - shiftUpDistance > 0) ?
+              shiftUpDistance :
+              distanceFromTop;
+
+            var top = element.offset().top - shiftUpDistance;
+
+            // Set the widget's position based on the left and top offsets calculated above.
             widget.css({top: top + 'px', left: left + 'px'});
             widget.show();
 
@@ -179,24 +235,18 @@ angular.module('kifi')
           scope.newLibrary = {};
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
-          // May remove this fetch; awaiting discussion with Josh.
-          libraryService.fetchLibrarySummaries(false).then(function (data) {
-            var libraries = _.filter(data.libraries, { access: 'owner' });
+          var libraries = _.filter(libraryService.librarySummaries, { access: 'owner' });
+          mutateReadOnlyLibraries(libraries, readOnlyLibraries);
 
-            libraries = _.filter(libraries, function (library) {
-              return !_.find(scope.excludeLibraries, { 'id': library.id });
-            });
-
-            libraries.forEach(function (library) {
-              library.keptTo = false;
-              if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
-                library.keptTo = true;
-              }
-            });
-
-            libraries[selectedIndex].selected = true;
-            scope.widgetLibraries = libraries;
+          libraries.forEach(function (library) {
+            library.keptTo = false;
+            if (_.indexOf(keptToLibraries, library.id) !== -1) {
+              library.keptTo = true;
+            }
           });
+
+          libraries[selectedIndex].selected = true;
+          scope.widgetLibraries = libraries;
         };
 
         scope.onHover = function (library) {
@@ -298,8 +348,23 @@ angular.module('kifi')
           library.visibility = library.visibility || 'published';
 
           libraryService.createLibrary(library).then(function () {
-            libraryService.fetchLibrarySummaries(true).then(function () {
+            libraryService.fetchLibrarySummaries(true).then(function (data) {
               scope.$evalAsync(function () {
+                var libraries = _.filter(data.libraries, { access: 'owner' });
+                var readOnlyLibraries = scope.readOnlyLibraries || [];
+                var keptToLibraries = scope.keptToLibraries || [];
+
+                mutateReadOnlyLibraries(libraries, readOnlyLibraries);
+
+                libraries.forEach(function (library) {
+                  library.keptTo = false;
+                  if (_.indexOf(keptToLibraries, library.id) !== -1) {
+                    library.keptTo = true;
+                  }
+                });
+
+                libraries[selectedIndex].selected = true;
+                scope.widgetLibraries = libraries;
                 scope.librarySelection.library = _.find(scope.widgetLibraries, { 'name': library.name });
                 if (_.isFunction(scope.clickAction)) {
                   scope.clickAction(element);

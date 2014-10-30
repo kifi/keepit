@@ -1,3 +1,5 @@
+@()(implicit request: com.keepit.common.controller.UserRequest[_])
+
 @admin("Websocket Performance", scripts = List("graphite")) {
 
 <div style="float: right" class="form-horizontal">
@@ -117,8 +119,8 @@
   if (chart == "timers") {
     var prefix = "stats.timers.shoebox.websocket.handler." + handler.val()
     var percentileValue = $("#percentile").val()
-    var percentileSuffix = (percentileValue == "0.99") ? "_99" : "" 
-    var percentileTitle = (percentileValue == "0.99") ? "99% " : "" 
+    var percentileSuffix = (percentileValue == "0.99") ? "_99" : ""
+    var percentileTitle = (percentileValue == "0.99") ? "99% " : ""
     var meanTargets = "divideSeries(" + sumSeries(prefix + ".sum" + percentileSuffix) + ",scale(" + sumSeries(prefix + ".count:sum") + "," + percentileValue + "))"
     options.title = "Handler " + percentileTitle + "Mean Time in Milliseconds"
     options.target = baseTargets.concat(meanTargets)
@@ -127,7 +129,7 @@
 
   if (chart == "anonymous") {
     var anonymousTarget = 'summarize(stats.counters.shoebox.websocket.anonymous.count:sum,"1min")';
-    options.title = "Anonymous Connexion Attempts per Minute" 
+    options.title = "Anonymous Connexion Attempts per Minute"
     options.target = baseTargets.concat(anonymousTarget)
     options.logBase = null;
   }

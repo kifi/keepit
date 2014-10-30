@@ -7,7 +7,7 @@
 // @require scripts/guide/spotlight.js
 // @require scripts/guide/curved_arrow.js
 
-guide.step = guide.step || function () {
+k.guide.step = k.guide.step || function () {
   var spotlight, $stage, $steps, $loading, timeout, arrow, steps, opts, stepIdx, animTick;
   var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel keydown keypress keyup'.split(' ');
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
@@ -21,7 +21,7 @@ guide.step = guide.step || function () {
         .append([0,0,0,0,0].map(function () {return '<span class="kifi-guide-spinner"></span>'}).join(''))
         .appendTo('body');
       spotlight = new Spotlight(wholeWindow(), {opacity: 0, maxOpacity: opts_.opacity});
-      $stage = $(render('html/guide/step_' + opts.index, {me: me, page: opts_.page}));
+      $stage = $(k.render('html/guide/step_' + opts.index, {me: k.me, page: opts_.page}));
       $steps = opts_.$guide.appendTo('body')
         .on('click', '.kifi-guide-x', hide);
       $steps.each(layout).data().updateProgress(opts_.done);
@@ -220,9 +220,9 @@ guide.step = guide.step || function () {
       var prevPos = $stage.data('pos');
       $stage.data('pos', pos);
       var tfm = {x: 0, y: 0};
-      for (var k in prevPos) {
-        tfm[k === 'left' || k === 'right' ? 'x' : 'y'] =
-           (k === 'left' || k === 'top' ? 1 : -1) * (pos[k] - prevPos[k]);
+      for (var prop in prevPos) {
+        tfm[prop === 'left' || prop === 'right' ? 'x' : 'y'] =
+           (prop === 'left' || prop === 'top' ? 1 : -1) * (pos[prop] - prevPos[prop]);
       }
       $stage.on('transitionend', function end(e) {
         if (e.target === this) {
@@ -458,8 +458,8 @@ guide.step = guide.step || function () {
     this.clientHeight;
   }
 
-  function setProp(o, k, v) {
-    o[k] = v;
+  function setProp(o, name, val) {
+    o[name] = val;
     return o;
   }
 }();

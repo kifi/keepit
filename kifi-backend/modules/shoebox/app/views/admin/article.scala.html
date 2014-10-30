@@ -1,4 +1,4 @@
-@(article: Option[com.keepit.search.Article], uri: com.keepit.model.NormalizedURI, info: Option[com.keepit.model.ScrapeInfo])
+@(article: Option[com.keepit.search.Article], uri: com.keepit.model.NormalizedURI, info: Option[com.keepit.model.ScrapeInfo])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin(article.map("Article: " + _.title).getOrElse("No article available")) {
   <table class="table table-bordered">

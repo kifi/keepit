@@ -7,23 +7,21 @@ angular.module('kifi')
     var isChrome = $window.chrome && $window.chrome.webstore && $window.chrome.webstore.install;
     var isFirefox = !isChrome && ('MozBoxSizing' in $window.document.documentElement.style) || ($window.navigator.userAgent.indexOf('Firefox') > -1);
     var majorVersion = +($window.navigator.userAgent.match(/(?:Chrome|Firefox)\/(\d+)/) || [null, 999])[1];
-    var supported = isChrome && majorVersion >= 26 || isFirefox && majorVersion >= 20;
+    var supported = isChrome && majorVersion >= 32 || isFirefox && majorVersion >= 20;
 
-    if (isChrome && supported) {
-      var elem = $window.document.createElement('link');
-      elem.rel = 'chrome-webstore-item';
-      elem.href = 'https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin';
-      var other = $window.document.getElementsByTagName('link')[0];
-      other.parentNode.insertBefore(elem, other);
-    }
-
-    var detectIfIsInstalled = function () {
-      var kifiAttr = $window.document.children[0].attributes['data-kifi-ext'];
-      return !!(kifiAttr && kifiAttr.value);
-    };
-
-    function installedVersion() {
-      return angular.element(document.documentElement).attr('data-kifi-ext');
+    if (supported) {
+      if (isChrome) {
+        $window.document.head.insertAdjacentHTML(
+          'beforeend', '<link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin">');
+      }
+      $window.addEventListener('message', function (e) {
+        var data = e.data || {};
+        if (data.type === 'kifi_ext_listening') {
+          $rootScope.$apply(function () {
+            api.installedVersion = data.version;
+          });
+        }
+      });
     }
 
     var api = {
@@ -50,7 +48,7 @@ angular.module('kifi')
             }, 10000);
           });
         } else if (isFirefox && supported) {
-          $window.location.href = '//www.kifi.com/assets/plugins/kifi.xpi';
+          $window.location.href = '//www.kifi.com/extensions/firefox/kifi.xpi';
         } else {
           $window.location.href = '//www.kifi.com/unsupported';
         }
@@ -58,11 +56,10 @@ angular.module('kifi')
       canInstall: supported,
       installInProgress: false,
       installed: false,
-      detectIfIsInstalled: detectIfIsInstalled,
       error: false,
-      installedVersion: installedVersion,
+      installedVersion: angular.element(document.documentElement).attr('data-kifi-ext'),
       hasMinimumVersion: function (minVersion, minCanaryVersion) {
-        var version = installedVersion();
+        var version = api.installedVersion;
         if (!version) {
           return false;
         }

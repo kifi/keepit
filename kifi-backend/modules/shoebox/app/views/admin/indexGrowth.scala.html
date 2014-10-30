@@ -1,3 +1,4 @@
+@()(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Index Growth", scripts = List("graphite")) {
 
@@ -80,7 +81,7 @@
 
     if (chart == "libraryIndex") {
       options.title = "Library Index"
-      options.target = ["substr(stats.gauges.search.index.library_v1.size,4,5)"]
+      options.target = ["substr(stats.gauges.search.index.library_v2.size,4,5)"]
       options.logBase = 2
     }
 

@@ -19,12 +19,12 @@
 // @require scripts/maintain_height.js
 // @require scripts/message_header.js
 
-panes.thread = function () {
+k.panes.thread = k.panes.thread || function () {
   'use strict';
   var handlers = {
     thread_info: function (o) {
       if ($holder && $holder.data('threadId') === o.thread) {
-        messageHeader.init($who.find('.kifi-message-header'), o.thread, o.participants);
+        k.messageHeader.init($who.find('.kifi-message-header'), o.thread, o.participants);
       }
     },
     thread: function (o) {
@@ -62,7 +62,7 @@ panes.thread = function () {
       });
 
       $paneBox.on('click', '.kifi-message-header-back', function () {
-        pane.back($redirected.length ? null : '/messages');
+        k.pane.back($redirected.length ? null : '/messages');
       });
 
       var $redirected = $paneBox.find('.kifi-thread-redirected').click(function () {
@@ -75,7 +75,7 @@ panes.thread = function () {
   };
 
   function renderBlank($paneBox, $tall, $who, threadId) {
-    $(render('html/keeper/messages', {
+    $(k.render('html/keeper/messages', {
       draftPlaceholder: 'Write something…'
     }, {
       compose: 'compose'
@@ -88,7 +88,7 @@ panes.thread = function () {
       .handleLookClicks()
       .hoverfu('.kifi-message-email-learn', function (configureHover) {
         var link = this;
-        render('html/keeper/message_email_tooltip', function (html) {
+        k.render('html/keeper/message_email_tooltip', function (html) {
           configureHover(html, {
             mustHoverFor: 1e9, click: 'toggle',
             position: {my: 'right+50 bottom-10', at: 'center top', of: link, collision: 'none'}
@@ -124,7 +124,7 @@ panes.thread = function () {
   }
 
   function onRemoved($header, compose, heighter) {
-    window.messageHeader.destroy($header);
+    k.messageHeader.destroy($header);
     compose.destroy();
     heighter.destroy();
   }
@@ -200,7 +200,7 @@ panes.thread = function () {
       id: '',
       createdAt: new Date().toISOString(),
       text: text,
-      user: me,
+      user: k.me,
       displayedSource: browserName
     }))
     .data('text', text);
@@ -234,7 +234,7 @@ panes.thread = function () {
       messageTip: 'message_tip'
     };
     if (m.auxData && m.auxData.length) {
-      var $rendered = $(render('html/keeper/message_aux', m, templates))
+      var $rendered = $(k.render('html/keeper/message_aux', m, templates))
         .on('click', '.kifi-message-email-view', function() {
           api.require('scripts/iframe_dialog.js', function() {
             api.port.emit('auth_info', function (info) {
@@ -243,7 +243,7 @@ panes.thread = function () {
           });
         });
     } else {
-      var $rendered = $(render('html/keeper/message_discussion', m, templates));
+      var $rendered = $(k.render('html/keeper/message_discussion', m, templates));
     }
     return $rendered.find('time').timeago().end()[0];
   }

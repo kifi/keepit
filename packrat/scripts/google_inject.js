@@ -26,7 +26,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   log('[google_inject]');
 
   var origin = location.origin;
-  var $res = $(render('html/search/google', {images: api.url('images')}));   // a reference to our search results (kept so that we can reinsert when removed)
+  var $res = $(k.render('html/search/google', {images: api.url('images')}));   // a reference to our search results (kept so that we can reinsert when removed)
   var $bar = $res.find('.kifi-res-bar');
   var $kifi = $res.find('.kifi-res-bar-kifi');
   var $status = $bar.find('.kifi-res-bar-status');
@@ -78,7 +78,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       "searched",
       {
         "origin": origin,
-        "guided": "guide" in window,
+        "guided": 'guide' in k,
         "uuid": response.uuid,
         "experimentId": response.experimentId,
         "query": response.query,
@@ -256,20 +256,15 @@ if (searchUrlRe.test(document.URL)) !function () {
   var observer = new MutationObserver(withMutations);
   function withMutations(mutations) {
     if (isVertical) return;
-    outer:
-    for (var i = 0; i < mutations.length; i++) {
-      for (var j = 0, nodes = mutations[i].addedNodes; j < nodes.length; j++) {
-        if (nodes[j].id === "ires") {
-          log("[withMutations] Google results inserted");
-          tGoogleResultsShown = Date.now();
-          if (attachKifiRes(nodes[j]) && !(tKifiResultsShown >= tKifiResultsReceived)) {
-            tKifiResultsShown = tGoogleResultsShown;
-          }
-          if (document.readyState !== 'loading') {  // avoid searching for input value if not yet updated to URL hash
-            $(setTimeout.bind(null, search));  // prediction may have changed
-          }
-          break outer;
-        }
+    var ires = document.getElementById('ires');
+    if (ires) {
+      log('[withMutations] Google results inserted');
+      tGoogleResultsShown = Date.now();
+      if (attachKifiRes(ires) && !(tKifiResultsShown >= tKifiResultsReceived)) {
+        tKifiResultsShown = tGoogleResultsShown;
+      }
+      if (document.readyState !== 'loading') {  // avoid searching for input value if not yet updated to URL hash
+        $(setTimeout.bind(null, search));  // prediction may have changed
       }
     }
     if (!$q.length || !document.contains($q[0])) {  // for #lst-ib (e.g. google.co.il)
@@ -516,7 +511,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       var $a = $(this);
       var i = $a.prevAll('.kifi-res-user').length;
       var user = $a.closest('.kifi-res-why').data('users')[i];
-      render('html/friend_card', $.extend({
+      k.render('html/friend_card', $.extend({
         self: user.id === response.me.id,
         className: 'kifi-res-user-card'
       }, user), function (html) {
@@ -533,7 +528,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       var moreKeepers = data.raw.keepers.filter(function (u) {
         return !keepersPictured.some(idIs(u.id));
       });
-      render('html/search/more_keepers', {
+      k.render('html/search/more_keepers', {
         keepers: moreKeepers,
         others: +$a.text() - moreKeepers.length
       }, function (html) {
@@ -545,7 +540,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       var $a = $(this);
       var i = $a.prevAll('.kifi-res-lib').length;
       var library = $a.closest('.kifi-res-why').data('libraries')[i];
-      render('html/library_card', $.extend({origin: response.origin}, library), function (html) {
+      k.render('html/library_card', $.extend({origin: response.origin}, library), function (html) {
         configureHover(html, {
           position: {my: 'left-46 bottom-16', at: 'center top', of: $a, collision: 'none'},
           canLeaveFor: 600,
@@ -568,7 +563,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       var data = $a.closest('.kifi-res-why').data();
       var nLibsShown = $a.prevAll('.kifi-res-lib').length;
       var moreLibs = data.libraries.slice(nLibsShown, nLibsShown + 3);
-      render('html/search/more_libraries', {
+      k.render('html/search/more_libraries', {
         libraries: moreLibs,
         origin: response.origin,
         others: +$a.text() - moreLibs.length
@@ -596,7 +591,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       var data = $a.closest('.kifi-res-why').data();
       var nTagsListed = $a.prevAll('.kifi-res-tag').length;
       var moreTags = data.tags.slice(nTagsListed);
-      render('html/search/more_tags', {
+      k.render('html/search/more_tags', {
         tags: moreTags,
         others: +$a.text() - moreTags.length
       }, function (html) {
@@ -642,7 +637,7 @@ if (searchUrlRe.test(document.URL)) !function () {
 
   function attachResults() {
     var hitsData = response.hits.map(renderDataForHit);
-    var $hits = $(render('html/search/google_hits', {
+    var $hits = $(k.render('html/search/google_hits', {
         hits: hitsData,
         images: api.url('images'),
         filter: response.filter && response.filter.who !== 'a',
@@ -689,7 +684,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   function detailLibrary(lib, callback) {
     api.port.emit('get_library', lib.id, function (o) {
       $.extend(lib, o);
-      lib.owner.pictureUrl = cdnBase + '/users/' + o.owner.id + '/pics/200/' + o.owner.pictureName;
+      lib.owner.pictureUrl = k.cdnBase + '/users/' + o.owner.id + '/pics/200/' + o.owner.pictureName;
       lib.owner.name = o.owner.firstName + ' ' + o.owner.lastName;
       callback(lib);
     });
@@ -727,7 +722,7 @@ if (searchUrlRe.test(document.URL)) !function () {
 
     var hitsData = [];
     for (var i = 0; i < hits.length; i++) {
-      hitHtml.push(render('html/search/google_hit', hitsData[i] = renderDataForHit(hits[i])));
+      hitHtml.push(k.render('html/search/google_hit', hitsData[i] = renderDataForHit(hits[i])));
     }
     var $hits = $(hitHtml.join(''))
     .css({visibility: 'hidden', height: 0, margin: 0})

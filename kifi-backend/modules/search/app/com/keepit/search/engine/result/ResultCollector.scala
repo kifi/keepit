@@ -1,7 +1,7 @@
 package com.keepit.search.engine.result
 
-import com.keepit.search.util.join.Joiner
+import com.keepit.search.util.join.AggregationContext
 
-abstract class ResultCollector[J <: Joiner] {
-  def collect(joiner: J): Unit
+abstract class ResultCollector[C <: AggregationContext] {
+  def collect(context: C): Unit
 }

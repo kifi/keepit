@@ -6,7 +6,7 @@ import scala.collection.mutable
 
 class HashJoinTest extends Specification {
 
-  class TstJoiner(result: mutable.HashMap[Long, (Option[Int], Option[Int], Option[Int])]) extends Joiner {
+  class TstAggregationContext(result: mutable.HashMap[Long, (Option[Int], Option[Int], Option[Int])]) extends AggregationContext {
     private var v1: Option[Int] = None
     private var v2: Option[Int] = None
     private var v3: Option[Int] = None
@@ -31,8 +31,8 @@ class HashJoinTest extends Specification {
     }
   }
 
-  class TstJoinerManager(result: mutable.HashMap[Long, (Option[Int], Option[Int], Option[Int])]) extends JoinerManager(8) {
-    def create() = new TstJoiner(result: mutable.HashMap[Long, (Option[Int], Option[Int], Option[Int])])
+  class TstAggregationContextManager(result: mutable.HashMap[Long, (Option[Int], Option[Int], Option[Int])]) extends AggregationContextManager(8) {
+    def create() = new TstAggregationContext(result: mutable.HashMap[Long, (Option[Int], Option[Int], Option[Int])])
   }
 
   val rand = new Random
@@ -70,7 +70,7 @@ class HashJoinTest extends Specification {
       }.toMap
 
       val result = mutable.HashMap.empty[Long, (Option[Int], Option[Int], Option[Int])]
-      val join = new HashJoin(buf, 20, new TstJoinerManager(result))
+      val join = new HashJoin(buf, 20, new TstAggregationContextManager(result))
 
       join.execute()
 
@@ -94,7 +94,7 @@ class HashJoinTest extends Specification {
 
       val expected: Map[Long, (Option[Int], Option[Int], Option[Int])] = table.groupBy(_._1).mapValues(s => (Some(s.map(_._2).sum), None, None))
       val result = mutable.HashMap.empty[Long, (Option[Int], Option[Int], Option[Int])]
-      val join = new HashJoin(buf, 20, new TstJoinerManager(result))
+      val join = new HashJoin(buf, 20, new TstAggregationContextManager(result))
 
       join.execute()
 

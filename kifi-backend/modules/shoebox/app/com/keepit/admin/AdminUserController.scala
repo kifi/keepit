@@ -271,7 +271,7 @@ class AdminUserController @Inject() (
       case cid if cid.toLong > 0 => Id[Collection](cid.toLong)
     }
     val bookmarkFilter = collectionFilter.map { collId =>
-      db.readOnlyReplica { implicit s => keepToCollectionRepo.getKeepsInCollection(collId) }
+      db.readOnlyReplica { implicit s => keepToCollectionRepo.getKeepsForTag(collId) }
     }
     val filteredBookmarks = db.readOnlyReplica { implicit s =>
       val query = bookmarkSearch.getOrElse("").toLowerCase()

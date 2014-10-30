@@ -5,12 +5,12 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.lucene.search.Query
 
 object Explanation {
-  def apply(query: Query, labels: Array[String], details: Map[String, Seq[ScoreDetail]], boostValues: (Float, Float)) = {
-    new Explanation(query, labels, details, boostValues._1, boostValues._2)
+  def apply(query: Query, labels: Array[String], rawScore: Float, details: Map[String, Seq[ScoreDetail]], boostValues: (Float, Float)) = {
+    new Explanation(query, labels, rawScore, details, boostValues._1, boostValues._2)
   }
 }
 
-class Explanation(val query: Query, val labels: Array[String], val details: Map[String, Seq[ScoreDetail]], clickBoostValue: Float, sharingBoostValue: Float) {
+class Explanation(val query: Query, val labels: Array[String], val rawScore: Float, val details: Map[String, Seq[ScoreDetail]], clickBoostValue: Float, sharingBoostValue: Float) {
 
   def boostValuesHtml: String = {
     val sb = new StringBuilder
@@ -50,15 +50,12 @@ class Explanation(val query: Query, val labels: Array[String], val details: Map[
       val detailsWithScores = details(name).filter { detail => detail.scoreMax.exists(_ != 0f) }
       val count = detailsWithScores.size
       if (count > 0) {
+        val nRows = detailsWithScores.map { detail => if (detail.scoreSum.isDefined) 2 else 1 }.sum
         detailsWithScores.headOption.foreach { detail =>
-          sb.append("<tr>")
-          sb.append(s"<th rowspan=$count> $name </th>\n")
+          sb.append("<tr> <th rowspan=$nRows> $name </th> <th> </th>\n")
           listScore(detail)
-          sb.append("</tr>\n")
           detailsWithScores.tail.foreach { detail =>
-            sb.append("<tr>")
             listScore(detail)
-            sb.append("</tr>\n")
           }
         }
       }
@@ -66,22 +63,29 @@ class Explanation(val query: Query, val labels: Array[String], val details: Map[
 
     def listScore(detail: ScoreDetail): Unit = {
       if (detail.scoreMax.exists(_ != 0f)) {
+        sb.append("<tr> <td> max </td>")
+        detail.scoreMax.foreach { value =>
+          if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
+          else sb.append(s"<td> $value </td>")
+        }
+        sb.append("</tr>\n")
         detail.scoreSum match {
           case Some(scoreSum) =>
-            (detail.scoreMax zip scoreSum).foreach { case (max, sum) => sb.append(s"<td> $max : $sum </td>") }
-          case None =>
-            detail.scoreMax.foreach { value =>
+            sb.append("<tr> <td> sum </td>")
+            scoreSum.foreach { value =>
               if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
               else sb.append(s"<td> $value </td>")
             }
+            sb.append("</tr>\n")
+          case None =>
         }
       }
     }
 
-    sb.append(s"""<table class="table table-bordered">\n""")
+    sb.append("""<table class="table table-bordered">\n""")
 
     // query labels
-    sb.append("<tr> <th> </th>")
+    sb.append("<tr> <th> </th> <th> </th>")
     labels.map(StringEscapeUtils.escapeHtml4(_)).foreach { label => sb.append(s"""<th> $label </th>""") }
     sb.append("</tr>\n")
 

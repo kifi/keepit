@@ -30,6 +30,8 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
   def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
   def updateLastEmailSent(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
+  def getMemberCountSinceForLibrary(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int
+  def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
 }
 
 @Singleton
@@ -91,10 +93,19 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   private def getOptCompiled(userId: Column[Id[User]], libraryId: Column[Id[Library]]) = Compiled {
-    (for (r <- rows if r.userId === userId && r.libraryId === libraryId) yield r)
+    for (r <- rows if r.userId === userId && r.libraryId === libraryId) yield r
   }
   def getOpt(userId: Id[User], libraryId: Id[Library])(implicit session: RSession): Option[LibraryMembership] = {
     getOptCompiled(userId, libraryId).firstOption
+  }
+
+  def getMemberCountSinceForLibrary(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int = {
+    Query((for (r <- rows if r.createdAt > since) yield r).length).first
+  }
+
+  def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
+    import StaticQuery.interpolation
+    sql"""select lm.library_id, count(*) as cnt from library_membership lm, library l where l.id = lm.library_id and l.state='active' and l.visibility='published' and lm.created_at > $since group by lm.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
   private def countWithLibraryCompiled(libraryId: Column[Id[Library]], accessSet: Set[LibraryAccess], excludeState: Option[State[LibraryMembership]]) = Compiled {

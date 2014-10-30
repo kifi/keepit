@@ -20,9 +20,9 @@ $.fn.scrollToBottom = function (callback) {
   });
 };
 
-var panes = panes || {};  // idempotent for Chrome
+k.panes = k.panes || {};  // idempotent for Chrome
 
-var pane = pane || function () {  // idempotent for Chrome
+k.pane = k.pane || function () {  // idempotent for Chrome
   'use strict';
   var $pane, paneHistory, paneObserver;
 
@@ -59,8 +59,8 @@ var pane = pane || function () {  // idempotent for Chrome
       log('[showPane] aborting', locator, back ? 'back' : '', paneState);
       return;
     }
-    if (window.toaster && toaster.showing()) {
-      toaster.hide(null, 'pane');
+    if (k.toaster && k.toaster.showing()) {
+      k.toaster.hide(null, 'pane');
     }
     var locatorCurr = paneHistory && paneHistory[0];
     if (locator === locatorCurr) {
@@ -70,9 +70,9 @@ var pane = pane || function () {  // idempotent for Chrome
     // TODO: have a state for pane-to-pane transitions and avoid interrupting
     var name = toPaneName(locator);
     var nameCurr = locatorCurr && toPaneName(locatorCurr);
-    if (name === nameCurr && panes[name].switchTo) {
+    if (name === nameCurr && k.panes[name].switchTo) {
       log('[showPane] delegating', name, locator);
-      panes[name].switchTo(locator);
+      k.panes[name].switchTo(locator);
       return;
     }
     log('[showPane]', locator, name, back ? 'back' : '', redirected ? 'redirected' : '');
@@ -86,12 +86,12 @@ var pane = pane || function () {  // idempotent for Chrome
     }
     if ($pane) {
       var left = back || toPaneIdx(name) < toPaneIdx(toPaneName(paneHistory[0]));
-      keeper.onPaneChange(locator);
+      k.keeper.onPaneChange(locator);
       var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden").layout();
       var $cart = $cubby.find(".kifi-pane-box-cart").addClass(left ? "kifi-back" : "kifi-forward");
       var $old = $cart.find(".kifi-pane-box");
       $old.triggerHandler('kifi:removing');
-      var $new = $(render('html/keeper/pane_' + name, {redirected: redirected}))[left ? 'prependTo' : 'appendTo']($cart).layout();
+      var $new = $(k.render('html/keeper/pane_' + name, {redirected: redirected}))[left ? 'prependTo' : 'appendTo']($cart).layout();
       $cart.addClass("kifi-animated").layout().addClass("kifi-roll")
       .on("transitionend", function end(e) {
         if (e.target !== this) return;
@@ -108,18 +108,18 @@ var pane = pane || function () {  // idempotent for Chrome
       populatePane($new, name, locator);
     } else {
       $('html').attr('kifi-pane-parent', '');
-      $pane = $(render('html/keeper/pane', {user: me, redirected: redirected}, {pane: 'pane_' + name}))
+      $pane = $(k.render('html/keeper/pane', {user: k.me, redirected: redirected}, {pane: 'pane_' + name}))
         .data('state', 'opening');
       $pane[0].dataset.locator = locator;
       api.port.emit('pane', {new: locator});
 
-      var bringSlider = !keeper.showing();
+      var bringSlider = !k.keeper.showing();
       if (bringSlider) {
-        $pane.append(keeper.create(locator)).insertAfter(tile);
+        $pane.append(k.keeper.create(locator)).insertAfter(k.tile);
       } else {
-        keeper.onPaneChange(locator);
-        $pane.insertBefore(tile);
-        keeper.moveToBottom();
+        k.keeper.onPaneChange(locator);
+        $pane.insertBefore(k.tile);
+        k.keeper.moveToBottom();
       }
       observePaneAncestry();
 
@@ -128,8 +128,8 @@ var pane = pane || function () {  // idempotent for Chrome
         if (e.target !== this) return;
         $pane.off('transitionend', onPaneShown);
         if (!bringSlider) {
-          keeper.appendTo($pane);
-          $pane.before(tile);
+          k.keeper.appendTo($pane);
+          $pane.before(k.tile);
         }
         $pane.data('state', 'open');
         keepLastAndCleanUpIfRemoved();
@@ -153,11 +153,11 @@ var pane = pane || function () {  // idempotent for Chrome
       })
       .hoverfu('.kifi-pane-top-menu-a:not(.kifi-active)', function (configureHover) {
         var btn = this;
-        render("html/keeper/titled_tip", {
+        k.render('html/keeper/titled_tip', {
           dir: "below",
           cssClass: 'kifi-pane-settings-tip',
           title: "Settings",
-          html: "Customize your Kifi<br/>experience."
+          html: 'Customize your Kifi<br/>experience.'
         }, function (html) {
           configureHover(html, {
             mustHoverFor: 700, hideAfter: 3000, click: "hide",
@@ -169,7 +169,7 @@ var pane = pane || function () {  // idempotent for Chrome
         if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         var $a = $(this).addClass('kifi-active');
-        var $menu = $(render('html/keeper/pane_top_menu', {user: me, site: location.hostname}))
+        var $menu = $(k.render('html/keeper/pane_top_menu', {user: k.me, site: location.hostname}))
           .insertAfter($a).layout().addClass('kifi-visible')
           .on('mouseover', '.kifi-pane-top-menu-item', function (e) {
             // kifi-hover needed because :hover doesn't work during drag
@@ -215,7 +215,7 @@ var pane = pane || function () {  // idempotent for Chrome
         e.preventDefault();
         var $hide = $(this).toggleClass("kifi-checked");
         var checked = $hide.hasClass("kifi-checked");
-        $(tile).toggle(!checked);
+        $(k.tile).toggle(!checked);
         api.port.emit("suppress_on_site", checked);
         setTimeout(function () {
           if (checked) {
@@ -236,7 +236,7 @@ var pane = pane || function () {  // idempotent for Chrome
         e.preventDefault();
         api.port.emit("deauthenticate");
         setTimeout(function () {
-          $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br/>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/k_gray.png') + '"/> icon above.</kifi>')
+          $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br/>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/url_gray.png') + '"/> icon above.</kifi>')
             .appendTo('body').delay(6000).fadeOut(1000, remove);
         }, 150);
       })
@@ -254,7 +254,7 @@ var pane = pane || function () {  // idempotent for Chrome
       })
       .on('click', '.kifi-pane-x', _.debounce(function (e) {
         if (e.originalEvent.isTrusted !== false) {
-          hidePane(tile.style.display !== 'none' && !tile.hasAttribute('kifi-fullscreen'));
+          hidePane(k.tile.style.display !== 'none' && !k.tile.hasAttribute('kifi-fullscreen'));
         }
       }, 400, true))
       .on("mousedown click keydown keypress keyup", function (e) {
@@ -270,14 +270,14 @@ var pane = pane || function () {  // idempotent for Chrome
     }
     log('[hidePane]', leaveSlider ? 'leaving slider' : '');
     if (leaveSlider) {
-      $(tile).css({top: '', bottom: '', transform: ''}).insertAfter($pane);
-      keeper.onPaneChange();
+      $(k.tile).css({top: '', bottom: '', transform: ''}).insertAfter($pane);
+      k.keeper.onPaneChange();
     } else {
-      $(tile).css('transform', '');
-      keeper.discard();
+      $(k.tile).css('transform', '');
+      k.keeper.discard();
     }
     $pane.find('.kifi-pane-box').triggerHandler('kifi:removing');
-    pane.onHide.dispatch();
+    k.pane.onHide.dispatch();
     $pane
     .data('state', 'closing')
     .off('transitionend') // onPaneShown
@@ -302,19 +302,19 @@ var pane = pane || function () {  // idempotent for Chrome
   function keepLastAndCleanUpIfRemoved() {
     if ($pane && document.contains($pane[0])) {
       if ($pane.data('state') === 'open') {  // do not interrupt transition
-        var parent = tile.parentNode;
+        var parent = k.tile.parentNode;
         var child = parent.lastElementChild, ours = [], covered, zIndex;
-        while (child !== tile) {
+        while (child !== k.tile) {
           if (child.classList.contains('kifi-root')) {
             ours.unshift(child);
-          } else if (+window.getComputedStyle(child).zIndex >= (zIndex || (zIndex = +window.getComputedStyle(tile).zIndex))) {
+          } else if (+window.getComputedStyle(child).zIndex >= (zIndex || (zIndex = +window.getComputedStyle(k.tile).zIndex))) {
             covered = true;
           }
           child = child.previousElementSibling;
         }
         if (covered) {
           var activeEl = document.activeElement, reactivateEl;
-          ours.unshift(tile);
+          ours.unshift(k.tile);
           for (var i = ours.length; i--;) {
             var el = ours[i];
             if (activeEl && el.contains(activeEl)) {
@@ -361,7 +361,7 @@ var pane = pane || function () {  // idempotent for Chrome
 
   function populatePane($box, name, locator) {
     api.require('scripts/' + name + '.js', function () {
-      panes[name].render($box, locator);
+      k.panes[name].render($box, locator);
     });
   }
 
@@ -391,7 +391,7 @@ var pane = pane || function () {  // idempotent for Chrome
     show: function (o) {
       if (o.compose) {
         log('[pane.show] compose', o.locator, o.trigger || '', o.to || '');
-        pane.compose(o.trigger, o.locator, o.to);
+        k.pane.compose(o.trigger, o.locator, o.to);
       } else {
         log('[pane.show]', o.locator, o.trigger || '', o.redirected || '');
         showPane(o.locator, false, o.redirected);
@@ -399,12 +399,12 @@ var pane = pane || function () {  // idempotent for Chrome
     },
     hide: hidePane,
     toggle: function (trigger, locator) {
-      if (trigger === 'button' && window.guide && $('.kifi-gs').length) {
+      if (trigger === 'button' && k.guide && $('.kifi-gs').length) {
         log('[pane.toggle] ignoring, guide');
       } else if ($pane) {
         if ($pane.data('state') === 'closing') {
           log('[pane.toggle] ignoring, hiding');
-        } else if (locator === paneHistory[0] && !(window.toaster && toaster.showing())) {
+        } else if (locator === paneHistory[0] && !(k.toaster && k.showing())) {
           hidePane(trigger === 'keeper');
         } else {
           showPane(locator);

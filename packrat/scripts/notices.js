@@ -24,7 +24,7 @@
 // Threads should only be marked as seen (and new highlight faded away) if the page is visible
 // (TBD whether focus is also required).
 
-panes.notices = function () {
+k.panes.notices = k.panes.notices || function () {
   'use strict';
 
   var handlers = {
@@ -120,7 +120,7 @@ panes.notices = function () {
   function renderListHolder(kind) {
     var params = {kind: kind};
     params[kind] = true;
-    return render('html/keeper/notices', params);
+    return k.render('html/keeper/notices', params);
   }
 
   function renderList(o) {
@@ -186,7 +186,7 @@ panes.notices = function () {
 
     var locatorOld = formatLocator($aOld.data('kind'));
     var locatorNew = formatLocator($aNew.data('kind'));
-    pane.pushState(locatorNew);
+    k.pane.pushState(locatorNew);
     api.port.emit('pane', {old: locatorOld, new: locatorNew});
   }
 
@@ -194,7 +194,7 @@ panes.notices = function () {
     notice.isVisited = !notice.unread;
     notice.formatMessage = formatMessage.snippet;
     notice.formatLocalDate = formatLocalDate;
-    notice.cdnBase = cdnBase;
+    notice.cdnBase = k.cdnBase;
     switch (notice.category) {
     case 'message':
       notice.title = notice.title || formatTitleFromUrl(notice.url);
@@ -202,7 +202,7 @@ panes.notices = function () {
       var nParticipants = participants.length;
       notice.author = notice.author || notice.participants[0];
       if (notice.authors === 1) {
-        notice[nParticipants === 1 ? 'isSelf' : notice.author.id === me.id ? 'isSent' : 'isReceived'] = true;
+        notice[nParticipants === 1 ? 'isSelf' : notice.author.id === k.me.id ? 'isSent' : 'isReceived'] = true;
       } else if (notice.firstAuthor > 1) {
         participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
       }
@@ -226,11 +226,11 @@ panes.notices = function () {
         }
       } else {
         if (nParticipants === 2) {
-          notice.namedParticipant = participants.filter(idIsNot(me.id))[0];
+          notice.namedParticipant = participants.filter(idIsNot(k.me.id))[0];
         } else if (nParticipants <= nNamesMax) {
-          notice.namedParticipants = participants.map(makeFirstNameYou(me.id));
+          notice.namedParticipants = participants.map(makeFirstNameYou(k.me.id));
         } else {
-          notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(me.id));
+          notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(k.me.id));
           notice.otherParticipants = participants.slice(nNamesMax - 1);
           notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
         }
@@ -242,7 +242,7 @@ panes.notices = function () {
         notice.nameIndex = counter();
         notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
       }
-      if (notice.author.id === me.id) {
+      if (notice.author.id === k.me.id) {
         if (notice.isSelf) {
           notice.multiple = notice.messages > 1;
         }
@@ -251,11 +251,11 @@ panes.notices = function () {
         notice.authorShortName = notice.author.firstName;
       }
       notice.picturedParticipants.map(formatParticipant);
-      return render('html/keeper/notice_message', notice);
+      return k.render('html/keeper/notice_message', notice);
     case 'triggered':
-      return render('html/keeper/notice_triggered', notice);
+      return k.render('html/keeper/notice_triggered', notice);
     case 'global':
-      return render('html/keeper/notice_global', notice);
+      return k.render('html/keeper/notice_global', notice);
     default:
       log('#a00', '[renderOne] unrecognized category', notice.category);
       return '';
@@ -460,7 +460,7 @@ panes.notices = function () {
 
   function onHoverfuOthers(configureHover) {
     var $a = $(this);
-    render('html/keeper/others', {names: $a.data('names')}, function(html) {
+    k.render('html/keeper/others', {names: $a.data('names')}, function(html) {
       configureHover(html, {
         mustHoverFor: 100,
         position: {my: 'center bottom-8', at: 'center top', of: $a, collision: 'none'}
@@ -491,7 +491,7 @@ panes.notices = function () {
   }
 
   function isSent(th) {
-    return th.firstAuthor != null && th.participants[th.firstAuthor].id === me.id;
+    return th.firstAuthor != null && th.participants[th.firstAuthor].id === k.me.id;
   }
 
   function toNamesJson(users) {

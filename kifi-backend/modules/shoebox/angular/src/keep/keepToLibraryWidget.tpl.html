@@ -6,7 +6,7 @@
     </div>
     <ul class="library-select-list">
       <li ng-repeat="library in widgetLibraries | filter:search" class="library-select-option"
-        ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
+        ng-class="{'selected': library.selected, 'keptTo': library.keptTo, 'readOnly': library.isReadOnly}"
         ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)">
         <span ng-switch="library.kind" class="keep-to-library-lib-icon-container">
           <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>

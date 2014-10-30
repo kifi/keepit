@@ -244,7 +244,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val user2 = db.readWrite { implicit s =>
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "Hsu", createdAt = t1, username = Username("bhsu"), normalizedUsername = "test"))
-          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def"))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusMinutes(3)))
           user2
         }
         inject[FakeUserActionsHelper].setUser(user2)
@@ -475,8 +475,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val libraryController = inject[LibraryController]
 
         val (user1, user2, user3, lib1, lib2) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("test"), normalizedUsername = "test", primaryEmail = Some(EmailAddress("aaron@kifi.com"))))
+          val user2 = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1, username = Username("test"), normalizedUsername = "test", primaryEmail = Some(EmailAddress("bulba@yahoo.com"))))
           val user3 = userRepo.save(User(firstName = "Char", lastName = "Mander", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
           val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.SECRET, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
@@ -789,7 +789,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             |{
             | "successes":[
             |   {
-            |     "library":"${pubId1}",
+            |     "library":"${pubId2}",
             |     "numMoved": 2
             |   }
             | ]
@@ -803,7 +803,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val result3 = libraryController.copyKeeps()(request3)
         status(result3) must equalTo(OK)
 
-        (contentAsJson(result3) \ "successes").as[Int] === 0
+        (contentAsJson(result3) \ "successes").as[Seq[JsObject]].length === 0
         (contentAsJson(result3) \\ "error").map(_.as[String]).toSet === Set("dest_permission_denied")
 
         inject[FakeUserActionsHelper].setUser(userB)
@@ -818,7 +818,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result4) must equalTo(OK)
         contentType(result4) must beSome("application/json")
         val jsonRes4 = Json.parse(contentAsString(result4))
-        (jsonRes4 \ "successes").as[Int] === 2
+        val copiedKeeps = db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(lib1.id.get, 0, Int.MaxValue)
+        }
+        val success4 = (jsonRes4 \\ "id").map(_.as[ExternalId[Keep]]).toSet === copiedKeeps.map(_.externalId).toSet
         (jsonRes4 \\ "keep").length === 0
 
         // move duplicate active keeps 1 & 2 from Lib1 to Lib2 as user 2 (error: already exists in dst)

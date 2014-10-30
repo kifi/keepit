@@ -15,7 +15,7 @@ var showBrokenLookLinkDialog = (function () {
       var imageUrl = this.src;
     }
 
-    $dialog = $(render('html/keeper/look_link_broken', {
+    $dialog = $(k.render('html/keeper/look_link_broken', {
       rangeHtml: rangeHtml,
       imageUrl: imageUrl
     }));

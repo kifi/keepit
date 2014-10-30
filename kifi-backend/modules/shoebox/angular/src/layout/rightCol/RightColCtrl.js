@@ -146,11 +146,16 @@ angular.module('kifi')
           'path': $location.path()
         });
       }
-      $window.document.documentElement.removeAttribute('data-guide');
     };
-    if ($window.document.documentElement.getAttribute('data-guide')) {
-      $scope.triggerGuide();
-    }
+
+    $scope.$watch(function () {
+      return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide);
+    }, function (show) {
+      if (show) {
+        $scope.triggerGuide();
+        profileService.savePrefs({auto_show_guide: null});
+      }
+    });
 
     $scope.importBookmarks = function () {
       var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');

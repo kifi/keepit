@@ -120,7 +120,7 @@ class UrlController @Inject() (
     Redirect(routes.UrlController.documentIntegrity())
   }
 
-  def normalizationView(page: Int = 0) = AdminUserPage { request =>
+  def normalizationView(page: Int = 0) = AdminUserPage { implicit request =>
     implicit val playRequest = request.request
     val PAGE_SIZE = 50
     val (pendingCount, appliedCount, applied) = db.readOnlyReplica { implicit s =>
@@ -156,7 +156,7 @@ class UrlController @Inject() (
     Ok(s"Ok. Redirections of all NormalizedURIs that were redirected to $toUriId is cleared. You should initiate renormalization.")
   }
 
-  def urlRenormalizeConsole() = AdminUserPage { request =>
+  def urlRenormalizeConsole() = AdminUserPage { implicit request =>
     Ok(html.admin.urlRenormalization())
   }
 
@@ -189,7 +189,7 @@ class UrlController @Inject() (
 
   }
 
-  def renormalizationView(page: Int = 0) = AdminUserPage { request =>
+  def renormalizationView(page: Int = 0) = AdminUserPage { implicit request =>
     val PAGE_SIZE = 200
     val (renorms, totalCount) = db.readOnlyReplica { implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount()) }
     val pageCount = (totalCount * 1.0 / PAGE_SIZE).ceil.toInt

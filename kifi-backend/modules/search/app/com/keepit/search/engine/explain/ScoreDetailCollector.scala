@@ -7,10 +7,11 @@ import scala.collection.mutable.ListBuffer
 
 class ScoreDetailCollector(targetId: Long, clickBoostsProvider: Option[() => ResultClickBoosts], sharingBoost: Option[Float]) extends ResultCollector[ScoreContext] {
 
-  private[this] var clickBoostValue: Float = -1f
-  private[this] var sharingBoostValue: Float = -1f
+  private[this] var _rawScore: Float = 0.0f
+  private[this] var _clickBoostValue: Float = -1f
+  private[this] var _sharingBoostValue: Float = -1f
 
-  private[this] val details: Map[String, ListBuffer[ScoreDetail]] = Map(
+  private[this] val _details: Map[String, ListBuffer[ScoreDetail]] = Map(
     "aggregate" -> new ListBuffer[ScoreDetail](),
     Visibility.name(Visibility.OWNER) -> new ListBuffer[ScoreDetail](),
     Visibility.name(Visibility.MEMBER) -> new ListBuffer[ScoreDetail](),
@@ -24,22 +25,25 @@ class ScoreDetailCollector(targetId: Long, clickBoostsProvider: Option[() => Res
 
     clickBoostsProvider.foreach { f =>
       val clickBoosts = f()
-      clickBoostValue = clickBoosts(targetId)
+      _clickBoostValue = clickBoosts(targetId)
     }
 
     sharingBoost.map { sharingBoost =>
-      sharingBoostValue = (1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat)
+      _sharingBoostValue = (1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat)
     }
 
-    details("aggregate") += ScoreDetail(ctx)
+    _rawScore = ctx.score()
+
+    _details("aggregate") += ScoreDetail(ctx)
   }
 
   def collectDetail(primaryId: Long, secondaryId: Long, visibility: Int, scoreArray: Array[Float]): Unit = {
     require(primaryId == targetId, "id mismatch")
 
-    details(Visibility.name(visibility)) += ScoreDetail(primaryId, secondaryId, visibility, scoreArray)
+    _details(Visibility.name(visibility)) += ScoreDetail(primaryId, secondaryId, visibility, scoreArray)
   }
 
-  def getDetails(): Map[String, Seq[ScoreDetail]] = details.mapValues(_.toSeq)
-  def getBoostValues(): (Float, Float) = (clickBoostValue, sharingBoostValue)
+  def rawScore(): Float = _rawScore
+  def getDetails(): Map[String, Seq[ScoreDetail]] = _details.mapValues(_.toSeq)
+  def getBoostValues(): (Float, Float) = (_clickBoostValue, _sharingBoostValue)
 }

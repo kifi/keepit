@@ -57,11 +57,11 @@ class AdminScreenshotController @Inject() (
     Ok("Goin!")
   }
 
-  def images() = AdminUserPage { request =>
+  def images() = AdminUserPage { implicit request =>
     Ok(html.admin.images())
   }
 
-  def imageInfos() = AdminUserPage { request =>
+  def imageInfos() = AdminUserPage { implicit request =>
     val imageInfos = db.readOnlyMaster { implicit ro =>
       imageInfoRepo.page(page = 0, size = 50).sortBy(_.id.get.id)
     }
@@ -69,7 +69,7 @@ class AdminScreenshotController @Inject() (
     Ok(html.admin.imageInfos(imageInfos))
   }
 
-  def imagesForUri(uriId: Id[NormalizedURI]) = AdminUserPage.async { request =>
+  def imagesForUri(uriId: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
     Try {
       db.readOnlyReplica { implicit ro =>
         uriRepo.get(uriId)

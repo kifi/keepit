@@ -3,7 +3,7 @@ package com.keepit.search.engine
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.explain.{ DirectExplainContext, ExplainContext, ScoreDetailCollector, ScoreDetail }
 import com.keepit.search.engine.result.ResultCollector
-import com.keepit.search.util.join.{ DataBufferReader, JoinerManager, DataBuffer, HashJoin }
+import com.keepit.search.util.join.{ DataBufferReader, AggregationContextManager, DataBuffer, HashJoin }
 import org.apache.lucene.search.{ Query, Weight }
 
 import scala.collection.mutable.ListBuffer
@@ -93,7 +93,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     }
   }
 
-  private[this] def join(joinerManager: JoinerManager): Unit = {
+  private[this] def join(aggregationContextManager: AggregationContextManager): Unit = {
     val startTime = System.currentTimeMillis()
 
     if (debugTracedIds != null) dumpBuf(debugTracedIds)
@@ -101,7 +101,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     val size = dataBuffer.size
     if (size > 0) {
       val numBuckets = ((size / 10 + 1) | 0x01)
-      val hashJoin = new HashJoin(dataBuffer, numBuckets, joinerManager)
+      val hashJoin = new HashJoin(dataBuffer, numBuckets, aggregationContextManager)
       hashJoin.execute()
     }
 
@@ -119,14 +119,14 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     new DirectScoreContext(scoreExpr, totalSize, matchWeightNormalizer.get, collector)
   }
 
-  private[this] def createScoreContextManager(collector: ResultCollector[ScoreContext]): JoinerManager = {
+  private[this] def createScoreContextManager(collector: ResultCollector[ScoreContext]): AggregationContextManager = {
     val debugOption = this
     if (debugTracedIds == null) {
-      new JoinerManager(32) {
+      new AggregationContextManager(32) {
         def create() = new ScoreContext(scoreExpr, totalSize, matchWeightNormalizer.get, collector)
       }
     } else {
-      new JoinerManager(32) {
+      new AggregationContextManager(32) {
         def create() = {
           val ctx = new ScoreContextWithDebug(scoreExpr, totalSize, matchWeightNormalizer.get, collector)
           ctx.debug(debugOption)
@@ -140,8 +140,8 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     new DirectExplainContext(targetId, scoreExpr, totalSize, matchWeightNormalizer.get, collector)
   }
 
-  private[this] def createExplainContextManager(collector: ScoreDetailCollector, targetId: Long): JoinerManager = {
-    new JoinerManager(1) {
+  private[this] def createExplainContextManager(collector: ScoreDetailCollector, targetId: Long): AggregationContextManager = {
+    new AggregationContextManager(1) {
       def create() = new ExplainContext(targetId, scoreExpr, totalSize, matchWeightNormalizer.get, collector)
     }
   }
@@ -163,7 +163,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
           }
           out.mkString("[", ", ", "]")
         }
-        debugLog(s"databuf id=$id id2=$id2 recType=${reader.recordType} scores=${scores}")
+        debugLog(s"databuf id=$id id2=$id2 visibility=[${Visibility.toString(reader.recordType)}] scores=${scores}")
       }
     }
   }

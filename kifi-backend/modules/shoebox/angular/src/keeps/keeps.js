@@ -285,8 +285,10 @@ angular.module('kifi')
         scrollDisabled: '=',
         scrollNext: '&',
         editMode: '=',
+        editOptions: '&',
         toggleEdit: '=',
-        updateSelectedCount: '&'
+        updateSelectedCount: '&',
+        selectedKeepsFilter: '&'
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
@@ -324,15 +326,29 @@ angular.module('kifi')
           }
         }
 
+        function getSelectedKeeps() {
+          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
+          var filter = scope.selectedKeepsFilter();
+          return _.isFunction(filter) ? filter(selectedKeeps) : selectedKeeps;
+        }
+
         function copyToLibrary () {
           // Copies the keeps that are selected into the library that is selected.
-          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
+          var selectedKeeps = getSelectedKeeps();
           var selectedLibrary = scope.librarySelection.library;
 
           keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
             // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
             //       not good.
             libraryService.fetchLibrarySummaries(true);
+
+            var addedKeeps = _.map(_.groupBy(selectedKeeps, 'url'), function (keeps, url) { return { 'url': url }; });
+
+            scope.$emit('keepAdded', libraryService.getSlugById(selectedLibrary.id), addedKeeps, scope.librarySelection.library);
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
           });
         }
 
@@ -353,6 +369,10 @@ angular.module('kifi')
             libraryService.addToLibraryCount(currentLibraryId, -1 * selectedKeeps.length);
             scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
             scope.selection.unselectAll();
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
           });
         }
 
@@ -366,6 +386,21 @@ angular.module('kifi')
 
         // 'selection' keeps track of which keeps have been selected.
         scope.selection = new selectionService.Selection();
+
+        // set default edit-mode options if it's not set by parent
+        scope.editOptions = _.isObject(scope.editOptions()) ? scope.editOptions : function() {
+          return {
+            // TODO draggable can be default to true when that is fixed
+            draggable: false,
+            actions: {
+              bulkUnkeep: true,
+              copyToLibrary: true,
+              moveToLibrary: true,
+              keepToLibrary: false,
+              editTags: true
+            }
+          };
+        };
 
 
         //
@@ -435,7 +470,11 @@ angular.module('kifi')
 
               var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
               undoService.add(selectedKeeps.length + keepsDeletedText, function () {
-                keepActionService.keepToLibrary(_.pluck(selectedKeeps, 'url'), libraryId);
+                keepActionService.keepToLibrary(_.map(selectedKeeps, function(keep) {
+                  var keepData = { url: keep.url };
+                  if (keep.title) { keepData.title = keep.title; }
+                  return keepData;
+                }), libraryId);
 
                 _.forEach(selectedKeeps, function (selectedKeep) {
                   selectedKeep.makeKept();
@@ -508,9 +547,13 @@ angular.module('kifi')
 
                 scope.librarySelection = {};
                 scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
-                scope.excludeLibraries = !scope.library ? [] : [scope.library];
+                scope.readOnlyLibraries = !scope.library ? [] : [scope.library];
                 scope.clickAction = function (widgetElement) {
-                  if (widgetElement.closest('.copy-to-library').length) {
+                  if (scope.librarySelection.library.isReadOnly) {
+                    return; // do nothing
+
+                    // FIXME refactor to not use CSS for business logic
+                  } else if (widgetElement.closest('.copy-to-library').length) {
                     copyToLibrary();
                   } else if (widgetElement.closest('.move-to-library').length) {
                     moveToLibrary();
@@ -526,6 +569,28 @@ angular.module('kifi')
         }, function (numSelected) {
           scope.disableEditTags();
           scope.updateSelectedCount({ numSelected: numSelected });
+
+          if (numSelected > 0) {
+            // creates an array of objects that identify the selected keeps and libraries they are in
+            var urlToLibraryPairs = _.flatten(_.map(scope.selection.getSelected(scope.keeps), function (keep) {
+              return _.map(keep.keeps, function (myKeep) {
+                return { url: keep.url, libraryId: myKeep.libraryId };
+              });
+            }));
+
+            // group the objects by libraryId
+            var selectedUrlsByLibrary = _.groupBy(urlToLibraryPairs, 'libraryId');
+
+            // set readOnlyLibraries to the libraries that ALL selected keeps are in
+            scope.readOnlyLibraries = _.reduce(selectedUrlsByLibrary, function (acc, urls, libraryId) {
+              if (urls.length === numSelected) {
+                acc.push({ id: libraryId });
+              }
+              return acc;
+            }, []);
+          } else {
+            scope.readOnlyLibraries = [];
+          }
         });
 
         scope.$watch(function () {

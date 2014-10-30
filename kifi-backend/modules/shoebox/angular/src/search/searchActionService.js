@@ -17,8 +17,13 @@ angular.module('kifi')
       _.extend(hit, hit.bookmark); //still need this??
 
       hit.isPrivate = hit.secret || false;
-      hit.others = hit.keepersTotal - hit.keepers.length;
       hit.isProtected = !hit.isMyBookmark; // will not be hidden if user keeps then unkeeps
+
+      // "others" is the number of Kifi users who kept a keep besides the user and the user's Kifi friends.
+      hit.others = hit.keepersTotal - hit.keepers.length - hit.keepersOmitted;
+      if (hit.keeps.length) {
+        hit.others--;
+      }
     }
 
     function copy(obj) {
@@ -35,8 +40,6 @@ angular.module('kifi')
       hit.isMyBookmark = false;
       hit.keepers = hit.keepers || [];
       hit.libraries = hit.libraries || [];
-
-
 
       for (var i=0; i<hit.libraries.length; i=i+2) {
         var idxLib = hit.libraries[i];
@@ -55,7 +58,6 @@ angular.module('kifi')
             decompressedLibraries.push(lib);
           }
           myLibraries.push(lib);
-
         }
       }
 
@@ -120,23 +122,24 @@ angular.module('kifi')
     //
     // Exposed API methods.
     //
-    function find(query, filter, context) {
+    function find(query, filter, library, context) {
       var url = routeService.search,
         reqData = {
           params: {
             q: query || void 0,
             f: filter || 'm',
+            l: library || void 0,
             maxHits: 10,
             context: context || void 0,
             withUriSummary: true
           }
         };
 
-      $log.log('searchActionService.find() req', reqData);
+      //$log.log('searchActionService.find() req', reqData);
 
       return $http.get(url, reqData).then(function (res) {
         var resData = res.data;
-        $log.log('searchActionService.find() res', resData);
+        //$log.log('searchActionService.find() res', resData);
 
         var hits = resData.hits || [];
         _.forEach(hits, function (hit) {

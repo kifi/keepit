@@ -10,7 +10,7 @@
 var initCompose = (function() {
   'use strict';
 
-  var KEY_PREFIX = CO_KEY + '-';
+  var KEY_PREFIX = MOD_KEYS.c + '-';
 
   var $forms = $();
   var enterToSend;
@@ -285,7 +285,7 @@ var initCompose = (function() {
 
     $form.hoverfu('.kifi-compose-highlight', function (configureHover) {
       var $a = $(this);
-      render('html/keeper/titled_tip', {
+      k.render('html/keeper/titled_tip', {
         title: 'Turn ' + ($a.hasClass('kifi-disabled') ? 'on' : 'off') + ' “Look here” mode',
         html: '“Look here” mode lets you<br/>reference text or images<br/>from the page in your<br/>message.'
       }, function (html) {
