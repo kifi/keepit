@@ -24,6 +24,18 @@ import ImplicitHelper._
 import com.keepit.common.core._
 import com.keepit.common.json
 import com.keepit.common.json.TupleFormat
+import play.api.http.Status._
+import com.keepit.commanders.RawBookmarkRepresentation
+import com.keepit.commanders.LibraryFail
+import play.api.libs.json.JsArray
+import scala.util.Failure
+import play.api.libs.json.JsString
+import scala.Some
+import scala.util.Success
+import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.controller.UserRequest
+import play.api.libs.json.JsObject
+import com.keepit.commanders.LibraryAddRequest
 
 class LibraryController @Inject() (
   db: Database,
@@ -110,7 +122,7 @@ class LibraryController @Inject() (
           }
         })
       case Left((respCode, msg)) => Future.successful {
-        if (respCode == SEE_OTHER) Redirect(msg, respCode) else Status(respCode)(Json.obj("error" -> msg))
+        if (respCode == MOVED_PERMANENTLY) MovedPermanently(msg) else Status(respCode)(Json.obj("error" -> msg))
       }
     }
   }
@@ -417,7 +429,7 @@ class LibraryController @Inject() (
           }.getOrElse(BadRequest(Json.obj("error" -> "no_passphrase_provided")))
         }
       case Left((respCode, msg)) =>
-        if (respCode == SEE_OTHER) Redirect(msg, respCode) else Status(respCode)(Json.obj("error" -> msg))
+        if (respCode == MOVED_PERMANENTLY) MovedPermanently(msg) else Status(respCode)(Json.obj("error" -> msg))
     }
   }
 

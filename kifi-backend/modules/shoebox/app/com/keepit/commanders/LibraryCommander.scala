@@ -987,7 +987,7 @@ class LibraryCommander @Inject() (
         ownerIdentifier.right.toOption.flatMap { username =>
           recoverLibraryAndOwner(Right(username), slug).map {
             case (library, owner) =>
-              if (followRedirect) Right(library) else Left((SEE_OTHER, Library.formatLibraryPath(owner.username, owner.externalId, library.slug)))
+              if (followRedirect) Right(library) else Left((MOVED_PERMANENTLY, Library.formatLibraryPath(owner.username, owner.externalId, library.slug)))
           }
         } getOrElse Left((BAD_REQUEST, "invalid_username"))
       case Some(owner) =>
@@ -997,7 +997,7 @@ class LibraryCommander @Inject() (
           case None =>
             recoverLibraryAndOwner(Left(owner), slug).map {
               case (library, owner) =>
-                if (followRedirect) Right(library) else Left((SEE_OTHER, Library.formatLibraryPath(owner.username, owner.externalId, library.slug)))
+                if (followRedirect) Right(library) else Left((MOVED_PERMANENTLY, Library.formatLibraryPath(owner.username, owner.externalId, library.slug)))
             } getOrElse Left((NOT_FOUND, "no_library_found"))
           case Some(lib) =>
             Right(lib)
