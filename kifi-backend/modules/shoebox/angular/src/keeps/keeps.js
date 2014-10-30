@@ -368,6 +368,12 @@ angular.module('kifi')
             libraryService.addToLibraryCount(currentLibraryId, -1 * selectedKeeps.length);
             scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
             scope.selection.unselectAll();
+
+            if (scope.availableKeeps.length < 10) {
+              scope.scrollNext()(scope.availableKeeps.length).then(function () {
+                scope.availableKeeps = _.filter(scope.keeps, function(k) { return k.unkept === false; });
+              });
+            }
           })['catch'](function () {
             modalService.open({
               template: 'common/modal/genericErrorModal.tpl.html'
@@ -456,53 +462,41 @@ angular.module('kifi')
 
         scope.unkeep = function (keeps) {
           var selectedKeeps = scope.selection.getSelected(keeps);
+          var libraryId = scope.library.id;
 
-          if (scope.librariesEnabled) {
-            var libraryId = scope.library.id;
-
-            keepActionService.unkeepManyFromLibrary(libraryId, selectedKeeps).then(function () {
-              _.forEach(selectedKeeps, function (selectedKeep) {
-                selectedKeep.makeUnkept();
-                _.without(scope.availableKeeps, selectedKeep);
-              });
-
-              var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
-              undoService.add(selectedKeeps.length + keepsDeletedText, function () {
-                keepActionService.keepToLibrary(_.map(selectedKeeps, function(keep) {
-                  var keepData = { url: keep.url };
-                  if (keep.title) { keepData.title = keep.title; }
-                  return keepData;
-                }), libraryId);
-
-                _.forEach(selectedKeeps, function (selectedKeep) {
-                  selectedKeep.makeKept();
-                });
-
-                scope.availableKeeps = selectedKeeps.concat(scope.availableKeeps);
-                scope.selection.selectAll(selectedKeeps);
-                libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
-              });
-
-              libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
-              scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
-              scope.selection.unselectAll();
+          keepActionService.unkeepManyFromLibrary(libraryId, selectedKeeps).then(function () {
+            _.forEach(selectedKeeps, function (selectedKeep) {
+              selectedKeep.makeUnkept();
+              _.without(scope.availableKeeps, selectedKeep);
             });
-          } else {
-            keepActionService.unkeepMany(selectedKeeps).then(function () {
+
+            var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
+            undoService.add(selectedKeeps.length + keepsDeletedText, function () {
+              keepActionService.keepToLibrary(_.map(selectedKeeps, function(keep) {
+                var keepData = { url: keep.url };
+                if (keep.title) { keepData.title = keep.title; }
+                return keepData;
+              }), libraryId);
+
               _.forEach(selectedKeeps, function (selectedKeep) {
-                selectedKeep.makeUnkept();
+                selectedKeep.makeKept();
               });
 
-              undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
-                keepActionService.keepMany(selectedKeeps);
-                _.forEach(selectedKeeps, function (selectedKeep) {
-                  selectedKeep.makeKept();
-                });
-              });
-
-              tagService.addToKeepCount(-1 * selectedKeeps.length);
+              scope.availableKeeps = selectedKeeps.concat(scope.availableKeeps);
+              scope.selection.selectAll(selectedKeeps);
+              libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
             });
-          }
+
+            libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
+            scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
+            scope.selection.unselectAll();
+
+            if (scope.availableKeeps.length < 10) {
+              scope.scrollNext()(scope.availableKeeps.length).then(function () {
+                scope.availableKeeps = _.filter(scope.keeps, function(k) { return k.unkept === false; });
+              });
+            }
+          });
         };
 
         scope.togglePrivate = function (keeps) {
