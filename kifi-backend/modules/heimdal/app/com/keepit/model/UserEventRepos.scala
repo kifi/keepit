@@ -36,7 +36,13 @@ class ProdUserEventLoggingRepo(
 
   val warnBufferSize = 500
   val maxBufferSize = 10000
-  private val augmentors = Seq(UserIdAugmentor, new ExtensionVersionAugmentor(shoeboxClient), new UserSegmentAugmentor(shoeboxClient), new UserValuesAugmentor(shoeboxClient), new UserKifiCampaignIdAugmentor(shoeboxClient))
+  private val augmentors = Seq(
+    UserIdAugmentor,
+    new UserAugmentor(shoeboxClient),
+    new ExtensionVersionAugmentor(shoeboxClient),
+    new UserSegmentAugmentor(shoeboxClient),
+    new UserValuesAugmentor(shoeboxClient),
+    new UserKifiCampaignIdAugmentor(shoeboxClient))
 
   def toBSON(event: UserEvent): BSONDocument = {
     val userBatch: Long = event.userId.id / 1000 //Warning: This is a (neccessary!) index optimization. Changing this will require a database change!
@@ -114,6 +120,16 @@ class UserSegmentAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAug
 object UserIdAugmentor extends EventAugmentor[UserEvent] {
   def isDefinedAt(userEvent: UserEvent) = true
   def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = Future.successful(Seq("userId" -> ContextDoubleData(userEvent.userId.id)))
+}
+
+class UserAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
+  def isDefinedAt(userEvent: UserEvent) = {
+    HeimdalContextBuilder.userFields.exists(!userEvent.context.data.contains(_))
+  }
+
+  def apply(userEvent: UserEvent) = shoeboxClient.getUser(userEvent.userId).map(_.toSeq.flatMap { user =>
+    HeimdalContextBuilder.getUserFields(user)
+  })
 }
 
 trait UserEventDescriptorRepo extends EventDescriptorRepo[UserEvent]
