@@ -688,7 +688,7 @@ api.port.on({
     }
   },
   suggest_tags: function (data, respond) {
-    var recentTags = loadRecentTags();
+    var recentTags = loadRecentTags().filter(notIn(data.tags));
     if (recentTags.length >= data.n && !data.q) {
       recentTags.length = data.n;
       respond(recentTags.map(makeTagObj));
@@ -697,12 +697,14 @@ api.port.on({
         var nMore = data.n - tags.length;
         if (nMore > 0) {
           var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
-          var matchingRecentTags = sf.filter(data.q, recentTags.filter(tagNotIn(tags)));
+          var matchingRecentTags = sf.filter(data.q, recentTags.filter(notIn(tags.map(getTag))));
           tags.push.apply(tags, matchingRecentTags.slice(0, nMore).map(makeTagObj, {sf: sf, q: data.q}));
         }
         respond(tags);
       };
-      ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, respondWith, function () {
+      ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, function (tags) {
+        respondWith(tags.filter(tagNotIn(data.tags)));
+      }, function () {
         respondWith([]);
       });
     }
@@ -1115,29 +1117,32 @@ api.port.on({
     if (!contactSearchCache) {
       contactSearchCache = new (global.ContactSearchCache || require('./contact_search_cache').ContactSearchCache)(3600000);
     }
-    var results = contactSearchCache.get(data);
-    if (results) {
-      respond(results);
+    var contacts = contactSearchCache.get(data.q);
+    if (contacts) {
+      respond(toResults(contacts));
     } else {
       ajax('GET', '/ext/contacts/search', {query: data.q, limit: data.n}, function (contacts) {
-        var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
-        if (!data.includeSelf) {
-          contacts = contacts.filter(idIsNot(me.id));
-        } else if (!contacts.some(idIs(me.id)) && (data.q ? sf.filter(data.q, [me], getName).length : contacts.length < data.n)) {
-          appendUserResult(contacts, data.n, me);
-        }
-        if (!contacts.some(idIs(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
-          appendUserResult(contacts, data.n, SUPPORT);
-        }
-        var results = contacts.map(toContactResult, {sf: sf, q: data.q});
-        if (results.length < data.n && data.q && !data.participants.some(idIs(data.q)) && !results.some(emailIs(data.q))) {
-          results.push({id: 'q', q: data.q, isValidEmail: emailRe.test(data.q)});
-        }
-        respond(results);
-        contactSearchCache.put(data, results);
+        contactSearchCache.put(data.q, contacts);
+        respond(toResults(contacts));
       }, function () {
         respond(null);
       });
+    }
+    function toResults(contacts) {
+      var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+      if (!data.includeSelf) {
+        contacts = contacts.filter(idIsNot(me.id));
+      } else if (!contacts.some(idIs(me.id)) && (data.q ? sf.filter(data.q, [me], getName).length : contacts.length < data.n)) {
+        appendUserResult(contacts, data.n, me);
+      }
+      if (!contacts.some(idIs(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
+        appendUserResult(contacts, data.n, SUPPORT);
+      }
+      var results = contacts.map(toContactResult, {sf: sf, q: data.q});
+      if (results.length < data.n && data.q && !data.exclude.some(idIs(data.q)) && !results.some(emailIs(data.q))) {
+        results.push({id: 'q', q: data.q, isValidEmail: emailRe.test(data.q)});
+      }
+      respond(results);
     }
   },
   delete_contact: function (email, respond) {
@@ -2416,11 +2421,14 @@ function libraryIdIs(id) {
 function libraryIdIsNot(id) {
   return function (o) {return o.libraryId !== id};
 }
-function tagIs(tag) {
-  return function (o) {return o.tag === tag};
+function getTag(o) {
+  return o.tag;
 }
 function tagNotIn(tags) {
-  return function (tag) {return !tags.some(tagIs(tag))};
+  return function (o) {return tags.indexOf(o.tag) < 0};
+}
+function notIn(arr) {
+  return function (x) {return arr.indexOf(x) < 0};
 }
 function getThreadId(n) {
   return n.thread;

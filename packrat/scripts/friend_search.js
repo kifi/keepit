@@ -5,7 +5,7 @@
 var initFriendSearch = (function () {
 
   return function ($in, source, participants, includeSelf, options) {
-    $in.tokenInput(search.bind(null, participants, includeSelf), $.extend({
+    $in.tokenInput(search.bind(null, participants.map(getId), includeSelf), $.extend({
       preventDuplicates: true,
       tokenValue: 'id',
       classPrefix: 'kifi-ti-',
@@ -18,9 +18,9 @@ var initFriendSearch = (function () {
     }, options));
   };
 
-  function search(participants, includeSelf, numTokens, query, withResults) {
+  function search(participantIds, includeSelf, ids, query, withResults) {
     var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
-    api.port.emit('search_contacts', {q: query, n: n, participants: participants, includeSelf: includeSelf(numTokens)}, function (contacts) {
+    api.port.emit('search_contacts', {q: query, n: n, includeSelf: includeSelf(ids.length), exclude: participantIds.concat(ids)}, function (contacts) {
       if (contacts.length < 3) {
         contacts.push('tip');
       }
@@ -155,6 +155,10 @@ var initFriendSearch = (function () {
         html.push(Mustache.escape(parts[i]));
       }
     }
+  }
+
+  function getId(o) {
+    return o.id;
   }
 
   function onBlur(item) {

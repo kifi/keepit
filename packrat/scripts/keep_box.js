@@ -842,8 +842,8 @@ k.keepBox = k.keepBox || (function () {
     return deferred.promise;
   }
 
-  function suggestTags(libraryId, keepId, numTokens, query, withResults) {
-    api.port.emit('suggest_tags', {q: query, n: 4, libraryId: libraryId, keepId: keepId}, function (items) {
+  function suggestTags(libraryId, keepId, tags, query, withResults) {
+    api.port.emit('suggest_tags', {q: query, n: 4, libraryId: libraryId, keepId: keepId, tags: tags}, function (items) {
       if (query && !items.some(tagIs(query))) {
         items.push({tag: query, matches: [[0, query.length]]});
       }

@@ -188,7 +188,9 @@
       .on('input', function (event) {
         search();
         resizeInput();
-        selectDropdownItem(null);
+        if (selectedDropdownItem && settings.allowFreeTagging) {
+          selectDropdownItem(null);
+        }
         if (selectedToken) {
           deselectToken();
         }
@@ -648,7 +650,7 @@
     }
 
     function updateHiddenInput() {
-      $hiddenInput.val(tokens.map(function (o) { return o[settings.tokenValue] }).join(settings.tokenDelimiter));
+      $hiddenInput.val(tokens.map(valueOfToken).join(settings.tokenDelimiter));
     }
 
     function hideDropdown() {
@@ -703,7 +705,7 @@
       if (data.issuedQuery !== query) {
         data.issuedQuery = query;
         $dropdown.add($tokenList).addClass(classes.searching);
-        findItems(tokens.length, query, renderDropdown.bind(null, query, Date.now()));
+        findItems(tokens.map(valueOfToken), query, renderDropdown.bind(null, query, Date.now()));
       }
     }
 
@@ -726,6 +728,10 @@
           });
         }
       });
+    }
+
+    function valueOfToken(tok) {
+      return tok[settings.tokenValue];
     }
 
     function focusAsync() {
