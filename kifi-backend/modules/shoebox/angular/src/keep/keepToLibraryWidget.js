@@ -135,7 +135,6 @@ angular.module('kifi')
          * @param {number} selectedIndex - the index of the selected library in the library list.
          */
         function adjustScroll(selectedIndex) {
-
           /**
            * After we finish scrolling, we set a flag that a scroll has just happened so that
            * a mouseenter event on a library item that was triggered as a result of the scroll
@@ -149,20 +148,24 @@ angular.module('kifi')
             }, 200);
           }
 
-          // Each library list item is 47px high, and we fit in 8 library list items within the
-          // visible area. For a library item to be visible, it should be entirely within the
-          // visible area (this means its top offset should be at least one library item height from
-          // the visible bottom).
+          // Each library list item is 47px high. For a library item to be visible, it should be
+          // entirely within the visible area (this means its top offset should be at least one
+          // library item height from the visible bottom).
+
+          // If we are not showing any subheaders (e.g., 'Kept In'), then we are displaying 6 librares.
+          // When we display subheaders, we are displaying 5 libraries (number of displayed libraries
+          // depends on max-height set in the stylesheet.).
+          var numLibrariesVisible = scope.widgetKeptInLibraries.length || scope.widgetRecentLibraries.length ? 5 : 6;
 
           var selectedLibraryTop = selectedIndex * 47;
           var visibleTop = libraryList.scrollTop();
-          var visibleBottom = visibleTop + (8 * 47);
+          var visibleBottom = visibleTop + (numLibrariesVisible * 47);
 
           if (selectedLibraryTop < visibleTop) {
             libraryList.scrollTop(selectedLibraryTop);
             setJustScrolled();
           } else if (selectedLibraryTop > (visibleBottom - 47)) {
-            libraryList.scrollTop(selectedLibraryTop - (7 * 47));
+            libraryList.scrollTop(selectedLibraryTop - ((numLibrariesVisible - 1) * 47));
             setJustScrolled();
           }
         }
