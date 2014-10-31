@@ -10,15 +10,20 @@ angular.module('kifi')
     return {
       restrict: 'A',
       /*
-       * Scope properties:
+       * Scope properties
+       *  (optional) keptToLibraryIds - an array of library ids that are already keeping the keep.
+       *
+       *  ---------
+       *  Callbacks
+       *  ---------
        *  (optional) librarySelectAction - a function that is called when a library has been selected;
        *                                   called with the selected library.
-       *  (optional) keptToLibraryIds - an array of library ids that are already keeping the keep.
-       *  (optional) libraryClickAction - a function that can be called once a library is selected;
-       *                           called with the element that this widget is on.
+       *  (optional) libraryClickAction - a function that can be called once a library is clicked;
+       *                                 called with the clicked library.
        *  (optional) widgetExitAction - a function that is called once the widget exits (includes when the widget exits after an action).
        *
-       *  Positioning properties:
+       *  ----------------------
+       *  Positioning properties
        *  ----------------------
        *  (optional) libSelectDownOffset - shift the bottom of the widget this much below the element.
        *  (optional) libSelectMaxUpOffset - maximum amount to shift up the top of the widget above the element.
@@ -33,7 +38,6 @@ angular.module('kifi')
         libSelectMaxUpOffset: '=',
         libSelectLeftOffset: '='
       },
-
       link: function (scope, element/*, attrs*/) {
         //
         // Internal data.
@@ -160,15 +164,14 @@ angular.module('kifi')
           }
         }
 
-
-        //
-        // Scope methods.
-        //
         function initWidget () {
+          //
           // Create widget.
+          //
           widget = angular.element($templateCache.get('keep/keepToLibraryWidget.tpl.html'));
           $rootElement.find('html').append(widget);
           $compile(widget)(scope);
+
 
           //
           // Position widget.
@@ -237,10 +240,10 @@ angular.module('kifi')
             }, 0);
           }, 0);
 
-          // Set event handlers.
-          $document.on('mousedown', onClick);
 
+          //
           // Initialize state.
+          //
           var keptToLibraryIds = scope.keptToLibraryIds || [];
           scope.search = {};
           selectedIndex = 0;
@@ -250,16 +253,26 @@ angular.module('kifi')
           scope.newLibrary = {};
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
-          scope.widgetKeptInLibraries = [];
-          scope.widgetMyLibraries = [];
-          scope.widgetRecentLibraries = [];
-          scope.widgetOtherLibraries = [];
+
+          //
+          // Group widget libraries.
+          //
+
+          // Libraries are divided into two possible groupings:
+          // (1) "Kept In" libraries followed by "My Libraries"; and
+          // (2) "Recent Libraries" followed by "Other Libraries".
+          //
+          // If there are any kept-in libraries, the first grouping is displayed.
 
           var libraries = _.filter(libraryService.librarySummaries, function (lib) {
             return lib.access !== 'read_only';
           });
 
-          // Sort libraries here.
+          scope.widgetKeptInLibraries = [];
+          scope.widgetMyLibraries = [];
+          scope.widgetRecentLibraries = [];
+          scope.widgetOtherLibraries = [];
+
           libraries.forEach(function (library) {
             library.keptTo = false;
 
@@ -278,15 +291,27 @@ angular.module('kifi')
             }
           });
 
+          // widgetLibraries is the list of libraries being displayed in the widget.
           if (scope.widgetKeptInLibraries.length) {
             widgetLibraries = scope.widgetKeptInLibraries.concat(scope.widgetMyLibraries);
           } else {
             widgetLibraries = scope.widgetRecentLibraries.concat(scope.widgetOtherLibraries);
           }
 
+          // Select the top listed library.
           widgetLibraries[selectedIndex].selected = true;
+
+
+          //
+          // Set event handlers.
+          //
+          $document.on('mousedown', onClick);
         }
 
+
+        //
+        // Scope methods.
+        //
         scope.onHover = function (library) {
           if (justScrolled) {
             justScrolled = false;
@@ -392,6 +417,7 @@ angular.module('kifi')
             submitting = false;
           });
         };
+
 
         init();
       }
