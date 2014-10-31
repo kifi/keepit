@@ -429,7 +429,7 @@ class LibraryController @Inject() (
           }.getOrElse(BadRequest(Json.obj("error" -> "no_passphrase_provided")))
         }
       case Left((respCode, msg)) =>
-        if (respCode == MOVED_PERMANENTLY) MovedPermanently(msg) else Status(respCode)(Json.obj("error" -> msg))
+        if (respCode == MOVED_PERMANENTLY) Redirect(msg, authToken.map("authToken" -> Seq(_)).toMap, MOVED_PERMANENTLY) else Status(respCode)(Json.obj("error" -> msg))
     }
   }
 
