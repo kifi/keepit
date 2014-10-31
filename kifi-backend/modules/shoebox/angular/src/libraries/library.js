@@ -89,8 +89,8 @@ angular.module('kifi')
     //
     // Watches and listeners.
     //
-    var deregisterKeepAdded = $rootScope.$on('keepAdded', function (e, libSlug, keeps) {
-      _.each(keeps, function (keep) {
+    var deregisterKeepAdded = $rootScope.$on('keepAdded', function (e, libSlug, keeps, library) {
+      keeps.forEach(function (keep) {
         // checks if the keep was added to the secret library from main or
         // vice-versa.  If so, it removes the keep from the current library
         if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
@@ -101,6 +101,18 @@ angular.module('kifi')
           }
         } else if (libSlug === $scope.librarySlug) {
           $scope.keeps.unshift(keep);
+        }
+
+        // add the new keep to the keep card's "my keeps" array
+        var existingKeep = _.find($scope.keeps, { url: keep.url });
+        if (existingKeep && !_.find($scope.keeps, { id: keep.id })) {
+          existingKeep.keeps.push({
+            id: keep.id,
+            isMine: true,
+            libraryId: library.id,
+            mine: true,
+            visibility: library.visibility
+          });
         }
       });
     });
