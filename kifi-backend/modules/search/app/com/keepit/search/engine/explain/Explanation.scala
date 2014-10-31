@@ -12,17 +12,38 @@ object Explanation {
 
 class Explanation(val query: Query, val labels: Array[String], val rawScore: Float, val details: Map[String, Seq[ScoreDetail]], clickBoostValue: Float, sharingBoostValue: Float) {
 
-  def boostValuesHtml: String = {
+  def queryHtml(title: String): String = {
     val sb = new StringBuilder
     sb.append("<table>\n")
-    sb.append("<tr><th> click boost </th><th> sharing boost </th> </tr>\n")
-    sb.append(s"<tr> <td> $clickBoostValue </td> <td> $sharingBoostValue </td> </th></tr>\n")
+    sb.append(s"<tr> <th> $title </th> </tr>\n")
+    sb.append(s"<tr> <td> ${query.toString} </td> </tr>\n")
     sb.append("</table>\n")
 
     sb.toString
   }
 
-  def sharingHtml: String = {
+  def scoreHtml(title: String): String = {
+    val sb = new StringBuilder
+    sb.append("<table>\n")
+    sb.append(s"<tr> <th> $title </th> </tr>\n")
+    sb.append(s"<tr> <td> $rawScore </td> </tr>\n")
+    sb.append("</table>\n")
+
+    sb.toString
+  }
+
+  def boostValuesHtml(title: String): String = {
+    val sb = new StringBuilder
+    sb.append("<table>\n")
+    sb.append(s"<tr> <th colspan=2> $title </th> </tr>\n")
+    sb.append("<tr> <th> click boost </th><th> sharing boost </th> </tr>\n")
+    sb.append(s"<tr> <td> $clickBoostValue </td> <td> $sharingBoostValue </td> </tr>\n")
+    sb.append("</table>\n")
+
+    sb.toString
+  }
+
+  def sharingHtml(title: String): String = {
     val sb = new StringBuilder
 
     def sharingCountByVisibility(visibility: Int): Unit = {
@@ -37,6 +58,7 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
     }
 
     sb.append("<table>")
+    sb.append(s"<tr><th colspan=3> $title </th></tr>\n")
     sb.append("<tr><th> </th><th> owner </th><th> member </th> <th> network </th></tr>\n")
     sb.append("<tr><th> count </th>")
     sharingCountByVisibility(Visibility.OWNER)
@@ -53,7 +75,7 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
     sb.toString
   }
 
-  def detailsHtml: String = {
+  def detailsHtml(title: String): String = {
     val sb = new StringBuilder
 
     def categoryByVisibility(visibility: Int): Unit = {
@@ -97,6 +119,9 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
 
     sb.append("<table>")
     sb.append("\n")
+
+    // title
+    sb.append(s"<tr> <th colspan=${2 + labels.length}> $title </th>")
 
     // query labels
     sb.append("<tr> <th colspan=2> </th> <th> </th>")

@@ -29,33 +29,27 @@
 
 <h2>Explaining for User:@userId URI:@uriId</h2>
 
-<h3>Query</h3>
+<p/>
 
-<table>
-<tr><td>
-@explanation.map(_.query.toString).getOrElse("<ul><li>none</li></ul>")
-</td></tr>
-</table>
+@Html(explanation.map(_.queryHtml("Query")).getOrElse("<ul><li>none</li></ul>"))
 
-<h3>Raw Score</h3>
+<p/>
 
-<table>
-<tr><td>
-@explanation.map(_.rawScore.toString).getOrElse("<ul><li>none</li></ul>")
-</td></tr>
-</table>
+@Html(explanation.map(_.scoreHtml("RawScore")).getOrElse(""))
 
-<h3>Boost Values</h3>
+<p/>
 
-@Html(explanation.map(_.boostValuesHtml).getOrElse("<ul><li>none</li></ul>"))
+@Html(explanation.map(_.boostValuesHtml("BoostValues")).getOrElse(""))
 
-<h3>Sharing and Hits</h3>
+<p/>
 
-@Html(explanation.map(_.sharingHtml).getOrElse("<ul><li>none</li></ul>"))
+@Html(explanation.map(_.sharingHtml("Sharing and Hits")).getOrElse(""))
 
-<h3>Score Details</h3>
+<p/>
 
-@Html(explanation.map(_.detailsHtml).getOrElse("<ul><li>none</li></ul>"))
+@Html(explanation.map(_.detailsHtml("Score Details")).getOrElse(""))
+
+<p/>
 
 </body>
 </html>
