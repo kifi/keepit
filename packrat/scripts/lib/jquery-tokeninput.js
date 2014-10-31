@@ -118,9 +118,6 @@
     get: function () {
       return this.data('tokenInput').getTokens();
     },
-    getQuery: function () {
-      return this.data('tokenInput').getCurrentQuery();
-    },
     getItems: function () {
       return this.data('tokenInput').getItems();
     },
@@ -171,9 +168,7 @@
         if (settings.disabled) {
           return false;
         }
-        if (!tokens.length || this.value) {
-          handleQueryChange();
-        }
+        search();
         $tokenList.addClass(classes.listFocused);
       })
       .blur(function () {
@@ -190,7 +185,16 @@
         }
         $tokenList.removeClass(classes.listFocused);
       })
-      .on('input', handleQueryChange)
+      .on('input', function (event) {
+        search();
+        resizeInput();
+        if (selectedDropdownItem && settings.allowFreeTagging) {
+          selectDropdownItem(null);
+        }
+        if (selectedToken) {
+          deselectToken();
+        }
+      })
       .keydown(function (event) {
         var $prevToken;
         var $nextToken;
@@ -213,17 +217,13 @@
             var left = event.keyCode === KEY.LEFT;
             var selStart = this.selectionStart;
             if (selStart === (left ? 0 : this.value.length) && selStart === this.selectionEnd) {
-              $prevToken = $inputToken.prev();
-              $nextToken = $inputToken.next();
-
-              if ($prevToken.is(selectedToken) || $nextToken.is(selectedToken)) {
-                deselectToken($(selectedToken), left ? POSITION.BEFORE : POSITION.AFTER);
+              var $destToken = (selectedToken ? $(selectedToken) : $inputToken)[left ? 'prev' : 'next']();
+              if ($destToken.is($inputToken)) {
+                deselectToken();
+                search();
                 return false;
-              } else if (left && $prevToken.length) {
-                selectToken($prevToken);
-                return false;
-              } else if (!left && $nextToken.length) {
-                selectToken($nextToken);
+              } else if ($destToken.length) {
+                selectToken($destToken);
                 return false;
               }
             }
@@ -267,7 +267,11 @@
                 addFreeTags();
               } else {
                 this.value = '';
-                handleQueryChange();
+                search();
+                resizeInput();
+                if (selectedToken) {
+                  deselectToken();
+                }
               }
               return false;
             }
@@ -293,12 +297,18 @@
       .click(function (event) {
         var $li = $(event.target).closest('li');
         if ($li.data('tokenInput')) {
-          toggleSelectToken($li);
+          if (selectedToken === $li[0]) {
+            deselectToken();
+            search();
+          } else {
+            selectToken($li);
+          }
         } else {
           if (selectedToken) {
-            deselectToken($(selectedToken), POSITION.END);
+            deselectToken();
+            search();
           }
-          $tokenInput.focus();
+          focusAsync();
         }
       })
       .insertBefore($hiddenInput);
@@ -411,7 +421,6 @@
         $tokenInput.attr('placeholder', settings.placeholder);
         resizeInput(true);  // grow the input to show as much of the placeholder as possible
       }
-      focusAsync($tokenInput);
     };
 
     this.add = function (item) {
@@ -442,8 +451,6 @@
     this.getTokens = function () {
       return tokens.slice();
     };
-
-    this.getCurrentQuery = getCurrentQuery;
 
     this.getItems = function () {
       return $dropdown.find('.' + classes.dropdownItemToken).map(function (_, htmlItem) {
@@ -476,9 +483,8 @@
       settings.disabled = typeof disable === 'boolean' ? disable : !settings.disabled;
       $tokenInput.attr('disabled', settings.disabled);
       $tokenList.toggleClass(classes.listDisabled, settings.disabled);
-      // if there is any token selected we deselect it
       if (selectedToken) {
-        deselectToken($(selectedToken), POSITION.END);
+        deselectToken();
       }
       $hiddenInput.attr('disabled', settings.disabled);
     }
@@ -491,13 +497,18 @@
     }
 
     function addFreeTags() {
-      $tokenInput.val().split(settings.tokenDelimiter).map($.trim).filter(function (s) { return s; }).forEach(function (val) {
-        var item = {};
-        item[settings.tokenValue] = val;
-        addToken(item, true);
-      });
-      $tokenInput.val('');
-      handleQueryChange();
+      var vals = $tokenInput.val().split(settings.tokenDelimiter).map($.trim).filter(function (s) { return s; });
+      if (vals.length) {
+        vals.forEach(function (val) {
+          var item = {};
+          item[settings.tokenValue] = val;
+          addToken(item, true);
+        });
+      } else {
+        $tokenInput.val('');
+        search();
+        resizeInput();
+      }
     }
 
     function resizeInput(force) {
@@ -525,6 +536,7 @@
       $('<span>×</span>')
         .addClass(classes.tokenX)
         .appendTo($token)
+        .mousedown(onMouseDownTokenX)
         .click(onClickTokenX);
 
       return $token;
@@ -554,8 +566,6 @@
 
         if (foundToken) {
           selectToken($(foundToken));
-          $inputToken.insertAfter(foundToken);
-          focusAsync($tokenInput);
           return;
         }
       }
@@ -576,48 +586,31 @@
     // Select a token in the token list
     function selectToken($token) {
       if (!settings.disabled) {
+        deselectToken();
         $token.addClass(classes.tokenSelected);
         selectedToken = $token[0];
 
-        // Hide input box
         $tokenInput.val('');
-
-        // Hide dropdown if it is visible (eg if we clicked to select token)
         hideDropdown();
       }
     }
 
-    // Deselect a token in the token list
-    function deselectToken($token, position) {
-      $token.removeClass(classes.tokenSelected);
+    // Deselect the selected token in the token list
+    function deselectToken() {
+      $(selectedToken).removeClass(classes.tokenSelected);
       selectedToken = null;
-
-      if (position === POSITION.BEFORE) {
-        $inputToken.insertBefore($token);
-        selectedTokenIndex--;
-      } else if (position === POSITION.AFTER) {
-        $inputToken.insertAfter($token);
-        selectedTokenIndex++;
-      } else {
-        $inputToken.appendTo($tokenList);
-        selectedTokenIndex = tokens.length;
-      }
-
-      focusAsync($tokenInput);
     }
 
-    // Toggle selection of a token in the token list
-    function toggleSelectToken($token) {
-      if (selectedToken === $token[0]) {
-        deselectToken($token, POSITION.END);
-      } else {
-        selectToken($token);
+    function onMouseDownTokenX() {
+      if (!settings.disabled && document.activeElement === $tokenInput[0]) {
+        $tokenInput.blur();
       }
     }
 
-    function onClickTokenX(event) {
+    function onClickTokenX() {
       if (!settings.disabled) {
         deleteToken(this.parentNode, true);
+        focusAsync();
         return false;
       }
     }
@@ -649,7 +642,7 @@
       updateHiddenInput();
 
       $tokenInput.val('').show();
-      focusAsync($tokenInput);
+      focusAsync();
 
       if (notify !== false && $.isFunction(settings.onDelete)) {
         settings.onDelete.call($hiddenInput, item);
@@ -657,33 +650,39 @@
     }
 
     function updateHiddenInput() {
-      $hiddenInput.val(tokens.map(function (o) { return o[settings.tokenValue] }).join(settings.tokenDelimiter));
+      $hiddenInput.val(tokens.map(valueOfToken).join(settings.tokenDelimiter));
     }
 
     function hideDropdown() {
-      renderDropdown(null, []);
+      renderDropdown(null, Date.now(), []);
+      $dropdown.data('issuedQuery', null);
     }
 
-    function renderDropdown(query, results) {
+    function renderDropdown(query, queryTime, results) {
+      var data = $dropdown.data();
       var now = Date.now();
-      if ($dropdown.data('populating') > now - 1000) {
-        $dropdown.data('queued', [query, results]);
-        return;
+      if (data.populating > now - 1000) {
+        if (!data.queued || queryTime >= data.queued[1]) {
+          data.queued = [query, queryTime, results];
+        }
+      } else if (queryTime >= (data.answerQueryTime || 0)) {
+        $dropdown.data({populating: now, answeredQuery: query, answerQueryTime: queryTime, mouseMoved: false});
+        $dropdown.add($tokenList).removeClass(classes.searching);
+
+        var els = results.map(createDropdownItemEl);
+        selectedDropdownItem = query && $(els[0]).filter('.' + classes.dropdownItemToken)[0] || null;
+        $(selectedDropdownItem).addClass(classes.dropdownItemSelected);
+
+        settings.showResults($dropdown, els, donePopulating.bind(null, queryTime));
       }
-      $dropdown.data({populating: now, queued: null, q: query, mouseMoved: false});
-      $dropdown.add($tokenList).removeClass(classes.searching);
-
-      var els = results.map(createDropdownItemEl);
-      selectedDropdownItem = query && $(els[0]).filter('.' + classes.dropdownItemToken)[0] || null;
-      $(selectedDropdownItem).addClass(classes.dropdownItemSelected);
-
-      settings.showResults($dropdown, els, donePopulating);
     }
 
-    function donePopulating() {
-      $dropdown.data('populating', 0);
-      var queued = $dropdown.data('queued');
+    function donePopulating(queryTime) {
+      var data = $dropdown.data();
+      data.populating = 0;
+      var queued = data.queued;
       if (queued) {
+        delete data.queued;
         renderDropdown.apply(null, queued);
       }
     }
@@ -700,22 +699,13 @@
       $(selectedDropdownItem = item).not('.' + classes.dropdownItemWaiting).addClass(classes.dropdownItemSelected);
     }
 
-    // Do a search and show the "searching" dropdown
-    function handleQueryChange() {
-      if (selectedToken) {
-        deselectToken($(selectedToken), POSITION.AFTER);
-      }
-
-      resizeInput();
-
-      var query = getCurrentQuery();
-      $dropdown.add($tokenList).addClass(classes.searching);
-      findItems(tokens.length, query, receiveResults.bind(null, query));
-    }
-
-    function receiveResults(query, results) {
-      if ($tokenInput.val().trim() === query && $dropdown.data('q') !== query) {
-        renderDropdown(query, results);
+    function search() {
+      var query = $tokenInput.val().trim();
+      var data = $dropdown.data()
+      if (data.issuedQuery !== query) {
+        data.issuedQuery = query;
+        $dropdown.add($tokenList).addClass(classes.searching);
+        findItems(tokens.map(valueOfToken), query, renderDropdown.bind(null, query, Date.now()));
       }
     }
 
@@ -740,12 +730,18 @@
       });
     }
 
-    function focusAsync($el) {
-      setTimeout($.fn.focus.bind($el), 0);
+    function valueOfToken(tok) {
+      return tok[settings.tokenValue];
     }
 
-    function getCurrentQuery() {
-      return $tokenInput.val().trim();
+    function focusAsync() {
+      setTimeout(focus, 0);
+    }
+
+    function focus() {
+      if (document.activeElement !== $tokenInput[0]) {
+        $tokenInput.focus();
+      }
     }
   };
 
