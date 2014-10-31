@@ -175,7 +175,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   }
 
   def close(): Unit = {
-    indexWriter.close()
+    indexWriterLock.synchronized { indexWriter.close() }
   }
 
   def getIndexerFor(id: Long): Indexer[T, S, I] = this
