@@ -40,7 +40,7 @@ class ScoreDetailCollector(targetId: Long, clickBoostsProvider: Option[() => Res
   def collectDetail(primaryId: Long, secondaryId: Long, visibility: Int, scoreArray: Array[Float]): Unit = {
     require(primaryId == targetId, "id mismatch")
 
-    _details(Visibility.name(visibility)) += ScoreDetail(primaryId, secondaryId, visibility, scoreArray)
+    _details(Visibility.name(visibility)) += ScoreDetail(primaryId, secondaryId, visibility, scoreArray.clone)
   }
 
   def rawScore(): Float = _rawScore

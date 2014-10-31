@@ -178,6 +178,8 @@ class SearchFactory @Inject() (
       case Some(engBuilder) =>
         val parseDoneAt = System.currentTimeMillis()
 
+        val librarySearcher = libraryIndexer.getSearcher
+
         // this is a non-user, library restricted search, add a library filter query
         addLibraryFilter(engBuilder, filter.libraryContext.get)
 
@@ -195,6 +197,7 @@ class SearchFactory @Inject() (
             engBuilder,
             articleSearcher,
             keepSearcher,
+            librarySearcher,
             friendIdsFuture,
             libraryIdsFuture,
             monitoredAwait,

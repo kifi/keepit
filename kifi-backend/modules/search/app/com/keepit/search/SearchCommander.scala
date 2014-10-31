@@ -81,7 +81,8 @@ trait SearchCommander {
     uriId: Id[NormalizedURI],
     lang: Option[String],
     experiments: Set[ExperimentType],
-    query: String): Future[Option[Explanation]]
+    query: String,
+    debug: Option[String]): Future[Option[Explanation]]
 
   def warmUp(userId: Id[User]): Unit
 
@@ -395,7 +396,7 @@ class SearchCommanderImpl @Inject() (
 
   def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = shards.find(uriId)
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[Explanation]] = {
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[Explanation]] = {
     val langs = lang match {
       case Some(str) => str.split(",").toSeq.map(Lang(_))
       case None => Seq(DefaultAnalyzer.defaultLang)
@@ -417,7 +418,10 @@ class SearchCommanderImpl @Inject() (
           } else {
             searchFactory.getKifiSearch(Set(shard), userId, query, firstLang, secondLang, 0, SearchFilter.default(), config).headOption
           }
-          searchOpt.map(_.explain(uriId))
+          searchOpt.map { search =>
+            debug.map(search.debug(_))
+            search.explain(uriId)
+          }
         }
     }
   }
