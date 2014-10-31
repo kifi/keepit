@@ -4,7 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.{ LibraryAddRequest, LibraryCommander, UserCommander }
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.controller.NonUserRequest
+import com.keepit.common.controller.{ FakeUserActionsHelper, UserRequest, NonUserRequest }
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
@@ -21,6 +21,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{ contentType, OK, status }
+import com.keepit.common.db.Id
 
 import play.api.test.Helpers._
 import play.api.test._
@@ -86,6 +87,9 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
         libraryCommander.modifyLibrary(library.id.get, library.ownerId, slug = Some("most-awesome-lib"))
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/awesome-lib"))) === MovedPermanentlyRoute("/abe.z1234/most-awesome-lib")
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/most-awesome-lib"))) must beAnInstanceOf[Angular]
+
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/invite"))) === RedirectToLogin("/invite")
+        router.route(UserRequest(FakeRequest.apply("GET", "/invite"), Id[User](1), None, inject[FakeUserActionsHelper])) must beAnInstanceOf[Angular]
 
         1 === 1
       }

@@ -74,6 +74,7 @@ angular.module('kifi')
     $scope.clearLibraryName = function () {
       $scope.search.showName = false;
       $scope.stayInLibraryPath = '';
+      $scope.library = {};
       if ($location.path() === '/find') {
         $location.search('l', '');
       }
@@ -81,12 +82,10 @@ angular.module('kifi')
 
     $scope.search.text = $routeParams.q || '';
     $scope.changeSearchInput = _.debounce(function () {
-      if ($scope.search.text === '') {
-        if ($scope.stayInLibraryPath !== '') {
-          $timeout(function() {
-            $location.url($scope.stayInLibraryPath);
-          }, 0);
-        }
+      if ($scope.search.text === '' && $scope.stayInLibraryPath !== '') {
+        $timeout(function() {
+          $location.url($scope.stayInLibraryPath);
+        }, 0);
         $scope.clearInput();
       } else {
         $timeout(function() {

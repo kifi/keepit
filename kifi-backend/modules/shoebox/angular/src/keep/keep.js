@@ -956,7 +956,6 @@ angular.module('kifi')
                 scope.keep.makeUnkept();
               } else {
                 _.remove(scope.keep.keeps, { libraryId: scope.librarySelection.library.id });
-                scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
               }
 
               libraryService.addToLibraryCount(scope.librarySelection.library.id, -1);
@@ -1019,8 +1018,10 @@ angular.module('kifi')
           }
         });
 
-        scope.$watch('keep.keeps.length', function () {
-          scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
+        scope.$watchCollection(function () {
+          return _.pluck(scope.keep.keeps, 'libraryId');
+        }, function (libraryIds) {
+          scope.keptToLibraries = libraryIds;
         });
 
 

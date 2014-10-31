@@ -182,7 +182,7 @@ class LibraryCommander @Inject() (
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId).isDefined) {
         val owner = basicUserRepo.load(library.ownerId)
         val keepCount = keepRepo.getCountByLibrary(library.id.get)
-        val followerCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
+        val followerCount = libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).apply(LibraryAccess.READ_ONLY)
         Right(library, owner, keepCount, followerCount)
       } else {
         Left(403, "library_access_denied")
@@ -196,20 +196,21 @@ class LibraryCommander @Inject() (
       library.id.get -> keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, keeps)
     }.toMap
 
-    val followerIdsByLibraryId = libraries.map { library =>
-      val (collaborators, followers, _) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
-      library.id.get -> (collaborators ++ followers).map(_.userId)
+    val followerInfosByLibraryId = libraries.map { library =>
+      val (collaborators, followers, _, counts) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
+      library.id.get -> ((collaborators ++ followers).map(_.userId), counts)
     }.toMap
 
     val usersById = {
-      val allUsersShown = libraries.flatMap { library => followerIdsByLibraryId(library.id.get) :+ library.ownerId }.toSet
+      val allUsersShown = libraries.flatMap { library => followerInfosByLibraryId(library.id.get)._1 :+ library.ownerId }.toSet
       db.readOnlyReplica { implicit s => basicUserRepo.loadAll(allUsersShown) }
     }
 
     val countsByLibraryId = db.readOnlyReplica { implicit s =>
       libraries.map { library =>
-        val collaboratorCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
-        val followerCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
+        val counts = followerInfosByLibraryId(library.id.get)._2
+        val collaboratorCount = counts(LibraryAccess.READ_WRITE)
+        val followerCount = counts(LibraryAccess.READ_INSERT) + counts(LibraryAccess.READ_ONLY)
         val keepCount = keepRepo.getCountByLibrary(library.id.get)
         library.id.get -> (collaboratorCount, followerCount, keepCount)
       }
@@ -219,7 +220,7 @@ class LibraryCommander @Inject() (
       futureKeepInfosByLibraryId(lib.id.get).map { keepInfos =>
         val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(lib.id.get)
         val owner = usersById(lib.ownerId)
-        val followers = followerIdsByLibraryId(lib.id.get).map(usersById(_))
+        val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_))
         FullLibraryInfo(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -245,22 +246,25 @@ class LibraryCommander @Inject() (
     createFullLibraryInfos(viewerUserIdOpt, 10, 10, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
   }
 
-  def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]) = {
+  def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], Map[LibraryAccess, Int]) = {
     val collaboratorsAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_INSERT, LibraryAccess.READ_WRITE)
     val followersAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_ONLY)
-    val membersAccess = collaboratorsAccess ++ followersAccess
     val relevantInviteStates = Set(LibraryInviteStates.ACTIVE)
 
     if (limit > 0) db.readOnlyMaster { implicit session =>
       // Get Collaborators
       val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, offset, limit, collaboratorsAccess)
+      val collaboratorsShown = collaborators.length
+
+      val memberCount = libraryMembershipRepo.countWithLibraryIdByAccess(libraryId)
+      val numCollaborators = memberCount(LibraryAccess.READ_INSERT) + memberCount(LibraryAccess.READ_WRITE)
+      val numMembers = numCollaborators + memberCount(LibraryAccess.READ_ONLY)
 
       // Get Followers
-      val collaboratorsShown = collaborators.length
       val followersLimit = limit - collaboratorsShown
       val followers = if (followersLimit == 0) Seq.empty[LibraryMembership] else {
         val followersOffset = if (collaboratorsShown > 0) 0 else {
-          val collaboratorsTotal = libraryMembershipRepo.countWithLibraryIdAndAccess(libraryId, collaboratorsAccess)
+          val collaboratorsTotal = numCollaborators
           offset - collaboratorsTotal
         }
         libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, followersOffset, followersLimit, followersAccess)
@@ -271,14 +275,14 @@ class LibraryCommander @Inject() (
       val inviteesLimit = limit - membersShown
       val inviteesWithInvites = if (inviteesLimit == 0 || !fillInWithInvites) Seq.empty[(Either[Id[User], EmailAddress], Set[LibraryInvite])] else {
         val inviteesOffset = if (membersShown > 0) 0 else {
-          val membersTotal = libraryMembershipRepo.countWithLibraryIdAndAccess(libraryId, membersAccess)
+          val membersTotal = numMembers
           offset - membersTotal
         }
         libraryInviteRepo.pageInviteesByLibraryId(libraryId, inviteesOffset, inviteesLimit, relevantInviteStates)
       }
-      (collaborators, followers, inviteesWithInvites)
+      (collaborators, followers, inviteesWithInvites, memberCount)
     }
-    else (Seq.empty, Seq.empty, Seq.empty)
+    else (Seq.empty, Seq.empty, Seq.empty, Map.empty)
   }
 
   def buildMaybeLibraryMembers(collaborators: Seq[LibraryMembership], followers: Seq[LibraryMembership], inviteesWithInvites: Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]): Seq[MaybeLibraryMember] = {
