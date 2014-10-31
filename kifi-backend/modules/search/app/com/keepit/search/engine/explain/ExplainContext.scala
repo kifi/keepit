@@ -11,22 +11,19 @@ class ExplainContext(
     matchWeight: Array[Float],
     collector: ScoreDetailCollector) extends ScoreContext(scoreExpr, scoreArraySize, matchWeight, collector) {
 
-  private[this] val scoreArray = new Array[Float](scoreArraySize)
-
   override def join(reader: DataBufferReader): Unit = {
     if (id == targetId) {
       val theVisibility = reader.recordType
       val id2 = if ((theVisibility & Visibility.HAS_SECONDARY_ID) != 0) reader.nextLong() else -1L
 
-      Arrays.fill(scoreArray, 0.0f)
-
+      val scoreArray = new Array[Float](scoreArraySize)
       while (reader.hasMore) {
         val bits = reader.nextTaggedFloatBits()
         val idx = DataBuffer.getTaggedFloatTag(bits)
         val scr = DataBuffer.getTaggedFloatValue(bits)
         scoreArray(idx) = scr
       }
-      collector.collectDetail(id, id2, theVisibility, scoreArray.clone())
+      collector.collectDetail(id, id2, theVisibility, scoreArray)
 
       reader.rewind()
       reader.nextLong() // discard the Id
