@@ -24,6 +24,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
+  def getAllPublishedLibraries()(implicit session: RSession): Seq[Library]
   def pagePublished(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[Library]
   def countPublished(implicit session: RSession): Int
 }
@@ -144,6 +145,10 @@ class LibraryRepoImpl @Inject() (
     idCache.bulkGetOrElse(libraryIds.map(LibraryIdKey(_))) { missingKeys =>
       getLibrariesCompiled(missingKeys.map(_.id)).list.map(library => LibraryIdKey(library.id.get) -> library).toMap
     }.map { case (libraryKey, library) => libraryKey.id -> library }
+  }
+
+  def getAllPublishedLibraries()(implicit session: RSession): Seq[Library] = {
+    (for (r <- rows if r.visibility === (LibraryVisibility("published"): LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).list
   }
 
   private def getLibrariesCompiled(libraryIds: Set[Id[Library]]) = Compiled {
