@@ -3,6 +3,7 @@ package com.keepit.dev
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.controller.ProdShoeboxUserActionsModule
 import com.keepit.common.mail._
+import com.keepit.common.seo.DevSiteMapGeneratorModule
 import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.graph.ProdGraphServiceClientModule
@@ -29,6 +30,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   userActionsModule = ProdShoeboxUserActionsModule(),
   mailModule = DevMailModule(),
   reaperModule = DevReaperModule(),
+  siteMapModule = DevSiteMapGeneratorModule(),
   storeModule = ShoeboxDevStoreModule(),
   sqsModule = DevSimpleQueueModule(),
   normalizationQueueModule = DevNormalizationUpdateJobQueueModule(),
