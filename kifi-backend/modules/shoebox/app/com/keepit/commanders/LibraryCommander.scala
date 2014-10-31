@@ -397,7 +397,7 @@ class LibraryCommander @Inject() (
                   lib
                 case Some(lib) =>
                   val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
-                  libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId) match {
+                  libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId, None) match {
                     case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
                     case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
                   }
@@ -747,7 +747,7 @@ class LibraryCommander @Inject() (
         Left(LibraryFail("cant_join_nonpublished_library"))
       else {
         val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
             libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true))
             notifyOwnerOfNewFollower(userId, lib)
