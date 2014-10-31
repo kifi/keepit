@@ -21,7 +21,7 @@ import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.common.Collection.dedupBy
+import com.keepit.common.CollectionHelpers.dedupBy
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future

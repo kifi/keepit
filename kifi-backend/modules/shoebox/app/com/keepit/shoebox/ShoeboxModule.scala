@@ -1,6 +1,7 @@
 package com.keepit.shoebox
 
 import com.keepit.common.controller.UserActionsModule
+import com.keepit.common.seo.SiteMapGeneratorModule
 import com.keepit.reports._
 import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.social.SecureSocialModule
@@ -39,6 +40,7 @@ abstract class ShoeboxModule(
     val userActionsModule: UserActionsModule,
     val mailModule: MailModule,
     val reaperModule: ReaperModule,
+    val siteMapModule: SiteMapGeneratorModule,
     val storeModule: ShoeboxDevStoreModule,
     val sqsModule: SimpleQueueModule,
     val normalizationQueueModule: NormalizationUpdateJobQueueModule,

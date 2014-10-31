@@ -74,23 +74,30 @@ angular.module('kifi')
     $scope.clearLibraryName = function () {
       $scope.search.showName = false;
       $scope.stayInLibraryPath = '';
+      $scope.library = {};
+      if ($location.path() === '/find') {
+        $location.search('l', '');
+      }
     };
 
     $scope.search.text = $routeParams.q || '';
     $scope.changeSearchInput = _.debounce(function () {
-      if ($scope.search.text === '') {
-        if ($scope.stayInLibraryPath !== '') {
-          $timeout(function() {
-            $location.url($scope.stayInLibraryPath);
-          }, 0);
-        }
+      if ($scope.search.text === '' && $scope.stayInLibraryPath !== '') {
+        $timeout(function() {
+          $location.url($scope.stayInLibraryPath);
+        }, 0);
         $scope.clearInput();
       } else {
         $timeout(function() {
+          var libId = $scope.library.id;
           if ($location.path() !== '/find') {
-            $location.url('/find?q=' + $scope.search.text + '&f=' + 'm');
+            if (libId) {
+              $location.url('/find?q=' + $scope.search.text + '&f=a' + '&l=' + libId);
+            } else {
+              $location.url('/find?q=' + $scope.search.text + '&f=' + 'm');
+            }
           } else {
-            $location.search('q', $scope.search.text); // this keeps any existing URL params
+            $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
           }
         });
       }

@@ -89,7 +89,7 @@ class ScoreContextWithDebug(
   }
   override def computeMatching(minThreshold: Float): Float = {
     val matching = super.computeMatching(minThreshold)
-    if (debugTracedIds.contains(id)) debugLog(s"scorectx-matching id=${id} matching=${matching} weights=(${matchWeight.mkString(",")})")
+    if (debugTracedIds.contains(id)) debugLog(s"scorectx-matching id=${id} matching=${matching} weights=[${matchWeight.mkString(",")}]")
     matching
   }
   override def score(): Float = {
@@ -98,11 +98,11 @@ class ScoreContextWithDebug(
     scr
   }
   override def join(reader: DataBufferReader): Unit = {
-    if (debugTracedIds.contains(id)) debugLog(s"scorectx-join id=${id} offset=${reader.recordOffset} recType=${reader.recordType}")
+    if (debugTracedIds.contains(id)) debugLog(s"scorectx-join id=${id} visibility=[${Visibility.toString(reader.recordType)}] offset=${reader.recordOffset}")
     super.join(reader)
   }
   override def flush(): Unit = {
-    if (debugTracedIds.contains(id)) debugLog(s"scorectx-flush id=$id id2=$secondaryId deg=$degree vis=$visibility scoreMax=(${scoreMax.mkString(",")}) scoreSum=(${scoreSum.mkString(",")}})")
+    if (debugTracedIds.contains(id)) debugLog(s"scorectx-flush id=$id id2=$secondaryId deg=$degree visibility=[${Visibility.toString(visibility)}] scoreMax=(${scoreMax.mkString(",")}) scoreSum=(${scoreSum.mkString(",")})")
     super.flush()
   }
 }

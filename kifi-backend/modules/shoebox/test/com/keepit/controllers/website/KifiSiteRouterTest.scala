@@ -2,9 +2,9 @@ package com.keepit.controllers.website
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders.{ LibraryAddRequest, LibraryCommander, UserCommander }
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.controller.NonUserRequest
+import com.keepit.common.controller.{ FakeUserActionsHelper, UserRequest, NonUserRequest }
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
@@ -13,7 +13,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.controllers.mobile.MobileKeepsController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.model.{ User, UserConnectionRepo, UserEmailAddress, UserEmailAddressRepo, UserEmailAddressStates, UserRepo, UserValueName, UserValueRepo, Username }
+import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
@@ -21,6 +21,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{ contentType, OK, status }
+import com.keepit.common.db.Id
 
 import play.api.test.Helpers._
 import play.api.test._
@@ -51,7 +52,6 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
     "route requests correctly" in {
       withDb(modules: _*) { implicit injector =>
         val userCommander = inject[UserCommander]
-        val userValueRepo = inject[UserValueRepo]
         val (user1, user2) = db.readWrite { implicit session =>
           val u1 = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("abez"), normalizedUsername = "abez"))
           val u2 = userRepo.save(User(firstName = "Léo", lastName = "HasAnAccentInHisName", username = Username("léo1221"), normalizedUsername = "leo"))
@@ -68,14 +68,28 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
 
         // Username routing
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abez"))) must beAnInstanceOf[Angular]
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/leo1221"))) === RedirectRoute("/l%C3%A9o1221")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/leo1221"))) === SeeOtherRoute("/l%C3%A9o1221")
         router.route(NonUserRequest(FakeRequest.apply("GET", "/léo1221"))) must beAnInstanceOf[Angular]
         router.route(NonUserRequest(FakeRequest.apply("GET", "/léo1222"))) === Error404
 
         userCommander.setUsername(user1.id.get, Username("abe.z1234"))
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/abez"))) === Error404
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abez"))) === MovedPermanentlyRoute("/abe.z1234")
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234"))) must beAnInstanceOf[Angular]
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/abeZ1234/awesome-lib"))) === RedirectRoute("/abe.z1234/awesome-lib")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abeZ1234/awesome-lib"))) === SeeOtherRoute("/abe.z1234/awesome-lib")
+
+        val libraryCommander = inject[LibraryCommander]
+        val Right(library) = {
+          val libraryRequest = LibraryAddRequest("Awesome Lib", LibraryVisibility.PUBLISHED, None, "awesome-lib", None, None)
+          libraryCommander.addLibrary(libraryRequest, user1.id.get)
+        }
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/awesome-lib"))) must beAnInstanceOf[Angular]
+
+        libraryCommander.modifyLibrary(library.id.get, library.ownerId, slug = Some("most-awesome-lib"))
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/awesome-lib"))) === MovedPermanentlyRoute("/abe.z1234/most-awesome-lib")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/most-awesome-lib"))) must beAnInstanceOf[Angular]
+
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/invite"))) === RedirectToLogin("/invite")
+        router.route(UserRequest(FakeRequest.apply("GET", "/invite"), Id[User](1), None, inject[FakeUserActionsHelper])) must beAnInstanceOf[Angular]
 
         1 === 1
       }

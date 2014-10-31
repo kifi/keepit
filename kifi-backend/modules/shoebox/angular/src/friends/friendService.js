@@ -115,6 +115,7 @@ angular.module('kifi')
       ignoreRequest: function (extId) {
         return $http.post(env.xhrBase + '/user/' + extId + '/ignoreRequest', {}).then(function () {
           kifiFriendsService.expireAll();
+          kifiFriendRequestsService.expireAll();
           api.getRequests();
           $analytics.eventTrack('user_clicked_page', {
             'action': 'ignoreRequest',

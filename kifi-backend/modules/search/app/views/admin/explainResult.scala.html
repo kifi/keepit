@@ -5,12 +5,21 @@
 <head>
 <title>Explaining for User:@userId URI:@uriId</title>
 <style>
- table, th, td {
-   border: 1px solid #ddd;
+ table {
+   border: 3px solid #ddd;
    border-collapse: collapse;
  }
- th, td {
-   padding: 5px;
+ th {
+   border: 2px solid #fff;
+   border-collapse: collapse;
+   background-color: #ddd;
+   padding: 7px;
+   text-align: center;
+ }
+ td {
+   border: 2px solid #ddd;
+   border-collapse: collapse;`
+   padding: 7px;
    text-align: right;
  }
 </style>
@@ -22,17 +31,25 @@
 
 <h3>Query</h3>
 
+<table>
+<tr><td>
 @explanation.map(_.query.toString).getOrElse("<ul><li>none</li></ul>")
+</td></tr>
+</table>
 
 <h3>Raw Score</h3>
 
+<table>
+<tr><td>
 @explanation.map(_.rawScore.toString).getOrElse("<ul><li>none</li></ul>")
+</td></tr>
+</table>
 
 <h3>Boost Values</h3>
 
 @Html(explanation.map(_.boostValuesHtml).getOrElse("<ul><li>none</li></ul>"))
 
-<h3>Sharing</h3>
+<h3>Sharing and Hits</h3>
 
 @Html(explanation.map(_.sharingHtml).getOrElse("<ul><li>none</li></ul>"))
 

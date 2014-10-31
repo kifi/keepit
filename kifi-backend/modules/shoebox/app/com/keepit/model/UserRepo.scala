@@ -46,7 +46,7 @@ class UserRepoImpl @Inject() (
   val clock: Clock,
   val externalIdCache: UserExternalIdCache,
   val idCache: UserIdCache,
-  airbreak: AirbrakeNotifier,
+  airbrake: AirbrakeNotifier,
   basicUserCache: BasicUserUserIdCache,
   heimdal: HeimdalServiceClient,
   expRepoProvider: Provider[UserExperimentRepoImpl])
@@ -84,7 +84,7 @@ class UserRepoImpl @Inject() (
     user.id foreach { id =>
       val currentUser = get(id)
       if (currentUser.username != user.username && currentUser.createdAt.isBefore(clock.now.minusHours(1))) {
-        airbreak.notify(s"username changes for user ${user.id.get}. $currentUser -> $user")
+        airbrake.notify(s"username changes for user ${user.id.get}. $currentUser -> $user")
       }
     }
     super.save(toSave)

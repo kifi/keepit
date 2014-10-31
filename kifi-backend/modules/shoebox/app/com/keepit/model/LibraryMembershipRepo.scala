@@ -25,8 +25,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def getOpt(userId: Id[User], libraryId: Id[Library])(implicit session: RSession): Option[LibraryMembership]
   def pageWithLibraryIdAndAccess(libraryId: Id[Library], offset: Int, limit: Int, accessSet: Set[LibraryAccess],
     excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
-  def countWithLibraryIdAndAccess(libraryId: Id[Library], accessSet: Set[LibraryAccess],
-    excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
+  def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): Map[LibraryAccess, Int]
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
   def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
   def updateLastEmailSent(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
@@ -108,19 +107,20 @@ class LibraryMembershipRepoImpl @Inject() (
     sql"""select lm.library_id, count(*) as cnt from library_membership lm, library l where l.id = lm.library_id and l.state='active' and l.visibility='published' and lm.created_at > $since group by lm.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
-  private def countWithLibraryCompiled(libraryId: Column[Id[Library]], accessSet: Set[LibraryAccess], excludeState: Option[State[LibraryMembership]]) = Compiled {
-    (for (b <- rows if b.libraryId === libraryId && b.access.inSet(accessSet) && b.state =!= excludeState.orNull) yield b).length
-  }
-  def countWithLibraryIdAndAccess(libraryId: Id[Library], accessSet: Set[LibraryAccess], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int = {
-    countWithLibraryCompiled(libraryId, accessSet, excludeState).run
-  }
-
   private def countMembershipsCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[LibraryMembership]]) = Compiled {
     (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).length
   }
 
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int = {
     countMembershipsCompiled(libraryId, excludeState).run
+  }
+
+  def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): Map[LibraryAccess, Int] = {
+    import StaticQuery.interpolation
+    val existingAccessMap = sql"""select access, count(*) from library_membership where library_id=$libraryId and state='active' group by access""".as[(String, Int)].list
+      .map(t => (LibraryAccess(t._1), t._2))
+      .toMap
+    LibraryAccess.getAll.map(access => (access -> existingAccessMap.getOrElse(access, 0))).toMap
   }
 
   def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession) = {

@@ -223,6 +223,12 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
         newTime = new DateTime(3000, 7, 10, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         res = topicRepo.getSmartRecentUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), noOlderThan = oldTime, preferablyNewerThan = newTime, minNum = 2, maxNum = 10).toArray
         res.size === 0 // nothing is new enough
+
+        // dedup test
+        val dupKeep = keeps(1).copy(keptAt = new DateTime(2014, 7, 19, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE), keepId = Id[Keep](19))
+        keepRepo.save(dupKeep)
+        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 3).map { case (keepId, feat) => keepId.id } === List(20, 1) // will contain 19 if no dedup
+
       }
     }
   }

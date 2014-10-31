@@ -73,6 +73,7 @@ case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthe
 class UserCommander @Inject() (
     db: Database,
     userRepo: UserRepo,
+    usernameRepo: UsernameAliasRepo,
     userCredRepo: UserCredRepo,
     emailRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
@@ -244,11 +245,11 @@ class UserCommander @Inject() (
   }
 
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
-    val candidates = createUsernameCandidates(firstName, lastName)
-    val username: Username = db.readOnlyReplica { implicit session =>
-      candidates.find { candidate => userRepo.getByUsername(candidate).isEmpty }
-    } getOrElse (throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!"))
+    val usernameCandidates = createUsernameCandidates(firstName, lastName)
     val newUser = db.readWrite { implicit session =>
+      val username: Username = usernameCandidates.find { candidate => userRepo.getByUsername(candidate).isEmpty && usernameRepo.reclaim(candidate).isSuccess } getOrElse {
+        throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
+      }
       userRepo.save(
         User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state,
           username = username, normalizedUsername = UsernameOps.normalize(username.value)))
@@ -524,20 +525,28 @@ class UserCommander @Inject() (
     heimdalClient.cancelDelightedSurvey(DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName))
   }
 
-  def setUsername(userId: Id[User], username: Username, overrideRestrictions: Boolean = false, readOnly: Boolean = false): Either[String, Username] = {
-    if (overrideRestrictions || UsernameOps.isValid(username.value)) {
+  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, readOnly: Boolean = false, overrideProtection: Boolean = false): Either[String, Username] = {
+    if (overrideValidityCheck || UsernameOps.isValid(username.value)) {
       db.readWrite { implicit session =>
         val existingUser = userRepo.getByUsername(username)
         if (existingUser.isDefined && existingUser.get.id.get != userId) {
           log.warn(s"[dry run] for user $userId another user ${existingUser.get} has an existing username: $username")
           Left("username_exists")
-        } else {
-          if (!readOnly) {
-            userRepo.save(userRepo.get(userId).copy(username = username, normalizedUsername = UsernameOps.normalize(username.value)))
-          } else {
-            log.info(s"[dry run] user $userId set with username $username")
+        } else usernameRepo.getByUsername(username) match {
+          case Some(alias) if (!alias.belongsTo(userId) && (alias.isLocked || (alias.isProtected && !overrideProtection))) =>
+            log.warn(s"[dry run] for user $userId username: $username is locked or protected as an alias by user ${alias.userId}")
+            Left("username_exists")
+          case _ => {
+            if (!readOnly) {
+              val user = userRepo.get(userId)
+              usernameRepo.alias(user.username, userId) // create an alias for the old username
+              usernameRepo.reclaim(username, Some(userId)).get // reclaim any existing alias for the new username
+              userRepo.save(user.copy(username = username, normalizedUsername = UsernameOps.normalize(username.value)))
+            } else {
+              log.info(s"[dry run] user $userId set with username $username")
+            }
+            Right(username)
           }
-          Right(username)
         }
       }
     } else {
@@ -672,6 +681,13 @@ class UserCommander @Inject() (
       }
     }
     counter
+  }
+
+  def getUserByUsernameOrAlias(username: Username): Option[(User, Boolean)] = {
+    db.readOnlyMaster { implicit session =>
+      userRepo.getByUsername(username).map((_, false)) orElse
+        usernameRepo.getByUsername(username).map(alias => (userRepo.get(alias.userId), true))
+    }
   }
 
 }

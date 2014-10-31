@@ -23,18 +23,30 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
   }
 
   def sharingHtml: String = {
-    def sharingCountByVisibility(visibility: Int): Int = {
+    val sb = new StringBuilder
+
+    def sharingCountByVisibility(visibility: Int): Unit = {
       // a record with no score is loaded for network information only
-      details(Visibility.name(visibility)).count { detail => detail.scoreMax.forall(_ == 0f) }
+      val count = details(Visibility.name(visibility)).count { detail => detail.scoreMax.forall(_ == 0f) }
+      sb.append(s"<td> $count </td>")
+    }
+    def hitCountByVisibility(visibility: Int): Unit = {
+      // a record with no score is loaded for network information only
+      val count = details(Visibility.name(visibility)).count { detail => detail.scoreMax.forall(_ == 0f) }
+      sb.append(s"<td> ${details(Visibility.name(Visibility.OWNER)).size - count} </td>")
     }
 
-    val sb = new StringBuilder
     sb.append("<table>")
-    sb.append("<tr><th> owner </th><th> member </th> <th> network </th></tr>\n")
-    sb.append("<tr>")
-    sb.append(s"<td> ${sharingCountByVisibility(Visibility.OWNER)} </td>")
-    sb.append(s"<td> ${sharingCountByVisibility(Visibility.MEMBER)} </td>")
-    sb.append(s"<td> ${sharingCountByVisibility(Visibility.NETWORK)} </td>")
+    sb.append("<tr><th> </th><th> owner </th><th> member </th> <th> network </th></tr>\n")
+    sb.append("<tr><th> count </th>")
+    sharingCountByVisibility(Visibility.OWNER)
+    sharingCountByVisibility(Visibility.MEMBER)
+    sharingCountByVisibility(Visibility.NETWORK)
+    sb.append("</tr>")
+    sb.append("<tr><th> hits </th>")
+    hitCountByVisibility(Visibility.OWNER)
+    hitCountByVisibility(Visibility.MEMBER)
+    hitCountByVisibility(Visibility.NETWORK)
     sb.append("</tr>")
     sb.append("</table>\n")
 
@@ -50,9 +62,9 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
       val detailsWithScores = details(name).filter { detail => detail.scoreMax.exists(_ != 0f) }
       val count = detailsWithScores.size
       if (count > 0) {
+        val nRows = detailsWithScores.map { detail => if (detail.scoreSum.isDefined) 2 else 1 }.sum
         detailsWithScores.headOption.foreach { detail =>
-          sb.append("<tr>")
-          sb.append(s"<th rowspan=$count> $name </th>\n")
+          sb.append(s"<tr> <th rowspan=$nRows> $name </th>")
           listScore(detail)
           sb.append("</tr>\n")
           detailsWithScores.tail.foreach { detail =>
@@ -66,22 +78,30 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
 
     def listScore(detail: ScoreDetail): Unit = {
       if (detail.scoreMax.exists(_ != 0f)) {
+        def listScores(name: String, array: Array[Float]): Unit = {
+          sb.append(s"<td> $name </td>")
+          array.foreach { value =>
+            if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
+            else sb.append(s"<td> $value </td>")
+          }
+        }
         detail.scoreSum match {
           case Some(scoreSum) =>
-            (detail.scoreMax zip scoreSum).foreach { case (max, sum) => sb.append(s"<td> $max : $sum </td>") }
+            listScores("max", detail.scoreMax)
+            sb.append("</tr>\n")
+            sb.append("<tr>\n")
+            listScores("sum", scoreSum)
           case None =>
-            detail.scoreMax.foreach { value =>
-              if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
-              else sb.append(s"<td> $value </td>")
-            }
+            listScores("&nbsp;", detail.scoreMax)
         }
       }
     }
 
-    sb.append(s"""<table class="table table-bordered">\n""")
+    sb.append("""<table class="table table-bordered">""")
+    sb.append("\n")
 
     // query labels
-    sb.append("<tr> <th> </th>")
+    sb.append("<tr> <th> </th> <th> </th>")
     labels.map(StringEscapeUtils.escapeHtml4(_)).foreach { label => sb.append(s"""<th> $label </th>""") }
     sb.append("</tr>\n")
 

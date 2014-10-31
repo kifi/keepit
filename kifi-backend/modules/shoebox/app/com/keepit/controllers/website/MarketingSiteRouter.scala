@@ -37,7 +37,12 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
   def marketingSite(path: String = "index") = {
     val file = if (path.isEmpty) "index" else path
     if (file.contains(".html")) {
-      NotFound(views.html.error.notFound(s"request.path (try to remove the .html)"))
+      val noHtml = file.replace(".html", "")
+      if (maybeCachedIndex(noHtml).nonEmpty) {
+        Redirect(s"https://www.kifi.com/$noHtml")
+      } else {
+        NotFound(views.html.error.notFound(s"$path (try to remove the .html)"))
+      }
     } else {
       maybeCachedIndex(file) map { content =>
         Ok(content).as(HTML)

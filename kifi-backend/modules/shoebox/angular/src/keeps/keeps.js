@@ -285,8 +285,10 @@ angular.module('kifi')
         scrollDisabled: '=',
         scrollNext: '&',
         editMode: '=',
+        editOptions: '&',
         toggleEdit: '=',
-        updateSelectedCount: '&'
+        updateSelectedCount: '&',
+        selectedKeepsFilter: '&'
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
@@ -324,15 +326,28 @@ angular.module('kifi')
           }
         }
 
+        function getSelectedKeeps() {
+          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
+          var filter = scope.selectedKeepsFilter();
+          return _.isFunction(filter) ? filter(selectedKeeps) : selectedKeeps;
+        }
+
         function copyToLibrary () {
           // Copies the keeps that are selected into the library that is selected.
-          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
+          var selectedKeeps = getSelectedKeeps();
           var selectedLibrary = scope.librarySelection.library;
 
-          keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
-            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
-            //       not good.
-            libraryService.fetchLibrarySummaries(true);
+          keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function (data) {
+            if (data.successes.length > 0) {
+              libraryService.fetchLibrarySummaries(true);
+
+              var addedKeeps = data.successes;
+              scope.$emit('keepAdded', libraryService.getSlugById(selectedLibrary.id), addedKeeps, scope.librarySelection.library);
+            }
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
           });
         }
 
@@ -353,6 +368,16 @@ angular.module('kifi')
             libraryService.addToLibraryCount(currentLibraryId, -1 * selectedKeeps.length);
             scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
             scope.selection.unselectAll();
+
+            if (scope.availableKeeps.length < 10) {
+              scope.scrollNext()(scope.availableKeeps.length).then(function () {
+                scope.availableKeeps = _.reject(scope.keeps, function(k) { return k.unkept; });
+              });
+            }
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
           });
         }
 
@@ -366,6 +391,20 @@ angular.module('kifi')
 
         // 'selection' keeps track of which keeps have been selected.
         scope.selection = new selectionService.Selection();
+
+        // set default edit-mode options if it's not set by parent
+        scope.editOptions = _.isObject(scope.editOptions()) ? scope.editOptions : function() {
+          return {
+            // TODO draggable can be default to true when that is fixed
+            draggable: false,
+            actions: {
+              bulkUnkeep: true,
+              copyToLibrary: true,
+              moveToLibrary: true,
+              editTags: true
+            }
+          };
+        };
 
 
         //
@@ -423,53 +462,41 @@ angular.module('kifi')
 
         scope.unkeep = function (keeps) {
           var selectedKeeps = scope.selection.getSelected(keeps);
+          var libraryId = scope.library.id;
 
-          if (scope.librariesEnabled) {
-            var libraryId = scope.library.id;
-
-            keepActionService.unkeepManyFromLibrary(libraryId, selectedKeeps).then(function () {
-              _.forEach(selectedKeeps, function (selectedKeep) {
-                selectedKeep.makeUnkept();
-                _.without(scope.availableKeeps, selectedKeep);
-              });
-
-              var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
-              undoService.add(selectedKeeps.length + keepsDeletedText, function () {
-                keepActionService.keepToLibrary(_.map(selectedKeeps, function(keep) {
-                  var keepData = { url: keep.url };
-                  if (keep.title) { keepData.title = keep.title; }
-                  return keepData;
-                }), libraryId);
-
-                _.forEach(selectedKeeps, function (selectedKeep) {
-                  selectedKeep.makeKept();
-                });
-
-                scope.availableKeeps = selectedKeeps.concat(scope.availableKeeps);
-                scope.selection.selectAll(selectedKeeps);
-                libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
-              });
-
-              libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
-              scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
-              scope.selection.unselectAll();
+          keepActionService.unkeepManyFromLibrary(libraryId, selectedKeeps).then(function () {
+            _.forEach(selectedKeeps, function (selectedKeep) {
+              selectedKeep.makeUnkept();
+              _.without(scope.availableKeeps, selectedKeep);
             });
-          } else {
-            keepActionService.unkeepMany(selectedKeeps).then(function () {
+
+            var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
+            undoService.add(selectedKeeps.length + keepsDeletedText, function () {
+              keepActionService.keepToLibrary(_.map(selectedKeeps, function(keep) {
+                var keepData = { url: keep.url };
+                if (keep.title) { keepData.title = keep.title; }
+                return keepData;
+              }), libraryId);
+
               _.forEach(selectedKeeps, function (selectedKeep) {
-                selectedKeep.makeUnkept();
+                selectedKeep.makeKept();
               });
 
-              undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
-                keepActionService.keepMany(selectedKeeps);
-                _.forEach(selectedKeeps, function (selectedKeep) {
-                  selectedKeep.makeKept();
-                });
-              });
-
-              tagService.addToKeepCount(-1 * selectedKeeps.length);
+              scope.availableKeeps = selectedKeeps.concat(scope.availableKeeps);
+              scope.selection.selectAll(selectedKeeps);
+              libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
             });
-          }
+
+            libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
+            scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
+            scope.selection.unselectAll();
+
+            if (scope.availableKeeps.length < 10) {
+              scope.scrollNext()(scope.availableKeeps.length).then(function () {
+                scope.availableKeeps = _.reject(scope.keeps, function(k) { return k.unkept; });
+              });
+            }
+          });
         };
 
         scope.togglePrivate = function (keeps) {
@@ -512,8 +539,8 @@ angular.module('kifi')
 
                 scope.librarySelection = {};
                 scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
-                scope.excludeLibraries = !scope.library ? [] : [scope.library];
                 scope.clickAction = function (widgetElement) {
+                  // TODO refactor to not use CSS for business logic
                   if (widgetElement.closest('.copy-to-library').length) {
                     copyToLibrary();
                   } else if (widgetElement.closest('.move-to-library').length) {

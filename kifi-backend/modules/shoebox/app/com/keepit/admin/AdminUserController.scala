@@ -837,8 +837,8 @@ class AdminUserController @Inject() (
     Ok(JsString(inactiveEmail.toString))
   }
 
-  def setUsername(userId: Id[User], username: String, overrideRestrictions: Boolean = false) = AdminUserPage { request =>
-    val res = userCommander.setUsername(userId, Username(username), overrideRestrictions)
+  def setUsername(userId: Id[User], username: String, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false) = AdminUserPage { request =>
+    val res = userCommander.setUsername(userId, Username(username), overrideValidityCheck = overrideValidityCheck, overrideProtection = overrideProtection)
 
     Ok(res.toString)
   }

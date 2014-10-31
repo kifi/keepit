@@ -13,12 +13,14 @@ object QueryEngineBuilder {
   class FilterQuery(subQuery: Query) extends FixedScoreQuery(subQuery)
 }
 
-class QueryEngineBuilder(coreQuery: Query) {
+class QueryEngineBuilder(userQuery: Query) {
   import QueryEngineBuilder._
 
   private[this] val _tieBreakerMultiplier = tieBreakerMultiplier
-  private[this] val _core = buildExpr(coreQuery) // (query, expr, size, recencyOnly)
+  private[this] val _expr = buildExpr(userQuery) // (expr, query, size, recencyOnly)
+  private[this] var _filters: List[(Query, Float)] = Nil
   private[this] var _boosters: List[(Query, Float)] = Nil
+  private[this] lazy val _core = buildCore() // (expr, query, size)
   private[this] lazy val _final = buildFinal()
   private[this] var built = false
 
@@ -29,26 +31,38 @@ class QueryEngineBuilder(coreQuery: Query) {
   }
 
   def addFilterQuery(filter: Query): QueryEngineBuilder = {
-    addBoosterQuery(new FilterQuery(filter), 1.0f)
+    if (built) throw new IllegalStateException("cannot modify the engine builder once an engine is built")
+    _filters = (new FilterQuery(filter), 1.0f) :: _filters
+    this
   }
 
   def build(): QueryEngine = {
-    new QueryEngine(_final._1, _final._2, _final._3, _core._3, _core._4)
+    new QueryEngine(_final._1, _final._2, _final._3, _core._3, _expr._4)
   }
 
   def getQueryLabels(): Array[String] = buildLabels()
 
   private[this] def buildFinal(): (ScoreExpr, Query, Int) = {
     built = true
-    val (query, expr, totalSize, noClickBoostNoSharingBoost) = _boosters.foldLeft(_core) {
-      case ((query, expr, size, recencyOnly), (booster, boostStrength)) =>
+    val (expr, query, totalSize) = _boosters.foldLeft(_core) {
+      case ((expr, query, size), (booster, boostStrength)) =>
         val boosterExpr = MaxExpr(size)
-        (new KBoostQuery(query, booster, boostStrength), BoostExpr(expr, boosterExpr, boostStrength), size + 1, recencyOnly)
+        (BoostExpr(expr, boosterExpr, boostStrength), new KBoostQuery(query, booster, boostStrength), size + 1)
     }
     (expr, query, totalSize)
   }
 
-  private[this] def buildExpr(query: Query): (Query, ScoreExpr, Int, Boolean) = {
+  private[this] def buildCore(): (ScoreExpr, Query, Int) = {
+    built = true
+    val (expr, query, totalSize, noClickBoostNoSharingBoost) = _filters.foldLeft(_expr) {
+      case ((expr, query, size, recencyOnly), (booster, boostStrength)) =>
+        val boosterExpr = MaxExpr(size)
+        (BoostExpr(expr, boosterExpr, boostStrength), new KBoostQuery(query, booster, boostStrength), size + 1, recencyOnly)
+    }
+    (expr, query, totalSize)
+  }
+
+  private[this] def buildExpr(query: Query): (ScoreExpr, Query, Int, Boolean) = {
     query match {
       case booleanQuery: KBooleanQuery =>
         val clauses = booleanQuery.clauses
@@ -81,19 +95,19 @@ class QueryEngineBuilder(coreQuery: Query) {
           filter = ExistsExpr(filterOut)
         )
 
-        (coreQuery, expr, exprIndex, false)
+        (expr, userQuery, exprIndex, false)
 
       case textQuery: KTextQuery =>
-        (coreQuery, MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1, false)
+        (MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), userQuery, 1, false)
 
       case filterQuery: KFilterQuery =>
         // this is a filter only query, use FixedScoreQuery and MaxExpr, and disable click boost and sharing boost
         // so that the recency boosting takes over ranking
         // this is a special requirement for "tag:" only query on kifi.com
-        (new KWrapperQuery(new FixedScoreQuery(filterQuery.subQuery)), MaxExpr(0), 1, true)
+        (MaxExpr(0), new KWrapperQuery(new FixedScoreQuery(filterQuery.subQuery)), 1, true)
 
       case q =>
-        (new KWrapperQuery(q), MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1, false)
+        (MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), new KWrapperQuery(q), 1, false)
     }
   }
 
@@ -102,7 +116,7 @@ class QueryEngineBuilder(coreQuery: Query) {
 
     val labels = new ArrayBuffer[String]
 
-    coreQuery match {
+    userQuery match {
       case booleanQuery: KBooleanQuery =>
         booleanQuery.clauses.foreach { clause =>
           val label = {
@@ -126,17 +140,17 @@ class QueryEngineBuilder(coreQuery: Query) {
       case q => labels += q.toString
     }
 
-    _boosters.foreach {
-      case (q, _) =>
-        labels += {
-          q match {
-            case _: KProximityQuery => "proximity boost"
-            case _: HomePageQuery => "home page boost"
-            case f: FilterQuery => s"filter(${f.subQuery.toString})"
-            case _ => s"boost(${q.toString})"
-          }
-        }
+    def toLabel(q: Query): String = {
+      q match {
+        case _: KProximityQuery => "proximity boost"
+        case _: HomePageQuery => "home page boost"
+        case f: FilterQuery => s"filter(${f.subQuery.toString})"
+        case _ => s"boost(${q.toString})"
+      }
     }
+
+    _filters.foreach { case (q, _) => labels += toLabel(q) }
+    _boosters.foreach { case (q, _) => labels += toLabel(q) }
 
     labels.toArray
   }

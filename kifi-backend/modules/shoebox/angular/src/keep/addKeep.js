@@ -97,7 +97,7 @@ angular.module('kifi')
                   keep.makeKept();
                   tagService.addToKeepCount(1);
 
-                  scope.$emit('keepAdded', '', keep);
+                  scope.$emit('keepAdded', '', [keep]);
                   scope.resetAndHide();
                 });
               }
@@ -129,7 +129,7 @@ angular.module('kifi')
                   libraryService.addToLibraryCount(scope.librarySelection.library.id, 1);
                   tagService.addToKeepCount(1);
 
-                  scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), keep);
+                  scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), [keep]);
                   scope.resetAndHide();
                 });
               }
@@ -146,7 +146,8 @@ angular.module('kifi')
           });
           scope.librarySelection = {};
           scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
-          scope.libSelectTopOffset = 110;
+          scope.libSelectDownOffset = 0;
+          scope.libSelectMaxUpOffset = 110;
         }
 
         scope.resetAndHide = function () {

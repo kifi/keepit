@@ -163,7 +163,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
           }
           out.mkString("[", ", ", "]")
         }
-        debugLog(s"databuf id=$id id2=$id2 recType=${reader.recordType} scores=${scores}")
+        debugLog(s"databuf offset=${reader.recordOffset} id=$id id2=$id2 visibility=[${Visibility.toString(reader.recordType)}] scores=${scores}")
       }
     }
   }
