@@ -58,4 +58,6 @@ object LibraryAccess {
       case OWNER.value => OWNER
     }
   }
+
+  def getAll() = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
 }

@@ -38,6 +38,7 @@ class AdminLibraryController @Inject() (
     collectionRepo: CollectionRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
     libraryCommander: LibraryCommander,
     userRepo: UserRepo,
@@ -49,6 +50,8 @@ class AdminLibraryController @Inject() (
     db.readWrite { implicit session =>
       val lib = libraryRepo.get(libraryId)
       if (lib.ownerId != fromUserId) throw new Exception(s"orig user $fromUserId is not matching current library owner $lib")
+      libraryAliasRepo.alias(lib.ownerId, lib.slug, lib.id.get)
+      libraryAliasRepo.reclaim(toUserId, lib.slug) // reclaim existing alias to a former library of toUserId with the same slug
       val newOwnerLib = lib.copy(ownerId = toUserId)
       libraryRepo.save(newOwnerLib)
       val currentOwnership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, fromUserId).getOrElse(throw new Exception(s"no ownership to lib $lib for user $fromUserId"))
