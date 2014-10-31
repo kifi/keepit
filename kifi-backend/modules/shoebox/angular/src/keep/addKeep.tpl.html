@@ -11,7 +11,7 @@
         <!-- TODO(yiping): Use button instead of div. Styles have been cleaned up but we need a way to not trigger the form submission. -->
         <!-- TODO(yiping): DRY this up. It's being used elsewhere too. -->
         <div class="add-keep-to-library-dropdown"
-          kf-keep-to-library-widget library-select-action="onLibrarySelected(selectedLibrary)"
+          kf-keep-to-library-widget widget-action-text="Add keep" library-select-action="onLibrarySelected(selectedLibrary)"
           lib-select-down-offset="0" lib-select-max-up-offset="110" lib-select-left-offset="0">
           <span ng-switch="selectedLibrary.kind" class="keep-to-library-lib-icon-container">
             <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>

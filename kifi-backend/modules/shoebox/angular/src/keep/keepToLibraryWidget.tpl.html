@@ -1,5 +1,7 @@
 <div class="keep-to-library-widget">
   <div ng-hide="showCreate">
+    <header ng-if="widgetActionText" class="keep-to-library-default-header">{{widgetActionText}} to a library</header>
+
     <div class="keep-to-library-search">
       <span class="keep-to-library-search-input-icon"></span>
       <input class="keep-to-library-search-input" ng-model="search.name" placeholder="Search your libraries" ng-keydown="processKeyEvent($event)">
@@ -50,9 +52,9 @@
   </div>
 
   <div ng-show="showCreate">
-    <div class="keep-to-library-create-header"">
+    <header class="keep-to-library-create-header">
       <span class="go-back-left-arrow" ng-click="hideCreatePanel()"></span>Keep to a new library
-    </div>
+    </header>
     <div class="keep-to-library-create-heading">Name Your Library</div>
     <div class="keep-to-library-create-name-input-container">
       <span ng-switch="newLibrary.visibility" class="keep-to-library-lib-icon-container">

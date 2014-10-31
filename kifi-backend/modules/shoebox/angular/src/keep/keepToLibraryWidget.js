@@ -11,6 +11,8 @@ angular.module('kifi')
       restrict: 'A',
       /*
        * Scope properties
+       *  (optional) widgetActionText - Text to display for action into library. E.g., 'Keep' will result
+       *                                'Keep to a library' in the widget header.
        *  (optional) keptToLibraryIds - an array of library ids that are already keeping the keep.
        *
        *  ---------
@@ -30,6 +32,7 @@ angular.module('kifi')
        *  (optional) libSelectLeftOffset - shift the left edge of the widget this much to the left of the element.
        */
       scope: {
+        widgetActionText: '@',
         keptToLibraryIds: '=',
         librarySelectAction: '&',
         libraryClickAction: '&',
