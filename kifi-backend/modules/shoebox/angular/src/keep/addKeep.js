@@ -141,13 +141,8 @@ angular.module('kifi')
 
         scope.librariesEnabled = libraryService.isAllowed();
         if (scope.librariesEnabled) {
-          scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
-            return lib.access !== 'read_only';
-          });
           scope.librarySelection = {};
-          scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
-          scope.libSelectDownOffset = 0;
-          scope.libSelectMaxUpOffset = 110;
+          scope.librarySelection.library = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
         }
 
         scope.resetAndHide = function () {
