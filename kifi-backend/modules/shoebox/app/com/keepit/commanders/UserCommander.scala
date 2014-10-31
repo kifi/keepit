@@ -538,9 +538,9 @@ class UserCommander @Inject() (
             Left("username_exists")
           case _ => {
             if (!readOnly) {
-              usernameRepo.reclaim(username, Some(userId)).get // reclaim any existing alias for the new username
               val user = userRepo.get(userId)
               usernameRepo.alias(user.username, userId) // create an alias for the old username
+              usernameRepo.reclaim(username, Some(userId)).get // reclaim any existing alias for the new username
               userRepo.save(user.copy(username = username, normalizedUsername = UsernameOps.normalize(username.value)))
             } else {
               log.info(s"[dry run] user $userId set with username $username")
@@ -681,6 +681,13 @@ class UserCommander @Inject() (
       }
     }
     counter
+  }
+
+  def getUserByUsernameOrAlias(username: Username): Option[(User, Boolean)] = {
+    db.readOnlyMaster { implicit session =>
+      userRepo.getByUsername(username).map((_, false)) orElse
+        usernameRepo.getByUsername(username).map(alias => (userRepo.get(alias.userId), true))
+    }
   }
 
 }

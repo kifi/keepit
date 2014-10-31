@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.google.inject.{ Provider, Inject, Singleton }
-import com.keepit.commanders.LibraryCommander
+import com.keepit.commanders.{ UserCommander, LibraryCommander }
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
@@ -23,8 +23,9 @@ import java.net.{ URLEncoder, URLDecoder }
 import scala.concurrent.Future
 
 sealed trait Routeable
+private case class MovedPermanentlyRoute(url: String) extends Routeable
 private case class Angular(headerload: Option[String], postload: Seq[MaybeUserRequest[_] => Future[String]] = Seq.empty) extends Routeable
-private case class RedirectRoute(url: String) extends Routeable
+private case class SeeOtherRoute(url: String) extends Routeable
 private case class RedirectToLogin(originalUrl: String) extends Routeable
 private case object Error404 extends Routeable
 
@@ -73,8 +74,10 @@ class KifiSiteRouter @Inject() (
       (request, route(request)) match {
         case (_, Error404) =>
           NotFound(views.html.error.notFound(request.path))
-        case (_, route: RedirectRoute) =>
+        case (r: MaybeUserRequest[T], route: SeeOtherRoute) =>
           Redirect(route.url)
+        case (r: MaybeUserRequest[T], route: MovedPermanentlyRoute) =>
+          MovedPermanently(route.url)
         case (_, route: RedirectToLogin) =>
           val nRes = Redirect("/login")
           // Less than ideal, but we can't currently test this:
@@ -95,25 +98,20 @@ class KifiSiteRouter @Inject() (
   def route(request: MaybeUserRequest[_]): Routeable = {
     val path = Path(request.path)
     redirects.get(path.path).map { targetPath =>
-      RedirectRoute(targetPath)
-    } getOrElse {
-      db.readOnlyReplica { implicit session =>
-        angularRouter.route(request, path) getOrElse Error404
-      }
-    }
+      SeeOtherRoute(targetPath)
+    } orElse angularRouter.route(request, path) getOrElse Error404
   }
 
 }
 
 @Singleton
 class AngularRouter @Inject() (
-    userRepo: UserRepo,
+    userCommander: UserCommander,
     libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier,
-    libraryRepo: LibraryRepo,
     libraryMetadataCache: LibraryMetadataCache) {
 
-  def route(request: MaybeUserRequest[_], path: Path)(implicit session: RSession): Option[Routeable] = {
+  def route(request: MaybeUserRequest[_], path: Path): Option[Routeable] = {
     ngStaticPage(request, path) orElse userOrLibrary(request, path)
   }
 
@@ -140,21 +138,28 @@ class AngularRouter @Inject() (
   //private val dataOnEveryAngularPage = Seq(injectUser _) // todo: Have fun with this!
 
   // combined to re-use User lookup
-  private def userOrLibrary(request: MaybeUserRequest[_], path: Path)(implicit session: RSession): Option[Routeable] = {
+  private def userOrLibrary(request: MaybeUserRequest[_], path: Path): Option[Routeable] = {
     if (path.split.length == 1 || path.split.length == 2) {
-      val userOpt = userRepo.getByUsername(Username(path.primary))
+      val userOpt = userCommander.getUserByUsernameOrAlias(Username(path.primary))
 
-      userOpt.flatMap { user =>
-        if (user.username.value != path.primary) {
-          val redir = "/" + (user.username.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
-          Some(RedirectRoute(redir))
-        } else if (path.split.length == 1) { // user profile page
-          Some(Angular(None)) // great place to postload request data since we have `user` available
-        } else {
-          libraryRepo.getBySlugAndUserId(user.id.get, LibrarySlug(path.secondary.get)) map { lib =>
-            Some(Angular(Some(libMetadata(lib)))) // great place to postload request data since we have `lib` available
-          } getOrElse None
-        }
+      userOpt.flatMap {
+        case (user, isUserAlias) =>
+          if (user.username.value != path.primary) { // username normalization or alias
+            val redir = "/" + (user.username.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
+            if (isUserAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
+          } else if (path.split.length == 1) { // user profile page
+            Some(Angular(None)) // great place to postload request data since we have `user` available
+          } else {
+            libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(path.secondary.get)) map {
+              case (library, isLibraryAlias) =>
+                if (library.slug.value != path.secondary.get) { // slug normalization or alias
+                  val redir = "/" + (path.split.dropRight(1) :+ library.slug.value).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
+                  if (isLibraryAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
+                } else {
+                  Some(Angular(Some(libMetadata(library)))) // great place to postload request data since we have `lib` available
+                }
+            } getOrElse None
+          }
       }
     } else {
       None
