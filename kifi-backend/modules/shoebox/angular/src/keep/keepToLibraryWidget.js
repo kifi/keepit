@@ -14,7 +14,7 @@ angular.module('kifi')
        *  (optional) librarySelectAction - a function that is called when a library has been selected;
        *                                   called with the selected library.
        *  (optional) keptToLibraryIds - an array of library ids that are already keeping the keep.
-       *  (optional) clickAction - a function that can be called once a library is selected;
+       *  (optional) libraryClickAction - a function that can be called once a library is selected;
        *                           called with the element that this widget is on.
        *  (optional) exitAction - a function that is called once the widget exits (includes when the widget exits after an action).
        *
@@ -27,7 +27,7 @@ angular.module('kifi')
       scope: {
         keptToLibraryIds: '=',
         librarySelectAction: '&',
-        clickAction: '&',
+        libraryClickAction: '&',
         exitAction: '&',
         libSelectDownOffset: '=',
         libSelectMaxUpOffset: '=',
@@ -94,6 +94,16 @@ angular.module('kifi')
           }
         }
 
+        function invokeWidgetCallbacks(selectedLibrary) {
+          if (_.isFunction(scope.librarySelectAction)) {
+            scope.librarySelectAction({ selectedLibrary: selectedLibrary });
+          }
+
+          if (_.isFunction(scope.libraryClickAction)) {
+            scope.libraryClickAction({ clickedLibrary: selectedLibrary });
+          }
+        }
+
         function onClick(event) {
           // Clicked outside widget? Exit.
           if (!angular.element(event.target).closest('.keep-to-library-widget').length) {
@@ -106,12 +116,7 @@ angular.module('kifi')
           // highlight on their selection.
           if (angular.element(event.target).closest('.library-select-option').length) {
             removeTimeout = $timeout(removeWidget, 200);
-            if (_.isFunction(scope.librarySelectAction)) {
-              scope.librarySelectAction({ selectedLibrary: widgetLibraries[selectedIndex] });
-            }
-            if (_.isFunction(scope.clickAction)) {
-              scope.clickAction(element);
-            }
+            invokeWidgetCallbacks(widgetLibraries[selectedIndex]);
             return;
           }
         }
@@ -332,12 +337,7 @@ angular.module('kifi')
               // If there are any libraries shown, select confirm the selected library.
               // Otherwise, go to the create panel.
               if (widget.find('.library-select-option').length) {
-                if (_.isFunction(scope.librarySelectAction)) {
-                  scope.librarySelectAction({ selectedLibrary: widgetLibraries[selectedIndex] });
-                }
-                if (_.isFunction(scope.clickAction)) {
-                  scope.clickAction(element);
-                }
+                invokeWidgetCallbacks(widgetLibraries[selectedIndex]);
                 removeWidget();
               } else {
                 scope.showCreatePanel();
@@ -384,12 +384,7 @@ angular.module('kifi')
           libraryService.createLibrary(library).then(function () {
             libraryService.fetchLibrarySummaries(true).then(function () {
               scope.$evalAsync(function () {
-                if (_.isFunction(scope.librarySelectAction)) {
-                  scope.librarySelectAction({ selectedLibrary: _.find(libraryService.librarySummaries, { 'name': library.name }) });
-                }
-                if (_.isFunction(scope.clickAction)) {
-                  scope.clickAction(element);
-                }
+                invokeWidgetCallbacks(_.find(libraryService.librarySummaries, { 'name': library.name }));
                 removeWidget();
               });
             });
