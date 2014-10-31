@@ -57,10 +57,15 @@ angular.module('kifi')
           $document.off('keydown', processKey);
         });
 
+        scope.selectedLibrary = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
+        scope.onLibrarySelected = function (selectedLibrary) {
+          scope.selectedLibrary = selectedLibrary;
+        };
+
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
           if (url && util.validateUrl(url)) {
-            return keepActionService.keepToLibrary([{ url: url }], scope.librarySelection.library.id).then(function (result) {
+            return keepActionService.keepToLibrary([{ url: url }], scope.selectedLibrary.id).then(function (result) {
               if (result.failures && result.failures.length) {
                 scope.resetAndHide();
                 modalService.open({
@@ -76,10 +81,10 @@ angular.module('kifi')
                   keep.makeKept();
 
                   libraryService.fetchLibrarySummaries(true);
-                  libraryService.addToLibraryCount(scope.librarySelection.library.id, 1);
+                  libraryService.addToLibraryCount(scope.selectedLibrary.id, 1);
                   tagService.addToKeepCount(1);
 
-                  scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), keep);
+                  scope.$emit('keepAdded', libraryService.getSlugById(scope.selectedLibrary.id), keep);
                   scope.resetAndHide();
                 });
               }
@@ -88,9 +93,6 @@ angular.module('kifi')
             scope.state.invalidUrl = true;
           }
         };
-
-        scope.librarySelection = {};
-        scope.librarySelection.library = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
 
         scope.resetAndHide = function () {
           reset();

@@ -11,8 +11,8 @@ angular.module('kifi')
       restrict: 'A',
       /*
        * Scope properties:
-       *  librarySelection - an object whose 'library' property will be the selected library.
-       *
+       *  (optional) librarySelectAction - a function that is called when a library has been selected;
+       *                                   called with the selected library.
        *  (optional) keptToLibraryIds - an array of library ids that are already keeping the keep.
        *  (optional) clickAction - a function that can be called once a library is selected;
        *                           called with the element that this widget is on.
@@ -25,8 +25,8 @@ angular.module('kifi')
        *  (optional) libSelectLeftOffset - shift the left edge of the widget this much to the left of the element.
        */
       scope: {
-        librarySelection: '=',
         keptToLibraryIds: '=',
+        librarySelectAction: '&',
         clickAction: '&',
         exitAction: '&',
         libSelectDownOffset: '=',
@@ -106,6 +106,9 @@ angular.module('kifi')
           // highlight on their selection.
           if (angular.element(event.target).closest('.library-select-option').length) {
             removeTimeout = $timeout(removeWidget, 200);
+            if (_.isFunction(scope.librarySelectAction)) {
+              scope.librarySelectAction({ selectedLibrary: widgetLibraries[selectedIndex] });
+            }
             if (_.isFunction(scope.clickAction)) {
               scope.clickAction(element);
             }
@@ -285,7 +288,6 @@ angular.module('kifi')
           } else {
             clearSelection();
             library.selected = true;
-            scope.librarySelection.library = library;
             selectedIndex = _.indexOf(widgetLibraries, library);
           }
         };
@@ -330,7 +332,9 @@ angular.module('kifi')
               // If there are any libraries shown, select confirm the selected library.
               // Otherwise, go to the create panel.
               if (widget.find('.library-select-option').length) {
-                scope.librarySelection.library = widgetLibraries[selectedIndex];
+                if (_.isFunction(scope.librarySelectAction)) {
+                  scope.librarySelectAction({ selectedLibrary: widgetLibraries[selectedIndex] });
+                }
                 if (_.isFunction(scope.clickAction)) {
                   scope.clickAction(element);
                 }
@@ -380,7 +384,9 @@ angular.module('kifi')
           libraryService.createLibrary(library).then(function () {
             libraryService.fetchLibrarySummaries(true).then(function () {
               scope.$evalAsync(function () {
-                scope.librarySelection.library = _.find(widgetLibraries, { 'name': library.name });
+                if (_.isFunction(scope.librarySelectAction)) {
+                  scope.librarySelectAction({ selectedLibrary: _.find(libraryService.librarySummaries, { 'name': library.name }) });
+                }
                 if (_.isFunction(scope.clickAction)) {
                   scope.clickAction(element);
                 }
