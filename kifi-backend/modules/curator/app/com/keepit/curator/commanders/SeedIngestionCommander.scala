@@ -40,21 +40,25 @@ class SeedIngestionCommander @Inject() (
 
   val ingestionLock = new ReactiveLock()
 
-  def ingestAll(): Future[Boolean] = ingestionLock.withLockFuture {
-    val fut = ingestAllKeeps().flatMap { _ =>
-      ingestLibraryMemberships.flatMap { _ =>
-        val userIds = usersToIngestGraphDataFor()
-        FutureHelpers.sequentialExec(userIds)(ingestTopUris)
+  def ingestAll(): Future[Boolean] = {
+    log.info("starting ingestAll outside lock")
+    ingestionLock.withLockFuture {
+      log.info("starting ingestAll inside lock")
+      val fut = ingestAllKeeps().flatMap { _ =>
+        ingestLibraryMemberships.flatMap { _ =>
+          val userIds = usersToIngestGraphDataFor()
+          FutureHelpers.sequentialExec(userIds)(ingestTopUris)
+        }
       }
-    }
-    fut.onComplete {
-      case Failure(ex) => {
-        log.error("Failure occured during ingestion.")
-        airbrake.notify("Failure occured during ingestion.", ex)
+      fut.onComplete {
+        case Failure(ex) => {
+          log.error("Failure occured during ingestion.")
+          airbrake.notify("Failure occured during ingestion.", ex)
+        }
+        case _ =>
       }
-      case _ =>
+      fut.map(_ => true)
     }
-    fut.map(_ => true)
   }
 
   def ingestAllKeeps(): Future[Unit] = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
