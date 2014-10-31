@@ -121,6 +121,8 @@ angular.module('kifi')
           if (!!searchKeep.id) {
             searchKeep.buildKeep(searchKeep);
           }
+          // TODO remove after we get rid of the deprecated code and update new code to use 'tags' instead of 'hashtags'
+          searchKeep.hashtags = searchKeep.tags;
           $scope.resultKeeps.push(searchKeep);
         });
 

@@ -721,7 +721,7 @@ angular.module('kifi')
         };
 
         scope.showTags = function (keep) {
-          return keep.isMyBookmark && (scope.hasTag(keep) || scope.addingTag.enabled);
+          return scope.hasTag(keep) || scope.addingTag.enabled;
         };
 
         scope.showAddTag = function () {
