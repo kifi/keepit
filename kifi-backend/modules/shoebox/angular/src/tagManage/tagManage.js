@@ -6,7 +6,6 @@ angular.module('kifi')
             'routeService', '$http', '$location', 'modalService', '$timeout', '$rootScope',
   function (tagService, $scope, $window, manageTagService, libraryService,
               routeService, $http, $location, modalService, $timeout, $rootScope) {
-    $scope.librariesEnabled = false;
     $scope.libraries = [];
     $scope.selected = {};
 
@@ -70,19 +69,16 @@ angular.module('kifi')
     //
     $scope.$watch(function () {
       return libraryService.isAllowed();
-    }, function (newVal) {
-      $scope.librariesEnabled = newVal;
-      if ($scope.librariesEnabled) {
-        libraryService.fetchLibrarySummaries().then(function () {
-          $scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
-            return lib.access !== 'read_only';
-          });
-          $scope.librarySelection = {};
-          $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
-          $scope.libSelectDownOffset = 100;
-          $scope.libSelectMaxUpOffset = 200;
+    }, function () {
+      libraryService.fetchLibrarySummaries().then(function () {
+        $scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
+          return lib.access !== 'read_only';
         });
-      }
+        $scope.librarySelection = {};
+        $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
+        $scope.libSelectDownOffset = 100;
+        $scope.libSelectMaxUpOffset = 200;
+      });
     });
 
     $scope.$watch(function() {

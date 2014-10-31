@@ -22,7 +22,6 @@ angular.module('kifi')
         //
         // Scope data.
         //
-        scope.librariesEnabled = false;
         scope.mainLib = {};
         scope.secretLib = {};
         scope.userLibsToShow = [];
@@ -90,15 +89,6 @@ angular.module('kifi')
         //
         // Watches and listeners.
         //
-        scope.$watch(function () {
-          return libraryService.isAllowed();
-        }, function (newVal) {
-          scope.librariesEnabled = newVal;
-          if (scope.librariesEnabled) {
-            libraryService.fetchLibrarySummaries().then(updateNavLibs);
-          }
-        });
-
         var deregisterLibrarySummaries = $rootScope.$on('librarySummariesChanged', updateNavLibs);
         scope.$on('$destroy', deregisterLibrarySummaries);
 

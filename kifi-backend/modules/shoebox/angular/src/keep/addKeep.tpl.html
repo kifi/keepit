@@ -7,11 +7,10 @@
       <div class="kf-add-keep-body">
         <div class="kf-add-keep-error" ng-show="state.invalidUrl">Please enter a valid URL</div>
         <input class="kf-add-keep-input" placeholder="http://..." ng-model="state.input" ng-focus="resetFocusState()"></input>
-        <div class="kf-add-keep-private-container" ng-if="!librariesEnabled" tabindex="0"><span class="kf-add-keep-private-checkbox sprite" ng-class="{ 'sprite-checkbox-icon': !state.checkedPrivate, 'sprite-checkbox-icon-active': state.checkedPrivate }" ng-click="togglePrivate()"></span><span class="kf-add-keep-private-label">Private</span></div>
 
         <!-- TODO(yiping): Use button instead of div. Styles have been cleaned up but we need a way to not trigger the form submission. -->
         <!-- TODO(yiping): DRY this up. It's being used elsewhere too. -->
-        <div class="add-keep-to-library-dropdown" ng-if="librariesEnabled" kf-keep-to-library-widget ng-click="showWidget()">
+        <div class="add-keep-to-library-dropdown" kf-keep-to-library-widget ng-click="showWidget()">
           <span ng-switch="librarySelection.library.kind" class="keep-to-library-lib-icon-container">
             <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>
             <span ng-switch-when="system_secret" class="keep-to-library-lib-icon svg-secret-library-icon"></span>
@@ -30,7 +29,6 @@
     </div>
   </div>
   <div class="dialog-buttons">
-    <button class="kf-action-button" ng-if="!librariesEnabled" ng-click="keepUrl()" tabindex="0">Keep it</button>
-    <button class="kf-action-button" ng-if="librariesEnabled" ng-click="keepToLibrary()" tabindex="0">&#10084; Keep it</button>
+    <button class="kf-action-button" ng-click="keepToLibrary()" tabindex="0">&#10084; Keep it</button>
   </div>
 </div>
