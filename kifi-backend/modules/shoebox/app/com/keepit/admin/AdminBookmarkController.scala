@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepsCommander, LibraryCommander, RichWhoKeptMyKeeps, URISummaryCommander }
+import com.keepit.commanders.{ CollectionCommander, KeepsCommander, LibraryCommander, RichWhoKeptMyKeeps, URISummaryCommander }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession._
@@ -9,6 +9,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
 import com.keepit.common.time._
+import com.keepit.heimdal._
 import com.keepit.model.{ KeepStates, _ }
 import com.keepit.scraper.ScrapeScheduler
 import play.api.libs.concurrent.Execution.Implicits._
@@ -32,6 +33,9 @@ class AdminBookmarksController @Inject() (
   uriSummaryCommander: URISummaryCommander,
   libraryCommander: LibraryCommander,
   keepCommander: KeepsCommander,
+  collectionCommander: CollectionCommander,
+  collectionRepo: CollectionRepo,
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock)
     extends AdminUserActions {
 
@@ -280,5 +284,17 @@ class AdminBookmarksController @Inject() (
       }
     }
   }
-}
 
+  def deleteTag(userId: Id[User], tagName: String) = UserAction { request =>
+    db.readOnlyMaster { implicit s =>
+      collectionRepo.getByUserAndName(userId, Hashtag(tagName))
+    } map { coll =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.unknown).build
+      collectionCommander.deleteCollection(coll)
+      NoContent
+    } getOrElse {
+      NotFound(Json.obj("error" -> "not_found"))
+    }
+  }
+
+}
