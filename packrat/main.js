@@ -2604,6 +2604,7 @@ function clearSession() {
     storeLibraries([]);
     unstore('recent_libraries');
     unstore('recent_tags');
+    unstore('recent_tag_times');
     unstore('user_id');
     api.tabs.each(function (tab) {
       api.icon.set(tab, 'icons/url_gray.png');
