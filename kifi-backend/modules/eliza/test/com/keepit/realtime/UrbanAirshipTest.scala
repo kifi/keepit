@@ -58,7 +58,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
       urbanAirshipClient.jsons(0) === Json.parse(
         """
           {
-            "audience":{"device_token":"8c265c51-16a8-4559-8b2e-d8b46f62bf06"},
+            "audience":{"apid":"8c265c51-16a8-4559-8b2e-d8b46f62bf06"},
             "device_types":["android"],
             "notification":{
               "android":{"alert":"bar","extra":{"unreadCount":"3","id":"5fe6e19f-6092-49f1-b446-5d992fda0034"}}
