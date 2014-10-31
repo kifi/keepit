@@ -95,15 +95,23 @@ var initFriendSearch = (function () {
             done();
           }
         }).css('height', measureCloneHeight($dropdown[0], 'clientHeight'));
+      } else {
+        done();
       }
     } else if (els.length === 0) {  // hiding entire list
-      $dropdown.css('height', $dropdown[0].clientHeight).layout();
-      $dropdown.off('transitionend').on('transitionend', function (e) {
-        if (e.target === this && e.originalEvent.propertyName === 'height') {
-          $dropdown.off('transitionend').empty().css('height', '');
-          done();
-        }
-      }).css('height', 0);
+      var height = $dropdown[0].clientHeight;
+      if (height > 0) {
+        $dropdown.css('height', height).layout();
+        $dropdown.off('transitionend').on('transitionend', function (e) {
+          if (e.target === this && e.originalEvent.propertyName === 'height') {
+            $dropdown.off('transitionend').empty().css('height', '');
+            done();
+          }
+        }).css('height', 0);
+      } else {
+        $dropdown.empty();
+        done();
+      }
     } else {  // list is changing
       // fade in overlaid as height adjusts and old fades out
       var heightInitial = $dropdown[0].clientHeight;

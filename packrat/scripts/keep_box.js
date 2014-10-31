@@ -544,7 +544,7 @@ k.keepBox = k.keepBox || (function () {
       allowFreeTagging: true,
       formatToken: formatTagToken,
       formatResult: formatTagResult,
-      showResults: showTagSuggestions,
+      showResults: $.proxy(showTagSuggestions, null, $view),
       onAdd: $.proxy(onAddTag, null, $view, library.id),
       onDelete: $.proxy(onDeleteTag, null, $view, library.id)
     });
@@ -851,10 +851,10 @@ k.keepBox = k.keepBox || (function () {
     });
   }
 
-  function showTagSuggestions($dropdown, els, done) {
+  function showTagSuggestions($view, $dropdown, els, done) {
     $dropdown
       .empty().append(els)
-      .position({my: 'left-6 bottom', at: 'left top', of: $dropdown.prev().find('input'), collision: 'fit none'})
+      .position({my: 'left-6 bottom', at: 'left top', of: $dropdown.prev().find('input'), collision: 'fit none', within: $view})
     done();
   }
 
@@ -867,6 +867,7 @@ k.keepBox = k.keepBox || (function () {
           $tags.tokenInput('replace', tag, {tag: name});
         }
         deferred.resolve();
+        $view.find('.kifi-keep-box-tags-token-for-input>input').triggerHandler('focus');
       } else {
         deferred.reject();
       }
@@ -953,7 +954,13 @@ k.keepBox = k.keepBox || (function () {
 
   function formatTagResult(item) {
     var html = ['<li class="kifi-keep-box-tags-dropdown-item-token">'];
-    pushWithBoldedMatches(html, item.tag, item.matches);
+    if (item.matches) {
+      pushWithBoldedMatches(html, item.tag, item.matches);
+    } else if (item.parts) {
+      pushPartsWithOddsBolded(html, item.parts);
+    } else {
+      html.push(Mustache.escape(item.tag));
+    }
     html.push('</li>');
     return html.join('');
   }
@@ -970,6 +977,16 @@ k.keepBox = k.keepBox || (function () {
       }
     }
     html.push(Mustache.escape(text.substr(i)));
+  }
+
+  function pushPartsWithOddsBolded(html, parts) {
+    for (var i = 0; i < parts.length; i++) {
+      if (i % 2) {
+        html.push('<b>', Mustache.escape(parts[i]), '</b>');
+      } else {
+        html.push(Mustache.escape(parts[i]));
+      }
+    }
   }
 
   function idIs(id) {

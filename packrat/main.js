@@ -688,7 +688,24 @@ api.port.on({
     }
   },
   suggest_tags: function (data, respond) {
-    ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, respond, respond.bind(null, []));
+    var recentTags = loadRecentTags();
+    if (recentTags.length >= data.n && !data.q) {
+      recentTags.length = data.n;
+      respond(recentTags.map(makeTagObj));
+    } else {
+      var respondWith = function (tags) {
+        var nMore = data.n - tags.length;
+        if (nMore > 0) {
+          var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+          var matchingRecentTags = sf.filter(data.q, recentTags.filter(tagNotIn(tags)));
+          tags.push.apply(tags, matchingRecentTags.slice(0, nMore).map(makeTagObj, {sf: sf, q: data.q}));
+        }
+        respond(tags);
+      };
+      ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, respondWith, function () {
+        respondWith([]);
+      });
+    }
   },
   tag: function (data, respond, tab) {
     var d = pageData[tab.nUri];
@@ -701,6 +718,7 @@ api.port.on({
           keep.tags = [resp.tag];
         }
         respond(resp.tag);
+        storeRecentTag(resp.tag);
       }, respond.bind(null, false));
     }
   },
@@ -716,6 +734,7 @@ api.port.on({
         respond(true);
       }, respond.bind(null, false));
     }
+    storeRecentTagRemoved(data.tag);
   },
   keeper_shown: function(data, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;
@@ -2231,6 +2250,80 @@ function storeRecentLib(id) {
   store('recent_libraries', JSON.stringify(ids));
 }
 
+function loadRecentTags() {
+  if (stored('user_id') === me.id) {
+    try {
+      return JSON.parse(stored('recent_tags'));
+    } catch (e) {
+    }
+  }
+  return [];
+}
+
+function loadRecentTagTimes() {
+  if (stored('user_id') === me.id) {
+    try {
+      return JSON.parse(stored('recent_tag_times'));
+    } catch (e) {
+    }
+  }
+  return [];
+}
+
+function storeRecentTag(tag) {
+  var time = Math.floor(Date.now() / 60000);  // minutes
+  var tags = loadRecentTags();
+  var times = loadRecentTagTimes();
+  var i = tags.indexOf(tag);
+  if (i >= 0) {
+    var tagTimes;
+    if (i === 0) {
+      tagTimes = times[0];
+    } else {
+      tags.splice(i, 1);
+      tags.unshift(tag);
+      tagTimes = times.splice(i, 1)[0];
+      times.unshift(tagTimes);
+    }
+    tagTimes.unshift(time);
+    if (tagTimes.length > 3) {
+      tagTimes.length = 3;
+    }
+  } else {
+    tags.unshift(tag);
+    times.unshift([time]);
+  }
+  for (var j = 0; j < times.length; j++) {
+    if (time - times[j][0] > 43200) { // over 30 days ago
+      tags.splice(j, 1);
+      times.splice(j--, 1);
+    }
+  }
+  if (tags.length > 24) {
+    tags.length = 24;
+    times.length = 24;
+  }
+  store('recent_tags', JSON.stringify(tags));
+  store('recent_tag_times', JSON.stringify(times));
+}
+
+function storeRecentTagRemoved(tag) {
+  var tags = loadRecentTags();
+  var i = tags.indexOf(tag);
+  if (i >= 0) {
+    var times = loadRecentTagTimes();
+    var tagTimes = times[i];
+    if (tagTimes && tagTimes.length > 1) {
+      tagTimes.length--;
+    } else {
+      tags.splice(i, 1);
+      times.splice(i, 1);
+      store('recent_tags', JSON.stringify(tags));
+    }
+    store('recent_tag_times', JSON.stringify(times));
+  }
+}
+
 function scheduleAutoEngage(tab, type) {
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
   var secName = type + 'Sec', timerName = type + 'Timer';
@@ -2323,6 +2416,12 @@ function libraryIdIs(id) {
 function libraryIdIsNot(id) {
   return function (o) {return o.libraryId !== id};
 }
+function tagIs(tag) {
+  return function (o) {return o.tag === tag};
+}
+function tagNotIn(tags) {
+  return function (tag) {return !tags.some(tagIs(tag))};
+}
 function getThreadId(n) {
   return n.thread;
 }
@@ -2341,7 +2440,9 @@ function extend(o, o1) {
 function clone(o) {
   return extend({}, o);
 }
-
+function makeTagObj(tag) {
+  return this ? {tag: tag, parts: this.sf.splitOnMatches(this.q, tag)} : {tag: tag};
+}
 function makeObjectsForEmailAddresses(id) {
   return id.indexOf('@') < 0 ? id : {kind: 'email', email: id};
 }
@@ -2494,6 +2595,7 @@ function clearSession() {
     storeDrafts({});
     storeLibraries([]);
     unstore('recent_libraries');
+    unstore('recent_tags');
     unstore('user_id');
     api.tabs.each(function (tab) {
       api.icon.set(tab, 'icons/url_gray.png');
