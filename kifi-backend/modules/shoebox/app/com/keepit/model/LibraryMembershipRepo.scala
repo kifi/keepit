@@ -77,25 +77,43 @@ class LibraryMembershipRepoImpl @Inject() (
     (for (b <- rows if b.libraryId === libraryId && b.access.inSet(accessSet) && b.state =!= excludeState.orNull) yield b).sortBy(r => (r.access, r.createdAt)).drop(offset).take(limit).list
   }
 
-  private def getWithLibraryIdCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[LibraryMembership]]) = Compiled {
-    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt)
+  private val getWithLibraryIdCompiled = Compiled { (libraryId: Column[Id[Library]]) =>
+    (for (row <- rows if row.libraryId === libraryId) yield row).sortBy(_.createdAt)
+  }
+  private val getWithLibraryIdWithExcludeCompiled = Compiled { (libraryId: Column[Id[Library]], excludeState: Column[State[LibraryMembership]]) =>
+    (for (row <- rows if row.libraryId === libraryId && row.state =!= excludeState) yield row).sortBy(_.createdAt)
   }
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership] = {
-    getWithLibraryIdCompiled(libraryId, excludeState).list
+    excludeState match {
+      case None => getWithLibraryIdCompiled(libraryId).list
+      case Some(exclude) => getWithLibraryIdWithExcludeCompiled(libraryId, exclude).list
+    }
   }
 
-  private def getWithUserIdCompiled(userId: Id[User], excludeState: Option[State[LibraryMembership]]) = Compiled {
-    (for (b <- rows if b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt)
+  private val getWithUserIdCompiled = Compiled { (userId: Column[Id[User]]) =>
+    (for (row <- rows if row.userId === userId) yield row).sortBy(_.createdAt)
+  }
+  private val getWithUserIdWithExcludeCompiled = Compiled { (userId: Column[Id[User]], excludeState: Column[State[LibraryMembership]]) =>
+    (for (row <- rows if row.userId === userId && row.state =!= excludeState) yield row).sortBy(_.createdAt)
   }
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership] = {
-    getWithUserIdCompiled(userId, excludeState).list
+    excludeState match {
+      case None => getWithUserIdCompiled(userId).list
+      case Some(exclude) => getWithUserIdWithExcludeCompiled(userId, exclude).list
+    }
   }
 
-  private def getWithLibraryIdAndUserIdCompiled(libraryId: Column[Id[Library]], userId: Column[Id[User]], excludeState: Option[State[LibraryMembership]]) = Compiled {
-    (for (b <- rows if b.libraryId === libraryId && b.userId === userId && b.state =!= excludeState.orNull) yield b)
+  private val getWithLibraryIdAndUserIdCompiled = Compiled { (libraryId: Column[Id[Library]], userId: Column[Id[User]]) =>
+    for (row <- rows if row.libraryId === libraryId && row.userId === userId) yield row
+  }
+  private val getWithLibraryIdAndUserIdWithExcludeCompiled = Compiled { (libraryId: Column[Id[Library]], userId: Column[Id[User]], excludeState: Column[State[LibraryMembership]]) =>
+    for (row <- rows if row.libraryId === libraryId && row.userId === userId && row.state =!= excludeState) yield row
   }
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Option[LibraryMembership] = {
-    getWithLibraryIdAndUserIdCompiled(libraryId, userId, excludeState).firstOption
+    excludeState match {
+      case None => getWithLibraryIdAndUserIdCompiled(libraryId, userId).firstOption
+      case Some(exclude) => getWithLibraryIdAndUserIdWithExcludeCompiled(libraryId, userId, exclude).firstOption
+    }
   }
 
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership] = {
@@ -111,11 +129,17 @@ class LibraryMembershipRepoImpl @Inject() (
     sql"""select lm.library_id, count(*) as cnt from library_membership lm, library l where l.id = lm.library_id and l.state='active' and l.visibility='published' and lm.created_at > $since group by lm.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
-  private def countMembershipsCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[LibraryMembership]]) = Compiled {
-    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).length
+  private val countMembershipsCompiled = Compiled { (libraryId: Column[Id[Library]]) =>
+    (for (row <- rows if row.libraryId === libraryId) yield row).length
+  }
+  private val countMembershipsWithExcludeCompiled = Compiled { (libraryId: Column[Id[Library]], excludeState: Column[State[LibraryMembership]]) =>
+    (for (row <- rows if row.libraryId === libraryId && row.state =!= excludeState) yield row).length
   }
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int = {
-    countMembershipsCompiled(libraryId, excludeState).run
+    excludeState match {
+      case None => countMembershipsCompiled(libraryId).run
+      case Some(exclude) => countMembershipsWithExcludeCompiled(libraryId, exclude).run
+    }
   }
 
   def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): Map[LibraryAccess, Int] = {
