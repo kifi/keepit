@@ -5,7 +5,7 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import com.keepit.common.controller.UserRequest
-import com.keepit.model.{ NotificationCategory, KeepSource, ExperimentType }
+import com.keepit.model.{ User, NotificationCategory, KeepSource, ExperimentType }
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.{ URI, UserAgent }
 import com.keepit.common.time.DateTimeJsonFormat
@@ -96,15 +96,24 @@ object HeimdalContext {
   val empty = HeimdalContext(Map.empty)
 }
 
+object HeimdalContextBuilder {
+  val userFields = Set("userCreatedAt", "daysSinceUserJoined")
+  def getUserFields(user: User): Map[String, ContextData] = {
+    val daysSinceUserJoined = (currentDateTime.getMillis.toFloat - user.createdAt.getMillis) / (24 * 3600 * 1000)
+    Seq("userCreatedAt" -> ContextDate(user.createdAt), "daysSinceUserJoined" -> ContextDoubleData(daysSinceUserJoined - daysSinceUserJoined % 0.01)).toMap
+  }
+}
+
 class HeimdalContextBuilder {
   val data = new scala.collection.mutable.HashMap[String, ContextData]()
 
   def +=[T](key: String, value: T)(implicit toSimpleContextData: T => SimpleContextData): Unit = data(key) = value
   def +=[T](key: String, values: Seq[T])(implicit toSimpleContextData: T => SimpleContextData): Unit = data(key) = ContextList(values.map(toSimpleContextData))
+  def ++=(moreData: Map[String, ContextData]): Unit = { data ++= moreData }
   def build: HeimdalContext = HeimdalContext(data.toMap)
 
   def addExistingContext(context: HeimdalContext): Unit = {
-    context.data.foreach { case (k, v) => data(k) = v }
+    this ++= context.data
   }
 
   def addServiceInfo(thisService: FortyTwoServices, myAmazonInstanceInfo: MyInstanceInfo): Unit = {
@@ -120,9 +129,7 @@ class HeimdalContextBuilder {
 
     request match {
       case userRequest: UserRequest[_] =>
-        this += ("userCreatedAt", userRequest.user.createdAt)
-        val daysSinceUserJoined = (currentDateTime.getMillis.toFloat - userRequest.user.createdAt.getMillis) / (24 * 3600 * 1000)
-        this += ("daysSinceUserJoined", daysSinceUserJoined - daysSinceUserJoined % 0.01)
+        this ++= HeimdalContextBuilder.getUserFields(userRequest.user)
         userRequest.kifiInstallationId.foreach { id => this += ("kifiInstallationId", id.toString) }
         addExperiments(userRequest.experiments)
         Try(SocialNetworkType(userRequest.identityOpt.get.identityId.providerId)).foreach { socialNetwork => this += ("identityProvider", socialNetwork.toString) }

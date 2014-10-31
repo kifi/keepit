@@ -221,7 +221,7 @@ class FixedResultSearchCommander extends SearchCommander {
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): Future[KifiShardResult] = ???
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[Explanation]] = ???
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[Explanation]] = ???
   def warmUp(userId: Id[User]): Unit = {}
   def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = ???
 }

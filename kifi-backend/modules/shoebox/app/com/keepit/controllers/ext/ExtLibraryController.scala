@@ -188,6 +188,9 @@ class ExtLibraryController @Inject() (
       } match {
         case Some(mem) if mem.isOwner => // TODO: change to .canWrite
           keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
+            case Right(keep) if (tag == "Add a tag") =>
+              log.warn(s"user ${request.userId} attempted to apply 'Add a tag'") // airbrake instead once these have stopped?
+              BadRequest(Json.obj("error" -> "disallowed_tag_name"))
             case Right(keep) =>
               implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
               val coll = keepsCommander.getOrCreateTag(request.userId, tag) // TODO: library ID, not user ID
