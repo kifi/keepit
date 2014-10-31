@@ -220,21 +220,6 @@ class SliderAdminController @Inject() (
     eliza.sendToAllUsers(Json.arr("version", ver))
     Ok(Json.obj("version" -> ver))
   }
-
-  // for run when we launch libraries (10/2014)
-  def setSiteShowLibraryIntro() = AdminUserAction { implicit request =>
-    val userIds = db.readOnlyReplica { implicit session =>
-      userRepo.getRecentActiveUsers(clock.now.minusYears(4)) filter { userId =>
-        userValueRepo.getUserValue(userId, UserValueName.SITE_SHOW_LIBRARY_INTRO).isEmpty
-      }
-    }
-    db.readWrite { implicit s =>
-      userIds foreach { userId =>
-        userValueRepo.setValue(userId, UserValueName.SITE_SHOW_LIBRARY_INTRO, true)
-      }
-    }
-    Ok(Json.arr(userIds))
-  }
 }
 
 case class ImportEvent(createdAt: DateTime, eventType: String, description: String)
