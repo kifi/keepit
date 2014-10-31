@@ -16,7 +16,7 @@ angular.module('kifi')
        *  (optional) keptToLibraryIds - an array of library ids that are already keeping the keep.
        *  (optional) libraryClickAction - a function that can be called once a library is selected;
        *                           called with the element that this widget is on.
-       *  (optional) exitAction - a function that is called once the widget exits (includes when the widget exits after an action).
+       *  (optional) widgetExitAction - a function that is called once the widget exits (includes when the widget exits after an action).
        *
        *  Positioning properties:
        *  ----------------------
@@ -28,7 +28,7 @@ angular.module('kifi')
         keptToLibraryIds: '=',
         librarySelectAction: '&',
         libraryClickAction: '&',
-        exitAction: '&',
+        widgetExitAction: '&',
         libSelectDownOffset: '=',
         libSelectMaxUpOffset: '=',
         libSelectLeftOffset: '='
@@ -89,8 +89,8 @@ angular.module('kifi')
             widget.remove();
           }
 
-          if (_.isFunction(scope.exitAction)) {
-            scope.exitAction();
+          if (_.isFunction(scope.widgetExitAction)) {
+            scope.widgetExitAction();
           }
         }
 
