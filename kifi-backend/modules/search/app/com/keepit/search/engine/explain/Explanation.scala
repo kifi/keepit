@@ -25,7 +25,7 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
   def sharingHtml: String = {
     def sharingCountByVisibility(visibility: Int): Int = {
       // a record with no score is loaded for network information only
-      details(Visibility.name(visibility)).count { detail => detail.scoreMax.exists(_ != 0f) }
+      details(Visibility.name(visibility)).count { detail => detail.scoreMax.forall(_ == 0f) }
     }
 
     val sb = new StringBuilder
