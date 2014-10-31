@@ -27,7 +27,7 @@ angular.module('kifi')
           _.each(keeps, function (keep) {
             if (!scope.keep.id &&                      // No scope.keep.id if the keep is not on a library page.
                 scope.keep.url === keep.url &&
-                library.kind === 'user_created' &&   // Do not show system libraries as attributions.
+                library.kind === 'user_created' &&     // Do not show system libraries as attributions.
                 !_.contains(visibleLibraryIds, library.id)) {
               library.keeperPic = friendService.getPictureUrlForUser(profileService.me);
               scope.visibleKeepLibraries.push(library);

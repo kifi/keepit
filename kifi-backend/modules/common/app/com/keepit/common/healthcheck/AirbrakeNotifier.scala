@@ -95,8 +95,8 @@ class AirbrakeSender @Inject() (
         val xmlRes = res.xml
         val id = (xmlRes \ "id").head.text
         val url = (xmlRes \ "url").head.text
-        log.info(s"sent to airbreak error $id more info at $url: $xml")
-        println(s"sent to airbreak error $id more info at $url: $xml")
+        log.info(s"sent to airbrake error $id more info at $url: $xml")
+        println(s"sent to airbrake error $id more info at $url: $xml")
       } catch {
         case t: Throwable => {
           pagerDutySender.openIncident("Airbrake Response Deserialization Error!", t, moreInfo = Some(res.body.take(1000)))

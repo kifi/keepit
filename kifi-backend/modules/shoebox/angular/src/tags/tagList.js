@@ -66,19 +66,7 @@ angular.module('kifi')
             return _.flatten(_.pluck(scope.getSelectedKeeps(), 'hashtags'));
           }
         }, function () {
-          if (scope.readOnlyMode()) {
-            var keeps = scope.getSelectedKeeps() || [];
-            if (keeps.length === 1 && keeps[0].tags && _.all(keeps[0].tags, _.isString)) {
-              // since kthe keep objects come from different places (search, recos, libraries)
-              // the above condition is to ensure that all tags are strings and not objects (which was
-              // the case for libraries)
-              scope.tagsToShow = _.map(keeps[0].tags, decorateTag(true));
-            } else {
-              scope.tagsToShow = [];
-            }
-          } else {
-            scope.tagsToShow = _.map(getCommonTags(), decorateTag(false));
-          }
+          scope.tagsToShow = _.map(getCommonTags(), decorateTag(scope.readOnlyMode()));
         });
 
         function indexOfTag(tag) {

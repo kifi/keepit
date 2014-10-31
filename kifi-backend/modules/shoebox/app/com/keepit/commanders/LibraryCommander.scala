@@ -884,11 +884,15 @@ class LibraryCommander @Inject() (
               combineTags(k.id.get, existingKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) =>
-              if (existingKeep.inDisjointLib)
-                keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
+              if (existingKeep.inDisjointLib) {
+                val newKeep = keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
                   inDisjointLib = toLibrary.isDisjoint, source = withSource.getOrElse(k.source), state = KeepStates.ACTIVE))
-              combineTags(k.id.get, existingKeep.id.get)
-              Left(LibraryError.AlreadyExistsInDest)
+                combineTags(k.id.get, existingKeep.id.get)
+                Right(newKeep)
+              } else {
+                combineTags(k.id.get, existingKeep.id.get)
+                Left(LibraryError.AlreadyExistsInDest)
+              }
           }
         }
         applyToKeeps(userId, toLibraryId, keeps, Set(), saveKeep)
@@ -925,14 +929,17 @@ class LibraryCommander @Inject() (
               combineTags(k.id.get, existingKeep.id.get)
               Right(movedKeep)
             case Some(existingKeep) =>
-              if (toLibraryId != k.libraryId.get) {
-                if (existingKeep.inDisjointLib)
-                  keepRepo.save(existingKeep.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility, inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
-                else
-                  keepRepo.save(k.copy(state = KeepStates.INACTIVE))
+              if (toLibraryId == k.libraryId.get) {
+                Left(LibraryError.AlreadyExistsInDest)
+              } else if (existingKeep.inDisjointLib) {
+                val newKeep = keepRepo.save(existingKeep.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility, inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
                 combineTags(k.id.get, existingKeep.id.get)
+                Right(newKeep)
+              } else {
+                keepRepo.save(k.copy(state = KeepStates.INACTIVE))
+                combineTags(k.id.get, existingKeep.id.get)
+                Left(LibraryError.AlreadyExistsInDest)
               }
-              Left(LibraryError.AlreadyExistsInDest)
           }
         }
         applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)

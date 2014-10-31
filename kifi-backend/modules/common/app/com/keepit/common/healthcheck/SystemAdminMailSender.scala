@@ -14,7 +14,7 @@ trait SystemAdminMailSender extends Logging {
 class RemoteSystemAdminMailSender @Inject() (
     postOffice: RemotePostOffice,
     amazonSimpleMailProvider: AmazonSimpleMailProvider,
-    airbreak: AirbrakeNotifier,
+    airbrake: AirbrakeNotifier,
     playMode: Mode) extends SystemAdminMailSender {
 
   var notifiedError = false
@@ -26,7 +26,7 @@ class RemoteSystemAdminMailSender @Inject() (
       } catch {
         case t: Throwable =>
           if (!notifiedError) {
-            airbreak.notify(s"could not send email using amazon mail service, using sendgrid", t)
+            airbrake.notify(s"could not send email using amazon mail service, using sendgrid", t)
             notifiedError = true
           }
           postOffice.queueMail(email.copy(subject = s"[AWS SES FAIL] ${email.subject}"))

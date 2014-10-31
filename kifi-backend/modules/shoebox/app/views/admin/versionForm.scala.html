@@ -3,7 +3,6 @@
 @import com.keepit.common.store._
 
 @admin("Latest Kifi Extension Versions", stylesheets = List("admin_slider")) {
-  <form class="kifi-ver-form form-inline" action="@com.keepit.controllers.admin.routes.SliderAdminController.broadcastLatestVersion("X")" method="POST">
 
 <style>
 .gold {
@@ -92,6 +91,7 @@ td.old-version {
 </style>
 
 <div class="row">
+  <p>An extension will try to force update when it connects if its version is killed or pre-golden.</p>
   <table class="kifi-versions table table-bordered" style="width:640px">
   <thead>
     <tr>
@@ -131,10 +131,8 @@ td.old-version {
 </table>
 </div>
 
-
-
-
-    <input name="ver" type="text" class="input-small" autofocus autocomplete="off" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}" title="The current latest version (e.g. &quot;2.3.99)&quot;">
+  <form class="kifi-ver-form form-inline" action="@com.keepit.controllers.admin.routes.SliderAdminController.broadcastLatestVersion("X")" method="POST">
+    <input name="ver" type="text" value="@details.gold" class="input-small" autofocus autocomplete="off" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}" title="The current latest version (e.g. &quot;2.3.4)&quot;">
     <button>Broadcast</button>
   </form>
 }

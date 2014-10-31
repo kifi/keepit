@@ -107,7 +107,7 @@ class KifiSiteRouter @Inject() (
 class AngularRouter @Inject() (
     userRepo: UserRepo,
     libraryCommander: LibraryCommander,
-    airbreak: AirbrakeNotifier,
+    airbrake: AirbrakeNotifier,
     libraryRepo: LibraryRepo,
     libraryMetadataCache: LibraryMetadataCache) {
 
@@ -165,7 +165,7 @@ class AngularRouter @Inject() (
     }
   } catch {
     case e: Throwable =>
-      airbreak.notify(s"on getting library metadata for $library", e)
+      airbrake.notify(s"on getting library metadata for $library", e)
       ""
   }
 

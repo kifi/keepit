@@ -337,14 +337,13 @@ angular.module('kifi')
           var selectedKeeps = getSelectedKeeps();
           var selectedLibrary = scope.librarySelection.library;
 
-          keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
-            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
-            //       not good.
-            libraryService.fetchLibrarySummaries(true);
+          keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function (data) {
+            if (data.successes.length > 0) {
+              libraryService.fetchLibrarySummaries(true);
 
-            var addedKeeps = _.map(_.groupBy(selectedKeeps, 'url'), function (keeps, url) { return { 'url': url }; });
-
-            scope.$emit('keepAdded', libraryService.getSlugById(selectedLibrary.id), addedKeeps, scope.librarySelection.library);
+              var addedKeeps = data.successes;
+              scope.$emit('keepAdded', libraryService.getSlugById(selectedLibrary.id), addedKeeps, scope.librarySelection.library);
+            }
           })['catch'](function () {
             modalService.open({
               template: 'common/modal/genericErrorModal.tpl.html'
@@ -369,6 +368,12 @@ angular.module('kifi')
             libraryService.addToLibraryCount(currentLibraryId, -1 * selectedKeeps.length);
             scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
             scope.selection.unselectAll();
+
+            if (scope.availableKeeps.length < 10) {
+              scope.scrollNext()(scope.availableKeeps.length).then(function () {
+                scope.availableKeeps = _.filter(scope.keeps, function(k) { return k.unkept === false; });
+              });
+            }
           })['catch'](function () {
             modalService.open({
               template: 'common/modal/genericErrorModal.tpl.html'
@@ -396,7 +401,6 @@ angular.module('kifi')
               bulkUnkeep: true,
               copyToLibrary: true,
               moveToLibrary: true,
-              keepToLibrary: false,
               editTags: true
             }
           };
@@ -458,53 +462,41 @@ angular.module('kifi')
 
         scope.unkeep = function (keeps) {
           var selectedKeeps = scope.selection.getSelected(keeps);
+          var libraryId = scope.library.id;
 
-          if (scope.librariesEnabled) {
-            var libraryId = scope.library.id;
-
-            keepActionService.unkeepManyFromLibrary(libraryId, selectedKeeps).then(function () {
-              _.forEach(selectedKeeps, function (selectedKeep) {
-                selectedKeep.makeUnkept();
-                _.without(scope.availableKeeps, selectedKeep);
-              });
-
-              var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
-              undoService.add(selectedKeeps.length + keepsDeletedText, function () {
-                keepActionService.keepToLibrary(_.map(selectedKeeps, function(keep) {
-                  var keepData = { url: keep.url };
-                  if (keep.title) { keepData.title = keep.title; }
-                  return keepData;
-                }), libraryId);
-
-                _.forEach(selectedKeeps, function (selectedKeep) {
-                  selectedKeep.makeKept();
-                });
-
-                scope.availableKeeps = selectedKeeps.concat(scope.availableKeeps);
-                scope.selection.selectAll(selectedKeeps);
-                libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
-              });
-
-              libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
-              scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
-              scope.selection.unselectAll();
+          keepActionService.unkeepManyFromLibrary(libraryId, selectedKeeps).then(function () {
+            _.forEach(selectedKeeps, function (selectedKeep) {
+              selectedKeep.makeUnkept();
+              _.without(scope.availableKeeps, selectedKeep);
             });
-          } else {
-            keepActionService.unkeepMany(selectedKeeps).then(function () {
+
+            var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
+            undoService.add(selectedKeeps.length + keepsDeletedText, function () {
+              keepActionService.keepToLibrary(_.map(selectedKeeps, function(keep) {
+                var keepData = { url: keep.url };
+                if (keep.title) { keepData.title = keep.title; }
+                return keepData;
+              }), libraryId);
+
               _.forEach(selectedKeeps, function (selectedKeep) {
-                selectedKeep.makeUnkept();
+                selectedKeep.makeKept();
               });
 
-              undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
-                keepActionService.keepMany(selectedKeeps);
-                _.forEach(selectedKeeps, function (selectedKeep) {
-                  selectedKeep.makeKept();
-                });
-              });
-
-              tagService.addToKeepCount(-1 * selectedKeeps.length);
+              scope.availableKeeps = selectedKeeps.concat(scope.availableKeeps);
+              scope.selection.selectAll(selectedKeeps);
+              libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
             });
-          }
+
+            libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
+            scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
+            scope.selection.unselectAll();
+
+            if (scope.availableKeeps.length < 10) {
+              scope.scrollNext()(scope.availableKeeps.length).then(function () {
+                scope.availableKeeps = _.filter(scope.keeps, function(k) { return k.unkept === false; });
+              });
+            }
+          });
         };
 
         scope.togglePrivate = function (keeps) {
@@ -547,13 +539,9 @@ angular.module('kifi')
 
                 scope.librarySelection = {};
                 scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
-                scope.readOnlyLibraries = !scope.library ? [] : [scope.library];
                 scope.clickAction = function (widgetElement) {
-                  if (scope.librarySelection.library.isReadOnly) {
-                    return; // do nothing
-
-                    // FIXME refactor to not use CSS for business logic
-                  } else if (widgetElement.closest('.copy-to-library').length) {
+                  // TODO refactor to not use CSS for business logic
+                  if (widgetElement.closest('.copy-to-library').length) {
                     copyToLibrary();
                   } else if (widgetElement.closest('.move-to-library').length) {
                     moveToLibrary();
@@ -569,28 +557,6 @@ angular.module('kifi')
         }, function (numSelected) {
           scope.disableEditTags();
           scope.updateSelectedCount({ numSelected: numSelected });
-
-          if (numSelected > 0) {
-            // creates an array of objects that identify the selected keeps and libraries they are in
-            var urlToLibraryPairs = _.flatten(_.map(scope.selection.getSelected(scope.keeps), function (keep) {
-              return _.map(keep.keeps, function (myKeep) {
-                return { url: keep.url, libraryId: myKeep.libraryId };
-              });
-            }));
-
-            // group the objects by libraryId
-            var selectedUrlsByLibrary = _.groupBy(urlToLibraryPairs, 'libraryId');
-
-            // set readOnlyLibraries to the libraries that ALL selected keeps are in
-            scope.readOnlyLibraries = _.reduce(selectedUrlsByLibrary, function (acc, urls, libraryId) {
-              if (urls.length === numSelected) {
-                acc.push({ id: libraryId });
-              }
-              return acc;
-            }, []);
-          } else {
-            scope.readOnlyLibraries = [];
-          }
         });
 
         scope.$watch(function () {
