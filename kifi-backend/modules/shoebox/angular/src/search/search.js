@@ -218,7 +218,7 @@ angular.module('kifi')
     var deregisterKeepAddedListener = $rootScope.$on('keepAdded', function (event, slug, keeps, library) {
       keeps.forEach(function (keep) {
         var searchKeep = _.find($scope.resultKeeps, { url: keep.url });
-        if (searchKeep && !_.contains(searchKeep.keeps, { id: keep.id })) {
+        if (searchKeep && !_.find(searchKeep.keeps, { id: keep.id })) {
           searchKeep.keeps.push({
             id: keep.id,
             isMine: true,
