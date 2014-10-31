@@ -31,8 +31,6 @@ angular.module('kifi')
     }
 
     function decompressHit(hit, users, libraries) {
-      var librariesEnabled = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('libraries') > -1;
-
       var decompressedKeepers = [];
       var decompressedLibraries = [];
       var myLibraries = [];
@@ -69,14 +67,14 @@ angular.module('kifi')
             decompressedKeepers.push(users[keeperIdx]);
           } else {
             var user = copy(users[keeperIdx]);
-            user.hidden = true && librariesEnabled;
+            user.hidden = true;
             decompressedKeepers.push(user);
           }
         }
       });
 
       hit.keepers = decompressedKeepers;
-      hit.libraries = librariesEnabled ? decompressedLibraries : [];
+      hit.libraries = decompressedLibraries;
       hit.myLibraries = myLibraries;
     }
 

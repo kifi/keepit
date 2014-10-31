@@ -42,7 +42,7 @@
     </div>
 
     <div class="import-library-selection">
-      <div class="add-keep-to-library-dropdown" ng-if="librariesEnabled" kf-keep-to-library-widget ng-click="showWidget()">
+      <div class="add-keep-to-library-dropdown" kf-keep-to-library-widget ng-click="showWidget()">
         <span ng-switch="librarySelection.library.kind" class="keep-to-library-lib-icon-container">
           <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>
           <span ng-switch-when="system_secret" class="keep-to-library-lib-icon svg-secret-library-icon"></span>
