@@ -14,7 +14,6 @@ angular.module('kifi', [
   'jun.smartScroll',
   'angularMoment',
   'jun.facebook',
-  'ui.slider',
   'angulartics',
   'kifi.templates'
 ])
