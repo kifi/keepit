@@ -9,43 +9,17 @@
     <ul ng-if="widgetKeptInLibraries.length" class="library-select-list">
       <li ng-repeat="library in widgetKeptInLibraries | filter:search" class="library-select-option"
         ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
-        ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)">
-
-        <span ng-switch="library.kind" class="keep-to-library-lib-icon-container">
-          <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>
-          <span ng-switch-when="system_secret" class="keep-to-library-lib-icon svg-secret-library-icon"></span>
-          <span ng-switch-default ng-switch="library.visibility">
-            <span ng-switch-when="published" class="keep-to-library-lib-icon svg-public-library-icon"></span>
-            <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
-
-            <!-- TODO: remove this when we've converted all discoverable libraries to public libraries in the db. -->
-            <span ng-switch-when="discoverable" class="keep-to-library-lib-icon svg-yellow-card-with-globe"></span>
-          </span>
-        </span>
-        {{library.name}}
-        <button class="kf-keep-lib-footer-button keep-to-library-unkeep-button">Unkeep</button>
-
+        ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
+        ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
       </li>
     </ul>
 
-    <div ng-if="widgetKeptInLibraries.length && !widgetRecentLibraries.length" class="library-group-header my-libraries-group-header">My Libraries</div>
-    <ul ng-if="widgetKeptInLibraries.length || !widgetRecentLibraries.length" class="library-select-list">
+    <div ng-if="widgetKeptInLibraries.length" class="library-group-header my-libraries-group-header">My Libraries</div>
+    <ul ng-if="widgetKeptInLibraries.length" class="library-select-list">
       <li ng-repeat="library in widgetMyLibraries | filter:search" class="library-select-option"
         ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
-        ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)">
-        <span ng-switch="library.kind" class="keep-to-library-lib-icon-container">
-          <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>
-          <span ng-switch-when="system_secret" class="keep-to-library-lib-icon svg-secret-library-icon"></span>
-          <span ng-switch-default ng-switch="library.visibility">
-            <span ng-switch-when="published" class="keep-to-library-lib-icon svg-public-library-icon"></span>
-            <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
-
-            <!-- TODO: remove this when we've converted all discoverable libraries to public libraries in the db. -->
-            <span ng-switch-when="discoverable" class="keep-to-library-lib-icon svg-yellow-card-with-globe"></span>
-          </span>
-        </span>
-        {{library.name}}
-        <button class="kf-keep-lib-footer-button keep-to-library-unkeep-button">Unkeep</button>
+        ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
+        ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
       </li>
     </ul>
 
@@ -53,41 +27,17 @@
     <ul ng-if="!widgetKeptInLibraries.length && widgetRecentLibraries.length" class="library-select-list">
       <li ng-repeat="library in widgetRecentLibraries | filter:search" class="library-select-option"
         ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
-        ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)">
-        <span ng-switch="library.kind" class="keep-to-library-lib-icon-container">
-          <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>
-          <span ng-switch-when="system_secret" class="keep-to-library-lib-icon svg-secret-library-icon"></span>
-          <span ng-switch-default ng-switch="library.visibility">
-            <span ng-switch-when="published" class="keep-to-library-lib-icon svg-public-library-icon"></span>
-            <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
-
-            <!-- TODO: remove this when we've converted all discoverable libraries to public libraries in the db. -->
-            <span ng-switch-when="discoverable" class="keep-to-library-lib-icon svg-yellow-card-with-globe"></span>
-          </span>
-        </span>
-        {{library.name}}
-        <button class="kf-keep-lib-footer-button keep-to-library-unkeep-button">Unkeep</button>
+        ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
+        ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
       </li>
     </ul>
 
     <div ng-if="!widgetKeptInLibraries.length && widgetRecentLibraries.length" class="library-group-header my-libraries-group-header">Other Libraries</div>
-    <ul ng-if="!widgetKeptInLibraries.length && widgetRecentLibraries.length" class="library-select-list">
+    <ul ng-if="!widgetKeptInLibraries.length" class="library-select-list">
       <li ng-repeat="library in widgetOtherLibraries | filter:search" class="library-select-option"
         ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
-        ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)">
-        <span ng-switch="library.kind" class="keep-to-library-lib-icon-container">
-          <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>
-          <span ng-switch-when="system_secret" class="keep-to-library-lib-icon svg-secret-library-icon"></span>
-          <span ng-switch-default ng-switch="library.visibility">
-            <span ng-switch-when="published" class="keep-to-library-lib-icon svg-public-library-icon"></span>
-            <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
-
-            <!-- TODO: remove this when we've converted all discoverable libraries to public libraries in the db. -->
-            <span ng-switch-when="discoverable" class="keep-to-library-lib-icon svg-yellow-card-with-globe"></span>
-          </span>
-        </span>
-        {{library.name}}
-        <button class="kf-keep-lib-footer-button keep-to-library-unkeep-button">Unkeep</button>
+        ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
+        ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
       </li>
     </ul>
 
