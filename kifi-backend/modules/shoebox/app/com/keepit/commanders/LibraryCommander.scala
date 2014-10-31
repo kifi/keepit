@@ -520,7 +520,7 @@ class LibraryCommander @Inject() (
       db.readOnlyMaster { implicit s =>
         userId match {
           case Some(id) =>
-            libraryMembershipRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get).nonEmpty ||
+            libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, id).nonEmpty ||
               libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get, excludeState = Some(LibraryInviteStates.INACTIVE)).nonEmpty ||
               checkAuthTokenAndPassPhrase(library.id.get, authToken, passPhrase)
           case None =>
