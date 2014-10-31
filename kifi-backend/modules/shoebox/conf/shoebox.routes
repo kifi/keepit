@@ -464,6 +464,7 @@ POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/inactive   @com.keepit.controllers.admin.AdminBookmarksController.inactive(id: Id[Keep])
 GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
 GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
+DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)
 
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
 GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
