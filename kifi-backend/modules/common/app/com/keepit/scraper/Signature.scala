@@ -6,13 +6,7 @@ import scala.math._
 
 class Signature(val bytes: Array[Byte]) {
 
-  def similarTo(other: Signature): Double = {
-    if (bytes.length == other.bytes.length) {
-      bytes.zip(other.bytes).count { pair => pair._1 == pair._2 }.toDouble / bytes.length.toDouble
-    } else {
-      0.0d
-    }
-  }
+  def similarTo(other: Signature): Double = Signature.similarity(this.bytes, other.bytes)
 
   def toBase64() = printBase64Binary(bytes)
 
@@ -40,6 +34,14 @@ object Signature {
     val bytes = new Array[Byte](Signature.SIZE)
     Arrays.fill(bytes, Int.MaxValue.toByte)
     Signature(bytes)
+  }
+
+  def similarity(arr1: Array[Byte], arr2: Array[Byte]): Double = {
+    if (arr1.length == arr2.length) {
+      arr1.zip(arr2).count { pair => pair._1 == pair._2 }.toDouble / arr1.length.toDouble
+    } else {
+      0.0d
+    }
   }
 
   abstract class Builder(windowSize: Int) {

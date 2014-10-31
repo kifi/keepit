@@ -46,14 +46,7 @@ class DuplicateDocumentDetection @Inject() (
   val DEFAULT_THRESHOLD = 0.90
   val EMPTY_DOCUMENT = Signature.empty().bytes
 
-  // from `Signature`, duplicated to use Array[Byte]s for efficiency
-  def similarTo(that: Array[Byte], other: Array[Byte]): Double = {
-    if (that.length == other.length) {
-      that.zip(other).filter { pair => pair._1 == pair._2 }.size.toDouble / 100.0d
-    } else {
-      0.0d
-    }
-  }
+  def similarTo(that: Array[Byte], other: Array[Byte]): Double = Signature.similarity(that, other)
 
   def alreadyDetected(nuriId: Id[NormalizedURI])(implicit session: RSession) = {
     dupeRepo.getSimilarTo(nuriId).filter(_.state != DuplicateDocumentStates.NEW).nonEmpty
