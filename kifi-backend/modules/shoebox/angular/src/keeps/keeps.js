@@ -332,46 +332,6 @@ angular.module('kifi')
           return _.isFunction(filter) ? filter(selectedKeeps) : selectedKeeps;
         }
 
-        function copyToLibrary () {
-          // Copies the keeps that are selected into the library that is selected.
-          var selectedKeeps = getSelectedKeeps();
-          var selectedLibrary = scope.librarySelection.library;
-
-          keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
-            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
-            //       not good.
-            libraryService.fetchLibrarySummaries(true);
-          })['catch'](function () {
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html'
-            });
-          });
-        }
-
-        function moveToLibrary () {
-          // Moves the keeps that are selected into the library that is selected.
-          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
-          var selectedLibrary = scope.librarySelection.library;
-
-          keepActionService.moveToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
-            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
-            //       not good.
-            _.forEach(selectedKeeps, function (selectedKeep) {
-              selectedKeep.makeUnkept();
-            });
-
-            libraryService.fetchLibrarySummaries(true);
-            var currentLibraryId = scope.library.id;
-            libraryService.addToLibraryCount(currentLibraryId, -1 * selectedKeeps.length);
-            scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
-            scope.selection.unselectAll();
-          })['catch'](function () {
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html'
-            });
-          });
-        }
-
 
         //
         // Scope data.
@@ -522,6 +482,44 @@ angular.module('kifi')
           scope.editingTags = false;
         };
 
+        scope.onWidgetCopyLibraryClicked = function (clickedLibrary) {
+          // Copies the keeps that are selected into the library that is selected.
+          var selectedKeeps = getSelectedKeeps();
+
+          keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), clickedLibrary.id).then(function () {
+            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
+            //       not good.
+            libraryService.fetchLibrarySummaries(true);
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
+          });
+        };
+
+        scope.onWidgetMoveLibraryClicked = function (clickedLibrary) {
+          // Moves the keeps that are selected into the library that is selected.
+          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
+
+          keepActionService.moveToLibrary(_.pluck(selectedKeeps, 'id'), clickedLibrary.id).then(function () {
+            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
+            //       not good.
+            _.forEach(selectedKeeps, function (selectedKeep) {
+              selectedKeep.makeUnkept();
+            });
+
+            libraryService.fetchLibrarySummaries(true);
+            var currentLibraryId = scope.library.id;
+            libraryService.addToLibraryCount(currentLibraryId, -1 * selectedKeeps.length);
+            scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
+            scope.selection.unselectAll();
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
+          });
+        };
+
 
         //
         // Watches and listeners.
@@ -530,28 +528,6 @@ angular.module('kifi')
           return libraryService.isAllowed();
         }, function (newVal) {
           scope.librariesEnabled = newVal;
-        });
-
-        scope.$watch('keepsLoading', function (newVal) {
-          if (!newVal) {
-            if (scope.librariesEnabled) {
-              libraryService.fetchLibrarySummaries().then(function () {
-                scope.libraries = !scope.library ? [] : _.filter(libraryService.librarySummaries, function (library) {
-                  return library.access !== 'read_only';
-                });
-
-                scope.librarySelection = {};
-                scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
-                scope.clickAction = function (widgetElement) {
-                  if (widgetElement.closest('.copy-to-library').length) {
-                    copyToLibrary();
-                  } else if (widgetElement.closest('.move-to-library').length) {
-                    moveToLibrary();
-                  }
-                };
-              });
-            }
-          }
         });
 
         scope.$watch(function () {
@@ -566,14 +542,6 @@ angular.module('kifi')
         }, function(enabled) {
           if (!enabled) {
             scope.selection.unselectAll();
-          }
-        });
-
-        $rootScope.$on('librarySummariesChanged', function () {
-          if (scope.librariesEnabled) {
-            scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
-              return lib.access !== 'read_only';
-            });
           }
         });
 
