@@ -1,21 +1,19 @@
 package com.keepit.realtime
 
 import com.google.inject.{ ImplementedBy, Inject }
-import com.keepit.common.strings._
 import com.keepit.common.db._
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ DirectUrl, HttpClient, NonOKResponseException }
+import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.eliza.model._
 import com.keepit.model.User
-import org.joda.time.{ DateTime, Days }
+import org.joda.time.Days
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json.Json
 
-import scala.concurrent.{ Future, future }
+import scala.concurrent.future
 
 case class UrbanAirshipConfig(key: String, secret: String, devKey: String, devSecret: String, baseUrl: String = "https://go.urbanairship.com")
 

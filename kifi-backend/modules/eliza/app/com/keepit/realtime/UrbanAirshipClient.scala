@@ -6,7 +6,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ NonOKResponseException, DirectUrl, HttpClient }
+import com.keepit.common.net.{CallTimeouts, NonOKResponseException, DirectUrl, HttpClient}
 import com.keepit.common.time._
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.JsObject
@@ -28,11 +28,12 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
     val res = httpClient.postFuture(DirectUrl(s"${config.baseUrl}/api/push/validate"), json)
     res.onFailure {
       case bad =>
-        airbrake.notify(s"[$validationId] json $json for ${notification.id} to $device did not validate: ${bad.toString}", bad)
+        log.error(s"[AA] [$validationId] json ${json.toString()} for ${notification.id} to $device did not validate: ${bad.toString}", bad)
+        airbrake.notify(s"[$validationId] json ${json.toString()} for ${notification.id} to $device did not validate: ${bad.toString}", bad)
     }
     res.onSuccess {
       case good =>
-        log.info(s"[$validationId] json for ${notification.id} to $device did validate: ${good.body}")
+        log.info(s"[AA] [$validationId] json for ${notification.id} to $device did validate: ${good.body}")
     }
   }
 
@@ -43,13 +44,13 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
       { req =>
         {
           case t: Throwable =>
-            log.error(s"Error posting to urbanairship on device $device notification $notification, trial #$trial - ${t.getMessage}", t)
+            log.error(s"[AA] Error posting to urbanairship json $json on device $device notification $notification, trial #$trial - ${t.getMessage}", t)
             if (trial >= MaxTrials) {
               httpClient.defaultFailureHandler(req)
               val validationId = ExternalId()
               airbrake.notify(s"failed sending notification ${notification.id} to $device, checking validation with id $validationId", t)
               validate(json, device, notification, validationId)
-              throw new Exception(s"[stop trying] error posting to urbanairship on device $device notification $notification on trial $trial, not attempting more retries", t)
+              throw new Exception(s"[AA] [stop trying] error posting to urbanairship json $json on device $device notification $notification on trial $trial, not attempting more retries", t)
             }
             post(json, device, notification, trial + 1)
         }
@@ -59,12 +60,12 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
       case clientRes =>
         if (clientRes.status != 200) {
           if (trial < MaxTrials) {
-            log.info(s"failure to send notification $notification to device $device on trial $trial: ${clientRes.body}, trying more")
+            log.info(s"[AA] failure to send notification $notification to device $device on trial $trial: ${clientRes.body}, trying more")
           } else {
             airbrake.notify(s"(on thread success) failure to send notification $notification to device $device: ${clientRes.body} trial $trial")
           }
         } else {
-          log.info(s"successfully sent notification ${notification.id} to $device: ${clientRes.body}")
+          log.info(s"[AA] successfully sent notification ${notification.id} to $device: ${clientRes.body}")
         }
     }
   }
@@ -83,13 +84,13 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
         val active = (r.json \ "active").as[Boolean]
         db.readWrite { implicit s =>
           val state = if (active) DeviceStates.ACTIVE else DeviceStates.INACTIVE
-          log.info(s"Setting device state to $state: ${device.token}")
+          log.info(s"[AA] Setting device state to $state: ${device.token}")
           deviceRepo.save(device.copy(state = state))
         }
       } recover {
         case e @ NonOKResponseException(url, response, _) if response.status == NOT_FOUND =>
           db.readWrite { implicit s =>
-            log.info(s"Setting device state to inactive: ${device.token}")
+            log.info(s"[AA] Setting device state to inactive: ${device.token}")
             deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
           }
       }
@@ -127,8 +128,9 @@ class ProdUrbanAirshipClient @Inject() (
   lazy val httpClient: HttpClient = {
     val encodedUserPass = new sun.misc.BASE64Encoder().encode(s"${config.key}:${config.secret}".getBytes)
     client.withHeaders("Authorization" -> s"Basic $encodedUserPass")
-    client.withHeaders("Content-Type" -> "application/json")
-    client.withHeaders("Accept" -> "application/vnd.urbanairship+json; version=3;")
+      .withHeaders("Content-Type" -> "application/json")
+      .withHeaders("Accept" -> "application/vnd.urbanairship+json; version=3;")
+      .withTimeout(CallTimeouts(maxWaitTime = Some(10000), responseTimeout = Some(10000), maxJsonParseTime = Some(1000)))
   }
 
   def send(json: JsObject, device: Device, notification: PushNotification): Unit = {
@@ -143,6 +145,9 @@ class DevUrbanAirshipClient @Inject() (
   lazy val httpClient: HttpClient = {
     val encodedUserPass = new sun.misc.BASE64Encoder().encode(s"${config.devKey}:${config.devSecret}".getBytes)
     client.withHeaders("Authorization" -> s"Basic $encodedUserPass")
+      .withHeaders("Content-Type" -> "application/json")
+      .withHeaders("Accept" -> "application/vnd.urbanairship+json; version=3;")
+      .withTimeout(CallTimeouts(maxWaitTime = Some(10000), responseTimeout = Some(10000), maxJsonParseTime = Some(1000)))
   }
 
   def send(json: JsObject, device: Device, notification: PushNotification): Unit = {
