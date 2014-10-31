@@ -14,6 +14,7 @@ import com.keepit.common.net.UserAgent
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
+import play.api.Play
 import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
 import ImplicitHelper._
@@ -22,12 +23,9 @@ import java.net.{ URLEncoder, URLDecoder }
 import scala.concurrent.Future
 
 sealed trait Routeable
-trait AngularRoute extends Routeable {
-  def headerload: Option[String]
-}
-private case class AngularLoggedIn(headerload: Option[String], postload: Seq[MaybeUserRequest[_] => Future[String]] = Seq.empty) extends AngularRoute
-private case class Angular(headerload: Option[String], postload: Seq[Request[_] => Future[String]] = Seq.empty) extends AngularRoute
+private case class Angular(headerload: Option[String], postload: Seq[MaybeUserRequest[_] => Future[String]] = Seq.empty) extends Routeable
 private case class RedirectRoute(url: String) extends Routeable
+private case class RedirectToLogin(originalUrl: String) extends Routeable
 private case object Error404 extends Routeable
 
 case class Path(requestPath: String) {
@@ -75,17 +73,21 @@ class KifiSiteRouter @Inject() (
       (request, route(request)) match {
         case (_, Error404) =>
           NotFound(views.html.error.notFound(request.path))
-        case (r: UserRequest[T], ng: AngularLoggedIn) =>
-          // logged in user, logged in only ng. deliver.
-          AngularDistAssets.angularApp(ng.headerload, ng.postload.map(s => s(r)))
-        case (r: MaybeUserRequest[T], route: RedirectRoute) =>
+        case (_, route: RedirectRoute) =>
           Redirect(route.url)
+        case (_, route: RedirectToLogin) =>
+          val nRes = Redirect("/login")
+          // Less than ideal, but we can't currently test this:
+          Play.maybeApplication match {
+            case Some(_) => nRes.withSession(request.session + ("original-url" -> request.uri))
+            case None => nRes
+          }
         case (r: NonUserRequest[T], _) if r.identityOpt.isDefined =>
           // non-authed client, but identity is set. Mid-signup, send them there.
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-        case (r: MaybeUserRequest[T], ng: AngularRoute) =>
+        case (r: MaybeUserRequest[T], ng: Angular) =>
           // routing to ng page - could be public pages like public library, user profile and other shared routes with private views
-          AngularDistAssets.angularApp(ng.headerload)
+          AngularDistAssets.angularApp(ng.headerload, ng.postload.map(s => s(r)))
       }
     }
   }
@@ -175,9 +177,12 @@ class AngularRouter @Inject() (
     request match {
       case u: UserRequest[_] =>
         (ngFixedRoutes.get(path.path) orElse ngPrefixRoutes.get(path.primary)).map { dataLoader =>
-          AngularLoggedIn(None, dataLoader)
+          Angular(None, dataLoader)
         }
-      case n: NonUserRequest[_] => None
+      case n: NonUserRequest[_] =>
+        (ngFixedRoutes.get(path.path) orElse ngPrefixRoutes.get(path.primary)).map { _ =>
+          RedirectToLogin(path.requestPath)
+        }
     }
   }
 }
