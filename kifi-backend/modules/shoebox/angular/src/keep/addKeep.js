@@ -14,7 +14,6 @@ angular.module('kifi')
 
         var focusState = 0; // 0: input field, 1: private toggle, 2: action button
         var input = element.find('.kf-add-keep-input');
-        var privateSwitch = element.find('.kf-add-keep-private-container');
 
         scope.state = {};
         var reset = function () {
@@ -54,23 +53,9 @@ angular.module('kifi')
           });
         }
 
-        privateSwitch.on('keydown', function (e) {
-          scope.$apply(function () {
-            if (e.which === keyIndices.KEY_SPACE) {
-              e.stopPropagation();
-              e.preventDefault();
-              scope.togglePrivate();
-            }
-          });
-        });
-
         scope.$on('$destroy', function () {
           $document.off('keydown', processKey);
         });
-
-        scope.togglePrivate = function () {
-          scope.state.checkedPrivate = !scope.state.checkedPrivate;
-        };
 
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
