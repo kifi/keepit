@@ -1071,5 +1071,26 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
     }
 
+    "get library members" in {
+      withDb(modules: _*) { implicit injector =>
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, emailAddress = Some(EmailAddress("thor@asgard.com")), access = LibraryAccess.READ_ONLY))
+          val memberCounts = libraryMembershipRepo.countWithLibraryIdByAccess(libMurica.id.get)
+          memberCounts(LibraryAccess.OWNER) === 1
+          memberCounts(LibraryAccess.READ_ONLY) === 2
+          memberCounts(LibraryAccess.READ_INSERT) === 0
+          memberCounts(LibraryAccess.READ_WRITE) === 0
+        }
+        val libraryCommander = inject[LibraryCommander]
+        val members = libraryCommander.getLibraryMembers(libMurica.id.get, 0, 10, true)
+        // collaborators
+        members._1.map(_.userId) === Seq()
+        // followers
+        members._2.map(_.userId) === Seq(userAgent.id.get, userIron.id.get)
+        // invitees
+        members._3.map(t => (t._1)) === Seq(Left(userHulk.id.get), Right(EmailAddress("thor@asgard.com")))
+      }
+    }
   }
 }

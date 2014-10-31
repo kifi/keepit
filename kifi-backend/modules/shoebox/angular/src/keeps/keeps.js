@@ -371,7 +371,7 @@ angular.module('kifi')
 
             if (scope.availableKeeps.length < 10) {
               scope.scrollNext()(scope.availableKeeps.length).then(function () {
-                scope.availableKeeps = _.filter(scope.keeps, function(k) { return k.unkept === false; });
+                scope.availableKeeps = _.reject(scope.keeps, function(k) { return k.unkept; });
               });
             }
           })['catch'](function () {
@@ -493,7 +493,7 @@ angular.module('kifi')
 
             if (scope.availableKeeps.length < 10) {
               scope.scrollNext()(scope.availableKeeps.length).then(function () {
-                scope.availableKeeps = _.filter(scope.keeps, function(k) { return k.unkept === false; });
+                scope.availableKeeps = _.reject(scope.keeps, function(k) { return k.unkept; });
               });
             }
           });
