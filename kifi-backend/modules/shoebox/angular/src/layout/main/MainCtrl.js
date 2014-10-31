@@ -17,10 +17,6 @@ angular.module('kifi')
       enabled: false
     };
 
-    $scope.onLibrarySelected = function (selectedLibrary) {
-      $scope.selectedLibrary = selectedLibrary;
-    };
-
     $scope.enableSearch = function () {
       $scope.searchEnabled = true;
       // add event handler on the inheriting scope
@@ -97,9 +93,17 @@ angular.module('kifi')
     }
     handleInjectedState(injectedState.state);
 
+    //
+    // For importing bookmarks
+    // TODO(yiping): Modularize this code; all this flat code in Main Ctrl is not good. :(
+    //
+    $scope.onImportLibrarySelected = function (selectedLibrary) {
+      $scope.importLibrary = selectedLibrary;
+    };
+
     function initBookmarkImport(count, msgEvent) {
       // Display the Main Library as the default option.
-      $scope.selectedLibrary = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
+      $scope.importLibrary = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
 
       modalService.open({
         template: 'common/modal/importBookmarksModal.tpl.html',
@@ -115,7 +119,7 @@ angular.module('kifi')
       fileInput.replaceWith(fileInput = fileInput.clone(true));
 
       // Display the Main Library as the default option.
-      $scope.selectedLibrary = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
+      $scope.importLibrary = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
 
       modalService.open({
         template: 'common/modal/importBookmarkFileModal.tpl.html',
@@ -296,6 +300,8 @@ angular.module('kifi')
       var bookmarkFileUpload = $rootElement.find('.bookmark-file-upload');
       bookmarkFileUpload.click();
     };
+
+    // END For importing bookmarks.
 
     $scope.editKeepsLabel = function () {
       if ($scope.editMode.enabled) {
