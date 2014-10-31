@@ -28,12 +28,12 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
     val res = httpClient.postFuture(DirectUrl(s"${config.baseUrl}/api/push/validate"), json)
     res.onFailure {
       case bad =>
-        log.error(s"[AA] [$validationId] json ${json.toString()} for ${notification.id} to $device did not validate: ${bad.toString}", bad)
+        log.error(s"[$validationId] json ${json.toString()} for ${notification.id} to $device did not validate: ${bad.toString}", bad)
         airbrake.notify(s"[$validationId] json ${json.toString()} for ${notification.id} to $device did not validate: ${bad.toString}", bad)
     }
     res.onSuccess {
       case good =>
-        log.info(s"[AA] [$validationId] json for ${notification.id} to $device did validate: ${good.body}")
+        log.info(s"[$validationId] json for ${notification.id} to $device did validate: ${good.body}")
     }
   }
 
@@ -45,13 +45,13 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
       { req =>
         {
           case t: Throwable =>
-            log.error(s"[AA] Error posting to urbanairship json $json on device $device notification $notification, trial #$trial - ${t.getMessage}", t)
+            log.error(s"Error posting to urbanairship json $json on device $device notification $notification, trial #$trial - ${t.getMessage}", t)
             if (trial >= MaxTrials) {
               httpClient.defaultFailureHandler(req)
               val validationId = ExternalId()
               airbrake.notify(s"failed sending notification ${notification.id} to $device, checking validation with id $validationId", t)
               validate(json, device, notification, validationId)
-              throw new Exception(s"[AA] [stop trying] error posting to urbanairship json $json on device $device notification $notification on trial $trial, not attempting more retries", t)
+              throw new Exception(s"[stop trying] error posting to urbanairship json $json on device $device notification $notification on trial $trial, not attempting more retries", t)
             }
             post(json, device, notification, trial + 1)
         }
@@ -62,12 +62,12 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
         println(s"sent! $clientRes")
         if (clientRes.status != 200) {
           if (trial < MaxTrials) {
-            log.info(s"[AA] failure to send notification $notification to device $device on trial $trial: ${clientRes.body}, trying more")
+            log.info(s"failure to send notification $notification to device $device on trial $trial: ${clientRes.body}, trying more")
           } else {
             airbrake.notify(s"(on thread success) failure to send notification $notification to device $device: ${clientRes.body} trial $trial")
           }
         } else {
-          log.info(s"[AA] successfully sent notification ${notification.id} to $device: ${clientRes.body}")
+          log.info(s"successfully sent notification ${notification.id} to $device: ${clientRes.body}")
         }
     }
     res
@@ -76,24 +76,31 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
   def updateDeviceState(device: Device): Unit = {
     log.info(s"Checking state of device: ${device.token}")
     if (device.updatedAt plus UrbanAirship.RecheckPeriod isBefore clock.now()) {
-      val uaUrl = device.deviceType match {
-        case DeviceType.IOS => s"${config.baseUrl}/api/device_tokens/${device.token}"
-        case DeviceType.Android => s"${config.baseUrl}/api/apids/${device.token}"
-        case dt => throw new Exception(s"Unknown device type: $dt")
+      val uaUrl = if (device.isChannel) {
+        log.info(s"device $device is using a channel")
+        s"${config.baseUrl}/api/channels/${device.token}"
+      } else {
+        device.deviceType match {
+          case DeviceType.IOS => s"${config.baseUrl}/api/device_tokens/${device.token}"
+          case DeviceType.Android => s"${config.baseUrl}/api/apids/${device.token}"
+          case dt => throw new Exception(s"Unknown device type: $dt")
+        }
       }
       httpClient.getFuture(DirectUrl(uaUrl), url => {
         case e @ NonOKResponseException(url, response, _) if response.status == NOT_FOUND =>
       }) map { r =>
-        val active = (r.json \ "active").as[Boolean]
+        val json = r.json
+        log.info(s"device report for $device: $json")
+        val active = (json \ "active").as[Boolean]
         db.readWrite { implicit s =>
           val state = if (active) DeviceStates.ACTIVE else DeviceStates.INACTIVE
-          log.info(s"[AA] Setting device state to $state: ${device.token}")
+          log.info(s"Setting device state to $state: ${device.token}")
           deviceRepo.save(device.copy(state = state))
         }
       } recover {
         case e @ NonOKResponseException(url, response, _) if response.status == NOT_FOUND =>
           db.readWrite { implicit s =>
-            log.info(s"[AA] Setting device state to inactive: ${device.token}")
+            log.info(s"Setting device state to inactive: ${device.token}")
             deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
           }
       }

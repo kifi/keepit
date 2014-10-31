@@ -73,7 +73,7 @@ class UrbanAirshipImpl @Inject() (
       new CacheLoader[Id[User], Seq[Device]]() {
         def load(userId: Id[User]): collection.Seq[Device] = {
           db.readOnlyReplica { implicit s =>
-            //todo(eishay): should be cached!
+            //todo(eishay): should be cached in memcache!
             deviceRepo.getByUserId(userId)
           }
         }
@@ -99,9 +99,10 @@ class UrbanAirshipImpl @Inject() (
 
   //see http://docs.urbanairship.com/reference/api/v3/push.html
   private[realtime] def createAndroidJson(notification: PushNotification, device: Device) = {
+    val audienceKey = if (device.isChannel) "android_channel" else "apid"
     notification.message.map { message =>
       Json.obj(
-        "audience" -> Json.obj("apid" -> device.token),
+        "audience" -> Json.obj(audienceKey -> device.token),
         "device_types" -> Json.arr("android"),
         "notification" -> Json.obj(
           "android" -> Json.obj(
@@ -115,7 +116,7 @@ class UrbanAirshipImpl @Inject() (
       )
     } getOrElse {
       Json.obj(
-        "audience" -> Json.obj("apid" -> device.token),
+        "audience" -> Json.obj(audienceKey -> device.token),
         "device_types" -> Json.arr("android"),
         "notification" -> Json.obj(
           "android" -> Json.obj(
@@ -130,10 +131,11 @@ class UrbanAirshipImpl @Inject() (
   }
 
   //see http://docs.urbanairship.com/reference/api/v3/push.html
-  private[realtime] def createIosJson(notification: PushNotification, device: Device) =
+  private[realtime] def createIosJson(notification: PushNotification, device: Device) = {
+    val audienceKey = if (device.isChannel) "ios_channel" else "device_token"
     notification.message.map { message =>
       Json.obj(
-        "audience" -> Json.obj("device_token" -> device.token),
+        "audience" -> Json.obj(audienceKey -> device.token),
         "device_types" -> Json.arr("ios"),
         "notification" -> Json.obj(
           "ios" -> Json.obj(
@@ -150,7 +152,7 @@ class UrbanAirshipImpl @Inject() (
       )
     } getOrElse {
       Json.obj(
-        "audience" -> Json.obj("device_token" -> device.token),
+        "audience" -> Json.obj(audienceKey -> device.token),
         "device_types" -> Json.arr("ios"),
         "notification" -> Json.obj(
           "ios" -> Json.obj(
@@ -164,6 +166,7 @@ class UrbanAirshipImpl @Inject() (
         )
       )
     }
+  }
 
   def sendNotification(device: Device, notification: PushNotification): Unit = {
     log.info(s"Sending notification to device: ${device.token}")
