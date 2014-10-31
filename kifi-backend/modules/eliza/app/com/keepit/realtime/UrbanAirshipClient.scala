@@ -6,7 +6,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{CallTimeouts, NonOKResponseException, DirectUrl, HttpClient}
+import com.keepit.common.net.{ CallTimeouts, NonOKResponseException, DirectUrl, HttpClient }
 import com.keepit.common.time._
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.JsObject
