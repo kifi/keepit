@@ -100,7 +100,7 @@ class ExtLibraryController @Inject() (
   def addKeep(libraryPubId: PublicId[Library]) = UserAction(parse.tolerantJson) { request =>
     decode(libraryPubId) { libraryId =>
       db.readOnlyMaster { implicit s =>
-        libraryMembershipRepo.getOpt(request.userId, libraryId)
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } match {
         case Some(mem) if mem.canWrite => // TODO: also allow keep if mem.canInsert and keep is not already in library
           val body = request.body

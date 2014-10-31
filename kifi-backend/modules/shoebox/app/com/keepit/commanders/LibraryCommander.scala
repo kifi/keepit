@@ -416,8 +416,8 @@ class LibraryCommander @Inject() (
   }
 
   def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean = {
-    db.readOnlyReplica { implicit s => libraryMembershipRepo.getOpt(userId, libraryId) } exists { memebership => //not cached!
-      memebership.canWrite
+    db.readOnlyReplica { implicit s => libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) } exists { membership => //not cached!
+      membership.canWrite
     }
   }
 
@@ -520,7 +520,7 @@ class LibraryCommander @Inject() (
       db.readOnlyMaster { implicit s =>
         userId match {
           case Some(id) =>
-            libraryMembershipRepo.getOpt(userId = id, libraryId = library.id.get).nonEmpty ||
+            libraryMembershipRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get).nonEmpty ||
               libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get, excludeState = Some(LibraryInviteStates.INACTIVE)).nonEmpty ||
               checkAuthTokenAndPassPhrase(library.id.get, authToken, passPhrase)
           case None =>
@@ -747,7 +747,7 @@ class LibraryCommander @Inject() (
         Left(LibraryFail("cant_join_nonpublished_library"))
       else {
         val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
-        libraryMembershipRepo.getOpt(userId, libraryId) match {
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
           case None =>
             libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true))
             notifyOwnerOfNewFollower(userId, lib)
