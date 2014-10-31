@@ -30,7 +30,7 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
           val users = db.readWrite { implicit rw => testFactory.createUsersWithConnections() }
           abook.addFriendRecommendationsExpectations(users(0).id.get, Seq(users(1).id.get, users(2).id.get, users(3).id.get))
 
-          inject[FakeUserActionsHelper].setUser(User(id = Some(Id[User](1L)), firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
+          inject[FakeUserActionsHelper].setUser(User(id = Some(Id[User](1L)), firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val controller = inject[MobilePeopleRecommendationController]
           val resultF = controller.getFriendRecommendations(1, 25)(FakeRequest())
 

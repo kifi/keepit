@@ -64,7 +64,7 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
         val input = Json.parse(
           s"""{"clicked": true}""".stripMargin)
 
-        inject[FakeUserActionsHelper].setUser(User(id = Some(Id[User](1L)), firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
+        inject[FakeUserActionsHelper].setUser(User(id = Some(Id[User](1L)), firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         val request = FakeRequest("POST", route).withBody(input)
 
         val controller = inject[RecommendationsController]

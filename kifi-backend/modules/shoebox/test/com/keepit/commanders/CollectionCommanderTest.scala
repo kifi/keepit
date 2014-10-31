@@ -33,7 +33,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
         val keeper = KeepSource.keeper
 
         val (user, collections, bookmark1, bookmark2) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
 
@@ -122,7 +122,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
         val userValueRepo = inject[UserValueRepo]
 
         val (user, oldOrdering, tagA, tagB, tagC, tagD) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val user1 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1, username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
           val tagA = Collection(userId = user1.id.get, name = Hashtag("tagA"))
           val tagB = Collection(userId = user1.id.get, name = Hashtag("tagB"))
@@ -186,7 +186,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
         val collectionCommander = inject[CollectionCommander]
 
         val (user, oldOrdering, tag1, tag2, tag3) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val user1 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1, username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = false))
 

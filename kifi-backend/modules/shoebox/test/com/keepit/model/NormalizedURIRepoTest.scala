@@ -18,8 +18,8 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
     db.readWrite { implicit s =>
       uriRepo.count === 0 //making sure the db is clean, we had some strange failures
       userRepo.count === 0 //making sure the db is clean
-      val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-      val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown", username = Username("moo"), normalizedUsername = "moo"))
+      val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+      val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown", username = Username("moo"), normalizedUsername = "moo", pictureName = Some("0")))
       val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURIStates.SCRAPED)
       uriRepo.assignSequenceNumbers(1000)
       val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURIStates.SCRAPED)
@@ -172,8 +172,8 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
     "search gets nothing" in {
       withDb() { implicit injector =>
         db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown", username = Username("moo"), normalizedUsername = "moo"))
+          val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+          val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown", username = Username("moo"), normalizedUsername = "moo", pictureName = Some("0")))
           val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURIStates.INACTIVE)
           val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURIStates.SCRAPED)
         }
@@ -186,8 +186,8 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         db.readWrite { implicit s =>
           uriRepo.all.size === 0 //making sure the db is clean, trying to understand some strange failures we got
-          val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown", username = Username("moo"), normalizedUsername = "moo"))
+          val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+          val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown", username = Username("moo"), normalizedUsername = "moo", pictureName = Some("0")))
           val uri1 = createUri(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURIStates.ACTIVE)
           val uri2 = createUri(title = "two title", url = "http://www.keepit.com/two", state = NormalizedURIStates.SCRAPED)
           val uri3 = createUri(title = "three title", url = "http://www.keepit.com/three", state = NormalizedURIStates.ACTIVE)

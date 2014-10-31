@@ -41,7 +41,7 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
           None, None, AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
 
         val user = inject[Database].readWrite { implicit s =>
-          userRepo.save(User(firstName = "Greg", lastName = "Methvin", username = Username("test"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Greg", lastName = "Methvin", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         val unsaved = SocialUserInfo(userId = user.id, fullName = "Greg Methvin", socialId = SocialId("rFOBMp35vZ"),
           networkType = SocialNetworks.LINKEDIN, credentials = Some(socialUser))

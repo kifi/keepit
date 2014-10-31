@@ -20,8 +20,8 @@ class KeepTest extends Specification with ShoeboxTestInjector {
     val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
     db.readWrite { implicit s =>
-      val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-      val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
+      val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+      val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
       uriRepo.count === 0
       val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -184,8 +184,8 @@ class KeepTest extends Specification with ShoeboxTestInjector {
           val urlId = urlRepo.save(URL(url = uri.url, domain = Some("kifi.com"), normalizedUriId = uri.id.get)).id.get
           val uriId = uri.id.get
           val url = uri.url
-          val firstUserId = userRepo.save(User(firstName = "Léo", lastName = "Grimaldi", username = Username("test"), normalizedUsername = "test")).id.get
-          val secondUserId = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test2"), normalizedUsername = "test2")).id.get
+          val firstUserId = userRepo.save(User(firstName = "Léo", lastName = "Grimaldi", username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))).id.get
+          val secondUserId = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test2"), normalizedUsername = "test2", pictureName = Some("0"))).id.get
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = firstUserId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
           (uri, uriId, url, firstUserId, secondUserId, urlId, lib1)
@@ -221,7 +221,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
         db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val user = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
           val uri3 = uriRepo.save(NormalizedURI.withHash("http://www.kifi.com/", Some("Kifi")))

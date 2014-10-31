@@ -88,8 +88,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val db = inject[Database]
 
         val (user1, user2, bookmark1, bookmark2, bookmark3) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+          val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
           inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
           inject[LibraryCommander].internSystemGeneratedLibraries(user2.id.get)
@@ -200,8 +200,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val db = inject[Database]
 
         val (user1, bookmark1, bookmark2, bookmark3) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+          val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
           inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
           inject[LibraryCommander].internSystemGeneratedLibraries(user2.id.get)
@@ -508,7 +508,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "allCollections (default sorting)" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, collections) = inject[Database].readWrite { implicit session =>
-          val user = inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user = inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val collections = inject[CollectionRepo].save(Collection(userId = user.id.get, name = Hashtag("myCollaction1"))) ::
             inject[CollectionRepo].save(Collection(userId = user.id.get, name = Hashtag("myCollaction2"))) ::
             inject[CollectionRepo].save(Collection(userId = user.id.get, name = Hashtag("myCollaction3"))) ::
@@ -543,7 +543,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
       withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2014, 9, 1, 21, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val (user) = db.readWrite { implicit session =>
-          val user1 = userRepo.save(User(firstName = "Mega", lastName = "Tron", username = Username("test"), normalizedUsername = "test"))
+          val user1 = userRepo.save(User(firstName = "Mega", lastName = "Tron", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
           val tagA = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagA"), createdAt = t1))
           val tagB = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagB"), createdAt = t1))
@@ -604,7 +604,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "keepMultiple" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val withCollection =
@@ -652,7 +652,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "saveCollection create mode" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
@@ -684,7 +684,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "saveCollection create mode with long name" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
@@ -702,7 +702,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "unkeepBatch" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val withCollection =
@@ -770,7 +770,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "unkeepMultiple" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val withCollection =
@@ -824,7 +824,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "reorder tags" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, oldOrdering, tagA, tagB, tagC, tagD) = inject[Database].readWrite { implicit session =>
-          val user1 = inject[UserRepo].save(User(firstName = "Tony", lastName = "Stark", username = Username("test2"), normalizedUsername = "test2"))
+          val user1 = inject[UserRepo].save(User(firstName = "Tony", lastName = "Stark", username = Username("test2"), normalizedUsername = "test2", pictureName = Some("0")))
           inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
 
           val tagA = Collection(userId = user1.id.get, name = Hashtag("tagA"))
@@ -912,7 +912,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
       withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2014, 9, 1, 21, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val (user) = db.readWrite { implicit session =>
-          val user1 = userRepo.save(User(firstName = "Mega", lastName = "Tron", username = Username("test"), normalizedUsername = "test"))
+          val user1 = userRepo.save(User(firstName = "Mega", lastName = "Tron", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
           val tagA = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagA"), createdAt = t1))
           val tagB = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagB"), createdAt = t1))

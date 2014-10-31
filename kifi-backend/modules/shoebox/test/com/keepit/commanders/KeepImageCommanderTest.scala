@@ -40,7 +40,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
   }
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
-      val user = userRepo.save(User(firstName = "Shamdrew", lastName = "Bronner", username = Username("test"), normalizedUsername = "test"))
+      val user = userRepo.save(User(firstName = "Shamdrew", lastName = "Bronner", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
       val lib = libraryRepo.save(Library(name = "Lib1", ownerId = user.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER, showInSearch = true))
       val uri = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))

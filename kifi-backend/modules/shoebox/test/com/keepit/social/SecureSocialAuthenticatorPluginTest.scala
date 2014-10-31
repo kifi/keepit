@@ -73,7 +73,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxAppl
         val socialId = SocialId("gm")
         val provider = SocialNetworks.FACEBOOK
         val user = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Greg", lastName = "Methvin", username = Username("test"), normalizedUsername = "test"))
+          val user = userRepo.save(User(firstName = "Greg", lastName = "Methvin", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           socialUserInfoRepo.save(SocialUserInfo(
             userId = user.id, socialId = socialId, fullName = "Greg Methvin", networkType = provider))
           user

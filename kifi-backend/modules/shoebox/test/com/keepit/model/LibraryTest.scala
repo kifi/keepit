@@ -12,8 +12,8 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-    val u1 = User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test")
-    val u2 = User(firstName = "Jackie", lastName = "Chan", createdAt = t1.plusHours(2), username = Username("test"), normalizedUsername = "test")
+    val u1 = User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
+    val u2 = User(firstName = "Jackie", lastName = "Chan", createdAt = t1.plusHours(2), username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
 
     db.readWrite { implicit s =>
       val user1 = userRepo.save(u1)

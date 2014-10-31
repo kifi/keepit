@@ -59,7 +59,7 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
         val changePwdRoute = com.keepit.controllers.mobile.routes.MobileUserController.changePassword().toString
         changePwdRoute === "/m/1/password/change"
         inject[Database].readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test"))
+          val user = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val identityId = IdentityId("me@feynman.com", "userpass")
           val pInfo = bcrypt.hash("welcome")
           val socialUser = new SocialUser(identityId, "Richard", "Feynman", "Richard Feynman", Some(identityId.userId), None, AuthenticationMethod.UserPassword, passwordInfo = Some(pInfo))
@@ -114,11 +114,11 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
 
   def setupSomeUsers()(implicit injector: Injector) = {
     inject[Database].readWrite { implicit s =>
-      val user1965 = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test"))
-      val user1933 = userRepo.save(User(firstName = "Paul", lastName = "Dirac", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673"), username = Username("test"), normalizedUsername = "test"))
-      val user1935 = userRepo.save(User(firstName = "James", lastName = "Chadwick", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a674"), username = Username("test"), normalizedUsername = "test"))
-      val user1927 = userRepo.save(User(firstName = "Arthur", lastName = "Compton", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a675"), username = Username("test"), normalizedUsername = "test"))
-      val user1921 = userRepo.save(User(firstName = "Albert", lastName = "Einstein", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a676"), username = Username("test"), normalizedUsername = "test"))
+      val user1965 = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+      val user1933 = userRepo.save(User(firstName = "Paul", lastName = "Dirac", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+      val user1935 = userRepo.save(User(firstName = "James", lastName = "Chadwick", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a674"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+      val user1927 = userRepo.save(User(firstName = "Arthur", lastName = "Compton", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a675"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+      val user1921 = userRepo.save(User(firstName = "Albert", lastName = "Einstein", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a676"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
       val friends = List(user1933, user1935, user1927, user1921)
 
       friends.foreach { friend => userConnRepo.save(UserConnection(user1 = user1965.id.get, user2 = friend.id.get)) }
@@ -131,7 +131,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
     "get currentUser" in {
       withDb(modules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
 
         val ctrl = com.keepit.controllers.mobile.routes.MobileUserController.currentUser()
@@ -172,7 +172,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
     "get basic user info for any user" in {
       withDb(modules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit rw =>
-          inject[UserRepo].save(User(firstName = "James", lastName = "Franco", username = Username("test"), normalizedUsername = "test"))
+          inject[UserRepo].save(User(firstName = "James", lastName = "Franco", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
 
         inject[FakeUserActionsHelper].setUser(user)
@@ -196,7 +196,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
     "updateCurrentUser updates names" in {
       withDb(modules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Sam", lastName = "Jackson", username = Username("test"), normalizedUsername = "test"))
+          inject[UserRepo].save(User(firstName = "Sam", lastName = "Jackson", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
 
         val ctrl = com.keepit.controllers.mobile.routes.MobileUserController.updateCurrentUser()
@@ -273,7 +273,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         val route = com.keepit.controllers.mobile.routes.MobileUserController.socialNetworkInfo().toString
         route === "/m/1/user/networks"
         inject[Database].readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test"))
+          val user = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("FRF"), networkType = SocialNetworks.FACEBOOK))
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("LRF"), networkType = SocialNetworks.LINKEDIN,
             profileUrl = Some("http://www.linkedin.com/in/rf"), pictureUrl = Some("http://my.pic.com/pic.jpg")))

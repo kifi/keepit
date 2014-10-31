@@ -27,8 +27,8 @@ class ShoeboxDeepLinkControllerTest extends Specification with ShoeboxTestInject
         val (heinlein, niven, uri) = db.readWrite { implicit s =>
           deepLinkRepo.count === 0
           (
-            userRepo.save(User(firstName = "Robert", lastName = "Heinlein", username = Username("test"), normalizedUsername = "test")),
-            userRepo.save(User(firstName = "Larry", lastName = "Niven", username = Username("test2"), normalizedUsername = "test2")),
+            userRepo.save(User(firstName = "Robert", lastName = "Heinlein", username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))),
+            userRepo.save(User(firstName = "Larry", lastName = "Niven", username = Username("test2"), normalizedUsername = "test2", pictureName = Some("0"))),
             uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/").get, Some("Google")))
           )
         }

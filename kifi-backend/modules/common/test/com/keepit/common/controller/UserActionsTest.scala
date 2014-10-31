@@ -19,7 +19,7 @@ class UserActionsTest extends Specification with CommonTestInjector {
   )
 
   def setUser()(implicit helper: FakeUserActionsHelper): Unit = {
-    helper.setUser(com.keepit.model.User(id = Some(Id[User](1)), firstName = "Test", lastName = "User", username = Username("tuser"), normalizedUsername = "tuser"))
+    helper.setUser(com.keepit.model.User(id = Some(Id[User](1)), firstName = "Test", lastName = "User", username = Username("tuser"), normalizedUsername = "tuser", pictureName = Some("0")))
   }
 
   def unsetUser()(implicit helper: FakeUserActionsHelper): Unit = {

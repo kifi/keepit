@@ -31,8 +31,8 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
   private def setup(client: FakeShoeboxServiceClientImpl) = {
     val extIds = (0 until 5).map { i => "4e5f7b8c-951b-4497-8661-12345678900" + i.toString }.map { ExternalId[User] }
     val users = (0 until 4).map { i =>
-      User(externalId = extIds(i), firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"), username = Username("test"), normalizedUsername = "test")
-    } :+ User(externalId = extIds(4), firstName = "Woody", lastName = "Allen", pictureName = Some("face"), username = Username("test"), normalizedUsername = "test")
+      User(externalId = extIds(i), firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
+    } :+ User(externalId = extIds(4), firstName = "Woody", lastName = "Allen", pictureName = Some("face"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
 
     val usersWithId = client.saveUsers(users: _*)
 

@@ -29,10 +29,10 @@ trait HelpRankTestHelper { self: TestInjector =>
     val keepFB = Json.obj("url" -> "http://facebook.com", "isPrivate" -> false)
 
     val (u1, u2, u3, u4) = db.readWrite { implicit session =>
-      val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-      val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
-      val u3 = userRepo.save(User(firstName = "Discoveryer", lastName = "DiscoveryetyDiscoveryyDiscovery", username = Username("test"), normalizedUsername = "test"))
-      val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot", username = Username("test"), normalizedUsername = "test"))
+      val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+      val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+      val u3 = userRepo.save(User(firstName = "Discoveryer", lastName = "DiscoveryetyDiscoveryyDiscovery", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+      val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
       (u1, u2, u3, u4)
     }
 

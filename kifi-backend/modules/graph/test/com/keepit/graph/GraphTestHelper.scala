@@ -31,7 +31,7 @@ trait GraphTestHelper {
   val keepid4: Id[Keep] = Id[Keep](4)
   val keepid5: Id[Keep] = Id[Keep](5)
 
-  val userUpdate = UserGraphUpdate(User(id = Some(u42), firstName = "Tan", lastName = "Lin", seq = SequenceNumber(1), username = Username("test"), normalizedUsername = "test"))
+  val userUpdate = UserGraphUpdate(User(id = Some(u42), firstName = "Tan", lastName = "Lin", seq = SequenceNumber(1), username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
   val keepGraphUpdate1 = KeepGraphUpdate(Keep(id = Some(keepid1), uriId = uriid1, urlId = urlid1, url = "url1", userId = u43,
     source = KeepSource("site"), seq = SequenceNumber(3), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true))

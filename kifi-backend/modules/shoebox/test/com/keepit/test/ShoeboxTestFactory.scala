@@ -10,10 +10,10 @@ class ShoeboxTestFactory @Inject() (userConnRepo: UserConnectionRepo, userRepo: 
 
   def createUsers()(implicit rw: RWSession) = {
     (
-      userRepo.save(User(firstName = "Aaron", lastName = "Paul", username = Username("test"), normalizedUsername = "test")),
-      userRepo.save(User(firstName = "Bryan", lastName = "Cranston", username = Username("test2"), normalizedUsername = "test2")),
-      userRepo.save(User(firstName = "Anna", lastName = "Gunn", primaryEmail = Some(EmailAddress("test@gmail.com")), username = Username("test3"), normalizedUsername = "test3")),
-      userRepo.save(User(firstName = "Dean", lastName = "Norris", username = Username("test4"), normalizedUsername = "test4"))
+      userRepo.save(User(firstName = "Aaron", lastName = "Paul", username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))),
+      userRepo.save(User(firstName = "Bryan", lastName = "Cranston", username = Username("test2"), normalizedUsername = "test2", pictureName = Some("0"))),
+      userRepo.save(User(firstName = "Anna", lastName = "Gunn", primaryEmail = Some(EmailAddress("test@gmail.com")), username = Username("test3"), normalizedUsername = "test3", pictureName = Some("0"))),
+      userRepo.save(User(firstName = "Dean", lastName = "Norris", username = Username("test4"), normalizedUsername = "test4", pictureName = Some("0")))
     )
   }
 

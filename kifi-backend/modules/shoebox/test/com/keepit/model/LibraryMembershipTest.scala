@@ -12,8 +12,8 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
     val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
     db.readWrite { implicit s =>
-      val user1 = userRepo.save(User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-      val user2 = userRepo.save(User(firstName = "Jackie", lastName = "Chan", createdAt = t1.plusHours(2), username = Username("test2"), normalizedUsername = "test2"))
+      val user1 = userRepo.save(User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+      val user2 = userRepo.save(User(firstName = "Jackie", lastName = "Chan", createdAt = t1.plusHours(2), username = Username("test2"), normalizedUsername = "test2", pictureName = Some("0")))
       val library1 = libraryRepo.save(Library(name = "Lib1", ownerId = user1.id.get, createdAt = t1.plusMinutes(2),
         visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("A"), memberCount = 1))
       val library2 = libraryRepo.save(Library(name = "Lib2", ownerId = user2.id.get, createdAt = t1.plusMinutes(5),

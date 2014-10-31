@@ -31,7 +31,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
     "Update username" in {
       withDb() { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         inject[FakeAirbrakeNotifier].errorCount() === 0
         db.readWrite { implicit session =>
@@ -45,7 +45,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
         val user = db.readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).isDefined === false
-          userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         val updatedUser = db.readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get === user
@@ -69,7 +69,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
 
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Martin", lastName = "Raison", username = Username("test"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Martin", lastName = "Raison", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
 
         db.readOnlyMaster { implicit session =>

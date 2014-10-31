@@ -19,7 +19,7 @@ class KeepToCollectionTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
 
         val (bookmark1, bookmark2, collections) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test"))
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
           val uri3 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/2"), Some("Amazon1")))

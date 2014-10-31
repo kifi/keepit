@@ -43,7 +43,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         val path = routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None, None).url
         path === "/search?q=test&maxHits=7"
 
-        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
+        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
         val result = inject[ExtSearchController].search("test", None, 7, None, None, None, None, None, None, None, None)(request)

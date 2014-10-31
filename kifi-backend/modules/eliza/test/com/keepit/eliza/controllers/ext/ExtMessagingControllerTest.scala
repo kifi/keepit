@@ -50,8 +50,8 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
     "send correctly" in {
       withDb(modules: _*) { implicit injector =>
         val extMessagingController = inject[ExtMessagingController]
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
         val path = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageAction().toString
@@ -156,8 +156,8 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
     "sendMessageReplyAction" in {
       withDb(modules: _*) { implicit injector =>
         val extMessagingController = inject[ExtMessagingController]
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
 

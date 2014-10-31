@@ -23,12 +23,12 @@ class SendFriendConnectionMadeNotificationHelperTest extends Specification with 
       val user1 = userRepo.save(User(
         firstName = "Homer",
         lastName = "Simpson",
-        primaryEmail = Some(EmailAddress("homer@gmail.com")), username = Username("test"), normalizedUsername = "test"
+        primaryEmail = Some(EmailAddress("homer@gmail.com")), username = Username("test"), normalizedUsername = "test", pictureName = Some("0")
       ))
       val user2 = userRepo.save(User(
         firstName = "Peter",
         lastName = "Griffin",
-        primaryEmail = Some(EmailAddress("peter@gmail.com")), username = Username("test"), normalizedUsername = "test"
+        primaryEmail = Some(EmailAddress("peter@gmail.com")), username = Username("test"), normalizedUsername = "test", pictureName = Some("0")
       ))
 
       (user1, user2)

@@ -61,9 +61,9 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
         val su = SocialUser(IdentityId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
         val u1 = db.readWrite { implicit s =>
-          val u1 = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1", username = Username("test"), normalizedUsername = "test"))
-          val u2 = userRepo.save(User(createdAt = now.minusDays(1), firstName = "B", lastName = "2", username = Username("test2"), normalizedUsername = "test2"))
-          val u3 = userRepo.save(User(createdAt = now.minusDays(1), firstName = "C", lastName = "3", username = Username("test3"), normalizedUsername = "test3"))
+          val u1 = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+          val u2 = userRepo.save(User(createdAt = now.minusDays(1), firstName = "B", lastName = "2", username = Username("test2"), normalizedUsername = "test2", pictureName = Some("0")))
+          val u3 = userRepo.save(User(createdAt = now.minusDays(1), firstName = "C", lastName = "3", username = Username("test3"), normalizedUsername = "test3", pictureName = Some("0")))
           val sui = socialUserInfoRepo.save(SocialUserInfo(
             userId = u1.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK,
             credentials = Some(su)))

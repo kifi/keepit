@@ -40,7 +40,7 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
         val path = com.keepit.controllers.mobile.routes.MobileSearchController.searchV1("test", None, 7, None, None, None, None, None, None, None).toString
         path === "/m/1/search?q=test&maxHits=7"
 
-        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
+        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
         val result = mobileSearchController.searchV1("test", None, 7, None, None, None, None, None, None, None)(request)

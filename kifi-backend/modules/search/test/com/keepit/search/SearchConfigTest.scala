@@ -34,7 +34,7 @@ class SearchConfigTest extends Specification with CommonTestInjector {
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager =
           new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
-        val Seq(andrew, greg) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"), User(firstName = "Greg", lastName = "Metvin", username = Username("test"), normalizedUsername = "test"))
+        val Seq(andrew, greg) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")), User(firstName = "Greg", lastName = "Metvin", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
         val (c1, _) = searchConfigManager.getConfig(andrew.id.get, getUserExperiments(andrew.id.get))
         val (c2, _) = searchConfigManager.getConfig(greg.id.get, getUserExperiments(greg.id.get))
@@ -48,7 +48,7 @@ class SearchConfigTest extends Specification with CommonTestInjector {
 
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
-        val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+        val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
         val v1 = Await.result(fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(
           config = SearchConfig(
@@ -77,7 +77,7 @@ class SearchConfigTest extends Specification with CommonTestInjector {
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
-        val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+        val Seq(andrew) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
         fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(
           config = SearchConfig(
@@ -112,7 +112,7 @@ class SearchConfigTest extends Specification with CommonTestInjector {
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
-        val Seq(greg) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Greg", lastName = "Metvin", username = Username("test"), normalizedUsername = "test"))
+        val Seq(greg) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Greg", lastName = "Metvin", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
         val ex = Await.result(fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(config = SearchConfig(
           "percentMatch" -> "700",
@@ -138,7 +138,7 @@ class SearchConfigTest extends Specification with CommonTestInjector {
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
-        val Seq(greg) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Greg", lastName = "Metvin", username = Username("test"), normalizedUsername = "test"))
+        val Seq(greg) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Greg", lastName = "Metvin", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
         fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(config = SearchConfig(
           "percentMatch" -> "9000",

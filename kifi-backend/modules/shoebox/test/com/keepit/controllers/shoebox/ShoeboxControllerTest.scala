@@ -56,11 +56,11 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
   def setupSomeUsers()(implicit injector: Injector) = {
     inject[Database].readWrite { implicit s =>
 
-      val user1965 = userRepo.save(User(firstName = "Richard", lastName = "Feynman", username = Username("test"), normalizedUsername = "test"))
-      val user1933 = userRepo.save(User(firstName = "Paul", lastName = "Dirac", username = Username("test2"), normalizedUsername = "test2"))
-      val user1935 = userRepo.save(User(firstName = "James", lastName = "Chadwick", username = Username("test3"), normalizedUsername = "test3"))
-      val user1927 = userRepo.save(User(firstName = "Arthur", lastName = "Compton", username = Username("test4"), normalizedUsername = "test4"))
-      val user1921 = userRepo.save(User(firstName = "Albert", lastName = "Einstein", username = Username("test5"), normalizedUsername = "test5"))
+      val user1965 = userRepo.save(User(firstName = "Richard", lastName = "Feynman", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+      val user1933 = userRepo.save(User(firstName = "Paul", lastName = "Dirac", username = Username("test2"), normalizedUsername = "test2", pictureName = Some("0")))
+      val user1935 = userRepo.save(User(firstName = "James", lastName = "Chadwick", username = Username("test3"), normalizedUsername = "test3", pictureName = Some("0")))
+      val user1927 = userRepo.save(User(firstName = "Arthur", lastName = "Compton", username = Username("test4"), normalizedUsername = "test4", pictureName = Some("0")))
+      val user1921 = userRepo.save(User(firstName = "Albert", lastName = "Einstein", username = Username("test5"), normalizedUsername = "test5", pictureName = Some("0")))
       val friends = List(user1933, user1935, user1927, user1921)
 
       friends.foreach { friend => userConnRepo.save(UserConnection(user1 = user1965.id.get, user2 = friend.id.get)) }
@@ -142,7 +142,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
       withDb(shoeboxControllerTestModules: _*) { implicit injector =>
         val (user1: Id[User], user2: Id[User], commonUserIds) = db.readWrite { implicit rw =>
           val saveUser = inject[UserRepo].save _
-          val users = for (i <- 0 to 9) yield saveUser(User(firstName = s"first$i", lastName = s"last$i", username = Username(s"test$i"), normalizedUsername = s"test$i"))
+          val users = for (i <- 0 to 9) yield saveUser(User(firstName = s"first$i", lastName = s"last$i", username = Username(s"test$i"), normalizedUsername = s"test$i", pictureName = Some("0")))
 
           val thisUserId = users(0).id.get
           val thatUserId = users(1).id.get
@@ -178,7 +178,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
           val userEmails = db.readWrite { implicit rw =>
             for (i <- 1 to 3) yield inject[UserRepo].save(User(firstName = s"first$i",
               lastName = s"last$i", primaryEmail = Some(EmailAddress(s"test$i@yahoo.com")),
-              username = Username(s"test$i"), normalizedUsername = s"test$i"))
+              username = Username(s"test$i"), normalizedUsername = s"test$i", pictureName = Some("0")))
           }.map(user => user.id.get -> user.primaryEmail).toMap
 
           val userIds = userEmails.keySet

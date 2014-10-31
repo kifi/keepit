@@ -17,8 +17,8 @@ import com.keepit.common.mail.EmailAddress
 class UserIndexerTest extends Specification with CommonTestInjector {
   private def setup(implicit client: FakeShoeboxServiceClientImpl) = {
     val users = (0 until 4).map { i =>
-      User(firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"), username = Username("test"), normalizedUsername = "test")
-    } :+ User(firstName = "Woody", lastName = "Allen", pictureName = Some("face"), username = Username("test"), normalizedUsername = "test")
+      User(firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
+    } :+ User(firstName = "Woody", lastName = "Allen", pictureName = Some("face"), username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
 
     val usersWithId = client.saveUsers(users: _*)
 
@@ -53,7 +53,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         val updates = indexer.update()
         indexer.sequenceNumber.value === 5
 
-        val newUsers = client.saveUsers(User(firstName = "abc", lastName = "xyz", username = Username("test"), normalizedUsername = "test"))
+        val newUsers = client.saveUsers(User(firstName = "abc", lastName = "xyz", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         client.addEmails(newUsers(0).id.get -> EmailAddress("abc@xyz.com"))
         indexer.update()
         indexer.sequenceNumber.value === 6
@@ -207,10 +207,10 @@ class UserIndexerTest extends Specification with CommonTestInjector {
       withInjector(FakeShoeboxServiceModule()) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         client.saveUsers(
-          User(firstName = s"abc", lastName = s"def", username = Username("test"), normalizedUsername = "test"),
-          User(firstName = s"def", lastName = s"abc", username = Username("test"), normalizedUsername = "test"),
-          User(firstName = s"uvw", lastName = s"xyzzzzzzzz", username = Username("test"), normalizedUsername = "test"),
-          User(firstName = s"xyzzzzzzzzzzzzz", lastName = s"uvw", username = Username("test"), normalizedUsername = "test")
+          User(firstName = s"abc", lastName = s"def", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+          User(firstName = s"def", lastName = s"abc", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+          User(firstName = s"uvw", lastName = s"xyzzzzzzzz", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+          User(firstName = s"xyzzzzzzzzzzzzz", lastName = s"uvw", username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
         )
 
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
@@ -255,8 +255,8 @@ class UserIndexerTest extends Specification with CommonTestInjector {
       withInjector(FakeShoeboxServiceModule()) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         client.saveUsers(
-          User(firstName = s"abc", lastName = s"def ghi", username = Username("test"), normalizedUsername = "test"),
-          User(firstName = s"abc", lastName = s"xyz", username = Username("test"), normalizedUsername = "test")
+          User(firstName = s"abc", lastName = s"def ghi", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+          User(firstName = s"abc", lastName = s"xyz", username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
         )
 
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
