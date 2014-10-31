@@ -116,28 +116,6 @@ angular.module('kifi')
       });
     }
 
-    function keepUrl(keepUrls, isPrivate) {
-      var data = {
-        keeps: keepUrls.map(function (keepUrl) {
-          return {
-            url: sanitizeUrl(keepUrl),
-            isPrivate: !!isPrivate
-          };
-        })
-      };
-
-      $log.log('keepActionService.keep()', data);
-
-      var url = env.xhrBase + '/keeps/add';
-      var config = {
-        params: { separateExisting: true }
-      };
-
-      return $http.post(url, data, config).then(function (res) {
-        return res && res.data;
-      });
-    }
-
     function keepToLibrary(keepInfos, libraryId) {
       $analytics.eventTrack('user_clicked_page', {
         // TODO(yiping): should we have a different action
@@ -300,7 +278,6 @@ angular.module('kifi')
       getSingleKeep: getSingleKeep,
       keepOne: keepOne,
       keepMany: keepMany,
-      keepUrl: keepUrl,
       keepToLibrary: keepToLibrary,
       copyToLibrary: copyToLibrary,
       moveToLibrary: moveToLibrary,

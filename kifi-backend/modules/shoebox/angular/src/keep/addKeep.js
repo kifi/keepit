@@ -28,11 +28,7 @@ angular.module('kifi')
           scope.$apply(function () {
             switch (e.which) {
               case keyIndices.KEY_ENTER:
-                if (scope.librariesEnabled) {
-                  scope.keepToLibrary();
-                } else {
-                  scope.keepUrl();
-                }
+                scope.keepToLibrary();
                 break;
               case keyIndices.KEY_TAB:
                 focusState = (focusState + 1) % 3;
@@ -76,37 +72,6 @@ angular.module('kifi')
           scope.state.checkedPrivate = !scope.state.checkedPrivate;
         };
 
-        scope.keepUrl = function () {
-          var url = (scope.state.input) || '';
-          if (url && util.validateUrl(url)) {
-            $location.path('/');
-
-            return keepActionService.keepUrl([url], scope.state.checkedPrivate).then(function (result) {
-              if (result.failures && result.failures.length) {
-                scope.resetAndHide();
-                modalService.open({
-                  template: 'common/modal/genericErrorModal.tpl.html'
-                });
-              } else if (result.alreadyKept && result.alreadyKept.length) {
-                scope.resetAndHide();
-                $location.path('/keep/' + result.alreadyKept[0].id);
-              } else {
-                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
-                  var keep = new keepDecoratorService.Keep(fullKeep);
-                  keep.buildKeep(keep);
-                  keep.makeKept();
-                  tagService.addToKeepCount(1);
-
-                  scope.$emit('keepAdded', '', keep);
-                  scope.resetAndHide();
-                });
-              }
-            });
-          } else {
-            scope.state.invalidUrl = true;
-          }
-        };
-
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
           if (url && util.validateUrl(url)) {
@@ -139,11 +104,8 @@ angular.module('kifi')
           }
         };
 
-        scope.librariesEnabled = libraryService.isAllowed();
-        if (scope.librariesEnabled) {
-          scope.librarySelection = {};
-          scope.librarySelection.library = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
-        }
+        scope.librarySelection = {};
+        scope.librarySelection.library = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
 
         scope.resetAndHide = function () {
           reset();
@@ -153,15 +115,6 @@ angular.module('kifi')
 
         $document.on('keydown', processKey);
         safeFocus();
-
-        var deregisterLibrarySummaries = $rootScope.$on('librarySummariesChanged', function () {
-          if (scope.librariesEnabled) {
-            scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
-              return lib.access !== 'read_only';
-            });
-          }
-        });
-        scope.$on('$destroy', deregisterLibrarySummaries);
       }
     };
   }
