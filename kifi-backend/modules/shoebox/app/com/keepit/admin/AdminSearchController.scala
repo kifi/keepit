@@ -24,8 +24,8 @@ class AdminSearchController @Inject() (
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     heimdal: HeimdalServiceClient) extends AdminUserActions with Logging {
 
-  def explain(query: String, uriId: Id[NormalizedURI], lang: String) = AdminUserPage.async { request =>
-    searchClient.explainResult(query, request.userId, uriId, lang).map(Ok(_))
+  def explain(query: String, uriId: Id[NormalizedURI], lang: String, debug: Option[String]) = AdminUserPage.async { request =>
+    searchClient.explainResult(query, request.userId, uriId, lang, debug).map(Ok(_))
   }
 
   def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminUserPage { implicit request =>

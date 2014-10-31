@@ -161,10 +161,18 @@ class KifiSearchImpl(
       new ScoreDetailCollector(uriId.id, Some(clickBoostsProvider), Some(sharingBoostInNetwork))
     }
 
+    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait)
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
 
-    engine.explain(uriId.id, collector, keepScoreSource, articleScoreSource)
+    if (debugFlags != 0) {
+      engine.debug(this)
+      libraryScoreSource.debug(this)
+      keepScoreSource.debug(this)
+      articleScoreSource.debug(this)
+    }
+
+    engine.explain(uriId.id, collector, libraryScoreSource, keepScoreSource, articleScoreSource)
 
     Explanation(query, labels, collector.rawScore, collector.getDetails(), collector.getBoostValues())
   }
