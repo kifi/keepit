@@ -98,7 +98,7 @@ class ScoreContextWithDebug(
     scr
   }
   override def join(reader: DataBufferReader): Unit = {
-    if (debugTracedIds.contains(id)) debugLog(s"scorectx-join id=${id} offset=${reader.recordOffset} visibility=[${Visibility.toString(reader.recordType)}]")
+    if (debugTracedIds.contains(id)) debugLog(s"scorectx-join id=${id} visibility=[${Visibility.toString(reader.recordType)}] offset=${reader.recordOffset}")
     super.join(reader)
   }
   override def flush(): Unit = {
