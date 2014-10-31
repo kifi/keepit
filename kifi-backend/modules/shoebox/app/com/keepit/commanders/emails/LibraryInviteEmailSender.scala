@@ -12,8 +12,7 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.mail.template.helpers.fullName
-import com.keepit.model._
-import com.keepit.social.BasicUser
+import com.keepit.model.{ UserEmailAddressRepo, NotificationCategory, User, LibraryInvite, LibraryRepo, LibraryVisibility, KeepRepo }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
