@@ -22,6 +22,11 @@ angular.module('kifi', [
 // http://stackoverflow.com/questions/16674279/how-to-nest-ng-view-inside-ng-include
 .run(['$route', angular.noop])
 
+// http://ng-perf.com/2014/10/24/simple-trick-to-speed-up-your-angularjs-app-load-time/
+.config(['$compileProvider', function($compileProvider) {
+    $compileProvider.debugInfoEnabled(false); // comment if you would like DOM annotations of angular bindings for development
+}])
+
 .constant('linkedinConfigSettings', {
   appKey: 'r11loldy9zlg'
 })
