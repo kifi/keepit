@@ -1,6 +1,9 @@
 package com.keepit.realtime
 
-import com.google.inject.{ ImplementedBy, Inject }
+import java.util.concurrent.TimeUnit
+
+import com.google.common.cache.{ CacheLoader, CacheBuilder, LoadingCache }
+import com.google.inject.{ Singleton, ImplementedBy, Inject }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -13,6 +16,7 @@ import org.joda.time.Days
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
+import scala.collection
 import scala.concurrent.future
 
 case class UrbanAirshipConfig(key: String, secret: String, devKey: String, devSecret: String, baseUrl: String = "https://go.urbanairship.com")
@@ -35,6 +39,7 @@ trait UrbanAirship {
   def sendNotification(device: Device, notification: PushNotification): Unit
 }
 
+@Singleton
 class UrbanAirshipImpl @Inject() (
     client: UrbanAirshipClient,
     deviceRepo: DeviceRepo,
@@ -61,20 +66,39 @@ class UrbanAirshipImpl @Inject() (
     device
   }
 
+  val devicesCache: LoadingCache[Id[User], Seq[Device]] = CacheBuilder.newBuilder()
+    .maximumSize(10000)
+    .expireAfterWrite(30, TimeUnit.MINUTES)
+    .build(
+      new CacheLoader[Id[User], Seq[Device]]() {
+        def load(userId: Id[User]): collection.Seq[Device] = {
+          db.readOnlyReplica { implicit s =>
+            //todo(eishay): should be cached!
+            deviceRepo.getByUserId(userId)
+          }
+        }
+      })
+
   def notifyUser(userId: Id[User], notification: PushNotification): Unit = {
-    // todo: Check shoebox if user has a notification preference
-    // UserNotifyPreferenceRepo.canSend(userId, someIdentifierRepresentingMobileNotificationType)
     log.info(s"Notifying user: $userId")
-    for {
-      d <- db.readOnlyReplica { implicit s => deviceRepo.getByUserId(userId) }
-      device <- client.updateDeviceState(d) if device.state == DeviceStates.ACTIVE
-    } {
+    val devices: Seq[Device] = devicesCache.get(userId)
+    //get only active devices
+    val activeDevices = devices filter { d =>
+      d.state == DeviceStates.ACTIVE
+    }
+    //send them all a push notification
+    activeDevices foreach { device =>
       sendNotification(device, notification)
+    }
+    log.info(s"user $userId has ${activeDevices.size} active devices out of ${devices.size} for notification $notification")
+    //refresh all devices (even not active ones)
+    devices foreach { device =>
+      client.updateDeviceState(device)
     }
   }
 
   //see http://docs.urbanairship.com/reference/api/v3/push.html
-  private def createAndroidJson(notification: PushNotification, device: Device) = {
+  private[realtime] def createAndroidJson(notification: PushNotification, device: Device) = {
     notification.message.map { message =>
       Json.obj(
         "audience" -> Json.obj("apid" -> device.token),
@@ -106,7 +130,7 @@ class UrbanAirshipImpl @Inject() (
   }
 
   //see http://docs.urbanairship.com/reference/api/v3/push.html
-  private def createIosJson(notification: PushNotification, device: Device) =
+  private[realtime] def createIosJson(notification: PushNotification, device: Device) =
     notification.message.map { message =>
       Json.obj(
         "audience" -> Json.obj("device_token" -> device.token),

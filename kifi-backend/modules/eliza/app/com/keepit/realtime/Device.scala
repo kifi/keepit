@@ -17,6 +17,8 @@ case class Device(
 
   def withId(id: Id[Device]): Device = copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): Device = copy(updatedAt = updateTime)
+
+  override def toString(): String = s"Device[id:$id,user:$userId,type:$deviceType,dev:$isDev]"
 }
 
 object DeviceStates extends States[Device]

@@ -119,6 +119,7 @@ angular.module('kifi')
       _.remove($scope.recos, function (reco) {
         return reco && reco.recoKeep && reco.recoKeep.isMyBookmark;
       });
+      $scope.recosState = 'hasRecos';
     } else {
       $scope.loading = true;
 

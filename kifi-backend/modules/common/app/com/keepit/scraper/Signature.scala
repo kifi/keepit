@@ -6,13 +6,7 @@ import scala.math._
 
 class Signature(val bytes: Array[Byte]) {
 
-  def similarTo(other: Signature): Double = {
-    if (bytes.length == other.bytes.length) {
-      bytes.zip(other.bytes).filter { pair => pair._1 == pair._2 }.size.toDouble / 100.0d
-    } else {
-      0.0d
-    }
-  }
+  def similarTo(other: Signature): Double = Signature.similarity(this.bytes, other.bytes)
 
   def toBase64() = printBase64Binary(bytes)
 
@@ -42,13 +36,20 @@ object Signature {
     Signature(bytes)
   }
 
+  def similarity(arr1: Array[Byte], arr2: Array[Byte]): Double = {
+    if (arr1.length == arr2.length) {
+      arr1.zip(arr2).count { pair => pair._1 == pair._2 }.toDouble / arr1.length.toDouble
+    } else {
+      0.0d
+    }
+  }
+
   abstract class Builder(windowSize: Int) {
 
     private[this] val sketch = new Array[Int](Signature.SIZE)
     Arrays.fill(sketch, Int.MaxValue)
 
     private[this] val window = new Array[Int](windowSize + 1)
-    Arrays.fill(sketch, Int.MaxValue)
 
     private[this] val cancelerShift = windowSize % 32
 
@@ -96,7 +97,6 @@ object Signature {
     private def updateSketch(seed: Int) {
       var v = seed.toLong & 0x7FFFFFFFFFFFFFFFL
       var i = 0
-      val sketchSize = sketch.length
       while (i < Signature.SIZE) {
         v = (v * 0x5DEECE66DL + 0x123456789L) & 0x7FFFFFFFFFFFFFFFL // linear congruential generator
         sketch(i) = min(sketch(i), (v % 0x7FFFFFFFL).toInt) // positive int

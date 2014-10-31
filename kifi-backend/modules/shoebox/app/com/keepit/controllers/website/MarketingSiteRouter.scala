@@ -41,7 +41,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
       if (maybeCachedIndex(noHtml).nonEmpty) {
         Redirect(s"https://www.kifi.com/$noHtml")
       } else {
-        NotFound(views.html.error.notFound(s"request.path (try to remove the .html)"))
+        NotFound(views.html.error.notFound(s"$path (try to remove the .html)"))
       }
     } else {
       maybeCachedIndex(file) map { content =>

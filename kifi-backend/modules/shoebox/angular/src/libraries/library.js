@@ -164,6 +164,7 @@ angular.module('kifi')
         $scope.loading = false;
         $scope.page = 'library';
         setTitle(library);
+        $rootScope.$emit('libraryUrl', $scope.library);
       }, function onError(resp) {
         if (resp.data && resp.data.error) {
           $scope.loading = false;
@@ -196,7 +197,6 @@ angular.module('kifi')
     $scope.$on('$destroy', deregisterLogin);
 
     init(true);
-    $rootScope.$emit('libraryUrl', $scope.library);
 
     $scope.submitPassPhrase = function () {
       libraryService.authIntoLibrary($scope.username, $scope.librarySlug, authToken, $scope.passphrase.value.toLowerCase()).then(function () {

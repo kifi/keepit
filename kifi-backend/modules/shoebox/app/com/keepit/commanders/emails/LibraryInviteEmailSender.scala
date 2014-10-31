@@ -12,8 +12,7 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.mail.template.helpers.fullName
-import com.keepit.model.{ UserEmailAddressRepo, UserRepo, NotificationCategory, User, LibraryInvite, LibraryRepo, KeepRepo }
-import com.keepit.social.BasicUser
+import com.keepit.model.{ UserEmailAddressRepo, NotificationCategory, User, LibraryInvite, LibraryRepo, LibraryVisibility, KeepRepo }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
@@ -46,10 +45,7 @@ class LibraryInviteEmailSender @Inject() (
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
       val fromUserId = invite.inviterId
       val fromAddress = db.readOnlyReplica { implicit session => userEmailRepo.getByUser(invite.inviterId).address }
-      val passPhrase = toRecipient match {
-        case Left(_: Id[User]) => None
-        case Right(_: EmailAddress) => Some(invite.passPhrase)
-      }
+      val passPhrase = if (library.visibility == LibraryVisibility.PUBLISHED || toRecipient.isLeft) None else Some(invite.passPhrase)
       val authToken = invite.authToken
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),

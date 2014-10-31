@@ -256,6 +256,7 @@ GET     /about/culture              @com.keepit.controllers.website.HomeControll
 GET     /about/investors            @com.keepit.controllers.website.HomeController.moved(uri = "/about")
 GET     /about/team                 @com.keepit.controllers.website.HomeController.route(path = "about/team")
 GET     /about/join_us              @com.keepit.controllers.website.HomeController.route(path = "about/join_us")
+GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about/join_us")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
 GET     /contact                    @com.keepit.controllers.website.HomeController.route(path = "contact")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
@@ -624,7 +625,6 @@ POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminCon
 POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminController.killVersion(ver: String)
 POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminController.unkillVersion(ver: String)
 POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
-POST    /admin/slider/setSiteShowLibraryIntro @com.keepit.controllers.admin.SliderAdminController.setSiteShowLibraryIntro()
 
 GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
 GET     /admin/libraries/:id             @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library])

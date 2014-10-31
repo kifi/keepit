@@ -1,18 +1,18 @@
 package com.keepit.realtime
 
+import com.google.inject.Provides
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.eliza.model.MessageThread
-import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.User
 import com.keepit.test.{ ElizaTestInjector, TestInjector }
+import net.codingwell.scalaguice.ScalaModule
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 
 class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInjector {
 
-  implicit val context = HeimdalContext.empty
-
-  "Urban Ariship" should {
+  "Urban Airship" should {
 
     "create ios json" in {
       withInjector() { implicit injector =>
@@ -42,7 +42,6 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
           """)
       }
     }
-
   }
 
   "create android json" in {
