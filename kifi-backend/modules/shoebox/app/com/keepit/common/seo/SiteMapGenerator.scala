@@ -9,7 +9,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
-import com.keepit.model.{ UserRepo, Library, LibraryRepo }
+import com.keepit.model.{ KeepRepo, UserRepo, Library, LibraryRepo }
 import play.api.{ Play, Plugin }
 import Play.current
 import scala.concurrent.Future
@@ -61,6 +61,7 @@ class SiteMapGenerator @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
     userRepo: UserRepo,
+    keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
     libraryCommander: LibraryCommander) extends Logging {
 
@@ -72,9 +73,11 @@ class SiteMapGenerator @Inject() (
     // batch, optimize
     val ownerIds = CollectionHelpers.dedupBy(libraries.map(_.ownerId))(id => id)
     val owners = db.readOnlyMaster { implicit ro => userRepo.getUsers(ownerIds) } // cached
-    val paths = libraries.filter { lib => owners.get(lib.ownerId).isDefined } map { lib =>
+    val paths = libraries.filter { lib =>
+      owners.get(lib.ownerId).isDefined && db.readOnlyMaster { implicit ro => keepRepo.getCountByLibrary(lib.id.get) > 3 } // proxy for quality; need bulk version
+    } map { lib =>
       val owner = owners(lib.ownerId)
-      s"https://kifi.com${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}"
+      s"https://www.kifi.com${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}"
     }
 
     // location only for now
