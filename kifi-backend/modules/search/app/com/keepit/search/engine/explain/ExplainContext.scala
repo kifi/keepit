@@ -15,30 +15,30 @@ class ExplainContext(
   private[this] val scoreArray = new Array[Float](scoreArraySize)
 
   override def set(id: Long): AggregationContext = {
-    if (debugTracedIds.contains(id)) debugLog(s"explainctx-set id=$id")
+    if (debugTracedIds != null && debugTracedIds.contains(id)) debugLog(s"explainctx-set id=$id")
     super.set(id)
   }
 
   override def computeMatching(minThreshold: Float): Float = {
     val matching = super.computeMatching(minThreshold)
-    if (debugTracedIds.contains(id)) debugLog(s"explainctx-matching id=${id} matching=${matching} weights=[${matchWeight.mkString(",")}]")
+    if (debugTracedIds != null && debugTracedIds.contains(id)) debugLog(s"explainctx-matching id=${id} matching=${matching} weights=[${matchWeight.mkString(",")}]")
     matching
   }
 
   override def score(): Float = {
     val scr = super.score()
-    if (debugTracedIds.contains(id)) debugLog(s"explainctx-score id=${id} score=${scr}")
+    if (debugTracedIds != null && debugTracedIds.contains(id)) debugLog(s"explainctx-score id=${id} score=${scr}")
     scr
   }
 
   override def flush(): Unit = {
-    if (debugTracedIds.contains(id)) debugLog(s"explainctx-flush id=$id id2=$secondaryId deg=$degree visibility=[${Visibility.toString(visibility)}] scoreMax=(${scoreMax.mkString(",")}) scoreSum=(${scoreSum.mkString(",")})")
+    if (debugTracedIds != null && debugTracedIds.contains(id)) debugLog(s"explainctx-flush id=$id id2=$secondaryId deg=$degree visibility=[${Visibility.toString(visibility)}] scoreMax=(${scoreMax.mkString(",")}) scoreSum=(${scoreSum.mkString(",")})")
     super.flush()
   }
 
   override def join(reader: DataBufferReader): Unit = {
     if (id == targetId) {
-      if (debugTracedIds.contains(id)) debugLog(s"explainctx-join id=${id} visibility=[${Visibility.toString(reader.recordType)}] offset=${reader.recordOffset}")
+      if (debugTracedIds != null && debugTracedIds.contains(id)) debugLog(s"explainctx-join id=${id} visibility=[${Visibility.toString(reader.recordType)}] offset=${reader.recordOffset}")
 
       val theVisibility = reader.recordType
       val id2 = if ((theVisibility & Visibility.HAS_SECONDARY_ID) != 0) reader.nextLong() else -1L
@@ -73,7 +73,7 @@ class DirectExplainContext(
 
   override def put(id: Long, visibility: Int): Unit = {
     if (id == targetId) {
-      if (debugTracedIds.contains(id)) debugLog(s"explainctx-put id=$id visibility=[${Visibility.toString(visibility)}]")
+      if (debugTracedIds != null && debugTracedIds.contains(id)) debugLog(s"explainctx-put id=$id visibility=[${Visibility.toString(visibility)}]")
       super.put(id, visibility) // do this before collectDetail to compute boost scores
       collector.collectDetail(id, -1, visibility, scoreArray)
     }
