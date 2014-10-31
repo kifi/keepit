@@ -10,9 +10,20 @@ import play.api.libs.json.Json
 
 class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInjector {
 
-  implicit val context = HeimdalContext.empty
+  "Send live Urban Airship" should {
+    "send ios message" in {
+      withInjector() { implicit injector =>
+        val urbanAirship = inject[UrbanAirshipImpl]
+        val notification = PushNotification(id = ExternalId[MessageThread](), unvisitedCount = 44, message = Some("Hello world :-)"), sound = None)
+        val device = Device(userId = Id[User](1), token = "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63", deviceType = DeviceType.IOS)
+        val json = urbanAirship.createIosJson(notification, device)
+        val client = inject[DevAndProdUrbanAirshipClient]
+        client.send(json, device, notification)
+      }
+    }
+  }
 
-  "Urban Ariship" should {
+  "Urban Airship" should {
 
     "create ios json" in {
       withInjector() { implicit injector =>
@@ -42,7 +53,6 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
           """)
       }
     }
-
   }
 
   "create android json" in {

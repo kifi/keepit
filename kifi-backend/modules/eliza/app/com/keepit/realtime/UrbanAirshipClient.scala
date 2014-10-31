@@ -6,7 +6,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{CallTimeouts, NonOKResponseException, DirectUrl, HttpClient}
+import com.keepit.common.net.{ CallTimeouts, NonOKResponseException, DirectUrl, HttpClient }
 import com.keepit.common.time._
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.JsObject
@@ -16,7 +16,7 @@ import scala.concurrent.Future
 @ImplementedBy(classOf[DevAndProdUrbanAirshipClient])
 trait UrbanAirshipClient {
   def send(json: JsObject, device: Device, notification: PushNotification): Unit
-  def updateDeviceState(device: Device): Future[Device]
+  def updateDeviceState(device: Device): Unit
 }
 
 abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, airbrake: AirbrakeNotifier, db: Database, deviceRepo: DeviceRepo) extends UrbanAirshipClient with Logging {
@@ -70,7 +70,7 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
     }
   }
 
-  def updateDeviceState(device: Device): Future[Device] = {
+  def updateDeviceState(device: Device): Unit = {
     log.info(s"Checking state of device: ${device.token}")
     if (device.updatedAt plus UrbanAirship.RecheckPeriod isBefore clock.now()) {
       val uaUrl = device.deviceType match {
@@ -94,7 +94,7 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
             deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
           }
       }
-    } else Future.successful(device)
+    }
   }
 
 }
@@ -103,7 +103,7 @@ class DevAndProdUrbanAirshipClient @Inject() (
     prod: ProdUrbanAirshipClient,
     dev: DevUrbanAirshipClient) extends UrbanAirshipClient {
 
-  def updateDeviceState(device: Device): Future[Device] = {
+  def updateDeviceState(device: Device): Unit = {
     if (device.isDev) {
       dev.updateDeviceState(device)
     } else {
