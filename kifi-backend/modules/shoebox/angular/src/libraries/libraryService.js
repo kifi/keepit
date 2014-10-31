@@ -211,6 +211,8 @@ angular.module('kifi')
         $rootScope.$emit('librarySummariesChanged');
       },
 
+      // TODO(yiping): All functions that update library summaries should refetch automatically instead of
+      // having client refetch.
       createLibrary: function (opts) {
         var required = ['name', 'visibility', 'slug'];
         var missingFields = _.filter(required, function (v) {
