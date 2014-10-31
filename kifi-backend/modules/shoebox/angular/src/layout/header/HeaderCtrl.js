@@ -74,6 +74,7 @@ angular.module('kifi')
     $scope.clearLibraryName = function () {
       $scope.search.showName = false;
       $scope.stayInLibraryPath = '';
+      $scope.library = {};
       if ($location.path() === '/find') {
         $location.search('l', '');
       }
