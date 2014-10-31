@@ -20,16 +20,9 @@ angular.module('kifi')
     // For populating libraries in the import modals.
     $scope.librariesEnabled = libraryService.isAllowed();
 
-    if ($scope.librariesEnabled) {
-      libraryService.fetchLibrarySummaries(true).then(function () {
-        $scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
-          return lib.access !== 'read_only';
-        });
-        $scope.librarySelection = {};
-        $scope.libSelectDownOffset = 0;
-        $scope.libSelectMaxUpOffset = 220;
-      });
-    }
+    $scope.onLibrarySelected = function (selectedLibrary) {
+      $scope.selectedLibrary = selectedLibrary;
+    };
 
     $scope.enableSearch = function () {
       $scope.searchEnabled = true;
@@ -109,11 +102,14 @@ angular.module('kifi')
 
     function initBookmarkImport(count, msgEvent) {
       if ($scope.librariesEnabled) {
-         modalService.open({
+        libraryService.fetchLibrarySummaries(true).then(function () {
+          $scope.selectedLibrary = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
+        });
+
+        modalService.open({
           template: 'common/modal/importBookmarksLibraryModal.tpl.html',
           scope: $scope
         });
-        $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
       } else {
         modalService.open({
           template: 'common/modal/importBookmarksModal.tpl.html',
@@ -130,11 +126,14 @@ angular.module('kifi')
       fileInput.replaceWith(fileInput = fileInput.clone(true));
 
       if ($scope.librariesEnabled) {
-         modalService.open({
+        libraryService.fetchLibrarySummaries(true).then(function () {
+          $scope.selectedLibrary = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
+        });
+
+        modalService.open({
           template: 'common/modal/importBookmarkFileLibraryModal.tpl.html',
           scope: $scope
         });
-        $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
       } else {
         modalService.open({
           template: 'common/modal/importBookmarkFileModal.tpl.html',
