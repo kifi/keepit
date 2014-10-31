@@ -79,7 +79,7 @@ class UrbanAirshipImpl @Inject() (
   private def createAndroidJson(notification: PushNotification, device: Device) = {
     notification.message.map { message =>
       Json.obj(
-        "audience" -> Json.obj("device_token" -> device.token),
+        "audience" -> Json.obj("apid" -> device.token),
         "device_types" -> Json.arr("android"),
         "notification" -> Json.obj(
           "android" -> Json.obj(
@@ -93,7 +93,7 @@ class UrbanAirshipImpl @Inject() (
       )
     } getOrElse {
       Json.obj(
-        "audience" -> Json.obj("device_token" -> device.token),
+        "audience" -> Json.obj("apid" -> device.token),
         "device_types" -> Json.arr("android"),
         "notification" -> Json.obj(
           "android" -> Json.obj(
