@@ -21,6 +21,7 @@ trait UrbanAirshipClient {
 
 abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, airbrake: AirbrakeNotifier, db: Database, deviceRepo: DeviceRepo) extends UrbanAirshipClient with Logging {
   def send(json: JsObject, device: Device, notification: PushNotification): Unit
+
   def httpClient: HttpClient
 
   private def validate(json: JsObject, device: Device, notification: PushNotification, validationId: ExternalId[Nothing]): Unit = {
@@ -99,10 +100,15 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
 
 class DevAndProdUrbanAirshipClient @Inject() (
     prod: ProdUrbanAirshipClient,
-    dev: DevUrbanAirshipClient,
-    clock: Clock, config: UrbanAirshipConfig, airbrake: AirbrakeNotifier, db: Database, deviceRepo: DeviceRepo) extends UrbanAirshipClientImpl(clock, config, airbrake, db, deviceRepo) {
+    dev: DevUrbanAirshipClient) extends UrbanAirshipClient {
 
-  def httpClient: HttpClient = ???
+  def updateDeviceState(device: Device): Future[Device] = {
+    if (device.isDev) {
+      dev.updateDeviceState(device)
+    } else {
+      prod.updateDeviceState(device)
+    }
+  }
 
   def send(json: JsObject, device: Device, notification: PushNotification): Unit = {
     if (device.isDev) {
