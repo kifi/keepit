@@ -6,7 +6,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ CallTimeouts, NonOKResponseException, DirectUrl, HttpClient }
+import com.keepit.common.net.{ ClientResponse, CallTimeouts, NonOKResponseException, DirectUrl, HttpClient }
 import com.keepit.common.time._
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.JsObject
@@ -15,12 +15,12 @@ import scala.concurrent.Future
 
 @ImplementedBy(classOf[DevAndProdUrbanAirshipClient])
 trait UrbanAirshipClient {
-  def send(json: JsObject, device: Device, notification: PushNotification): Unit
+  def send(json: JsObject, device: Device, notification: PushNotification): Future[ClientResponse]
   def updateDeviceState(device: Device): Unit
 }
 
 abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, airbrake: AirbrakeNotifier, db: Database, deviceRepo: DeviceRepo) extends UrbanAirshipClient with Logging {
-  def send(json: JsObject, device: Device, notification: PushNotification): Unit
+  def send(json: JsObject, device: Device, notification: PushNotification): Future[ClientResponse]
 
   def httpClient: HttpClient
 
@@ -39,7 +39,8 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
 
   private val MaxTrials = 3
 
-  protected def post(json: JsObject, device: Device, notification: PushNotification, trial: Int = 1): Unit = {
+  protected def post(json: JsObject, device: Device, notification: PushNotification, trial: Int = 1): Future[ClientResponse] = {
+    println(s"sending json $json to device $device on tril $trial with notification $notification")
     val res = httpClient.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), json,
       { req =>
         {
@@ -58,6 +59,7 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
     )
     res.onSuccess {
       case clientRes =>
+        println(s"sent! $clientRes")
         if (clientRes.status != 200) {
           if (trial < MaxTrials) {
             log.info(s"[AA] failure to send notification $notification to device $device on trial $trial: ${clientRes.body}, trying more")
@@ -68,6 +70,7 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
           log.info(s"[AA] successfully sent notification ${notification.id} to $device: ${clientRes.body}")
         }
     }
+    res
   }
 
   def updateDeviceState(device: Device): Unit = {
@@ -111,7 +114,7 @@ class DevAndProdUrbanAirshipClient @Inject() (
     }
   }
 
-  def send(json: JsObject, device: Device, notification: PushNotification): Unit = {
+  def send(json: JsObject, device: Device, notification: PushNotification): Future[ClientResponse] = {
     if (device.isDev) {
       dev.send(json, device, notification)
     } else {
@@ -133,8 +136,9 @@ class ProdUrbanAirshipClient @Inject() (
       .withTimeout(CallTimeouts(maxWaitTime = Some(10000), responseTimeout = Some(10000), maxJsonParseTime = Some(1000)))
   }
 
-  def send(json: JsObject, device: Device, notification: PushNotification): Unit = {
+  def send(json: JsObject, device: Device, notification: PushNotification): Future[ClientResponse] = {
     if (device.isDev) throw new Exception(s"Not supporting dev device: $device")
+    post(json, device, notification)
   }
 }
 
@@ -150,7 +154,7 @@ class DevUrbanAirshipClient @Inject() (
       .withTimeout(CallTimeouts(maxWaitTime = Some(10000), responseTimeout = Some(10000), maxJsonParseTime = Some(1000)))
   }
 
-  def send(json: JsObject, device: Device, notification: PushNotification): Unit = {
+  def send(json: JsObject, device: Device, notification: PushNotification): Future[ClientResponse] = {
     if (!device.isDev) throw new Exception(s"Not supporting prod device: $device")
     post(json, device, notification)
   }
