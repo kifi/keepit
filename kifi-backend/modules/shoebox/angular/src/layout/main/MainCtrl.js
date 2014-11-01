@@ -17,19 +17,14 @@ angular.module('kifi')
       enabled: false
     };
 
-    // For populating libraries in the import modals.
-    $scope.librariesEnabled = libraryService.isAllowed();
-
-    if ($scope.librariesEnabled) {
-      libraryService.fetchLibrarySummaries(true).then(function () {
-        $scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
-          return lib.access !== 'read_only';
-        });
-        $scope.librarySelection = {};
-        $scope.libSelectDownOffset = 0;
-        $scope.libSelectMaxUpOffset = 220;
+    libraryService.fetchLibrarySummaries(true).then(function () {
+      $scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+        return lib.access !== 'read_only';
       });
-    }
+      $scope.librarySelection = {};
+      $scope.libSelectDownOffset = 0;
+      $scope.libSelectMaxUpOffset = 220;
+    });
 
     $scope.enableSearch = function () {
       $scope.searchEnabled = true;
@@ -108,18 +103,11 @@ angular.module('kifi')
     handleInjectedState(injectedState.state);
 
     function initBookmarkImport(count, msgEvent) {
-      if ($scope.librariesEnabled) {
-         modalService.open({
-          template: 'common/modal/importBookmarksLibraryModal.tpl.html',
-          scope: $scope
-        });
-        $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
-      } else {
-        modalService.open({
-          template: 'common/modal/importBookmarksModal.tpl.html',
-          scope: $scope
-        });
-      }
+      modalService.open({
+        template: 'common/modal/importBookmarksLibraryModal.tpl.html',
+        scope: $scope
+      });
+      $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
 
       $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
     }
@@ -129,18 +117,11 @@ angular.module('kifi')
       var fileInput = $rootElement.find('.bookmark-file-upload');
       fileInput.replaceWith(fileInput = fileInput.clone(true));
 
-      if ($scope.librariesEnabled) {
-         modalService.open({
-          template: 'common/modal/importBookmarkFileLibraryModal.tpl.html',
-          scope: $scope
-        });
-        $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
-      } else {
-        modalService.open({
-          template: 'common/modal/importBookmarkFileModal.tpl.html',
-          scope: $scope
-        });
-      }
+      modalService.open({
+        template: 'common/modal/importBookmarkFileLibraryModal.tpl.html',
+        scope: $scope
+      });
+      $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
     }
 
     var deregisterGlobalModal = $rootScope.$on('showGlobalModal', function (e, modal) {

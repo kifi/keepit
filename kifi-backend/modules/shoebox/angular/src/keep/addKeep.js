@@ -28,11 +28,7 @@ angular.module('kifi')
           scope.$apply(function () {
             switch (e.which) {
               case keyIndices.KEY_ENTER:
-                if (scope.librariesEnabled) {
-                  scope.keepToLibrary();
-                } else {
-                  scope.keepUrl();
-                }
+                scope.keepToLibrary();
                 break;
               case keyIndices.KEY_TAB:
                 focusState = (focusState + 1) % 3;
@@ -139,16 +135,13 @@ angular.module('kifi')
           }
         };
 
-        scope.librariesEnabled = libraryService.isAllowed();
-        if (scope.librariesEnabled) {
-          scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
-            return lib.access !== 'read_only';
-          });
-          scope.librarySelection = {};
-          scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
-          scope.libSelectDownOffset = 0;
-          scope.libSelectMaxUpOffset = 110;
-        }
+        scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
+          return lib.access !== 'read_only';
+        });
+        scope.librarySelection = {};
+        scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
+        scope.libSelectDownOffset = 0;
+        scope.libSelectMaxUpOffset = 110;
 
         scope.resetAndHide = function () {
           reset();
@@ -160,11 +153,9 @@ angular.module('kifi')
         safeFocus();
 
         var deregisterLibrarySummaries = $rootScope.$on('librarySummariesChanged', function () {
-          if (scope.librariesEnabled) {
-            scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
-              return lib.access !== 'read_only';
-            });
-          }
+          scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
+            return lib.access !== 'read_only';
+          });
         });
         scope.$on('$destroy', deregisterLibrarySummaries);
       }
