@@ -42,18 +42,31 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
   val hashFunction = Hashing.murmur3_32()
 
   def landing(implicit request: Request[_]) = {
-    val ip = Try {
-      request.remoteAddress // remoteAddress looks up 'X-Forwarded-For'
+    val pickOpt = Try {
+      request.getQueryString("v").map(_.toInt)
     } recover {
       case t: Throwable =>
-        InetAddress.getLocalHost.toString // with affinity this might be sufficient
+        log.error(s"[landing] Caught exception $t while parsing queryParam(v):${request.queryString("v")}")
+        None
     } get
-    val hasher = hashFunction.newHasher()
-    val hc = hasher.putString(ip, Charsets.UTF_8).hash()
-    val hash = (Math.abs(hc.asInt()) % 100) // rough
-    val winner = if (hash < 50) "index1" else "index2"
-    log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip hc=$hc winner=$winner")
-    winner
+
+    pickOpt match {
+      case Some(idx) if (idx == 1 || idx == 2) =>
+        "index" + idx
+      case None =>
+        val ip = Try {
+          request.remoteAddress // remoteAddress looks up 'X-Forwarded-For'
+        } recover {
+          case t: Throwable =>
+            InetAddress.getLocalHost.toString // with affinity this might be sufficient
+        } get
+        val hasher = hashFunction.newHasher()
+        val hc = hasher.putString(ip, Charsets.UTF_8).hash()
+        val hash = (Math.abs(hc.asInt()) % 100) // rough
+        val winner = if (hash < 50) "index1" else "index2"
+        log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip hc=$hc winner=$winner")
+        winner
+    }
   }
 
   def marketingSite(path: String = "index")(implicit request: Request[_]) = {
