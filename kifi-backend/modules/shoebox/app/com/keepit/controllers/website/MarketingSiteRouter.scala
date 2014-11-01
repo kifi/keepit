@@ -1,13 +1,18 @@
 package com.keepit.controllers.website
 
 import java.io.StringWriter
+import java.net.InetAddress
 
+import com.google.common.base.Charsets
+import com.google.common.hash.Hashing
 import com.keepit.common.logging.Logging
 import controllers.AssetsBuilder
 import org.apache.commons.io.IOUtils
 import play.api.Play.current
-import play.api.mvc.{ Action, Controller }
+import play.api.mvc.{ Request, Controller }
 import play.api.{ Mode, Play }
+
+import scala.util.Try
 
 object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
 
@@ -34,8 +39,29 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
     }
   }
 
-  def marketingSite(path: String = "index") = {
-    val file = if (path.isEmpty) "index" else path
+  val hashFunction = Hashing.murmur3_32()
+
+  def landing(implicit request: Request[_]) = {
+    val ip = Try {
+      request.remoteAddress // remoteAddress looks up 'X-Forwarded-For'
+    } recover {
+      case t: Throwable =>
+        InetAddress.getLocalHost.toString // with affinity this might be sufficient
+    } get
+    val hasher = hashFunction.newHasher()
+    val hc = hasher.putString(ip, Charsets.UTF_8).hash()
+    val hash = (Math.abs(hc.asInt()) % 100) // rough
+    val winner = if (hash < 50) "index1" else "index2"
+    log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip hc=$hc winner=$winner")
+    winner
+  }
+
+  def marketingSite(path: String = "index")(implicit request: Request[_]) = {
+    val file = if (path.isEmpty || path == "index") {
+      landing
+    } else {
+      path
+    }
     if (file.contains(".html")) {
       val noHtml = file.replace(".html", "")
       if (maybeCachedIndex(noHtml).nonEmpty) {
