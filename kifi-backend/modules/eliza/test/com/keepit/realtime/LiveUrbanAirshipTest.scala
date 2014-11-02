@@ -17,8 +17,7 @@ import scala.concurrent.duration.Duration
 class LiveUrbanAirshipTest extends Specification with ElizaApplicationInjector {
 
   "Urban Airship" should {
-    args(skipAll = true
-    )
+    args(skipAll = true)
     "send live ios message" in {
       running(new ElizaApplication(ProdHttpClientModule(), new ScalaModule {
         def configure: Unit = {}
