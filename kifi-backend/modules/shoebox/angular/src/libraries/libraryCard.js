@@ -120,9 +120,9 @@ angular.module('kifi')
 
           scope.library.shareUrl = env.origin + scope.library.url;
           scope.library.shareFbUrl = scope.library.shareUrl +
-            '?utm_medium=vf_facebook&utm_source=library_invite&utm_content=' + scope.library.id + '&kcid=vf_facebook-library_invite-' + scope.library.id;
+            '?utm_medium=vf_facebook&utm_source=library_invite&utm_content=lid_' + scope.library.id + '&kcid=na-vf_facebook-library_invite-lid_' + scope.library.id;
           scope.library.shareTwitterUrl = scope.library.shareUrl +
-            '?utm_medium=vf_twitter&utm_source=library_invite&utm_content=' + scope.library.id + '&kcid=vf_twitter-library_invite-' + scope.library.id;
+            '?utm_medium=vf_twitter&utm_source=library_invite&utm_content=lid_' + scope.library.id + '&kcid=na-vf_twitter-library_invite-lid_' + scope.library.id;
           scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
 
           // Figure out whether this library is a library that the user has been invited to.
