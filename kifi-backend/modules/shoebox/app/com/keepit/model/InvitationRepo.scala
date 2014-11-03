@@ -166,7 +166,7 @@ class InvitationRepoImpl @Inject() (
   }
 
   def getRecentInvites(since: DateTime)(implicit session: RSession): List[Invitation] = {
-    (for (b <- rows if b.state.inSet(Set(InvitationStates.ACTIVE, InvitationStates.ACCEPTED)) && b.createdAt > since && b.lastSentAt.isNotNull) yield b).list
+    (for (b <- rows if b.state.inSet(Set(InvitationStates.ACTIVE, InvitationStates.ACCEPTED)) && b.updatedAt > since && b.lastSentAt.isNotNull) yield b).list
   }
 }
 
