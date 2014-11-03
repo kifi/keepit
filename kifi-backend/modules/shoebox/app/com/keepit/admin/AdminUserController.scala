@@ -345,7 +345,7 @@ class AdminUserController @Inject() (
           val invites = invitationRepo.getRecentInvites()
           val (accepted, sent) = invites.partition(_.state == InvitationStates.ACCEPTED)
           val recentUsers = userRepo.getRecentActiveUsers()
-          (Some(userRepo.countNewUsers), recentUsers, Some(InvitationInfo(accepted, sent)))
+          (Some(userRepo.countNewUsers), recentUsers, Some(InvitationInfo(sent, accepted)))
         }
       case _ =>
         (None, Seq.empty, None)
