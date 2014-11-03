@@ -230,15 +230,7 @@ class ExtLibraryController @Inject() (
   }
 
   def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
-    val futureTagsAndMatches = query.map(_.trim).filter(_.nonEmpty) match {
-      case Some(validQuery) => keepsCommander.searchTags(request.userId, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
-      case None => {
-        val libraryId = Library.decodePublicId(pubId).get
-        val uriId = db.readOnlyMaster { implicit session => keepRepo.get(keepId).uriId }
-        keepsCommander.suggestTags(request.userId, libraryId, uriId, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
-      }
-    }
-    futureTagsAndMatches.imap { tagsAndMatches =>
+    keepsCommander.suggestTags(request.userId, keepId, query, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
       val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)
