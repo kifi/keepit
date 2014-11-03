@@ -87,7 +87,10 @@ angular.module('kifi')
         // Internal data.
         //
         var lastSizedAt = $window.innerWidth;
-        scope.availableKeeps = scope.keeps;
+
+        scope.$watch('keeps', function () {
+          scope.availableKeeps = scope.keeps;
+        });
 
         //
         // Internal methods.
@@ -224,6 +227,7 @@ angular.module('kifi')
               });
 
               scope.availableKeeps = selectedKeeps.concat(scope.availableKeeps);
+
               scope.selection.selectAll(selectedKeeps);
               libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
             });
