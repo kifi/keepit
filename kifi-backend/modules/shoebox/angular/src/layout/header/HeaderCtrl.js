@@ -131,13 +131,6 @@ angular.module('kifi')
     $scope.me = profileService.me;
     $scope.me.picUrl = $scope.me.picUrl || '//www.kifi.com/assets/img/ghost.200.png';
 
-    $scope.librariesEnabled = false;
-    $scope.$watch(function () {
-      return libraryService.isAllowed();
-    }, function (newVal) {
-      $scope.librariesEnabled = newVal;
-    });
-
     $scope.isActive = function (path) {
       var loc = $location.path();
       return loc === path || util.startsWith(loc, path + '/');
