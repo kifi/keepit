@@ -423,23 +423,28 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
     "search tags" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, user2, lib, mem1, mem2, keep) = db.readWrite { implicit s =>
+        val (user1, user2, lib, mem1, mem2, keep1, keep2) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
           val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
           val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
-          val keep = keepInLibrary(user1, lib, "http://foo.com", "Foo")
-          (user1, user2, lib, mem1, mem2, keep)
+          val keep1 = keepInLibrary(user1, lib, "http://foo.com", "Foo")
+          val keep2 = keepInLibrary(user1, lib, "http://bar.com", "Bar")
+          (user1, user2, lib, mem1, mem2, keep1, keep2)
         }
         val libPubId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
-        status(tagKeep(user1, libPubId, keep.externalId, "animal")) === OK
-        status(tagKeep(user1, libPubId, keep.externalId, "aardvark")) === OK
-        status(tagKeep(user1, libPubId, keep.externalId, "Awesome")) === OK
+        status(tagKeep(user1, libPubId, keep1.externalId, "animal")) === OK
+        status(tagKeep(user1, libPubId, keep1.externalId, "aardvark")) === OK
+        status(tagKeep(user1, libPubId, keep1.externalId, "Awesome")) === OK
 
-        // user can search tags in own library
-        contentAsString(searchTags(user1, libPubId, keep.externalId, "a", 2)) === """[{"tag":"aardvark","matches":[[0,1]]},{"tag":"animal","matches":[[0,1]]}]"""
-        contentAsString(searchTags(user1, libPubId, keep.externalId, "s", 2)) === """[]"""
+        // user can search new tags for keeps
+        contentAsString(searchTags(user1, libPubId, keep1.externalId, "a", 2)) === """[]"""
+        contentAsString(searchTags(user1, libPubId, keep2.externalId, "a", 2)) === """[{"tag":"aardvark","matches":[[0,1]]},{"tag":"animal","matches":[[0,1]]}]"""
+        contentAsString(searchTags(user1, libPubId, keep2.externalId, "s", 2)) === """[]"""
+
+        status(tagKeep(user1, libPubId, keep2.externalId, "aardvark")) === OK
+        contentAsString(searchTags(user1, libPubId, keep2.externalId, "a", 2)) === """[{"tag":"animal","matches":[[0,1]]},{"tag":"Awesome","matches":[[0,1]]}]"""
 
         /* todo(Léo): reconsider when tags have been figured out from a product perspective
         // other user with read access to library can search tags
@@ -449,7 +454,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
         // other user without read access to library cannot search tags
         db.readWrite { implicit s => libraryMembershipRepo.save(mem2.copy(state = LibraryMembershipStates.INACTIVE)) }
-        status(searchTags(user2, libPubId, keep.externalId, "a", 3)) === FORBIDDEN
+        status(searchTags(user2, libPubId, keep1.externalId, "a", 3)) === FORBIDDEN
       }
     }
   }
