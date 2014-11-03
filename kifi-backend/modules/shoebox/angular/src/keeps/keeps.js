@@ -94,6 +94,7 @@ angular.module('kifi')
           scope.availableKeeps = _.reject(keeps, { 'unkept': true });
         });
 
+
         //
         // Internal methods.
         //
@@ -314,6 +315,15 @@ angular.module('kifi')
         }, function(enabled) {
           if (!enabled) {
             scope.selection.unselectAll();
+          }
+        });
+
+        scope.$watch('keepsLoading', function (newVal) {
+          // Size the keeps dynamically once the keeps are loaded and visible.
+          if (!newVal) {
+            scope.$evalAsync(function () {
+              sizeKeeps();
+            });
           }
         });
 
