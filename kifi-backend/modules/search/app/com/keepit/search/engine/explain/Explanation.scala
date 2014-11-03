@@ -91,7 +91,7 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
       val detailsWithScores = details(name).filter { detail => detail.scoreMax.exists(_ != 0f) }
       val nRows = detailsWithScores.size
       if (nRows > 0) {
-        sb.append(s"<tr> <th rowspan=$nRows> $source ($name) </th>")
+        sb.append(s"<tr> <th rowspan=$nRows> $source </th>")
         detailsWithScores.headOption.foreach { detail =>
           listScores(detail.scoreMax)
           sb.append("</tr>\n")
