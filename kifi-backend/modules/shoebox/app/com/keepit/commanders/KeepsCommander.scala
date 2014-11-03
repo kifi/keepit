@@ -253,14 +253,13 @@ class KeepsCommander @Inject() (
           val keeperId = keep.userId
           val mine = userId == keeperId
           val libraryId = keep.libraryId.get
-          val lib = libraryRepo.get(libraryId)
           val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).exists(_.canWrite)
           BasicKeep(
             id = keep.externalId,
             mine = mine,
             removable = removable,
-            visibility = lib.visibility,
-            libraryId = Library.publicId(lib.id.get)
+            visibility = keep.visibility,
+            libraryId = Library.publicId(libraryId)
           )
         }
         uriId -> userKeeps
