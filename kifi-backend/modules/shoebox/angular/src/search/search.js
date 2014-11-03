@@ -28,7 +28,7 @@ angular.module('kifi')
     //
     function init() {
       query = $routeParams.q || '';
-      filter = $routeParams.f || 'm';
+      filter = $routeParams.f || 'a';
       library = $routeParams.l || '';
       if (!query) { // No query or blank query.
         $location.path('/');

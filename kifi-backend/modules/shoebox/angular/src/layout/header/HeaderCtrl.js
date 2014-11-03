@@ -94,7 +94,7 @@ angular.module('kifi')
             if (libId) {
               $location.url('/find?q=' + $scope.search.text + '&f=a' + '&l=' + libId);
             } else {
-              $location.url('/find?q=' + $scope.search.text + '&f=' + 'm');
+              $location.url('/find?q=' + $scope.search.text);
             }
           } else {
             $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
