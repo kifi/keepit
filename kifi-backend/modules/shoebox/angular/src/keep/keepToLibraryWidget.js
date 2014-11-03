@@ -173,6 +173,10 @@ angular.module('kifi')
 
         function initWidget () {
           //
+          // Create widget.
+          //
+          widget = angular.element($templateCache.get('keep/keepToLibraryWidget.tpl.html'));
+          $rootElement.find('html').append(widget);
           $compile(widget)(scope);
 
 
