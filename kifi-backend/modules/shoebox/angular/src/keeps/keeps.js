@@ -88,8 +88,10 @@ angular.module('kifi')
         //
         var lastSizedAt = $window.innerWidth;
 
-        scope.$watch('keeps', function () {
-          scope.availableKeeps = scope.keeps;
+        scope.$watchCollection(function () {
+          return scope.keeps;
+        }, function (keeps) {
+          scope.availableKeeps = _.reject(keeps, { 'unkept': true });
         });
 
         //
@@ -211,7 +213,6 @@ angular.module('kifi')
           keepActionService.unkeepManyFromLibrary(libraryId, selectedKeeps).then(function () {
             _.forEach(selectedKeeps, function (selectedKeep) {
               selectedKeep.makeUnkept();
-              _.without(scope.availableKeeps, selectedKeep);
             });
 
             var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
@@ -226,20 +227,15 @@ angular.module('kifi')
                 selectedKeep.makeKept();
               });
 
-              scope.availableKeeps = selectedKeeps.concat(scope.availableKeeps);
-
               scope.selection.selectAll(selectedKeeps);
               libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
             });
 
             libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
-            scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
             scope.selection.unselectAll();
 
             if (scope.availableKeeps.length < 10) {
-              scope.scrollNext()(scope.availableKeeps.length).then(function () {
-                scope.availableKeeps = _.reject(scope.keeps, function(k) { return k.unkept; });
-              });
+              scope.scrollNext()(scope.availableKeeps.length);
             }
           });
         };
