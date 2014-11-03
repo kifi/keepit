@@ -10,7 +10,7 @@ import com.keepit.social.BasicUser
 class SearchAnalyticsTest extends Specification {
 
   val tags = Seq(ExternalId[Collection](), ExternalId[Collection](), ExternalId[Collection]())
-  val users = Seq(User(Some(Id(1)), firstName = "", lastName = "", username = Username("test"), normalizedUsername = "test"), User(Some(Id(1)), firstName = "", lastName = "", username = Username("test"), normalizedUsername = "test"))
+  val users = Seq(User(Some(Id(1)), firstName = "", lastName = "", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")), User(Some(Id(1)), firstName = "", lastName = "", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
   "KifiHitContext" should {
     "be deserialized from a KifiSearchHit" in { // old extensions, to be deprecated

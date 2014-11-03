@@ -24,12 +24,12 @@ trait GraphTestHelper extends SearchTestInjector {
 
   def initData()(implicit injector: Injector) = {
     val users = saveUsers(
-      User(firstName = "Agrajag", lastName = "", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "Barmen", lastName = "", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "Colin", lastName = "", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "Dan", lastName = "", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "Eccentrica", lastName = "", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "Hactar", lastName = "", username = Username("test"), normalizedUsername = "test")
+      User(firstName = "Agrajag", lastName = "", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+      User(firstName = "Barmen", lastName = "", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+      User(firstName = "Colin", lastName = "", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+      User(firstName = "Dan", lastName = "", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+      User(firstName = "Eccentrica", lastName = "", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+      User(firstName = "Hactar", lastName = "", username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
     )
     val uris = saveURIs(
       NormalizedURI.withHash(title = Some("1"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),
@@ -44,8 +44,8 @@ trait GraphTestHelper extends SearchTestInjector {
 
   def superBigData()(implicit injector: Injector) = {
     val users = saveUsers(
-      User(firstName = "rich", lastName = "", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "poor", lastName = "", username = Username("test"), normalizedUsername = "test")
+      User(firstName = "rich", lastName = "", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+      User(firstName = "poor", lastName = "", username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
     )
 
     val uris = saveURIs(

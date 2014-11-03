@@ -56,7 +56,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
 
         val user = inject[Database].readWrite { implicit s =>
-          userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         val unsaved = SocialUserInfo(userId = user.id, fullName = "Eishay Smith", socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
         val socialUserInfo = inject[Database].readWrite { implicit s =>

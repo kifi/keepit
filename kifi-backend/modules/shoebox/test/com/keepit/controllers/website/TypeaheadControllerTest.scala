@@ -57,8 +57,8 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           val socialConnRepo = inject[SocialConnectionRepo]
           val suiRepo = inject[SocialUserInfoRepo]
 
-          val u1 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
-          val u2 = userRepo.save(User(firstName = "Douglas", lastName = "Adams", username = Username("test"), normalizedUsername = "test"))
+          val u1 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+          val u2 = userRepo.save(User(firstName = "Douglas", lastName = "Adams", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           userConnRepo.addConnections(u1.id.get, Set(u2.id.get))
 
           val c1 = SocialUser(IdentityId("id1", "facebook"), "Foo", "Bar", "Foo Bar", None, None, AuthenticationMethod.OAuth2, None, None)
@@ -139,8 +139,8 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           val socialConnRepo = inject[SocialConnectionRepo]
           val suiRepo = inject[SocialUserInfoRepo]
 
-          val u1 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
-          val u2 = userRepo.save(User(firstName = "Douglas", lastName = "Adams", username = Username("test"), normalizedUsername = "test"))
+          val u1 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+          val u2 = userRepo.save(User(firstName = "Douglas", lastName = "Adams", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           userConnRepo.addConnections(u1.id.get, Set(u2.id.get))
 
           val c1 = SocialUser(IdentityId("id1", "facebook"), "Foo", "Bar", "Foo Bar", None, None, AuthenticationMethod.OAuth2, None, None)
@@ -205,8 +205,8 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           val socialConnRepo = inject[SocialConnectionRepo]
           val suiRepo = inject[SocialUserInfoRepo]
 
-          val u1 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
-          val u2 = userRepo.save(User(firstName = "Douglas", lastName = "Adams", username = Username("test"), normalizedUsername = "test"))
+          val u1 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+          val u2 = userRepo.save(User(firstName = "Douglas", lastName = "Adams", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           userConnRepo.addConnections(u1.id.get, Set(u2.id.get))
 
           val c1 = SocialUser(IdentityId("id1", "facebook"), "Foo", "Bar", "Foo Bar", None, None, AuthenticationMethod.OAuth2, None, None)
@@ -272,9 +272,9 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val userInteractionCommander = inject[UserInteractionCommander]
         val (u1, u2, u3, u4, u5) = db.readWrite { implicit session =>
-          val u1 = userRepo.save(User(firstName = "Spongebob", lastName = "Squarepants", username = Username("test"), normalizedUsername = "test"))
-          val u2 = userRepo.save(User(firstName = "Patrick", lastName = "Star", username = Username("test"), normalizedUsername = "test"))
-          val u3 = userRepo.save(User(firstName = "Squidward", lastName = "Tentacles", username = Username("test"), normalizedUsername = "test"))
+          val u1 = userRepo.save(User(firstName = "Spongebob", lastName = "Squarepants", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+          val u2 = userRepo.save(User(firstName = "Patrick", lastName = "Star", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+          val u3 = userRepo.save(User(firstName = "Squidward", lastName = "Tentacles", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val u4 = EmailAddress("squirrelsandy@texas.gov")
           val u5 = EmailAddress("mrkrabs@krusty.com")
 
@@ -341,9 +341,9 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val userInteractionCommander = inject[UserInteractionCommander]
         val (u1, u2, u3, u4, u5) = db.readWrite { implicit session =>
-          val u1 = userRepo.save(User(firstName = "Spongebob", lastName = "Squarepants", username = Username("test"), normalizedUsername = "test"))
-          val u2 = userRepo.save(User(firstName = "Patrick", lastName = "Star", username = Username("test"), normalizedUsername = "test"))
-          val u3 = userRepo.save(User(firstName = "Squidward", lastName = "Tentacles", username = Username("test"), normalizedUsername = "test"))
+          val u1 = userRepo.save(User(firstName = "Spongebob", lastName = "Squarepants", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+          val u2 = userRepo.save(User(firstName = "Patrick", lastName = "Star", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
+          val u3 = userRepo.save(User(firstName = "Squidward", lastName = "Tentacles", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val u4 = EmailAddress("squirrelsandy@texas.gov")
           val u5 = EmailAddress("mrkrabs@krusty.com")
 

@@ -52,7 +52,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
     def setup(db: Database, network: SocialNetworkType)(implicit injector: Injector) = {
       val emailAddressRepo: UserEmailAddressRepo = inject[UserEmailAddressRepo]
       val (myUser, mySocialUser) = db.readWrite { implicit s =>
-        val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+        val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
         emailAddressRepo.save(UserEmailAddress(userId = u.id.get, address = EmailAddress("andrew@gmail.com")))
 
@@ -69,7 +69,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
       inject[SocialUserImportFriends].importFriends(mySocialUser, extractedFriends)
 
       val (user, socialUserInfo) = db.readWrite { implicit c =>
-        val user = inject[UserRepo].save(User(firstName = "Greg", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+        val user = inject[UserRepo].save(User(firstName = "Greg", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         val socialUserInfo = inject[SocialUserInfoRepo].save(SocialUserInfo(
           fullName = "Greg Smith",
           socialId = SocialId("gsmith"),
@@ -156,13 +156,13 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
         val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 
         val sui1 = inject[Database].readWrite { implicit s =>
-          val u1 = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+          val u1 = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val su1 = inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Andrew Conner",
             socialId = SocialId("71105121"),
             networkType = SocialNetworks.FACEBOOK
           ).withUser(u1))
-          val u2 = inject[UserRepo].save(User(firstName = "Igor", lastName = "Perisic", username = Username("test"), normalizedUsername = "test"))
+          val u2 = inject[UserRepo].save(User(firstName = "Igor", lastName = "Perisic", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Igor Perisic",
             socialId = SocialId("28779"),
@@ -179,7 +179,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
         inject[SocialUserImportFriends].importFriends(sui1, extractedFriends)
 
         val (user, socialUserInfo) = inject[Database].readWrite { implicit c =>
-          val user = inject[UserRepo].save(User(firstName = "fn1", lastName = "ln1", username = Username("test"), normalizedUsername = "test"))
+          val user = inject[UserRepo].save(User(firstName = "fn1", lastName = "ln1", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val socialUserInfo = inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Bob Smith",
             socialId = SocialId("bsmith"),

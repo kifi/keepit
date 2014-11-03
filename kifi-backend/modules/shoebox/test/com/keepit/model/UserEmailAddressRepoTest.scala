@@ -13,7 +13,7 @@ class UserEmailAddressRepoTest extends Specification with ShoeboxTestInjector {
         val clock = inject[FakeClock]
         val now = clock.now
         val (user, address) = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("shachaf@gmail.com"), createdAt = now.minusDays(3)))
           val address = userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("shanee@gmail.com"), createdAt = now.minusDays(1).minusHours(6)))
           userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("dafna@gmail.com"), createdAt = now.minusHours(3)))

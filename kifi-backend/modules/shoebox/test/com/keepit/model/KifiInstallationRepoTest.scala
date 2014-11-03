@@ -13,7 +13,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
     "persist" in {
       withDb() { implicit injector =>
         val (user, installExt) = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Dafna", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user = userRepo.save(User(firstName = "Dafna", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val installExt = installationRepo.save(KifiInstallation(
             userId = user.id.get,
             version = KifiExtVersion("1.1.1"),

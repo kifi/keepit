@@ -35,7 +35,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "persist bookmark" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         val (main, secret) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
@@ -55,7 +55,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "persist to RawKeepRepo" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
@@ -73,7 +73,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "persist to RawKeepRepo (with libraryId)" in {
       withDb(modules: _*) { implicit injector =>
         val (user, lib) = db.readWrite { implicit session =>
-          val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val lib = libraryRepo.save(Library(name = "Lib1", ownerId = user.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           (user, lib)
@@ -97,7 +97,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "persist bookmarks" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
@@ -142,7 +142,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "persist bookmarks with one bad url" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val fakeAirbrake = inject[FakeAirbrakeNotifier]
@@ -176,7 +176,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "reactivate inactive bookmarks for the same url" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
-          userRepo.save(User(firstName = "Greg", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Greg", lastName = "Smith", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
         val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]

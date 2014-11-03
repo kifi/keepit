@@ -55,7 +55,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
         val su = SocialUser(IdentityId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
         val user = db.readWrite { implicit s =>
-          val user = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1", username = Username("test"), normalizedUsername = "test"))
+          val user = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
           val sui = socialUserInfoRepo.save(SocialUserInfo(
             userId = user.id, fullName = "A 1", socialId = SocialId("111"), networkType = SocialNetworks.FACEBOOK,
             credentials = Some(su)))

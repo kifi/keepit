@@ -67,7 +67,13 @@ object BasicUser {
       externalId = user.externalId,
       firstName = user.firstName,
       lastName = user.lastName,
-      pictureName = user.pictureName.getOrElse(S3UserPictureConfig.defaultName) + ".jpg",
+      pictureName = user.pictureName.getOrElse {
+        if (user.state == UserStates.ACTIVE) {
+          throw new Exception(s"active user ${user.id.get} (${user.firstName} ${user.lastName}) has no picture")
+        } else {
+          S3UserPictureConfig.defaultName
+        }
+      } + ".jpg",
       username = user.username
     )
   }

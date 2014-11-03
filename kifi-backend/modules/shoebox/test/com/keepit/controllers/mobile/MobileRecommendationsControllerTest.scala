@@ -58,7 +58,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     "topRecos" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
-          userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
 
         inject[UserActionsHelper].asInstanceOf[FakeUserActionsHelper].setUser(user, Set())
@@ -124,7 +124,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     "topPublicRecos" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
-          userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
 
         inject[UserActionsHelper].asInstanceOf[FakeUserActionsHelper].setUser(user, Set())

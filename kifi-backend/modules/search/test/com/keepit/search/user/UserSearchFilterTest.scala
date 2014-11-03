@@ -13,10 +13,10 @@ class UserSearchFilterTest extends Specification with CommonTestInjector {
   private def setup(implicit client: FakeShoeboxServiceClientImpl) = {
 
     val users = client.saveUsers(
-      User(firstName = "abc", lastName = "xyz", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "alpha", lastName = "one", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "alpha", lastName = "two", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "alpha", lastName = "three", username = Username("test"), normalizedUsername = "test")
+      User(firstName = "abc", lastName = "xyz", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+      User(firstName = "alpha", lastName = "one", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+      User(firstName = "alpha", lastName = "two", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")),
+      User(firstName = "alpha", lastName = "three", username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))
     )
     val ids = users.map { _.id.get }
     val conn = Map(ids(0) -> Set(ids(1), ids(3)))

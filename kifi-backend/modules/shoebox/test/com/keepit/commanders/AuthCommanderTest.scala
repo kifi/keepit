@@ -77,7 +77,7 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
 
         // create user
         val (user, suiWithUser) = db.readWrite { implicit rw =>
-          val user = userRepo.save(User(firstName = "Foo", lastName = "bar", username = Username("foo-bar"), normalizedUsername = "foo-bar"))
+          val user = userRepo.save(User(firstName = "Foo", lastName = "bar", username = Username("foo-bar"), normalizedUsername = "foo-bar", pictureName = Some("0")))
           val suiWithUser = suiRepo.save(sui.copy(userId = user.id))
           (user, suiWithUser)
         }

@@ -51,8 +51,8 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
         withDb(modules: _*) { implicit injector =>
           val (user1: User, user2: User) = db.readWrite { implicit rw =>
             val saveUser = inject[UserRepo].save _
-            (saveUser(User(firstName = s"first1", lastName = s"last1", username = Username("test"), normalizedUsername = "test")),
-              saveUser(User(firstName = s"first1", lastName = s"last2", username = Username("test"), normalizedUsername = "test")))
+            (saveUser(User(firstName = s"first1", lastName = s"last1", username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))),
+              saveUser(User(firstName = s"first1", lastName = s"last2", username = Username("test"), normalizedUsername = "test", pictureName = Some("0"))))
           }
 
           val actual = inject[UserConnectionsCommander].getMutualFriends(user1.id.get, user2.id.get)
@@ -64,7 +64,7 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
         withDb(modules: _*) { implicit injector =>
           val (user1: Id[User], user2: Id[User], commonUserIds) = db.readWrite { implicit rw =>
             val saveUser = inject[UserRepo].save _
-            val users = for (i <- 0 to 9) yield saveUser(User(firstName = s"first$i", lastName = s"last$i", username = Username("test"), normalizedUsername = "test"))
+            val users = for (i <- 0 to 9) yield saveUser(User(firstName = s"first$i", lastName = s"last$i", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
 
             val thisUserId = users(0).id.get
             val thatUserId = users(1).id.get

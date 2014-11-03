@@ -53,8 +53,8 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val userCommander = inject[UserCommander]
         val (user1, user2) = db.readWrite { implicit session =>
-          val u1 = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("abez"), normalizedUsername = "abez"))
-          val u2 = userRepo.save(User(firstName = "Léo", lastName = "HasAnAccentInHisName", username = Username("léo1221"), normalizedUsername = "leo"))
+          val u1 = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("abez"), normalizedUsername = "abez", pictureName = Some("0")))
+          val u2 = userRepo.save(User(firstName = "Léo", lastName = "HasAnAccentInHisName", username = Username("léo1221"), normalizedUsername = "leo", pictureName = Some("0")))
 
           (u1, u2)
         }

@@ -210,7 +210,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val userCommander = inject[UserCommander]
         val userValueRepo = inject[UserValueRepo]
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("AbeLincoln"), normalizedUsername = "test"))
+          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("AbeLincoln"), normalizedUsername = "test", pictureName = Some("0")))
         }
 
         val email1 = EmailAddress("vampireXslayer@gmail.com")
@@ -260,7 +260,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, user3) = setup()
         val outbox = inject[FakeOutbox]
         val user4 = db.readWrite { implicit rw =>
-          inject[UserRepo].save(User(firstName = "Jane", lastName = "Doe", primaryEmail = Some(EmailAddress("jane@doe.com")), username = Username("test"), normalizedUsername = "test"))
+          inject[UserRepo].save(User(firstName = "Jane", lastName = "Doe", primaryEmail = Some(EmailAddress("jane@doe.com")), username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
         }
 
         // set service client response

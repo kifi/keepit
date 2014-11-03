@@ -40,7 +40,7 @@ class InstallExtensionTipTest extends Specification with ShoeboxTestInjector {
 
   "InstallExtensionTip" should {
     def setup()(implicit injector: Injector) = db.readWrite { implicit rw =>
-      val user = inject[UserRepo].save(User(firstName = "Danny", lastName = "Tanner", username = Username("test"), normalizedUsername = "test"))
+      val user = inject[UserRepo].save(User(firstName = "Danny", lastName = "Tanner", username = Username("test"), normalizedUsername = "test", pictureName = Some("0")))
       val emailToSend = EmailToSend(
         title = "Testing",
         to = Left(user.id.get),
