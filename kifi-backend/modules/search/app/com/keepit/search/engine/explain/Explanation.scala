@@ -58,7 +58,7 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
     }
 
     sb.append("<table>")
-    sb.append(s"<tr><th colspan=3> $title </th></tr>\n")
+    sb.append(s"<tr><th colspan=4> $title </th></tr>\n")
     sb.append("<tr><th> </th><th> owner </th><th> member </th> <th> network </th></tr>\n")
     sb.append("<tr><th> count </th>")
     sharingCountByVisibility(Visibility.OWNER)
@@ -80,10 +80,18 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
 
     def categoryByVisibility(visibility: Int): Unit = {
       val name = Visibility.name(visibility)
+      val source = if ((visibility & (Visibility.OWNER | Visibility.MEMBER | Visibility.NETWORK)) != 0) {
+        s"keep ($name)"
+      } else if ((visibility & Visibility.OTHERS) != 0) {
+        "article"
+      } else {
+        "restricted"
+      }
+
       val detailsWithScores = details(name).filter { detail => detail.scoreMax.exists(_ != 0f) }
       val nRows = detailsWithScores.size
       if (nRows > 0) {
-        sb.append(s"<tr> <th rowspan=$nRows colspan=2> $name </th>")
+        sb.append(s"<tr> <th rowspan=$nRows> $source ($name) </th>")
         detailsWithScores.headOption.foreach { detail =>
           listScores(detail.scoreMax)
           sb.append("</tr>\n")
@@ -95,6 +103,7 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
         }
       }
     }
+
     def listScores(array: Array[Float]): Unit = {
       array.foreach { value =>
         if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
@@ -108,11 +117,10 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
     }
 
     def aggregatedScoreDetail(detail: ScoreDetail): Unit = {
-      sb.append(s"<tr> <th rowspan=2> aggregate </th>")
-      sb.append("<td> max </td>")
+      sb.append(s"<tr> <th> <u>max</u> </th>")
       listScores(detail.scoreMax)
       sb.append("</tr>\n")
-      sb.append("<tr> <td> sum </td>")
+      sb.append("<tr> <th> <u>sum</u> </th>")
       detail.scoreSum.foreach(listScores(_))
       sb.append("</tr>\n")
     }
@@ -121,10 +129,10 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
     sb.append("\n")
 
     // title
-    sb.append(s"<tr> <th colspan=${2 + labels.length}> $title </th>")
+    sb.append(s"<tr> <th colspan=${1 + labels.length}> $title </th> </tr>\n")
 
     // query labels
-    sb.append("<tr> <th colspan=2> </th> <th> </th>")
+    sb.append("<tr> <th> </th>")
     labels.map(StringEscapeUtils.escapeHtml4(_)).foreach { label => sb.append(s"<th> $label </th>") }
     sb.append("</tr>\n")
 
