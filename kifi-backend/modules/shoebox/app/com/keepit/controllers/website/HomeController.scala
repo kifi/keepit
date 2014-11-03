@@ -77,7 +77,7 @@ class HomeController @Inject() (
     }
   }
 
-  def route(path: String) = Action {
+  def route(path: String) = Action { implicit request =>
     MarketingSiteRouter.marketingSite(path)
   }
 
