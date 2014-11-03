@@ -148,6 +148,9 @@ angular.module('kifi')
               };
             }
           });
+          scope.$evalAsync(function () {
+            angular.element('.white-background').height(element.height() + 20);
+          });
         }
 
         function preloadSocial () {
