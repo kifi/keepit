@@ -283,21 +283,14 @@ class InviteCommander @Inject() (
     val me = db.readOnlyReplica { implicit s => socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get }
     val socialUserInfo = inviteInfo.friend.left.get
     val path = routes.InviteController.acceptInvite(invite.externalId).url
-    val subject = inviteInfo.subject.getOrElse(s"Kifi -- ${me.fullName.split(' ')(0)} invites you to Kifi") // todo: same for email
+    val subject = inviteInfo.subject.getOrElse(s"${me.fullName.split(' ')(0)} has invited you to join Kifi!") // todo: same for email
     val message = inviteInfo.message.getOrElse(
       """
-        |Please accept my invitation to kifi.
+        |Kifi is a remarkable new way to collect, discover, and share knowledge. Powered by people, search, and recommendations. Instantly share with friends, and have conversations right on the page!
         |
-        |What is kifi and why should I join?
+        |Try it free: https://www.kifi.com
         |
-        |Kifi (short for keep it find it) allows you to easily keep and tag
-        |anything you find online - an article, video, picture, email, anything -
-        |then quickly find it on top of your favorite search engine results,
-        |together with relevant pages that your friends kept, too.
-        |
-        |Kifi also lets you message your friends about what you keep and
-        |find alongside any web page, to get their opinion or gain from their
-        |expertise.
+        |Kifi is available for Chrome, Firefox, iOS, and Android.
         | """.stripMargin
     )
     val messageWithUrl = s"$message\n$baseUrl$path\n\nKifi is available for desktop only on chrome and firefox.\nSafari, Internet Explorer and mobile are coming soon!"
