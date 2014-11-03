@@ -6,8 +6,10 @@ import com.keepit.common.logging.Logging
 import controllers.AssetsBuilder
 import org.apache.commons.io.IOUtils
 import play.api.Play.current
-import play.api.mvc.{ Action, Controller }
+import play.api.mvc.{ Request, Controller }
 import play.api.{ Mode, Play }
+
+import scala.util.Try
 
 object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
 
@@ -34,8 +36,33 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
     }
   }
 
-  def marketingSite(path: String = "index") = {
-    val file = if (path.isEmpty) "index" else path
+  def landing(implicit request: Request[_]) = {
+    val pickOpt = Try {
+      request.getQueryString("v").map(_.toInt)
+    } recover {
+      case t: Throwable =>
+        log.error(s"[landing] Caught exception $t while parsing queryParam(v):${request.queryString("v")}")
+        None
+    } get
+
+    pickOpt match {
+      case Some(idx) if (idx == 1 || idx == 2) =>
+        "index." + idx
+      case None =>
+        val ip = request.remoteAddress // remoteAddress looks up 'X-Forwarded-For'
+        val hash = (Math.abs(ip.hashCode()) % 100) // rough
+        val winner = if (hash < 50) "index.1" else "index.2"
+        log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$winner")
+        winner
+    }
+  }
+
+  def marketingSite(path: String = "index")(implicit request: Request[_]) = {
+    val file = if (path.isEmpty || path == "index") {
+      landing
+    } else {
+      path
+    }
     if (file.contains(".html")) {
       val noHtml = file.replace(".html", "")
       if (maybeCachedIndex(noHtml).nonEmpty) {
