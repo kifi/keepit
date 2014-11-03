@@ -21,7 +21,10 @@ angular.module('kifi')
 
         scope.$emit('getCurrentLibrary', { callback: function (lib) {
           if (lib && lib.id) {
-            _.remove(scope.visibleKeepLibraries, { id: lib.id });
+            var library = _.find(scope.visibleKeepLibraries, { id: lib.id });
+            if (library) {
+              library.hidden = true;
+            }
           }
         }});
 
