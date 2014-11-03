@@ -48,7 +48,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
     pickOpt match {
       case Some(idx) if (idx == 1 || idx == 2) =>
         "index." + idx
-      case None =>
+      case _ =>
         val ip = request.remoteAddress // remoteAddress looks up 'X-Forwarded-For'
         val hash = (Math.abs(ip.hashCode()) % 100) // rough
         val winner = if (hash < 50) "index.1" else "index.2"
