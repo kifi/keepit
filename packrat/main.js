@@ -542,9 +542,9 @@ api.port.on({
       var libraryId = data.libraryId || mySysLibIds[data.secret ? 1 : 0];
       ajax('POST', '/ext/libraries/' + libraryId + '/keeps', {
         url: data.url,
-        title: data.title,
-        canonical: data.canonical,
-        og: data.og,
+        canonical: !tab.usedHistoryApi && data.canonical || undefined,
+        og: !tab.usedHistoryApi && data.og || undefined,
+        title: !tab.usedHistoryApi && data.ogTitle || data.title,
         guided: data.guided
       }, function done(keep) {
         log('[keep:done]', keep);
@@ -865,13 +865,20 @@ api.port.on({
       discardDraft(data.to ? [tab.nUri, tab.url] : [currentThreadId(tab)]);
     }
   },
-  send_message: function(data, respond, tab) {
+  send_message: function (data, respond, tab) {
     discardDraft([tab.nUri, tab.url]);
-    data.extVersion = api.version;
-    data.source = api.browser.name;
-    data.eip = eip;
-    data.recipients = data.recipients.map(makeObjectsForEmailAddresses);
-    ajax('eliza', 'POST', '/eliza/messages', data, function(o) {
+    ajax('eliza', 'POST', '/eliza/messages', {
+      url: data.url,
+      canonical: !tab.usedHistoryApi && data.canonical || undefined,
+      og: !tab.usedHistoryApi && data.og || undefined,
+      title: !tab.usedHistoryApi && data.ogTitle || data.title,
+      extVersion: api.version,
+      source: api.browser.name,
+      eip: eip,
+      text: data.text,
+      recipients: data.recipients.map(makeObjectsForEmailAddresses),
+      guided: data.guided
+    }, function (o) {
       log('[send_message] resp:', o);
       // thread (notification) JSON comes via socket
       messageData[o.parentId] = o.messages;

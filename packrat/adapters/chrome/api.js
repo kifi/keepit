@@ -197,6 +197,7 @@ var api = (function createApi() {
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != e.url.match(stripHashRe)[0]) {
         api.tabs.on.unload.dispatch(page, true);
         page.url = e.url;
+        page.usedHistoryApi = true;
         api.tabs.on.loading.dispatch(page);
       } else {
         page.url = e.url;
