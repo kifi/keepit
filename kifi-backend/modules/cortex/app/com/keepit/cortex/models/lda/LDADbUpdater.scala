@@ -42,7 +42,7 @@ trait LDADbUpdater extends BaseFeatureUpdater[Id[NormalizedURI], NormalizedURI, 
 
 @Singleton
 class LDADbUpdaterImpl @Inject() (
-    representer: LDAURIRepresenter,
+    representer: MultiVersionedLDAURIRepresenter,
     db: Database,
     uriRepo: CortexURIRepo,
     topicRepo: URILDATopicRepo,
@@ -60,10 +60,11 @@ class LDADbUpdaterImpl @Inject() (
   private implicit def toURISeq(seq: SequenceNumber[CortexURI]) = SequenceNumber[NormalizedURI](seq.value)
 
   def update(): Unit = {
-    implicit val version = representer.version
-    val tasks = fetchTasks
-    log.info(s"fetched ${tasks.size} tasks")
-    processTasks(tasks)
+    representer.versions.foreach { implicit version =>
+      val tasks = fetchTasks
+      log.info(s"fetched ${tasks.size} tasks")
+      processTasks(tasks)
+    }
   }
 
   private def fetchTasks(implicit version: ModelVersion[DenseLDA]): Seq[CortexURI] = {
@@ -148,7 +149,7 @@ class LDADbUpdaterImpl @Inject() (
 
   private def computeFeature(uri: CortexURI)(implicit version: ModelVersion[DenseLDA]): URILDATopic = {
     val normUri = NormalizedURI(id = Some(uri.uriId), seq = SequenceNumber[NormalizedURI](uri.seq.value), url = "", urlHash = UrlHash(""))
-    representer.genFeatureAndWordCount(normUri) match {
+    representer.getRepresenter(version).get.genFeatureAndWordCount(normUri) match {
       case (None, cnt) => URILDATopic(uriId = uri.uriId, uriSeq = SequenceNumber[NormalizedURI](uri.seq.value), version = version, numOfWords = cnt, state = URILDATopicStates.NOT_APPLICABLE)
       case (Some(feat), cnt) => {
         val arr = feat.vectorize
@@ -163,7 +164,7 @@ class LDADbUpdaterImpl @Inject() (
           secondTopic = Some(second),
           thirdTopic = Some(third),
           firstTopicScore = Some(sparse.head._2),
-          sparseFeature = Some(SparseTopicRepresentation(dimension = representer.dimension, topics = sparse.toMap)),
+          sparseFeature = Some(SparseTopicRepresentation(dimension = representer.getDimension(version).get, topics = sparse.toMap)),
           feature = Some(LDATopicFeature(arr)),
           state = URILDATopicStates.ACTIVE)
       }
