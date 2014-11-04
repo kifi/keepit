@@ -98,12 +98,7 @@ class LibraryCommander @Inject() (
           val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
           if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
         }
-        //should also get owr word2vec
-        val embedlyKeywords: Seq[String] = keeps map { keep =>
-          uriSummaryCommander.getStoredEmbedlyKeywords(keep.uriId).map(_.name)
-        } flatten
-        val tags: Seq[String] = collectionRepo.getTagsByLibrary(library.id.get).map(_.tag).toSeq
-        val allTags: Seq[String] = (embedlyKeywords ++ tags).toSet.toSeq
+
         PublicPageMetaFullTags(
           unsafeTitle = s"${library.name} by ${owner.firstName} ${owner.lastName} \u2022 Kifi",
           url = url,
@@ -113,7 +108,6 @@ class LibraryCommander @Inject() (
           facebookId = facebookId,
           createdAt = library.createdAt,
           updatedAt = library.updatedAt,
-          unsafeTags = allTags,
           unsafeFirstName = owner.firstName,
           unsafeLastName = owner.lastName)
       }
