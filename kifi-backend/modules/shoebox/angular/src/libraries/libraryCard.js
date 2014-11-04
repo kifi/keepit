@@ -259,7 +259,7 @@ angular.module('kifi')
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html',
             modalData: {
-              startOnFollowers: false,
+              pane: 'manage',
               library: scope.library,
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
@@ -284,13 +284,23 @@ angular.module('kifi')
         };
 
         scope.showFollowers = function () {
-          modalService.open({
-            template: 'libraries/manageLibraryModal.tpl.html',
-            modalData: {
-              startOnFollowers: true,
-              library: scope.library
-            }
-          });
+          if (scope.library.owner.id === profileService.me.id) {
+            modalService.open({
+              template: 'libraries/manageLibraryModal.tpl.html',
+              modalData: {
+                pane: 'members',
+                library: scope.library
+              }
+            });
+          } else {
+            modalService.open({
+              template: 'libraries/libraryFollowersModal.tpl.html',
+              modalData: {
+                library: scope.library
+              }
+            });
+          }
+
         };
 
         //

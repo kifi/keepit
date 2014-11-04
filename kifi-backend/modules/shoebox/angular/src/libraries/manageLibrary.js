@@ -174,8 +174,7 @@ angular.module('kifi')
           if (loading) { return; }
           if (scope.library.id) {
             loading = true;
-            var showInvites = scope.library.isMine;
-            libraryService.getMoreMembers(scope.library.id, pageSize, scope.offset, showInvites).then(function (resp) {
+            libraryService.getMoreMembers(scope.library.id, pageSize, scope.offset).then(function (resp) {
               var members = resp.members;
               loading = false;
               if (members.length === 0) {
@@ -229,10 +228,9 @@ angular.module('kifi')
         //
         if (scope.modalData) {
           scope.library = _.cloneDeep(scope.modalData.library);
-          if (scope.modalData.startOnFollowers) {
+          if (scope.modalData.pane === 'members') {
             scope.showFollowers = true;
           }
-          scope.library.isMine = scope.library.owner.id === profileService.me.id;
           scope.library.followers.forEach(function (follower) {
             follower.status = 'Following';
           });
