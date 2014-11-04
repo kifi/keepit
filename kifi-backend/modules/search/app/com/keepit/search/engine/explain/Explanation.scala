@@ -5,12 +5,23 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.lucene.search.Query
 
 object Explanation {
-  def apply(query: Query, labels: Array[String], rawScore: Float, scoreComputation: String, details: Map[String, Seq[ScoreDetail]], boostValues: (Float, Float)) = {
-    new Explanation(query, labels, rawScore, scoreComputation, details, boostValues._1, boostValues._2)
+  def apply(query: Query, labels: Array[String], matching: (Float, Float, Float), boostValues: (Float, Float), rawScore: Float, boostedScore: Float, scoreComputation: String, details: Map[String, Seq[ScoreDetail]]) = {
+    new Explanation(query, labels, matching._1, matching._2, matching._3, boostValues._1, boostValues._2, rawScore, boostedScore, scoreComputation, details)
   }
 }
 
-class Explanation(val query: Query, val labels: Array[String], val rawScore: Float, val scoreComputation: String, val details: Map[String, Seq[ScoreDetail]], clickBoostValue: Float, sharingBoostValue: Float) {
+class Explanation(
+    val query: Query,
+    val labels: Array[String],
+    val matching: Float,
+    val matchingThreshold: Float,
+    val minMatchingThreshold: Float,
+    val clickBoostValue: Float,
+    val sharingBoostValue: Float,
+    val rawScore: Float,
+    val boostedScore: Float,
+    val scoreComputation: String,
+    val details: Map[String, Seq[ScoreDetail]]) {
 
   def queryHtml(title: String): String = {
     val sb = new StringBuilder
@@ -26,7 +37,8 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
     val sb = new StringBuilder
     sb.append("<table>\n")
     sb.append(s"<tr> <th> $title </th> </tr>\n")
-    sb.append(s"<tr> <td> $rawScore </td> </tr>\n")
+    sb.append(s"<tr> <th> raw score </th> <th> boosted score </th> </tr>\n")
+    sb.append(s"<tr> <td> $rawScore </td> <td> $boostedScore </td> </tr>\n")
     sb.append("</table>\n")
 
     sb.toString
@@ -50,8 +62,8 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
     val sb = new StringBuilder
     sb.append("<table>\n")
     sb.append(s"<tr> <th colspan=2> $title </th> </tr>\n")
-    sb.append("<tr> <th> click boost </th><th> sharing boost </th> </tr>\n")
-    sb.append(s"<tr> <td> $clickBoostValue </td> <td> $sharingBoostValue </td> </tr>\n")
+    sb.append("<tr> <th> matching boost </th> <th> click boost </th> <th> sharing boost </th> </tr>\n")
+    sb.append(s"<tr> <td> $matching </td> <td> $clickBoostValue </td> <td> $sharingBoostValue </td> </tr>\n")
     sb.append("</table>\n")
 
     sb.toString
