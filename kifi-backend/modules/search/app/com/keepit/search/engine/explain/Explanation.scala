@@ -27,7 +27,7 @@ class Explanation(
     val sb = new StringBuilder
     sb.append("<table>\n")
     sb.append(s"<tr> <th> $title </th> </tr>\n")
-    sb.append(s"<tr> <td> ${query.toString} </td> </tr>\n")
+    sb.append(s"""<tr> <td style="text-align:left"> ${query.toString} </td> </tr>\n""")
     sb.append("</table>\n")
 
     sb.toString
@@ -36,7 +36,7 @@ class Explanation(
   def scoreHtml(title: String): String = {
     val sb = new StringBuilder
     sb.append("<table>\n")
-    sb.append(s"<tr> <th> $title </th> </tr>\n")
+    sb.append(s"<tr> <th colspan=2> $title </th> </tr>\n")
     sb.append(s"<tr> <th> raw score </th> <th> boosted score </th> </tr>\n")
     sb.append(s"<tr> <td> $rawScore </td> <td> $boostedScore </td> </tr>\n")
     sb.append("</table>\n")
@@ -48,7 +48,7 @@ class Explanation(
     val sb = new StringBuilder
     sb.append("<table>\n")
     sb.append(s"<tr> <th> $title </th> </tr>\n")
-    sb.append("<tr> <td>\n")
+    sb.append("<tr> <td  style=\"text-align:left\">\n")
     sb.append("<ul>\n")
     sb.append(scoreComputation)
     sb.append("</ul>\n")
@@ -61,7 +61,7 @@ class Explanation(
   def boostValuesHtml(title: String): String = {
     val sb = new StringBuilder
     sb.append("<table>\n")
-    sb.append(s"<tr> <th colspan=2> $title </th> </tr>\n")
+    sb.append(s"<tr> <th colspan=3> $title </th> </tr>\n")
     sb.append("<tr> <th> matching boost </th> <th> click boost </th> <th> sharing boost </th> </tr>\n")
     sb.append(s"<tr> <td> $matching </td> <td> $clickBoostValue </td> <td> $sharingBoostValue </td> </tr>\n")
     sb.append("</table>\n")
