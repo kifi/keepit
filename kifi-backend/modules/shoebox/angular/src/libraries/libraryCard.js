@@ -97,11 +97,10 @@ angular.module('kifi')
             scope.library.owner.picUrl = friendService.getPictureUrlForUser(scope.library.owner);
           }
 
-          if (_.isArray(scope.library.followers)) {
-            scope.library.followers.forEach(function (follower) {
-              follower.picUrl = friendService.getPictureUrlForUser(follower);
-            });
-          }
+          scope.library.followers = scope.library.followers || [];
+          scope.library.followers.forEach(function (follower) {
+            follower.picUrl = friendService.getPictureUrlForUser(follower);
+          });
 
           var maxLength = 150;
           scope.library.formattedDescription = '<p>' + angular.element('<div>').text(scope.library.description).text().replace(/\n+/, '<p>');
@@ -148,6 +147,7 @@ angular.module('kifi')
               };
             }
           });
+
           if (scope.$root.userLoggedIn === false) {
             scope.$evalAsync(function () {
               angular.element('.white-background').height(element.height() + 20);
