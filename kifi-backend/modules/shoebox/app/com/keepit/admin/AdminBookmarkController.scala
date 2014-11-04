@@ -306,29 +306,38 @@ class AdminBookmarksController @Inject() (
           case ((userId, tag), collections) =>
             require(collections.forall(_.userId == userId), "Collections do not match expected user id")
             require(collections.forall(_.name.tag.toLowerCase == tag.tag.toLowerCase), "Collections do not match expected tag")
-            val primaryCollection = collections.find(c => c.name == tag && c.isActive).get
-            val duplicateCollections: Set[(Collection, Seq[KeepToCollection])] = collections.filterNot(_.id.get == primaryCollection.id.get).map { duplicateCollection =>
-              val updatedKTCs = keepToCollectionRepo.getByCollection(duplicateCollection.id.get).map { ktc =>
-                val updatedKTC = {
-                  if (keepToCollectionRepo.getByKeep(ktc.keepId).map(_.collectionId).contains(primaryCollection.id.get)) ktc.copy(state = KeepToCollectionStates.INACTIVE)
-                  else ktc.copy(collectionId = primaryCollection.id.get)
+            collections.find(_.isActive) match {
+              case Some(primaryCollection) => {
+                val duplicateCollections: Set[(Collection, Seq[KeepToCollection])] = collections.filterNot(_.id.get == primaryCollection.id.get).map { duplicateCollection =>
+                  val updatedKTCs = keepToCollectionRepo.getByCollection(duplicateCollection.id.get).map { ktc =>
+                    val updatedKTC = {
+                      if (keepToCollectionRepo.getByKeep(ktc.keepId).map(_.collectionId).contains(primaryCollection.id.get)) ktc.copy(state = KeepToCollectionStates.INACTIVE)
+                      else ktc.copy(collectionId = primaryCollection.id.get)
+                    }
+                    if (!readOnly) { keepToCollectionRepo.save(updatedKTC) } else updatedKTC
+                  }
+                  if (!readOnly) { collectionRepo.save(duplicateCollection.copy(state = CollectionStates.INACTIVE, name = Hashtag(ExternalId().id))) }
+                  duplicateCollection -> updatedKTCs
                 }
-                if (!readOnly) { keepToCollectionRepo.save(updatedKTC) } else updatedKTC
+                Some(primaryCollection) -> duplicateCollections
               }
-              if (!readOnly) { collectionRepo.save(duplicateCollection.copy(state = CollectionStates.INACTIVE, name = Hashtag(ExternalId().id))) }
-              duplicateCollection -> updatedKTCs
+              case None => {
+                if (!readOnly) { collections.foreach(coll => collectionRepo.save(coll.copy(name = Hashtag(ExternalId().id)))) }
+                None -> collections.map((_, Seq.empty[KeepToCollection]))
+              }
             }
-            primaryCollection -> duplicateCollections
         }
       }
       val result = JsArray(allDuplicateCollections.toSeq.map {
-        case (primaryCollection, duplicateCollections) =>
+        case (primaryCollectionOpt, duplicateCollections) =>
           Json.obj(
-            "primaryCollection" -> Json.obj(
-              "id" -> primaryCollection.id.get,
-              "userId" -> primaryCollection.userId,
-              "name" -> primaryCollection.name,
-              "state" -> primaryCollection.state
+            "primaryCollection" -> primaryCollectionOpt.map(primaryCollection =>
+              Json.obj(
+                "id" -> primaryCollection.id.get,
+                "userId" -> primaryCollection.userId,
+                "name" -> primaryCollection.name,
+                "state" -> primaryCollection.state
+              )
             ),
             "duplicates" -> JsArray(duplicateCollections.toSeq.map {
               case (deactivatedCollection, updatedKeepToCollections) =>
