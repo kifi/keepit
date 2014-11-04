@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.keepit.commanders.{ BasicCollectionByIdKey, BasicCollectionByIdCache }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
@@ -42,6 +43,7 @@ class CollectionRepoImpl @Inject() (
   val userCollectionsCache: UserCollectionsCache,
   val userCollectionSummariesCache: UserCollectionSummariesCache,
   val bookmarkCountForCollectionCache: KeepCountForCollectionCache,
+  val basicCollectionCache: BasicCollectionByIdCache,
   val keepToCollectionRepo: KeepToCollectionRepo,
   val elizaServiceClient: ElizaServiceClient,
   val db: DataBaseComponent,
@@ -73,6 +75,7 @@ class CollectionRepoImpl @Inject() (
   override def deleteCache(model: Collection)(implicit session: RSession): Unit = {
     userCollectionsCache.remove(UserCollectionsKey(model.userId))
     userCollectionSummariesCache.remove(UserCollectionSummariesKey(model.userId))
+    model.id.foreach { colectionId => basicCollectionCache.remove(BasicCollectionByIdKey(colectionId)) }
 
     val keepToCollections = keepToCollectionRepo.getByCollection(model.id.get)
     keepToCollections.foreach(keepToCollectionRepo.deleteCache)
