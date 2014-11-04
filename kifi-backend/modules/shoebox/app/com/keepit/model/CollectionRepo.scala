@@ -206,7 +206,7 @@ class CollectionRepoImpl @Inject() (
 
   def getDuplicateCollections()(implicit session: RSession): Map[(Id[User], Hashtag), Set[Collection]] = {
     import StaticQuery.interpolation
-    val query = sql"select user_id, name from (select c.user_id, c.name, count(c.id) as collection_count from collection group by c.user_id, c.name) as collection_by_user_and_tag where collection_count > 1"
+    val query = sql"select user_id, name from (select user_id, name, count(id) as collection_count from collection group by user_id, name) as collection_by_user_and_tag where collection_count > 1"
     val relevantUsersAndTags = query.as[(Id[User], Hashtag, Int)].list.map { row => (row._1, row._2) }
     relevantUsersAndTags.map {
       case (userId, tag) =>
