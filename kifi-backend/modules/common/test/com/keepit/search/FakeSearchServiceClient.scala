@@ -55,7 +55,7 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]] = Future.successful(Seq.empty)
 
-  override def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = ???
+  override def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html] = ???
 
   override def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = ???
 

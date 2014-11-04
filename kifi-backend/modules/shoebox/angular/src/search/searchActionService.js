@@ -31,8 +31,6 @@ angular.module('kifi')
     }
 
     function decompressHit(hit, users, libraries) {
-      var librariesEnabled = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('libraries') > -1;
-
       var decompressedKeepers = [];
       var decompressedLibraries = [];
       var myLibraries = [];
@@ -69,14 +67,14 @@ angular.module('kifi')
             decompressedKeepers.push(users[keeperIdx]);
           } else {
             var user = copy(users[keeperIdx]);
-            user.hidden = true && librariesEnabled;
+            user.hidden = true;
             decompressedKeepers.push(user);
           }
         }
       });
 
       hit.keepers = decompressedKeepers;
-      hit.libraries = librariesEnabled ? decompressedLibraries : [];
+      hit.libraries = decompressedLibraries;
       hit.myLibraries = myLibraries;
     }
 
@@ -137,7 +135,13 @@ angular.module('kifi')
 
       //$log.log('searchActionService.find() req', reqData);
 
-      return $http.get(url, reqData).then(function (res) {
+      var searchActionPromise = $http.get(url, reqData);
+      var librarySummariesPromise = libraryService.fetchLibrarySummaries(false);
+      var resultsFetched = $q.all([librarySummariesPromise, searchActionPromise]);
+
+      // ensures that the libraries have been loaded before the hits are decompressed
+      return resultsFetched.then(function (results) {
+        var res = results[1];
         var resData = res.data;
         //$log.log('searchActionService.find() res', resData);
 

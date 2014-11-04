@@ -97,11 +97,10 @@ angular.module('kifi')
             scope.library.owner.picUrl = friendService.getPictureUrlForUser(scope.library.owner);
           }
 
-          if (_.isArray(scope.library.followers)) {
-            scope.library.followers.forEach(function (follower) {
-              follower.picUrl = friendService.getPictureUrlForUser(follower);
-            });
-          }
+          scope.library.followers = scope.library.followers || [];
+          scope.library.followers.forEach(function (follower) {
+            follower.picUrl = friendService.getPictureUrlForUser(follower);
+          });
 
           var maxLength = 150;
           scope.library.formattedDescription = '<p>' + angular.element('<div>').text(scope.library.description).text().replace(/\n+/, '<p>');
@@ -119,7 +118,14 @@ angular.module('kifi')
           }
 
           scope.library.shareUrl = env.origin + scope.library.url;
-          scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
+          scope.library.shareFbUrl = scope.library.shareUrl +
+            '?utm_medium=vf_facebook&utm_source=library_invite&utm_content=lid_' + scope.library.id +
+            '&kcid=na-vf_facebook-library_invite-lid_' + scope.library.id;
+
+          scope.library.shareTwitterUrl = scope.library.shareUrl +
+            '?utm_medium=vf_twitter&utm_source=library_invite&utm_content=lid_' + scope.library.id +
+            '&kcid=na-vf_twitter-library_invite-lid_' + scope.library.id;
+          scope.library.shareText = 'Discover this amazing @Kifi library about ' + scope.library.name + '!';
 
           // Figure out whether this library is a library that the user has been invited to.
           // If so, display an invite header.
@@ -141,6 +147,12 @@ angular.module('kifi')
               };
             }
           });
+
+          if (scope.$root.userLoggedIn === false) {
+            scope.$evalAsync(function () {
+              angular.element('.white-background').height(element.height() + 20);
+            });
+          }
         }
 
         function preloadSocial () {
@@ -196,7 +208,7 @@ angular.module('kifi')
         scope.shareFB = function () {
           $FB.ui({
             method: 'share',
-            href: scope.library.shareUrl
+            href: scope.library.shareFbUrl
           });
         };
 
@@ -252,6 +264,7 @@ angular.module('kifi')
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html',
             modalData: {
+              pane: 'manage',
               library: scope.library,
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
@@ -275,6 +288,25 @@ angular.module('kifi')
           scope.editKeepsText = scope.editKeepsText === 'Edit Keeps' ? 'Done Editing' : 'Edit Keeps';
         };
 
+        scope.showFollowers = function () {
+          if (scope.library.owner.id === profileService.me.id) {
+            modalService.open({
+              template: 'libraries/manageLibraryModal.tpl.html',
+              modalData: {
+                pane: 'members',
+                library: scope.library
+              }
+            });
+          } else {
+            modalService.open({
+              template: 'libraries/libraryFollowersModal.tpl.html',
+              modalData: {
+                library: scope.library
+              }
+            });
+          }
+
+        };
 
         //
         // Watches and listeners.

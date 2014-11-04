@@ -116,7 +116,14 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   def getMatchWeightNormalizer(): MatchWeightNormalizer = matchWeightNormalizer
 
   private[this] def createDirectScoreContext(collector: ResultCollector[ScoreContext]): DirectScoreContext = {
-    new DirectScoreContext(scoreExpr, totalSize, matchWeightNormalizer.get, collector)
+    val debugOption = this
+    if (debugTracedIds == null) {
+      new DirectScoreContext(scoreExpr, totalSize, matchWeightNormalizer.get, collector)
+    } else {
+      val ctx = new DirectScoreContextWithDebug(scoreExpr, totalSize, matchWeightNormalizer.get, collector)
+      ctx.debug(debugOption)
+      ctx
+    }
   }
 
   private[this] def createScoreContextManager(collector: ResultCollector[ScoreContext]): AggregationContextManager = {
@@ -137,12 +144,20 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   }
 
   private[this] def createDirectExplainContext(collector: ScoreDetailCollector, targetId: Long): DirectExplainContext = {
-    new DirectExplainContext(targetId, scoreExpr, totalSize, matchWeightNormalizer.get, collector)
+    val debugOption = this
+    val ctx = new DirectExplainContext(targetId, scoreExpr, totalSize, matchWeightNormalizer.get, collector)
+    ctx.debug(debugOption)
+    ctx
   }
 
   private[this] def createExplainContextManager(collector: ScoreDetailCollector, targetId: Long): AggregationContextManager = {
+    val debugOption = this
     new AggregationContextManager(1) {
-      def create() = new ExplainContext(targetId, scoreExpr, totalSize, matchWeightNormalizer.get, collector)
+      def create() = {
+        val ctx = new ExplainContext(targetId, scoreExpr, totalSize, matchWeightNormalizer.get, collector)
+        ctx.debug(debugOption)
+        ctx
+      }
     }
   }
 

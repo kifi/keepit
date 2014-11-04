@@ -1,6 +1,6 @@
 package com.keepit.realtime
 
-import com.keepit.common.db.{ States, ModelWithState, State, Id }
+import com.keepit.common.db.{ ExternalId, States, ModelWithState, State, Id }
 import com.keepit.common.time._
 import com.keepit.model.User
 import org.joda.time.DateTime
@@ -14,6 +14,8 @@ case class Device(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     isDev: Boolean = false) extends ModelWithState[Device] {
+
+  def isChannel: Boolean = ExternalId.UUIDPattern.pattern.matcher(token).matches()
 
   def withId(id: Id[Device]): Device = copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): Device = copy(updatedAt = updateTime)

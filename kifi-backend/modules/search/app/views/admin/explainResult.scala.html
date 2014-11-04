@@ -18,7 +18,7 @@
  }
  td {
    border: 2px solid #ddd;
-   border-collapse: collapse;`
+   border-collapse: collapse;
    padding: 7px;
    text-align: right;
  }
@@ -29,33 +29,40 @@
 
 <h2>Explaining for User:@userId URI:@uriId</h2>
 
-<h3>Query</h3>
+<p/>
 
-<table>
-<tr><td>
-@explanation.map(_.query.toString).getOrElse("<ul><li>none</li></ul>")
-</td></tr>
+@Html(explanation.map(_.queryHtml("Parsed Query")).getOrElse("<ul><li>none</li></ul>"))
+
+<p/>
+
+<table style="border:0px">
+<tr>
+<td style="border:0px">
+
+@Html(explanation.map(_.scoreHtml("Score")).getOrElse(""))
+
+</td>
+<td style="border:0px">
+
+@Html(explanation.map(_.boostValuesHtml("BoostValues")).getOrElse(""))
+
+</td>
+</tr>
 </table>
 
-<h3>Raw Score</h3>
+<p/>
 
-<table>
-<tr><td>
-@explanation.map(_.rawScore.toString).getOrElse("<ul><li>none</li></ul>")
-</td></tr>
-</table>
+@Html(explanation.map(_.sharingHtml("Sharing and Hits")).getOrElse(""))
 
-<h3>Boost Values</h3>
+<p/>
 
-@Html(explanation.map(_.boostValuesHtml).getOrElse("<ul><li>none</li></ul>"))
+@Html(explanation.map(_.detailsHtml("Score Details")).getOrElse(""))
 
-<h3>Sharing and Hits</h3>
+<p/>
 
-@Html(explanation.map(_.sharingHtml).getOrElse("<ul><li>none</li></ul>"))
+@Html(explanation.map(_.scoreComputationHtml("Score Computation Details")).getOrElse(""))
 
-<h3>Score Details</h3>
-
-@Html(explanation.map(_.detailsHtml).getOrElse("<ul><li>none</li></ul>"))
+<p/>
 
 </body>
 </html>

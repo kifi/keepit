@@ -6,17 +6,12 @@ function ContactSearchCache(lifeSec) {
   this.lifeSec = lifeSec;
 }
 ContactSearchCache.prototype = {
-  key: function (o) {
-    return (o.includeSelf ? '+' : '-') + o.q;
-  },
-  put: function (o, results) {
+  put: function (key, results) {
     this.prune();
-    var key = this.key(o);
     this.cache[key] = results;
     this.putAt[key] = Date.now();
   },
-  get: function (o) {
-    var key = this.key(o);
+  get: function (key) {
     return this.cache[key];
   },
   prune: function () {

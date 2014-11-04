@@ -16,6 +16,7 @@ class KifiSearchNonUserImpl(
     engineBuilder: QueryEngineBuilder,
     articleSearcher: Searcher,
     keepSearcher: Searcher,
+    librarySearcher: Searcher,
     friendIdsFuture: Future[Set[Long]],
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     monitoredAwait: MonitoredAwait,
@@ -30,6 +31,7 @@ class KifiSearchNonUserImpl(
     debugLog("engine created")
 
     val collector = new KifiNonUserResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
+    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait)
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, false, config, monitoredAwait)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
 
@@ -38,7 +40,7 @@ class KifiSearchNonUserImpl(
       keepScoreSource.debug(this)
     }
 
-    engine.execute(collector, keepScoreSource, articleScoreSource)
+    engine.execute(collector, libraryScoreSource, keepScoreSource, articleScoreSource)
 
     timeLogs.search()
 
@@ -82,13 +84,21 @@ class KifiSearchNonUserImpl(
     val engine = engineBuilder.build()
     val labels = engineBuilder.getQueryLabels()
     val query = engine.getQuery()
-    val collector = new ScoreDetailCollector(uriId.id, None, None)
+    val collector = new ScoreDetailCollector(uriId.id, None, percentMatch / 100.0f, None)
 
+    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait)
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
 
-    engine.explain(uriId.id, collector, keepScoreSource, articleScoreSource)
+    if (debugFlags != 0) {
+      engine.debug(this)
+      libraryScoreSource.debug(this)
+      keepScoreSource.debug(this)
+      articleScoreSource.debug(this)
+    }
 
-    Explanation(query, labels, collector.rawScore, collector.getDetails(), collector.getBoostValues())
+    engine.explain(uriId.id, collector, libraryScoreSource, keepScoreSource, articleScoreSource)
+
+    Explanation(query, labels, collector.getMatchingValues(), collector.getBoostValues(), collector.rawScore, collector.boostedScore, collector.scoreComputation, collector.getDetails())
   }
 }

@@ -22,6 +22,12 @@ class ScoreContext(
 
   def score(): Float = scoreExpr()(this)
 
+  def explainScoreExpr(): String = {
+    val sb = new StringBuilder()
+    scoreExpr.explain()(sb, this)
+    sb.toString()
+  }
+
   def computeMatching(minThreshold: Float): Float = {
     val len = matchWeight.length
     var matching = 1.0f
@@ -162,4 +168,26 @@ class DirectScoreContext(
   def getCount: Int = count
 
   override def join(reader: DataBufferReader): Unit = throw new UnsupportedOperationException("DirectScoreContext does not support join")
+}
+
+class DirectScoreContextWithDebug(
+    scoreExpr: ScoreExpr,
+    scoreArray: Array[Float],
+    matchWeight: Array[Float],
+    collector: ResultCollector[ScoreContext]) extends DirectScoreContext(scoreExpr, scoreArray, matchWeight, collector) with Logging with DebugOption {
+
+  def this(
+    scoreExpr: ScoreExpr,
+    scoreArraySize: Int,
+    matchWeight: Array[Float],
+    collector: ResultCollector[ScoreContext]) = {
+    // scoreMax and scoreSum share the same array
+    // this is ok since there shouldn't be more than one call per term, thus max = sum, in the direct path mode
+    this(scoreExpr, new Array[Float](scoreArraySize), matchWeight, collector)
+  }
+
+  override def put(id: Long, theVisibility: Int): Unit = {
+    if (debugTracedIds.contains(id)) debugLog(s"scorectx-put id=$id visibility=[${Visibility.toString(theVisibility)}]")
+    super.put(id, theVisibility)
+  }
 }

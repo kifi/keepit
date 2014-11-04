@@ -8,6 +8,9 @@ angular.module('kifi')
     var librarySummaries = [],
         invitedSummaries = [];
 
+    // Maintain client state for recently kept-to libraries.
+    var recentLibraries = [];
+
 
     //
     // Clutches.
@@ -130,6 +133,7 @@ angular.module('kifi')
     var api = {
       librarySummaries: librarySummaries,
       invitedSummaries: invitedSummaries,
+      recentLibraries: recentLibraries,
 
       isAllowed: function () {
         return profileService.me.experiments && profileService.me.experiments.indexOf('libraries') !== -1;
@@ -207,6 +211,8 @@ angular.module('kifi')
         $rootScope.$emit('librarySummariesChanged');
       },
 
+      // TODO(yiping): All functions that update library summaries should refetch automatically instead of
+      // having client refetch.
       createLibrary: function (opts) {
         var required = ['name', 'visibility', 'slug'];
         var missingFields = _.filter(required, function (v) {
@@ -317,6 +323,14 @@ angular.module('kifi')
         return $http.get(routeService.getMoreLibraryMembers(libraryId, pageSize, offset)).then(function(resp) {
           return resp.data;
         });
+      },
+
+      addRecentLibrary: function (libraryId) {
+        // Maintain a short queue of 3 itmes to store recent libraries.
+        recentLibraries.push(libraryId);
+        if (recentLibraries.length > 3) {
+          recentLibraries.shift();
+        }
       }
     };
 

@@ -171,14 +171,14 @@ class SearchController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) = Action.async { request =>
+  def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], debug: Option[String]) = Action.async { request =>
     if (searchCommander.findShard(uriId).isDefined) {
       val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
-      searchCommander.explain(userId, uriId, lang, userExperiments, query) map { explanationOpt =>
+      searchCommander.explain(userId, uriId, lang, userExperiments, query, debug) map { explanationOpt =>
         Ok(html.admin.explainResult(userId, uriId, explanationOpt))
       }
     } else {
-      distributedSearchClient.call(userId, uriId, Search.internal.explain(query, userId, uriId, lang), JsNull).map(r => Ok(r.body))
+      distributedSearchClient.call(userId, uriId, Search.internal.explain(query, userId, uriId, lang, debug), JsNull).map(r => Ok(r.body))
     }
   }
 

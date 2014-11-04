@@ -28,7 +28,7 @@ angular.module('kifi')
     //
     function init() {
       query = $routeParams.q || '';
-      filter = $routeParams.f || 'm';
+      filter = $routeParams.f || 'a';
       library = $routeParams.l || '';
       if (!query) { // No query or blank query.
         $location.path('/');
@@ -154,10 +154,6 @@ angular.module('kifi')
       return !$scope.isFilterSelected(type) && !!getFilterCount(type);
     };
 
-    $scope.allowEdit = function () {
-      return !$scope.isFilterSelected('f') && !$scope.isFilterSelected('a');
-    };
-
     $scope.analyticsTrack = function (keep, $event) {
       searchActionService.reportSearchClickAnalytics(keep, $scope.resultKeeps.indexOf(keep), $scope.resultKeeps.length);
       return [keep, $event]; // log analytics for search click here
@@ -194,7 +190,7 @@ angular.module('kifi')
     $scope.editOptions = {
       draggable: false,
       actions: {
-        copyToLibrary: true
+        keepToLibrary: true
       }
     };
 

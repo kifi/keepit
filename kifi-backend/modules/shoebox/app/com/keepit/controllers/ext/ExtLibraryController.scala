@@ -100,7 +100,7 @@ class ExtLibraryController @Inject() (
   def addKeep(libraryPubId: PublicId[Library]) = UserAction(parse.tolerantJson) { request =>
     decode(libraryPubId) { libraryId =>
       db.readOnlyMaster { implicit s =>
-        libraryMembershipRepo.getOpt(request.userId, libraryId)
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } match {
         case Some(mem) if mem.canWrite => // TODO: also allow keep if mem.canInsert and keep is not already in library
           val body = request.body
@@ -188,6 +188,9 @@ class ExtLibraryController @Inject() (
       } match {
         case Some(mem) if mem.isOwner => // TODO: change to .canWrite
           keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
+            case Right(keep) if (tag == "Add a tag") =>
+              log.warn(s"user ${request.userId} attempted to apply 'Add a tag'") // airbrake instead once these have stopped?
+              BadRequest(Json.obj("error" -> "disallowed_tag_name"))
             case Right(keep) =>
               implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
               val coll = keepsCommander.getOrCreateTag(request.userId, tag) // TODO: library ID, not user ID
@@ -227,15 +230,7 @@ class ExtLibraryController @Inject() (
   }
 
   def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
-    val futureTagsAndMatches = query.map(_.trim).filter(_.nonEmpty) match {
-      case Some(validQuery) => keepsCommander.searchTags(request.userId, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
-      case None => {
-        val libraryId = Library.decodePublicId(pubId).get
-        val uriId = db.readOnlyMaster { implicit session => keepRepo.get(keepId).uriId }
-        keepsCommander.suggestTags(request.userId, libraryId, uriId, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
-      }
-    }
-    futureTagsAndMatches.imap { tagsAndMatches =>
+    keepsCommander.suggestTags(request.userId, keepId, query, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
       val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)

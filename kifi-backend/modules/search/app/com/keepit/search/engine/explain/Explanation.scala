@@ -5,24 +5,71 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.lucene.search.Query
 
 object Explanation {
-  def apply(query: Query, labels: Array[String], rawScore: Float, details: Map[String, Seq[ScoreDetail]], boostValues: (Float, Float)) = {
-    new Explanation(query, labels, rawScore, details, boostValues._1, boostValues._2)
+  def apply(query: Query, labels: Array[String], matching: (Float, Float, Float), boostValues: (Float, Float), rawScore: Float, boostedScore: Float, scoreComputation: String, details: Map[String, Seq[ScoreDetail]]) = {
+    new Explanation(query, labels, matching._1, matching._2, matching._3, boostValues._1, boostValues._2, rawScore, boostedScore, scoreComputation, details)
   }
 }
 
-class Explanation(val query: Query, val labels: Array[String], val rawScore: Float, val details: Map[String, Seq[ScoreDetail]], clickBoostValue: Float, sharingBoostValue: Float) {
+class Explanation(
+    val query: Query,
+    val labels: Array[String],
+    val matching: Float,
+    val matchingThreshold: Float,
+    val minMatchingThreshold: Float,
+    val clickBoostValue: Float,
+    val sharingBoostValue: Float,
+    val rawScore: Float,
+    val boostedScore: Float,
+    val scoreComputation: String,
+    val details: Map[String, Seq[ScoreDetail]]) {
 
-  def boostValuesHtml: String = {
+  def queryHtml(title: String): String = {
     val sb = new StringBuilder
     sb.append("<table>\n")
-    sb.append("<tr><th> click boost </th><th> sharing boost </th> </tr>\n")
-    sb.append(s"<tr> <td> $clickBoostValue </td> <td> $sharingBoostValue </td> </th></tr>\n")
+    sb.append(s"<tr> <th> $title </th> </tr>\n")
+    sb.append(s"""<tr> <td style="text-align:left"> ${query.toString} </td> </tr>\n""")
     sb.append("</table>\n")
 
     sb.toString
   }
 
-  def sharingHtml: String = {
+  def scoreHtml(title: String): String = {
+    val sb = new StringBuilder
+    sb.append("<table>\n")
+    sb.append(s"<tr> <th colspan=2> $title </th> </tr>\n")
+    sb.append(s"<tr> <th> raw score </th> <th> boosted score </th> </tr>\n")
+    sb.append(s"<tr> <td> $rawScore </td> <td> $boostedScore </td> </tr>\n")
+    sb.append("</table>\n")
+
+    sb.toString
+  }
+
+  def scoreComputationHtml(title: String): String = {
+    val sb = new StringBuilder
+    sb.append("<table>\n")
+    sb.append(s"<tr> <th> $title </th> </tr>\n")
+    sb.append("<tr> <td  style=\"text-align:left\">\n")
+    sb.append("<ul>\n")
+    sb.append(scoreComputation)
+    sb.append("</ul>\n")
+    sb.append("</td> </tr>\n")
+    sb.append("</table>\n")
+
+    sb.toString
+  }
+
+  def boostValuesHtml(title: String): String = {
+    val sb = new StringBuilder
+    sb.append("<table>\n")
+    sb.append(s"<tr> <th colspan=3> $title </th> </tr>\n")
+    sb.append("<tr> <th> matching boost </th> <th> click boost </th> <th> sharing boost </th> </tr>\n")
+    sb.append(s"<tr> <td> $matching </td> <td> $clickBoostValue </td> <td> $sharingBoostValue </td> </tr>\n")
+    sb.append("</table>\n")
+
+    sb.toString
+  }
+
+  def sharingHtml(title: String): String = {
     val sb = new StringBuilder
 
     def sharingCountByVisibility(visibility: Int): Unit = {
@@ -33,10 +80,11 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
     def hitCountByVisibility(visibility: Int): Unit = {
       // a record with no score is loaded for network information only
       val count = details(Visibility.name(visibility)).count { detail => detail.scoreMax.forall(_ == 0f) }
-      sb.append(s"<td> ${details(Visibility.name(Visibility.OWNER)).size - count} </td>")
+      sb.append(s"<td> ${details(Visibility.name(visibility)).size - count} </td>")
     }
 
     sb.append("<table>")
+    sb.append(s"<tr><th colspan=4> $title </th></tr>\n")
     sb.append("<tr><th> </th><th> owner </th><th> member </th> <th> network </th></tr>\n")
     sb.append("<tr><th> count </th>")
     sharingCountByVisibility(Visibility.OWNER)
@@ -53,59 +101,68 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
     sb.toString
   }
 
-  def detailsHtml: String = {
+  def detailsHtml(title: String): String = {
     val sb = new StringBuilder
 
-    def categoryByVisibility(visibility: Int): Unit = categoryByName(Visibility.name(visibility))
+    def categoryByVisibility(visibility: Int): Unit = {
+      val name = Visibility.name(visibility)
+      val source = if ((visibility & (Visibility.OWNER | Visibility.MEMBER | Visibility.NETWORK)) != 0) {
+        s"keep ($name)"
+      } else if ((visibility & Visibility.OTHERS) != 0) {
+        "article"
+      } else {
+        "restricted"
+      }
 
-    def categoryByName(name: String): Unit = {
       val detailsWithScores = details(name).filter { detail => detail.scoreMax.exists(_ != 0f) }
-      val count = detailsWithScores.size
-      if (count > 0) {
-        val nRows = detailsWithScores.map { detail => if (detail.scoreSum.isDefined) 2 else 1 }.sum
+      val nRows = detailsWithScores.size
+      if (nRows > 0) {
+        sb.append(s"<tr> <th rowspan=$nRows> $source </th>")
         detailsWithScores.headOption.foreach { detail =>
-          sb.append(s"<tr> <th rowspan=$nRows> $name </th>")
-          listScore(detail)
+          listScores(detail.scoreMax)
           sb.append("</tr>\n")
           detailsWithScores.tail.foreach { detail =>
             sb.append("<tr>")
-            listScore(detail)
+            listScores(detail.scoreMax)
             sb.append("</tr>\n")
           }
         }
       }
     }
 
-    def listScore(detail: ScoreDetail): Unit = {
-      if (detail.scoreMax.exists(_ != 0f)) {
-        def listScores(name: String, array: Array[Float]): Unit = {
-          sb.append(s"<td> $name </td>")
-          array.foreach { value =>
-            if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
-            else sb.append(s"<td> $value </td>")
-          }
-        }
-        detail.scoreSum match {
-          case Some(scoreSum) =>
-            listScores("max", detail.scoreMax)
-            sb.append("</tr>\n")
-            sb.append("<tr>\n")
-            listScores("sum", scoreSum)
-          case None =>
-            listScores("&nbsp;", detail.scoreMax)
-        }
+    def listScores(array: Array[Float]): Unit = {
+      array.foreach { value =>
+        if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
+        else sb.append(s"<td> $value </td>")
       }
     }
 
-    sb.append("""<table class="table table-bordered">""")
+    def aggregatedScores(): Unit = {
+      val detailsWithScores = details("aggregate")
+      detailsWithScores.foreach(aggregatedScoreDetail(_))
+    }
+
+    def aggregatedScoreDetail(detail: ScoreDetail): Unit = {
+      sb.append(s"<tr> <th> <u>max</u> </th>")
+      listScores(detail.scoreMax)
+      sb.append("</tr>\n")
+      sb.append("<tr> <th> <u>sum</u> </th>")
+      detail.scoreSum.foreach(listScores(_))
+      sb.append("</tr>\n")
+    }
+
+    sb.append("<table>")
     sb.append("\n")
 
+    // title
+    sb.append(s"<tr> <th colspan=${1 + labels.length}> $title </th> </tr>\n")
+
     // query labels
-    sb.append("<tr> <th> </th> <th> </th>")
-    labels.map(StringEscapeUtils.escapeHtml4(_)).foreach { label => sb.append(s"""<th> $label </th>""") }
+    sb.append("<tr> <th> </th>")
+    labels.map(StringEscapeUtils.escapeHtml4(_)).foreach { label => sb.append(s"<th> $label </th>") }
     sb.append("</tr>\n")
 
-    categoryByName("aggregate")
+    aggregatedScores()
     categoryByVisibility(Visibility.OWNER)
     categoryByVisibility(Visibility.MEMBER)
     categoryByVisibility(Visibility.NETWORK)

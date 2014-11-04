@@ -340,7 +340,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val user1 = userRepo.save(User(firstName = "Tom", lastName = "Brady", username = Username("tom"), normalizedUsername = "b", primaryEmail = Some(EmailAddress("tombrady@gmail.com"))))
         val user2 = userRepo.save(User(firstName = "Aaron", lastName = "Rodgers", username = Username("aaron"), normalizedUsername = "a", primaryEmail = Some(EmailAddress("aaronrodgers@gmail.com"))))
         val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"),
-          visibility = LibraryVisibility.PUBLISHED, memberCount = 1, description = Some("Lorem ipsum")))
+          visibility = LibraryVisibility.SECRET, memberCount = 1, description = Some("Lorem ipsum")))
 
         val uri = uriRepo.save(NormalizedURI(url = "http://www.kifi.com", urlHash = UrlHash("abc")))
         // todo(andrew) jared compiler bug if url_ var is named url
@@ -407,6 +407,15 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val html = email.htmlBody.value
         testHtml(html)
         html must contain(invite.passPhrase)
+
+        db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
+        val emailWithoutPassPhrase = Await.result(inviteSender.inviteUserToLibrary(inviteNonUser), Duration(5, "seconds")).get
+        emailWithoutPassPhrase.subject === "Tom Brady invited you to follow Football!"
+        emailWithoutPassPhrase.to(0) === EmailAddress("aaronrodgers@gmail.com")
+        params.map(emailWithoutPassPhrase.htmlBody.contains(_)) === List(true, true, true, true)
+        val htmlWithoutPassPhrase = emailWithoutPassPhrase.htmlBody.value
+        testHtml(htmlWithoutPassPhrase)
+        htmlWithoutPassPhrase must not contain invite.passPhrase
       }
     }
   }
