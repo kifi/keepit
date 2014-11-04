@@ -41,11 +41,13 @@ class SeedIngestionCommander @Inject() (
   val ingestionLock = new ReactiveLock()
 
   def ingestAll(): Future[Boolean] = {
-    log.info("starting ingestAll outside lock")
+    log.info("YZ: starting ingestAll outside lock")
     ingestionLock.withLockFuture {
-      log.info("starting ingestAll inside lock")
+      log.info("XYZ: starting ingestAll inside lock")
       val fut = ingestAllKeeps().flatMap { _ =>
+        log.info("XYZ: ingest all keeps future completed")
         ingestLibraryMemberships.flatMap { _ =>
+          log.info("XYZ: ingest library memberships future completed")
           val userIds = usersToIngestGraphDataFor()
           FutureHelpers.sequentialExec(userIds)(ingestTopUris)
         }
@@ -62,14 +64,20 @@ class SeedIngestionCommander @Inject() (
   }
 
   def ingestAllKeeps(): Future[Unit] = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
-    log.info("Ingested one batch of keeps.")
+    log.info("XYZ: Ingested one batch of keeps.")
   }
 
   def ingestLibraryMemberships(): Future[Unit] = FutureHelpers.whilef(libraryMembershipIngestor(INGESTION_BATCH_SIZE)) {
-    log.info("Ingested one batch of libraries.")
+    log.info("XYZ: Ingested one batch of libraries.")
   }
 
-  def ingestTopUris(userId: Id[User]): Future[Unit] = topUrisIngestor(userId).map(_ => ())
+  def ingestTopUris(userId: Id[User]): Future[Unit] = {
+    log.info("XYZ: Triggered Top Uri ingestion for " + userId)
+    topUrisIngestor(userId).map { _ =>
+      log.info("XYZ: Completed Top Uri ingestion for " + userId)
+      ()
+    }
+  }
 
   private def cookSeedItem(userId: Id[User], rawItem: RawSeedItem, keepers: Keepers): SeedItem = SeedItem(
     userId = userId,
