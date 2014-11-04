@@ -305,9 +305,9 @@ angular.module('kifi')
 
     $scope.editKeepsLabel = function () {
       if ($scope.editMode.enabled) {
-        return 'Done editing';
+        return 'Done';
       } else {
-        return 'Edit keeps';
+        return 'Bulk keep to library';
       }
     };
 

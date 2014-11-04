@@ -474,7 +474,6 @@ angular.module('kifi')
         // Internal methods.
         //
         function init() {
-          scope.keptToLibraryIds = _.pluck(scope.keep.keeps, 'libraryId');
           updateKeepStatus();
         }
 
