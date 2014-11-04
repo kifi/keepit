@@ -324,7 +324,11 @@ angular.module('kifi')
       $rootElement.find('body').addClass('mac');
     }
 
-    $scope.showDelightedSurvey = profileService.prefs && profileService.prefs.show_delighted_question;
+
+    var deregisterPrefsChangedListener = $rootScope.$on('prefsChanged', function () {
+      $scope.showDelightedSurvey = profileService.prefs && profileService.prefs.show_delighted_question;
+    });
+    $scope.$on('$destroy', deregisterPrefsChangedListener);
 
     /**
      * Make the page "extension-friendly"
