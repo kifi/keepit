@@ -175,9 +175,10 @@ function respondToTab(callbackId, page, response) {
   }
 }
 
-exports.request = function(method, url, data, done, fail) {
+exports.request = function (method, url, data, headers, done, fail) {
   var options = {
     url: url,
+    headers: headers,
     onComplete: onRequestEnd.bind(null, done, fail)
   };
   if (data != null && data !== '') {

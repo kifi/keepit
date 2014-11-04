@@ -618,7 +618,7 @@ var api = (function createApi() {
         }
       }
     },
-    request: function(method, uri, data, done, fail) {
+    request: function (method, uri, data, headers, done, fail) {
       var xhr = new XMLHttpRequest();
       xhr.open(method, uri, true);
       if (data != null && data !== '') {
@@ -626,6 +626,9 @@ var api = (function createApi() {
           data = JSON.stringify(data);
         }
         xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
+      }
+      for (var name in headers) {
+        xhr.setRequestHeader(name, headers[name]);
       }
       xhr.responseType = 'json';
       xhr.addEventListener('loadend', onXhrLoadEnd.bind(xhr, done, fail));
