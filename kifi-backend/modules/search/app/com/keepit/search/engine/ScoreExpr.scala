@@ -17,15 +17,11 @@ abstract class ScoreExpr { // using abstract class for performance. trait is slo
     sb.append("  <ul>\n")
     sb.append(s"  <li> $operandName1:</li>\n")
     sb.append("      <ul>\n")
-    sb.append("      <li>\n")
     operand1.explain()
-    sb.append("      </li>\n")
     sb.append("      </ul>\n")
     sb.append(s"  <li> $operandName2:</li>\n")
     sb.append("    <ul>\n")
-    sb.append("    <li>\n")
     operand2.explain()
-    sb.append("    </li>\n")
     sb.append("    </ul>\n")
     sb.append("  </ul>\n")
   }
@@ -34,9 +30,7 @@ abstract class ScoreExpr { // using abstract class for performance. trait is slo
     sb.append(s"<li>$operatorName1: $value</li>\n")
     sb.append("  <ul>\n")
     operands.foreach { operand =>
-      sb.append("  <li>\n")
       operand.explain()
-      sb.append("  </li>\n")
     }
     sb.append("  </ul>\n")
   }

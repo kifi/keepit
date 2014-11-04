@@ -73,7 +73,7 @@ class ScoreDetailCollector(targetId: Long, clickBoostsProvider: Option[() => Res
   def getMatchingValues(): (Float, Float, Float) = (_matching, matchingThreshold, minMatchingThreshold)
   def getBoostValues(): (Float, Float) = (_clickBoostValue, _sharingBoostValue)
   def rawScore(): Float = _rawScore
-  def boostedScore(): Float = _rawScore
+  def boostedScore(): Float = _boostedScore
   def scoreComputation(): String = _scoreComputation
   def getDetails(): Map[String, Seq[ScoreDetail]] = _details.mapValues(_.toSeq)
 }
