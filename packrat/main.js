@@ -56,7 +56,7 @@ function clearDataCache() {
     notice.context.version = api.version;
     notice.context.userAgent = api.browser.userAgent;
     notice.context.userId = me && me.id;
-    api.request('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, function (o) {
+    api.request('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, {}, function (o) {
       log('[airbrake]', o.url);
     });
   });
@@ -142,6 +142,7 @@ function insertUpdateChronologically(arr, o, timePropName) {
 // ===== Server requests
 
 var httpMethodRe = /^(?:GET|HEAD|POST|PUT|DELETE)$/;
+var httpHeaders = {'X-Kifi-Client': 'BE ' + api.version};
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
   if (httpMethodRe.test(service)) { // shift args if service is missing
     fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
@@ -166,7 +167,7 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 
   uri = serviceNameToUri(service) + uri;
   api.request(
-    method, uri, data, done,
+    method, uri, data, httpHeaders, done,
     fail || (method === 'GET' ? onGetFail.bind(null, uri, done, 1) : null));
 }
 
@@ -176,7 +177,7 @@ function onGetFail(uri, done, failures, req) {
       var ms = failures * 2000;
       log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms');
       api.timers.setTimeout(
-        api.request.bind(api, 'GET', uri, null, done, onGetFail.bind(null, uri, done, failures + 1)),
+        api.request.bind(api, 'GET', uri, null, httpHeaders, done, onGetFail.bind(null, uri, done, failures + 1)),
         ms);
     } else {
       log('[onGetFail]', req.status, uri, failures, 'failures, giving up');
