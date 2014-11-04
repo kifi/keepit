@@ -60,35 +60,36 @@ class LDADbUpdaterImpl @Inject() (
   private implicit def toURISeq(seq: SequenceNumber[CortexURI]) = SequenceNumber[NormalizedURI](seq.value)
 
   def update(): Unit = {
+    implicit val version = representer.version
     val tasks = fetchTasks
     log.info(s"fetched ${tasks.size} tasks")
     processTasks(tasks)
   }
 
-  private def fetchTasks(): Seq[CortexURI] = {
-    val commitOpt = db.readOnlyReplica { implicit s => commitRepo.getByModelAndVersion(modelName, representer.version.version) }
-    if (commitOpt.isEmpty) db.readWrite { implicit s => commitRepo.save(FeatureCommitInfo(modelName = modelName, modelVersion = representer.version.version, seq = 0L)) }
+  private def fetchTasks(implicit version: ModelVersion[DenseLDA]): Seq[CortexURI] = {
+    val commitOpt = db.readOnlyReplica { implicit s => commitRepo.getByModelAndVersion(modelName, version.version) }
+    if (commitOpt.isEmpty) db.readWrite { implicit s => commitRepo.save(FeatureCommitInfo(modelName = modelName, modelVersion = version.version, seq = 0L)) }
 
     val fromSeq = SequenceNumber[CortexURI](commitOpt.map { _.seq }.getOrElse(0L))
     log.info(s"fetch tasks from ${fromSeq.value}")
     db.readOnlyReplica { implicit s => uriRepo.getSince(fromSeq, fetchSize) }
   }
 
-  private def processTasks(uris: Seq[CortexURI]): Unit = {
+  private def processTasks(uris: Seq[CortexURI])(implicit version: ModelVersion[DenseLDA]): Unit = {
     uris.foreach { uri => processURI(uri) }
 
     log.info(s"${uris.size} uris processed")
 
     uris.lastOption.map { uri =>
       db.readWrite { implicit s =>
-        val commitInfo = commitRepo.getByModelAndVersion(modelName, representer.version.version).get
+        val commitInfo = commitRepo.getByModelAndVersion(modelName, version.version).get
         log.info(s"committing with seq = ${uri.seq.value}")
         commitRepo.save(commitInfo.withSeq(uri.seq.value).withUpdateTime(currentDateTime))
       }
     }
   }
 
-  private def processURI(uri: CortexURI): Unit = {
+  private def processURI(uri: CortexURI)(implicit version: ModelVersion[DenseLDA]): Unit = {
     updateAction(uri) match {
       case Ignore =>
       case CreateNewFeature => {
@@ -97,7 +98,7 @@ class LDADbUpdaterImpl @Inject() (
       }
 
       case UpdateExistingFeature => {
-        val curr = db.readOnlyReplica { implicit s => topicRepo.getByURI(uri.uriId, representer.version) }.get
+        val curr = db.readOnlyReplica { implicit s => topicRepo.getByURI(uri.uriId, version) }.get
         val newFeat = computeFeature(uri)
         val delta = if (curr.firstTopic == newFeat.firstTopic) 0 else 1
         val updated = URILDATopic(
@@ -106,7 +107,7 @@ class LDADbUpdaterImpl @Inject() (
           updatedAt = currentDateTime,
           uriId = uri.uriId,
           uriSeq = uri.seq,
-          version = representer.version,
+          version = version,
           numOfWords = newFeat.numOfWords,
           firstTopic = newFeat.firstTopic,
           secondTopic = newFeat.secondTopic,
@@ -121,18 +122,18 @@ class LDADbUpdaterImpl @Inject() (
       }
 
       case DeactivateExistingFeature => {
-        val curr = db.readOnlyReplica { implicit s => topicRepo.getByURI(uri.uriId, representer.version) }.get
+        val curr = db.readOnlyReplica { implicit s => topicRepo.getByURI(uri.uriId, version) }.get
         val deactivated = curr.withUpdateTime(currentDateTime).withState(URILDATopicStates.INACTIVE).withSeq(uri.seq)
         db.readWrite { implicit s => topicRepo.save(deactivated) }
       }
     }
   }
 
-  private def updateAction(uri: CortexURI): UpdateAction = {
+  private def updateAction(uri: CortexURI)(implicit version: ModelVersion[DenseLDA]): UpdateAction = {
     def isTwoWeeksOld(time: DateTime) = time.plusWeeks(2).getMillis < currentDateTime.getMillis
     def isOneDayOld(time: DateTime) = time.plusDays(1).getMillis < currentDateTime.getMillis
 
-    val infoOpt = db.readOnlyReplica { implicit s => topicRepo.getUpdateTimeAndState(uri.uriId, representer.version) }
+    val infoOpt = db.readOnlyReplica { implicit s => topicRepo.getUpdateTimeAndState(uri.uriId, version) }
 
     (uri.state.value, infoOpt) match {
       case (SCRAPED.value, None) => CreateNewFeature
@@ -145,10 +146,10 @@ class LDADbUpdaterImpl @Inject() (
     }
   }
 
-  private def computeFeature(uri: CortexURI): URILDATopic = {
+  private def computeFeature(uri: CortexURI)(implicit version: ModelVersion[DenseLDA]): URILDATopic = {
     val normUri = NormalizedURI(id = Some(uri.uriId), seq = SequenceNumber[NormalizedURI](uri.seq.value), url = "", urlHash = UrlHash(""))
     representer.genFeatureAndWordCount(normUri) match {
-      case (None, cnt) => URILDATopic(uriId = uri.uriId, uriSeq = SequenceNumber[NormalizedURI](uri.seq.value), version = representer.version, numOfWords = cnt, state = URILDATopicStates.NOT_APPLICABLE)
+      case (None, cnt) => URILDATopic(uriId = uri.uriId, uriSeq = SequenceNumber[NormalizedURI](uri.seq.value), version = version, numOfWords = cnt, state = URILDATopicStates.NOT_APPLICABLE)
       case (Some(feat), cnt) => {
         val arr = feat.vectorize
         val sparse = arr.zipWithIndex.sortBy(-1f * _._1).take(sparsity).map { case (score, idx) => (LDATopic(idx), score) }
@@ -156,7 +157,7 @@ class LDADbUpdaterImpl @Inject() (
         URILDATopic(
           uriId = uri.uriId,
           uriSeq = uri.seq,
-          version = representer.version,
+          version = version,
           numOfWords = cnt,
           firstTopic = Some(first),
           secondTopic = Some(second),
