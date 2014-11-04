@@ -153,6 +153,13 @@ angular.module('kifi')
           scope.showFollowers = false;
         };
 
+        scope.displayForManageOnly = function() {
+          return scope.showFollowers && !scope.modalData.followersOnly;
+        };
+        scope.displayFollowers = function() {
+          return scope.showFollowers || scope.modalData.followersOnly;
+        };
+
         //
         // Smart Scroll
         //

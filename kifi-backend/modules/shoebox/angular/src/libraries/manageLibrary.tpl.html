@@ -3,7 +3,7 @@
 
   <div class="dialog-body-wrap">
     <h1 class="dialog-header">
-      <button ng-if="showFollowers && !modalData.followersOnly" class="go-back-button" ng-click="hideFollowersPanel()">
+      <button ng-if="displayForManageOnly()" class="go-back-button" ng-click="hideFollowersPanel()">
         <span class="go-back-left-arrow"></span>Back
       </button>
       {{modalTitle}}
@@ -16,8 +16,8 @@
           <span ng-if="library.isMine">following your library</span>
           <span ng-if="!library.isMine">following this library</span>
         </p>
-        <button ng-if="!(showFollowers || modalData.followersOnly)" class="manage-lib-followers-button" ng-click="showFollowersPanel()">Invite and manage followers</button>
-        <div ng-if="(showFollowers || modalData.followersOnly) && library.isMine" kf-library-share-search library="library" manage-lib-invite="true" class="manage-lib-invite"></div>
+        <button ng-if="!displayFollowers()" class="manage-lib-followers-button" ng-click="showFollowersPanel()">Invite and manage followers</button>
+        <div ng-if="displayFollowers() && library.isMine" kf-library-share-search library="library" manage-lib-invite="true" class="manage-lib-invite"></div>
       </div>
 
       <div class="manage-lib-content">
