@@ -35,7 +35,6 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getByUserSortedByNumKeeps(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
   def getByUserSortedByName(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
   def getAllTagsByUserSortedByNumKeeps(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)]
-  def getDuplicateCollections()(implicit session: RSession): Map[(Id[User], Hashtag), Set[Collection]]
 }
 
 @Singleton
@@ -202,17 +201,6 @@ class CollectionRepoImpl @Inject() (
     import scala.collection.JavaConversions._
     val query = sql"select c.name, count(kc.id) as keep_count from collection c, keep_to_collection kc where kc.collection_id = c.id and user_id=${userId} and kc.state = ${KeepToCollectionStates.ACTIVE} and c.state=${CollectionStates.ACTIVE} group by c.id order by keep_count"
     query.as[(Hashtag, Int)].list.map { row => (row._1, row._2) }
-  }
-
-  def getDuplicateCollections()(implicit session: RSession): Map[(Id[User], Hashtag), Set[Collection]] = {
-    import StaticQuery.interpolation
-    val query = sql"select user_id, name from (select user_id, name, count(id) as collection_count from collection group by user_id, name) as collection_by_user_and_tag where collection_count > 1"
-    val relevantUsersAndTags = query.as[(Id[User], Hashtag)].list
-    relevantUsersAndTags.map {
-      case (userId, tag) =>
-        val collections = (for (c <- rows if c.userId === userId && c.name === tag) yield c).list.toSet
-        (userId, tag) -> collections
-    }.toMap
   }
 }
 
