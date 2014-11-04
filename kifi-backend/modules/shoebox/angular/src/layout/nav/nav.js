@@ -159,7 +159,7 @@ angular.module('kifi')
         //
         var fuseOptions = {
            keys: ['name'],
-           threshold: 0.3 // 0 means exact match, 1 means match with anything
+           threshold: 0.3  // 0 means exact match, 1 means match with anything.
         };
         var librarySummarySearch = {};
         var invitedSummarySearch = {};
