@@ -46,6 +46,9 @@ var iframeDialog = function () {
   };
 
   function show(name, origin, data) {
+    if (name === 'login') {
+      $('.kifi-signed-out-tooltip').not(':animated').stop().fadeOut(function () { $(this).remove() });
+    }
     var config = configs[name];
     if (config) {
       buildAndShow(config, origin, data, name)
