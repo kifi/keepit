@@ -400,22 +400,32 @@ class KeepRepoImpl @Inject() (
     (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt desc).drop(offset).take(limit).list
   }
 
-  private def getCountByLibraryCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {
-    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).length
+  private val getCountByLibraryCompiled = Compiled { (libraryId: Column[Id[Library]]) =>
+    (for (b <- rows if b.libraryId === libraryId) yield b).length
   }
-
+  private val getCountByLibraryWithExcludeCompiled = Compiled { (libraryId: Column[Id[Library]], excludeState: Column[State[Keep]]) =>
+    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState) yield b).length
+  }
   def getCountByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Int = {
     countByLibraryCache.getOrElse(CountByLibraryKey(libraryId)) {
-      getCountByLibraryCompiled(libraryId, excludeState).run
+      excludeState match {
+        case None => getCountByLibraryCompiled(libraryId).run
+        case Some(exclude) => getCountByLibraryWithExcludeCompiled(libraryId, exclude).run
+      }
     }
   }
 
-  private def getByExtIdandLibraryIdCompiled(extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {
-    (for (b <- rows if b.externalId === extId && b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b)
+  private val getByExtIdandLibraryIdCompiled = Compiled { (extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]]) =>
+    (for (b <- rows if b.externalId === extId && b.libraryId === libraryId) yield b)
   }
-
+  private val getByExtIdandLibraryIdWithExcludeCompiled = Compiled { (extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]], excludeState: Column[State[Keep]]) =>
+    (for (b <- rows if b.externalId === extId && b.libraryId === libraryId && b.state =!= excludeState) yield b)
+  }
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
-    getByExtIdandLibraryIdCompiled(extId, libraryId, excludeState).firstOption
+    excludeState match {
+      case None => getByExtIdandLibraryIdCompiled(extId, libraryId).firstOption
+      case Some(exclude) => getByExtIdandLibraryIdWithExcludeCompiled(extId, libraryId, exclude).firstOption
+    }
   }
 
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep] = {

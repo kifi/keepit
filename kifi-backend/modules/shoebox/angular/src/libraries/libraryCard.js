@@ -264,6 +264,7 @@ angular.module('kifi')
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html',
             modalData: {
+              pane: 'manage',
               library: scope.library,
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
@@ -287,6 +288,25 @@ angular.module('kifi')
           scope.editKeepsText = scope.editKeepsText === 'Edit Keeps' ? 'Done Editing' : 'Edit Keeps';
         };
 
+        scope.showFollowers = function () {
+          if (scope.library.owner.id === profileService.me.id) {
+            modalService.open({
+              template: 'libraries/manageLibraryModal.tpl.html',
+              modalData: {
+                pane: 'members',
+                library: scope.library
+              }
+            });
+          } else {
+            modalService.open({
+              template: 'libraries/libraryFollowersModal.tpl.html',
+              modalData: {
+                library: scope.library
+              }
+            });
+          }
+
+        };
 
         //
         // Watches and listeners.

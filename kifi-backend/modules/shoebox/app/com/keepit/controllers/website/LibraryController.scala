@@ -257,7 +257,9 @@ class LibraryController @Inject() (
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libraryId) =>
-        val (collaborators, followers, inviteesWithInvites, _) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = true)
+        val library = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
+        val showInvites = request.userIdOpt.map(uId => uId == library.ownerId).getOrElse(false)
+        val (collaborators, followers, inviteesWithInvites, _) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = showInvites)
         val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
         Ok(Json.obj("members" -> maybeMembers))
     }

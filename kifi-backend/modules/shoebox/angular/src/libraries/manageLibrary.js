@@ -150,6 +150,7 @@ angular.module('kifi')
         };
 
         scope.hideFollowersPanel = function () {
+          scope.viewFollowersFirst = false;
           scope.showFollowers = false;
         };
 
@@ -225,6 +226,10 @@ angular.module('kifi')
         //
         if (scope.modalData) {
           scope.library = _.cloneDeep(scope.modalData.library);
+          if (scope.modalData.pane === 'members') {
+            scope.viewFollowersFirst = true;
+            scope.showFollowers = true;
+          }
           scope.library.followers.forEach(function (follower) {
             follower.status = 'Following';
           });
