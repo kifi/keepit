@@ -13,15 +13,15 @@ k.guide.step1 = k.guide.step1 || function () {
     },
     {
       substep: true,
-      afterTransition: '.kifi-keep-btn',
       lit: {bottom: 8, right: 7, width: 155, height: 49},
       pad: [10, 20, 50, 20],
+      afterTransition: '.kifi-keep-btn',
       arrow: {dx: 130, dy: 96, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -80, gap: 10, sel: '.kifi-keep-btn'}},
       allow: {type: 'click', target: '.kifi-keep-btn'}
     },
     {
-      afterTransition: '.kifi-keep-box',
       pad: [0],
+      afterTransition: '.kifi-keep-box',
       arrow: {dx: 150, dy: 0, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: 0, gap: 5, sel: '.kifi-keep-box-lib.kifi-system.kifi-discoverable'}},
       allow: [
         {type: /^key/, target: '.kifi-keep-box-lib-input', unless: function (e) {return e.keyCode === 27}},  // esc
@@ -29,10 +29,9 @@ k.guide.step1 = k.guide.step1 || function () {
       ]
     },
     {
-      afterTransition: '.kifi-keep-box-cart',
-      lit: '.kifi-keep-box',
       litFor: 3000,
-      pad: [0],
+      pad: [0, 0, 20],
+      afterTransition: '.kifi-keep-box-cart',
       pos: {bottom: 280, right: 480},  // TODO: position relative to spotlight
       transition: 'opacity'
     },
@@ -102,7 +101,17 @@ k.guide.step1 = k.guide.step1 || function () {
           if (view) {
             observer.disconnect();
             observer = null;
-            step.show(3);
+            var cart = view.parentNode;
+            var vp = cart.parentNode;
+            var box = $(vp).closest('.kifi-keep-box')[0];
+            var r = box.parentNode.getBoundingClientRect();
+            var pxTaller = view.offsetHeight - vp.offsetHeight;
+            step.show(3, getTransitionDurationMs(window.getComputedStyle(cart)), {
+              left: r.left + box.offsetLeft,
+              top: r.top + box.offsetTop - pxTaller,
+              width: box.offsetWidth,
+              height: box.offsetHeight + pxTaller
+            });
           }
         });
         observer.observe(k.tile.querySelector('.kifi-keep-box-cart'), {childList: true});
