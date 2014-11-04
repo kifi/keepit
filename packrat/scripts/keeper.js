@@ -495,6 +495,15 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         showSlider();
       }
     },
+    hide: function () {
+      if (k.toaster) {
+        k.toaster.hide();
+      }
+      if (k.keepBox) {
+        k.keepBox.hide();
+      }
+      hideSlider();
+    },
     create: function(locator) {
       createSlider(locator);
       return $slider;

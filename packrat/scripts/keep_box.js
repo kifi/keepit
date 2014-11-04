@@ -121,7 +121,7 @@ k.keepBox = k.keepBox || (function () {
   var hideInterval;
   function hide(e, trigger) {
     clearInterval(hideInterval), hideInterval = null;
-    log('[keepBox:hide]');
+    log('[keepBox:hide]', trigger);
     $(document).data('esc').remove(hide);
     $box.find('.kifi-keep-box-view').triggerHandler('kifi-hide');
     $box
@@ -437,10 +437,10 @@ k.keepBox = k.keepBox || (function () {
   }
 
   function keepTo(library) {
-    var data = {libraryId: library.id, title: authoredTitle()};
+    var data = {libraryId: library.id};
     log('[keep]', data);
     var deferred = Q.defer();
-    api.port.emit('keep', withUrls(data), function (keep) {
+    api.port.emit('keep', withTitles(withUrls(data)), function (keep) {
       if (keep) {
         if (library.system) {
           $box.data('libraries').forEach(deleteKeepIfSystemLib);
