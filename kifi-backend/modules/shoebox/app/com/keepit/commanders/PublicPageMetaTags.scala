@@ -112,6 +112,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |<meta name="twitter:app:id:googleplay" content="com.kifi">
       |<meta name="twitter:app:url:googleplay" content="kifi:/$urlPathOnly">
       |$twitterImageTags
+      |<meta name="twitter:dnt" content="on">
       |<meta itemprop="name" content="$title">
       |<meta itemprop="description" content="$description">
     """.stripMargin
