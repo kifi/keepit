@@ -150,6 +150,7 @@ angular.module('kifi')
         };
 
         scope.hideFollowersPanel = function () {
+          scope.viewFollowersFirst = false;
           scope.showFollowers = false;
         };
 
@@ -186,9 +187,6 @@ angular.module('kifi')
                   member.picUrl = friendService.getPictureUrlForUser(member);
                   member.status = setMemberStatus(member);
                 });
-                if (!scope.library.isMine) {
-                  members = _.reject(members, {status: 'Invitation Pending'});
-                }
                 scope.memberList.push.apply(scope.memberList, members);
               }
             });
@@ -229,6 +227,7 @@ angular.module('kifi')
         if (scope.modalData) {
           scope.library = _.cloneDeep(scope.modalData.library);
           if (scope.modalData.pane === 'members') {
+            scope.viewFollowersFirst = true;
             scope.showFollowers = true;
           }
           scope.library.followers.forEach(function (follower) {

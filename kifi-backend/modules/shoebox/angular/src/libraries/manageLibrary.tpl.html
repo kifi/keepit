@@ -13,14 +13,14 @@
         <p class="manage-lib-followers-stats">
           <span ng-pluralize count="library.numFollowers"
                 when="{'0': '0 people are ', 'one': '1 person is ', 'other': '{} people are '}"></span>
-          <span>following your library</span>
+          following your library
         </p>
         <button ng-if="!showFollowers" class="manage-lib-followers-button" ng-click="showFollowersPanel()">Invite and manage followers</button>
         <div ng-if="showFollowers" kf-library-share-search library="library" manage-lib-invite="true" class="manage-lib-invite"></div>
       </div>
 
       <div class="manage-lib-content">
-        <div ng-hide="showFollowers" class="dialog-text manage-lib-default-content">
+        <div ng-hide="showFollowers" ng-if="!viewFollowersFirst" class="dialog-text manage-lib-default-content">
           <div class="manage-lib-input-wrapper">
             <div class="manage-lib-input-title">
               <span class="manage-lib-heading">Name</span>
