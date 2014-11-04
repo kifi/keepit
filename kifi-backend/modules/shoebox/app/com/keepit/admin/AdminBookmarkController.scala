@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders.{ CollectionCommander, KeepsCommander, LibraryCommander, RichWhoKeptMyKeeps, URISummaryCommander }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.net._
@@ -19,6 +19,7 @@ import views.html
 
 import scala.collection.mutable.{ SynchronizedMap, HashMap => MutableMap }
 import scala.concurrent._
+import com.keepit.common.akka.SafeFuture
 
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -35,6 +36,7 @@ class AdminBookmarksController @Inject() (
   keepCommander: KeepsCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
+  keepToCollectionRepo: KeepToCollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock)
     extends AdminUserActions {
@@ -294,6 +296,62 @@ class AdminBookmarksController @Inject() (
       NoContent
     } getOrElse {
       NotFound(Json.obj("error" -> "not_found"))
+    }
+  }
+
+  def clearDuplicateTags(readOnly: Boolean = true) = AdminUserPage.async { implicit request =>
+    SafeFuture {
+      val allDuplicateCollections = db.readWrite { implicit session =>
+        collectionRepo.getDuplicateCollections().map {
+          case ((userId, tag), collections) =>
+            require(collections.forall(_.userId == userId), "Collections do not match expected user id")
+            require(collections.forall(_.name.tag.toLowerCase == tag.tag.toLowerCase), "Collections do not match expected tag")
+            val primaryCollection = collections.find(c => c.name == tag && c.isActive).get
+            val duplicateCollections: Set[(Collection, Seq[KeepToCollection])] = collections.filterNot(_.id.get == primaryCollection.id.get).map { duplicateCollection =>
+              val updatedKTCs = keepToCollectionRepo.getByCollection(duplicateCollection.id.get).map { ktc =>
+                val updatedKTC = {
+                  if (keepToCollectionRepo.getByKeep(ktc.keepId).map(_.collectionId).contains(primaryCollection.id.get)) ktc.copy(state = KeepToCollectionStates.INACTIVE)
+                  else ktc.copy(collectionId = primaryCollection.id.get)
+                }
+                if (!readOnly) { keepToCollectionRepo.save(updatedKTC) } else updatedKTC
+              }
+              if (!readOnly) { collectionRepo.save(duplicateCollection.copy(state = CollectionStates.INACTIVE, name = Hashtag(ExternalId().id))) }
+              duplicateCollection -> updatedKTCs
+            }
+            primaryCollection -> duplicateCollections
+        }
+      }
+      val result = JsArray(allDuplicateCollections.toSeq.map {
+        case (primaryCollection, duplicateCollections) =>
+          Json.obj(
+            "primaryCollection" -> Json.obj(
+              "id" -> primaryCollection.id.get,
+              "userId" -> primaryCollection.userId,
+              "name" -> primaryCollection.name,
+              "state" -> primaryCollection.state
+            ),
+            "duplicates" -> JsArray(duplicateCollections.toSeq.map {
+              case (deactivatedCollection, updatedKeepToCollections) =>
+                Json.obj(
+                  "deactivatedCollection" -> Json.obj(
+                    "id" -> deactivatedCollection.id.get,
+                    "userId" -> deactivatedCollection.userId,
+                    "name" -> deactivatedCollection.name,
+                    "state" -> deactivatedCollection.state
+                  ),
+                  "updatedKeepToCollections" -> JsArray(updatedKeepToCollections.map { ktc =>
+                    Json.obj(
+                      "id" -> ktc.id.get,
+                      "collectionId" -> ktc.collectionId,
+                      "keepId" -> ktc.keepId,
+                      "state" -> ktc.state
+                    )
+                  })
+                )
+            })
+          )
+      })
+      Ok(result)
     }
   }
 
