@@ -277,6 +277,21 @@ class KeepsCommander @Inject() (
       val pageInfosFuture = Future.sequence(keeps.map { keep =>
         getKeepSummary(keep, idealImageSize)
       })
+      val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
+        val idToLibrary = {
+          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
+          db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) }
+        }
+        val idToBasicUser = {
+          val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
+          val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
+          val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
+          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners) }
+        }
+        val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
+
+        (idToBasicUser, idToBasicLibrary)
+      }
 
       val colls = db.readOnlyMaster { implicit s =>
         keeps.map { keep =>
@@ -289,21 +304,8 @@ class KeepsCommander @Inject() (
       for {
         augmentationInfos <- augmentationFuture
         pageInfos <- pageInfosFuture
+        (idToBasicUser, idToBasicLibrary) <- basicInfosFuture
       } yield {
-
-        val idToLibrary = {
-          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
-          db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) }
-        }
-
-        val idToBasicUser = {
-          val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
-          val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
-          val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
-          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners) }
-        }
-
-        val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
 
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.map {
           case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
