@@ -271,7 +271,6 @@ angular.module('kifi')
             var addedKeeps = data.keeps;
             if (addedKeeps.length > 0) {
               libraryService.fetchLibrarySummaries(true);
-
               scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, clickedLibrary);
             }
             libraryService.fetchLibrarySummaries(true);
@@ -283,10 +282,9 @@ angular.module('kifi')
           var selectedKeeps = getSelectedKeeps();
 
           keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), clickedLibrary.id).then(function (data) {
-            if (data.successes.length > 0) {
+            var addedKeeps = data.successes;
+            if (addedKeeps.length > 0) {
               libraryService.fetchLibrarySummaries(true);
-
-              var addedKeeps = data.successes;
               scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, scope.librarySelection.library);
             }
           })['catch'](function () {
