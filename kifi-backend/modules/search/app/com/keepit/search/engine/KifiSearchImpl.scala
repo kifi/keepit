@@ -174,6 +174,6 @@ class KifiSearchImpl(
 
     engine.explain(uriId.id, collector, libraryScoreSource, keepScoreSource, articleScoreSource)
 
-    Explanation(query, labels, collector.rawScore, collector.getDetails(), collector.getBoostValues())
+    Explanation(query, labels, collector.rawScore, collector.scoreComputation, collector.getDetails(), collector.getBoostValues())
   }
 }

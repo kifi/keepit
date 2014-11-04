@@ -5,12 +5,12 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.lucene.search.Query
 
 object Explanation {
-  def apply(query: Query, labels: Array[String], rawScore: Float, details: Map[String, Seq[ScoreDetail]], boostValues: (Float, Float)) = {
-    new Explanation(query, labels, rawScore, details, boostValues._1, boostValues._2)
+  def apply(query: Query, labels: Array[String], rawScore: Float, scoreComputation: String, details: Map[String, Seq[ScoreDetail]], boostValues: (Float, Float)) = {
+    new Explanation(query, labels, rawScore, scoreComputation, details, boostValues._1, boostValues._2)
   }
 }
 
-class Explanation(val query: Query, val labels: Array[String], val rawScore: Float, val details: Map[String, Seq[ScoreDetail]], clickBoostValue: Float, sharingBoostValue: Float) {
+class Explanation(val query: Query, val labels: Array[String], val rawScore: Float, val scoreComputation: String, val details: Map[String, Seq[ScoreDetail]], clickBoostValue: Float, sharingBoostValue: Float) {
 
   def queryHtml(title: String): String = {
     val sb = new StringBuilder
@@ -27,6 +27,20 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
     sb.append("<table>\n")
     sb.append(s"<tr> <th> $title </th> </tr>\n")
     sb.append(s"<tr> <td> $rawScore </td> </tr>\n")
+    sb.append("</table>\n")
+
+    sb.toString
+  }
+
+  def scoreComputationHtml(title: String): String = {
+    val sb = new StringBuilder
+    sb.append("<table>\n")
+    sb.append(s"<tr> <th> $title </th> </tr>\n")
+    sb.append("<tr> <td>\n")
+    sb.append("<ul>\n")
+    sb.append(scoreComputation)
+    sb.append("</ul>\n")
+    sb.append("</td> </tr>\n")
     sb.append("</table>\n")
 
     sb.toString
