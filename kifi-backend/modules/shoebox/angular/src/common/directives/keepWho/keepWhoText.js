@@ -3,23 +3,17 @@
 angular.module('kifi')
 
 .directive('kfKeepWhoText', [
-  'profileService', 'libraryService',
-  function (profileService, libraryService) {
+  'profileService',
+  function (profileService) {
     return {
       restrict: 'A',
       replace: true,
       templateUrl: 'common/directives/keepWho/keepWhoText.tpl.html',
       scope: {
-        keep: '=',
-        deprecated: '='
+        keep: '='
       },
       link: function (scope) {
         var keep = scope.keep;
-
-        scope.librariesEnabled = libraryService.isAllowed();
-
-        // TODO(josh) remove this after we remove the deprecated keep card
-        scope.useDeprecated = typeof scope.deprecated === 'boolean' && scope.deprecated;
 
         scope.me = profileService.me;
 
@@ -43,24 +37,18 @@ angular.module('kifi')
         };
 
         scope.hasLibraries = function () {
-          return scope.librariesEnabled && librariesTotal() > 0;
+          return librariesTotal() > 0;
         };
 
         scope.getFriendText = function () {
           var num = keep.keepers ? keep.keepers.length : 0;
           var text = (num === 1) ? '1 friend' : num + ' friends';
-          if (scope.useDeprecated && keep.isMyBookmark) {
-            return 'and ' + text;
-          }
           return text;
         };
 
         scope.getOthersText = function () {
           var num = keep.others ? keep.others : 0;
           var text = (num === 1) ? '1 other' : num + ' others';
-          if (scope.useDeprecated && (scope.hasKeepers() || keep.isMyBookmark)) {
-            return 'and ' + text;
-          }
           return text;
         };
 

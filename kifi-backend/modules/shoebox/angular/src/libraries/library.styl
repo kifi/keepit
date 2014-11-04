@@ -4,8 +4,12 @@
 invite-header-orange = #ff7c3c
 
 .kf-library-card-header
-  padding: 0 25px 0 30px
   margin-bottom: 10px
+  padding: 0 25px 0 30px
+
+.kf-logged-out .kf-library-card-header
+  background-color: #fff
+
 
   .kf-logged-out &
     margin-bottom: -30px
@@ -19,24 +23,6 @@ invite-header-orange = #ff7c3c
   border: none
   box-shadow: none
   padding-bottom: 20px
-
-  &::before
-    content: ' '
-    position: absolute
-    width: 99999px
-    left: 100%
-    top: 0
-    bottom: 0
-    background-color: #fff
-
-  &::after
-    content: ' '
-    position: absolute
-    width: 99999px
-    right: 100%
-    top: 0
-    bottom: 0
-    background-color: #fff
 
   .kf-keep-lib-name-container
     width: 100%
@@ -387,6 +373,7 @@ invite-header-orange = #ff7c3c
 
 .library-share-contact-list
   max-height: 285px
+  overflow-x: hidden
   overflow-y: auto
 
 .library-share-contact

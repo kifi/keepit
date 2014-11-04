@@ -9,20 +9,7 @@
       <span class="kf-subtitle-text">Your Helpful Keeps</span>
     </div>
   </div>
-<div ng-if="librariesEnabled"
-    kf-keeps
-    keeps="keeps"
-    keeps-loading="loading"
-    keeps-has-more="hasMore"
-    scroll-disabled="!hasMore"
-    scroll-distance="scrollDistance"
-    scroll-next="getNextKeeps"
-    edit-mode="editMode"
-    toggle-edit="toggleEdit"
-    update-selected-count="updateSelectedCount(numSelected)"
-  ></div>
-  <div ng-if="!librariesEnabled"
-    kf-keeps-deprecated
+<div kf-keeps
     keeps="keeps"
     keeps-loading="loading"
     keeps-has-more="hasMore"

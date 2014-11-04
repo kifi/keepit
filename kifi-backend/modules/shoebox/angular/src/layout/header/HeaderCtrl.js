@@ -94,7 +94,7 @@ angular.module('kifi')
             if (libId) {
               $location.url('/find?q=' + $scope.search.text + '&f=a' + '&l=' + libId);
             } else {
-              $location.url('/find?q=' + $scope.search.text + '&f=' + 'm');
+              $location.url('/find?q=' + $scope.search.text);
             }
           } else {
             $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
@@ -130,13 +130,6 @@ angular.module('kifi')
 
     $scope.me = profileService.me;
     $scope.me.picUrl = $scope.me.picUrl || '//www.kifi.com/assets/img/ghost.200.png';
-
-    $scope.librariesEnabled = false;
-    $scope.$watch(function () {
-      return libraryService.isAllowed();
-    }, function (newVal) {
-      $scope.librariesEnabled = newVal;
-    });
 
     $scope.isActive = function (path) {
       var loc = $location.path();

@@ -126,7 +126,7 @@ angular.module('kifi')
           scope.library.shareTwitterUrl = scope.library.shareUrl +
             '?utm_medium=vf_twitter&utm_source=library_invite&utm_content=lid_' + scope.library.id +
             '&kcid=na-vf_twitter-library_invite-lid_' + scope.library.id;
-          scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
+          scope.library.shareText = 'Discover this amazing @Kifi library about ' + scope.library.name + '!';
 
           // Figure out whether this library is a library that the user has been invited to.
           // If so, display an invite header.
@@ -148,6 +148,11 @@ angular.module('kifi')
               };
             }
           });
+          if (scope.$root.userLoggedIn === false) {
+            scope.$evalAsync(function () {
+              angular.element('.white-background').height(element.height() + 20);
+            });
+          }
         }
 
         function preloadSocial () {

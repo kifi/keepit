@@ -19,6 +19,15 @@ angular.module('kifi')
         scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
         scope.visibleKeepLibraries = scope.keep.libraries;
 
+        scope.$emit('getCurrentLibrary', { callback: function (lib) {
+          if (lib && lib.id) {
+            var library = _.find(scope.visibleKeepLibraries, { id: lib.id });
+            if (library) {
+              library.hidden = true;
+            }
+          }
+        }});
+
         // For keep cards that search results on the search page, add and remove user library attribution
         // on the client side when the user keeps or unkeeps.
         var deregisterKeepAddedListener = $rootScope.$on('keepAdded', function (e, libSlug, keeps, library) {
