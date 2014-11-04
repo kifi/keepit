@@ -881,9 +881,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |]
              |}""".stripMargin))
 
-        val testPath2 = com.keepit.controllers.website.routes.LibraryController.getLibraryMembers(pubId1, 1, 4, true).url
+        val testPath2 = com.keepit.controllers.website.routes.LibraryController.getLibraryMembers(pubId1, 1, 4).url
         val request2 = FakeRequest("POST", testPath2)
-        val result2 = libraryController.getLibraryMembers(pubId1, 1, 3, true)(request2)
+        val result2 = libraryController.getLibraryMembers(pubId1, 1, 3)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
@@ -908,9 +908,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |]
              |}""".stripMargin))
 
-        val testPath3 = com.keepit.controllers.website.routes.LibraryController.getLibraryMembers(pubId1, 1, 4, false).url
+        inject[FakeUserActionsHelper].setUser(user2)
+        val testPath3 = com.keepit.controllers.website.routes.LibraryController.getLibraryMembers(pubId1, 1, 4).url
         val request3 = FakeRequest("POST", testPath3)
-        val result3 = libraryController.getLibraryMembers(pubId1, 1, 3, false)(request3)
+        val result3 = libraryController.getLibraryMembers(pubId1, 1, 3)(request3)
         status(result3) must equalTo(OK)
         contentType(result3) must beSome("application/json")
 

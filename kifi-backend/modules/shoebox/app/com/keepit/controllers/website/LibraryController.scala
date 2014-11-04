@@ -252,11 +252,13 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibraryMembers(pubId: PublicId[Library], offset: Int, limit: Int, showInvites: Boolean = false) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+  def getLibraryMembers(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     if (limit > 30) { BadRequest(Json.obj("error" -> "invalid_limit")) }
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libraryId) =>
+        val library = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
+        val showInvites = request.userIdOpt.map(uId => uId == library.ownerId).getOrElse(false)
         val (collaborators, followers, inviteesWithInvites, _) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = showInvites)
         val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
         Ok(Json.obj("members" -> maybeMembers))
