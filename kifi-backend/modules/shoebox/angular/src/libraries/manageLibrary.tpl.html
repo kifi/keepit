@@ -3,25 +3,25 @@
 
   <div class="dialog-body-wrap">
     <h1 class="dialog-header">
-      <button ng-if="showFollowers" class="go-back-button" ng-click="hideFollowersPanel()">
+      <button ng-if="showFollowers && !modalData.followersOnly" class="go-back-button" ng-click="hideFollowersPanel()">
         <span class="go-back-left-arrow"></span>Back
       </button>
       {{modalTitle}}
     </h1>
-
     <div class="dialog-body">
       <div ng-if="modifyingExistingLibrary" class="manage-lib-followers-info">
         <p class="manage-lib-followers-stats">
           <span ng-pluralize count="library.numFollowers"
                 when="{'0': '0 people are ', 'one': '1 person is ', 'other': '{} people are '}"></span>
-          following your library
+          <span ng-if="library.isMine">following your library</span>
+          <span ng-if="!library.isMine">following this library</span>
         </p>
-        <button ng-if="!showFollowers" class="manage-lib-followers-button" ng-click="showFollowersPanel()">Invite and manage followers</button>
-        <div ng-if="showFollowers" kf-library-share-search library="library" manage-lib-invite="true" class="manage-lib-invite"></div>
+        <button ng-if="!(showFollowers || modalData.followersOnly)" class="manage-lib-followers-button" ng-click="showFollowersPanel()">Invite and manage followers</button>
+        <div ng-if="(showFollowers || modalData.followersOnly) && library.isMine" kf-library-share-search library="library" manage-lib-invite="true" class="manage-lib-invite"></div>
       </div>
 
       <div class="manage-lib-content">
-        <div ng-hide="showFollowers" class="dialog-text manage-lib-default-content">
+        <div ng-if="!modalData.followersOnly" ng-hide="showFollowers" class="dialog-text manage-lib-default-content">
           <div class="manage-lib-input-wrapper">
             <div class="manage-lib-input-title">
               <span class="manage-lib-heading">Name</span>
@@ -83,11 +83,12 @@
         </div>
       </div>
 
-      <div class="dialog-buttons">
+      <div class="dialog-buttons" ng-if="!modalData.followersOnly">
         <button ng-if="!modifyingExistingLibrary" class="manage-lib-create-button" ng-click="saveLibrary()">Create Library</button>
         <button ng-if="modifyingExistingLibrary" class="manage-lib-delete-button" ng-click="openDeleteLibraryModal()">Delete library</button>
         <button ng-if="modifyingExistingLibrary" class="manage-lib-save-button" ng-click="saveLibrary()">Save</button>
       </div>
+      <div class="manage-lib-footer" ng-if="modalData.followersOnly"></div>
     </div>
   </div>
 </div>

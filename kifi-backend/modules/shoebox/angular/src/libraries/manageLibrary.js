@@ -186,6 +186,9 @@ angular.module('kifi')
                   member.picUrl = friendService.getPictureUrlForUser(member);
                   member.status = setMemberStatus(member);
                 });
+                if (scope.modalData.followersOnly) {
+                  members = _.reject(members, {status: 'Invitation Pending'});
+                }
                 scope.memberList.push.apply(scope.memberList, members);
               }
             });
@@ -225,6 +228,7 @@ angular.module('kifi')
         //
         if (scope.modalData) {
           scope.library = _.cloneDeep(scope.modalData.library);
+          scope.library.isMine = scope.library.owner.id === profileService.me.id;
           scope.library.followers.forEach(function (follower) {
             follower.status = 'Following';
           });
