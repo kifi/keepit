@@ -153,13 +153,6 @@ angular.module('kifi')
           scope.showFollowers = false;
         };
 
-        scope.displayForManageOnly = function() {
-          return scope.showFollowers && !scope.modalData.followersOnly;
-        };
-        scope.displayFollowers = function() {
-          return scope.showFollowers || scope.modalData.followersOnly;
-        };
-
         //
         // Smart Scroll
         //
@@ -181,7 +174,8 @@ angular.module('kifi')
           if (loading) { return; }
           if (scope.library.id) {
             loading = true;
-            libraryService.getMoreMembers(scope.library.id, pageSize, scope.offset).then(function (resp) {
+            var showInvites = scope.library.isMine;
+            libraryService.getMoreMembers(scope.library.id, pageSize, scope.offset, showInvites).then(function (resp) {
               var members = resp.members;
               loading = false;
               if (members.length === 0) {
@@ -193,7 +187,7 @@ angular.module('kifi')
                   member.picUrl = friendService.getPictureUrlForUser(member);
                   member.status = setMemberStatus(member);
                 });
-                if (scope.modalData.followersOnly) {
+                if (!scope.library.isMine) {
                   members = _.reject(members, {status: 'Invitation Pending'});
                 }
                 scope.memberList.push.apply(scope.memberList, members);
@@ -235,6 +229,9 @@ angular.module('kifi')
         //
         if (scope.modalData) {
           scope.library = _.cloneDeep(scope.modalData.library);
+          if (scope.modalData.startOnFollowers) {
+            scope.showFollowers = true;
+          }
           scope.library.isMine = scope.library.owner.id === profileService.me.id;
           scope.library.followers.forEach(function (follower) {
             follower.status = 'Following';

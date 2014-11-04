@@ -259,7 +259,7 @@ angular.module('kifi')
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html',
             modalData: {
-              followersOnly: false,
+              startOnFollowers: false,
               library: scope.library,
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
@@ -287,7 +287,7 @@ angular.module('kifi')
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html',
             modalData: {
-              followersOnly: true,
+              startOnFollowers: true,
               library: scope.library
             }
           });
