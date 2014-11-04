@@ -10,6 +10,7 @@ class ScoreDetailCollector(targetId: Long, clickBoostsProvider: Option[() => Res
   private[this] var _rawScore: Float = 0.0f
   private[this] var _clickBoostValue: Float = -1f
   private[this] var _sharingBoostValue: Float = -1f
+  private[this] var _scoreComputation: String = null
 
   private[this] val _details: Map[String, ListBuffer[ScoreDetail]] = Map(
     "aggregate" -> new ListBuffer[ScoreDetail](),
@@ -34,6 +35,8 @@ class ScoreDetailCollector(targetId: Long, clickBoostsProvider: Option[() => Res
 
     _rawScore = ctx.score()
 
+    _scoreComputation = ctx.explainScoreExpr()
+
     _details("aggregate") += ScoreDetail(ctx)
   }
 
@@ -44,6 +47,7 @@ class ScoreDetailCollector(targetId: Long, clickBoostsProvider: Option[() => Res
   }
 
   def rawScore(): Float = _rawScore
+  def scoreComputation(): String = _scoreComputation
   def getDetails(): Map[String, Seq[ScoreDetail]] = _details.mapValues(_.toSeq)
   def getBoostValues(): (Float, Float) = (_clickBoostValue, _sharingBoostValue)
 }

@@ -22,6 +22,12 @@ class ScoreContext(
 
   def score(): Float = scoreExpr()(this)
 
+  def explainScoreExpr(): String = {
+    val sb = new StringBuilder()
+    scoreExpr.explain()(sb, this)
+    sb.toString()
+  }
+
   def computeMatching(minThreshold: Float): Float = {
     val len = matchWeight.length
     var matching = 1.0f
