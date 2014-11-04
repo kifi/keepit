@@ -35,7 +35,7 @@
 
 <p/>
 
-@Html(explanation.map(_.scoreHtml("RawScore")).getOrElse(""))
+@Html(explanation.map(_.scoreHtml("Score")).getOrElse(""))
 
 <p/>
 
@@ -48,6 +48,10 @@
 <p/>
 
 @Html(explanation.map(_.detailsHtml("Score Details")).getOrElse(""))
+
+<p/>
+
+@Html(explanation.map(_.scoreComputationHtml("Score Computation Details")).getOrElse(""))
 
 <p/>
 
