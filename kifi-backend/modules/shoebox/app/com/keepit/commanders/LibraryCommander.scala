@@ -817,11 +817,12 @@ class LibraryCommander @Inject() (
           case Right(successKeep) => goodKeeps += successKeep
         }
       }
-      searchClient.updateKeepIndex()
       if (badKeeps.size != keeps.size)
         libraryRepo.updateLastKept(dstLibraryId)
       groupedKeeps.keys.flatten
     }
+    searchClient.updateKeepIndex()
+
     implicit val dca = TransactionalCaching.Implicits.directCacheAccess
     srcLibs.map { srcLibId =>
       countByLibraryCache.remove(CountByLibraryKey(srcLibId))
