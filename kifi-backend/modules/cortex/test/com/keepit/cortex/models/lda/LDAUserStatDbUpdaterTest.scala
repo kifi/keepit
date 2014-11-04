@@ -26,7 +26,7 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
           uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](2L), uriSeq = SequenceNumber[NormalizedURI](2L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(1f, 0f))), state = URILDATopicStates.ACTIVE))
         }
 
-        val updater = new LDAUserStatDbUpdaterImpl(uriRep, db, keepRepo, uriTopicRepo, userLDAStatsRepo, commitRepo) {
+        val updater = new LDAUserStatDbUpdaterImpl(uriReps, db, keepRepo, uriTopicRepo, userLDAStatsRepo, commitRepo) {
           override val min_num_evidence = 1
         }
 
@@ -57,7 +57,7 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
         uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](2L), uriSeq = SequenceNumber[NormalizedURI](2L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(1f, 0f))), state = URILDATopicStates.ACTIVE))
       }
 
-      val updater = new LDAUserStatDbUpdaterImpl(uriRep, db, keepRepo, uriTopicRepo, userLDAStatsRepo, commitRepo) {
+      val updater = new LDAUserStatDbUpdaterImpl(uriReps, db, keepRepo, uriTopicRepo, userLDAStatsRepo, commitRepo) {
         override val min_num_evidence = 1
       }
 
@@ -74,4 +74,3 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
   }
 
 }
-

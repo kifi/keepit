@@ -70,7 +70,7 @@ class UserLDAStatisticsPluginImpl @Inject() (
 class UserLDAStatisticsUpdater @Inject() (
     db: Database,
     userTopicRepo: UserLDAInterestsRepo,
-    representer: LDAURIRepresenter,
+    representer: MultiVersionedLDAURIRepresenter,
     statsStore: UserLDAStatisticsStore,
     cache: UserLDAStatisticsCache) extends Logging {
 
@@ -79,13 +79,17 @@ class UserLDAStatisticsUpdater @Inject() (
   private val MIN_EVIDENCE = 100
 
   def update() {
-    val (_, interests) = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(representer.version, MIN_EVIDENCE) }
+    representer.versions.foreach { version => update(version) }
+  }
+
+  def update(version: ModelVersion[DenseLDA]) {
+    val (_, interests) = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(version, MIN_EVIDENCE) }
     val vecs = interests.map { _.mean }
     log.info(s"begin user LDA stats update. data size: ${vecs.size}")
     if (vecs.size > 1) {
-      val stats = genStats(vecs, representer.version)
-      statsStore.+=(MiscPrefix.LDA.userLDAStatsJsonFile, representer.version, stats)
-      cache.set(UserLDAStatisticsCacheKey(representer.version), stats)
+      val stats = genStats(vecs, version)
+      statsStore.+=(MiscPrefix.LDA.userLDAStatsJsonFile, version, stats)
+      cache.set(UserLDAStatisticsCacheKey(version), stats)
     }
   }
 

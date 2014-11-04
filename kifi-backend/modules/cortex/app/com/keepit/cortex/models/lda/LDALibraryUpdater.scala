@@ -18,7 +18,7 @@ import org.joda.time.DateTime
 
 @Singleton
 class LDALibraryUpdaterImpl @Inject() (
-    representer: LDAURIRepresenter,
+    representer: MultiVersionedLDAURIRepresenter,
     db: Database,
     keepRepo: CortexKeepRepo,
     libRepo: CortexLibraryRepo,
@@ -32,10 +32,11 @@ class LDALibraryUpdaterImpl @Inject() (
   protected val min_num_evidence = 1
 
   def update(): Unit = {
-    implicit val version = representer.version
-    val tasks = fetchTasks
-    log.info(s"fetched ${tasks.size} tasks")
-    processTasks(tasks)
+    representer.versions.foreach { implicit version =>
+      val tasks = fetchTasks
+      log.info(s"fetched ${tasks.size} tasks")
+      processTasks(tasks)
+    }
   }
 
   private def fetchTasks(implicit version: ModelVersion[DenseLDA]): Seq[CortexKeep] = {
