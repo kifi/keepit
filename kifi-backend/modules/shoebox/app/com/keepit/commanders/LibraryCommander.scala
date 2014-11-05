@@ -755,12 +755,9 @@ class LibraryCommander @Inject() (
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
 
-        SafeFuture {
-          libraryAnalytics.acceptLibraryInvite(userId, libraryId, eventContext)
-          val keepCount = keepRepo.getCountByLibrary(libraryId)
-          libraryAnalytics.followLibrary(userId, lib, keepCount, eventContext)
-        }
-
+        val keepCount = keepRepo.getCountByLibrary(libraryId)
+        libraryAnalytics.acceptLibraryInvite(userId, libraryId, eventContext)
+        libraryAnalytics.followLibrary(userId, lib, keepCount, eventContext)
         searchClient.updateLibraryIndex()
         Right(updatedLib)
       }
@@ -783,10 +780,9 @@ class LibraryCommander @Inject() (
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           val lib = libraryRepo.get(libraryId)
           libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
-          SafeFuture {
-            val keepCount = keepRepo.getCountByLibrary(libraryId)
-            libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
-          }
+
+          val keepCount = keepRepo.getCountByLibrary(libraryId)
+          libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
           searchClient.updateLibraryIndex()
           Right()
         }

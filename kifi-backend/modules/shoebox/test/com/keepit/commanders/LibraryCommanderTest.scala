@@ -535,7 +535,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (Left(userAgent.id.get), LibraryAccess.READ_ONLY, None),
           (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
           (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
-        val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)(HeimdalContext(Map()))
+        val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)
         res1.isRight === true
         res1.right.get === Seq((Left(userIron.externalId), LibraryAccess.READ_ONLY),
           (Left(userAgent.externalId), LibraryAccess.READ_ONLY),
@@ -558,10 +558,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val inviteList2_RW = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
         val inviteList2_RO = Seq((Left(userIron.id.get), LibraryAccess.READ_ONLY, None))
         // Scumbag Ironman tries to invite himself for READ_ONLY access (OK for Published Library)
-        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO)(HeimdalContext(Map())).isRight === true
+        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO).isRight === true
 
         // Scumbag Ironman tries to invite himself for READ_WRITE access (NOT OK for Published Library)
-        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW)(HeimdalContext(Map())).isRight === true
+        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW).isRight === true
       }
     }
 
