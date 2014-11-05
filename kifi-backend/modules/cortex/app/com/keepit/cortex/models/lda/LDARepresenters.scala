@@ -1,7 +1,7 @@
 package com.keepit.cortex.models.lda
 
 import com.keepit.cortex.features._
-import com.keepit.cortex.core.ModelVersion
+import com.keepit.cortex.core.{ MultiVersionedFeatureRepresenter, ModelVersion }
 import com.keepit.cortex.nlp.Stopwords
 import com.keepit.cortex.utils.TextUtils
 import com.keepit.search.Article
@@ -27,9 +27,8 @@ case class LDAURIRepresenter(docRep: LDADocRepresenter, articleStore: ArticleSto
   }
 }
 
-case class MultiVersionedLDAURIRepresenter(representers: LDAURIRepresenter*) {
-  private val dimMap = representers.map { rep => (rep.version, rep.dimension) }.toMap
-  def versions: Seq[ModelVersion[DenseLDA]] = representers.map { _.version }
-  def getRepresenter(version: ModelVersion[DenseLDA]): Option[LDAURIRepresenter] = representers.find(_.version == version)
-  def getDimension(version: ModelVersion[DenseLDA]): Option[Int] = dimMap.get(version)
-}
+case class MultiVersionedLDAWordRepresenter(representers: LDAWordRepresenter*) extends MultiVersionedFeatureRepresenter[DenseLDA, LDAWordRepresenter](representers)
+
+case class MultiVersionedLDADocRepresenter(representers: LDADocRepresenter*) extends MultiVersionedFeatureRepresenter[DenseLDA, LDADocRepresenter](representers)
+
+case class MultiVersionedLDAURIRepresenter(representers: LDAURIRepresenter*) extends MultiVersionedFeatureRepresenter[DenseLDA, LDAURIRepresenter](representers)
