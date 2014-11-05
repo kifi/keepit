@@ -439,6 +439,21 @@ angular.module('kifi')
                 removeWidget();
               });
             });
+          })['catch'](function (err) {
+            var error = err.data && err.data.error;
+            switch (error) {
+              case 'library name already exists for user':  // deprecated
+              case 'library_name_exists':
+                scope.$error.general = 'You already have a library with this name';
+                break;
+              case 'invalid library name':  // deprecated
+              case 'invalid_name':
+                scope.$error.general = 'You already have a library with this name';
+                break;
+              default:
+                scope.$error.general = 'Hmm, something went wrong. Try again later?';
+                break;
+            }
           })['finally'](function () {
             submitting = false;
           });
