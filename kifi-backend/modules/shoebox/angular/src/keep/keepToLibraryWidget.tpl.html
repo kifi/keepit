@@ -64,6 +64,7 @@
         <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
       </span>
       <input class="keep-to-library-create-name-input" ng-model="newLibrary.name" placeholder="Inspiring videos, Recipes I love...">
+      <span ng-show="$error.name" class="keep-to-library-create-name-error">{{$error.name}}</span>
     </div>
     <div class="keep-to-library-create-heading">Make it private?</div>
     <div class="keep-to-library-create-visibility">

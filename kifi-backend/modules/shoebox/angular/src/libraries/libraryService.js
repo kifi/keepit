@@ -126,6 +126,12 @@ angular.module('kifi')
       library.secondLine = lines[1];
     }
 
+    function duplicateName(name) {
+      return _.find(librarySummaries, function (librarySummary) {
+        return (librarySummary.name === name) && (librarySummary.access === 'owner');
+      });
+    }
+
 
     //
     // API methods.
@@ -145,10 +151,26 @@ angular.module('kifi')
         });
       },
 
-      duplicateName: function (name) {
-        return _.find(librarySummaries, function (librarySummary) {
-          return (librarySummary.name === name) && (librarySummary.access === 'owner');
-        });
+      getLibraryNameError: function (name) {
+        function hasInvalidCharacters (myString, invalidChars) {
+          return _.some(invalidChars, function (invalidChar) {
+            return myString.indexOf(invalidChar) !== -1;
+          });
+        }
+
+        if (!name.length) {
+          return 'Please enter a name for your library';
+        } else if (name.length < 3) {
+          return 'Please try a longer name';
+        } else if (name.length > 50) {
+          return 'Please try a shorter name';
+        } else if (hasInvalidCharacters(name, ['/', '\\', '"', '\''])) {
+          return 'Please no slashes or quotes in your library name';
+        } else if (duplicateName(name)) {
+          return 'You already have a library with this name';
+        }
+
+        return null;
       },
 
       fetchLibrarySummaries: function (invalidateCache) {

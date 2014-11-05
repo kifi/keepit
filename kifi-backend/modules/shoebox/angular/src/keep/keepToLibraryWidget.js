@@ -60,14 +60,6 @@ angular.module('kifi')
 
 
         //
-        // Scope data.
-        //
-        scope.search = {};
-        scope.showCreate = false;
-        scope.newLibrary = {};
-
-
-        //
         // Internal methods.
         //
         function init() {
@@ -296,12 +288,17 @@ angular.module('kifi')
           // Initialize state.
           //
           scope.keptToLibraryIds = scope.keptToLibraryIds || [];
-          scope.search = {};
+
           selectedIndex = 0;
           libraryList = widget.find('.library-select-list');
           searchInput = widget.find('.keep-to-library-search-input');
+
+          scope.keptToLibraryIds = scope.keptToLibraryIds || [];
+          scope.search = {};
           scope.showCreate = false;
           scope.newLibrary = {};
+          scope.$error = {};
+
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
 
@@ -422,9 +419,15 @@ angular.module('kifi')
         };
 
         scope.createLibrary = function (library) {
-          if (submitting || !library.name || (library.name.length < 3)) {
+          if (submitting || !library.name) {
             return;
           }
+
+          scope.$error.name = libraryService.getLibraryNameError(library.name);
+          if (scope.$error.name) {
+            return;
+          }
+          scope.$error = {};
 
           library.slug = util.generateSlug(library.name);
           library.visibility = library.visibility || 'published';
@@ -440,6 +443,17 @@ angular.module('kifi')
             submitting = false;
           });
         };
+
+
+        //
+        // Watches and listeners.
+        //
+        scope.$watch('newLibrary.name', function (newVal, oldVal) {
+          if (newVal !== oldVal) {
+            // Clear the error popover when the user changes the name field.
+            scope.$error.name = null;
+          }
+        });
 
 
         init();
