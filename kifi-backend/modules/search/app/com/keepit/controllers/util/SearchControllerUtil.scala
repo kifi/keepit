@@ -133,7 +133,9 @@ trait SearchControllerUtil {
     val augmentationFields = limitedAugmentationInfos.map { limitedInfo =>
 
       val keepersIndices = limitedInfo.keepers.map(userIndexById(_))
-      val librariesIndices = limitedInfo.libraries.flatMap { case (libraryId, keeperId) if libraryIndexById.contains(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId)) }
+      val librariesIndices = limitedInfo.libraries.collect {
+        case (libraryId, keeperId) if libraryIndexById.contains(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId))
+      }.flatten
 
       Json.obj(
         "keepers" -> keepersIndices,
