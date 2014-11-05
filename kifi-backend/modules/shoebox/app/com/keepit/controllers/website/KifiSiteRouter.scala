@@ -2,6 +2,7 @@ package com.keepit.controllers.website
 
 import java.net.{ URLDecoder, URLEncoder }
 
+import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.google.inject.{ Inject, Provider, Singleton }
 import com.keepit.commanders.{ LibraryCommander, UserCommander }
 import com.keepit.common.controller._
@@ -62,7 +63,8 @@ class KifiSiteRouter @Inject() (
       MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission")
     } else if (request.path == "/" && request.userIdOpt.isEmpty) {
       //should we ever get to this line???
-      Redirect(com.keepit.controllers.website.routes.HomeController.home)
+      Redirect(com.keepit.controllers.website.routes.HomeController.
+        home)
     } else if (userAgentOpt.exists(_.isMobile) &&
       request.queryString.get(KifiMobileAppLinkFlag.key).exists(_.contains(KifiMobileAppLinkFlag.value))) {
       Ok(views.html.mobile.MobileRedirect(request.uri))
@@ -92,10 +94,11 @@ class KifiSiteRouter @Inject() (
   }
 
   def route(request: MaybeUserRequest[_]): Routeable = {
+    val userAgent = request.userAgentOpt.getOrElse(UserAgent.UnknownUserAgent)
     val path = Path(request.path)
     redirects.get(path.path).map { targetPath =>
       SeeOtherRoute(targetPath)
-    } orElse angularRouter.route(request, path) getOrElse Error404
+    } orElse angularRouter.route(request, path, userAgent) getOrElse Error404
   }
 
 }
@@ -107,8 +110,8 @@ class AngularRouter @Inject() (
     airbrake: AirbrakeNotifier,
     libraryMetadataCache: LibraryMetadataCache) {
 
-  def route(request: MaybeUserRequest[_], path: Path): Option[Routeable] = {
-    ngStaticPage(request, path) orElse userOrLibrary(request, path)
+  def route(request: MaybeUserRequest[_], path: Path, userAgent: UserAgent): Option[Routeable] = {
+    ngStaticPage(request, path) orElse userOrLibrary(request, path, userAgent)
   }
 
   def injectUser(request: MaybeUserRequest[_]) = Future {
