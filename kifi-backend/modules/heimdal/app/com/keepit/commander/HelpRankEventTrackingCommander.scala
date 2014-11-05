@@ -66,7 +66,7 @@ class HelpRankEventTrackingCommander @Inject() (
               // todo(ray): remove dependency on KifiHitContext
               val res = shoebox.getBasicUsers(keeperIds) flatMap { userMap =>
                 val extKeeperIds = keeperIds.collect { case id if userMap.get(id).isDefined => userMap(id).externalId }
-                val sanitizedHit = SanitizedKifiHit(hitUUID, "feed", "", uriId, KifiHitContext(false, false, 0, extKeeperIds, Seq.empty, None, 0, 0))
+                val sanitizedHit = SanitizedKifiHit(hitUUID, "feed", "", uriId, KifiHitContext(false, false, 0, extKeeperIds, None, Seq.empty, None, 0, 0))
                 kifiHitCache.set(KifiHitKey(userId, uriId), sanitizedHit)
                 log.infoP(s"key=${KifiHitKey(userId, uriId)} cached=${kifiHitCache.get(KifiHitKey(userId, uriId))}")
                 val futures = keeperIds map { keeperId =>

@@ -39,7 +39,7 @@ case class BasicSearchContext(
   filterByTime: Option[String],
   maxResults: Option[Int],
   kifiResults: Int,
-  kifiResultsWithLibraries: Option[Int] = None,
+  kifiResultsWithLibraries: Option[Int],
   kifiExpanded: Option[Boolean],
   kifiTime: Option[Int],
   kifiShownTime: Option[Int],
@@ -88,7 +88,7 @@ case class KifiHitContext(
   isPrivate: Boolean,
   keepCount: Int,
   keepers: Seq[ExternalId[User]],
-  libraries: Option[Seq[(PublicId[Library], ExternalId[User])]] = None,
+  libraries: Option[Seq[(PublicId[Library], ExternalId[User])]],
   tags: Seq[String], // was ExternalId[Collection], moving to inlined Hashtag
   title: Option[String],
   titleMatches: Int,
