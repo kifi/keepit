@@ -1,24 +1,20 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.cache.TransactionalCaching.Implicits._
-import com.google.inject.{ Provider, Inject, Singleton }
-import com.keepit.commanders.{ UserCommander, LibraryCommander }
-import com.keepit.common.db.Id
+import java.net.{ URLDecoder, URLEncoder }
+
+import com.google.inject.{ Inject, Provider, Singleton }
+import com.keepit.commanders.{ LibraryCommander, UserCommander }
+import com.keepit.common.controller._
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
-import com.keepit.common.controller._
-import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.KifiMobileAppLinkFlag
 import com.keepit.common.net.UserAgent
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
 import play.api.Play
-import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
-import ImplicitHelper._
-import java.net.{ URLEncoder, URLDecoder }
+import play.api.mvc.Result
 
 import scala.concurrent.Future
 
@@ -138,7 +134,7 @@ class AngularRouter @Inject() (
   //private val dataOnEveryAngularPage = Seq(injectUser _) // todo: Have fun with this!
 
   // combined to re-use User lookup
-  private def userOrLibrary(request: MaybeUserRequest[_], path: Path): Option[Routeable] = {
+  private def userOrLibrary(request: MaybeUserRequest[_], path: Path, userAgent: UserAgent): Option[Routeable] = {
     if (path.split.length == 1 || path.split.length == 2) {
       val userOpt = userCommander.getUserByUsernameOrAlias(Username(path.primary))
 
@@ -156,7 +152,10 @@ class AngularRouter @Inject() (
                   val redir = "/" + (path.split.dropRight(1) :+ library.slug.value).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
                   if (isLibraryAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
                 } else {
-                  Some(Angular(Some(libMetadata(library)))) // great place to postload request data since we have `lib` available
+                  val metadata = if (userAgent.possiblyBot) {
+                    Some(libMetadata(library))
+                  } else None
+                  Some(Angular(metadata)) // great place to postload request data since we have `lib` available
                 }
             } getOrElse None
           }

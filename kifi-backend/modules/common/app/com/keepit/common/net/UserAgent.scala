@@ -2,7 +2,7 @@ package com.keepit.common.net
 
 import com.keepit.common.logging.Logging
 import net.sf.uadetector.service.UADetectorServiceFactory
-import net.sf.uadetector.{ ReadableUserAgent => SFUserAgent }
+import net.sf.uadetector.{ ReadableUserAgent => SFUserAgent, UserAgentType }
 import play.api.mvc.{ Request => PlayRequest }
 
 case class UserAgent(
@@ -10,6 +10,7 @@ case class UserAgent(
     name: String,
     operatingSystemFamily: String,
     operatingSystemName: String,
+    possiblyBot: Boolean,
     typeName: String,
     version: String) {
   lazy val isKifiIphoneApp: Boolean = typeName == UserAgent.KifiIphoneAppTypeName
@@ -19,7 +20,6 @@ case class UserAgent(
   lazy val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily) || isKifiIphoneApp || isKifiAndroidApp
   lazy val isMobileWeb: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily)
   lazy val isMobileApp: Boolean = isKifiIphoneApp || isKifiAndroidApp
-  lazy val screenCanFitWebApp: Boolean = !isMobileWeb // || UserAgent.TabletIndicators.exists(userAgent.contains(_))  // TODO: let people use web app on tablet
   lazy val canRunExtensionIfUpToDate: Boolean = !isMobile && UserAgent.ExtensionBrowserNames.contains(name)
   lazy val isOldIE: Boolean = name == "IE" && (try { version.toDouble.toInt } catch { case _: NumberFormatException => Double.MaxValue }) < 10
 }
@@ -43,18 +43,21 @@ object UserAgent extends Logging {
   def apply(request: PlayRequest[_]): UserAgent = fromString(request.headers.get("user-agent").getOrElse(""))
   def apply(request: String): UserAgent = fromString(request)
 
+  private val PossiblyBot = Seq(UserAgentType.FEED_READER, UserAgentType.LIBRARY, UserAgentType.OTHER, UserAgentType.ROBOT, UserAgentType.USERAGENT_ANONYMIZER, UserAgentType.UNKNOWN)
+
   private def fromString(userAgent: String): UserAgent = {
     userAgent match {
       case iosAppRe(appName, appVersion, buildSuffix, device, os, osVersion) =>
-        UserAgent(userAgent, appName, os, device, KifiIphoneAppTypeName, appVersion)
+        UserAgent(userAgent, appName, os, device, false, KifiIphoneAppTypeName, appVersion)
       case androidAppRe(appName, os, osVersion, device) =>
-        UserAgent(userAgent, appName, os, os, typeName = "Android", version = "unknown")
+        UserAgent(userAgent, appName, os, os, false, typeName = "Android", version = "unknown")
       case _ =>
         val agent: SFUserAgent = parser.parse(userAgent)
         UserAgent(trim(userAgent),
           normalizeChrome(normalize(agent.getName)),
           normalize(agent.getOperatingSystem.getFamilyName),
           normalize(agent.getOperatingSystem.getName),
+          agent.getType == null || PossiblyBot.contains(agent.getType),
           normalize(agent.getTypeName),
           normalize(agent.getVersionNumber.toVersionString))
     }
