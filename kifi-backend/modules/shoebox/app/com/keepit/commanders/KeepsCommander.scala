@@ -27,6 +27,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.BodyParsers.parse
 
+import scala.collection.mutable
 import scala.concurrent.Future
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
@@ -247,13 +248,15 @@ class KeepsCommander @Inject() (
 
   // todo(Léo): factored out of PageCommander, need to be optimized for fewer database queries
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
+    val libraryMemberships = new mutable.HashMap[Id[Library], Option[LibraryMembership]]
     db.readOnlyMaster { implicit session =>
       uriIds.map { uriId =>
         val userKeeps = keepRepo.getAllByUriAndUser(uriId, userId).toSet.map { keep: Keep =>
           val keeperId = keep.userId
           val mine = userId == keeperId
           val libraryId = keep.libraryId.get
-          val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).exists(_.canWrite)
+          val libraryOpt = libraryMemberships.getOrElseUpdate(libraryId, libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId))
+          val removable = libraryOpt.exists(_.canWrite)
           BasicKeep(
             id = keep.externalId,
             mine = mine,
@@ -274,9 +277,6 @@ class KeepsCommander @Inject() (
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
         searchClient.augment(perspectiveUserIdOpt, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items)
       }
-      val pageInfosFuture = Future.sequence(keeps.map { keep =>
-        getKeepSummary(keep, idealImageSize)
-      })
       val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
         val idToLibrary = {
           val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
@@ -292,6 +292,9 @@ class KeepsCommander @Inject() (
 
         (idToBasicUser, idToBasicLibrary)
       }
+      val pageInfosFuture = Future.sequence(keeps.map { keep =>
+        getKeepSummary(keep, idealImageSize)
+      })
 
       val colls = db.readOnlyMaster { implicit s =>
         keeps.map { keep =>
