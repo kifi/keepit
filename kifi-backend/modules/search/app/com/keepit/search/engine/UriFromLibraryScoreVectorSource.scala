@@ -97,7 +97,7 @@ class UriFromLibraryScoreVectorSource(
   private def indexReaderContexts: Seq[AtomicReaderContext] = { keepSearcher.indexReader.getContext.leaves }
 
   private def loadWithScore(libId: Long, visibility: Int, taggedScores: Array[Int], size: Int, output: DataBuffer, writer: DataBufferWriter): Unit = {
-    val v = visibility | Visibility.HAS_SECONDARY_ID
+    val v = visibility | Visibility.HAS_SECONDARY_ID | Visibility.LIB_NAME_MATCH
 
     indexReaderContexts.foreach { readerContext =>
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
