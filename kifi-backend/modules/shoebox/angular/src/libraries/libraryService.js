@@ -145,6 +145,12 @@ angular.module('kifi')
         });
       },
 
+      duplicateName: function (name) {
+        return _.find(librarySummaries, function (librarySummary) {
+          return (librarySummary.name === name) && (librarySummary.access === 'owner');
+        });
+      },
+
       fetchLibrarySummaries: function (invalidateCache) {
         if (invalidateCache) {
           userLibrarySummariesService.expire();

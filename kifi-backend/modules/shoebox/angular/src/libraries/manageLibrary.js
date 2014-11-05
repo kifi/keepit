@@ -46,6 +46,8 @@ angular.module('kifi')
             return 'Please try a shorter name';
           } else if (hasInvalidCharacters(scope.library.name, ['/', '\\', '"', '\''])) {
             return 'Please no slashes or quotes in your library name';
+          } else if (libraryService.duplicateName(name)) {
+            return 'You already have a library with this name';
           }
 
           return null;
