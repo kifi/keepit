@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ Provider, Inject }
 import com.keepit.commanders.emails.{ LibraryInviteEmailSender, EmailOptOutCommander }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -356,7 +357,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
+  def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     val badMessage: Option[String] = {
       if (libAddReq.name.isEmpty || !Library.isValidName(libAddReq.name)) { Some("invalid_name") }
       else if (libAddReq.slug.isEmpty || !LibrarySlug.isValidSlug(libAddReq.slug)) { Some("invalid_slug") }
@@ -402,6 +403,7 @@ class LibraryCommander @Inject() (
             val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, inviterId = ownerId, userId = Some(c), access = LibraryAccess.READ_ONLY)
 
             inviteBulkUsers(bulkInvites1 ++ bulkInvites2)
+            libraryAnalytics.createLibrary(ownerId, library, context)
             searchClient.updateLibraryIndex()
             Right(library)
         }
@@ -484,6 +486,7 @@ class LibraryCommander @Inject() (
       val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
         keepRepo.save(keep.sanitizeForDelete())(s)
       }
+      libraryAnalytics.deleteLibrary(userId, oldLibrary, context)
       libraryAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, context)
       searchClient.updateKeepIndex()
       //Note that this is at the end, if there was an error while cleaning other library assets
@@ -751,8 +754,13 @@ class LibraryCommander @Inject() (
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
-        libraryAnalytics.sendLibraryInvite(userId, libraryId, Seq(), eventContext)
-        libraryAnalytics.followLibrary(userId, lib, eventContext)
+
+        SafeFuture {
+          libraryAnalytics.acceptLibraryInvite(userId, libraryId, Seq(), eventContext)
+          val keepCount = keepRepo.getByLibrary(libraryId, 0, Int.MaxValue)
+          libraryAnalytics.followLibrary(userId, lib, keepCount, eventContext)
+        }
+
         searchClient.updateLibraryIndex()
         Right(updatedLib)
       }
@@ -775,7 +783,10 @@ class LibraryCommander @Inject() (
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           val lib = libraryRepo.get(libraryId)
           libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
-          libraryAnalytics.unfollowLibrary(userId, lib, eventContext)
+          SafeFuture {
+            val keepCount = keepRepo.getByLibrary(libraryId, 0, Int.MaxValue)
+            libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
+          }
           searchClient.updateLibraryIndex()
           Right()
         }
@@ -827,7 +838,7 @@ class LibraryCommander @Inject() (
     (goodKeeps.toSeq, badKeeps.toSeq)
   }
 
-  def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
+  def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
     db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndName(userId, tagName)
     } match {
@@ -841,7 +852,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
+  def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
     db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndName(userId, tagName)
     } match {
@@ -855,7 +866,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource]): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
+  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
     val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
       val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
@@ -896,11 +907,13 @@ class LibraryCommander @Inject() (
               }
           }
         }
-        applyToKeeps(userId, toLibraryId, keeps, Set(), saveKeep)
+        val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(), saveKeep)
+        libraryAnalytics.editLibrary(userId, toLibrary, context, Some("copy_keeps"))
+        keepResults
     }
   }
 
-  def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep]): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
+  def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
     val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
       val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
@@ -943,7 +956,9 @@ class LibraryCommander @Inject() (
               }
           }
         }
-        applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
+        val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
+        libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
+        keepResults
     }
   }
 
