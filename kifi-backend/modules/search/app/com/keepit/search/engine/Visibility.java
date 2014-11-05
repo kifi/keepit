@@ -10,7 +10,7 @@ public final class Visibility {
   public static final int OWNER = 0x08;
   //  unused = 0x10
   public static final int HAS_SECONDARY_ID = 0x20;
-  // unused = 0x40
+  public static final int LIB_NAME_MATCH = 0x40;
 
   public static String name(int visibility) {
     if ((visibility & Visibility.OWNER) != 0) return "owner";

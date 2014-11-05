@@ -4,25 +4,40 @@
 .library-create-visibility-custom-input
   position: relative
   display: inline-block
-  margin: 0 15px
+  margin: 0 15px 0 35px
   border-radius: 18px
-  width: 66px
-  height: 36px
-  background-position: 11px 50%
-  background-size: auto 12px
-  background-repeat: no-repeat
-  background-color: #e3e3e3
+  width: 55px
+  height: 28px
+  background-color: #73c885
   vertical-align: middle
   transition: background-color 0.2s
   cursor: pointer
 
+  .library-create-visibility-custom-input-public-background
+  .library-create-visibility-custom-input-secret-background
+    position: absolute
+    width: 50%
+    height: 100%
+    background-repeat: no-repeat
+
+  .library-create-visibility-custom-input-public-background
+    left: 0px
+    background-position: 5px 0px
+    background-size: auto 30px
+
+  .library-create-visibility-custom-input-secret-background
+    left: 27px
+    background-position: 8px 7px
+    background-size: auto 12px
+
   &::after
     position: absolute;
-    bottom: 4px
-    left: 4px
+    bottom: 0
+    right: 0
+    border: 1px solid #eee
     border-radius: 50%
-    width: 28px
-    height: 28px
+    width: 26px
+    height: 26px
     background-color: #fff
     box-shadow: rgba(0, 0, 0, 0.14902) 0px 1px 1px
     transition: transform 0.2s
@@ -37,4 +52,4 @@
   background-color: libraryRed
 
   &::after
-    transform: translate(30px)
+    transform: translate(-28px)

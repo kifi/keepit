@@ -58,6 +58,7 @@ class LibraryController @Inject() (
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
     val addRequest = request.body.as[LibraryAddRequest]
 
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(LibraryFail(message)) =>
         Future.successful(BadRequest(Json.obj("error" -> message)))
@@ -87,7 +88,7 @@ class LibraryController @Inject() (
 
   def removeLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.removeLibrary(id, request.userId) match {
       case Some((status, message)) => Status(status)(Json.obj("error" -> message))
       case _ => Ok(JsString("success"))
@@ -179,7 +180,7 @@ class LibraryController @Inject() (
             (id, access, message)
           }
         }
-        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val res = libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList)
         res match {
           case Left(fail) =>
@@ -270,6 +271,7 @@ class LibraryController @Inject() (
     val hashtag = Hashtag(tag)
     val id = Library.decodePublicId(libraryId).get
     SafeFuture {
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       libraryCommander.copyKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
         case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
         case Right((goodKeeps, badKeeps)) =>
@@ -293,6 +295,7 @@ class LibraryController @Inject() (
     val hashtag = Hashtag(tag)
     val id = Library.decodePublicId(libraryId).get
     SafeFuture {
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       libraryCommander.moveKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
         case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
         case Right((goodKeeps, badKeeps)) =>
@@ -326,6 +329,7 @@ class LibraryController @Inject() (
     Library.decodePublicId(toPubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val targetKeeps = db.readOnlyMaster { implicit s => targetKeepsExt.map(keepRepo.getOpt) }.flatten
         val (goodKeeps, badKeeps) = libraryCommander.copyKeeps(request.userId, toId, targetKeeps, Some(KeepSource.userCopied))
         val errors = badKeeps.map {
@@ -352,6 +356,7 @@ class LibraryController @Inject() (
     Library.decodePublicId(toPubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val targetKeeps = db.readOnlyReplica { implicit s => targetKeepsExt.map { keepRepo.getOpt } }.flatten
         val (goodKeeps, badKeeps) = libraryCommander.moveKeeps(request.userId, toId, targetKeeps)
         val errors = badKeeps.map {
