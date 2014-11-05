@@ -1,13 +1,24 @@
 #!/bin/bash
+set -o nounset
+set -o errexit
 
 pushd "$(dirname $0)/.." > /dev/null
 
-if [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
+if [[ ! -f FortyTwo.pem ]]; then
 
-  read -p $'\nPress Enter to deploy _real_ Firefox extension to kifi.com\n'
+  echo $'\nERROR: cannot find FortyTwo.pem'
+  exit 1
+
+elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
+
+  echo $'\nDeploying REAL Firefox extension to kifi.com'
+  read -p 'Press Enter or Ctrl-C '
+
+  xpisign -k FortyTwo.pem out/kifi.xpi out/kifi-signed.xpi
+
   echo 'Uploading to S3...'
   aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi.xpi \
-    --content-type 'application/x-xpinstall' --body out/kifi.xpi \
+    --content-type 'application/x-xpinstall' --body out/kifi-signed.xpi \
     --cache-control 'no-cache, no-store'
   aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi.update.rdf \
     --content-type 'application/rdf+xml' --body out/kifi.update.rdf \
@@ -16,7 +27,11 @@ if [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
 
 elif [[ -f out/kifi-dev.crx && -f out/kifi-dev.xml && -f out/kifi-dev.xpi && -f out/kifi-dev.update.rdf ]]; then
 
-  read -p $'\nPress Enter to deploy dev extension\n'
+  echo $'\nDeploying DEV extensions to kifi.com'
+  read -p 'Press Enter or Ctrl-C '
+
+  xpisign -k FortyTwo.pem out/kifi-dev.xpi out/kifi-dev-signed.xpi
+
   echo 'Uploading to S3...'
   aws s3api put-object --bucket kifi-bin --key ext/chrome/kifi-dev.crx \
     --content-type 'application/x-chrome-extension' --body out/kifi-dev.crx \
@@ -25,7 +40,7 @@ elif [[ -f out/kifi-dev.crx && -f out/kifi-dev.xml && -f out/kifi-dev.xpi && -f 
     --content-type 'application/xml' --body out/kifi-dev.xml \
     --cache-control 'no-cache, no-store'
   aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi-dev.xpi \
-    --content-type 'application/x-xpinstall' --body out/kifi-dev.xpi \
+    --content-type 'application/x-xpinstall' --body out/kifi-dev-signed.xpi \
     --cache-control 'no-cache, no-store'
   aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi-dev.update.rdf \
     --content-type 'application/rdf+xml' --body out/kifi-dev.update.rdf \
