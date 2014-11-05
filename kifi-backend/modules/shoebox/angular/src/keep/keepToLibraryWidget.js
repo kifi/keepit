@@ -46,13 +46,14 @@ angular.module('kifi')
         // Internal data.
         //
         var widget = null;
-        var selectedIndex = 0;
         var searchInput = null;
         var libraryList = null;
+        var newLibraryNameInput = null;
+
+        var selectedIndex = 0;
         var justScrolled = false;
         var removeTimeout = null;
         var resetJustScrolledTimeout = null;
-        var newLibraryNameInput = null;
         var submitting = false;
         var allLibraries = [];
         var widgetLibraries = [];
@@ -202,6 +203,7 @@ angular.module('kifi')
           }
 
           // Select the top listed library.
+          selectedIndex = 0;
           if (widgetLibraries.length) {
             widgetLibraries[selectedIndex].selected = true;
           }
@@ -287,11 +289,7 @@ angular.module('kifi')
           //
           // Initialize state.
           //
-          scope.keptToLibraryIds = scope.keptToLibraryIds || [];
-
           selectedIndex = 0;
-          libraryList = widget.find('.library-select-list');
-          searchInput = widget.find('.keep-to-library-search-input');
 
           scope.keptToLibraryIds = scope.keptToLibraryIds || [];
           scope.search = {};
@@ -299,6 +297,8 @@ angular.module('kifi')
           scope.newLibrary = {};
           scope.$error = {};
 
+          libraryList = widget.find('.library-select-list');
+          searchInput = widget.find('.keep-to-library-search-input');
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
 
@@ -343,7 +343,7 @@ angular.module('kifi')
 
         scope.onSearchInputChange = function (name) {
           var matchedLibraries = libraryNameSearch.search(name);
-          groupWidgetLibraries(matchedLibraries.length ? matchedLibraries : allLibraries);
+          groupWidgetLibraries(!name ? allLibraries : matchedLibraries);
         };
 
         scope.processKeyEvent = function ($event) {
@@ -404,6 +404,13 @@ angular.module('kifi')
         scope.showCreatePanel = function () {
           scope.showCreate = true;
 
+          // If there are no libraries shown, prepopulate the create-library
+          // name input field with the search query.
+          if (!widget.find('.library-select-option').length) {
+            scope.newLibrary.name = scope.search.name;
+          }
+
+
           // Wait for the creation panel to be shown, and then focus on the
           // input.
           $timeout(function () {
@@ -413,7 +420,6 @@ angular.module('kifi')
 
         scope.hideCreatePanel = function () {
           scope.showCreate = false;
-          scope.search = {};
 
           // Wait for the libraries panel to be shown, and then focus on the
           // search input.
