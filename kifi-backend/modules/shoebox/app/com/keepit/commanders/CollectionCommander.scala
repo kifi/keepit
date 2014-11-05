@@ -41,7 +41,7 @@ class CollectionCommander @Inject() (
     collectionRepo: CollectionRepo,
     userValueRepo: UserValueRepo,
     searchClient: SearchServiceClient,
-    keptAnalytics: KeepingAnalytics,
+    libraryAnalytics: LibraryAnalytics,
     basicCollectionCache: BasicCollectionByIdCache,
     clock: Clock) extends Logging {
 
@@ -174,7 +174,7 @@ class CollectionCommander @Inject() (
             s.onTransactionSuccess { searchClient.updateKeepIndex() }
             val newColl = collectionRepo.save(Collection(userId = userId, name = name))
             updateCollectionOrdering(userId)
-            keptAnalytics.createdTag(newColl, context)
+            libraryAnalytics.createdTag(newColl, context)
             Left(BasicCollection.fromCollection(newColl.summary))
           } else {
             Right(CollectionSaveFail(s"Tag '$name' already exists"))
@@ -194,7 +194,7 @@ class CollectionCommander @Inject() (
       collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE))
       updateCollectionOrdering(collection.userId)
     }
-    keptAnalytics.deletedTag(collection, context)
+    libraryAnalytics.deletedTag(collection, context)
     searchClient.updateKeepIndex()
   }
 
@@ -203,7 +203,7 @@ class CollectionCommander @Inject() (
       collectionRepo.save(collection.copy(state = CollectionStates.ACTIVE, createdAt = clock.now()))
       updateCollectionOrdering(collection.userId)
     }
-    keptAnalytics.undeletedTag(collection, context)
+    libraryAnalytics.undeletedTag(collection, context)
     searchClient.updateKeepIndex()
   }
 

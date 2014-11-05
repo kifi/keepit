@@ -10,7 +10,36 @@ import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @Singleton
-class KeepingAnalytics @Inject() (heimdal: HeimdalServiceClient) {
+class LibraryAnalytics @Inject() (heimdal: HeimdalServiceClient) {
+
+  def followLibrary(userId: Id[User], library: Library, context: HeimdalContext): Unit = {
+    val followedAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++= context.data
+      contextBuilder += ("action", "followed")
+      contextBuilder += ("privacySetting", library.visibility.toString)
+      contextBuilder += ("libraryId", library.id.toString)
+      contextBuilder += ("libraryOwnerId", library.ownerId.toString)
+      contextBuilder += ("followerCount", library.memberCount - 1)
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, followedAt))
+    }
+  }
+
+  def unfollowLibrary(userId: Id[User], library: Library, context: HeimdalContext): Unit = {
+    val unfollowedAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++= context.data
+      contextBuilder += ("action", "unfollowed")
+      contextBuilder += ("privacySetting", library.visibility.toString)
+      contextBuilder += ("libraryId", library.id.toString)
+      contextBuilder += ("libraryOwnerId", library.ownerId.toString)
+      contextBuilder += ("followerCount", library.memberCount - 1)
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, unfollowedAt))
+    }
+  }
+
   def renamedTag(oldTag: Collection, newTag: Collection, context: HeimdalContext): Unit = {
     val renamedAt = currentDateTime
     SafeFuture {

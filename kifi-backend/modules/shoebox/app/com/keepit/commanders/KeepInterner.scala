@@ -37,7 +37,7 @@ class KeepInterner @Inject() (
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
-  keptAnalytics: KeepingAnalytics,
+  libraryAnalytics: LibraryAnalytics,
   keepsAbuseMonitor: KeepsAbuseMonitor,
   rawBookmarkFactory: RawBookmarkFactory,
   userValueRepo: UserValueRepo,
@@ -70,7 +70,7 @@ class KeepInterner @Inject() (
       val total = deduped.size
 
       keepsAbuseMonitor.inspect(userId, total)
-      keptAnalytics.keepImport(userId, clock.now, context, total, deduped.headOption.map(_.source).getOrElse(KeepSource.bookmarkImport))
+      libraryAnalytics.keepImport(userId, clock.now, context, total, deduped.headOption.map(_.source).getOrElse(KeepSource.bookmarkImport))
 
       db.readWrite(attempts = 3) { implicit session =>
         // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
@@ -120,7 +120,7 @@ class KeepInterner @Inject() (
     val (newKeeps, existingKeeps) = persistedBookmarksWithUris.partition(obj => obj.isNewKeep || obj.wasInactiveKeep) match {
       case (newKeeps, existingKeeps) => (newKeeps map (_.bookmark), existingKeeps map (_.bookmark))
     }
-    keptAnalytics.keptPages(userId, createdKeeps, context)
+    libraryAnalytics.keptPages(userId, createdKeeps, context)
     heimdalClient.processKeepAttribution(userId, createdKeeps)
     (newKeeps, existingKeeps, failures)
   }
@@ -131,7 +131,7 @@ class KeepInterner @Inject() (
     } map { persistedBookmarksWithUri =>
       val bookmark = persistedBookmarksWithUri.bookmark
       if (persistedBookmarksWithUri.isNewKeep) {
-        keptAnalytics.keptPages(userId, Seq(bookmark), context)
+        libraryAnalytics.keptPages(userId, Seq(bookmark), context)
         heimdalClient.processKeepAttribution(userId, Seq(bookmark))
       }
       db.readWrite { implicit s => libraryRepo.updateLastKept(library.id.get) } // do not update seq num, only update if successful keep
