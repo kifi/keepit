@@ -28,7 +28,7 @@ class LibraryAnalytics @Inject() (heimdal: HeimdalServiceClient) {
     heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
   }
 
-  def acceptLibraryInvite(userId: Id[User], libId: Id[Library], inviteeList: Seq[(Either[Id[User], EmailAddress])], eventContext: HeimdalContext) = {
+  def acceptLibraryInvite(userId: Id[User], libId: Id[Library], eventContext: HeimdalContext) = {
     val builder = new HeimdalContextBuilder
     builder.addExistingContext(eventContext)
     builder += ("action", "accepted")
