@@ -385,6 +385,10 @@ angular.module('kifi')
                 invokeWidgetCallbacks(widgetLibraries[selectedIndex]);
                 removeWidget();
               } else {
+                // If there are no libraries shown, prepopulate the create-library
+                // name input field with the search query.
+                scope.newLibrary.name = scope.search.name;
+
                 scope.showCreatePanel();
               }
               break;
