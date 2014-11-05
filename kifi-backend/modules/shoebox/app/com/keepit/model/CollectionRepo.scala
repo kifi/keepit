@@ -30,7 +30,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
   def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean)(implicit session: RWSession): Collection
   def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag]
-  def getByUserSortedByLastKept(userId: Id[User], page: Int, size: Int, excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Seq[Collection]
+  def getByUserSortedByLastKept(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
   def getByUserSortedByNumKeeps(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
   def getByUserSortedByName(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
   def getAllTagsByUserSortedByNumKeeps(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)]
@@ -161,37 +161,40 @@ class CollectionRepoImpl @Inject() (
 
   def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag] = {
     import StaticQuery.interpolation
-    val query = sql"select DISTINCT c.name from keep_to_collection kc, collection c where kc.bookmark_id = ${keepId} and c.id = kc.collection_id and c.state=${CollectionStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE}"
+    val query = sql"select DISTINCT c.name from keep_to_collection kc, collection c where kc.bookmark_id = ${keepId} and c.id = kc.collection_id and c.state='#${CollectionStates.ACTIVE}' and kc.state='#${KeepToCollectionStates.ACTIVE}'"
 
     query.as[String].list.map(tag => Hashtag(tag)).toSet
   }
 
-  def getByUserSortedByLastKept(userId: Id[User], page: Int, size: Int, excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Seq[Collection] = {
-    (for (c <- rows if c.userId === userId && c.state =!= excludeState) yield c).sortBy(r => (r.lastKeptTo.desc, r.id)).drop(page * size).take(size).list
+  private def pageTagsByUserQuery[S](userId: Id[User], page: Int, size: Int, sortBy: String) = {
+    import StaticQuery.interpolation
+    val query = sql"select c.id, c.external_id, c.name, count(kc.id) as keep_count, c.last_kept_to from collection c, keep_to_collection kc, bookmark b where kc.collection_id=c.id and kc.bookmark_id=b.id and c.user_id=${userId} and b.state='#${KeepStates.ACTIVE}' and kc.state='#${KeepToCollectionStates.ACTIVE}' and c.state=${CollectionStates.ACTIVE} group by c.id order by #${sortBy} limit ${size} offset ${page * size}"
+    query.as[(Id[Collection], ExternalId[Collection], Hashtag, Int, Option[DateTime])]
+  }
+
+  private val sortByName = "name"
+  private val sortByLastKeptTo = "last_kept_to DESC, name"
+  private val sortByKeepCount = "keep_count DESC, name"
+
+  def getByUserSortedByLastKept(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)] = {
+    pageTagsByUserQuery(userId, page, size, sortByLastKeptTo).list.map { row =>
+      (CollectionSummary(row._1, row._2, row._3), row._4)
+    }
   }
 
   def getByUserSortedByNumKeeps(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)] = {
-    import StaticQuery.interpolation
-    import scala.collection.JavaConversions._
-    val query = sql"select c.id, c.external_id, c.name, count(kc.id) as keep_count from collection c, keep_to_collection kc, bookmark b where kc.collection_id=c.id and kc.bookmark_id=b.id and c.user_id=${userId} and b.state=${KeepStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE} and c.state=${CollectionStates.ACTIVE} group by c.id order by keep_count desc limit ${size} offset ${page * size}"
-    query.as[(Id[Collection], ExternalId[Collection], Hashtag, Int)].list.map { row =>
+    pageTagsByUserQuery(userId, page, size, sortByKeepCount).list.map { row =>
       (CollectionSummary(row._1, row._2, row._3), row._4)
     }
   }
   def getByUserSortedByName(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)] = {
-    import StaticQuery.interpolation
-    import scala.collection.JavaConversions._
-    val query = sql"select c.id, c.external_id, c.name, count(kc.id) as keep_count from collection c, keep_to_collection kc, bookmark b where kc.collection_id=c.id and kc.bookmark_id=b.id and c.user_id=${userId} and b.state=${KeepStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE} and c.state=${CollectionStates.ACTIVE} group by c.id order by c.name limit ${size} offset ${page * size}"
-    query.as[(Id[Collection], ExternalId[Collection], Hashtag, Int)].list.map { row =>
+    pageTagsByUserQuery(userId, page, size, sortByName).list.map { row =>
       (CollectionSummary(row._1, row._2, row._3), row._4)
     }
   }
 
   def getAllTagsByUserSortedByNumKeeps(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)] = {
-    import StaticQuery.interpolation
-    import scala.collection.JavaConversions._
-    val query = sql"select c.name, count(kc.id) as keep_count from collection c, keep_to_collection kc, bookmark b where kc.collection_id=c.id and kc.bookmark_id=b.id and c.user_id=${userId} and b.state=${KeepStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE} and c.state=${CollectionStates.ACTIVE} group by c.id order by keep_count"
-    query.as[(Hashtag, Int)].list.map { row => (row._1, row._2) }
+    pageTagsByUserQuery(userId, 0, Int.MaxValue, sortByKeepCount).list.map { row => (row._3, row._4) }
   }
 }
 

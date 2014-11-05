@@ -69,20 +69,11 @@ class CollectionCommander @Inject() (
     log.info(s"Getting all collections for $userId (sort $sort)")
     db.readOnlyMaster { implicit s =>
       sort match {
-        case "num_keeps" =>
-          collectionRepo.getByUserSortedByNumKeeps(userId, offset, pageSize).map { summary =>
-            BasicCollection.fromCollection(summary._1, Some(summary._2))
-          }
-        case "name" =>
-          collectionRepo.getByUserSortedByName(userId, offset, pageSize).map { summary =>
-            BasicCollection.fromCollection(summary._1, Some(summary._2))
-          }
-        case _ => // default is "last_kept"
-          val sortedTags = collectionRepo.getByUserSortedByLastKept(userId, offset, pageSize)
-          val bmCounts = collectionRepo.getBookmarkCounts(sortedTags.map(_.id.get).toSet)
-          sortedTags.map { c => BasicCollection.fromCollection(c.summary, bmCounts.get(c.id.get).orElse(Some(0))) }
+        case "num_keeps" => collectionRepo.getByUserSortedByNumKeeps(userId, offset, pageSize)
+        case "name" => collectionRepo.getByUserSortedByName(userId, offset, pageSize)
+        case _ => collectionRepo.getByUserSortedByLastKept(userId, offset, pageSize) // default is "last_kept"
       }
-    }
+    }.map { case (collectionSummary, keepCount) => BasicCollection.fromCollection(collectionSummary, Some(keepCount)) }
   }
 
   def updateCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
