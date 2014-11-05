@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.factory('modalService', ['$compile', '$rootScope', '$templateCache',
-  function ($compile, $rootScope, $templateCache) {
+.factory('modalService', ['$compile', '$rootScope', '$templateCache', '$timeout',
+  function ($compile, $rootScope, $templateCache, $timeout) {
     var modals = [];
 
     function open (opts) {
@@ -36,7 +36,9 @@ angular.module('kifi')
       if (ref && ref.length > 0 && ref[0].length) {
         var $modal = ref[0];
         var scope = ref[1];
-        scope.$destroy();
+        $timeout(function () {
+          scope.$destroy();
+        });
         $modal.remove();
       }
     }

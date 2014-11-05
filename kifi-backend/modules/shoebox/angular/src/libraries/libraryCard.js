@@ -97,11 +97,10 @@ angular.module('kifi')
             scope.library.owner.picUrl = friendService.getPictureUrlForUser(scope.library.owner);
           }
 
-          if (_.isArray(scope.library.followers)) {
-            scope.library.followers.forEach(function (follower) {
-              follower.picUrl = friendService.getPictureUrlForUser(follower);
-            });
-          }
+          scope.library.followers = scope.library.followers || [];
+          scope.library.followers.forEach(function (follower) {
+            follower.picUrl = friendService.getPictureUrlForUser(follower);
+          });
 
           var maxLength = 150;
           scope.library.formattedDescription = '<p>' + angular.element('<div>').text(scope.library.description).text().replace(/\n+/, '<p>');
@@ -148,6 +147,7 @@ angular.module('kifi')
               };
             }
           });
+
           if (scope.$root.userLoggedIn === false) {
             scope.$evalAsync(function () {
               angular.element('.white-background').height(element.height() + 20);
@@ -264,6 +264,7 @@ angular.module('kifi')
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html',
             modalData: {
+              pane: 'manage',
               library: scope.library,
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
@@ -287,6 +288,25 @@ angular.module('kifi')
           scope.editKeepsText = scope.editKeepsText === 'Edit Keeps' ? 'Done Editing' : 'Edit Keeps';
         };
 
+        scope.showFollowers = function () {
+          if (scope.library.owner.id === profileService.me.id) {
+            modalService.open({
+              template: 'libraries/manageLibraryModal.tpl.html',
+              modalData: {
+                pane: 'members',
+                library: scope.library
+              }
+            });
+          } else {
+            modalService.open({
+              template: 'libraries/libraryFollowersModal.tpl.html',
+              modalData: {
+                library: scope.library
+              }
+            });
+          }
+
+        };
 
         //
         // Watches and listeners.

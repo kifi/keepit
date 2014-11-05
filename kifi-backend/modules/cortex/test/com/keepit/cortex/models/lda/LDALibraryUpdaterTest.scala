@@ -18,7 +18,7 @@ class LDALibraryUpdaterTest extends Specification with CortexTestInjector with L
         val commitRepo = inject[FeatureCommitInfoRepo]
         val uriTopicRepo = inject[URILDATopicRepo]
         val libLDARepo = inject[LibraryLDATopicRepo]
-        val updater = new LDALibraryUpdaterImpl(uriRep, db, keepRepo, libRepo, libLDARepo, uriTopicRepo, commitRepo)
+        val updater = new LDALibraryUpdaterImpl(uriReps, db, keepRepo, libRepo, libLDARepo, uriTopicRepo, commitRepo)
 
         val time = new DateTime(2014, 1, 30, 17, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 

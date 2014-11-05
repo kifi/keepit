@@ -82,7 +82,6 @@ class LDACommander @Inject() (
           val s3 = libraryInducedUserURIInterestScore(libFeats, uriTopicOpt)
           LDAUserURIInterestScores(s2.global, s1.recency, s3)
         } else {
-          log.info("uri in junk topic. return zero scores for user")
           LDAUserURIInterestScores(None, None, None)
         }
       }

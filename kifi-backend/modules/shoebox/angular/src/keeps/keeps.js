@@ -261,14 +261,32 @@ angular.module('kifi')
           scope.editingTags = false;
         };
 
+        scope.onWidgetKeepToLibraryClicked = function (clickedLibrary) {
+          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
+          var keepInfos = selectedKeeps.map(function (keep) {
+            return { 'url': keep.url, 'title': keep.title };
+          });
+
+          keepActionService.keepToLibrary(keepInfos, clickedLibrary.id).then(function (data) {
+            var addedKeeps = data.keeps;
+            if (addedKeeps.length > 0) {
+              libraryService.fetchLibrarySummaries(true);
+              scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, clickedLibrary);
+            }
+            libraryService.fetchLibrarySummaries(true);
+          });
+        };
+
         scope.onWidgetCopyLibraryClicked = function (clickedLibrary) {
           // Copies the keeps that are selected into the library that is selected.
           var selectedKeeps = getSelectedKeeps();
 
-          keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), clickedLibrary.id).then(function () {
-            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
-            //       not good.
-            libraryService.fetchLibrarySummaries(true);
+          keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), clickedLibrary.id).then(function (data) {
+            var addedKeeps = data.successes;
+            if (addedKeeps.length > 0) {
+              libraryService.fetchLibrarySummaries(true);
+              scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, scope.librarySelection.library);
+            }
           })['catch'](function () {
             modalService.open({
               template: 'common/modal/genericErrorModal.tpl.html'

@@ -26,7 +26,7 @@ class UserLDAStatisticsTest extends Specification with CortexTestInjector with L
         val cache = inject[UserLDAStatisticsCache]
         val store = new InMemoryUserLDAStatisticsStore
 
-        val updater = new UserLDAStatisticsUpdater(db, repo, uriRep, store, cache)
+        val updater = new UserLDAStatisticsUpdater(db, repo, uriReps, store, cache)
         updater.update()
 
         val stat = cache.get(UserLDAStatisticsCacheKey(uriRep.version)).get

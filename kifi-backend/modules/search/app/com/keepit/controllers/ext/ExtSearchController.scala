@@ -16,6 +16,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import com.keepit.search.augmentation.{ AugmentationCommander }
 import com.keepit.common.json
+import com.keepit.common.core._
 
 object ExtSearchController {
   private[ExtSearchController] val maxKeepersShown = 20
@@ -77,14 +78,8 @@ class ExtSearchController @Inject() (
 
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
       getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>
-        val (allSecondaryFields, userIds, libraryIds) = writesAugmentationFields(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
         val librarySearcher = libraryIndexer.getSearcher
-        val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, libraryIds.toSet)
-
-        val futureUsers = {
-          val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
-          shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
-        }
+        val (allSecondaryFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
 
         val hitsJson = allSecondaryFields.zipWithIndex.map {
           case (secondaryFields, index) =>
@@ -92,19 +87,14 @@ class ExtSearchController @Inject() (
             json.minify(Json.obj("secret" -> secret) ++ secondaryFields - "librariesTotal")
         }
 
-        futureUsers.map { usersById =>
-          val users = userIds.map(usersById(_))
-          val libraries = libraryIds.map { libId =>
-            val (library, visibility) = libraryRecordsAndVisibilityById(libId)
-            val owner = usersById(library.ownerId)
-            makeBasicLibrary(library, visibility, owner)
-          }
+        futureBasicUsersAndLibraries.imap {
+          case (users, libraries) =>
 
-          val librariesJson = libraries.map { library =>
-            json.minify(Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "secret" -> library.isSecret))
-          }
+            val librariesJson = libraries.map { library =>
+              json.minify(Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "secret" -> library.isSecret))
+            }
 
-          Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> librariesJson)
+            Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> librariesJson)
         }
       }
     }

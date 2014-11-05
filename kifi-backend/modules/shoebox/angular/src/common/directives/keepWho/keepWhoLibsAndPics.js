@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfKeepWhoLibsAndPics', [
-  '$rootScope', 'friendService', 'keepWhoService', 'profileService',
-  function ($rootScope, friendService, keepWhoService, profileService) {
+  '$rootScope', 'friendService', 'keepWhoService', 'profileService', 'libraryService',
+  function ($rootScope, friendService, keepWhoService, profileService, libraryService) {
     return {
       restrict: 'A',
       replace: true,
@@ -36,7 +36,7 @@ angular.module('kifi')
           _.each(keeps, function (keep) {
             if (!scope.keep.id &&                      // No scope.keep.id if the keep is not on a library page.
                 scope.keep.url === keep.url &&
-                library.kind === 'user_created' &&     // Do not show system libraries as attributions.
+                !libraryService.isSystemLibrary(library) &&     // Do not show system libraries as attributions.
                 !_.contains(visibleLibraryIds, library.id)) {
               library.keeperPic = friendService.getPictureUrlForUser(profileService.me);
               scope.visibleKeepLibraries.push(library);

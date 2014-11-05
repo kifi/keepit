@@ -4,6 +4,8 @@ import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.models.word2vec._
+import com.keepit.cortex.nlp.Stopwords
+import com.keepit.search.ArticleStore
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 import com.keepit.common.logging.Logging
@@ -32,6 +34,19 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
 
   @Singleton
   @Provides
+  def ldaDocRepresenter(wordRep: LDAWordRepresenter, stopWords: Stopwords): LDADocRepresenter = {
+    LDADocRepresenter(wordRep, stopWords)
+  }
+
+  @Singleton
+  @Provides
+  def ldaUriRepresenter(docRep: LDADocRepresenter, articleStore: ArticleStore): MultiVersionedLDAURIRepresenter = {
+    val uriRep = LDAURIRepresenter(docRep, articleStore)
+    MultiVersionedLDAURIRepresenter(uriRep)
+  }
+
+  @Singleton
+  @Provides
   def word2vecWordRepresenter(store: Word2VecStore): Word2VecWordRepresenter = {
     log.info("loading word2vec from model store")
     val version = ModelVersions.word2vecVersion
@@ -40,7 +55,7 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
   }
 }
 
-case class CortexDevModelModule() extends CortexModelModule {
+case class CortexDevModelModule() extends CortexModelModule() {
   def configure() {
     bind[RichWord2VecURIFeatureUpdatePlugin].to[RichWord2VecURIFeatureUpdatePluginImpl].in[AppScoped]
     bind[LDADbUpdatePlugin].to[LDADbUpdatePluginImpl].in[AppScoped]
@@ -57,6 +72,19 @@ case class CortexDevModelModule() extends CortexModelModule {
     val version = ModelVersions.denseLDAVersion
     val lda = ldaStore.get(version).get
     new LDAWordRepresenter(version, lda)
+  }
+
+  @Singleton
+  @Provides
+  def ldaDocRepresenter(wordRep: LDAWordRepresenter, stopWords: Stopwords): LDADocRepresenter = {
+    LDADocRepresenter(wordRep, stopWords)
+  }
+
+  @Singleton
+  @Provides
+  def ldaUriRepresenter(docRep: LDADocRepresenter, articleStore: ArticleStore): MultiVersionedLDAURIRepresenter = {
+    val uriRep = LDAURIRepresenter(docRep, articleStore)
+    MultiVersionedLDAURIRepresenter(uriRep)
   }
 
   @Singleton
