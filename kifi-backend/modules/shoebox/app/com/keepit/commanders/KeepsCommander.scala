@@ -295,7 +295,7 @@ class KeepsCommander @Inject() (
 
       val colls = db.readOnlyMaster { implicit s =>
         keeps.map { keep =>
-          keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
+          keepToCollectionRepo.getCollectionsForKeep(keep)
         }
       }.map(collectionCommander.getBasicCollections)
 

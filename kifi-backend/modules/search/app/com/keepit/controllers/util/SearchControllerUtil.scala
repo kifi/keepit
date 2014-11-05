@@ -98,11 +98,12 @@ trait SearchControllerUtil {
   }
 
   def writesAugmentationFields(
+    librarySearcher: Searcher,
     userId: Id[User],
     maxKeepersShown: Int,
     maxLibrariesShown: Int,
     maxTagsShown: Int,
-    augmentedItems: Seq[AugmentedItem]): (Seq[JsObject], Seq[Id[User]], Seq[Id[Library]]) = {
+    augmentedItems: Seq[AugmentedItem]): (Seq[JsObject], Future[(Seq[BasicUser], Seq[BasicLibrary])]) = {
 
     val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
     val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
@@ -111,13 +112,28 @@ trait SearchControllerUtil {
     val userIds = ((allKeepersShown.flatten ++ allLibrariesShown.flatMap(_.map(_._2))).toSet - userId).toSeq
     val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
 
-    val libraryIds = allLibrariesShown.flatMap(_.map(_._1)).distinct
+    val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, allLibrariesShown.flatMap(_.map(_._1)).toSet)
+
+    val libraryIds = libraryRecordsAndVisibilityById.keys.toSeq // libraries that are missing from the index are implicitly ignored
     val libraryIndexById = libraryIds.zipWithIndex.toMap
+
+    val futureBasicUsersAndLibraries = {
+      val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
+      shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds).map { usersById =>
+        val users = userIds.map(usersById(_))
+        val libraries = libraryIds.map { libId =>
+          val (library, visibility) = libraryRecordsAndVisibilityById(libId)
+          val owner = usersById(library.ownerId)
+          makeBasicLibrary(library, visibility, owner)
+        }
+        (users, libraries)
+      }
+    }
 
     val augmentationFields = limitedAugmentationInfos.map { limitedInfo =>
 
       val keepersIndices = limitedInfo.keepers.map(userIndexById(_))
-      val librariesIndices = limitedInfo.libraries.flatMap { case (libraryId, keeperId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId)) }
+      val librariesIndices = limitedInfo.libraries.flatMap { case (libraryId, keeperId) if libraryIndexById.contains(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId)) }
 
       Json.obj(
         "keepers" -> keepersIndices,
@@ -130,18 +146,20 @@ trait SearchControllerUtil {
         "tagsOmitted" -> limitedInfo.tagsOmitted
       )
     }
-    (augmentationFields, userIds, libraryIds)
+    (augmentationFields, futureBasicUsersAndLibraries)
   }
 
-  def getLibraryRecordsAndVisibility(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, LibraryVisibility)] = {
-    libraryIds.map { libId =>
-      val record = LibraryIndexable.getRecord(librarySearcher, libId).get
-      val visibility = LibraryIndexable.getVisibility(librarySearcher, libId).get
+  private def getLibraryRecordsAndVisibility(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, LibraryVisibility)] = {
+    for {
+      libId <- libraryIds
+      record <- LibraryIndexable.getRecord(librarySearcher, libId)
+      visibility <- LibraryIndexable.getVisibility(librarySearcher, libId)
+    } yield {
       libId -> (record, visibility)
-    }.toMap
-  }
+    }
+  }.toMap
 
-  def makeBasicLibrary(library: LibraryRecord, visibility: LibraryVisibility, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+  private def makeBasicLibrary(library: LibraryRecord, visibility: LibraryVisibility, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
     val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
     BasicLibrary(Library.publicId(library.id), library.name, path, visibility)
   }

@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SchedulerPlugin }
+import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel.{ LDAInfoRepo, URILDATopicRepo }
 import com.keepit.common.time._
 import scala.concurrent.duration._
@@ -42,13 +43,16 @@ class LDAInfoUpdatePluginImpl @Inject() (
 @Singleton
 class LDAInfoUpdater @Inject() (
     db: Database,
-    representer: LDAURIRepresenter,
+    representer: MultiVersionedLDAURIRepresenter,
     uriLDARepo: URILDATopicRepo,
     infoRepo: LDAInfoRepo) extends Logging {
 
   def updateTopicSizeCounts() {
+    representer.versions.foreach { version => updateTopicSizeCounts(version) }
+  }
+
+  def updateTopicSizeCounts(version: ModelVersion[DenseLDA]) {
     log.info("updating topic size counts")
-    val version = representer.version
     val counts = db.readOnlyReplica { implicit s => uriLDARepo.getTopicCounts(version) }
 
     db.readWrite { implicit s =>
