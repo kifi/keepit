@@ -64,6 +64,7 @@
         <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
       </span>
       <input class="keep-to-library-create-name-input" ng-model="newLibrary.name" placeholder="Inspiring videos, Recipes I love...">
+      <span ng-show="$error.name" class="keep-to-library-create-name-error">{{$error.name}}</span>
     </div>
     <div class="keep-to-library-create-heading">Make it private?</div>
     <div class="keep-to-library-create-visibility">
@@ -77,6 +78,7 @@
       <div ng-switch-default>Anyone will be able to see the keeps in this library.</div>
       <div ng-switch-when="secret">Only you will be able to see the keeps in this library.</div>
     </div>
+    <div ng-show="$error.general" class="keep-to-library-create-general-error">{{$error.general}}</div>
     <div class="keep-to-library-create-button-container">
       <button class="keep-to-library-create-button" ng-click="createLibrary(newLibrary)">Create Library</button>
     </div>

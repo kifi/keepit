@@ -46,25 +46,18 @@ angular.module('kifi')
         // Internal data.
         //
         var widget = null;
-        var selectedIndex = 0;
         var searchInput = null;
         var libraryList = null;
+        var newLibraryNameInput = null;
+
+        var selectedIndex = 0;
         var justScrolled = false;
         var removeTimeout = null;
         var resetJustScrolledTimeout = null;
-        var newLibraryNameInput = null;
         var submitting = false;
         var allLibraries = [];
         var widgetLibraries = [];
         var libraryNameSearch = null;
-
-
-        //
-        // Scope data.
-        //
-        scope.search = {};
-        scope.showCreate = false;
-        scope.newLibrary = {};
 
 
         //
@@ -210,6 +203,7 @@ angular.module('kifi')
           }
 
           // Select the top listed library.
+          selectedIndex = 0;
           if (widgetLibraries.length) {
             widgetLibraries[selectedIndex].selected = true;
           }
@@ -295,13 +289,16 @@ angular.module('kifi')
           //
           // Initialize state.
           //
+          selectedIndex = 0;
+
           scope.keptToLibraryIds = scope.keptToLibraryIds || [];
           scope.search = {};
-          selectedIndex = 0;
-          libraryList = widget.find('.library-select-list');
-          searchInput = widget.find('.keep-to-library-search-input');
           scope.showCreate = false;
           scope.newLibrary = {};
+          scope.$error = {};
+
+          libraryList = widget.find('.library-select-list');
+          searchInput = widget.find('.keep-to-library-search-input');
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
 
@@ -346,7 +343,7 @@ angular.module('kifi')
 
         scope.onSearchInputChange = function (name) {
           var matchedLibraries = libraryNameSearch.search(name);
-          groupWidgetLibraries(matchedLibraries.length ? matchedLibraries : allLibraries);
+          groupWidgetLibraries(!name ? allLibraries : matchedLibraries);
         };
 
         scope.processKeyEvent = function ($event) {
@@ -388,6 +385,10 @@ angular.module('kifi')
                 invokeWidgetCallbacks(widgetLibraries[selectedIndex]);
                 removeWidget();
               } else {
+                // If there are no libraries shown, prepopulate the create-library
+                // name input field with the search query.
+                scope.newLibrary.name = scope.search.name;
+
                 scope.showCreatePanel();
               }
               break;
@@ -403,6 +404,13 @@ angular.module('kifi')
         scope.showCreatePanel = function () {
           scope.showCreate = true;
 
+          // If there are no libraries shown, prepopulate the create-library
+          // name input field with the search query.
+          if (!widget.find('.library-select-option').length) {
+            scope.newLibrary.name = scope.search.name;
+          }
+
+
           // Wait for the creation panel to be shown, and then focus on the
           // input.
           $timeout(function () {
@@ -412,19 +420,25 @@ angular.module('kifi')
 
         scope.hideCreatePanel = function () {
           scope.showCreate = false;
-          scope.search = {};
 
           // Wait for the libraries panel to be shown, and then focus on the
-          // search input.
+          // search input and scroll back to the top.
           $timeout(function () {
             searchInput.focus();
+            libraryList.scrollTop(0);
           }, 0);
         };
 
         scope.createLibrary = function (library) {
-          if (submitting || !library.name || (library.name.length < 3)) {
+          if (submitting || !library.name) {
             return;
           }
+
+          scope.$error.name = libraryService.getLibraryNameError(library.name);
+          if (scope.$error.name) {
+            return;
+          }
+          scope.$error = {};
 
           library.slug = util.generateSlug(library.name);
           library.visibility = library.visibility || 'published';
@@ -436,10 +450,36 @@ angular.module('kifi')
                 removeWidget();
               });
             });
+          })['catch'](function (err) {
+            var error = err.data && err.data.error;
+            switch (error) {
+              case 'library name already exists for user':  // deprecated
+              case 'library_name_exists':
+                scope.$error.general = 'You already have a library with this name';
+                break;
+              case 'invalid library name':  // deprecated
+              case 'invalid_name':
+                scope.$error.general = 'You already have a library with this name';
+                break;
+              default:
+                scope.$error.general = 'Hmm, something went wrong. Try again later?';
+                break;
+            }
           })['finally'](function () {
             submitting = false;
           });
         };
+
+
+        //
+        // Watches and listeners.
+        //
+        scope.$watch('newLibrary.name', function (newVal, oldVal) {
+          if (newVal !== oldVal) {
+            // Clear the error popover when the user changes the name field.
+            scope.$error.name = null;
+          }
+        });
 
 
         init();
