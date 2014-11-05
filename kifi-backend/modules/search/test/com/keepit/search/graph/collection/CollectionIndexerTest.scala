@@ -28,7 +28,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
         val collectionIndexer = mkCollectionIndexer(collectionDir)
 
         val expectedUriToUserEdges = uris.map { (_, users) } // all users have all uris
-        saveBookmarksByURI(expectedUriToUserEdges)
+        val allKeeps = saveBookmarksByURI(expectedUriToUserEdges)
         collectionIndexer.update() === 0
 
         val collections = users.zipWithIndex.map {
@@ -36,7 +36,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
             val coll = saveCollection(user, s"${user.firstName} - Collection")
             val bookmark = {
               val uri = uris(idx % numURIs)
-              getBookmarkByUriAndUser(uri.id.get, user.id.get)
+              allKeeps.find { keep => keep.uriId == uri.id.get && keep.userId == user.id.get }
             }
             saveBookmarksToCollection(coll, Seq(bookmark.get))
         }
