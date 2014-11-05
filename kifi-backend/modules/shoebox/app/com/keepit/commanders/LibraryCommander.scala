@@ -1137,7 +1137,7 @@ object FullLibraryInfo {
 }
 
 case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
-  override val version = 1
+  override val version = 2
   val namespace = "library_info_libraryid"
   def toKey(): String = libraryId.id.toString
 }

@@ -243,6 +243,8 @@ class RecommendationsCommander @Inject() (
     val curatedLibraries = {
       val libraryById = db.readOnlyReplica { implicit session => libRepo.getLibraries(curatedLibIds.toSet) }
       curatedLibIds.map(libraryById(_))
+    }.filter { lib =>
+      lib.visibility == LibraryVisibility.PUBLISHED
     }
 
     libCommander.createFullLibraryInfos(Some(userId), maxMembersShown = 10, maxKeepsShown = 0, curatedLibraries).map { fullLibraryInfos =>
