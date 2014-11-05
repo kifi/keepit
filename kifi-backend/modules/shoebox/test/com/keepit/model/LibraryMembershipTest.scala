@@ -19,13 +19,13 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
       val library2 = libraryRepo.save(Library(name = "Lib2", ownerId = user2.id.get, createdAt = t1.plusMinutes(5),
         visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("B"), memberCount = 1))
       val lm1 = libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get,
-        access = LibraryAccess.READ_WRITE, createdAt = t1.plusHours(1), showInSearch = true))
+        access = LibraryAccess.OWNER, createdAt = t1.plusHours(1), showInSearch = true))
       val lm2 = libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user2.id.get,
         access = LibraryAccess.READ_ONLY, createdAt = t1.plusHours(2), showInSearch = true))
       val lm3 = libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user2.id.get,
-        access = LibraryAccess.READ_WRITE, createdAt = t1.plusHours(3), showInSearch = true))
+        access = LibraryAccess.OWNER, createdAt = t1.plusHours(3), showInSearch = true))
       val lm4 = libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user1.id.get,
-        access = LibraryAccess.READ_WRITE, createdAt = t1.plusHours(4), showInSearch = true))
+        access = LibraryAccess.OWNER, createdAt = t1.plusHours(4), showInSearch = true))
       (library1, library2, user1, user2, lm1, lm2, lm3, lm4, t1)
     }
   }
@@ -33,9 +33,15 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
   "LibraryMembershipRepo" should {
     "basically work" in { // test read/write/save
       withDb() { implicit injector =>
-        setup()
+        val (library1, library2, user1, user2, lm1, lm2, lm3, lm4, t1) = setup()
         val all = db.readOnlyMaster(implicit session => libraryMembershipRepo.all)
-        all.map(_.access) === Seq(LibraryAccess.READ_WRITE, LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE, LibraryAccess.READ_WRITE)
+        all.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY, LibraryAccess.OWNER, LibraryAccess.OWNER)
+        db.readOnlyMaster { implicit session =>
+          libraryMembershipRepo.countByLibraryAccess(user1.id.get, LibraryAccess.OWNER) === 2
+          libraryMembershipRepo.countByLibraryAccess(user1.id.get, LibraryAccess.READ_ONLY) === 0
+          libraryMembershipRepo.countByLibraryAccess(user2.id.get, LibraryAccess.OWNER) === 1
+          libraryMembershipRepo.countByLibraryAccess(user2.id.get, LibraryAccess.READ_ONLY) === 1
+        }
       }
     }
 
