@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.mail.template.tags
-import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
+import com.keepit.common.mail.{ BasicContact, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
@@ -293,7 +293,7 @@ class LibraryCommander @Inject() (
 
     val invitedMembers = inviteesWithInvites.map {
       case (invitee, invites) =>
-        val member = invitee.left.map(usersById(_))
+        val member = invitee.left.map(usersById(_)).right.map(BasicContact(_)) // todo(ray): fetch contacts from abook or cache
         val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
         val access = invites.map(_.access).maxBy(_.priority)
         MaybeLibraryMember(member, Some(access), Some(lastInvitedAt))
@@ -350,7 +350,7 @@ class LibraryCommander @Inject() (
             case Some((access, lastInvitedAt)) => (Some(access), Some(lastInvitedAt))
             case None => (None, None)
           }
-          MaybeLibraryMember(Right(contact.email), access, lastInvitedAt)
+          MaybeLibraryMember(Right(contact), access, lastInvitedAt)
         }
         suggestedUsers ++ suggestedEmailAddresses
     }
@@ -1122,14 +1122,11 @@ object LibraryInfo {
   }
 }
 
-case class MaybeLibraryMember(member: Either[BasicUser, EmailAddress], access: Option[LibraryAccess], lastInvitedAt: Option[DateTime])
+case class MaybeLibraryMember(member: Either[BasicUser, BasicContact], access: Option[LibraryAccess], lastInvitedAt: Option[DateTime])
 
 object MaybeLibraryMember {
   implicit val writes = Writes[MaybeLibraryMember] { member =>
-    val identityFields = member.member match {
-      case Left(user) => Json.toJson(user).as[JsObject]
-      case Right(emailAddress) => Json.obj("email" -> emailAddress)
-    }
+    val identityFields = member.member.fold(user => Json.toJson(user), contact => Json.toJson(contact)).as[JsObject]
     val libraryRelatedFields = Json.obj("membership" -> member.access, "lastInvitedAt" -> member.lastInvitedAt)
     json.minify(identityFields ++ libraryRelatedFields)
   }
