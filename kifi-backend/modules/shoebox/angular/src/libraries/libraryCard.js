@@ -130,7 +130,7 @@ angular.module('kifi')
           // Figure out whether this library is a library that the user has been invited to.
           // If so, display an invite header.
           var promise = null;
-          if (libraryService.invitedSummaries) {
+          if (libraryService.invitedSummaries.length) {
             promise = $q.when(libraryService.invitedSummaries);
           } else {
             promise = libraryService.fetchLibrarySummaries(true).then(function () {
