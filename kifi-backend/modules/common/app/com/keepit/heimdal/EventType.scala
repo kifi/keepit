@@ -45,6 +45,7 @@ object UserEventTypes {
   val RECOMMENDATION_USER_ACTION = EventType("reco_action")
 
   // Libraries
+  val MODIFIED_LIBRARY = EventType("modified_library")
   val FOLLOWED_LIBRARY = EventType("followed_library")
 }
 
