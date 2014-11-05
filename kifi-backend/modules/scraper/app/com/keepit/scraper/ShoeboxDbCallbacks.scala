@@ -26,9 +26,6 @@ class ShoeboxDbCallbackHelper @Inject() (
 
   private def await[T](awaitable: Awaitable[T]) = Await.result(awaitable, config.syncAwaitTimeout seconds)
 
-  def syncAssignTasks(zkId: Long, max: Int): Seq[ScrapeRequest] = await(assignTasks(zkId, max))
-  def syncIsUnscrapableP(url: URI, destinationUrl: Option[String]) = await(isUnscrapableP(url, destinationUrl))
-  def syncGetNormalizedUri(uri: NormalizedURI): Option[NormalizedURI] = await(getNormalizedUri(uri))
   def syncSaveNormalizedUri(uri: NormalizedURI): NormalizedURI = {
     try {
       normalizedUriLock.lock()
@@ -97,9 +94,6 @@ class ShoeboxDbCallbackHelper @Inject() (
 }
 
 trait SyncShoeboxDbCallbacks {
-  def syncAssignTasks(zkId: Long, max: Int): Seq[ScrapeRequest]
-  def syncIsUnscrapableP(url: URI, destinationUrl: Option[String]): Boolean
-  def syncGetNormalizedUri(uri: NormalizedURI): Option[NormalizedURI]
   def syncSaveNormalizedUri(uri: NormalizedURI): NormalizedURI
   def syncUpdateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Unit
   def syncSaveScrapeInfo(info: ScrapeInfo): Unit

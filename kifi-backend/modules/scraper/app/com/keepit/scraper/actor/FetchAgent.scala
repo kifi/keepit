@@ -1,6 +1,5 @@
 package com.keepit.scraper.actor
 
-import akka.actor._
 import com.google.inject.Inject
 import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.concurrent.ExecutionContext
@@ -10,15 +9,17 @@ import com.keepit.common.net.URI
 import com.keepit.model.HttpProxy
 import com.keepit.scraper.extractor.{ ExtractorFactory, ExtractorProviderType, ExtractorProviderTypes, LinkedInIdExtractor }
 import com.keepit.scraper.fetcher.HttpFetcher
-import com.keepit.scraper.{ ScrapeWorker, ScraperConfig, SyncShoeboxDbCallbacks }
-import org.apache.http.HttpStatus
+import com.keepit.scraper.{ BasicArticle, ShoeboxDbCallbacks, ScrapeWorker, ScraperConfig }
+import play.api.http.Status
+
+import scala.concurrent.Future
 
 class FetchAgent @Inject() (
     airbrake: AirbrakeNotifier,
-    helper: SyncShoeboxDbCallbacks,
+    helper: ShoeboxDbCallbacks,
     extractorFactory: ExtractorFactory,
     httpFetcher: HttpFetcher,
-    worker: ScrapeWorker) extends FortyTwoActor(airbrake) with Logging {
+    worker: ScrapeWorker) extends FortyTwoActor(airbrake) with Logging with Status {
 
   import akka.pattern.pipe
   import ScraperMessages.Fetch
@@ -33,19 +34,23 @@ class FetchAgent @Inject() (
       fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt).pipeTo(sender)
     case m => throw new UnsupportedActorMessage(m)
   }
-  private def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]) = {
+  private def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     val uri = URI.parse(url).get
     val extractor = extractorProviderTypeOpt match {
       case Some(t) if t == ExtractorProviderTypes.LINKEDIN_ID => new LinkedInIdExtractor(uri, ScraperConfig.maxContentChars)
       case _ => extractorFactory(uri)
     }
     if (uri.host.isEmpty) throw new IllegalArgumentException(s"url $url has no host!")
-    httpFetcher.get(uri, proxy = proxyOpt)(input => extractor.process(input)) map { fetchStatus =>
+    val resF = httpFetcher.get(uri, proxy = proxyOpt)(input => extractor.process(input)) flatMap { fetchStatus =>
       fetchStatus.statusCode match {
-        case HttpStatus.SC_OK if !helper.syncIsUnscrapableP(uri, fetchStatus.destinationUrl) =>
-          Some(extractor.basicArticle(fetchStatus.destinationUrl getOrElse url))
-        case _ => None
+        case OK =>
+          helper.isUnscrapableP(uri, fetchStatus.destinationUrl) map { isUnscrapable =>
+            if (isUnscrapable) None
+            else Some(extractor.basicArticle(fetchStatus.destinationUrl getOrElse url))
+          }
+        case _ => Future.successful(None)
       }
     }
+    resF
   }
 }
