@@ -100,6 +100,7 @@
           <th>Invited By</th>
           <th>Invite Sent</th>
           <th>Messages all/active/started</th>
+          <th>Lib create/follow</th>
           <th>Network</th>
           <th>Private Keeps</th>
           <th>Public Keeps</th>
@@ -116,6 +117,7 @@
           <td>@for(i <- userStatistics.invitedBy){ @adminHelper.userDisplay(i) }</td>
           <td>@userStatistics.invitations</td>
           <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
+          <td>@{userStatistics.librariesCreated}/@{userStatistics.librariesFollowed}</td>
           <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
           <td>@userStatistics.privateKeeps</td>
           <td>@userStatistics.publicKeeps</td>

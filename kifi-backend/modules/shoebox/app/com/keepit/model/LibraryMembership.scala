@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.cache.{ PrimitiveCacheImpl, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.{ SequenceNumber, State, Id }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time.DateTimeJsonFormat
@@ -36,4 +36,13 @@ case class LibraryMembershipIdKey(id: Id[LibraryMembership]) extends Key[Library
 
 class LibraryMembershipIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LibraryMembershipIdKey, LibraryMembership](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class LibraryMembershipCountKey(userId: Id[User], access: LibraryAccess) extends Key[Int] {
+  override val version = 1
+  val namespace = "library_membership_count"
+  def toKey(): String = s"$userId:$access"
+}
+
+class LibraryMembershipCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[LibraryMembershipCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
