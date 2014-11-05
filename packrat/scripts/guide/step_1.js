@@ -24,8 +24,11 @@ k.guide.step1 = k.guide.step1 || function () {
       afterTransition: '.kifi-keep-box',
       arrow: {dx: 150, dy: 0, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: 0, gap: 5, sel: '.kifi-keep-box-lib.kifi-system.kifi-discoverable'}},
       allow: [
-        {type: /^key/, target: '.kifi-keep-box-lib-input', unless: function (e) {return e.keyCode === 27}},  // esc
-        {type: /^(?:mouse|click$)/, target: '.kifi-keep-box-lib'}
+        {type: /^key/, target: '.kifi-keep-box-lib-input', unless: function (e) {
+          return e.keyCode === 27 ||  // allow all keys except Esc (anywhere) and Enter (on Create New Library)
+            (e.keyCode === 13 || e.keyCode === 108) && $(e.target).closest('.kifi-keep-box-view').find('.kifi-keep-box-lib.kifi-create').is('.kifi-highlighted');
+        }},
+        {type: /^(?:mouse|click$)/, target: '.kifi-keep-box-lib:not(.kifi-create)'}
       ]
     },
     {
