@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.mail.template.tags
-import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
+import com.keepit.common.mail.{ BasicContact, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
@@ -308,7 +308,7 @@ class LibraryCommander @Inject() (
     actualMembers ++ invitedMembers
   }
 
-  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]] = {
+  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[LibraryShareResult]] = {
     val futureFriendsAndContacts = query.map(_.trim).filter(_.nonEmpty) match {
       case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, limit)
       case None => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, limit))
@@ -348,7 +348,7 @@ class LibraryCommander @Inject() (
                 case None => (None, None)
               }
             }
-            MaybeLibraryMember(Left(basicUser), access, lastInvitedAt)
+            LibraryShareResult(Left(basicUser), access, lastInvitedAt)
         }
 
         val suggestedEmailAddresses = contacts.map { contact =>
@@ -356,7 +356,7 @@ class LibraryCommander @Inject() (
             case Some((access, lastInvitedAt)) => (Some(access), Some(lastInvitedAt))
             case None => (None, None)
           }
-          MaybeLibraryMember(Right(contact.email), access, lastInvitedAt)
+          LibraryShareResult(Right(contact), access, lastInvitedAt)
         }
         suggestedUsers ++ suggestedEmailAddresses
     }
@@ -1125,6 +1125,16 @@ object LibraryInfo {
   def descriptionShortener(str: Option[String]): Option[String] = str match {
     case Some(s) => { Some(s.dropRight(s.length - MaxDescriptionLength)) } // will change later!
     case _ => None
+  }
+}
+
+case class LibraryShareResult(member: Either[BasicUser, BasicContact], access: Option[LibraryAccess], lastInvitedAt: Option[DateTime])
+
+object LibraryShareResult {
+  implicit val writes = Writes[LibraryShareResult] { libraryShareResult =>
+    val identityFields = libraryShareResult.member.fold(user => Json.toJson(user), contact => Json.toJson(contact)).as[JsObject]
+    val libraryRelatedFields = Json.obj("membership" -> libraryShareResult.access, "lastInvitedAt" -> libraryShareResult.lastInvitedAt)
+    json.minify(identityFields ++ libraryRelatedFields)
   }
 }
 
