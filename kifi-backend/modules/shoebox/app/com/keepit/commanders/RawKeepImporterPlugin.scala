@@ -39,7 +39,7 @@ private class RawKeepImporterActor @Inject() (
     airbrake: AirbrakeNotifier,
     urlRepo: URLRepo,
     scraper: ScrapeScheduler,
-    keptAnalytics: KeepingAnalytics,
+    libraryAnalytics: LibraryAnalytics,
     collectionRepo: CollectionRepo,
     kifiInstallationRepo: KifiInstallationRepo,
     bookmarksCommanderProvider: Provider[KeepsCommander],

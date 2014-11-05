@@ -54,7 +54,7 @@ class LibraryCommander @Inject() (
     airbrake: AirbrakeNotifier,
     searchClient: SearchServiceClient,
     elizaClient: ElizaServiceClient,
-    keptAnalytics: KeepingAnalytics,
+    libraryAnalytics: LibraryAnalytics,
     libraryInviteSender: Provider[LibraryInviteEmailSender],
     heimdal: HeimdalServiceClient,
     contextBuilderFactory: HeimdalContextBuilderFactory,
@@ -484,7 +484,7 @@ class LibraryCommander @Inject() (
       val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
         keepRepo.save(keep.sanitizeForDelete())(s)
       }
-      keptAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, context)
+      libraryAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, context)
       searchClient.updateKeepIndex()
       //Note that this is at the end, if there was an error while cleaning other library assets
       //we would want to be able to get back to the library and clean it again
@@ -708,7 +708,7 @@ class LibraryCommander @Inject() (
       val (inv1, res) = successInvites.unzip
       inviteBulkUsers(inv1)
 
-      trackLibraryInvitation(inviterId, libraryId, inviteList.map { _._1 }, eventContext, action = "sent")
+      libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
 
       Right(res)
     }
@@ -751,7 +751,8 @@ class LibraryCommander @Inject() (
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
-        trackLibraryInvitation(userId, libraryId, Seq(), eventContext, action = "accepted")
+        libraryAnalytics.sendLibraryInvite(userId, libraryId, Seq(), eventContext)
+        libraryAnalytics.followLibrary(userId, lib, eventContext)
         searchClient.updateLibraryIndex()
         Right(updatedLib)
       }
@@ -765,7 +766,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def leaveLibrary(libraryId: Id[Library], userId: Id[User]): Either[LibraryFail, Unit] = {
+  def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit] = {
     db.readWrite { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
         case None => Left(LibraryFail("membership_not_found"))
@@ -774,6 +775,7 @@ class LibraryCommander @Inject() (
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           val lib = libraryRepo.get(libraryId)
           libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
+          libraryAnalytics.unfollowLibrary(userId, lib, eventContext)
           searchClient.updateLibraryIndex()
           Right()
         }
@@ -1015,24 +1017,6 @@ class LibraryCommander @Inject() (
         }
       case _ => None
     }
-  }
-
-  private def trackLibraryInvitation(userId: Id[User], libId: Id[Library], inviteeList: Seq[(Either[Id[User], EmailAddress])], eventContext: HeimdalContext, action: String) = {
-    val builder = contextBuilderFactory()
-    builder.addExistingContext(eventContext)
-    builder += ("action", action)
-    builder += ("category", "libraryInvitation")
-    builder += ("libraryId", libId.id)
-
-    if (action == "sent") {
-      builder += ("libraryOwnerId", userId.id)
-      val numUsers = inviteeList.count(_.isLeft)
-      val numEmails = inviteeList.size - numUsers
-      builder += ("numUserInvited", numUsers)
-      builder += ("numNonUserInvited", numEmails)
-    }
-
-    heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
   }
 
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]) = {

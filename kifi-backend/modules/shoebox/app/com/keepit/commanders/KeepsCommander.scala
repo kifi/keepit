@@ -124,7 +124,7 @@ class KeepsCommander @Inject() (
     keepRepo: KeepRepo,
     collectionRepo: CollectionRepo,
     userRepo: UserRepo,
-    keptAnalytics: KeepingAnalytics,
+    libraryAnalytics: LibraryAnalytics,
     rawBookmarkFactory: RawBookmarkFactory,
     scheduler: Scheduler,
     heimdalClient: HeimdalServiceClient,
@@ -479,7 +479,7 @@ class KeepsCommander @Inject() (
     log.info(s"[unkeepMulti] deactivatedKeeps:(len=${deactivatedBookmarks.length}):${deactivatedBookmarks.mkString(",")}")
 
     val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromKeep
-    keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
+    libraryAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
     searchClient.updateKeepIndex()
     deactivatedKeepInfos
   }
@@ -552,7 +552,7 @@ class KeepsCommander @Inject() (
 
   private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit context: HeimdalContext): Unit = {
     // TODO: broadcast over any open user channels
-    keptAnalytics.unkeptPages(userId, keeps, context)
+    libraryAnalytics.unkeptPages(userId, keeps, context)
     searchClient.updateKeepIndex()
   }
 
@@ -561,7 +561,7 @@ class KeepsCommander @Inject() (
       val keeps = getKeepsInBulkSelection(selection, userId).filter(_.state != KeepStates.ACTIVE)
       keeps.map(setKeepStateWithSession(_, KeepStates.ACTIVE, userId))
     }
-    keptAnalytics.rekeptPages(userId, keeps, context)
+    libraryAnalytics.rekeptPages(userId, keeps, context)
     searchClient.updateKeepIndex()
     keeps.length
   }
@@ -580,7 +580,7 @@ class KeepsCommander @Inject() (
       val newKeeps = oldKeeps.map(updateKeepWithSession(_, Some(isPrivate), None))
       (oldKeeps, newKeeps)
     }
-    (oldKeeps zip newKeeps) map { case (oldKeep, newKeep) => keptAnalytics.updatedKeep(oldKeep, newKeep, context) }
+    (oldKeeps zip newKeeps) map { case (oldKeep, newKeep) => libraryAnalytics.updatedKeep(oldKeep, newKeep, context) }
     searchClient.updateKeepIndex()
     newKeeps.length
   }
@@ -590,7 +590,7 @@ class KeepsCommander @Inject() (
     if (shouldBeUpdated) Some {
       val updatedKeep = db.readWrite { implicit s => updateKeepWithSession(keep, isPrivate, title) }
       searchClient.updateKeepIndex()
-      keptAnalytics.updatedKeep(keep, updatedKeep, context)
+      libraryAnalytics.updatedKeep(keep, updatedKeep, context)
       updatedKeep
     }
     else None
@@ -622,7 +622,7 @@ class KeepsCommander @Inject() (
             case Some(keep) if normTitle.isDefined && normTitle != keep.title =>
               val keep2 = keepRepo.save(keep.withTitle(normTitle))
               searchClient.updateKeepIndex()
-              keptAnalytics.updatedKeep(keep, keep2, context)
+              libraryAnalytics.updatedKeep(keep, keep2, context)
               Right(keep2)
             case Some(keep) =>
               Right(keep)
@@ -668,7 +668,7 @@ class KeepsCommander @Inject() (
       val taggingAt = currentDateTime
       tagged.foreach { ktc =>
         keepRepo.save(keepsById(ktc.keepId)) // notify keep index
-        keptAnalytics.taggedPage(updatedCollection, keepsById(ktc.keepId), context, taggingAt)
+        libraryAnalytics.taggedPage(updatedCollection, keepsById(ktc.keepId), context, taggingAt)
       }
       tagged
     }
@@ -690,7 +690,7 @@ class KeepsCommander @Inject() (
       val removedAt = currentDateTime
       removed.foreach { ktc =>
         keepRepo.save(keepsById(ktc.keepId)) // notify keep index
-        keptAnalytics.untaggedPage(collection, keepsById(ktc.keepId), context, removedAt)
+        libraryAnalytics.untaggedPage(collection, keepsById(ktc.keepId), context, removedAt)
       }
       removed.toSet
     } tap { _ =>
@@ -724,8 +724,8 @@ class KeepsCommander @Inject() (
     }
     collection match {
       case Some(t) if t.isActive => t
-      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, name = normalizedName, createdAt = clock.now())) } tap (keptAnalytics.createdTag(_, context))
-      case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) } tap (keptAnalytics.createdTag(_, context))
+      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, name = normalizedName, createdAt = clock.now())) } tap (libraryAnalytics.createdTag(_, context))
+      case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) } tap (libraryAnalytics.createdTag(_, context))
     }
   }
 
@@ -739,7 +739,7 @@ class KeepsCommander @Inject() (
         keepToCollectionRepo.remove(keepId = keep.id.get, collectionId = collection.id.get)
         collectionRepo.collectionChanged(collection.id.get, inactivateIfEmpty = true)
         keepRepo.save(keep) // notify keep index
-        keptAnalytics.untaggedPage(collection, keep, context)
+        libraryAnalytics.untaggedPage(collection, keep, context)
         keep
       }
     }

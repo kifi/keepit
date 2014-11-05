@@ -93,7 +93,7 @@ class MobileLibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         val res = libraryCommander.joinLibrary(request.userId, libId)
         res match {
           case Left(fail) =>
@@ -122,6 +122,7 @@ class MobileLibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         libraryCommander.leaveLibrary(id, request.userId) match {
           case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
           case Right(_) => Ok(JsString("success"))
