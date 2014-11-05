@@ -422,9 +422,10 @@ angular.module('kifi')
           scope.showCreate = false;
 
           // Wait for the libraries panel to be shown, and then focus on the
-          // search input.
+          // search input and scroll back to the top.
           $timeout(function () {
             searchInput.focus();
+            libraryList.scrollTop(0);
           }, 0);
         };
 
