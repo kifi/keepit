@@ -25,24 +25,26 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
 
   @Singleton
   @Provides
-  def ldaWordRepresenter(ldaStore: LDAModelStore): LDAWordRepresenter = {
+  def ldaWordRepresenter(ldaStore: LDAModelStore): MultiVersionedLDAWordRepresenter = {
     log.info("loading lda from model store")
     val version = ModelVersions.denseLDAVersion
     val lda = ldaStore.get(version).get
-    new LDAWordRepresenter(version, lda)
+    val wordRep = LDAWordRepresenter(version, lda)
+    MultiVersionedLDAWordRepresenter(wordRep)
   }
 
   @Singleton
   @Provides
-  def ldaDocRepresenter(wordRep: LDAWordRepresenter, stopWords: Stopwords): LDADocRepresenter = {
-    LDADocRepresenter(wordRep, stopWords)
+  def ldaDocRepresenter(wordRep: MultiVersionedLDAWordRepresenter, stopWords: Stopwords): MultiVersionedLDADocRepresenter = {
+    val docReps = wordRep.representers.map { wordRep => LDADocRepresenter(wordRep, stopWords) }
+    MultiVersionedLDADocRepresenter(docReps: _*)
   }
 
   @Singleton
   @Provides
-  def ldaUriRepresenter(docRep: LDADocRepresenter, articleStore: ArticleStore): MultiVersionedLDAURIRepresenter = {
-    val uriRep = LDAURIRepresenter(docRep, articleStore)
-    MultiVersionedLDAURIRepresenter(uriRep)
+  def ldaUriRepresenter(docRep: MultiVersionedLDADocRepresenter, articleStore: ArticleStore): MultiVersionedLDAURIRepresenter = {
+    val uriReps = docRep.representers.map { docRep => LDAURIRepresenter(docRep, articleStore) }
+    MultiVersionedLDAURIRepresenter(uriReps: _*)
   }
 
   @Singleton
@@ -68,23 +70,25 @@ case class CortexDevModelModule() extends CortexModelModule() {
 
   @Singleton
   @Provides
-  def ldaWordRepresenter(ldaStore: LDAModelStore): LDAWordRepresenter = {
+  def ldaWordRepresenter(ldaStore: LDAModelStore): MultiVersionedLDAWordRepresenter = {
     val version = ModelVersions.denseLDAVersion
     val lda = ldaStore.get(version).get
-    new LDAWordRepresenter(version, lda)
+    val wordRep = LDAWordRepresenter(version, lda)
+    MultiVersionedLDAWordRepresenter(wordRep)
   }
 
   @Singleton
   @Provides
-  def ldaDocRepresenter(wordRep: LDAWordRepresenter, stopWords: Stopwords): LDADocRepresenter = {
-    LDADocRepresenter(wordRep, stopWords)
+  def ldaDocRepresenter(wordRep: MultiVersionedLDAWordRepresenter, stopWords: Stopwords): MultiVersionedLDADocRepresenter = {
+    val docReps = wordRep.representers.map { wordRep => LDADocRepresenter(wordRep, stopWords) }
+    MultiVersionedLDADocRepresenter(docReps: _*)
   }
 
   @Singleton
   @Provides
-  def ldaUriRepresenter(docRep: LDADocRepresenter, articleStore: ArticleStore): MultiVersionedLDAURIRepresenter = {
-    val uriRep = LDAURIRepresenter(docRep, articleStore)
-    MultiVersionedLDAURIRepresenter(uriRep)
+  def ldaUriRepresenter(docRep: MultiVersionedLDADocRepresenter, articleStore: ArticleStore): MultiVersionedLDAURIRepresenter = {
+    val uriReps = docRep.representers.map { docRep => LDAURIRepresenter(docRep, articleStore) }
+    MultiVersionedLDAURIRepresenter(uriReps: _*)
   }
 
   @Singleton

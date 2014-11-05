@@ -14,7 +14,6 @@ import scala.collection.mutable
 @Singleton
 class LDAInfoCommander @Inject() (
     db: Database,
-    wordRep: LDAWordRepresenter,
     topicInfoRepo: LDAInfoRepo,
     topicWordsStore: LDATopicWordsStore) {
 
