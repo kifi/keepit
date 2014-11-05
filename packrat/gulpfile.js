@@ -378,7 +378,7 @@ gulp.task('zip-chrome', ['build', 'config-package-chrome'], function () {
 gulp.task('crx-chrome-dev', ['build', 'config-package-chrome'], shell.task([[
   'cp icons/dev/* out/chrome/icons/',
   '/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome' +
-  ' --pack-extension=out/chrome --pack-extension-key=kifi-dev.pem > /dev/null',
+  ' --pack-extension=out/chrome --pack-extension-key=kifi-dev-chrome.pem > /dev/null',
   'mv out/chrome.crx out/kifi-dev.crx',
   'echo $\'<?xml version="1.0" encoding="UTF-8"?>\\n<gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">\\n  <app appid="ddepcfcogoamilbllhdmlojoefkjdofi">\\n    <updatecheck codebase="https://www.kifi.com/extensions/chrome/kifi-dev.crx" version="\'$(grep \'"version"\' out/chrome/manifest.json | cut -d\\" -f4)$\'" />\\n  </app>\\n</gupdate>\' > out/kifi-dev.xml'
 ].join(' && ')]));
