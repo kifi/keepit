@@ -41,10 +41,10 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
   }
 
   val fakeCortex = new FakeCortexServiceClientImpl(null) {
-    override def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Seq[Id[Keep]]]] = {
+    override def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Seq[Id[Keep]]]] = {
       Future.successful(uriIds.map { uid => if (uid.id.toInt % 2 == 1) Seq.empty[Id[Keep]] else Seq(Id[Keep](uid.id)) })
     }
-    override def getTopicNames(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[String]]] = {
+    override def getTopicNames(uris: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Option[String]]] = {
       val names = uris.map { uri => Some("topic_" + uri.id) }
       Future.successful(names)
     }
