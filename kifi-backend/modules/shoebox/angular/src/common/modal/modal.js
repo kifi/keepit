@@ -66,18 +66,20 @@ angular.module('kifi')
           }
         });
 
-        var wrap = element.find('.dialog-body-wrap');
+        var wrap = element.find('.dialog-body');
+        var verticalScrollbarCss = {'max-height': $window.innerHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'};
+
         var resizeWindow = _.debounce(function () {
-          var winHeight = $window.innerHeight;
-          var modalHeight = wrap.height();
-          debugger;
-          wrap.css({'max-height': winHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'auto'});
+          verticalScrollbarCss['max-height'] = $window.innerHeight - 160 + 'px';
+          wrap.css(verticalScrollbarCss);
         }, 100);
         $window.addEventListener('resize', resizeWindow);
 
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', resizeWindow);
         });
+
+        wrap.css(verticalScrollbarCss);
       }
     };
   }
@@ -109,9 +111,11 @@ angular.module('kifi')
       scope.singleAction = attrs.singleAction || true;
 
       var wrap = element.find('.dialog-body-wrap');
+      var verticalScrollbarCss = {'max-height': $window.innerHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'};
+
       var resizeWindow = _.debounce(function () {
-        var winHeight = $window.innerHeight;
-        wrap.css({'max-height': winHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'});
+        verticalScrollbarCss['max-height'] = $window.innerHeight - 160 + 'px';
+        wrap.css(verticalScrollbarCss);
       }, 100);
       $window.addEventListener('resize', resizeWindow);
 
@@ -132,6 +136,8 @@ angular.module('kifi')
       scope.$on('$destroy', function () {
         $window.removeEventListener('resize', resizeWindow);
       });
+
+      wrap.css(verticalScrollbarCss);
     }
   };
 }]);
