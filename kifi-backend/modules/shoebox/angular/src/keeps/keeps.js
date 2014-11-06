@@ -164,9 +164,13 @@ angular.module('kifi')
             }
             scope.editMode.enabled = true;
             scope.selection.toggleSelect(keep);
-          } else if (event.target.href && scope.keepClick) {
-            scope.keepClick(keep, event);
+          } else if (scope.keepClick) {
+            // the timeout is to prevent pop-up blocker
+            setTimeout(function () {
+              scope.keepClick(keep, event);
+            });
           }
+          return true;
         };
 
         scope.isMultiChecked = function (keeps) {
