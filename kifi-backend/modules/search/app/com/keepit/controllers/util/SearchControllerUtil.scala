@@ -42,7 +42,7 @@ trait SearchControllerUtil {
   def reactiveEnumerator(futureSeq: Seq[Future[String]]) = {
     // Returns successful results of Futures in the order they are completed, reactively
     Enumerator.interleave(futureSeq.map { future =>
-      safelyFlatten(future.map(str => Enumerator(", " + str))(immediate))
+      safelyFlatten(future.map(str => Enumerator("," + str))(immediate))
     })
   }
 
