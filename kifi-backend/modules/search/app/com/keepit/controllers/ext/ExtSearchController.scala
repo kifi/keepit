@@ -104,10 +104,10 @@ class ExtSearchController @Inject() (
       Ok.chunked(plainResultEnumerator
         .andThen(augmentationEnumerator)
         .andThen(Enumerator.eof)).as(TEXT)
-    } else {
+    } else {  // JSON format last used by extension 3.3.10
       Ok.chunked(Enumerator("[").andThen(plainResultEnumerator)
         .andThen(Enumerator(",")).andThen(augmentationEnumerator)
-        .andThen(Enumerator("]").andThen(Enumerator.eof)))
+        .andThen(Enumerator("]").andThen(Enumerator.eof))).as(JSON)
     } withHeaders ("Cache-Control" -> "private, max-age=10")
   }
 
