@@ -20,7 +20,6 @@ class LDAController @Inject() (
     extends CortexServiceController with Logging {
 
   implicit val ldaVersion = PublishingVersions.denseLDAVersion
-  assume(ldaVersion == infoCommander.ldaVersion)
 
   def numOfTopics() = Action { request =>
     Ok(JsNumber(lda.numOfTopics))

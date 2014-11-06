@@ -21,6 +21,12 @@ angular.module('kifi')
       templateUrl: 'libraries/libraryCard.tpl.html',
       link: function (scope, element/*, attrs*/) {
         //
+        // Internal data.
+        //
+        var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
+        //                   ↑↑↑ use this one ↑↑↑
+
+        //
         // Scope data.
         //
         scope.isUserLoggedOut = $rootScope.userLoggedIn === false;
@@ -122,9 +128,9 @@ angular.module('kifi')
             '?utm_medium=vf_facebook&utm_source=library_invite&utm_content=lid_' + scope.library.id +
             '&kcid=na-vf_facebook-library_invite-lid_' + scope.library.id;
 
-          scope.library.shareTwitterUrl = scope.library.shareUrl +
+          scope.library.shareTwitterUrl = encodeURIComponent(scope.library.shareUrl +
             '?utm_medium=vf_twitter&utm_source=library_invite&utm_content=lid_' + scope.library.id +
-            '&kcid=na-vf_twitter-library_invite-lid_' + scope.library.id;
+            '&kcid=na-vf_twitter-library_invite-lid_' + scope.library.id);
           scope.library.shareText = 'Discover this amazing @Kifi library about ' + scope.library.name + '!';
 
           // Figure out whether this library is a library that the user has been invited to.
@@ -231,8 +237,11 @@ angular.module('kifi')
             platformService.goToAppOrStore($location.absUrl());
             return;
           } else if ($rootScope.userLoggedIn === false) {
+            libraryService.trackEvent('visitor_clicked_page', library, { action: 'followButton' });
             return signupService.register({libraryId: scope.library.id});
           }
+
+          libraryService.trackEvent('user_followed_library', library, { action: 'followed' });
 
           libraryService.joinLibrary(library.id).then(function (result) {
             if (result === 'already_joined') {
@@ -257,6 +266,7 @@ angular.module('kifi')
         };
 
         scope.unfollowLibrary = function (library) {
+          libraryService.trackEvent('user_followed_library', library, { action: 'unfollow' });
           libraryService.leaveLibrary(library.id);
         };
 
@@ -268,7 +278,7 @@ angular.module('kifi')
               library: scope.library,
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
-                  libraryService.getLibraryByUserSlug(scope.username, data.library.slug, true).then(function (library) {
+                  libraryService.getLibraryByUserSlug(scope.username, data.library.slug, authToken, true).then(function (library) {
                     _.assign(scope.library, library);
                     augmentData();
                     adjustFollowerPicsSize();
