@@ -147,17 +147,14 @@ class InviteController @Inject() (db: Database,
                 case (_, Some(emailAddress)) =>
                   abookServiceClient.getContactNameByEmail(senderUserId, emailAddress).map(_ orElse Some(""))
                 case _ =>
+                  log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
                   Future.successful(None)
               }
-              nameOpt.map {
-                case Some(name) =>
-                  val inviter = inviterUserOpt.get.firstName
-                  log.info(s"invitation $id from ${inviterUserOpt.get} went through!")
-                  Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id))
-                case None =>
-                  log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
-                  Redirect(com.keepit.controllers.website.routes.HomeController.home)
-              }
+              val openGraphTags = Map(
+                KifiSiteRouter.substituteMetaProperty("og:title", inviteCommander.fbTitle(inviterUserOpt.map(_.firstName))),
+                KifiSiteRouter.substituteMetaProperty("og:description", inviteCommander.fbDescription)
+              )
+              resolve(MarketingSiteRouter.marketingSite(substitutions = openGraphTags).withCookies(Cookie("inv", invite.externalId.id)))
             }
           case _ =>
             resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home))
