@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('HeaderCtrl', [
   '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService',
-    '$location', 'util', 'keyIndices', 'modalService', 'libraryService', '$timeout', 'searchActionService', '$routeParams',
+    '$location', 'util', 'keyIndices', 'modalService', '$timeout', 'searchActionService', '$routeParams',
   function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService,
-    $location, util, keyIndices, modalService, libraryService, $timeout, searchActionService, $routeParams) {
+    $location, util, keyIndices, modalService, $timeout, searchActionService, $routeParams) {
 
     $scope.toggleMenu = function () {
       $rootElement.find('html').toggleClass('kf-sidebar-active');

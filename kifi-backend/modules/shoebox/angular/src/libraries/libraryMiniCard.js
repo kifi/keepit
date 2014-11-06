@@ -14,8 +14,10 @@ angular.module('kifi')
       },
       templateUrl: 'libraries/libraryMiniCard.tpl.html',
       link: function (scope/*, element, attrs*/) {
-
         scope.library = _.cloneDeep(scope.refLibrary());
+        scope.showMiniCard = true;
+
+
         //
         // Internal helper methods.
         //
@@ -35,12 +37,20 @@ angular.module('kifi')
                 $location.path(scope.library.url);
               }
             }
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
           });
         }
 
         function unfollowLibrary() {
           libraryService.leaveLibrary(scope.library.id).then(function () {
             $location.path(scope.library.url);
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
           });
         }
 
@@ -86,6 +96,8 @@ angular.module('kifi')
             scope.library.owner.image = friendService.getPictureUrlForUser(scope.library.owner);
             scope.library.access = data.membership;
             scope.library.isMine = scope.library.access === 'owner';
+          })['catch'](function () {
+            scope.showMiniCard = false;
           });
         }
       }

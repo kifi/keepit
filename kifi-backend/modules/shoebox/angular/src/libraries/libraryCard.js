@@ -189,8 +189,13 @@ angular.module('kifi')
 
         scope.ignoreInvitation = function (library) {
           if (library.invite) {
-            library.invite.actedOn = true;
-            libraryService.declineToJoinLibrary(library.id);
+            libraryService.declineToJoinLibrary(library.id).then(function () {
+              library.invite.actedOn = true;
+            })['catch'](function () {
+              modalService.open({
+                template: 'common/modal/genericErrorModal.tpl.html'
+              });
+            });
           }
         };
 
@@ -242,10 +247,6 @@ angular.module('kifi')
         };
 
         scope.followLibrary = function (library) {
-          if (library.invite) {
-            library.invite.actedOn = true;
-          }
-
           if (platformService.isSupportedMobilePlatform()) {
             platformService.goToAppOrStore($location.absUrl() + '?follow=true');
             return;
@@ -257,6 +258,10 @@ angular.module('kifi')
           libraryService.trackEvent('user_clicked_page', library, { action: 'followed' });
 
           libraryService.joinLibrary(library.id).then(function (result) {
+            if (library.invite) {
+              library.invite.actedOn = true;
+            }
+
             if (result === 'already_joined') {
               scope.genericErrorMessage = 'You are already following this library!';
               modalService.open({
@@ -275,12 +280,20 @@ angular.module('kifi')
 
             augmentData();
             adjustFollowerPicsSize();
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
           });
         };
 
         scope.unfollowLibrary = function (library) {
           libraryService.trackEvent('user_clicked_page', library, { action: 'unfollow' });
-          libraryService.leaveLibrary(library.id);
+          libraryService.leaveLibrary(library.id)['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
+          });
         };
 
         scope.manageLibrary = function () {
@@ -295,11 +308,19 @@ angular.module('kifi')
                     _.assign(scope.library, library);
                     augmentData();
                     adjustFollowerPicsSize();
-                  });
 
-                  if (data.library.slug !== scope.librarySlug) {
-                    $location.path('/' + scope.username + '/' + data.library.slug);
-                  }
+                    if (data.library.slug !== scope.librarySlug) {
+                      $location.path('/' + scope.username + '/' + data.library.slug);
+                    }
+                  })['catch'](function () {
+                    modalService.open({
+                      template: 'common/modal/genericErrorModal.tpl.html'
+                    });
+                  });
+                })['catch'](function () {
+                  modalService.open({
+                    template: 'common/modal/genericErrorModal.tpl.html'
+                  });
                 });
               }
             }
