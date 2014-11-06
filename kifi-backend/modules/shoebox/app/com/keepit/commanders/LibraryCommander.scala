@@ -66,8 +66,8 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
-  def libraryMetaTags(library: Library): PublicPageMetaTags = {
-    db.readOnlyMaster { implicit s =>
+  def libraryMetaTags(library: Library): Future[PublicPageMetaTags] = {
+    db.readOnlyMasterAsync { implicit s =>
       val owner = userRepo.get(library.ownerId)
       val urlPathOnly = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
       if (library.visibility != PUBLISHED) {

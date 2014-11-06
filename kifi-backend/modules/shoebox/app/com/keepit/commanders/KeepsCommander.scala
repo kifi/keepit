@@ -249,23 +249,28 @@ class KeepsCommander @Inject() (
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
     val libraryMemberships = new mutable.HashMap[Id[Library], Option[LibraryMembership]]
     db.readOnlyMaster { implicit session =>
-      keepRepo.getAllByUserAndUriIds(userId, uriIds).groupBy(_.uriId).map {
-        case (uriId, keeps) =>
-          val userKeeps = keeps.map { keep =>
-            val mine = userId == keep.userId
-            val libraryId = keep.libraryId.get
-            val libraryOpt = libraryMemberships.getOrElseUpdate(libraryId, libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId))
-            val removable = libraryOpt.exists(_.canWrite)
-            BasicKeep(
-              id = keep.externalId,
-              mine = mine,
-              removable = removable,
-              visibility = keep.visibility,
-              libraryId = Library.publicId(libraryId)
-            )
-          }.toSet
-          uriId -> userKeeps
-      }
+      val grouped = keepRepo.getAllByUserAndUriIds(userId, uriIds).groupBy(_.uriId)
+      uriIds.map { uriId =>
+        grouped.get(uriId) match {
+          case Some(keeps) =>
+            val userKeeps = keeps.map { keep =>
+              val mine = userId == keep.userId
+              val libraryId = keep.libraryId.get
+              val libraryOpt = libraryMemberships.getOrElseUpdate(libraryId, libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId))
+              val removable = libraryOpt.exists(_.canWrite)
+              BasicKeep(
+                id = keep.externalId,
+                mine = mine,
+                removable = removable,
+                visibility = keep.visibility,
+                libraryId = Library.publicId(libraryId)
+              )
+            }.toSet
+            uriId -> userKeeps
+          case _ =>
+            uriId -> Set.empty[BasicKeep]
+        }
+      }.toMap
     }
   }
 
