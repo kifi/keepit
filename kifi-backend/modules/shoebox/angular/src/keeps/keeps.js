@@ -235,6 +235,7 @@ angular.module('kifi')
             libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
             scope.selection.unselectAll();
 
+            scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
             if (scope.availableKeeps.length < 10) {
               scope.scrollNext()(scope.availableKeeps.length);
             }
@@ -333,15 +334,6 @@ angular.module('kifi')
         }, function(enabled) {
           if (!enabled) {
             scope.selection.unselectAll();
-          }
-        });
-
-        scope.$watch('keepsLoading', function (newVal) {
-          // Size the keeps dynamically once the keeps are loaded and visible.
-          if (!newVal) {
-            scope.$evalAsync(function () {
-              sizeKeeps();
-            });
           }
         });
 
