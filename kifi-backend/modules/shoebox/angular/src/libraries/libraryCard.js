@@ -123,9 +123,9 @@ angular.module('kifi')
             '?utm_medium=vf_facebook&utm_source=library_invite&utm_content=lid_' + scope.library.id +
             '&kcid=na-vf_facebook-library_invite-lid_' + scope.library.id;
 
-          scope.library.shareTwitterUrl = scope.library.shareUrl +
+          scope.library.shareTwitterUrl = encodeURIComponent(scope.library.shareUrl +
             '?utm_medium=vf_twitter&utm_source=library_invite&utm_content=lid_' + scope.library.id +
-            '&kcid=na-vf_twitter-library_invite-lid_' + scope.library.id;
+            '&kcid=na-vf_twitter-library_invite-lid_' + scope.library.id);
           scope.library.shareText = 'Discover this amazing @Kifi library about ' + scope.library.name + '!';
 
           // Figure out whether this library is a library that the user has been invited to.
