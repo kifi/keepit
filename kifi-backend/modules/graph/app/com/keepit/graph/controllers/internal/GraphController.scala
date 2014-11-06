@@ -16,7 +16,7 @@ import com.keepit.graph.model.{ EdgeKind, VertexKind, GraphKinds }
 import com.keepit.graph.model.VertexKind._
 import scala.collection.mutable
 import com.keepit.common.db.Id
-import com.keepit.model.{ NormalizedURI, SocialUserInfo, User }
+import com.keepit.model.{ Library, NormalizedURI, SocialUserInfo, User }
 import com.keepit.common.time._
 import com.keepit.graph.utils.GraphPrimitives
 import scala.concurrent.Future
@@ -88,6 +88,7 @@ class GraphController @Inject() (
     val users = mutable.Map[Id[User], Int]()
     val socialUsers = mutable.Map[Id[SocialUserInfo], Int]()
     val uris = mutable.Map[Id[NormalizedURI], Int]()
+    val libraries = mutable.Map[Id[Library], Int]()
     val extra = mutable.Map[String, Int]()
 
     val collisions = journal.getVisited()
@@ -99,9 +100,10 @@ class GraphController @Inject() (
       case (vertexId, count) if vertexId.kind == UriReader => uris += VertexDataId.toNormalizedUriId(vertexId.asId[UriReader]) -> count
       case (vertexId, count) if vertexId.kind == FacebookAccountReader => socialUsers += VertexDataId.fromFacebookAccountIdtoSocialUserId(vertexId.asId[FacebookAccountReader]) -> count
       case (vertexId, count) if vertexId.kind == LinkedInAccountReader => socialUsers += VertexDataId.fromLinkedInAccountIdtoSocialUserId(vertexId.asId[LinkedInAccountReader]) -> count
+      case (vertexId, count) if vertexId.kind == LibraryReader => libraries += VertexDataId.toLibraryId(vertexId.asId[LibraryReader]) -> count
       case (vertexId, count) => extra += vertexId.toString() -> count
     }
-    Collisions(users.toMap, socialUsers.toMap, uris.toMap, extra.toMap)
+    Collisions(users.toMap, socialUsers.toMap, libraries.toMap, uris.toMap, extra.toMap)
   }
 
   private def getForbiddenCollisions(startingVertexId: VertexId, avoidTrivialCollisions: Boolean): Set[VertexId] = {
