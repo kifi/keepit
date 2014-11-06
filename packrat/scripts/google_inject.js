@@ -39,7 +39,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   var refinements = -1;   // how many times the user has refined the search on the same page. No searches at all yet.
   var showMoreOnArrival;
   var clicks = {kifi: [], google: []};  // clicked result link hrefs
-  var tQuery, tGoogleResultsShown, tKifiResultsReceived, tKifiResultsShown;  // for timing stats
+  var time = {google: {shown: 0}, kifi: {queried: 0, received: 0, shown: 0}};  // for timing stats
 
   var $q = $(), $qf = $q, $qp = $q, keyTimer;
   $(function() {
@@ -59,7 +59,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   checkSearchType();
   search(true, null, true);  // Google can be slow to initialize the input field, or it may be missing
   if (document.getElementById('ires')) {
-    tGoogleResultsShown = tQuery;
+    time.google.shown = time.kifi.queried;
   }
 
   var isVertical;
@@ -86,9 +86,9 @@ if (searchUrlRe.test(document.URL)) !function () {
         "maxResults": response.prefs.maxResults,
         "kifiResults": response.hits.length,
         "kifiExpanded": response.expanded || false,
-        "kifiTime": tKifiResultsReceived - tQuery,
-        "kifiShownTime": tKifiResultsShown - tQuery,
-        "thirdPartyShownTime": tGoogleResultsShown - tQuery,
+        "kifiTime": Math.max(-1, time.kifi.received - time.kifi.queried),
+        "kifiShownTime": Math.max(-1, time.kifi.shown - time.kifi.queried),
+        "thirdPartyShownTime": Math.max(-1, time.google.shown - time.kifi.queried),
         "kifiResultsClicked": clicks.kifi.length,
         "thirdPartyResultsClicked": clicks.google.length,
         "refinements": refinements,
@@ -135,9 +135,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     $arrow.removeAttr('href');
     $res.find('#kifi-res-list,.kifi-res-end').css('opacity', .2);
 
-    tKifiResultsReceived = null;
-    tKifiResultsShown = null;
-    var t1 = tQuery = Date.now();
+    var t1 = time.kifi.queried = Date.now();
     refinements++;
     api.port.emit("get_keeps", {query: q, filter: newFilter, first: isFirst, whence: 'i'}, function results(resp) {
       if (q !== query || !areSameFilter(newFilter, filter)) {
@@ -149,7 +147,8 @@ if (searchUrlRe.test(document.URL)) !function () {
         return;
       }
 
-      var now = tKifiResultsReceived = Date.now();
+      var now = time.kifi.received = Date.now();
+
       log('[results] took', now - t1, 'ms');
       if (!newFilter) {
         clicks.kifi.length = clicks.google.length = 0;
@@ -164,9 +163,9 @@ if (searchUrlRe.test(document.URL)) !function () {
       // }
 
       var inDoc = document.contains($res[0]);
-      var showAny = Boolean(resp.cutPoint && (resp.prefs.maxResults && !(inDoc && tGoogleResultsShown >= tQuery) || resp.context === 'guide') || newFilter);
+      var showAny = Boolean(resp.cutPoint && (resp.prefs.maxResults && !(inDoc && time.google.shown >= time.kifi.queried) || resp.context === 'guide') || newFilter);
       var showPreview = Boolean(showAny && !newFilter);
-      log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'cutPoint:', resp.cutPoint, 'inDoc:', inDoc);
+      log('[results] cutPoint:', resp.cutPoint, 'inDoc:', inDoc);
       unpack(resp);
       if (resp.hits.length) {
         if (resp.cutPoint) {
@@ -199,7 +198,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       $bar[0].className = 'kifi-res-bar' + (showPreview ? ' kifi-preview' : showAny ? '' : ' kifi-collapsed');
       $arrow[0].href = 'javascript:';
       if (inDoc) {
-        tKifiResultsShown = Date.now();
+        time.kifi.shown = Date.now();
         if (showAny) {
           $res.find('.kifi-res-why').each(makeWhyFit);
         }
@@ -258,9 +257,12 @@ if (searchUrlRe.test(document.URL)) !function () {
     if (isVertical) return;
     if (attachKifiRes() > 0) {
       log('[withMutations] Google results inserted');
-      tGoogleResultsShown = Date.now();
-      if (!(tKifiResultsShown >= tKifiResultsReceived)) {
-        tKifiResultsShown = tGoogleResultsShown;
+      var now = Date.now();
+      if (time.google.shown < time.kifi.queried) {  // updating if we haven't searched would make us look artificially good
+        time.google.shown = now;
+      }
+      if (time.kifi.shown < time.kifi.received) {  // updating if we haven't received anything new would make us look artificially bad
+        time.kifi.shown = now;
       }
       if (document.readyState !== 'loading') {  // avoid searching for input value if not yet updated to URL hash
         $(setTimeout.bind(null, search));  // prediction may have changed
@@ -326,9 +328,9 @@ if (searchUrlRe.test(document.URL)) !function () {
           "maxResults": response.prefs.maxResults,
           "kifiResults": response.hits.length,
           "kifiExpanded": response.expanded || false,
-          "kifiTime": tKifiResultsReceived - tQuery,
-          "kifiShownTime": tKifiResultsShown - tQuery,
-          "thirdPartyShownTime": tGoogleResultsShown - tQuery,
+          "kifiTime": Math.max(-1, time.kifi.received - time.kifi.queried),
+          "kifiShownTime": Math.max(-1, time.kifi.shown - time.kifi.queried),
+          "thirdPartyShownTime": Math.max(-1, time.google.shown - time.kifi.queried),
           "kifiResultsClicked": clicks.kifi.length,
           "thirdPartyResultsClicked": clicks.google.length,
           "resultPosition": resIdx,
