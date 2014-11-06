@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('libraryService', [
-  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService',
-  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService) {
+  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService', '$analytics',
+  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService, $analytics) {
     var librarySummaries = [],
         invitedSummaries = [];
 
@@ -331,6 +331,30 @@ angular.module('kifi')
         if (recentLibraries.length > 3) {
           recentLibraries.shift();
         }
+      },
+
+      getCommonTrackingAttributes: function (library) {
+        var defaultAttributes = {
+          libraryId: library.id,
+          libraryOwnerUserId: library.owner.id,
+          libraryOwnerUserName: library.owner.username,
+          followerCount: library.numFollowers,
+          keepCount: library.numKeeps,
+          privacySetting: library.visibility,
+          source: 'site'
+        };
+
+        if (library.visibility === 'published') {
+          defaultAttributes.libraryName = library.name;
+        }
+
+        return defaultAttributes;
+      },
+
+      trackEvent: function (eventName, library, attributes) {
+        var defaultAttributes = api.getCommonTrackingAttributes(library);
+        attributes = _.extend(defaultAttributes, attributes || {});
+        $analytics.eventTrack(eventName, attributes);
       }
     };
 

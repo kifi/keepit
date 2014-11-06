@@ -94,18 +94,7 @@ angular.module('kifi')
       $rootScope.$broadcast('currentLibraryChanged', $scope.library);
       if (id) {
         var library = $scope.library;
-        var trackLibraryAttributes = {
-          libraryId: library.id,
-          libraryOwnerUserId: library.owner.id,
-          libraryOwnerUserName: library.owner.username,
-          followerCount: library.numFollowers,
-          keepCount: library.numKeeps,
-          privacySetting: library.visibility
-        };
-
-        if (library.visibility === 'published') {
-          trackLibraryAttributes.libraryName = library.name;
-        }
+        var trackLibraryAttributes = libraryService.getCommonTrackingAttributes(library);
 
         if (profileService.me && profileService.me.id) {
           trackLibraryAttributes.owner = $scope.userIsOwner() ? 'Yes' : 'No';
@@ -149,6 +138,16 @@ angular.module('kifi')
       args.callback($scope.library);
     });
     $scope.$on('$destroy', deregisterCurrentLibrary);
+
+    $scope.libaryKeepClicked = function (keep, event) {
+      var target = event.target;
+      var eventAction = target.getAttribute('click-action');
+      if ($scope.$root.userLoggedIn) {
+        libraryService.trackEvent('user_clicked_page', $scope.library, { action: eventAction });
+      } else {
+        libraryService.trackEvent('visitor_clicked_page', $scope.library, { action: eventAction });
+      }
+    };
 
     var setTitle = function (lib) {
       $window.document.title = lib.name + ' by ' + lib.owner.firstName + ' ' + lib.owner.lastName + ' • Kifi' ;

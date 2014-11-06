@@ -231,8 +231,11 @@ angular.module('kifi')
             platformService.goToAppOrStore($location.absUrl());
             return;
           } else if ($rootScope.userLoggedIn === false) {
+            libraryService.trackEvent('visitor_clicked_page', library, { action: 'followButton' });
             return signupService.register({libraryId: scope.library.id});
           }
+
+          libraryService.trackEvent('user_followed_library', library, { action: 'followed' });
 
           libraryService.joinLibrary(library.id).then(function (result) {
             if (result === 'already_joined') {
@@ -257,6 +260,7 @@ angular.module('kifi')
         };
 
         scope.unfollowLibrary = function (library) {
+          libraryService.trackEvent('user_followed_library', library, { action: 'unfollow' });
           libraryService.leaveLibrary(library.id);
         };
 
