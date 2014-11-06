@@ -85,8 +85,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfBasicModalContent', ['$window',
-  function ($window) {
+.directive('kfBasicModalContent', [
+  function () {
   return {
     restrict: 'A',
     replace: true,
@@ -110,34 +110,16 @@ angular.module('kifi')
       // scope.singleAction will be set to true.
       scope.singleAction = attrs.singleAction || true;
 
-      var wrap = element.find('.dialog-body-wrap');
-      var verticalScrollbarCss = {'max-height': $window.innerHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'};
-
-      var resizeWindow = _.debounce(function () {
-        verticalScrollbarCss['max-height'] = $window.innerHeight - 160 + 'px';
-        wrap.css(verticalScrollbarCss);
-      }, 100);
-      $window.addEventListener('resize', resizeWindow);
-
       scope.closeAndCancel = function () {
-        $window.removeEventListener('resize', resizeWindow);
         kfModalCtrl.close(scope.cancel);
       };
       scope.closeAndAction = function () {
-        $window.removeEventListener('resize', resizeWindow);
         kfModalCtrl.close(scope.action);
       };
 
       scope.close = function () {
-        $window.removeEventListener('resize', resizeWindow);
         kfModalCtrl.close();
       };
-
-      scope.$on('$destroy', function () {
-        $window.removeEventListener('resize', resizeWindow);
-      });
-
-      wrap.css(verticalScrollbarCss);
     }
   };
 }]);
