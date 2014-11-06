@@ -3,7 +3,9 @@ package com.keepit.controllers.website
 import java.io.StringWriter
 
 import com.keepit.common.concurrent.ExecutionContext.immediate
+import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.logging.Logging
+import com.keepit.common.core._
 import controllers.AssetsBuilder
 import org.apache.commons.io.IOUtils
 import play.api.Play.current
@@ -47,15 +49,16 @@ object AngularDistAssets extends AssetsBuilder with Controller with Logging {
   }
 
   @inline
-  private def augmentPage(headerLoad: String, postload: => Seq[Future[String]]) = {
+  private def augmentPage(headerLoad: Future[String], postload: => Seq[Future[String]]) = {
     val (idx1, idx2) = maybeCachedIndex
-    val compositPage = idx1 andThen Enumerator(headerLoad) andThen idx2
+    val headers = headerLoad.map { f => Enumerator(f) }
+    val compositPage = idx1 andThen Enumerator.flatten(headers) andThen idx2
     compositPage.andThen(reactiveEnumerator(postload)).andThen(Enumerator.eof)
   }
 
-  def angularApp(headerLoad: Option[String] = None, postload: => Seq[Future[String]] = Seq()) = {
+  def angularApp(headerLoad: Option[Future[String]] = None, postload: => Seq[Future[String]] = Seq()) = {
     val header = headerLoad match {
-      case None => "<title>Kifi</title>"
+      case None => Future.successful("<title>Kifi</title>")
       case Some(h) => h
     }
     Ok.chunked(augmentPage(header, postload)).as(HTML)

@@ -3,19 +3,16 @@ package com.keepit.controllers.website
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.commanders.{ UserCommander, LibraryCommander }
-import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
+import com.keepit.common.core._
 import com.keepit.common.controller._
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.KifiMobileAppLinkFlag
-import com.keepit.common.net.UserAgent
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
 import play.api.Play
-import play.api.mvc.{ Result, Request }
+import play.api.mvc.Result
 import play.api.libs.concurrent.Execution.Implicits._
 import ImplicitHelper._
 import java.net.{ URLEncoder, URLDecoder }
@@ -24,7 +21,7 @@ import scala.concurrent.Future
 
 sealed trait Routeable
 private case class MovedPermanentlyRoute(url: String) extends Routeable
-private case class Angular(headerload: Option[String], postload: Seq[MaybeUserRequest[_] => Future[String]] = Seq.empty) extends Routeable
+private case class Angular(headerload: Option[Future[String]], postload: Seq[MaybeUserRequest[_] => Future[String]] = Seq.empty) extends Routeable
 private case class SeeOtherRoute(url: String) extends Routeable
 private case class RedirectToLogin(originalUrl: String) extends Routeable
 private case object Error404 extends Routeable
@@ -166,14 +163,14 @@ class AngularRouter @Inject() (
     }
   }
 
-  private def libMetadata(library: Library): String = try {
-    libraryMetadataCache.getOrElse(LibraryMetadataKey(library.id.get)) {
-      libraryCommander.libraryMetaTags(library).formatOpenGraph
+  private def libMetadata(library: Library): Future[String] = try {
+    libraryMetadataCache.getOrElseFuture(LibraryMetadataKey(library.id.get)) {
+      libraryCommander.libraryMetaTags(library).imap(_.formatOpenGraph)
     }
   } catch {
     case e: Throwable =>
       airbrake.notify(s"on getting library metadata for $library", e)
-      ""
+      Future.successful("")
   }
 
   // Some means to serve Angular. The Seq is possible injected data to include
