@@ -41,8 +41,8 @@ angular.module('kifi')
 ])
 
 .controller('SignupCtrl', [
-  '$scope', '$FB', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope',
-  function ($scope, $FB, modalService, registrationService, $window, installService, $q, $log, $rootScope) {
+  '$scope', '$FB', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope', '$timeout',
+  function ($scope, $FB, modalService, registrationService, $window, installService, $q, $log, $rootScope, $timeout) {
 
     // Shared data across several modals
 
@@ -94,6 +94,7 @@ angular.module('kifi')
       if (!form.$valid) {
         return false;
       }
+      $rootScope.$broadcast('signupLibraryStarted', 'clickSignUpButton');
       modalService.close();
       $scope.userData.method = 'email';
       registerFinalizeModal();
@@ -103,6 +104,11 @@ angular.module('kifi')
       if (!$FB.failedToLoad) {
         $FB.init();
       }
+    };
+
+    $scope.fbAuthFromLibrary = function () {
+      $rootScope.$broadcast('signupLibraryStarted', 'clickAuthFacebook');
+      return $scope.fbAuth();
     };
 
     $scope.fbAuth = function () {

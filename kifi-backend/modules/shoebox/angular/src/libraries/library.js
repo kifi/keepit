@@ -139,6 +139,11 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregisterCurrentLibrary);
 
+    $scope.$on('signupLibraryStarted', function (e, action) {
+      var attrs = { type: 'signupLibrary', action: action };
+      libraryService.trackEvent('visitor_clicked_page', $scope.library, attrs);
+    });
+
     $scope.libaryKeepClicked = function (keep, event) {
       var target = event.target;
       var eventAction = target.getAttribute('click-action');
