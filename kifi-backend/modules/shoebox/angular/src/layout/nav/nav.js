@@ -100,9 +100,9 @@ angular.module('kifi')
 
         var deregisterLibraryVisited = $rootScope.$on('lastViewedLib', function (e, lib) {
           if (lib.name) {
-            var ind = _.findIndex(scope.userLibsToShow, function(l) { return l.name === lib.name; });
-            if (scope.userLibsToShow[ind]) {
-              scope.userLibsToShow[ind].lastViewed = Date.now();
+            var idx = _.findIndex(scope.userLibsToShow, { 'name' : lib.name });
+            if (scope.userLibsToShow[idx]) {
+              scope.userLibsToShow[idx].lastViewed = Date.now();
             }
             if (scope.sortingMenu.option === 'last_viewed') {
               updateNavLibs();
