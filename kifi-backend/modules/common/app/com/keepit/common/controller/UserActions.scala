@@ -126,11 +126,11 @@ trait UserActionsHelper extends UserActionsRequirements with Logging {
     }
 
   def getUserIdOptWithFallback(implicit request: Request[_]): Future[Option[Id[User]]] = {
-    val kifiIdOpt = getUserIdFromSession recover {
+    val kifiIdOpt = getUserIdFromSession.recover {
       case t: Throwable =>
-        airbrake.notify(s"[getUserIdOpt] Caught exception $t while retrieving userId from request; cause=${t.getCause}", t)
+        airbrake.notify(s"[getUserIdOpt] Caught exception $t while retrieving userId from request; cause=${t.getCause}. Path: ${request.path}, headers: ${request.headers.toMap}", t)
         None
-    } get
+    }.get
 
     kifiIdOpt match {
       case Some(userId) =>
@@ -297,7 +297,7 @@ object KifiSession {
   val FORTYTWO_USER_ID = "fortytwo_user_id"
 
   implicit class HttpSessionWrapper(val underlying: Session) extends AnyVal {
-    def setUserId(userId: Id[User]): Session = underlying + (FORTYTWO_USER_ID -> userId.toString)
+    def setUserId(userId: Id[User]): Session = underlying + (FORTYTWO_USER_ID -> userId.id.toString)
     def getUserId(): Option[Id[User]] = underlying.get(FORTYTWO_USER_ID).map(id => Id[User](id.toLong))
     def deleteUserId(): Session = underlying - FORTYTWO_USER_ID
   }
