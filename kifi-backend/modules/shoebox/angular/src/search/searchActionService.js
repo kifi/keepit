@@ -205,9 +205,6 @@ angular.module('kifi')
           keepers: keep.keepers.map(function (elem) {
             return elem.id;
           }),
-          libraries: keep.libraries.map(function (elem) {
-            return elem.id;
-          }),
           tags: keep.tags,
           title: keep.summary.title,
           titleMatches: 0, //This broke with new search api (the information is no longer available). Needs to be investigated if we still need it.
