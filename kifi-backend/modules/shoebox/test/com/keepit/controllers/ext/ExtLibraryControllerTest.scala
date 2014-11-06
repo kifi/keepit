@@ -11,7 +11,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model.{ Collection, FakeSliderHistoryTrackerModule, Hashtag, Keep, KeepSource, KeepToCollection }
-import com.keepit.model.{ Library, LibraryAccess, LibraryMembership, LibraryMembershipStates, LibrarySlug, LibraryStates, LibraryVisibility }
+import com.keepit.model.{ Library, LibraryAccess, LibraryMembership, LibraryMembershipStates, LibrarySlug, LibraryStates, LibraryVisibility, LibraryInvite }
 import com.keepit.model.{ NormalizedURI, URLFactory, UrlHash, User, Username }
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
