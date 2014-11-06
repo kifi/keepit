@@ -19,7 +19,7 @@ angular.module('kifi')
       var safeUrl;
       if (isSupportedMobilePlatform()) {
         if (isIPhone()) {
-          safeUrl = url.replace(/https?:/, '');
+          safeUrl = 'kifi:' + url.replace(/https?:/, '');
 
           if (url.indexOf('branch', url.length - 'branch'.length) !== -1) { // url ends with 'branch'
             createBranchLink({
@@ -29,7 +29,7 @@ angular.module('kifi')
             });
           } else {
             $timeout(function () {
-              $window.location = 'kifi:' + safeUrl;
+              $window.location = safeUrl;
             }, 200);
             $timeout(function () {
               $window.location = 'itms://itunes.apple.com/us/app/kifi/id740232575';
