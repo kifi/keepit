@@ -98,6 +98,19 @@ angular.module('kifi')
         });
         scope.$on('$destroy', deregisterChangedLibrary);
 
+        var deregisterLibraryVisited = $rootScope.$on('lastViewedLib', function (e, lib) {
+          if (lib.name) {
+            var ind = _.findIndex(scope.userLibsToShow, function(l) { return l.name === lib.name; });
+            if (scope.userLibsToShow[ind]) {
+              scope.userLibsToShow[ind].lastViewed = Date.now();
+            }
+            if (scope.sortingMenu.option === 'last_viewed') {
+              updateNavLibs();
+            }
+          }
+        });
+        scope.$on('$destroy', deregisterLibraryVisited);
+
         scope.$watch(function () {
           return friendService.requests.length;
         }, function (value) {
