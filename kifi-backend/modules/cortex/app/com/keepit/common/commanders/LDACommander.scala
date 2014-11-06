@@ -25,13 +25,13 @@ class LDACommander @Inject() (
     libTopicRepo: LibraryLDATopicRepo,
     userStatUpdatePlugin: LDAUserStatDbUpdatePlugin) extends Logging {
 
-  val numOfTopics: Int = infoCommander.getLDADimension()
+  def numOfTopics(implicit version: ModelVersion[DenseLDA]): Int = infoCommander.getLDADimension
 
-  def activeTopics = infoCommander.activeTopics
+  val activeTopics = infoCommander.activeTopics
 
-  private def projectToActive(arr: Array[Float]): Array[Float] = {
+  private def projectToActive(arr: Array[Float])(implicit version: ModelVersion[DenseLDA]): Array[Float] = {
     assume(arr.size == numOfTopics)
-    activeTopics.map { i => arr(i) }.toArray
+    activeTopics(version).map { i => arr(i) }.toArray
   }
 
   def userTopicMean(userId: Id[User])(implicit version: ModelVersion[DenseLDA]): Option[UserLDAInterests] = {
@@ -66,7 +66,7 @@ class LDACommander @Inject() (
 
     def isInJunkTopic(uriTopicOpt: Option[URILDATopic], junks: Set[Int]): Boolean = uriTopicOpt.exists(x => x.firstTopic.exists(t => junks.contains(t.index)))
 
-    val junkTopics = infoCommander.inactiveTopics
+    val junkTopics = infoCommander.inactiveTopics(version)
     db.readOnlyReplica { implicit s =>
       val userInterestOpt = userTopicRepo.getByUser(userId, version)
       val userInterestStatOpt = userLDAStatRepo.getActiveByUser(userId, version)
@@ -92,7 +92,7 @@ class LDACommander @Inject() (
     libraryInducedUserURIInterestScore(libFeats, uriFeatOpt)
   }
 
-  private def libraryInducedUserURIInterestScore(libFeats: Seq[LibraryTopicMean], uriLDAOpt: Option[URILDATopic]): Option[LDAUserURIInterestScore] = {
+  private def libraryInducedUserURIInterestScore(libFeats: Seq[LibraryTopicMean], uriLDAOpt: Option[URILDATopic])(implicit version: ModelVersion[DenseLDA]): Option[LDAUserURIInterestScore] = {
     val uriFeatOpt = uriLDAOpt.flatMap(_.feature)
     val numWords = uriLDAOpt.map { _.numOfWords }.getOrElse(0)
     val numTopicChanges = uriLDAOpt.map { _.timesFirstTopicChanged }.getOrElse(0)
@@ -106,7 +106,7 @@ class LDACommander @Inject() (
     } else None
   }
 
-  private def computeGaussianInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAStats]): LDAUserURIInterestScores = {
+  private def computeGaussianInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAStats])(implicit version: ModelVersion[DenseLDA]): LDAUserURIInterestScores = {
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>
         val globalScore = computeGaussianInterestScore(userFeat.numOfEvidence, Some(userFeat), uriFeat, isRecent = false)
@@ -115,7 +115,7 @@ class LDACommander @Inject() (
     }
   }
 
-  private def computeGaussianInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserLDAStats], uriFeat: URILDATopic, isRecent: Boolean): Option[LDAUserURIInterestScore] = {
+  private def computeGaussianInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserLDAStats], uriFeat: URILDATopic, isRecent: Boolean)(implicit version: ModelVersion[DenseLDA]): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeat.feature) match {
       case (Some(userFeat), Some(uriFeatVec)) =>
         val userMean = projectToActive(userFeat.userTopicMean.get.mean)
