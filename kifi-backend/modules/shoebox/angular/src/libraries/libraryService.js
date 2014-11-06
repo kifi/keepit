@@ -151,7 +151,7 @@ angular.module('kifi')
         });
       },
 
-      getLibraryNameError: function (name) {
+      getLibraryNameError: function (name, isExistingLibrary) {
         function hasInvalidCharacters (myString, invalidChars) {
           return _.some(invalidChars, function (invalidChar) {
             return myString.indexOf(invalidChar) !== -1;
@@ -166,7 +166,7 @@ angular.module('kifi')
           return 'Please try a shorter name';
         } else if (hasInvalidCharacters(name, ['/', '\\', '"', '\''])) {
           return 'Please no slashes or quotes in your library name';
-        } else if (duplicateName(name)) {
+        } else if (!isExistingLibrary && duplicateName(name)) {
           return 'You already have a library with this name';
         }
 

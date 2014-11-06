@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
-  'modalService', 'profileService', 'util', '$window',
+  'modalService', 'profileService', 'util', '$window', '$analytics',
   function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
-            modalService, profileService, util, $window) {
+            modalService, profileService, util, $window, $analytics) {
     //
     // Internal data.
     //
@@ -89,6 +89,33 @@ angular.module('kifi')
     //
     // Watches and listeners.
     //
+
+    $scope.$watch('library.id', function (id) {
+      $rootScope.$broadcast('currentLibraryChanged', $scope.library);
+      if (id) {
+        var library = $scope.library;
+        var trackLibraryAttributes = {
+          libraryId: library.id,
+          libraryOwnerUserId: library.owner.id,
+          libraryOwnerUserName: library.owner.username,
+          followerCount: library.numFollowers,
+          keepCount: library.numKeeps,
+          privacySetting: library.visibility
+        };
+
+        if (library.visibility === 'published') {
+          trackLibraryAttributes.libraryName = library.name;
+        }
+
+        if (profileService.me && profileService.me.id) {
+          trackLibraryAttributes.owner = $scope.userIsOwner() ? 'Yes' : 'No';
+        }
+
+        var url = $analytics.settings.pageTracking.basePath + $location.url();
+        $analytics.pageTrack(url, trackLibraryAttributes);
+      }
+    });
+
     var deregisterKeepAdded = $rootScope.$on('keepAdded', function (e, libSlug, keeps, library) {
       keeps.forEach(function (keep) {
         // checks if the keep was added to the secret library from main or
@@ -177,6 +204,9 @@ angular.module('kifi')
         $scope.page = 'library';
         setTitle(library);
         $rootScope.$emit('libraryUrl', $scope.library);
+        if ($scope.library.kind === 'user_created' && $scope.library.access !== 'none') {
+          $rootScope.$emit('lastViewedLib', $scope.library);
+        }
       }, function onError(resp) {
         if (resp.data && resp.data.error) {
           $scope.loading = false;
