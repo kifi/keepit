@@ -74,7 +74,7 @@ class ExtSearchController @Inject() (
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
     val plainResultFuture = searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt)
-    val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator("[" + toKifiSearchResultV2(r).toString))(immediate))
+    val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
       getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>
@@ -98,10 +98,17 @@ class ExtSearchController @Inject() (
         }
       }
     }
-    val augmentationEnumerator = safelyFlatten(augmentationFuture.map(aug => Enumerator("," + Json.stringify(aug) + "]"))(immediate))
+    val augmentationEnumerator = safelyFlatten(augmentationFuture.map(aug => Enumerator(Json.stringify(aug)))(immediate))
 
-    Ok.chunked(plainResultEnumerator.andThen(augmentationEnumerator).andThen(Enumerator.eof))
-      .withHeaders("Cache-Control" -> "private, max-age=10")
+    if (request.headers.get("Accept").exists(_ == "text/plain")) {
+      Ok.chunked(plainResultEnumerator
+        .andThen(augmentationEnumerator)
+        .andThen(Enumerator.eof)).as(TEXT)
+    } else {
+      Ok.chunked(Enumerator("[").andThen(plainResultEnumerator)
+        .andThen(Enumerator(",")).andThen(augmentationEnumerator)
+        .andThen(Enumerator("]").andThen(Enumerator.eof)))
+    } withHeaders ("Cache-Control" -> "private, max-age=10")
   }
 
   //external (from the extension)
