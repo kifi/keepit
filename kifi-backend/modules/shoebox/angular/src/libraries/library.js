@@ -177,6 +177,9 @@ angular.module('kifi')
         $scope.page = 'library';
         setTitle(library);
         $rootScope.$emit('libraryUrl', $scope.library);
+        if ($scope.library.kind === 'user_created' && $scope.library.access !== 'none') {
+          $rootScope.$emit('lastViewedLib', $scope.library);
+        }
       }, function onError(resp) {
         if (resp.data && resp.data.error) {
           $scope.loading = false;
