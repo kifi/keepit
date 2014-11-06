@@ -143,6 +143,8 @@ POST    /ext/libraries/:id/keeps/:k/image/upload @com.keepit.controllers.ext.Ext
 GET     /ext/libraries/:id/keeps/:k/image/:token @com.keepit.controllers.ext.ExtKeepImageController.checkImageStatus(id: PublicId[Library], k: ExternalId[Keep], token: String)
 POST    /ext/libraries/:id/keeps/:k/image @com.keepit.controllers.ext.ExtKeepImageController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
 GET     /ext/libraries/:id/tags/search           @com.keepit.controllers.ext.ExtLibraryController.deprecatedSearchTags(id: PublicId[Library], q: String, n: Option[Int] ?= None)
+POST    /ext/libraries/:id/join     @com.keepit.controllers.ext.ExtLibraryController.joinLibrary(id: PublicId[Library])
+POST    /ext/libraries/:id/leave    @com.keepit.controllers.ext.ExtLibraryController.leaveLibrary(id: PublicId[Library])
 
 ##########################################
 # Mobile

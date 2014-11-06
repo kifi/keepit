@@ -143,6 +143,28 @@ class ExtLibraryController @Inject() (
     }
   }
 
+  def joinLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
+    decode(libraryPubId) { libraryId =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+      libraryCommander.joinLibrary(request.userId, libraryId) match {
+        case Left(fail) =>
+          BadRequest(Json.obj("error" -> fail.message))
+        case Right(lib) =>
+          NoContent
+      }
+    }
+  }
+
+  def leaveLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
+    decode(libraryPubId) { libraryId =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+      libraryCommander.leaveLibrary(libraryId, request.userId) match {
+        case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+        case Right(_) => NoContent
+      }
+    }
+  }
+
   // imgSize is of format "<w>x<h>", such as "300x500"
   def getKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], imgSize: Option[String]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
