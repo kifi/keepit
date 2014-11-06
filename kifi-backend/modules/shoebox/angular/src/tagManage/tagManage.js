@@ -151,7 +151,7 @@ angular.module('kifi')
       libraryService.copyKeepsFromTagToLibrary(clickedLibrary.id, tagName).then(function () {
         modalService.open({
           template: 'tagManage/tagToLibModal.tpl.html',
-          modalData: { library : clickedLibrary, action: $scope.actionToLibrary }
+          modalData: { library : clickedLibrary, action: 'copy' }
         });
         // todo (aaron): call addToLibraryCount accordingly (make sure source libraries do NOT lose keep counts)
         libraryService.fetchLibrarySummaries(true);
@@ -168,7 +168,7 @@ angular.module('kifi')
       libraryService.moveKeepsFromTagToLibrary(clickedLibrary.id, tagName).then(function () {
         modalService.open({
           template: 'tagManage/tagToLibModal.tpl.html',
-          modalData: { library : clickedLibrary, action: $scope.actionToLibrary }
+          modalData: { library : clickedLibrary, action: 'move' }
         });
         // todo (aaron): call addToLibraryCount accordingly (make sure source libraries lose keep counts)
         libraryService.fetchLibrarySummaries(true);
