@@ -12,22 +12,29 @@
       $analyticsProvider.firstPageview(false);
       $analyticsProvider.registerPageTrack(trackPage);
       $analyticsProvider.registerEventTrack(trackEvent);
+
+      // another function MUST be responsible for calling $analytics.pageTrack(url) now
+      $analyticsProvider.settings.pageTracking.autoTrackVirtualPages = false;
     }
   ])
-  .run(['$window', '$log', 'profileService', 'analyticsState', '$http', 'env',
-    function (_$window_, _$log_, _profileService_, _analyticsState_, _$http_, _env_) {
+  .run(['$rootScope', '$window', '$log', 'profileService', 'analyticsState', '$http', 'env',
+    function (_$rootScope_, _$window_, _$log_, _profileService_, _analyticsState_, _$http_, _env_) {
       $window = _$window_;
       $log = _$log_;
       profileService = _profileService_;
       analyticsState = _analyticsState_;
       $http = _$http_;
       env = _env_;
+
+      $rootScope = _$rootScope_;
+      $rootScope.$on('currentLibraryChanged', registerCurrentLibrary);
     }
   ]);
 
-  var $window, $log, profileService, analyticsState, $http, env;  // injected before any code below runs
+  var $window, $rootScope, $log, profileService, analyticsState, $http, env;  // injected before any code below runs
   var identifiedViewEventQueue = [];
   var userId;
+  var currentLibrary;
 
   var locations = {
     yourKeeps: /^\/$/,
@@ -40,6 +47,10 @@
     helpRankReKeeps: /^\/helprank\/rekeeps?$/
   };
 
+  function registerCurrentLibrary(event, library) {
+    currentLibrary = library;
+  }
+
   function trackEventThroughProxy(event, properties)  {
     return $http.post(env.xhrBase + '/events', [{
       'event': event,
@@ -47,12 +58,14 @@
     }]);
   }
 
-  function trackPage(path) {
+  function trackPage(path, attributes) {
     var mixpanel = $window.mixpanel;
     if (mixpanel) { // TODO: fake implementation for tests
       var origin = $window.location.origin;
-      pageTrackForVisitor(mixpanel, path, origin);
-      pageTrackForUser(mixpanel, path, origin);
+      attributes = attributes || {};
+
+      pageTrackForVisitor(mixpanel, path, origin, attributes);
+      pageTrackForUser(mixpanel, path, origin, attributes);
     }
   }
 
@@ -77,6 +90,9 @@
   }
 
   function getLocation(path) {
+    if (currentLibrary) {
+      return (profileService.me && profileService.me.id) ? 'library' : 'libraryLanding';
+    }
     for (var loc in locations) {
       if (locations[loc].test(path)) {
         return loc;
@@ -96,7 +112,7 @@
       (experiments.indexOf('admin') >= 0 ? 'admin' : 'standard');
   }
 
-  function pageTrackForUser(mixpanel, path, origin) {
+  function pageTrackForUser(mixpanel, path, origin, attributes) {
     if (userId) {
       var oldId = mixpanel.get_distinct_id && mixpanel.get_distinct_id();
       try {
@@ -104,14 +120,16 @@
         mixpanel.identify(userId);
         $log.log('mixpanelService.pageTrackForUser(' + path + '):' + origin);
 
-        var customAttributes = analyticsState.events.user_viewed_page;
-        var attributes = _.extend(customAttributes, {
+        attributes = _.extend({
           type: getLocation(path),
           origin: origin,
           siteVersion: 2,
           userStatus: getUserStatus(),
           experiments: getExperiments()
-        });
+        }, attributes || {});
+
+        var customAttributes = analyticsState.events.user_viewed_page;
+        attributes = _.extend(customAttributes, attributes);
 
         trackEventThroughProxy('user_viewed_page', attributes);
       } finally {
@@ -133,7 +151,7 @@
         var toSend = identifiedViewEventQueue.slice();
         identifiedViewEventQueue.length = 0;
         toSend.forEach(function (path) {
-          pageTrackForUser(mixpanel, path, origin);
+          pageTrackForUser(mixpanel, path, origin, attributes);
         });
       };
 
@@ -145,13 +163,16 @@
     }
   }
 
-  function pageTrackForVisitor(mixpanel, path, origin) {
+  function pageTrackForVisitor(mixpanel, path, origin, attributes) {
     $log.log('mixpanelService.pageTrackForVisitor(' + path + '):' + origin);
-    mixpanel.track('visitor_viewed_page', {
+
+    attributes = _.extend({
       type: getLocation(path),
       origin: origin,
       siteVersion: 2
-    });
+    }, attributes || {});
+
+    mixpanel.track('visitor_viewed_page', attributes);
   }
 
 })();

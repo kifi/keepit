@@ -98,12 +98,17 @@ class ExtSearchController @Inject() (
         }
       }
     }
+    val augmentationEnumerator = safelyFlatten(augmentationFuture.map(aug => Enumerator(Json.stringify(aug)))(immediate))
 
-    val augmentationEnumerator = reactiveEnumerator(Seq(augmentationFuture.map(Json.stringify)(immediate)))
-
-    val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(augmentationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
-
-    Ok.chunked(resultEnumerator).withHeaders("Cache-Control" -> "private, max-age=10")
+    if (request.headers.get("Accept").exists(_ == "text/plain")) {
+      Ok.chunked(plainResultEnumerator
+        .andThen(augmentationEnumerator)
+        .andThen(Enumerator.eof)).as(TEXT)
+    } else {  // JSON format last used by extension 3.3.10
+      Ok.chunked(Enumerator("[").andThen(plainResultEnumerator)
+        .andThen(Enumerator(",")).andThen(augmentationEnumerator)
+        .andThen(Enumerator("]").andThen(Enumerator.eof))).as(JSON)
+    } withHeaders ("Cache-Control" -> "private, max-age=10")
   }
 
   //external (from the extension)

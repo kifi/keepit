@@ -190,9 +190,10 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = false))
 
-          val tag1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Mario")))
-          val tag2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Luigi")))
-          val tag3 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Bowser")))
+          val marioTag = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Mario")))
+          val luigiTag = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Luigi")))
+          val bowserTag = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Bowser")))
+          val peachTag = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Peach")))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
@@ -206,23 +207,29 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
-          val collectionIds = Seq(tag1.externalId, tag2.externalId, tag3.externalId)
+          val collectionIds = Seq(marioTag.externalId, luigiTag.externalId, bowserTag.externalId)
 
           userValueRepo.save(UserValue(userId = user1.id.get, name = UserValueName.USER_COLLECTION_ORDERING, value = Json.stringify(Json.toJson(collectionIds))))
 
           // keeps for Mario
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = marioTag.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = marioTag.id.get))
+          collectionRepo.save(marioTag.copy(lastKeptTo = Some(t1)))
+
+          // keeps for Peach
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = peachTag.id.get))
+          collectionRepo.save(peachTag.copy(lastKeptTo = Some(t1.plusHours(1))))
 
           // keeps for Bowser
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag3.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = bowserTag.id.get))
+          collectionRepo.save(bowserTag.copy(lastKeptTo = Some(t1.plusHours(1))))
 
-          (user1, collectionIds, tag1, tag2, tag3)
+          (user1, collectionIds, marioTag, luigiTag, bowserTag)
         }
 
-        collectionCommander.pageCollections("user", 0, 3, user.id.get).map(_.name) === Seq("Mario", "Luigi", "Bowser")
-        collectionCommander.pageCollections("name", 0, 3, user.id.get).map(_.name) === Seq("Bowser", "Mario") // Luigi don't have keeps!
-        collectionCommander.pageCollections("num_keeps", 0, 3, user.id.get).map(_.name) === Seq("Mario", "Bowser") // Luigi don't have keeps!
+        collectionCommander.pageCollections("whatever", 0, 3, user.id.get).map(_.name) === Seq("Bowser", "Peach", "Mario") // default to lastKeptAt, break ties by name, Luigi don't have keeps!
+        collectionCommander.pageCollections("name", 0, 3, user.id.get).map(_.name) === Seq("Bowser", "Mario", "Peach") // Luigi don't have keeps!
+        collectionCommander.pageCollections("num_keeps", 0, 3, user.id.get).map(_.name) === Seq("Mario", "Bowser", "Peach") // break ties by name, Luigi don't have keeps!
       }
     }
   }

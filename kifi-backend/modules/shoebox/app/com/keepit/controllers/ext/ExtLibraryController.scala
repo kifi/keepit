@@ -60,6 +60,7 @@ class ExtLibraryController @Inject() (
     val visibility = (body \ "visibility").as[LibraryVisibility]
     val slug = LibrarySlug.generateFromName(name)
     val addRequest = LibraryAddRequest(name, visibility, description = None, slug, collaborators = None, followers = None)
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
       case Right(lib) =>

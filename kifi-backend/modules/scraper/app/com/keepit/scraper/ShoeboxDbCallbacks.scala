@@ -26,31 +26,6 @@ class ShoeboxDbCallbackHelper @Inject() (
 
   private def await[T](awaitable: Awaitable[T]) = Await.result(awaitable, config.syncAwaitTimeout seconds)
 
-  def syncSaveNormalizedUri(uri: NormalizedURI): NormalizedURI = {
-    try {
-      normalizedUriLock.lock()
-      log.info(s"[${normalizedUriLock.getQueueLength}] about to persist $uri")
-      val saved = await(saveNormalizedUri(uri))
-      log.info(s"[${normalizedUriLock.getQueueLength}] done with persist $uri")
-      saved
-    } finally {
-      normalizedUriLock.unlock()
-    }
-  }
-  def syncUpdateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Unit = {
-    try {
-      normalizedUriLock.lock()
-      log.info(s"[${normalizedUriLock.getQueueLength}] about to update $uriId")
-      await(updateNormalizedURIState(uriId, state))
-      log.info(s"[${normalizedUriLock.getQueueLength}] done with update $uriId")
-    } finally {
-      normalizedUriLock.unlock()
-    }
-  }
-  def syncSaveScrapeInfo(info: ScrapeInfo): Unit = await(saveScrapeInfo(info))
-  def syncSavePageInfo(info: PageInfo): Unit = await(savePageInfo(info))
-  def syncSaveImageInfo(info: ImageInfo): Unit = await(saveImageInfo(info))
-  def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Seq[Keep] = await(getBookmarksByUriWithoutTitle(uriId))
   def syncGetLatestKeep(url: String): Option[Keep] = await(getLatestKeep(url))
   def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = {
     try {
@@ -62,10 +37,6 @@ class ShoeboxDbCallbackHelper @Inject() (
     } finally {
       recordPermanentRedirectLock.unlock()
     }
-  }
-  def syncSaveBookmark(bookmark: Keep): Keep = await(saveBookmark(bookmark))
-  def syncRecordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Unit = {
-    await(recordScrapedNormalization(uriId, uriSignature, candidateUrl, candidateNormalization, alternateUrls))
   }
 
   def assignTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = shoeboxScraperClient.assignScrapeTasks(zkId, max)
@@ -88,23 +59,13 @@ class ShoeboxDbCallbackHelper @Inject() (
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = {
     shoeboxScraperClient.recordScrapedNormalization(uriId, uriSignature, candidateUrl, candidateNormalization, alternateUrls)
   }
-  override def updateURIRestriction(uriId: Id[NormalizedURI], r: Option[Restriction]): Unit = await({
-    shoeboxServiceClient.updateURIRestriction(uriId, r)
-  })
+
+  def updateURIRestriction(uriId: Id[NormalizedURI], r: Option[Restriction]): Future[Unit] = shoeboxServiceClient.updateURIRestriction(uriId, r)
 }
 
 trait SyncShoeboxDbCallbacks {
-  def syncSaveNormalizedUri(uri: NormalizedURI): NormalizedURI
-  def syncUpdateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Unit
-  def syncSaveScrapeInfo(info: ScrapeInfo): Unit
-  def syncSavePageInfo(info: PageInfo): Unit
-  def syncSaveImageInfo(info: ImageInfo): Unit
-  def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Seq[Keep]
   def syncGetLatestKeep(url: String): Option[Keep]
   def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI
-  def syncSaveBookmark(bookmark: Keep): Keep
-  def syncRecordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Unit
-  def updateURIRestriction(uriId: Id[NormalizedURI], r: Option[Restriction]): Unit
 }
 
 trait ShoeboxDbCallbacks {
@@ -121,4 +82,5 @@ trait ShoeboxDbCallbacks {
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
   def isUnscrapableP(url: URI, destinationUrl: Option[String]): Future[Boolean]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
+  def updateURIRestriction(uriId: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
 }

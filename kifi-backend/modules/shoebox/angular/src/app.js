@@ -118,8 +118,10 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  '$scope', 'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log', 'platformService', '$rootElement',
-  function ($scope, profileService, $window, $rootScope, friendService, $timeout, $log, platformService, $rootElement) {
+  '$scope', 'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log',
+  'platformService', '$rootElement', '$analytics', '$location',
+  function ($scope, profileService, $window, $rootScope, friendService, $timeout, $log,
+      platformService, $rootElement, $analytics, $location) {
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
 
     function start() {
@@ -134,6 +136,20 @@ angular.module('kifi', [
           }
         });
       });
+
+      // track the current page; this requires angulartics autoTrackVirtualPages
+      // setting be false, or we will duplicate 2 page-track events
+      if (!$analytics.settings.pageTracking.autoTrackVirtualPages) {
+        $rootScope.$on('$routeChangeSuccess', function(next, current) {
+          // we cannot track the current page yet because we have not loaded
+          // information about the library to be loaded; therefore, libraries need
+          // to be responsible for calling pageTrack for themselves
+          if (current.$$route.controller !== 'LibraryCtrl') {
+            var url = $analytics.settings.pageTracking.basePath + $location.url();
+            $analytics.pageTrack(url);
+          }
+        });
+      }
     }
 
     start();

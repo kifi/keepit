@@ -2,7 +2,7 @@ package com.keepit.controllers.ext
 
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.search.engine.explain.Explanation
-import com.keepit.search.engine.result.KifiShardResult
+import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardHit, KifiShardResult }
 import com.keepit.test.SearchTestInjector
 import org.specs2.mutable._
 import com.keepit.model._
@@ -100,6 +100,76 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         """)
         // println(Json.parse(contentAsString(result)).toString) // can be removed?
         Json.parse(contentAsString(result)) === expected
+      }
+    }
+
+    "search keeps with library support and JSON response" in {
+      withInjector(modules: _*) { implicit injector =>
+        val path = routes.ExtSearchController.search2("test", 2, None, None, None, None, None).url
+        path === "/ext/search?q=test&n=2"
+
+        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
+        inject[FakeUserActionsHelper].setUser(user)
+        val request = FakeRequest("GET", path)
+        val result = inject[ExtSearchController].search2("test", 2, None, None, None, None, None)(request)
+        status(result) === OK
+        contentType(result) === Some("application/json")
+        contentAsString(result) === "1\r\n" + // chunk byte count
+          "[\r\n" +
+          "123\r\n" + // chunk byte count
+          """
+          {
+            "uuid":"98765432-1234-5678-9abc-fedcba987654",
+            "query":"test",
+            "hits":[{"title":"Example Site","url":"http://example.com","keepId":"604754fb-182d-4c39-a314-2d1994b24159"}],
+            "myTotal":12,
+            "friendsTotal":23,
+            "mayHaveMore":true,
+            "show":true,
+            "cutPoint":1,
+            "experimentId":null,
+            "context":"AgFJAN8CZHg="
+          }""".replaceAll("\n *", "") + "\r\n" +
+          "1\r\n" + // chunk byte count
+          ",\r\n" +
+          "27\r\n" + // chunk byte count
+          """{"hits":[{}],"users":[],"libraries":[]}""" + "\r\n" +
+          "1\r\n" + // chunk byte count
+          "]\r\n" +
+          "0\r\n" + // chunk byte count
+          "\r\n"
+      }
+    }
+
+    "search keeps with library support and a plain text response" in {
+      withInjector(modules: _*) { implicit injector =>
+        val path = routes.ExtSearchController.search2("test", 2, None, None, None, None, None).url
+        path === "/ext/search?q=test&n=2"
+
+        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
+        inject[FakeUserActionsHelper].setUser(user)
+        val request = FakeRequest("GET", path).withHeaders("Accept" -> "text/plain")
+        val result = inject[ExtSearchController].search2("test", 2, None, None, None, None, None)(request)
+        status(result) === OK
+        contentType(result) === Some("text/plain")
+        contentAsString(result) === "123\r\n" + // chunk byte count
+          """
+          {
+            "uuid":"98765432-1234-5678-9abc-fedcba987654",
+            "query":"test",
+            "hits":[{"title":"Example Site","url":"http://example.com","keepId":"604754fb-182d-4c39-a314-2d1994b24159"}],
+            "myTotal":12,
+            "friendsTotal":23,
+            "mayHaveMore":true,
+            "show":true,
+            "cutPoint":1,
+            "experimentId":null,
+            "context":"AgFJAN8CZHg="
+          }""".replaceAll("\n *", "") + "\r\n" +
+          "27\r\n" + // chunk byte count
+          """{"hits":[{}],"users":[],"libraries":[]}""" + "\r\n" +
+          "0\r\n" + // chunk byte count
+          "\r\n"
       }
     }
   }
@@ -208,7 +278,31 @@ class FixedResultSearchCommander extends SearchCommander {
     lastUUIDStr: Option[String],
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String] = None) = ???
+    debug: Option[String] = None): Future[KifiPlainResult] = {
+    Future.successful(new KifiPlainResult(
+      uuid = ExternalId[ArticleSearchResult]("98765432-1234-5678-9abc-fedcba987654"),
+      query = query,
+      searchFilter = SearchFilter.default(),
+      firstLang = Lang("en"),
+      result = KifiShardResult(
+        hits = Seq(
+          KifiShardHit(
+            id = 234,
+            score = .999f,
+            visibility = 0,
+            libraryId = 678,
+            keepId = 456,
+            title = "Example Site",
+            url = "http://example.com",
+            externalId = ExternalId[Keep]("604754fb-182d-4c39-a314-2d1994b24159"))),
+        myTotal = 12,
+        friendsTotal = 23,
+        othersTotal = 210,
+        show = true,
+        cutPoint = 1),
+      idFilter = Set(100, 220),
+      searchExperimentId = None))
+  }
 
   def distSearch2(
     shards: Set[Shard[NormalizedURI]],
