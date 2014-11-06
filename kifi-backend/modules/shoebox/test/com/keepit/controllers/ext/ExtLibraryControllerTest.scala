@@ -212,6 +212,13 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           libraryMembershipRepo.countWithLibraryId(lib1.id.get) === 2
         }
 
+        // join again for idempotency
+        status(joinLibrary(user2, libPubId1)) === NO_CONTENT
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).isEmpty === false
+          libraryMembershipRepo.countWithLibraryId(lib1.id.get) === 2
+        }
+
         // join a secret library (with no invite)
         status(joinLibrary(user2, libPubId2)) === BAD_REQUEST
         db.readWrite { implicit s =>
@@ -257,8 +264,15 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           libraryMembershipRepo.countWithLibraryId(lib1.id.get) === 1
         }
 
+        // leave a library again
+        status(leaveLibrary(user2, libPubId1)) === NO_CONTENT
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get, None).get.state === LibraryMembershipStates.INACTIVE
+          libraryMembershipRepo.countWithLibraryId(lib1.id.get) === 1
+        }
+
         // leave a library (no membership)
-        status(leaveLibrary(user2, libPubId2)) === BAD_REQUEST
+        status(leaveLibrary(user2, libPubId2)) === NO_CONTENT
 
         // leave a library when owner
         status(leaveLibrary(user1, libPubId1)) === BAD_REQUEST
