@@ -38,14 +38,6 @@ trait SearchControllerUtil {
 
   @inline def safelyFlatten[E](eventuallyEnum: Future[Enumerator[E]]): Enumerator[E] = Enumerator.flatten(new SafeFuture(eventuallyEnum))
 
-  @inline
-  def reactiveEnumerator(futureSeq: Seq[Future[String]]) = {
-    // Returns successful results of Futures in the order they are completed, reactively
-    Enumerator.interleave(futureSeq.map { future =>
-      safelyFlatten(future.map(str => Enumerator(", " + str))(immediate))
-    })
-  }
-
   def uriSummaryInfoFuture(plainResultFuture: Future[KifiPlainResult]): Future[String] = {
     plainResultFuture.flatMap { r =>
       val uriIds = r.hits.map(h => Id[NormalizedURI](h.id))
