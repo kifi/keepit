@@ -21,6 +21,12 @@ angular.module('kifi')
       templateUrl: 'libraries/libraryCard.tpl.html',
       link: function (scope, element/*, attrs*/) {
         //
+        // Internal data.
+        //
+        var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
+        //                   ↑↑↑ use this one ↑↑↑
+
+        //
         // Scope data.
         //
         scope.isUserLoggedOut = $rootScope.userLoggedIn === false;
@@ -268,7 +274,7 @@ angular.module('kifi')
               library: scope.library,
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
-                  libraryService.getLibraryByUserSlug(scope.username, data.library.slug, true).then(function (library) {
+                  libraryService.getLibraryByUserSlug(scope.username, data.library.slug, authToken, true).then(function (library) {
                     _.assign(scope.library, library);
                     augmentData();
                     adjustFollowerPicsSize();
