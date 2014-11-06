@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfModal', [
-  '$document', 'modalService',
-  function ($document, modalService) {
+  '$document', 'modalService', '$window',
+  function ($document, modalService, $window) {
     return {
       restrict: 'A',
       replace: true,
@@ -64,6 +64,19 @@ angular.module('kifi')
           if (!oldVal && newVal) {
             scope.close();
           }
+        });
+
+        var wrap = element.find('.dialog-body-wrap');
+        var resizeWindow = _.debounce(function () {
+          var winHeight = $window.innerHeight;
+          var modalHeight = wrap.height();
+          debugger;
+          wrap.css({'max-height': winHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'auto'});
+        }, 100);
+        $window.addEventListener('resize', resizeWindow);
+
+        scope.$on('$destroy', function () {
+          $window.removeEventListener('resize', resizeWindow);
         });
       }
     };
