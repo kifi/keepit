@@ -37,7 +37,7 @@
 
 <table style="border:0px">
 <tr>
-<td style="border:0px">
+<td style="border:0px; padding:0px;">
 
 @Html(explanation.map(_.scoreHtml("Score")).getOrElse(""))
 
@@ -52,7 +52,7 @@
 
 <p/>
 
-@Html(explanation.map(_.sharingHtml("Sharing and Hits")).getOrElse(""))
+@Html(explanation.map(_.sharingHtml("Sharing and Hit Counts")).getOrElse(""))
 
 <p/>
 

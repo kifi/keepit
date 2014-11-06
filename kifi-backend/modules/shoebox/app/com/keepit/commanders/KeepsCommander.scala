@@ -246,28 +246,27 @@ class KeepsCommander @Inject() (
     }
   }
 
-  // todo(Léo): factored out of PageCommander, need to be optimized for fewer database queries
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
     val libraryMemberships = new mutable.HashMap[Id[Library], Option[LibraryMembership]]
     db.readOnlyMaster { implicit session =>
-      uriIds.map { uriId =>
-        val userKeeps = keepRepo.getAllByUriAndUser(uriId, userId).toSet.map { keep: Keep =>
-          val keeperId = keep.userId
-          val mine = userId == keeperId
-          val libraryId = keep.libraryId.get
-          val libraryOpt = libraryMemberships.getOrElseUpdate(libraryId, libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId))
-          val removable = libraryOpt.exists(_.canWrite)
-          BasicKeep(
-            id = keep.externalId,
-            mine = mine,
-            removable = removable,
-            visibility = keep.visibility,
-            libraryId = Library.publicId(libraryId)
-          )
-        }
-        uriId -> userKeeps
+      keepRepo.getAllByUserAndUriIds(userId, uriIds).groupBy(_.uriId).map {
+        case (uriId, keeps) =>
+          val userKeeps = keeps.map { keep =>
+            val mine = userId == keep.userId
+            val libraryId = keep.libraryId.get
+            val libraryOpt = libraryMemberships.getOrElseUpdate(libraryId, libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId))
+            val removable = libraryOpt.exists(_.canWrite)
+            BasicKeep(
+              id = keep.externalId,
+              mine = mine,
+              removable = removable,
+              visibility = keep.visibility,
+              libraryId = Library.publicId(libraryId)
+            )
+          }.toSet
+          uriId -> userKeeps
       }
-    }.toMap
+    }
   }
 
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep], idealImageSize: ImageSize = KeepImageSize.Large.idealSize): Future[Seq[KeepInfo]] = {

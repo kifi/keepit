@@ -68,15 +68,11 @@
     </div>
     <div class="keep-to-library-create-heading">Make it private?</div>
     <div class="keep-to-library-create-visibility">
-      <span kf-library-visibility-checkbox library="newLibrary"></span>
-      <span ng-switch="newLibrary.visibility">
-        <span ng-switch-default>No, make it public.</span>
-        <span ng-switch-when="secret">Yes, make it private.</span>
+      <span class="keep-to-library-create-visibility-switch" kf-library-visibility-checkbox library="newLibrary"></span>
+      <span class="keep-to-library-create-visibility-explanation" ng-switch="newLibrary.visibility">
+        <span ng-switch-default><strong>Public</strong>. Anyone can see and follow this library.</span>
+        <span ng-switch-when="secret"><strong>Private</strong>. Only people you invite can see this library.</span>
       </span>
-    </div>
-    <div ng-switch="newLibrary.visibility" class="keep-to-library-visibility-explanation">
-      <div ng-switch-default>Anyone will be able to see the keeps in this library.</div>
-      <div ng-switch-when="secret">Only you will be able to see the keeps in this library.</div>
     </div>
     <div ng-show="$error.general" class="keep-to-library-create-general-error">{{$error.general}}</div>
     <div class="keep-to-library-create-button-container">

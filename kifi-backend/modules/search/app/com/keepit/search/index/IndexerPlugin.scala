@@ -24,6 +24,7 @@ object IndexerPluginMessages {
   case object RefreshSearcher
   case object RefreshWriter
   case object WarmUpIndexDirectory
+  case object Close
 }
 
 trait IndexManager[S, I <: Indexer[_, S, I]] {
@@ -104,6 +105,7 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
   }
 
   override def onStop() {
+    actor.ref ! Close
     indexer.close()
     super.onStop()
   }
@@ -149,9 +151,11 @@ class BasicIndexerActor[S, I <: Indexer[_, S, I]](
 
   import IndexerPluginMessages._
 
+  private[this] var isClosing = false
+
   def receive() = {
     case UpdateIndex =>
-      indexer.updateAsync()
+      if (!isClosing) indexer.updateAsync()
     case BackUpIndex => {
       val minBackupInterval = 600000 // 10 minutes
       if (System.currentTimeMillis - indexer.lastBackup > minBackupInterval) indexer.backup()
@@ -159,6 +163,7 @@ class BasicIndexerActor[S, I <: Indexer[_, S, I]](
     case RefreshSearcher => indexer.refreshSearcher()
     case RefreshWriter => indexer.refreshWriter()
     case WarmUpIndexDirectory => indexer.warmUpIndexDirectory()
+    case Close => isClosing = true
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -191,10 +196,11 @@ abstract class CoordinatingIndexerActor[S, I <: Indexer[_, S, I]](
 
   private def endUpdate(): Unit = { updating = false }
 
+  private[this] var isClosing = false
   private[this] val errorCount = new AtomicInteger(0)
 
   override def receive() = {
-    case UpdateIndex => if (!updating) { startUpdate() }
+    case UpdateIndex => if (!isClosing && !updating) { startUpdate() }
     case FailedUpdate(ex) => {
       if (errorCount.getAndIncrement() > 0) { // ignore the first error (shoebox deployment may be going on)
         airbrake.notify(s"Failed to update index $indexer", ex)
@@ -203,7 +209,7 @@ abstract class CoordinatingIndexerActor[S, I <: Indexer[_, S, I]](
     }
     case SuccessfulUpdate(done) => {
       errorCount.set(0)
-      if (done) { endUpdate() }
+      if (isClosing || done) { endUpdate() }
       else { startUpdate() }
     }
     case BackUpIndex => {
@@ -213,6 +219,7 @@ abstract class CoordinatingIndexerActor[S, I <: Indexer[_, S, I]](
     case RefreshSearcher => indexer.refreshSearcher()
     case RefreshWriter => indexer.refreshWriter()
     case WarmUpIndexDirectory => indexer.warmUpIndexDirectory()
+    case Close => isClosing = true
     case m => throw new UnsupportedActorMessage(m)
   }
 }
