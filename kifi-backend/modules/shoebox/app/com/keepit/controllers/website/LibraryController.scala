@@ -14,15 +14,20 @@ import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import org.joda.time.DateTime
+import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter }
+import play.api.Mode.Mode
+import play.api.Mode.Mode
+import play.api.{ Mode, Play }
+import play.api.libs.iteratee.{ Enumeratee, Iteratee, Enumerator }
 import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.BodyParsers
+import play.api.mvc._
 
 import scala.concurrent.Future
 import scala.util.{ Success, Failure }
 import ImplicitHelper._
 import com.keepit.common.core._
-import com.keepit.common.json
+import com.keepit.common.{ CollectionHelpers, json }
 import com.keepit.common.json.TupleFormat
 import play.api.http.Status._
 import com.keepit.commanders.RawBookmarkRepresentation
@@ -30,12 +35,14 @@ import com.keepit.commanders.LibraryFail
 import play.api.libs.json.JsArray
 import scala.util.Failure
 import play.api.libs.json.JsString
-import scala.Some
 import scala.util.Success
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.controller.UserRequest
 import play.api.libs.json.JsObject
 import com.keepit.commanders.LibraryAddRequest
+import com.keepit.common.time._
+
+import scala.xml.{ Node, Elem }
 
 class LibraryController @Inject() (
   db: Database,
@@ -48,12 +55,58 @@ class LibraryController @Inject() (
   keepsCommander: KeepsCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   collectionRepo: CollectionRepo,
+  mode: Mode,
   clock: Clock,
   val libraryCommander: LibraryCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
+
+  def getTopLibraries() = MaybeUserAction { request =>
+    val tops = db.readOnlyReplica { implicit request =>
+      libraryMembershipRepo.mostMembersSince(20, clock.now().minusHours(24))
+    }
+
+    val libIds = tops.map(_._1)
+    val libMap = db.readOnlyReplica { implicit request =>
+      libraryRepo.getLibraries(libIds.toSet)
+    }
+    val libraries = libIds.map(libMap(_))
+    val ownerIds = CollectionHelpers.dedupBy(libraries.map(_.ownerId))(id => id)
+    val ownerMap = db.readOnlyMaster { implicit request => userRepo.getUsers(ownerIds) }
+    val formatter = DateTimeFormat.forPattern("E, d MMM y HH:mm:ss Z") // rfc822
+    val prefix = if (mode == Mode.Dev) "http://dev.ezkeep.com:9000" else "https://www.kifi.com"
+    val items = tops map {
+      case (libId, count) =>
+        val lib = libMap(libId)
+        val owner = ownerMap(lib.ownerId)
+        <item>
+          <title>{ lib.slug.value }</title>
+          <description>{ lib.description.getOrElse("") }</description>
+          <link>{ s"$prefix${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
+          <pubDate>{ lib.createdAt.toString(formatter) }</pubDate>
+        </item>
+    }
+    val rss =
+      <rss>
+        <channel>
+          <title>Top Libraries on Kifi</title>
+          <link>{ s"$prefix${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}" }</link>
+          { items }
+        </channel>
+      </rss>
+
+    val elems = Enumerator.enumerate(rss)
+    val toBytes = Enumeratee.map[Node] { n => n.toString.getBytes }
+    val header = Enumerator("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes)
+    val combined = header.andThen(elems &> toBytes)
+    log.info(s"[getTopLibraries] published #${libIds.size} libraries. ${libIds.take(20)} ...")
+    Result(
+      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/xml")),
+      body = combined
+    )
+  }
 
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
     val addRequest = request.body.as[LibraryAddRequest]
