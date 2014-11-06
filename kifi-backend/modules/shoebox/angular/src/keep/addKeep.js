@@ -86,8 +86,16 @@ angular.module('kifi')
 
                   scope.$emit('keepAdded', libraryService.getSlugById(scope.selectedLibrary.id), [keep]);
                   scope.resetAndHide();
+                })['catch'](function () {
+                  modalService.open({
+                    template: 'common/modal/genericErrorModal.tpl.html'
+                  });
                 });
               }
+            })['catch'](function () {
+              modalService.open({
+                template: 'common/modal/genericErrorModal.tpl.html'
+              });
             });
           } else {
             scope.state.invalidUrl = true;

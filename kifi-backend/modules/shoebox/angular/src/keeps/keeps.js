@@ -226,14 +226,18 @@ angular.module('kifi')
                 var keepData = { url: keep.url };
                 if (keep.title) { keepData.title = keep.title; }
                 return keepData;
-              }), libraryId);
+              }), libraryId).then(function () {
+                _.forEach(selectedKeeps, function (selectedKeep) {
+                  selectedKeep.makeKept();
+                });
 
-              _.forEach(selectedKeeps, function (selectedKeep) {
-                selectedKeep.makeKept();
+                scope.selection.selectAll(selectedKeeps);
+                libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
+              })['catch'](function () {
+                modalService.open({
+                  template: 'common/modal/genericErrorModal.tpl.html'
+                });
               });
-
-              scope.selection.selectAll(selectedKeeps);
-              libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
             });
 
             libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
@@ -243,11 +247,11 @@ angular.module('kifi')
             if (scope.availableKeeps.length < 10) {
               scope.scrollNext()(scope.availableKeeps.length);
             }
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
           });
-        };
-
-        scope.togglePrivate = function (keeps) {
-          keepActionService.togglePrivateMany(scope.selection.getSelected(keeps));
         };
 
         scope.selectionPrivacyState = function (keeps) {
@@ -279,6 +283,10 @@ angular.module('kifi')
               scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, clickedLibrary);
             }
             libraryService.fetchLibrarySummaries(true);
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
           });
         };
 
