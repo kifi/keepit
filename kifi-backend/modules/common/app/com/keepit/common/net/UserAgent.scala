@@ -26,7 +26,7 @@ case class UserAgent(
 
 object UserAgent extends Logging {
 
-  val UnknownUserAgent = fromString("")
+  val UnknownUserAgent = UserAgent("", "", "", "", true, "", "")
 
   val KifiIphoneAppTypeName = "kifi iphone app"
 
@@ -48,14 +48,16 @@ object UserAgent extends Logging {
   private val PossiblyBot = Seq(UserAgentType.FEED_READER, UserAgentType.LIBRARY, UserAgentType.OTHER, UserAgentType.ROBOT, UserAgentType.USERAGENT_ANONYMIZER, UserAgentType.UNKNOWN)
 
   private def fromString(userAgent: String): UserAgent = {
-    userAgent match {
+    val trimmed = userAgent.trim
+    trimmed match {
+      case "" => UnknownUserAgent
       case iosAppRe(appName, appVersion, buildSuffix, device, os, osVersion) =>
-        UserAgent(userAgent, appName, os, device, false, KifiIphoneAppTypeName, appVersion)
+        UserAgent(trimmed, appName, os, device, false, KifiIphoneAppTypeName, appVersion)
       case androidAppRe(appName, os, osVersion, device) =>
-        UserAgent(userAgent, appName, os, os, false, typeName = "Android", version = "unknown")
+        UserAgent(trimmed, appName, os, os, false, typeName = "Android", version = "unknown")
       case _ =>
-        val agent: SFUserAgent = parser.parse(userAgent)
-        UserAgent(trim(userAgent),
+        val agent: SFUserAgent = parser.parse(trimmed)
+        UserAgent(trim(trimmed),
           normalizeChrome(normalize(agent.getName)),
           normalize(agent.getOperatingSystem.getFamilyName),
           normalize(agent.getOperatingSystem.getName),
