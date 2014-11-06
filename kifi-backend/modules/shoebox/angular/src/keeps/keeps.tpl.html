@@ -7,15 +7,27 @@
         <span class="kf-keep-selected-count-text" ng-pluralize count="selection.getSelected(keeps).length" when="{'1': 'keep selected', 'other': 'keeps selected'}"></span>
       </div>
       <div class="kf-keep-selection-options" ng-class="{disabled: editingTags || selection.getSelected(keeps).length === 0}">
-        <div ng-if="!librariesEnabled" class="kf-keep-selection-option"><span ng-click="togglePrivate(keeps)">Make {{selectionPrivacyState(keeps)}}</span></div>
-
-        <div ng-if="librariesEnabled && editOptions().actions.copyToLibrary" class="kf-keep-selection-option copy-to-library">
-          <span kf-keep-to-library-widget ng-click="showWidget()">Copy to library</span>
+        <div ng-if="editOptions().actions.copyToLibrary" class="kf-keep-selection-option copy-to-library">
+          <span kf-keep-to-library-widget widget-action-text="Copy"
+            library-click-action="onWidgetCopyLibraryClicked(clickedLibrary)"
+            lib-select-down-offset="0" lib-select-max-up-offset="100" lib-select-left-offset="50">
+            Copy to library
+          </span>
         </div>
-        <div ng-if="librariesEnabled && editOptions().actions.moveToLibrary" class="kf-keep-selection-option move-to-library">
-          <span kf-keep-to-library-widget ng-click="showWidget()">Move to library</span>
+        <div ng-if="editOptions().actions.moveToLibrary" class="kf-keep-selection-option move-to-library">
+          <span kf-keep-to-library-widget widget-action-text="Move"
+            library-click-action="onWidgetMoveLibraryClicked(clickedLibrary)"
+            lib-select-down-offset="0" lib-select-max-up-offset="100" lib-select-left-offset="50">
+            Move to library
+          </span>
         </div>
-
+        <div ng-if="editOptions().actions.keepToLibrary" class="kf-keep-selection-option keep-to-library">
+          <span kf-keep-to-library-widget widget-action-text="Keep"
+            library-click-action="onWidgetKeepToLibraryClicked(clickedLibrary)"
+            lib-select-down-offset="0" lib-select-max-up-offset="100" lib-select-left-offset="50">
+            Keep to library
+          </span>
+        </div>
         <div ng-if="editOptions().actions.moveToLibrary" class="kf-keep-selection-option"><span ng-click="unkeep(keeps)">Unkeep</span></div>
         <div ng-if="editOptions().actions.editTags" class="kf-keep-selection-option" ng-click="enableEditTags()"><span>Edit Tags</span></div>
         <div class="kf-keep-selection-options-mask"></div>

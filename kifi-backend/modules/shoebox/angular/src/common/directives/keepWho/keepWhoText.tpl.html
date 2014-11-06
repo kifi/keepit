@@ -1,10 +1,8 @@
 <div class="kf-keep-who-text">
-  <span class="kf-keep-who-text-prefix svg-button-keep-heart-green" ng-if="!useDeprecated">Kept by:</span>
-  <span class="kf-keep-you" ng-if="useDeprecated && keep.isMyBookmark">You</span>
-  <span class="kf-keep-libraries" ng-show="!useDeprecated && hasLibraries()">{{getLibrariesText()}}</span>
-  <span class="kf-keep-dot" ng-if="!useDeprecated && hasKeepers()">‧</span>
+  <span class="kf-keep-who-text-prefix svg-button-keep-heart-green">Kept by:</span>
+  <span class="kf-keep-libraries" ng-show="hasLibraries()">{{getLibrariesText()}}</span>
+  <span class="kf-keep-dot" ng-if="hasLibraries() && hasKeepers()">‧</span>
   <span class="kf-keep-friends" ng-show="hasKeepers()">{{getFriendText()}}</span>
-  <span class="kf-keep-dot" ng-if="!useDeprecated && hasOthers()">‧</span>
+  <span class="kf-keep-dot" ng-if="hasOthers() && hasKeepers()">‧</span>
   <span class="kf-keep-others" ng-show="hasOthers()">{{getOthersText()}}</span>
-  <span class="kf-keep-kept-this" ng-if="useDeprecated">kept this</span>
 </div>

@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.cortex.core.{ StatModelName, FeatureRepresentation }
+import com.keepit.cortex.core.{ ModelVersion, StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
 import com.keepit.curator.CuratorServiceClient
@@ -36,7 +36,7 @@ trait LDAUserDbUpdater extends BaseFeatureUpdater[Id[User], User, DenseLDA, Feat
 
 @Singleton
 class LDAUserDbUpdaterImpl @Inject() (
-    representer: LDAURIRepresenter,
+    representer: MultiVersionedLDAURIRepresenter,
     db: Database,
     keepRepo: CortexKeepRepo,
     uriTopicRepo: URILDATopicRepo,
@@ -48,41 +48,43 @@ class LDAUserDbUpdaterImpl @Inject() (
   private val modelName = StatModelName.LDA_USER
 
   def update(): Unit = {
-    val tasks = fetchTasks
-    log.info(s"fetched ${tasks.size} tasks")
-    processTasks(tasks)
+    representer.versions.foreach { implicit version =>
+      val tasks = fetchTasks
+      log.info(s"fetched ${tasks.size} tasks")
+      processTasks(tasks)
+    }
   }
 
-  private def fetchTasks(): Seq[CortexKeep] = {
-    val commitOpt = db.readOnlyReplica { implicit s => commitRepo.getByModelAndVersion(modelName, representer.version.version) }
-    if (commitOpt.isEmpty) db.readWrite { implicit s => commitRepo.save(FeatureCommitInfo(modelName = modelName, modelVersion = representer.version.version, seq = 0L)) }
+  private def fetchTasks(implicit version: ModelVersion[DenseLDA]): Seq[CortexKeep] = {
+    val commitOpt = db.readOnlyReplica { implicit s => commitRepo.getByModelAndVersion(modelName, version.version) }
+    if (commitOpt.isEmpty) db.readWrite { implicit s => commitRepo.save(FeatureCommitInfo(modelName = modelName, modelVersion = version.version, seq = 0L)) }
 
     val fromSeq = SequenceNumber[CortexKeep](commitOpt.map { _.seq }.getOrElse(0L))
     log.info(s"fetch tasks from ${fromSeq.value}")
     db.readOnlyReplica { implicit s => keepRepo.getSince(fromSeq, fetchSize) }
   }
 
-  private def processTasks(keeps: Seq[CortexKeep]): Unit = {
+  private def processTasks(keeps: Seq[CortexKeep])(implicit version: ModelVersion[DenseLDA]): Unit = {
     val users = keeps.map { _.userId }.distinct
     users.foreach { processUser(_) }
     log.info(s"${users.size} users processed")
     keeps.lastOption.map { keep =>
       db.readWrite { implicit s =>
-        val commitInfo = commitRepo.getByModelAndVersion(modelName, representer.version.version).get
+        val commitInfo = commitRepo.getByModelAndVersion(modelName, version.version).get
         log.info(s"committing with seq = ${keep.seq.value}")
         commitRepo.save(commitInfo.withSeq(keep.seq.value).withUpdateTime(currentDateTime))
       }
     }
   }
 
-  private def processUser(user: Id[User]): Unit = {
-    val model = db.readOnlyReplica { implicit s => userTopicRepo.getByUser(user, representer.version) }
+  private def processUser(user: Id[User])(implicit version: ModelVersion[DenseLDA]): Unit = {
+    val model = db.readOnlyReplica { implicit s => userTopicRepo.getByUser(user, version) }
     if (shouldComputeFeature(model, user)) {
-      val topicCounts = db.readOnlyReplica { implicit s => uriTopicRepo.getUserTopicHistograms(user, representer.version) }
+      val topicCounts = db.readOnlyReplica { implicit s => uriTopicRepo.getUserTopicHistograms(user, version) }
       val numOfEvidence = topicCounts.map { _._2 }.sum
       val time = currentDateTime
       val recentTopicCounts = db.readOnlyReplica { implicit s =>
-        uriTopicRepo.getSmartRecentUserTopicHistograms(user, representer.version, noOlderThan = time.minusMonths(1), preferablyNewerThan = time.minusWeeks(1), minNum = 15, maxNum = 40)
+        uriTopicRepo.getSmartRecentUserTopicHistograms(user, version, noOlderThan = time.minusMonths(1), preferablyNewerThan = time.minusWeeks(1), minNum = 15, maxNum = 40)
       }
       val numOfRecentEvidence = recentTopicCounts.map { _._2 }.sum
       val topicMean = genFeature(topicCounts)
@@ -90,7 +92,7 @@ class LDAUserDbUpdaterImpl @Inject() (
       val state = if (topicMean.isDefined) UserLDAInterestsStates.ACTIVE else UserLDAInterestsStates.NOT_APPLICABLE
       val newModel = model match {
         case Some(m) => m.copy(numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean).withUpdateTime(currentDateTime).withState(state)
-        case None => UserLDAInterests(userId = user, version = representer.version, numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean,
+        case None => UserLDAInterests(userId = user, version = version, numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean,
           overallSnapshotAt = Some(time), overallSnapshot = topicMean, recencySnapshotAt = Some(time), recencySnapshot = recentTopicMean, state = state)
       }
       val (snaphShotChanged, tosave) = updateSnapshotIfNecessary(newModel)
@@ -113,9 +115,9 @@ class LDAUserDbUpdaterImpl @Inject() (
     model.isEmpty || isOld(model.get.updatedAt) || recentlyKeptMany(userId)
   }
 
-  private def genFeature(topicCounts: Seq[(LDATopic, Int)]): Option[UserTopicMean] = {
+  private def genFeature(topicCounts: Seq[(LDATopic, Int)])(implicit version: ModelVersion[DenseLDA]): Option[UserTopicMean] = {
     if (topicCounts.isEmpty) return None
-    val arr = new Array[Float](representer.dimension)
+    val arr = new Array[Float](representer.getDimension(version).get)
     topicCounts.foreach { case (topic, cnt) => arr(topic.index) += cnt }
     val s = arr.sum
     Some(UserTopicMean(arr.map { x => x / s }))

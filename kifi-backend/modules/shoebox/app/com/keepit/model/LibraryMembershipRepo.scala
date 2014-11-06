@@ -30,6 +30,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def updateLastEmailSent(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
   def getMemberCountSinceForLibrary(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
+  def countByLibraryAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
 }
 
 @Singleton
@@ -37,6 +38,7 @@ class LibraryMembershipRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val libraryRepo: LibraryRepo,
+  val libraryMembershipCountCache: LibraryMembershipCountCache,
   val memberIdCache: LibraryMembershipIdCache)
     extends DbRepo[LibraryMembership] with DbRepoWithDelete[LibraryMembership] with LibraryMembershipRepo with SeqNumberDbFunction[LibraryMembership] with Logging {
 
@@ -165,6 +167,7 @@ class LibraryMembershipRepoImpl @Inject() (
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
     libMem.id.map { id =>
       memberIdCache.remove(LibraryMembershipIdKey(id))
+      libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
     }
   }
 
@@ -174,6 +177,7 @@ class LibraryMembershipRepoImpl @Inject() (
         deleteCache(libMem)
       } else {
         memberIdCache.set(LibraryMembershipIdKey(id), libMem)
+        libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
       }
     }
   }
@@ -185,6 +189,12 @@ class LibraryMembershipRepoImpl @Inject() (
   override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
     import StaticQuery.interpolation
     sql"""select min(seq) from library_membership where seq < 0""".as[Option[Long]].first
+  }
+
+  def countByLibraryAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int = {
+    libraryMembershipCountCache.getOrElse(LibraryMembershipCountKey(userId, access)) {
+      StaticQuery.queryNA[Int](s"select count(user_id) from library_membership where user_id = $userId and access = '${access.value}' group by user_id").firstOption.getOrElse(0)
+    }
   }
 
 }

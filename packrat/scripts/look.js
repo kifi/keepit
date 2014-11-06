@@ -16,6 +16,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
   function lookMouseDown(e) {
     if (e.which != 1) return;
     e.preventDefault();
+
     var selector = this.href.substr(11);
     if (selector.lastIndexOf('r|', 0) === 0) {
       var r = snapshot.findRange(selector), rects;
@@ -38,7 +39,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
           sel.addRange(r);
         });
       } else {
-        showBroken(selector);
+        showBroken(this, selector);
       }
     } else if (selector.lastIndexOf('i|', 0) === 0) {
       var img = snapshot.findImage(selector);
@@ -59,11 +60,11 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
         });
       } else {
         img = new Image();
-        $(img).on('load error', showBroken);
+        $(img).on('load error', showBroken.bind(img, this));
         try {
           img.src = decodeURIComponent(selector.split('|')[4]);
         } catch (e) {
-          showBroken.call(img, {type: 'error'});
+          showBroken.call(img, this, {type: 'error'});
         }
       }
     } else {
@@ -88,7 +89,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
           height: elRect.height + 4
         }, anim.ms).delay(2000).fadeOut(1000, removeThis);
       } else {
-        showBroken();
+        showBroken(this);
       }
     }
   }
@@ -107,7 +108,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
       left: bPos.left,
       opacity: 0,
       transformOrigin: '0 0',
-      transform: 'translate(' + (fromRect.left - bPos.left) + 'px,' + (fromRect.top - bPos.top) + 'px) scale(' + scale + ',' + scale + ')',
+      transform: 'translate(' + (fromRect.left - bPos.left) + 'px,' + (fromRect.top - bPos.top) + 'px) scale(' + scale + ')',
       transition: 'all ' + anim.ms + 'ms ease-in-out,opacity ' + anim.ms + 'ms ease-out'
     })
     .appendTo($('body')[0] || 'html')
@@ -127,10 +128,17 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
     return Math.max(400, Math.min(800, 100 * Math.log(dist)));
   }
 
-  function showBroken(e) {
+  function showBroken(a, eventOrSelector) {
+    var authorName = $(a).closest('.kifi-message-sent,.kifi-compose-draft').map(function () {
+      if (this.classList.contains('kifi-compose-draft')) {
+        return 'you';
+      } else {
+        return $(this).find('.kifi-message-name').text().trim().replace(/ .*/, '');
+      }
+    })[0];
     var self = this;
     api.require('scripts/look_link_broken.js', function () {
-      showBrokenLookLinkDialog.call(self, e);
+      showBrokenLookLinkDialog.call(self, a, authorName, eventOrSelector);
     });
   }
 }());

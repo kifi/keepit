@@ -13,6 +13,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.controllers.mobile.MobileKeepsController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -48,6 +49,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
   )
 
   "KifiSiteRouter" should {
+    implicit val context = HeimdalContext.empty
 
     "route requests correctly" in {
       withDb(modules: _*) { implicit injector =>

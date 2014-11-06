@@ -27,6 +27,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.BodyParsers.parse
 
+import scala.collection.mutable
 import scala.concurrent.Future
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
@@ -38,9 +39,10 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.typeahead.{ HashtagTypeahead, HashtagHit, TypeaheadHit }
-import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem }
+import com.keepit.search.augmentation.{ RestrictedKeepInfo, ItemAugmentationRequest, AugmentableItem }
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.store.ImageSize
+import com.keepit.common.CollectionHelpers
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -122,7 +124,7 @@ class KeepsCommander @Inject() (
     keepRepo: KeepRepo,
     collectionRepo: CollectionRepo,
     userRepo: UserRepo,
-    keptAnalytics: KeepingAnalytics,
+    libraryAnalytics: LibraryAnalytics,
     rawBookmarkFactory: RawBookmarkFactory,
     scheduler: Scheduler,
     heimdalClient: HeimdalServiceClient,
@@ -244,27 +246,32 @@ class KeepsCommander @Inject() (
     }
   }
 
-  // todo(Léo): factored out of PageCommander, need to be optimized for fewer database queries
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
+    val libraryMemberships = new mutable.HashMap[Id[Library], Option[LibraryMembership]]
     db.readOnlyMaster { implicit session =>
+      val grouped = keepRepo.getAllByUserAndUriIds(userId, uriIds).groupBy(_.uriId)
       uriIds.map { uriId =>
-        val userKeeps = keepRepo.getAllByUriAndUser(uriId, userId).toSet.map { keep: Keep =>
-          val keeperId = keep.userId
-          val mine = userId == keeperId
-          val libraryId = keep.libraryId.get
-          val lib = libraryRepo.get(libraryId)
-          val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).exists(_.canWrite)
-          BasicKeep(
-            id = keep.externalId,
-            mine = mine,
-            removable = removable,
-            visibility = lib.visibility,
-            libraryId = Library.publicId(lib.id.get)
-          )
+        grouped.get(uriId) match {
+          case Some(keeps) =>
+            val userKeeps = keeps.map { keep =>
+              val mine = userId == keep.userId
+              val libraryId = keep.libraryId.get
+              val libraryOpt = libraryMemberships.getOrElseUpdate(libraryId, libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId))
+              val removable = libraryOpt.exists(_.canWrite)
+              BasicKeep(
+                id = keep.externalId,
+                mine = mine,
+                removable = removable,
+                visibility = keep.visibility,
+                libraryId = Library.publicId(libraryId)
+              )
+            }.toSet
+            uriId -> userKeeps
+          case _ =>
+            uriId -> Set.empty[BasicKeep]
         }
-        uriId -> userKeeps
-      }
-    }.toMap
+      }.toMap
+    }
   }
 
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep], idealImageSize: ImageSize = KeepImageSize.Large.idealSize): Future[Seq[KeepInfo]] = {
@@ -274,13 +281,28 @@ class KeepsCommander @Inject() (
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
         searchClient.augment(perspectiveUserIdOpt, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items)
       }
+      val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
+        val idToLibrary = {
+          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
+          db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) }
+        }
+        val idToBasicUser = {
+          val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
+          val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
+          val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
+          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners) }
+        }
+        val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
+
+        (idToBasicUser, idToBasicLibrary)
+      }
       val pageInfosFuture = Future.sequence(keeps.map { keep =>
         getKeepSummary(keep, idealImageSize)
       })
 
       val colls = db.readOnlyMaster { implicit s =>
         keeps.map { keep =>
-          keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
+          keepToCollectionRepo.getCollectionsForKeep(keep)
         }
       }.map(collectionCommander.getBasicCollections)
 
@@ -289,21 +311,8 @@ class KeepsCommander @Inject() (
       for {
         augmentationInfos <- augmentationFuture
         pageInfos <- pageInfosFuture
+        (idToBasicUser, idToBasicLibrary) <- basicInfosFuture
       } yield {
-
-        val idToLibrary = {
-          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
-          db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) }
-        }
-
-        val idToBasicUser = {
-          val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
-          val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
-          val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
-          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners) }
-        }
-
-        val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
 
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.map {
           case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
@@ -474,7 +483,7 @@ class KeepsCommander @Inject() (
     log.info(s"[unkeepMulti] deactivatedKeeps:(len=${deactivatedBookmarks.length}):${deactivatedBookmarks.mkString(",")}")
 
     val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromKeep
-    keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
+    libraryAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
     searchClient.updateKeepIndex()
     deactivatedKeepInfos
   }
@@ -547,7 +556,7 @@ class KeepsCommander @Inject() (
 
   private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit context: HeimdalContext): Unit = {
     // TODO: broadcast over any open user channels
-    keptAnalytics.unkeptPages(userId, keeps, context)
+    libraryAnalytics.unkeptPages(userId, keeps, context)
     searchClient.updateKeepIndex()
   }
 
@@ -556,7 +565,7 @@ class KeepsCommander @Inject() (
       val keeps = getKeepsInBulkSelection(selection, userId).filter(_.state != KeepStates.ACTIVE)
       keeps.map(setKeepStateWithSession(_, KeepStates.ACTIVE, userId))
     }
-    keptAnalytics.rekeptPages(userId, keeps, context)
+    libraryAnalytics.rekeptPages(userId, keeps, context)
     searchClient.updateKeepIndex()
     keeps.length
   }
@@ -575,7 +584,7 @@ class KeepsCommander @Inject() (
       val newKeeps = oldKeeps.map(updateKeepWithSession(_, Some(isPrivate), None))
       (oldKeeps, newKeeps)
     }
-    (oldKeeps zip newKeeps) map { case (oldKeep, newKeep) => keptAnalytics.updatedKeep(oldKeep, newKeep, context) }
+    (oldKeeps zip newKeeps) map { case (oldKeep, newKeep) => libraryAnalytics.updatedKeep(oldKeep, newKeep, context) }
     searchClient.updateKeepIndex()
     newKeeps.length
   }
@@ -585,7 +594,7 @@ class KeepsCommander @Inject() (
     if (shouldBeUpdated) Some {
       val updatedKeep = db.readWrite { implicit s => updateKeepWithSession(keep, isPrivate, title) }
       searchClient.updateKeepIndex()
-      keptAnalytics.updatedKeep(keep, updatedKeep, context)
+      libraryAnalytics.updatedKeep(keep, updatedKeep, context)
       updatedKeep
     }
     else None
@@ -617,7 +626,7 @@ class KeepsCommander @Inject() (
             case Some(keep) if normTitle.isDefined && normTitle != keep.title =>
               val keep2 = keepRepo.save(keep.withTitle(normTitle))
               searchClient.updateKeepIndex()
-              keptAnalytics.updatedKeep(keep, keep2, context)
+              libraryAnalytics.updatedKeep(keep, keep2, context)
               Right(keep2)
             case Some(keep) =>
               Right(keep)
@@ -663,7 +672,7 @@ class KeepsCommander @Inject() (
       val taggingAt = currentDateTime
       tagged.foreach { ktc =>
         keepRepo.save(keepsById(ktc.keepId)) // notify keep index
-        keptAnalytics.taggedPage(updatedCollection, keepsById(ktc.keepId), context, taggingAt)
+        libraryAnalytics.taggedPage(updatedCollection, keepsById(ktc.keepId), context, taggingAt)
       }
       tagged
     }
@@ -685,7 +694,7 @@ class KeepsCommander @Inject() (
       val removedAt = currentDateTime
       removed.foreach { ktc =>
         keepRepo.save(keepsById(ktc.keepId)) // notify keep index
-        keptAnalytics.untaggedPage(collection, keepsById(ktc.keepId), context, removedAt)
+        libraryAnalytics.untaggedPage(collection, keepsById(ktc.keepId), context, removedAt)
       }
       removed.toSet
     } tap { _ =>
@@ -719,8 +728,8 @@ class KeepsCommander @Inject() (
     }
     collection match {
       case Some(t) if t.isActive => t
-      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, name = normalizedName, createdAt = clock.now())) } tap (keptAnalytics.createdTag(_, context))
-      case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) } tap (keptAnalytics.createdTag(_, context))
+      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, name = normalizedName, createdAt = clock.now())) } tap (libraryAnalytics.createdTag(_, context))
+      case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) } tap (libraryAnalytics.createdTag(_, context))
     }
   }
 
@@ -734,7 +743,7 @@ class KeepsCommander @Inject() (
         keepToCollectionRepo.remove(keepId = keep.id.get, collectionId = collection.id.get)
         collectionRepo.collectionChanged(collection.id.get, inactivateIfEmpty = true)
         keepRepo.save(keep) // notify keep index
-        keptAnalytics.untaggedPage(collection, keep, context)
+        libraryAnalytics.untaggedPage(collection, keep, context)
         keep
       }
     }
@@ -807,18 +816,41 @@ class KeepsCommander @Inject() (
     hashtagTypeahead.topN(userId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
   }
 
-  def suggestTags(userId: Id[User], libraryId: Id[Library], uriId: Id[NormalizedURI], limit: Option[Int]): Future[Seq[Hashtag]] = {
-    val item = AugmentableItem(uriId, Some(libraryId))
-    val request = ItemAugmentationRequest.uniform(userId, item)
-    searchClient.augmentation(request).map { response =>
-      val (thisKeep, moreKeeps) = response.infos(item).keeps.toSet.partition(_.keptIn == Some(libraryId))
-      val existingTags = thisKeep.flatMap(_.tags)
-      val validTags = moreKeeps.flatMap {
-        case myKeep if myKeep.keptBy == Some(userId) => myKeep.tags
-        case anotherKeep => anotherKeep.tags.filterNot(_.isSensitive)
+  private def searchTagsForKeep(userId: Id[User], keepId: ExternalId[Keep], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
+    val futureHits = searchTags(userId, query, None)
+    val existingTags = db.readOnlyMaster { implicit session =>
+      val keep = keepRepo.get(keepId)
+      collectionRepo.getTagsByKeepId(keep.id.get)
+    }
+    futureHits.imap { hits =>
+      val validHits = hits.filterNot(hit => existingTags.contains(hit.tag))
+      limit.map(validHits.take(_)) getOrElse validHits
+    }
+  }
+
+  private def suggestTagsForKeep(userId: Id[User], keepId: ExternalId[Keep], limit: Option[Int]): Future[Seq[Hashtag]] = {
+    val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId) }
+    val item = AugmentableItem(keep.uriId, Some(keep.libraryId.get))
+    val futureAugmentationResponse = searchClient.augmentation(ItemAugmentationRequest.uniform(userId, item))
+    val existingNormalizedTags = db.readOnlyMaster { implicit session => collectionRepo.getTagsByKeepId(keep.id.get).map(_.normalized) }
+    futureAugmentationResponse.map { response =>
+      val suggestedTags = {
+        val restrictedKeeps = response.infos(item).keeps.toSet
+        val safeTags = restrictedKeeps.flatMap {
+          case myKeep if myKeep.keptBy == Some(userId) => myKeep.tags
+          case anotherKeep => anotherKeep.tags.filterNot(_.isSensitive)
+        }
+        val validTags = safeTags.filterNot(tag => existingNormalizedTags.contains(tag.normalized))
+        CollectionHelpers.dedupBy(validTags.toSeq.sortBy(-response.scores.byTag(_)))(_.normalized)
       }
-      val suggestedTags = (validTags -- existingTags).toSeq.sortBy(-response.scores.byTag(_))
       limit.map(suggestedTags.take(_)) getOrElse suggestedTags
+    }
+  }
+
+  def suggestTags(userId: Id[User], keepId: ExternalId[Keep], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]] = {
+    query.map(_.trim).filter(_.nonEmpty) match {
+      case Some(validQuery) => searchTagsForKeep(userId, keepId, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
+      case None => suggestTagsForKeep(userId, keepId, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
     }
   }
 

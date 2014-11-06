@@ -8,6 +8,9 @@ angular.module('kifi')
     var librarySummaries = [],
         invitedSummaries = [];
 
+    // Maintain client state for recently kept-to libraries.
+    var recentLibraries = [];
+
 
     //
     // Clutches.
@@ -123,6 +126,12 @@ angular.module('kifi')
       library.secondLine = lines[1];
     }
 
+    function duplicateName(name) {
+      return _.find(librarySummaries, function (librarySummary) {
+        return (librarySummary.name === name) && (librarySummary.access === 'owner');
+      });
+    }
+
 
     //
     // API methods.
@@ -130,6 +139,7 @@ angular.module('kifi')
     var api = {
       librarySummaries: librarySummaries,
       invitedSummaries: invitedSummaries,
+      recentLibraries: recentLibraries,
 
       isAllowed: function () {
         return profileService.me.experiments && profileService.me.experiments.indexOf('libraries') !== -1;
@@ -139,6 +149,28 @@ angular.module('kifi')
         return _.some(librarySummaries, function (libSum) {
           return (libSum.kind === 'system_main' || libSum.kind === 'system_secret') && libSum.id === libraryId;
         });
+      },
+
+      getLibraryNameError: function (name, isExistingLibrary) {
+        function hasInvalidCharacters (myString, invalidChars) {
+          return _.some(invalidChars, function (invalidChar) {
+            return myString.indexOf(invalidChar) !== -1;
+          });
+        }
+
+        if (!name.length) {
+          return 'Please enter a name for your library';
+        } else if (name.length < 3) {
+          return 'Please try a longer name';
+        } else if (name.length > 50) {
+          return 'Please try a shorter name';
+        } else if (hasInvalidCharacters(name, ['/', '\\', '"', '\''])) {
+          return 'Please no slashes or quotes in your library name';
+        } else if (!isExistingLibrary && duplicateName(name)) {
+          return 'You already have a library with this name';
+        }
+
+        return null;
       },
 
       fetchLibrarySummaries: function (invalidateCache) {
@@ -207,6 +239,8 @@ angular.module('kifi')
         $rootScope.$emit('librarySummariesChanged');
       },
 
+      // TODO(yiping): All functions that update library summaries should refetch automatically instead of
+      // having client refetch.
       createLibrary: function (opts) {
         var required = ['name', 'visibility', 'slug'];
         var missingFields = _.filter(required, function (v) {
@@ -317,6 +351,14 @@ angular.module('kifi')
         return $http.get(routeService.getMoreLibraryMembers(libraryId, pageSize, offset)).then(function(resp) {
           return resp.data;
         });
+      },
+
+      addRecentLibrary: function (libraryId) {
+        // Maintain a short queue of 3 itmes to store recent libraries.
+        recentLibraries.push(libraryId);
+        if (recentLibraries.length > 3) {
+          recentLibraries.shift();
+        }
       }
     };
 

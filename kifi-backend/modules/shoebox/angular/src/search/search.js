@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$rootScope', '$location', '$routeParams', '$window', 'keepDecoratorService', 'searchActionService',
-  function ($scope, $rootScope, $location, $routeParams, $window, keepDecoratorService, searchActionService) {
+  '$scope', '$rootScope', '$location', '$routeParams', '$window', 'keepDecoratorService', 'searchActionService', 'libraryService',
+  function ($scope, $rootScope, $location, $routeParams, $window, keepDecoratorService, searchActionService, libraryService) {
     //
     // Internal data.
     //
@@ -96,7 +96,7 @@ angular.module('kifi')
     };
 
     $scope.getNextKeeps = function (resetExistingResults) {
-      if ($scope.loading) {
+      if ($scope.loading || query === '') {
         return;
       }
 
@@ -154,10 +154,6 @@ angular.module('kifi')
       return !$scope.isFilterSelected(type) && !!getFilterCount(type);
     };
 
-    $scope.allowEdit = function () {
-      return !$scope.isFilterSelected('f') && !$scope.isFilterSelected('a');
-    };
-
     $scope.analyticsTrack = function (keep, $event) {
       searchActionService.reportSearchClickAnalytics(keep, $scope.resultKeeps.indexOf(keep), $scope.resultKeeps.length);
       return [keep, $event]; // log analytics for search click here
@@ -194,7 +190,7 @@ angular.module('kifi')
     $scope.editOptions = {
       draggable: false,
       actions: {
-        copyToLibrary: true
+        keepToLibrary: true
       }
     };
 
@@ -205,7 +201,13 @@ angular.module('kifi')
 
     // Report search analytics on unload.
     var onUnload = function () {
-      searchActionService.reportSearchAnalyticsOnUnload($scope.resultKeeps.length);
+      var resultsWithLibs = 0;
+      $scope.resultKeeps.forEach( function (keep) {
+        if (_.some(keep.libraries, function (lib) { return !libraryService.isSystemLibrary(lib); })) {
+          resultsWithLibs++;
+        }
+      });
+      searchActionService.reportSearchAnalyticsOnUnload($scope.resultKeeps.length, resultsWithLibs);
     };
     $window.addEventListener('beforeunload', onUnload);
 

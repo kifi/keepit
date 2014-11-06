@@ -132,12 +132,22 @@ class MemcachedCache @Inject() (
     }
   }
 
-  def set(key: String, value: Any, expiration: Int) {
-    client.set(key, expiration, value, tc)
+  def set(key: String, value: Any, expiration: Int): Unit = {
+    try {
+      client.set(key, expiration, value, tc)
+    } catch {
+      case t: Throwable =>
+        logger.error("An error has occurred while setting the value to memcached", t)
+    }
   }
 
   def remove(key: String) {
-    client.delete(key)
+    try {
+      client.delete(key)
+    } catch {
+      case t: Throwable =>
+        logger.error("An error has occurred while deleting the value from memcached", t)
+    }
   }
 
   override def bulkGet(keys: Set[String]): Map[String, Any] = {

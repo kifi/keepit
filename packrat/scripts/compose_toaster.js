@@ -134,7 +134,7 @@ k.toaster = k.toaster || (function () {
     $t.data('sending', true);
     api.port.emit(
       'send_message',
-      withUrls({title: authoredTitle(), text: text, recipients: recipients.map(idOf), guided: guided}),
+      withTitles(withUrls({text: text, recipients: recipients.map(idOf), guided: guided})),
       function (resp) {
         log('[sendMessage] resp:', resp);
         api.require('scripts/pane.js', function () {

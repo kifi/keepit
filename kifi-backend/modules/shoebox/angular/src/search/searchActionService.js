@@ -31,8 +31,6 @@ angular.module('kifi')
     }
 
     function decompressHit(hit, users, libraries) {
-      var librariesEnabled = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('libraries') > -1;
-
       var decompressedKeepers = [];
       var decompressedLibraries = [];
       var myLibraries = [];
@@ -69,18 +67,18 @@ angular.module('kifi')
             decompressedKeepers.push(users[keeperIdx]);
           } else {
             var user = copy(users[keeperIdx]);
-            user.hidden = true && librariesEnabled;
+            user.hidden = true;
             decompressedKeepers.push(user);
           }
         }
       });
 
       hit.keepers = decompressedKeepers;
-      hit.libraries = librariesEnabled ? decompressedLibraries : [];
+      hit.libraries = decompressedLibraries;
       hit.myLibraries = myLibraries;
     }
 
-    function reportSearchAnalytics(endedWith, numResults) {
+    function reportSearchAnalytics(endedWith, numResults, numResultsWithLibraries) {
       var url = routeService.searchedAnalytics;
       if (lastSearchContext && lastSearchContext.query) {
         var origin = $location.$$protocol + '://' + $location.$$host;
@@ -96,6 +94,7 @@ angular.module('kifi')
           maxResults: lastSearchContext.maxResults,
           kifiExpanded: true,
           kifiResults: numResults,
+          kifiResultsWithLibraries: numResultsWithLibraries,
           kifiTime: lastSearchContext.kifiTime,
           kifiShownTime: lastSearchContext.kifiShownTime,
           kifiResultsClicked: lastSearchContext.clicks,
@@ -137,7 +136,13 @@ angular.module('kifi')
 
       //$log.log('searchActionService.find() req', reqData);
 
-      return $http.get(url, reqData).then(function (res) {
+      var searchActionPromise = $http.get(url, reqData);
+      var librarySummariesPromise = libraryService.fetchLibrarySummaries(false);
+      var resultsFetched = $q.all([librarySummariesPromise, searchActionPromise]);
+
+      // ensures that the libraries have been loaded before the hits are decompressed
+      return resultsFetched.then(function (results) {
+        var res = results[1];
         var resData = res.data;
         //$log.log('searchActionService.find() res', resData);
 
@@ -178,12 +183,12 @@ angular.module('kifi')
       pageSession = createPageSession();
     }
 
-    function reportSearchAnalyticsOnUnload(numResults) {
-      reportSearchAnalytics('unload', numResults);
+    function reportSearchAnalyticsOnUnload(numResults, numResultsWithLibraries) {
+      reportSearchAnalytics('unload', numResults, numResultsWithLibraries);
     }
 
-    function reportSearchAnalyticsOnRefine(numResults) {
-      reportSearchAnalytics('refinement', numResults);
+    function reportSearchAnalyticsOnRefine(numResults, numResultsWithLibraries) {
+      reportSearchAnalytics('refinement', numResults, numResultsWithLibraries);
     }
 
     function reportSearchClickAnalytics(keep, resultPosition, numResults) {
@@ -193,7 +198,6 @@ angular.module('kifi')
         if ($location.$$port) {
           origin = origin + ':' + $location.$$port;
         }
-        var matches = keep.bookmark.matches || (keep.bookmark.matches = {});
         var hitContext = {
           isMyBookmark: keep.isMyBookmark,
           isPrivate: keep.isPrivate,
@@ -202,9 +206,9 @@ angular.module('kifi')
             return elem.id;
           }),
           tags: keep.tags,
-          title: keep.bookmark.title,
-          titleMatches: (matches.title || []).length,
-          urlMatches: (matches.url || []).length
+          title: keep.summary.title,
+          titleMatches: 0, //This broke with new search api (the information is no longer available). Needs to be investigated if we still need it.
+          urlMatches: 0
         };
         var data = {
           origin: origin,

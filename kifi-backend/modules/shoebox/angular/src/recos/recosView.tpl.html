@@ -10,7 +10,7 @@
     <div kf-reco-recency-slider ng-if="recosState === 'hasRecos'" get-more="getMore(recency)"></div>
   </header>
 
-  <div class="kf-reco kf-reco-info kf-reco-cta" ng-if="recosState === 'noRecos' && librariesEnabled()" ng-hide="initialCardClosed">
+  <div class="kf-reco kf-reco-info kf-reco-cta" ng-if="recosState === 'noRecos'" ng-hide="initialCardClosed">
     <span class="kf-reco-cta-text">To get started, simply click the follow button on some of the libraries below</span>
     <img class="kf-reco-cta-image" src="/img/webapp-ftui-follow-button-image.png">
   </div>
@@ -23,7 +23,7 @@
   </div>
 
   <div class="kf-recos" ng-hide="loading">
-    <div class="kf-reco" ng-repeat="reco in recos" reco="reco" ng-controller="RecoCtrl" ng-class="{'kf-reco-recommended': librariesEnabled}">
+    <div class="kf-reco kf-reco-recommended" ng-repeat="reco in recos" reco="reco" ng-controller="RecoCtrl">
       <header class="kf-reco-top">
         <span class="kf-reco-icon kf-reco-close-x" ng-click="trash(reco)" ng-if="reco.recoData.type === 'recommended'"></span>
         <div ng-if="reco.recoData.type === 'recommended'" kf-reco-dropdown-menu reco="reco" show-improvement-modal="showImprovementModal()"></div>
@@ -33,9 +33,7 @@
         <span ng-if="reco.recoData.kind === 'library'">Featured</span>
       </header>
 
-      <div ng-if="librariesEnabled && reco.recoData.kind === 'keep'" kf-keep-card keep="reco.recoKeep" keep-callback="trackRecoKeep(keep)" click-callback="trackRecoClick(keep)" libraries="libraries"></div>
-      <div ng-if="!librariesEnabled && reco.recoData.kind === 'keep'" kf-keep-card-deprecated keep="reco.recoKeep" keep-callback="trackRecoKeep(keep)" click-callback="trackRecoClick(keep)"></div>
-
+      <div ng-if="reco.recoData.kind === 'keep'" kf-keep-card keep="reco.recoKeep" keep-callback="trackRecoKeep(keep)" click-callback="trackRecoClick(keep)" libraries="libraries"></div>
       <div ng-if="reco.recoData.kind === 'library'" kf-library-card library="reco.recoLib" recommendation="true"></div>
 
       <footer class="kf-reco-bottom" ng-if="hasReason()" ng-class="{ 'kf-reco-multiple-reasons': hasTwoOrMoreReasons() }">

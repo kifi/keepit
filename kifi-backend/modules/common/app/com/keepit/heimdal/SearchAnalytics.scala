@@ -1,7 +1,7 @@
 package com.keepit.heimdal
 
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ NormalizedURI, Collection, User }
+import com.keepit.model.{ Library, NormalizedURI, Collection, User }
 import com.keepit.search._
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.{ ExternalId, Id }
@@ -14,6 +14,8 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.social.BasicUser
 import com.keepit.common.net.URI
+import com.keepit.common.crypto.PublicId
+import com.keepit.common.json.TupleFormat
 
 case class SearchEngine(name: String) {
   override def toString = name
@@ -37,6 +39,7 @@ case class BasicSearchContext(
   filterByTime: Option[String],
   maxResults: Option[Int],
   kifiResults: Int,
+  kifiResultsWithLibraries: Option[Int],
   kifiExpanded: Option[Boolean],
   kifiTime: Option[Int],
   kifiShownTime: Option[Int],
@@ -57,6 +60,7 @@ object BasicSearchContext {
     (__ \\ 'when).readNullable[String].fmap(filterByTime) and
     (__ \ 'maxResults).readNullable[Int] and
     (__ \ 'kifiResults).read[Int] and
+    (__ \ 'kifiResultsWithLibraries).readNullable[Int] and
     (__ \ 'kifiExpanded).readNullable[Boolean] and
     (__ \ 'kifiTime).readNullable[Int] and
     (__ \ 'kifiShownTime).readNullable[Int] and
@@ -84,17 +88,22 @@ case class KifiHitContext(
   isPrivate: Boolean,
   keepCount: Int,
   keepers: Seq[ExternalId[User]],
+  libraries: Option[Seq[(PublicId[Library], ExternalId[User])]],
   tags: Seq[String], // was ExternalId[Collection], moving to inlined Hashtag
   title: Option[String],
   titleMatches: Int,
   urlMatches: Int)
 
 object KifiHitContext {
+
+  private implicit val librariesFormat = TupleFormat.tuple2Format[PublicId[Library], ExternalId[User]]
+
   implicit val reads: Reads[KifiHitContext] = (
     (__ \ 'isMyBookmark).read[Boolean] and
     (__ \ 'isPrivate).read[Boolean] and
     (__ \ 'count).read[Int] and
     ((__ \ 'keepers).read[Seq[String]].fmap(_.map(ExternalId[User](_))) orElse (__ \ 'users).read[Seq[BasicUser]].fmap(_.map(_.externalId))) and
+    (__ \ 'libraries).readNullable[Seq[(PublicId[Library], ExternalId[User])]] and
     ((__ \\ 'tags).readNullable[Seq[String]].fmap(_.toSeq.flatten)) and
     ((__ \ 'title).readNullable[String] orElse (__ \ 'bookmark \ 'title).readNullable[String]) and
     ((__ \ 'titleMatches).read[Int] orElse (__ \ 'bookmark \\ 'matches \ 'title).read[JsArray].fmap(_.value.length) orElse Reads.pure(0)) and
@@ -106,6 +115,7 @@ object KifiHitContext {
     (__ \ 'isPrivate).write[Boolean] and
     (__ \ 'count).write[Int] and
     (__ \ 'keepers).write[Seq[ExternalId[User]]] and
+    (__ \ 'libraries).writeNullable[Seq[(PublicId[Library], ExternalId[User])]] and
     (__ \ 'tags).write[Seq[String]] and
     (__ \ 'title).writeNullable[String] and
     (__ \ 'titleMatches).write[Int] and
@@ -170,6 +180,7 @@ class SearchAnalytics @Inject() (
     kifiHitContext.map { hitContext =>
       contextBuilder += ("keep", keep(hitContext))
       contextBuilder += ("keepersShown", hitContext.keepers.length)
+      hitContext.libraries.foreach { libraries => contextBuilder += ("librariesShown", libraries.length) }
       contextBuilder += ("keepCount", hitContext.keepCount)
       contextBuilder += ("isPrivate", hitContext.isPrivate)
 
@@ -244,6 +255,7 @@ class SearchAnalytics @Inject() (
 
       contextBuilder += ("moreResultsRequests", latestSearchResult.pageNumber)
       contextBuilder += ("displayedKifiResults", searchContext.kifiResults)
+      searchContext.kifiResultsWithLibraries.foreach { count => contextBuilder += ("kifiResultsWithLibrariesShown", count) }
       searchContext.kifiResultsClicked.foreach { count => contextBuilder += ("kifiResultsClicked", count) }
       searchContext.thirdPartyResultsClicked.foreach { count => contextBuilder += ("thirdPartyResultsClicked", count) }
 

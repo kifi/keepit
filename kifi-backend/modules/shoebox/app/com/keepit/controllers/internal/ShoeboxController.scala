@@ -96,7 +96,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(sui))
   }
 
-  def sendMail = Action(parse.tolerantJson) { request =>
+  def sendMail = Action(parse.tolerantJson(maxLength = 1024 * 500)) { request =>
     Json.fromJson[ElectronicMail](request.body).asOpt match {
       case Some(mail) =>
         db.readWrite(attempts = 3) { implicit session =>
@@ -110,7 +110,7 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def sendMailToUser = Action(parse.tolerantJson) { request =>
+  def sendMailToUser = Action(parse.tolerantJson(maxLength = 1024 * 500)) { request =>
     val userId = Id[User]((request.body \ "user").as[Long])
     val email = (request.body \ "email").as[ElectronicMail]
 
@@ -121,7 +121,7 @@ class ShoeboxController @Inject() (
     Ok("true")
   }
 
-  def processAndSendMail = Action.async(parse.tolerantJson) { request =>
+  def processAndSendMail = Action.async(parse.tolerantJson(maxLength = 1024 * 500)) { request =>
     request.body.asOpt[EmailToSend] match {
       case Some(module) =>
         emailTemplateSender.send(module).map { mail =>

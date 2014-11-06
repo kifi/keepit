@@ -10,56 +10,74 @@ angular.module('kifi')
     return {
       restrict: 'A',
       /*
-       * Relies on parent scope to have:
-       *  libraries - an array of library objects to select from.
-       *  librarySelection - an object whose 'library' property will be the selected library.
+       * Scope properties
+       *  (optional) widgetActionText - Text to display for action into library. E.g., 'Keep' will result
+       *                                'Keep to a library' in the widget header.
+       *  (optional) keptToLibraryIds - an array of library ids that are already keeping the keep.
        *
-       *  Optional properties on parent scope:
-       *   keptToLibraries - an array of library ids that are already keeping the keep.
-       *   clickAction() - a function that can be called once a library is selected;
-       *                   called with the element that this widget is on.
-       *   exitAction() - a function that is called once the widget exits (includes when the widget exits after an action).
+       *  ---------
+       *  Callbacks
+       *  ---------
+       *  (optional) librarySelectAction - a function that is called when a library has been selected;
+       *                                   called with the selected library.
+       *  (optional) libraryClickAction - a function that can be called once a library is clicked;
+       *                                 called with the clicked library.
+       *  (optional) widgetExitAction - a function that is called once the widget exits (includes when the widget exits after an action).
        *
-       *   Positioning properties:
-       *   ----------------------
-       *   libSelectDownOffset - shift the bottom of the widget this much below the element.
-       *   libSelectMaxUpOffset - maximum amount to shift up the top of the widget above the element.
-       *   libSelectLeftOffset - shift the left edge of the widget this much to the left of the element.
+       *  ----------------------
+       *  Positioning properties
+       *  ----------------------
+       *  (optional) libSelectDownOffset - shift the bottom of the widget this much below the element.
+       *  (optional) libSelectMaxUpOffset - maximum amount to shift up the top of the widget above the element.
+       *  (optional) libSelectLeftOffset - shift the left edge of the widget this much to the left of the element.
        */
+      scope: {
+        widgetActionText: '@',
+        keptToLibraryIds: '=',
+        librarySelectAction: '&',
+        libraryClickAction: '&',
+        widgetExitAction: '&',
+        libSelectDownOffset: '=',
+        libSelectMaxUpOffset: '=',
+        libSelectLeftOffset: '='
+      },
       link: function (scope, element/*, attrs*/) {
         //
         // Internal data.
         //
         var widget = null;
-        var selectedIndex = 0;
         var searchInput = null;
         var libraryList = null;
+        var newLibraryNameInput = null;
+
+        var selectedIndex = 0;
         var justScrolled = false;
         var removeTimeout = null;
         var resetJustScrolledTimeout = null;
-        var newLibraryNameInput = null;
         var submitting = false;
-
-
-        //
-        // Scope data.
-        //
-        scope.search = {};
-        scope.showCreate = false;
-        scope.newLibrary = {};
-        scope.widgetLibraries = [];
+        var allLibraries = [];
+        var widgetLibraries = [];
+        var libraryNameSearch = null;
 
 
         //
         // Internal methods.
         //
+        function init() {
+          element.on('click', function () {
+            initWidget();
+          });
+
+          scope.$on('$destroy', removeWidget);
+        }
+
         function cancelTimeout() {
           $timeout.cancel(removeTimeout);
           $timeout.cancel(resetJustScrolledTimeout);
         }
 
         function clearSelection () {
-          scope.widgetLibraries.forEach(function (library) {
+          widgetLibraries.forEach(function (library) {
             library.selected = false;
           });
         }
@@ -73,8 +91,18 @@ angular.module('kifi')
             widget.remove();
           }
 
-          if (_.isFunction(scope.exitAction)) {
-            scope.exitAction();
+          if (_.isFunction(scope.widgetExitAction)) {
+            scope.widgetExitAction();
+          }
+        }
+
+        function invokeWidgetCallbacks(selectedLibrary) {
+          if (_.isFunction(scope.librarySelectAction)) {
+            scope.librarySelectAction({ selectedLibrary: selectedLibrary });
+          }
+
+          if (_.isFunction(scope.libraryClickAction)) {
+            scope.libraryClickAction({ clickedLibrary: selectedLibrary });
           }
         }
 
@@ -90,9 +118,7 @@ angular.module('kifi')
           // highlight on their selection.
           if (angular.element(event.target).closest('.library-select-option').length) {
             removeTimeout = $timeout(removeWidget, 200);
-            if (_.isFunction(scope.clickAction)) {
-              scope.clickAction(element);
-            }
+            invokeWidgetCallbacks(widgetLibraries[selectedIndex]);
             return;
           }
         }
@@ -104,7 +130,6 @@ angular.module('kifi')
          * @param {number} selectedIndex - the index of the selected library in the library list.
          */
         function adjustScroll(selectedIndex) {
-
           /**
            * After we finish scrolling, we set a flag that a scroll has just happened so that
            * a mouseenter event on a library item that was triggered as a result of the scroll
@@ -118,41 +143,80 @@ angular.module('kifi')
             }, 200);
           }
 
-          // Each library list item is 47px high, and we fit in 8 library list items within the
-          // visible area. For a library item to be visible, it should be entirely within the
-          // visible area (this means its top offset should be at least one library item height from
-          // the visible bottom).
+          // Each library list item is 47px high. For a library item to be visible, it should be
+          // entirely within the visible area (this means its top offset should be at least one
+          // library item height from the visible bottom).
+
+          // If we are not showing any subheaders (e.g., 'Kept In'), then we are displaying 6 librares.
+          // When we display subheaders, we are displaying 5 libraries (number of displayed libraries
+          // depends on max-height set in the stylesheet.).
+          var numLibrariesVisible = scope.widgetKeptInLibraries.length || scope.widgetRecentLibraries.length ? 5 : 6;
 
           var selectedLibraryTop = selectedIndex * 47;
           var visibleTop = libraryList.scrollTop();
-          var visibleBottom = visibleTop + (8 * 47);
+          var visibleBottom = visibleTop + (numLibrariesVisible * 47);
 
           if (selectedLibraryTop < visibleTop) {
             libraryList.scrollTop(selectedLibraryTop);
             setJustScrolled();
           } else if (selectedLibraryTop > (visibleBottom - 47)) {
-            libraryList.scrollTop(selectedLibraryTop - (7 * 47));
+            libraryList.scrollTop(selectedLibraryTop - ((numLibrariesVisible - 1) * 47));
             setJustScrolled();
           }
         }
 
-        function mutateKeptToLibraries(libraries, keptToLibraries) {
+        function groupWidgetLibraries(libraries) {
+          // Libraries are divided into two possible groupings:
+          // (1) "Kept In" libraries followed by "My Libraries"; and
+          // (2) "Recent Libraries" followed by "Other Libraries".
+          //
+          // If there are any kept-in libraries, the first grouping is displayed.
+
+          scope.widgetKeptInLibraries = [];
+          scope.widgetMyLibraries = [];
+          scope.widgetRecentLibraries = [];
+          scope.widgetOtherLibraries = [];
+
           libraries.forEach(function (library) {
-            library.keptTo = _.contains(keptToLibraries, library.id);
+            library.keptTo = false;
+
+            if (_.indexOf(scope.keptToLibraryIds, library.id) !== -1) {
+              library.keptTo = true;
+              scope.widgetKeptInLibraries.push(library);
+            } else {
+              library.keptTo = false;
+              scope.widgetMyLibraries.push(library);
+            }
+
+            if (_.indexOf(libraryService.recentLibraries, library.id) !== -1) {
+              scope.widgetRecentLibraries.push(library);
+            } else {
+              scope.widgetOtherLibraries.push(library);
+            }
           });
+
+          // widgetLibraries is the list of libraries being displayed in the widget.
+          if (scope.widgetKeptInLibraries.length) {
+            widgetLibraries = scope.widgetKeptInLibraries.concat(scope.widgetMyLibraries);
+          } else {
+            widgetLibraries = scope.widgetRecentLibraries.concat(scope.widgetOtherLibraries);
+          }
+
+          // Select the top listed library.
+          selectedIndex = 0;
+          if (widgetLibraries.length) {
+            widgetLibraries[selectedIndex].selected = true;
+          }
         }
 
-
-        //
-        // Scope methods.
-        //
-        scope.showWidget = function () {
-          var keptToLibraries = scope.keptToLibraries || [];
-
+        function initWidget() {
+          //
           // Create widget.
+          //
           widget = angular.element($templateCache.get('keep/keepToLibraryWidget.tpl.html'));
           $rootElement.find('html').append(widget);
           $compile(widget)(scope);
+
 
           //
           // Position widget.
@@ -185,7 +249,7 @@ angular.module('kifi')
             var left = element.offset().left - shiftLeftDistance;
 
             // Shift the widget up or down.
-            var shiftUpDistance ;
+            var shiftUpDistance;
             var widgetHeight = widget.height();
 
             // First, shift the widget down based on the passed in desired shift down distance.
@@ -221,33 +285,55 @@ angular.module('kifi')
             }, 0);
           }, 0);
 
-          // Set event handlers.
-          $document.on('mousedown', onClick);
 
+          //
           // Initialize state.
-          scope.search = {};
+          //
           selectedIndex = 0;
-          libraryList = widget.find('.library-select-list');
-          searchInput = widget.find('.keep-to-library-search-input');
+
+          scope.keptToLibraryIds = scope.keptToLibraryIds || [];
+          scope.search = {};
           scope.showCreate = false;
           scope.newLibrary = {};
+          scope.$error = {};
+
+          libraryList = widget.find('.library-select-list');
+          searchInput = widget.find('.keep-to-library-search-input');
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
-          var libraries = _.filter(libraryService.librarySummaries, { access: 'owner' });
-          mutateKeptToLibraries(libraries, keptToLibraries);
 
-          libraries[selectedIndex].selected = true;
-          scope.widgetLibraries = libraries;
-        };
+          //
+          // Group widget libraries.
+          //
+          allLibraries = _.filter(libraryService.librarySummaries, function (lib) {
+            return lib.access !== 'read_only';
+          });
 
+          libraryNameSearch = new Fuse(allLibraries, {
+            keys: ['name'],
+            threshold: 0.3  // 0 means exact match, 1 means match with anything.
+          });
+
+          groupWidgetLibraries(allLibraries);
+
+
+          //
+          // Set event handlers.
+          //
+          $document.on('mousedown', onClick);
+        }
+
+
+        //
+        // Scope methods.
+        //
         scope.onHover = function (library) {
           if (justScrolled) {
             justScrolled = false;
           } else {
             clearSelection();
             library.selected = true;
-            scope.librarySelection.library = library;
-            selectedIndex = _.indexOf(scope.widgetLibraries, library);
+            selectedIndex = _.indexOf(widgetLibraries, library);
           }
         };
 
@@ -255,10 +341,15 @@ angular.module('kifi')
           library.selected = false;
         };
 
+        scope.onSearchInputChange = function (name) {
+          var matchedLibraries = libraryNameSearch.search(name);
+          groupWidgetLibraries(!name ? allLibraries : matchedLibraries);
+        };
+
         scope.processKeyEvent = function ($event) {
           function getNextIndex(index, direction) {
             var nextIndex = index + direction;
-            return (nextIndex < 0 || nextIndex > scope.widgetLibraries.length - 1) ? index : nextIndex;
+            return (nextIndex < 0 || nextIndex > widgetLibraries.length - 1) ? index : nextIndex;
           }
 
           switch ($event.keyCode) {
@@ -268,7 +359,7 @@ angular.module('kifi')
 
               clearSelection();
               selectedIndex = getNextIndex(selectedIndex, -1);
-              scope.widgetLibraries[selectedIndex].selected = true;
+              widgetLibraries[selectedIndex].selected = true;
 
               adjustScroll(selectedIndex);
 
@@ -279,7 +370,7 @@ angular.module('kifi')
 
               clearSelection();
               selectedIndex = getNextIndex(selectedIndex, 1);
-              scope.widgetLibraries[selectedIndex].selected = true;
+              widgetLibraries[selectedIndex].selected = true;
 
               adjustScroll(selectedIndex);
 
@@ -291,12 +382,13 @@ angular.module('kifi')
               // If there are any libraries shown, select confirm the selected library.
               // Otherwise, go to the create panel.
               if (widget.find('.library-select-option').length) {
-                scope.librarySelection.library = scope.widgetLibraries[selectedIndex];
-                if (_.isFunction(scope.clickAction)) {
-                  scope.clickAction(element);
-                }
+                invokeWidgetCallbacks(widgetLibraries[selectedIndex]);
                 removeWidget();
               } else {
+                // If there are no libraries shown, prepopulate the create-library
+                // name input field with the search query.
+                scope.newLibrary.name = scope.search.name;
+
                 scope.showCreatePanel();
               }
               break;
@@ -312,6 +404,13 @@ angular.module('kifi')
         scope.showCreatePanel = function () {
           scope.showCreate = true;
 
+          // If there are no libraries shown, prepopulate the create-library
+          // name input field with the search query.
+          if (!widget.find('.library-select-option').length) {
+            scope.newLibrary.name = scope.search.name;
+          }
+
+
           // Wait for the creation panel to be shown, and then focus on the
           // input.
           $timeout(function () {
@@ -321,49 +420,69 @@ angular.module('kifi')
 
         scope.hideCreatePanel = function () {
           scope.showCreate = false;
-          scope.search = {};
 
           // Wait for the libraries panel to be shown, and then focus on the
-          // search input.
+          // search input and scroll back to the top.
           $timeout(function () {
             searchInput.focus();
+            libraryList.scrollTop(0);
           }, 0);
         };
 
         scope.createLibrary = function (library) {
-          if (submitting || !library.name || (library.name.length < 3)) {
+          if (submitting || !library.name) {
             return;
           }
+
+          scope.$error.name = libraryService.getLibraryNameError(library.name);
+          if (scope.$error.name) {
+            return;
+          }
+          scope.$error = {};
 
           library.slug = util.generateSlug(library.name);
           library.visibility = library.visibility || 'published';
 
           libraryService.createLibrary(library).then(function () {
-            libraryService.fetchLibrarySummaries(true).then(function (data) {
+            libraryService.fetchLibrarySummaries(true).then(function () {
               scope.$evalAsync(function () {
-                var libraries = _.filter(data.libraries, { access: 'owner' });
-                var keptToLibraries = scope.keptToLibraries || [];
-
-                mutateKeptToLibraries(libraries, keptToLibraries);
-
-                libraries[selectedIndex].selected = true;
-                scope.widgetLibraries = libraries;
-                scope.librarySelection.library = _.find(scope.widgetLibraries, { 'name': library.name });
-                if (_.isFunction(scope.clickAction)) {
-                  scope.clickAction(element);
-                }
+                invokeWidgetCallbacks(_.find(libraryService.librarySummaries, { 'name': library.name }));
                 removeWidget();
               });
             });
+          })['catch'](function (err) {
+            var error = err.data && err.data.error;
+            switch (error) {
+              case 'library name already exists for user':  // deprecated
+              case 'library_name_exists':
+                scope.$error.general = 'You already have a library with this name';
+                break;
+              case 'invalid library name':  // deprecated
+              case 'invalid_name':
+                scope.$error.general = 'You already have a library with this name';
+                break;
+              default:
+                scope.$error.general = 'Hmm, something went wrong. Try again later?';
+                break;
+            }
           })['finally'](function () {
             submitting = false;
           });
         };
 
+
         //
-        // Clean up.
+        // Watches and listeners.
         //
-        scope.$on('$destroy', removeWidget);
+        scope.$watch('newLibrary.name', function (newVal, oldVal) {
+          if (newVal !== oldVal) {
+            // Clear the error popover when the user changes the name field.
+            scope.$error.name = null;
+          }
+        });
+
+
+        init();
       }
     };
   }

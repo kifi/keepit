@@ -1,12 +1,36 @@
-<div kf-modal kf-width="620px" class="import-modal" force-close="forceClose">
+<div kf-modal kf-width="560px" class="import-modal" force-close="forceClose">
   <div kf-basic-modal-content centered="true" title="Import your browser bookmarks as keeps" single-action="false" cancel="cancelImport()">
-    <img src="/img/bookmark-to-kifi@2x.png" class="import-star-to-kifi">
-    <div class="dialog-text">
-      Get pages you bookmarked in your browser into your personal Kifi library. Public imports mean that your keeps can be discovered by friends, but will never automatically be displayed as a list anywhere.
+    <div class="import-library-explanation">
+      <div class="import-bookmarks-icon svg-import-bookmarks"></div>
+      <div class="kifi-clover-icon svg-kifi-clover-logo"></div>
+      <div class="dialog-text">
+        Import pages you bookmarked in your browser into your Kifi library. Choose
+        a public or private library as needed.
+      </div>
     </div>
+
+    <div class="import-library-selection">
+      Choose a library to import to
+      <div class="add-keep-to-library-dropdown"
+        kf-keep-to-library-widget widget-action-text="Import keeps" library-select-action="onImportLibrarySelected(selectedLibrary)"
+        lib-select-down-offset="0" lib-select-max-up-offset="220" lib-select-left-offset="0">
+        <span ng-switch="importLibrary.kind" class="keep-to-library-lib-icon-container">
+          <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>
+          <span ng-switch-when="system_secret" class="keep-to-library-lib-icon svg-secret-library-icon"></span>
+          <span ng-switch-default ng-switch="importLibrary.visibility">
+            <span ng-switch-when="published" class="keep-to-library-lib-icon svg-public-library-icon"></span>
+            <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
+
+            <span ng-switch-when="discoverable" class="keep-to-library-lib-icon svg-yellow-card-with-globe"></span>
+          </span>
+        </span>
+        {{importLibrary.name}}
+        <span class="add-keep-to-library-dropdown-arrow"></span>
+      </div>
+    </div>
+
     <div class="dialog-buttons">
-      <button ng-click="importBookmarks()">Import Privately</button>
-      <button ng-click="importBookmarks(true)">Import Publicly</button>
+      <button class="import-button" ng-click="importBookmarksToLibrary(importLibrary)">Import</button>
     </div>
   </div>
 </div>

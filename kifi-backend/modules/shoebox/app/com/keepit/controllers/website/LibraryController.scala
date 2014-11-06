@@ -58,6 +58,7 @@ class LibraryController @Inject() (
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
     val addRequest = request.body.as[LibraryAddRequest]
 
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(LibraryFail(message)) =>
         Future.successful(BadRequest(Json.obj("error" -> message)))
@@ -87,7 +88,7 @@ class LibraryController @Inject() (
 
   def removeLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.removeLibrary(id, request.userId) match {
       case Some((status, message)) => Status(status)(Json.obj("error" -> message))
       case _ => Ok(JsString("success"))
@@ -179,7 +180,7 @@ class LibraryController @Inject() (
             (id, access, message)
           }
         }
-        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val res = libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList)
         res match {
           case Left(fail) =>
@@ -200,7 +201,7 @@ class LibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val res = libraryCommander.joinLibrary(request.userId, libId)
         res match {
           case Left(fail) =>
@@ -229,6 +230,7 @@ class LibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         libraryCommander.leaveLibrary(id, request.userId) match {
           case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
           case Right(_) => Ok(JsString("success"))
@@ -257,7 +259,9 @@ class LibraryController @Inject() (
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libraryId) =>
-        val (collaborators, followers, inviteesWithInvites, _) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = true)
+        val library = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
+        val showInvites = request.userIdOpt.map(uId => uId == library.ownerId).getOrElse(false)
+        val (collaborators, followers, inviteesWithInvites, _) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = showInvites)
         val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
         Ok(Json.obj("members" -> maybeMembers))
     }
@@ -267,6 +271,7 @@ class LibraryController @Inject() (
     val hashtag = Hashtag(tag)
     val id = Library.decodePublicId(libraryId).get
     SafeFuture {
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       libraryCommander.copyKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
         case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
         case Right((goodKeeps, badKeeps)) =>
@@ -290,6 +295,7 @@ class LibraryController @Inject() (
     val hashtag = Hashtag(tag)
     val id = Library.decodePublicId(libraryId).get
     SafeFuture {
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       libraryCommander.moveKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
         case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
         case Right((goodKeeps, badKeeps)) =>
@@ -323,6 +329,7 @@ class LibraryController @Inject() (
     Library.decodePublicId(toPubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val targetKeeps = db.readOnlyMaster { implicit s => targetKeepsExt.map(keepRepo.getOpt) }.flatten
         val (goodKeeps, badKeeps) = libraryCommander.copyKeeps(request.userId, toId, targetKeeps, Some(KeepSource.userCopied))
         val errors = badKeeps.map {
@@ -349,6 +356,7 @@ class LibraryController @Inject() (
     Library.decodePublicId(toPubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val targetKeeps = db.readOnlyReplica { implicit s => targetKeepsExt.map { keepRepo.getOpt } }.flatten
         val (goodKeeps, badKeeps) = libraryCommander.moveKeeps(request.userId, toId, targetKeeps)
         val errors = badKeeps.map {
@@ -485,15 +493,7 @@ class LibraryController @Inject() (
   }
 
   def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
-    val futureTagsAndMatches = query.map(_.trim).filter(_.nonEmpty) match {
-      case Some(validQuery) => keepsCommander.searchTags(request.userId, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
-      case None => {
-        val libraryId = Library.decodePublicId(pubId).get
-        val uriId = db.readOnlyMaster { implicit session => keepRepo.get(keepId).uriId }
-        keepsCommander.suggestTags(request.userId, libraryId, uriId, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
-      }
-    }
-    futureTagsAndMatches.imap { tagsAndMatches =>
+    keepsCommander.suggestTags(request.userId, keepId, query, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
       val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)

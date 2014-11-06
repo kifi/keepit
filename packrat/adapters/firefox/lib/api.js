@@ -175,9 +175,10 @@ function respondToTab(callbackId, page, response) {
   }
 }
 
-exports.request = function(method, url, data, done, fail) {
+exports.request = function (method, url, data, headers, done, fail) {
   var options = {
     url: url,
+    headers: headers,
     onComplete: onRequestEnd.bind(null, done, fail)
   };
   if (data != null && data !== '') {
@@ -597,6 +598,7 @@ require('./location').onChange(errors.wrap(function onLocationChange(tabId, newP
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != tab.url.match(stripHashRe)[0]) {
         exports.tabs.on.unload.dispatch(page, true);
         page.url = tab.url;
+        page.usedHistoryApi = true;
         exports.tabs.on.loading.dispatch(page);
       } else {
         page.url = tab.url;

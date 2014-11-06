@@ -1,20 +1,4 @@
-<ul class="kf-nav-group" ng-if="!librariesEnabled">
-  <li class="kf-nav-item kf-nav-recos" ng-class="{ active: isActive('/') }">
-    <a class="kf-nav-link" href="/">
-      <span class="sprite sprite-clover-small"></span>
-      <span class="kf-nav-name pre-libraries-style">Recommendations</span>
-    </a>
-  </li>
-  <li class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive('/keeps') }">
-    <a class="kf-nav-link" href="/keeps">
-      <span class="sprite sprite-cards-small"></span>
-      <span class="kf-nav-name pre-libraries-style">Keeps Library</span>
-      <span class="kf-nav-count" ng-class="{ empty: !counts.keepCount }">{{counts.keepCount}}</span>
-    </a>
-  </li>
-</ul>
-
-<div class="kf-nav-group" ng-if="librariesEnabled">
+<div class="kf-nav-group">
   <div class="kf-nav-lib-recos" ng-class="{ active: isActive('/') }">
     <a class="kf-nav-link" href="/">
       <span class="reco-icon svg-reco-icon"></span>

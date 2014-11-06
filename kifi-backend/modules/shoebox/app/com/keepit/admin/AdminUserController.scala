@@ -45,7 +45,9 @@ case class UserStatistics(
   privateKeeps: Int,
   publicKeeps: Int,
   experiments: Set[ExperimentType],
-  kifiInstallations: Seq[KifiInstallation])
+  kifiInstallations: Seq[KifiInstallation],
+  librariesCreated: Int,
+  librariesFollowed: Int)
 
 case class InvitationInfo(activeInvites: Seq[Invitation], acceptedInvites: Seq[Invitation])
 
@@ -81,6 +83,7 @@ class AdminUserController @Inject() (
     mailRepo: ElectronicMailRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
     keepRepo: KeepRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     socialConnectionRepo: SocialConnectionRepo,
     searchFriendRepo: SearchFriendRepo,
     userConnectionRepo: UserConnectionRepo,
@@ -312,6 +315,8 @@ class AdminUserController @Inject() (
     val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(user.id.get)
     val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
     val emails = emailRepo.getAllByUser(user.id.get)
+    val librariesCreated = libraryMembershipRepo.countByLibraryAccess(user.id.get, LibraryAccess.OWNER) - 2 //ignoring main and secret
+    val librariesFollowed = libraryMembershipRepo.countByLibraryAccess(user.id.get, LibraryAccess.READ_ONLY)
 
     UserStatistics(user,
       userConnectionRepo.getConnectionCount(user.id.get),
@@ -321,11 +326,13 @@ class AdminUserController @Inject() (
       privateKeeps,
       publicKeeps,
       userExperimentRepo.getUserExperiments(user.id.get),
-      kifiInstallations)
+      kifiInstallations,
+      librariesCreated,
+      librariesFollowed)
   }
 
   def userStatisticsPage(page: Int = 0, userViewType: UserViewType) = {
-    val PAGE_SIZE: Int = 50
+    val PAGE_SIZE: Int = 30
     val (users, userCount) = db.readOnlyReplica { implicit s =>
       userViewType match {
         case AllUsersViewType => (userRepo.pageIncluding(UserStates.ACTIVE)(page, PAGE_SIZE) map userStatistics,
@@ -345,7 +352,7 @@ class AdminUserController @Inject() (
           val invites = invitationRepo.getRecentInvites()
           val (accepted, sent) = invites.partition(_.state == InvitationStates.ACCEPTED)
           val recentUsers = userRepo.getRecentActiveUsers()
-          (Some(userRepo.countNewUsers), recentUsers, Some(InvitationInfo(accepted, sent)))
+          (Some(userRepo.countNewUsers), recentUsers, Some(InvitationInfo(sent, accepted)))
         }
       case _ =>
         (None, Seq.empty, None)

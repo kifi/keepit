@@ -19,3 +19,10 @@ trait BinaryFeatureFormatter[T <: FeatureRepresentation[_, _ <: StatModel]] {
   def toBinary(m: T): Array[Byte]
   def fromBinary(bytes: Array[Byte]): T
 }
+
+abstract class MultiVersionedFeatureRepresenter[M <: StatModel, FR <: FeatureRepresenter[_, M, _]](representers: Seq[FR]) {
+  private val dimMap = representers.map { rep => (rep.version, rep.dimension) }.toMap
+  def versions: Seq[ModelVersion[M]] = representers.map { _.version }
+  def getRepresenter(version: ModelVersion[M]): Option[FR] = representers.find(_.version == version)
+  def getDimension(version: ModelVersion[M]): Option[Int] = dimMap.get(version)
+}

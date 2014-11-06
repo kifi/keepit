@@ -29,7 +29,7 @@ class LDADbUpdaterTest extends Specification with CortexTestInjector with LDADbT
           uris.map { CortexURI.fromURI(_) }.foreach { uriRepo.save(_) }
         }
 
-        val updater = new LDADbUpdaterImpl(uriRep, db, uriRepo, topicRepo, commitRepo)
+        val updater = new LDADbUpdaterImpl(uriReps, db, uriRepo, topicRepo, commitRepo)
         updater.update
 
         db.readOnlyMaster { implicit s =>
@@ -63,7 +63,7 @@ class LDADbUpdaterTest extends Specification with CortexTestInjector with LDADbT
           uris.map { CortexURI.fromURI(_) }.foreach { uriRepo.save(_) }
         }
 
-        val updater = new LDADbUpdaterImpl(uriRep, db, uriRepo, topicRepo, commitRepo)
+        val updater = new LDADbUpdaterImpl(uriReps, db, uriRepo, topicRepo, commitRepo)
         updater.update
 
         db.readOnlyMaster { implicit s =>
@@ -100,7 +100,7 @@ class LDADbUpdaterTest extends Specification with CortexTestInjector with LDADbT
           uris.map { CortexURI.fromURI(_) }.foreach { uriRepo.save(_) }
         }
 
-        val updater = new LDADbUpdaterImpl(uriRep, db, uriRepo, topicRepo, commitRepo)
+        val updater = new LDADbUpdaterImpl(uriReps, db, uriRepo, topicRepo, commitRepo)
         updater.update
 
         db.readOnlyMaster { implicit s =>
@@ -122,7 +122,7 @@ class LDADbUpdaterTest extends Specification with CortexTestInjector with LDADbT
           uris.map { CortexURI.fromURI(_).copy(state = State[CortexURI]("active")) }.foreach { uriRepo.save(_) }
         }
 
-        val updater = new LDADbUpdaterImpl(uriRep, db, uriRepo, topicRepo, commitRepo)
+        val updater = new LDADbUpdaterImpl(uriReps, db, uriRepo, topicRepo, commitRepo)
         updater.update
 
         db.readOnlyMaster { implicit s =>
@@ -152,6 +152,7 @@ trait LDADbTestHelper extends URIFeatureTestHelper {
   }
   val articleStore = new InMemoryArticleStoreImpl()
   val uriRep = LDAURIRepresenter(docRep, articleStore)
+  val uriReps = MultiVersionedLDAURIRepresenter(uriRep)
 
   def makeURI(idx: Int, seq: Option[SequenceNumber[NormalizedURI]] = None, state: State[NormalizedURI] = NormalizedURIStates.SCRAPED) = {
     NormalizedURI(id = Some(Id[NormalizedURI](idx)), url = s"http://page${idx}.com", urlHash = UrlHash(s"page${idx}"), seq = seq.getOrElse(SequenceNumber[NormalizedURI](idx)), state = state)

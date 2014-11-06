@@ -114,7 +114,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
           } else if (tile && (kept = tile.dataset.kept) && (kept === 'private') === e.altKey) {
             loadAndDo('keeper', 'showKeepBox');
           } else {
-            api.port.emit('keep', withUrls({title: authoredTitle(), secret: e.altKey}));
+            api.port.emit('keep', withTitles(withUrls({secret: e.altKey})));
           }
           e.preventDefault();
         }
@@ -226,7 +226,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   }
 
   function onResize() {
-    if (paneCall('showing')) return;
+    if (k.pane && k.pane.showing()) return;
     clearTimeout(onResize.t);  // throttling tile repositioning
     onResize.t = setTimeout(positionTile, 50);
   }
@@ -254,18 +254,19 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     }
     if (tile) {
       if (leaveTileInDoc) {
-        tile.style.display = 'none';
+        if (k.keeper) {
+          k.keeper.hide('action');
+        }
+        tile.removeAttribute('data-kept');
       } else {
         if (tileObserver) tileObserver.disconnect();
         tileObserver = tileParent = null;
         tile.remove();
       }
     }
-    paneCall('hide');
-  }
-
-  function paneCall(methodName) {
-    return k.pane && k.pane[methodName]();
+    if (k.pane) {
+      k.pane.hide();
+    }
   }
 
   api.onEnd.push(function() {
@@ -290,14 +291,15 @@ function withUrls(o) {
   return o;
 }
 
-function authoredTitle() {
+function withTitles(o) {
   var el = document.querySelector('meta[property="og:title"]');
-  var title = el && el.content.trim() || document.title.trim();
-  if (title && !el) {
+  o.ogTitle = el && el.content.trim();
+  o.title = document.title.trim();
+  if (o.title && !el) {
     el = document.body.firstElementChild;
     if (el && el.tagName === 'IMG' && el.src === document.URL) {
-      title = '';  // discard browser-generated title for image file
+      o.title = '';  // discard browser-generated title for image file
     }
   }
-  return title;
+  return o;
 }

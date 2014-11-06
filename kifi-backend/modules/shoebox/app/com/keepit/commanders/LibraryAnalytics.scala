@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.common.db.Id
+import com.keepit.common.mail.EmailAddress
 import com.keepit.model._
 import com.keepit.heimdal._
 import com.keepit.common.time._
@@ -10,7 +11,111 @@ import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @Singleton
-class KeepingAnalytics @Inject() (heimdal: HeimdalServiceClient) {
+class LibraryAnalytics @Inject() (heimdal: HeimdalServiceClient) {
+
+  def sendLibraryInvite(userId: Id[User], libId: Id[Library], inviteeList: Seq[(Either[Id[User], EmailAddress])], eventContext: HeimdalContext) = {
+    val builder = new HeimdalContextBuilder
+    builder.addExistingContext(eventContext)
+    builder += ("action", "sent")
+    builder += ("category", "libraryInvitation")
+    builder += ("libraryId", libId.id.toString)
+    builder += ("libraryOwnerId", userId.id.toString)
+    val numUsers = inviteeList.count(_.isLeft)
+    val numEmails = inviteeList.size - numUsers
+    builder += ("numUserInvited", numUsers)
+    builder += ("numNonUserInvited", numEmails)
+
+    heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
+  }
+
+  def acceptLibraryInvite(userId: Id[User], libId: Id[Library], eventContext: HeimdalContext) = {
+    val builder = new HeimdalContextBuilder
+    builder.addExistingContext(eventContext)
+    builder += ("action", "accepted")
+    builder += ("category", "libraryInvitation")
+    builder += ("libraryId", libId.id.toString)
+    heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
+  }
+
+  def followLibrary(userId: Id[User], library: Library, keepCount: Int, context: HeimdalContext): Unit = {
+    val followedAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++= context.data
+      contextBuilder += ("action", "followed")
+      contextBuilder += ("privacySetting", library.visibility.toString)
+      contextBuilder += ("libraryId", library.id.toString)
+      contextBuilder += ("libraryOwnerId", library.ownerId.toString)
+      contextBuilder += ("followerCount", library.memberCount - 1)
+      contextBuilder += ("keepCount", keepCount)
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, followedAt))
+    }
+  }
+
+  def unfollowLibrary(userId: Id[User], library: Library, keepCount: Int, context: HeimdalContext): Unit = {
+    val unfollowedAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++= context.data
+      contextBuilder += ("action", "unfollowed")
+      contextBuilder += ("privacySetting", library.visibility.toString)
+      contextBuilder += ("libraryId", library.id.toString)
+      contextBuilder += ("libraryOwnerId", library.ownerId.toString)
+      contextBuilder += ("followerCount", library.memberCount - 1)
+      contextBuilder += ("keepCount", keepCount)
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, unfollowedAt))
+    }
+  }
+
+  def createLibrary(userId: Id[User], library: Library, context: HeimdalContext): Unit = {
+    val createdLibraryAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++= context.data
+      contextBuilder += ("action", "created")
+      contextBuilder += ("privacySetting", library.visibility.toString)
+      contextBuilder += ("libraryId", library.id.toString)
+      contextBuilder += ("libraryOwnerId", library.ownerId.toString)
+      contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, createdLibraryAt))
+    }
+  }
+  def deleteLibrary(userId: Id[User], library: Library, context: HeimdalContext): Unit = {
+    val createdLibraryAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++= context.data
+      contextBuilder += ("action", "deleted")
+      contextBuilder += ("privacySetting", library.visibility.toString)
+      contextBuilder += ("libraryId", library.id.toString)
+      contextBuilder += ("libraryOwnerId", library.ownerId.toString)
+      contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, createdLibraryAt))
+    }
+  }
+  def editLibrary(userId: Id[User], library: Library, context: HeimdalContext, subAction: Option[String] = None): Unit = {
+    val createdLibraryAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++= context.data
+      contextBuilder += ("action", "edited")
+      subAction match {
+        case Some("move_keeps") =>
+          contextBuilder += ("subAction", "movedKeeps")
+        case Some("copy_keeps") =>
+          contextBuilder += ("subAction", "copiedKeeps")
+        case Some("import_keeps") =>
+          contextBuilder += ("subAction", "importedKeeps")
+        case _ =>
+      }
+      contextBuilder += ("privacySetting", library.visibility.toString)
+      contextBuilder += ("libraryId", library.id.toString)
+      contextBuilder += ("libraryOwnerId", library.ownerId.toString)
+      contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, createdLibraryAt))
+    }
+  }
+
   def renamedTag(oldTag: Collection, newTag: Collection, context: HeimdalContext): Unit = {
     val renamedAt = currentDateTime
     SafeFuture {

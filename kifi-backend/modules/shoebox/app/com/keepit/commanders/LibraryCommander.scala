@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ Provider, Inject }
 import com.keepit.commanders.emails.{ LibraryInviteEmailSender, EmailOptOutCommander }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -10,7 +11,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.mail.template.tags
-import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
+import com.keepit.common.mail.{ BasicContact, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
@@ -54,7 +55,7 @@ class LibraryCommander @Inject() (
     airbrake: AirbrakeNotifier,
     searchClient: SearchServiceClient,
     elizaClient: ElizaServiceClient,
-    keptAnalytics: KeepingAnalytics,
+    libraryAnalytics: LibraryAnalytics,
     libraryInviteSender: Provider[LibraryInviteEmailSender],
     heimdal: HeimdalServiceClient,
     contextBuilderFactory: HeimdalContextBuilderFactory,
@@ -65,8 +66,8 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
-  def libraryMetaTags(library: Library): PublicPageMetaTags = {
-    db.readOnlyMaster { implicit s =>
+  def libraryMetaTags(library: Library): Future[PublicPageMetaTags] = {
+    db.readOnlyMasterAsync { implicit s =>
       val owner = userRepo.get(library.ownerId)
       val urlPathOnly = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
       if (library.visibility != PUBLISHED) {
@@ -98,12 +99,7 @@ class LibraryCommander @Inject() (
           val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
           if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
         }
-        //should also get owr word2vec
-        val embedlyKeywords: Seq[String] = keeps map { keep =>
-          uriSummaryCommander.getStoredEmbedlyKeywords(keep.uriId).map(_.name)
-        } flatten
-        val tags: Seq[String] = collectionRepo.getTagsByLibrary(library.id.get).map(_.tag).toSeq
-        val allTags: Seq[String] = (embedlyKeywords ++ tags).toSet.toSeq
+
         PublicPageMetaFullTags(
           unsafeTitle = s"${library.name} by ${owner.firstName} ${owner.lastName} \u2022 Kifi",
           url = url,
@@ -113,7 +109,6 @@ class LibraryCommander @Inject() (
           facebookId = facebookId,
           createdAt = library.createdAt,
           updatedAt = library.updatedAt,
-          unsafeTags = allTags,
           unsafeFirstName = owner.firstName,
           unsafeLastName = owner.lastName)
       }
@@ -299,7 +294,7 @@ class LibraryCommander @Inject() (
 
     val invitedMembers = inviteesWithInvites.map {
       case (invitee, invites) =>
-        val member = invitee.left.map(usersById(_))
+        val member = invitee.left.map(usersById(_)).right.map(BasicContact(_)) // todo(ray): fetch contacts from abook or cache
         val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
         val access = invites.map(_.access).maxBy(_.priority)
         MaybeLibraryMember(member, Some(access), Some(lastInvitedAt))
@@ -356,13 +351,13 @@ class LibraryCommander @Inject() (
             case Some((access, lastInvitedAt)) => (Some(access), Some(lastInvitedAt))
             case None => (None, None)
           }
-          MaybeLibraryMember(Right(contact.email), access, lastInvitedAt)
+          MaybeLibraryMember(Right(contact), access, lastInvitedAt)
         }
         suggestedUsers ++ suggestedEmailAddresses
     }
   }
 
-  def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
+  def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     val badMessage: Option[String] = {
       if (libAddReq.name.isEmpty || !Library.isValidName(libAddReq.name)) { Some("invalid_name") }
       else if (libAddReq.slug.isEmpty || !LibrarySlug.isValidSlug(libAddReq.slug)) { Some("invalid_slug") }
@@ -408,6 +403,7 @@ class LibraryCommander @Inject() (
             val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, inviterId = ownerId, userId = Some(c), access = LibraryAccess.READ_ONLY)
 
             inviteBulkUsers(bulkInvites1 ++ bulkInvites2)
+            libraryAnalytics.createLibrary(ownerId, library, context)
             searchClient.updateLibraryIndex()
             Right(library)
         }
@@ -490,7 +486,8 @@ class LibraryCommander @Inject() (
       val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
         keepRepo.save(keep.sanitizeForDelete())(s)
       }
-      keptAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, context)
+      libraryAnalytics.deleteLibrary(userId, oldLibrary, context)
+      libraryAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, context)
       searchClient.updateKeepIndex()
       //Note that this is at the end, if there was an error while cleaning other library assets
       //we would want to be able to get back to the library and clean it again
@@ -714,7 +711,7 @@ class LibraryCommander @Inject() (
       val (inv1, res) = successInvites.unzip
       inviteBulkUsers(inv1)
 
-      trackLibraryInvitation(inviterId, libraryId, inviteList.map { _._1 }, eventContext, action = "sent")
+      libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
 
       Right(res)
     }
@@ -757,7 +754,10 @@ class LibraryCommander @Inject() (
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
-        trackLibraryInvitation(userId, libraryId, Seq(), eventContext, action = "accepted")
+
+        val keepCount = keepRepo.getCountByLibrary(libraryId)
+        libraryAnalytics.acceptLibraryInvite(userId, libraryId, eventContext)
+        libraryAnalytics.followLibrary(userId, lib, keepCount, eventContext)
         searchClient.updateLibraryIndex()
         Right(updatedLib)
       }
@@ -771,7 +771,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def leaveLibrary(libraryId: Id[Library], userId: Id[User]): Either[LibraryFail, Unit] = {
+  def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit] = {
     db.readWrite { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
         case None => Left(LibraryFail("membership_not_found"))
@@ -780,6 +780,9 @@ class LibraryCommander @Inject() (
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           val lib = libraryRepo.get(libraryId)
           libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
+
+          val keepCount = keepRepo.getCountByLibrary(libraryId)
+          libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
           searchClient.updateLibraryIndex()
           Right()
         }
@@ -817,11 +820,12 @@ class LibraryCommander @Inject() (
           case Right(successKeep) => goodKeeps += successKeep
         }
       }
-      searchClient.updateKeepIndex()
       if (badKeeps.size != keeps.size)
         libraryRepo.updateLastKept(dstLibraryId)
       groupedKeeps.keys.flatten
     }
+    searchClient.updateKeepIndex()
+
     implicit val dca = TransactionalCaching.Implicits.directCacheAccess
     srcLibs.map { srcLibId =>
       countByLibraryCache.remove(CountByLibraryKey(srcLibId))
@@ -830,7 +834,7 @@ class LibraryCommander @Inject() (
     (goodKeeps.toSeq, badKeeps.toSeq)
   }
 
-  def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
+  def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
     db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndName(userId, tagName)
     } match {
@@ -844,7 +848,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
+  def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
     db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndName(userId, tagName)
     } match {
@@ -858,7 +862,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource]): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
+  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
     val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
       val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
@@ -899,11 +903,13 @@ class LibraryCommander @Inject() (
               }
           }
         }
-        applyToKeeps(userId, toLibraryId, keeps, Set(), saveKeep)
+        val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(), saveKeep)
+        libraryAnalytics.editLibrary(userId, toLibrary, context, Some("copy_keeps"))
+        keepResults
     }
   }
 
-  def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep]): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
+  def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
     val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
       val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
@@ -946,7 +952,9 @@ class LibraryCommander @Inject() (
               }
           }
         }
-        applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
+        val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
+        libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
+        keepResults
     }
   }
 
@@ -1020,24 +1028,6 @@ class LibraryCommander @Inject() (
         }
       case _ => None
     }
-  }
-
-  private def trackLibraryInvitation(userId: Id[User], libId: Id[Library], inviteeList: Seq[(Either[Id[User], EmailAddress])], eventContext: HeimdalContext, action: String) = {
-    val builder = contextBuilderFactory()
-    builder.addExistingContext(eventContext)
-    builder += ("action", action)
-    builder += ("category", "libraryInvitation")
-    builder += ("libraryId", libId.id)
-
-    if (action == "sent") {
-      builder += ("libraryOwnerId", userId.id)
-      val numUsers = inviteeList.count(_.isLeft)
-      val numEmails = inviteeList.size - numUsers
-      builder += ("numUserInvited", numUsers)
-      builder += ("numNonUserInvited", numEmails)
-    }
-
-    heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
   }
 
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]) = {
@@ -1127,14 +1117,11 @@ object LibraryInfo {
   }
 }
 
-case class MaybeLibraryMember(member: Either[BasicUser, EmailAddress], access: Option[LibraryAccess], lastInvitedAt: Option[DateTime])
+case class MaybeLibraryMember(member: Either[BasicUser, BasicContact], access: Option[LibraryAccess], lastInvitedAt: Option[DateTime])
 
 object MaybeLibraryMember {
   implicit val writes = Writes[MaybeLibraryMember] { member =>
-    val identityFields = member.member match {
-      case Left(user) => Json.toJson(user).as[JsObject]
-      case Right(emailAddress) => Json.obj("email" -> emailAddress)
-    }
+    val identityFields = member.member.fold(user => Json.toJson(user), contact => Json.toJson(contact)).as[JsObject]
     val libraryRelatedFields = Json.obj("membership" -> member.access, "lastInvitedAt" -> member.lastInvitedAt)
     json.minify(identityFields ++ libraryRelatedFields)
   }
@@ -1161,7 +1148,7 @@ object FullLibraryInfo {
 }
 
 case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
-  override val version = 1
+  override val version = 2
   val namespace = "library_info_libraryid"
   def toKey(): String = libraryId.id.toString
 }

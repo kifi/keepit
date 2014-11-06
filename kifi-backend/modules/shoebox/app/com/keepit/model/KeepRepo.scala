@@ -15,12 +15,10 @@ import com.keepit.common.core._
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] //todo: replace option with seq
-  def getAllByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep]
+  def getAllByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep]
-  def getPrimaryByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep]
   def getPrimaryInDisjointByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
-  def getDuplicatesByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def countPublicActiveByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Int
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Keep]
@@ -173,16 +171,12 @@ class KeepRepoImpl @Inject() (
       keeps.find(_.inDisjointLib).orElse(keeps.headOption) // order: disjoint, custom
     }
 
-  def getAllByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep] = {
-    (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true && b.state === KeepStates.ACTIVE) yield b).list
+  def getAllByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep] = {
+    (for (b <- rows if b.userId === userId && b.uriId.inSet(uriIds) && b.state === KeepStates.ACTIVE) yield b).list
   }
 
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep] = {
     (for (b <- rows if b.externalId === extId && b.userId === userId) yield b).firstOption
-  }
-
-  def getPrimaryByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] = {
-    (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true) yield b).firstOption
   }
 
   def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep] = {
@@ -191,10 +185,6 @@ class KeepRepoImpl @Inject() (
 
   def getPrimaryInDisjointByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] = {
     (for (b <- rows if b.uriId === uriId && b.userId === userId && b.inDisjointLib && b.isPrimary === true) yield b).firstOption
-  }
-
-  def getDuplicatesByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep] = {
-    (for (b <- rows if b.uriId === uriId && b.userId === userId && b.state === KeepStates.DUPLICATE) yield b).list
   }
 
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep] =
@@ -410,22 +400,32 @@ class KeepRepoImpl @Inject() (
     (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt desc).drop(offset).take(limit).list
   }
 
-  private def getCountByLibraryCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {
-    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).length
+  private val getCountByLibraryCompiled = Compiled { (libraryId: Column[Id[Library]]) =>
+    (for (b <- rows if b.libraryId === libraryId) yield b).length
   }
-
+  private val getCountByLibraryWithExcludeCompiled = Compiled { (libraryId: Column[Id[Library]], excludeState: Column[State[Keep]]) =>
+    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState) yield b).length
+  }
   def getCountByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Int = {
     countByLibraryCache.getOrElse(CountByLibraryKey(libraryId)) {
-      getCountByLibraryCompiled(libraryId, excludeState).run
+      excludeState match {
+        case None => getCountByLibraryCompiled(libraryId).run
+        case Some(exclude) => getCountByLibraryWithExcludeCompiled(libraryId, exclude).run
+      }
     }
   }
 
-  private def getByExtIdandLibraryIdCompiled(extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {
-    (for (b <- rows if b.externalId === extId && b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b)
+  private val getByExtIdandLibraryIdCompiled = Compiled { (extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]]) =>
+    (for (b <- rows if b.externalId === extId && b.libraryId === libraryId) yield b)
   }
-
+  private val getByExtIdandLibraryIdWithExcludeCompiled = Compiled { (extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]], excludeState: Column[State[Keep]]) =>
+    (for (b <- rows if b.externalId === extId && b.libraryId === libraryId && b.state =!= excludeState) yield b)
+  }
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
-    getByExtIdandLibraryIdCompiled(extId, libraryId, excludeState).firstOption
+    excludeState match {
+      case None => getByExtIdandLibraryIdCompiled(extId, libraryId).firstOption
+      case Some(exclude) => getByExtIdandLibraryIdWithExcludeCompiled(extId, libraryId, exclude).firstOption
+    }
   }
 
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep] = {

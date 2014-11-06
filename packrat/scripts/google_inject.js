@@ -256,11 +256,10 @@ if (searchUrlRe.test(document.URL)) !function () {
   var observer = new MutationObserver(withMutations);
   function withMutations(mutations) {
     if (isVertical) return;
-    var ires = document.getElementById('ires');
-    if (ires) {
+    if (attachKifiRes() > 0) {
       log('[withMutations] Google results inserted');
       tGoogleResultsShown = Date.now();
-      if (attachKifiRes(ires) && !(tKifiResultsShown >= tKifiResultsReceived)) {
+      if (!(tKifiResultsShown >= tKifiResultsReceived)) {
         tKifiResultsShown = tGoogleResultsShown;
       }
       if (document.readyState !== 'loading') {  // avoid searching for input value if not yet updated to URL hash
@@ -281,8 +280,9 @@ if (searchUrlRe.test(document.URL)) !function () {
     observer.observe(document.getElementById('main'), whatToObserve);
   });
 
-  function attachKifiRes(ires) {
-    if ((ires = ires || document.getElementById('ires'))) {
+  function attachKifiRes() {
+    var ires = document.getElementById('ires');
+    if (ires) {
       if ($res[0].nextElementSibling !== ires) {
         $res.insertBefore(ires);
         if (!$res[0].firstElementChild.classList.contains('kifi-collapsed')) {
@@ -292,8 +292,9 @@ if (searchUrlRe.test(document.URL)) !function () {
           setTimeout(bindResHandlers);
           boundResHandlers = true;
         }
+        return 1; // just attached
       }
-      return true;
+      return -1; // already attached
     }
   }
 

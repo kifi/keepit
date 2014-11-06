@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
+import com.keepit.commanders.{ BasicCollectionByIdKey, BasicCollectionByIdCache }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ State, Id }
@@ -11,6 +12,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]]
+  def getCollectionsForKeep(keep: Keep)(implicit session: RSession): Seq[Id[Collection]]
   def getKeepsForTag(collectionId: Id[Collection],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit seesion: RSession): Seq[Id[Keep]]
   def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[KeepUriAndTime]
@@ -28,6 +30,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
 class KeepToCollectionRepoImpl @Inject() (
   airbrake: AirbrakeNotifier,
   collectionsForKeepCache: CollectionsForKeepCache,
+  basicCollectionCache: BasicCollectionByIdCache,
   collectionRepoProvider: Provider[CollectionRepoImpl],
   keepRepoProvider: Provider[KeepRepoImpl],
   val db: DataBaseComponent,
@@ -43,6 +46,7 @@ class KeepToCollectionRepoImpl @Inject() (
 
   override def deleteCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
     collectionsForKeepCache.remove(CollectionsForKeepKey(ktc.keepId))
+    basicCollectionCache.remove(BasicCollectionByIdKey(ktc.collectionId))
   }
 
   type RepoImpl = KeepToCollectionTable
@@ -65,6 +69,21 @@ class KeepToCollectionRepoImpl @Inject() (
       } yield kc
 
       query.sortBy(_.updatedAt).map(_.collectionId).list // todo(martin): we should add a column for explicit ordering of tags
+    }
+  }
+
+  def getCollectionsForKeep(keep: Keep)(implicit session: RSession): Seq[Id[Collection]] = {
+    if (keep.isActive) {
+      collectionsForKeepCache.getOrElse(CollectionsForKeepKey(keep.id.get)) {
+        val query = for {
+          kc <- rows if kc.bookmarkId === keep.id.get && kc.state === KeepToCollectionStates.ACTIVE
+          c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
+        } yield kc
+
+        query.sortBy(_.updatedAt).map(_.collectionId).list // todo(martin): we should add a column for explicit ordering of tags
+      }
+    } else {
+      Seq.empty
     }
   }
 

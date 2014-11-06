@@ -1,0 +1,37 @@
+<div class="library-followers dialog-content">
+  <a class="dialog-x library-followers-close-x" ng-click="close()"></a>
+
+  <div class="dialog-body-wrap">
+    <h1 class="dialog-header"> {{modalTitle}} </h1>
+    <div class="dialog-body">
+      <div class="lib-followers-info">
+        <p class="lib-followers-stats">
+          <span ng-pluralize count="library.numFollowers"
+                when="{'0': '0 people are ', 'one': '1 person is ', 'other': '{} people are '}"></span>
+          <span>following this library</span>
+        </p>
+      </div>
+
+      <div class="lib-followers-content">
+        <div class="lib-followers-content-list" smart-scroll scroll-distance="followerScrollDistance" scroll-disabled="isFollowerScrollDisabled()" scroll-next="followerScrollNext()">
+
+          <ul class="lib-followers-list">
+            <li class="lib-follower lib-owner">
+              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image">
+              <div class="lib-follower-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+            </li>
+
+            <li class="lib-follower" ng-repeat="follower in followerList">
+              <div class="lib-follower-user" ng-if="follower.id">
+                <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image">
+                <div class="lib-follower-name">{{follower.firstName}} {{follower.lastName}}</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>

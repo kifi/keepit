@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders.{ CollectionCommander, KeepsCommander, LibraryCommander, RichWhoKeptMyKeeps, URISummaryCommander }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.net._
@@ -19,6 +19,7 @@ import views.html
 
 import scala.collection.mutable.{ SynchronizedMap, HashMap => MutableMap }
 import scala.concurrent._
+import com.keepit.common.akka.SafeFuture
 
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -295,5 +296,4 @@ class AdminBookmarksController @Inject() (
       NotFound(Json.obj("error" -> "not_found"))
     }
   }
-
 }

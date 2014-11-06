@@ -1,35 +1,68 @@
-<div kf-modal kf-width="590px" class="import-file-modal" force-close="forceClose">
+<div kf-modal kf-width="560px" class="import-file-modal" force-close="forceClose">
   <div kf-basic-modal-content title="Import your links to Kifi" single-action="false" cancel="cancelBookmarkUpload()">
-    <div class="file-import-inner">
-      <img src="/img/bookmark-to-kifi@2x.png" class="import-kippt-to-kifi">
-      <ul class="file-import-info">
-        <li>The "keep engine" indexes each word of each page so that you can easily find it later when searching on Google or kifi.com</li>
-        <li><b>Public Keeps</b> are only discoverable by friends when searching and never displayed anywhere else</li>
-      </ul>
-      <div class="file-import-well">
-        <p class="import-how-to">How to import your content into Kifi:</p>
-        <div class="import-inset">
-          <p>Step 1: Export your links from
-          <a href="https://getpocket.com/export" ng-click="openExportPopup($event)">Pocket</a>,
-          <a href="http://export.delicious.com/settings/bookmarks/export" ng-click="openExportPopup($event)">Delicious</a>,
-          <a href="https://kippt.com/export/" ng-click="openExportPopup($event)">Kippt</a>,
-          <a href="https://www.instapaper.com/user/export" ng-click="openExportPopup($event)">Instapaper</a>, or
-          <a href="https://pinboard.in/export/" ng-click="openExportPopup($event)">Pinboard</a> (the format should be HTML).</p>
-          <p class="import-file-link">Step 2: <a ng-click="openBookmarkFileSelector($event)" href="javascript:">Click here to select the file you downloaded</a>.
-          <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html" onchange="angular.element(this).scope().allowUpload(this)"></p>
-          <div ng-show="importFilename">Step 3: Upload your bookmarks
-            <div class="dialog-buttons">
-              <button ng-click="uploadBookmarkFile($event)" ng-class="{'disabled': disableBookmarkImport }">Import privately</button>
-              <button ng-click="uploadBookmarkFile($event, true)" ng-class="{'disabled': disableBookmarkImport }">Import publicly</button>
-            </div>
-          </div>
-          <div ng-click="openBookmarkFileSelector($event)" class="import-file-status">
-            <div ng-if="importFilename"><i>{{importFilename}}</i> selected.</div>
-            <div ng-if="!importFilename && !importFileStatus">Please select a file to get started.</div>
-            <div ng-if="importFileStatus">{{importFileStatus}}</div>
-          </div>
-        </div>
+    <div class="import-library-explanation">
+      <img src="/img/others.png" class="import-file-others-icon">
+      <div class="arrow-right-icon svg-arrow-right"></div>
+      <div class="kifi-clover-icon svg-kifi-clover-logo"></div>
+
+      <div class="dialog-text">
+        Import your links from other sites into your Kifi library. Choose a public or private library as needed.
       </div>
+    </div>
+
+    <div class="import-library-how-to">
+      <p class="import-library-how-to-heading">3 easy steps to import your content into Kifi:</p>
+      <table>
+        <tr class="import-library-how-to-row">
+          <td class="import-library-how-to-row-heading">Step 1</td>
+          <td class="import-library-how-to-row-content">Export your links from
+            <a href="https://getpocket.com/export" ng-click="openExportPopup($event)">Pocket</a>,
+            <a href="http://export.delicious.com/settings/bookmarks/export" ng-click="openExportPopup($event)">Delicious</a>,
+            <a href="https://kippt.com/export/" ng-click="openExportPopup($event)">Kippt</a>,
+            <a href="https://www.instapaper.com/user/export" ng-click="openExportPopup($event)">Instapaper</a>, or
+            <a href="https://pinboard.in/export/" ng-click="openExportPopup($event)">Pinboard</a> (the format should be HTML).
+          </td>
+        </tr>
+
+        <tr class="import-library-how-to-row">
+          <td class="import-library-how-to-row-heading">Step 2</td>
+          <td class="import-library-how-to-row-content">Select
+            <a ng-click="openBookmarkFileSelector($event)" href="javascript:">the file you downloaded</a>.
+            <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html" onchange="angular.element(this).scope().allowUpload(this)">
+            <span ng-if="importFilename" class="bookmark-file-upload-name"><i>{{importFilename}}</i> selected.</span>
+            <div ng-if="importFileStatus" class="bookmark-file-upload-status" >{{importFileStatus}}</div>
+          </td>
+        </tr>
+
+        <tr class="import-library-how-to-row">
+          <td class="import-library-how-to-row-heading">Step 3</td>
+          <td class="import-library-how-to-row-content">Choose a library to import to</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="import-library-selection">
+      <div class="add-keep-to-library-dropdown"
+        kf-keep-to-library-widget widget-action-text="Import keeps" library-select-action="onImportLibrarySelected(selectedLibrary)"
+        lib-select-down-offset="0" lib-select-max-up-offset="220" lib-select-left-offset="0">
+        <span ng-switch="importLibrary.kind" class="keep-to-library-lib-icon-container">
+          <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>
+          <span ng-switch-when="system_secret" class="keep-to-library-lib-icon svg-secret-library-icon"></span>
+          <span ng-switch-default ng-switch="importLibrary.visibility">
+            <span ng-switch-when="published" class="keep-to-library-lib-icon svg-public-library-icon"></span>
+            <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
+
+            <!-- TODO: remove this when we no longer have any discoverable libraries. -->
+            <span ng-switch-when="discoverable" class="keep-to-library-lib-icon svg-yellow-card-with-globe"></span>
+          </span>
+        </span>
+        {{importLibrary.name}}
+        <span class="add-keep-to-library-dropdown-arrow"></span>
+      </div>
+    </div>
+
+    <div class="dialog-buttons">
+      <button class="import-button" ng-class="{'disabled': disableBookmarkImport || !importFilename}" ng-click="importBookmarkFileToLibrary(importLibrary)">Import</button>
     </div>
   </div>
 </div>

@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.cortex.core.{ StatModelName, FeatureRepresentation }
+import com.keepit.cortex.core.{ ModelVersion, StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater, FeaturePluginMessages }
 import com.keepit.model.User
@@ -50,7 +50,7 @@ trait LDAUserStatDbUpdater extends BaseFeatureUpdater[Id[User], User, DenseLDA, 
 
 @Singleton
 class LDAUserStatDbUpdaterImpl @Inject() (
-    representer: LDAURIRepresenter,
+    representer: MultiVersionedLDAURIRepresenter,
     db: Database,
     keepRepo: CortexKeepRepo,
     uriTopicRepo: URILDATopicRepo,
@@ -63,47 +63,51 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   protected val min_num_evidence = 5
 
   def update(): Unit = {
-    val tasks = fetchTasks
-    log.info(s"fetched ${tasks.size} tasks")
-    processTasks(tasks)
+    representer.versions.foreach { implicit version =>
+      val tasks = fetchTasks
+      log.info(s"fetched ${tasks.size} tasks")
+      processTasks(tasks)
+    }
   }
 
   def updateUser(userId: Id[User]): Unit = {
-    processUser(userId)
+    representer.versions.foreach { implicit version =>
+      processUser(userId)
+    }
   }
 
-  private def fetchTasks(): Seq[CortexKeep] = {
-    val commitOpt = db.readOnlyReplica { implicit s => commitRepo.getByModelAndVersion(modelName, representer.version.version) }
-    if (commitOpt.isEmpty) db.readWrite { implicit s => commitRepo.save(FeatureCommitInfo(modelName = modelName, modelVersion = representer.version.version, seq = 0L)) }
+  private def fetchTasks(implicit version: ModelVersion[DenseLDA]): Seq[CortexKeep] = {
+    val commitOpt = db.readOnlyReplica { implicit s => commitRepo.getByModelAndVersion(modelName, version.version) }
+    if (commitOpt.isEmpty) db.readWrite { implicit s => commitRepo.save(FeatureCommitInfo(modelName = modelName, modelVersion = version.version, seq = 0L)) }
 
     val fromSeq = SequenceNumber[CortexKeep](commitOpt.map { _.seq }.getOrElse(0L))
     log.info(s"fetch tasks from ${fromSeq.value}")
     db.readOnlyReplica { implicit s => keepRepo.getSince(fromSeq, fetchSize) }
   }
 
-  private def processTasks(keeps: Seq[CortexKeep]): Unit = {
+  private def processTasks(keeps: Seq[CortexKeep])(implicit version: ModelVersion[DenseLDA]): Unit = {
     val users = keeps.map { _.userId }.distinct
     users.foreach { processUser(_) }
     log.info(s"${users.size} users processed")
     keeps.lastOption.map { keep =>
       db.readWrite { implicit s =>
-        val commitInfo = commitRepo.getByModelAndVersion(modelName, representer.version.version).get
+        val commitInfo = commitRepo.getByModelAndVersion(modelName, version.version).get
         log.info(s"committing with seq = ${keep.seq.value}")
         commitRepo.save(commitInfo.withSeq(keep.seq.value).withUpdateTime(currentDateTime))
       }
     }
   }
 
-  private def processUser(userId: Id[User]): Unit = {
-    val model = db.readOnlyReplica { implicit s => userLDAStatsRepo.getByUser(userId, representer.version) }
-    val numFeat = db.readOnlyReplica { implicit s => uriTopicRepo.countUserURIFeatures(userId, representer.version, min_num_words) }
+  private def processUser(userId: Id[User])(implicit version: ModelVersion[DenseLDA]): Unit = {
+    val model = db.readOnlyReplica { implicit s => userLDAStatsRepo.getByUser(userId, version) }
+    val numFeat = db.readOnlyReplica { implicit s => uriTopicRepo.countUserURIFeatures(userId, version, min_num_words) }
     if (shouldComputeFeature(model, numFeat)) {
-      val feats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserURIFeatures(userId, representer.version, min_num_words) }
+      val feats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserURIFeatures(userId, version, min_num_words) }
       val (mean, variance) = genMeanAndVar(feats)
       val state = if (feats.size > min_num_evidence) UserLDAStatsStates.ACTIVE else UserLDAStatsStates.NOT_APPLICABLE
       val toSave = model match {
         case Some(m) => m.copy(numOfEvidence = feats.size, userTopicMean = mean, userTopicVar = variance).withUpdateTime(currentDateTime).withState(state)
-        case None => UserLDAStats(userId = userId, version = representer.version, numOfEvidence = feats.size, userTopicMean = mean, userTopicVar = variance, state = state)
+        case None => UserLDAStats(userId = userId, version = version, numOfEvidence = feats.size, userTopicMean = mean, userTopicVar = variance, state = state)
       }
       db.readWrite { implicit s => userLDAStatsRepo.save(toSave) }
     }

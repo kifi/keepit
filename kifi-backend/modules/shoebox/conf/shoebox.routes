@@ -237,6 +237,8 @@ POST    /m/1/libraries/:id/join                 @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/decline              @com.keepit.controllers.mobile.MobileLibraryController.declineLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/leave                @com.keepit.controllers.mobile.MobileLibraryController.leaveLibrary(id: PublicId[Library])
 GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
+POST    /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.MobileLibraryController.inviteUsersToLibrary(id: PublicId[Library])
+GET     /m/1/libraries/:id/members/suggest      @com.keepit.controllers.mobile.MobileLibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
 
 GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 
@@ -250,11 +252,14 @@ GET     /                           @com.keepit.controllers.website.HomeControll
 GET     /blog                       @com.keepit.controllers.website.HomeController.moved(uri = "http://blog.kifi.com")
 GET     /blog/                      @com.keepit.controllers.website.HomeController.moved(uri = "http://blog.kifi.com")
 GET     /about                      @com.keepit.controllers.website.HomeController.route(path = "about")
+GET     /about.html                 @com.keepit.controllers.website.HomeController.moved(uri = "/about")
 GET     /about/                     @com.keepit.controllers.website.HomeController.moved(uri = "/about")
 GET     /about/mission              @com.keepit.controllers.website.HomeController.moved(uri = "/about")
+GET     /about/mission.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about")
 GET     /about/culture              @com.keepit.controllers.website.HomeController.moved(uri = "/about")
 GET     /about/investors            @com.keepit.controllers.website.HomeController.moved(uri = "/about")
 GET     /about/team                 @com.keepit.controllers.website.HomeController.route(path = "about/team")
+GET     /about/team.html            @com.keepit.controllers.website.HomeController.moved(uri  = "about/team")
 GET     /about/join_us              @com.keepit.controllers.website.HomeController.route(path = "about/join_us")
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about/join_us")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")

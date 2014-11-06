@@ -2,6 +2,7 @@ package com.keepit.controllers.cortex
 
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
+import com.keepit.cortex.PublishingVersions
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.common.controller.CortexServiceController
@@ -17,6 +18,8 @@ class LDAController @Inject() (
   representer: LDARepresenterCommander,
   infoCommander: LDAInfoCommander)
     extends CortexServiceController with Logging {
+
+  implicit val ldaVersion = PublishingVersions.denseLDAVersion
 
   def numOfTopics() = Action { request =>
     Ok(JsNumber(lda.numOfTopics))
@@ -125,7 +128,7 @@ class LDAController @Inject() (
   }
 
   def recomputeUserLDAStat() = Action { request =>
-    lda.recomputeUserLDAStats()
+    lda.recomputeUserLDAStats
     Ok
   }
 

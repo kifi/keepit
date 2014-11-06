@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
@@ -343,11 +344,16 @@ class HeimdalServiceClientImpl @Inject() (
   }
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = {
-    val payload = Json.obj(
-      "userId" -> userId,
-      "keeps" -> newKeeps
-    )
-    call(Heimdal.internal.processKeepAttribution, payload) map { r => Unit }
+    var count = 0
+    FutureHelpers.sequentialExec[Seq[Keep], Unit](newKeeps.grouped(50).toSeq) { batch =>
+      val payload = Json.obj(
+        "userId" -> userId,
+        "keeps" -> batch
+      )
+      call(Heimdal.internal.processKeepAttribution, payload) map { r =>
+        count += batch.size
+        log.info(s"[processKeepAttribution(userId=$userId)] processed $count keeps")
+      }
+    }
   }
-
 }

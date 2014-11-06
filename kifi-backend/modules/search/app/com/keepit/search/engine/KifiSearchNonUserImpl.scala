@@ -84,7 +84,7 @@ class KifiSearchNonUserImpl(
     val engine = engineBuilder.build()
     val labels = engineBuilder.getQueryLabels()
     val query = engine.getQuery()
-    val collector = new ScoreDetailCollector(uriId.id, None, None)
+    val collector = new ScoreDetailCollector(uriId.id, None, percentMatch / 100.0f, None)
 
     val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait)
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait)
@@ -99,6 +99,6 @@ class KifiSearchNonUserImpl(
 
     engine.explain(uriId.id, collector, libraryScoreSource, keepScoreSource, articleScoreSource)
 
-    Explanation(query, labels, collector.rawScore, collector.getDetails(), collector.getBoostValues())
+    Explanation(query, labels, collector.getMatchingValues(), collector.getBoostValues(), collector.rawScore, collector.boostedScore, collector.scoreComputation, collector.getDetails())
   }
 }

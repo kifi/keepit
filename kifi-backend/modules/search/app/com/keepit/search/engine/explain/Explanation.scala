@@ -5,18 +5,29 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.lucene.search.Query
 
 object Explanation {
-  def apply(query: Query, labels: Array[String], rawScore: Float, details: Map[String, Seq[ScoreDetail]], boostValues: (Float, Float)) = {
-    new Explanation(query, labels, rawScore, details, boostValues._1, boostValues._2)
+  def apply(query: Query, labels: Array[String], matching: (Float, Float, Float), boostValues: (Float, Float), rawScore: Float, boostedScore: Float, scoreComputation: String, details: Map[String, Seq[ScoreDetail]]) = {
+    new Explanation(query, labels, matching._1, matching._2, matching._3, boostValues._1, boostValues._2, rawScore, boostedScore, scoreComputation, details)
   }
 }
 
-class Explanation(val query: Query, val labels: Array[String], val rawScore: Float, val details: Map[String, Seq[ScoreDetail]], clickBoostValue: Float, sharingBoostValue: Float) {
+class Explanation(
+    val query: Query,
+    val labels: Array[String],
+    val matching: Float,
+    val matchingThreshold: Float,
+    val minMatchingThreshold: Float,
+    val clickBoostValue: Float,
+    val sharingBoostValue: Float,
+    val rawScore: Float,
+    val boostedScore: Float,
+    val scoreComputation: String,
+    val details: Map[String, Seq[ScoreDetail]]) {
 
   def queryHtml(title: String): String = {
     val sb = new StringBuilder
     sb.append("<table>\n")
     sb.append(s"<tr> <th> $title </th> </tr>\n")
-    sb.append(s"<tr> <td> ${query.toString} </td> </tr>\n")
+    sb.append(s"""<tr> <td style="text-align:left"> ${query.toString} </td> </tr>\n""")
     sb.append("</table>\n")
 
     sb.toString
@@ -25,8 +36,23 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
   def scoreHtml(title: String): String = {
     val sb = new StringBuilder
     sb.append("<table>\n")
+    sb.append(s"<tr> <th colspan=2> $title </th> </tr>\n")
+    sb.append(s"<tr> <th> raw score </th> <th> boosted score </th> </tr>\n")
+    sb.append(s"<tr> <td> $rawScore </td> <td> $boostedScore </td> </tr>\n")
+    sb.append("</table>\n")
+
+    sb.toString
+  }
+
+  def scoreComputationHtml(title: String): String = {
+    val sb = new StringBuilder
+    sb.append("<table>\n")
     sb.append(s"<tr> <th> $title </th> </tr>\n")
-    sb.append(s"<tr> <td> $rawScore </td> </tr>\n")
+    sb.append("<tr> <td  style=\"text-align:left\">\n")
+    sb.append("<ul>\n")
+    sb.append(scoreComputation)
+    sb.append("</ul>\n")
+    sb.append("</td> </tr>\n")
     sb.append("</table>\n")
 
     sb.toString
@@ -35,9 +61,9 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
   def boostValuesHtml(title: String): String = {
     val sb = new StringBuilder
     sb.append("<table>\n")
-    sb.append(s"<tr> <th colspan=2> $title </th> </tr>\n")
-    sb.append("<tr> <th> click boost </th><th> sharing boost </th> </tr>\n")
-    sb.append(s"<tr> <td> $clickBoostValue </td> <td> $sharingBoostValue </td> </tr>\n")
+    sb.append(s"<tr> <th colspan=3> $title </th> </tr>\n")
+    sb.append("<tr> <th> matching boost </th> <th> click boost </th> <th> sharing boost </th> </tr>\n")
+    sb.append(s"<tr> <td> $matching </td> <td> $clickBoostValue </td> <td> $sharingBoostValue </td> </tr>\n")
     sb.append("</table>\n")
 
     sb.toString
@@ -48,27 +74,38 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
 
     def sharingCountByVisibility(visibility: Int): Unit = {
       // a record with no score is loaded for network information only
-      val count = details(Visibility.name(visibility)).count { detail => detail.scoreMax.forall(_ == 0f) }
-      sb.append(s"<td> $count </td>")
+      val sharingCount = details(Visibility.name(visibility)).count { detail => detail.scoreMax.forall(_ == 0f) || (detail.visibility & Visibility.LIB_NAME_MATCH) != 0 }
+      sb.append(s"<td> $sharingCount </td>")
     }
-    def hitCountByVisibility(visibility: Int): Unit = {
+    def keepHitCountByVisibility(visibility: Int): Unit = {
       // a record with no score is loaded for network information only
-      val count = details(Visibility.name(visibility)).count { detail => detail.scoreMax.forall(_ == 0f) }
-      sb.append(s"<td> ${details(Visibility.name(visibility)).size - count} </td>")
+      val sharingCount = details(Visibility.name(visibility)).count { detail => detail.scoreMax.forall(_ == 0f) || (detail.visibility & Visibility.LIB_NAME_MATCH) != 0 }
+      sb.append(s"<td> ${details(Visibility.name(visibility)).size - sharingCount} </td>")
+    }
+    def libraryNameHitCountByVisibility(visibility: Int): Unit = {
+      // a record with no score is loaded for network information only
+      val count = details(Visibility.name(visibility)).count { detail => (detail.visibility & Visibility.LIB_NAME_MATCH) != 0 }
+      sb.append(s"<td> $count </td>")
     }
 
     sb.append("<table>")
     sb.append(s"<tr><th colspan=4> $title </th></tr>\n")
     sb.append("<tr><th> </th><th> owner </th><th> member </th> <th> network </th></tr>\n")
-    sb.append("<tr><th> count </th>")
+    sb.append("<tr><th> sharing count </th>")
     sharingCountByVisibility(Visibility.OWNER)
     sharingCountByVisibility(Visibility.MEMBER)
     sharingCountByVisibility(Visibility.NETWORK)
     sb.append("</tr>")
-    sb.append("<tr><th> hits </th>")
-    hitCountByVisibility(Visibility.OWNER)
-    hitCountByVisibility(Visibility.MEMBER)
-    hitCountByVisibility(Visibility.NETWORK)
+    sb.append("<tr><th> keep hits (metadata) </th>")
+    keepHitCountByVisibility(Visibility.OWNER)
+    keepHitCountByVisibility(Visibility.MEMBER)
+    keepHitCountByVisibility(Visibility.NETWORK)
+    sb.append("</tr>")
+    sb.append("</tr>")
+    sb.append("<tr><th> keep hits (library name) </th>")
+    libraryNameHitCountByVisibility(Visibility.OWNER)
+    libraryNameHitCountByVisibility(Visibility.MEMBER)
+    libraryNameHitCountByVisibility(Visibility.NETWORK)
     sb.append("</tr>")
     sb.append("</table>\n")
 

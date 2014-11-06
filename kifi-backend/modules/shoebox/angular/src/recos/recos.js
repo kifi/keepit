@@ -21,8 +21,6 @@ angular.module('kifi')
     $scope.recosState = 'loading';
     $scope.initialCardClosed = false;
 
-    $scope.librariesEnabled = libraryService.isAllowed;
-
     $scope.getMore = function (opt_recency) {
       $scope.loading = true;
 
@@ -161,12 +159,7 @@ angular.module('kifi')
     $scope.reasons = $scope.reco.recoData.reasons;
     $scope.reasonIndex = 0;
 
-    $scope.librariesEnabled = libraryService.isAllowed();
-    if ($scope.librariesEnabled) {
-      $scope.libraries = libraryService.fetchLibrarySummaries(false);
-    } else {
-      $scope.libraries = [];
-    }
+    $scope.libraries = libraryService.fetchLibrarySummaries(false);
 
     $scope.hasReason = function () {
       return $scope.reco.recoData.reasons &&

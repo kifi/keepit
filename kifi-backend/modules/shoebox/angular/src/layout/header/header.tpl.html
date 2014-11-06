@@ -7,7 +7,7 @@
       <a href="/" target="_self"><span class="svg-kifi-clover-white-text kf-header-logo"></span></a>
     </div>
 
-    <div class="kf-header-search-bar" ng-if="librariesEnabled">
+    <div class="kf-header-search-bar">
         <div class="kf-query-lib-container" ng-class="{empty: isEmpty()}">
           <div class="kf-query-lib-icon" ng-class="{'focused': isFocused}"></div>
 
@@ -31,7 +31,7 @@
             <div class="kf-callout-bubble-button" ng-click="closeCallout()">Got it</div>
           </div>
       </div>
-      <a href="/tags/manage" class="kf-header-manage-tags sprite svg-tag-black" ng-class="{'svg-tag-hover': hover, 'kf-callout-tags-button': showCallout()}" ng-if="librariesEnabled" ng-mouseenter="hover = true" ng-mouseleave="hover = false">Manage your tags</a>
+      <a href="/tags/manage" class="kf-header-manage-tags sprite svg-tag-black" ng-class="{'svg-tag-hover': hover, 'kf-callout-tags-button': showCallout()}" ng-mouseenter="hover = true" ng-mouseleave="hover = false">Manage your tags</a>
       <div class="kf-header-icon-hover-container">
         <a href="/friends" class="kf-header-icon-friends sprite sprite-friends">Friends</a>
         <menu class="kf-dropdown-menu">

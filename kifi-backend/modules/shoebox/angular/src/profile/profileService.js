@@ -245,6 +245,7 @@ angular.module('kifi')
         if (prefs.library_sorting_pref !== oldPrefs.library_sorting_pref) {
           $rootScope.$emit('changedLibrarySorting');
         }
+        $rootScope.$emit('prefsChanged');
         return p.data;
       });
     }

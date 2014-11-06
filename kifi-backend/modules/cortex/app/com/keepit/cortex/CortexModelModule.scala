@@ -4,6 +4,8 @@ import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.models.word2vec._
+import com.keepit.cortex.nlp.Stopwords
+import com.keepit.search.ArticleStore
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 import com.keepit.common.logging.Logging
@@ -23,11 +25,26 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
 
   @Singleton
   @Provides
-  def ldaWordRepresenter(ldaStore: LDAModelStore): LDAWordRepresenter = {
+  def ldaWordRepresenter(ldaStore: LDAModelStore): MultiVersionedLDAWordRepresenter = {
     log.info("loading lda from model store")
     val version = ModelVersions.denseLDAVersion
     val lda = ldaStore.get(version).get
-    new LDAWordRepresenter(version, lda)
+    val wordRep = LDAWordRepresenter(version, lda)
+    MultiVersionedLDAWordRepresenter(wordRep)
+  }
+
+  @Singleton
+  @Provides
+  def ldaDocRepresenter(wordRep: MultiVersionedLDAWordRepresenter, stopWords: Stopwords): MultiVersionedLDADocRepresenter = {
+    val docReps = wordRep.representers.map { wordRep => LDADocRepresenter(wordRep, stopWords) }
+    MultiVersionedLDADocRepresenter(docReps: _*)
+  }
+
+  @Singleton
+  @Provides
+  def ldaUriRepresenter(docRep: MultiVersionedLDADocRepresenter, articleStore: ArticleStore): MultiVersionedLDAURIRepresenter = {
+    val uriReps = docRep.representers.map { docRep => LDAURIRepresenter(docRep, articleStore) }
+    MultiVersionedLDAURIRepresenter(uriReps: _*)
   }
 
   @Singleton
@@ -40,7 +57,7 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
   }
 }
 
-case class CortexDevModelModule() extends CortexModelModule {
+case class CortexDevModelModule() extends CortexModelModule() {
   def configure() {
     bind[RichWord2VecURIFeatureUpdatePlugin].to[RichWord2VecURIFeatureUpdatePluginImpl].in[AppScoped]
     bind[LDADbUpdatePlugin].to[LDADbUpdatePluginImpl].in[AppScoped]
@@ -53,10 +70,25 @@ case class CortexDevModelModule() extends CortexModelModule {
 
   @Singleton
   @Provides
-  def ldaWordRepresenter(ldaStore: LDAModelStore): LDAWordRepresenter = {
+  def ldaWordRepresenter(ldaStore: LDAModelStore): MultiVersionedLDAWordRepresenter = {
     val version = ModelVersions.denseLDAVersion
     val lda = ldaStore.get(version).get
-    new LDAWordRepresenter(version, lda)
+    val wordRep = LDAWordRepresenter(version, lda)
+    MultiVersionedLDAWordRepresenter(wordRep)
+  }
+
+  @Singleton
+  @Provides
+  def ldaDocRepresenter(wordRep: MultiVersionedLDAWordRepresenter, stopWords: Stopwords): MultiVersionedLDADocRepresenter = {
+    val docReps = wordRep.representers.map { wordRep => LDADocRepresenter(wordRep, stopWords) }
+    MultiVersionedLDADocRepresenter(docReps: _*)
+  }
+
+  @Singleton
+  @Provides
+  def ldaUriRepresenter(docRep: MultiVersionedLDADocRepresenter, articleStore: ArticleStore): MultiVersionedLDAURIRepresenter = {
+    val uriReps = docRep.representers.map { docRep => LDAURIRepresenter(docRep, articleStore) }
+    MultiVersionedLDAURIRepresenter(uriReps: _*)
   }
 
   @Singleton
