@@ -773,8 +773,8 @@ class LibraryCommander @Inject() (
 
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit] = {
     db.readWrite { implicit s =>
-      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
-        case None => Left(LibraryFail("membership_not_found"))
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
+        case None => Right()
         case Some(mem) if mem.access == LibraryAccess.OWNER => Left(LibraryFail("cannot_leave_own_library"))
         case Some(mem) => {
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
