@@ -1,6 +1,7 @@
-@(numTopics: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
+@(numTopics: Int, version: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("LDA"){
+  <h2>version: @version</h2>
   <h2>@numTopics topics</h2>
 
   <div>show topN topic words for topics with id between fromId and toId. Note: fromId >=0. toId < @numTopics. If fromId = toId, return one single topic. </div>
@@ -94,7 +95,7 @@
         event.preventDefault();
 
         $.post('@com.keepit.controllers.admin.routes.AdminLDAController.showTopics',
-          {fromId: $('#fromId').val(), toId: $('#toId').val(), topN: $('#topN').val()}
+          {fromId: $('#fromId').val(), toId: $('#toId').val(), topN: $('#topN').val(), version: @version}
         ).done(done).fail(fail);
 
         function done(data) {
@@ -112,7 +113,7 @@
 
             var isActive = (states[i] == true)
             var isNameable = (nameables[i] == true)
-            var url = '@com.keepit.controllers.admin.routes.AdminLDAController.topicDetail(0)'.replace('0', topicIds[i])
+            var url = '@com.keepit.controllers.admin.routes.AdminLDAController.topicDetail(0, version)'.replace('0', topicIds[i])
             var idLink = $('<a>').attr('href', url).text(topicIds[i])
 
             $("#topic_words_table").append(
@@ -160,7 +161,7 @@
         }
 
         $.postJson('@com.keepit.controllers.admin.routes.AdminLDAController.saveEdits',
-          {topic_ids: retIds, topic_names: retNames, topic_states: retStates, topic_nameable: retNameable}
+          {topic_ids: retIds, topic_names: retNames, topic_states: retStates, topic_nameable: retNameable, version: @version}
         ).done(done).fail(fail);
 
         function done(data){ alert("changes saved") }
@@ -175,7 +176,7 @@
         event.preventDefault();
 
         $.post('@com.keepit.controllers.admin.routes.AdminLDAController.wordTopic',
-          {word: $('#word').val()}
+          {word: $('#word').val(), version: @version}
         ).done(done).fail(fail);
 
         function done(data){ $("#word_topic_result").empty().prepend(data) }
@@ -188,7 +189,7 @@
         event.preventDefault();
 
         $.post('@com.keepit.controllers.admin.routes.AdminLDAController.docTopic',
-          {doc: $('#doc').val()}
+          {doc: $('#doc').val(), version: $('#version_number').val()}
         ).done(done).fail(fail);
 
         function done(data){ $("#doc_topic_result").empty().prepend(data) }
@@ -200,7 +201,7 @@
         event.preventDefault();
 
         $.post('@com.keepit.controllers.admin.routes.AdminLDAController.userUriInterest',
-          {userId: $('#user_id').val(), uriId: $('#uri_id').val()}
+          {userId: $('#user_id').val(), uriId: $('#uri_id').val(), version: @version}
         ).done(done).fail(fail);
 
         function done(data) { $("#user_uri_interest_result").empty().prepend(data)}
@@ -211,7 +212,7 @@
       $('#user_topic_mean').submit(function(event){
         event.preventDefault();
         $.post('@com.keepit.controllers.admin.routes.AdminLDAController.userTopicMean',
-          {userId: $('#user_id_for_topic_mean').val()}
+          {userId: $('#user_id_for_topic_mean').val(), version: @version}
         ).done(done).fail(fail);
 
         function done(data) { $("#user_topic_mean_result").empty().prepend(data)}
@@ -222,7 +223,7 @@
       $('#library_topic').submit(function(event){
         event.preventDefault();
         $.post('@com.keepit.controllers.admin.routes.AdminLDAController.libraryTopic',
-          {libId: $('#libId_for_library_topic').val()}
+          {libId: $('#libId_for_library_topic').val(), version: @version}
         ).done(done).fail(fail);
 
         function done(data) { $("#library_topic_result").empty().prepend(data)}
