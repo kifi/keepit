@@ -42,7 +42,7 @@ import com.keepit.common.controller.UserRequest
 import play.api.libs.json.JsObject
 import com.keepit.commanders.LibraryAddRequest
 
-import scala.xml.{ Node, Elem }
+import scala.xml.{ Unparsed, Node, Elem }
 
 class LibraryController @Inject() (
   db: Database,
@@ -82,6 +82,8 @@ class LibraryController @Inject() (
         })
       }
     })
+
+    val logo = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png"
     metaTagsF map { metaTags =>
       val idToMetaTags = metaTags.toMap
       val ownerIds = CollectionHelpers.dedupBy(libraries.map(_.ownerId))(id => id)
@@ -92,30 +94,32 @@ class LibraryController @Inject() (
           val lib = libMap(libId)
           val metaTags = idToMetaTags(libId)
           val owner = ownerMap(lib.ownerId)
+          val desc = Unparsed(
+            s"""
+               |<![CDATA[
+               |<img src="${metaTags.images.headOption.getOrElse(logo)}"/>
+               |${metaTags.description}
+               |]]>
+               |""".stripMargin)
           <item>
             <title>{ metaTags.title }</title>
-            <description>{ metaTags.description }</description>
+            <description>{ desc }</description>
             <link>{ s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
             <pubDate>{ metaTags.updatedAt.toString(formatter) }</pubDate>
             <author>{ metaTags.fullName }</author>
           </item>
       }
+      val feedTitle = "Top Libraries on Kifi"
       val rss =
         <rss version="2.0">
           <channel>
-            <title>Top Libraries on Kifi</title>
+            <title>{ feedTitle }</title>
             <link>{ s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}" }</link>
-            {
-              metaTags.headOption.flatMap(_._2.images.headOption) match {
-                case None => {}
-                case Some(imgUrl) =>
-                  <image>
-                    <url>
-                      { imgUrl }
-                    </url>
-                  </image>
-              }
-            }
+            <image>
+              <url>{ logo }</url>
+              <title>{ feedTitle }</title>
+              <link>{ fortyTwoConfig.applicationBaseUrl }</link>
+            </image>
             { items }
           </channel>
         </rss>
