@@ -37,7 +37,6 @@ angular.module('kifi')
 
         scope.editSlug = function () {
           scope.emptySlug = !scope.library.slug;
-          scope.library.slug = util.generateSlug(scope.library.slug);
           scope.userHasEditedSlug = true;
         };
 
@@ -49,6 +48,10 @@ angular.module('kifi')
           scope.$error.name = libraryService.getLibraryNameError(scope.library.name, scope.modalData && scope.modalData.library.name);
           if (scope.$error.name) {
             return;
+          }
+
+          if (scope.userHasEditedSlug) {
+            scope.library.slug = util.generateSlug(scope.library.slug);
           }
 
           submitting = true;
