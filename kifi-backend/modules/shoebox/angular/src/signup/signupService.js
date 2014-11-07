@@ -41,8 +41,8 @@ angular.module('kifi')
 ])
 
 .controller('SignupCtrl', [
-  '$scope', '$FB', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope', '$timeout',
-  function ($scope, $FB, modalService, registrationService, $window, installService, $q, $log, $rootScope, $timeout) {
+  '$scope', '$FB', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope',
+  function ($scope, $FB, modalService, registrationService, $window, installService, $q, $log, $rootScope) {
 
     // Shared data across several modals
 
@@ -83,6 +83,10 @@ angular.module('kifi')
     };
 
     var registerModal = function () {
+      if ($scope.userData.libraryId) {
+        $rootScope.$broadcast('trackLibraryEvent', 'view', { type: 'signupLibrary' });
+      }
+
       setModalScope(modalService.open({
         template: 'signup/registerModal.tpl.html',
         scope: $scope
@@ -94,7 +98,11 @@ angular.module('kifi')
       if (!form.$valid) {
         return false;
       }
-      $rootScope.$broadcast('signupLibraryStarted', 'clickSignUpButton');
+
+      if ($scope.userData.libraryId) {
+        $rootScope.$broadcast('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickSignUpButton' });
+      }
+
       modalService.close();
       $scope.userData.method = 'email';
       registerFinalizeModal();
@@ -107,7 +115,9 @@ angular.module('kifi')
     };
 
     $scope.fbAuthFromLibrary = function () {
-      $rootScope.$broadcast('signupLibraryStarted', 'clickAuthFacebook');
+      if ($scope.userData.libraryId) {
+        $rootScope.$broadcast('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthFacebook' });
+      }
       return $scope.fbAuth();
     };
 
@@ -167,6 +177,10 @@ angular.module('kifi')
 
     // 2nd Register modal
     var registerFinalizeModal = function () {
+      if ($scope.userData.libraryId) {
+        $rootScope.$broadcast('trackLibraryEvent', 'view', { type: 'signup2Library' });
+      }
+
       $scope.requestActive = false;
       $scope.registerFinalizeSubmitted = false;
       setModalScope(modalService.open({
@@ -239,6 +253,11 @@ angular.module('kifi')
         } else {
           $scope.thanksVersion = 'notSupported';
         }
+
+        if ($scope.userData.libraryId) {
+          $rootScope.$broadcast('trackLibraryEvent', 'view', { type: 'installLibrary' });
+        }
+
         setModalScope(modalService.open({
           template: 'signup/thanksForRegisteringModal.tpl.html',
           scope: $scope

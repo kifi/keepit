@@ -15,6 +15,23 @@ angular.module('kifi')
     var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
     //                   ↑↑↑ use this one ↑↑↑
 
+    //
+    // Internal functions
+    //
+
+    function trackPageView(attributes) {
+      var url = $analytics.settings.pageTracking.basePath + $location.url();
+      var library = $scope.library;
+      var trackLibraryAttributes = _.extend(attributes || {},
+        libraryService.getCommonTrackingAttributes(library));
+
+      if (profileService.me && profileService.me.id) {
+        trackLibraryAttributes.owner = $scope.userIsOwner() ? 'Yes' : 'No';
+      }
+
+      $analytics.pageTrack(url, trackLibraryAttributes);
+    }
+
 
     //
     // Scope data.
@@ -93,15 +110,7 @@ angular.module('kifi')
     $scope.$watch('library.id', function (id) {
       $rootScope.$broadcast('currentLibraryChanged', $scope.library);
       if (id) {
-        var library = $scope.library;
-        var trackLibraryAttributes = libraryService.getCommonTrackingAttributes(library);
-
-        if (profileService.me && profileService.me.id) {
-          trackLibraryAttributes.owner = $scope.userIsOwner() ? 'Yes' : 'No';
-        }
-
-        var url = $analytics.settings.pageTracking.basePath + $location.url();
-        $analytics.pageTrack(url, trackLibraryAttributes);
+        trackPageView();
       }
     });
 
@@ -139,9 +148,16 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregisterCurrentLibrary);
 
-    $scope.$on('signupLibraryStarted', function (e, action) {
-      var attrs = { type: 'signupLibrary', action: action };
-      libraryService.trackEvent('visitor_clicked_page', $scope.library, attrs);
+    $scope.$on('trackLibraryEvent', function (e, eventType, attributes) {
+      if (eventType === 'click') {
+        if (!$rootScope.userLoggedIn) {
+          libraryService.trackEvent('visitor_clicked_page', $scope.library, attributes);
+        } else {
+          libraryService.trackEvent('user_clicked_page', $scope.library, attributes);
+        }
+      } else if (eventType === 'view') {
+        trackPageView(attributes);
+      }
     });
 
     $scope.libaryKeepClicked = function (keep, event) {
