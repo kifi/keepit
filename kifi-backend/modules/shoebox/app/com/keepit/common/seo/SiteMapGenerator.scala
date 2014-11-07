@@ -3,13 +3,16 @@ package com.keepit.common.seo
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.commanders.LibraryCommander
 import com.keepit.common.CollectionHelpers
+import com.keepit.common.time._
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ KeepRepo, UserRepo, Library, LibraryRepo }
+import org.joda.time.DateTime
 import play.api.{ Play, Plugin }
 import Play.current
 import scala.concurrent.Future
@@ -62,6 +65,7 @@ class SiteMapGenerator @Inject() (
     db: Database,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
+    fortyTwoConfig: FortyTwoConfig,
     libraryRepo: LibraryRepo,
     libraryCommander: LibraryCommander) extends Logging {
 
@@ -73,27 +77,39 @@ class SiteMapGenerator @Inject() (
     // batch, optimize
     val ownerIds = CollectionHelpers.dedupBy(libraries.map(_.ownerId))(id => id)
     val owners = db.readOnlyMaster { implicit ro => userRepo.getUsers(ownerIds) } // cached
-    val paths = libraries.filter { lib =>
+    val libs = libraries.filter { lib =>
       owners.get(lib.ownerId).isDefined && db.readOnlyMaster { implicit ro => keepRepo.getCountByLibrary(lib.id.get) > 3 } // proxy for quality; need bulk version
-    } map { lib =>
+    }
+
+    def path(lib: Library): String = {
       val owner = owners(lib.ownerId)
-      s"https://www.kifi.com${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}"
+      s"${fortyTwoConfig.applicationBaseUrl}{Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}"
+    }
+
+    def lastMod(lib: Library): DateTime = {
+      db.readOnlyReplica { implicit s =>
+        keepRepo.latestKeepInLibrary(lib.id.get) match {
+          case Some(date) if date.isAfter(lib.updatedAt) => date
+          case _ => lib.updatedAt
+        }
+      }
     }
 
     // location only for now
     val urlset =
       <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
         {
-          paths.map { path =>
+          libs.map { lib =>
             <url>
               <loc>
-                { path }
+                { path(lib) }
               </loc>
+              <lastmod>{ ISO_8601_DAY_FORMAT.print(lastMod(lib)) }</lastmod>
             </url>
           }
         }
       </urlset>
-    log.info(s"[generate] done with sitemap generation. #libraries=${paths.size}")
+    log.info(s"[generate] done with sitemap generation. #libraries=${libs.size}")
     urlset
   }
 
