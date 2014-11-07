@@ -41,7 +41,6 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.controller.UserRequest
 import play.api.libs.json.JsObject
 import com.keepit.commanders.LibraryAddRequest
-import com.keepit.common.time._
 
 import scala.xml.{ Node, Elem }
 
@@ -66,6 +65,7 @@ class LibraryController @Inject() (
 
   def getTopLibraries() = MaybeUserAction { request =>
     val tops = db.readOnlyReplica { implicit ro =>
+      import com.keepit.common.time._
       libraryMembershipRepo.mostMembersSince(20, clock.now().minusHours(24))
     }
 
@@ -86,7 +86,7 @@ class LibraryController @Inject() (
           <description>{ lib.description.getOrElse(s"${owner.fullName}'s ${lib.name} Kifi Library") }</description>
           <link>{ s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
           <guid>{}</guid>
-          <pubDate>{ lib.createdAt.toString(formatter) }</pubDate>
+          <pubDate>{ lib.updatedAt.toString(formatter) }</pubDate>
         </item>
     }
     val rss =
