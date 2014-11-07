@@ -154,12 +154,13 @@ angular.module('kifi')
           var img = { w: keep.summary.imageWidth, h: keep.summary.imageHeight };
           var cardWidth = element.find('.kf-keep-contents')[0].offsetWidth;
           var optimalWidth = Math.floor(cardWidth * 0.50); // ideal image size is 45% of card
+          var textHeight = parseInt($sizer.css('line-height'));
 
           $sizer[0].style.width = '';
 
           function trimDesc(desc) {
             $sizer.text(desc);
-            var singleLineWidthPx = $sizer[0].offsetWidth * ($sizer[0].offsetHeight / 24);
+            var singleLineWidthPx = $sizer[0].offsetWidth * ($sizer[0].offsetHeight / textHeight);
 
             if (desc.length > 150) {
               // If description is quite long, trim it. We're drawing it, because for non-latin
@@ -193,7 +194,7 @@ angular.module('kifi')
             function tryWidth(width) {
               $sizer[0].style.width = width + 'px';
               //$sizer.width(width);
-              var height = $sizer[0].offsetHeight + 25; // subtitle is 25px
+              var height = $sizer[0].offsetHeight;
               return height;
             }
             var imageWidth = cardWidth - guessWidth;
@@ -228,8 +229,8 @@ angular.module('kifi')
 
           var asideWidthPercent = Math.floor(((cardWidth - bestRes.guess) / cardWidth) * 100);
           //var calcTextWidth = 100 - asideWidthPercent;
-          var linesToShow = Math.floor((bestRes.hi / 24)); // line height
-          var calcTextHeight = linesToShow * 24 + 22; // 22px subtitle
+          var linesToShow = Math.ceil((bestRes.hi / textHeight)); // line height
+          var calcTextHeight = linesToShow * textHeight;
 
           keep.sizeCard = function () {
             var $content = element.find('.kf-keep-content-line');
