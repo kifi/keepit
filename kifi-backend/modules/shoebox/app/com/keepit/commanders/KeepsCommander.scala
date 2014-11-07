@@ -301,9 +301,7 @@ class KeepsCommander @Inject() (
       })
 
       val colls = db.readOnlyMaster { implicit s =>
-        keeps.map { keep =>
-          keepToCollectionRepo.getCollectionsForKeep(keep)
-        }
+        keepToCollectionRepo.getCollectionsForKeeps(keeps)
       }.map(collectionCommander.getBasicCollections)
 
       val allMyKeeps = perspectiveUserIdOpt.map { userId => getBasicKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[BasicKeep]]
