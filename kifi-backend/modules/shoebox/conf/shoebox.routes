@@ -293,6 +293,11 @@ GET     /users/:id/pics/:size/:name @com.keepit.controllers.assets.UserPictureCo
 POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureController.update()
 
 ##########################################
+# Feeds (RSS)
+##########################################
+GET     /feeds/libraries/top        @com.keepit.controllers.website.LibraryController.getTopLibraries()
+
+##########################################
 # Web API
 ##########################################
 
