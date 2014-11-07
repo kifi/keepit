@@ -74,6 +74,7 @@ if (searchUrlRe.test(document.URL)) !function () {
 
   //endedWith is either "unload" or "refinement"
   function sendSearchedEvent(endedWith) {
+    var kgDelta = time.kifi.shown - time.google.shown;
     api.port.emit("log_search_event", [
       "searched",
       {
@@ -91,6 +92,8 @@ if (searchUrlRe.test(document.URL)) !function () {
         "thirdPartyShownTime": Math.max(-1, time.google.shown - time.kifi.queried),
         "kifiResultsClicked": clicks.kifi.length,
         "thirdPartyResultsClicked": clicks.google.length,
+        "chunkDelta": response.chunkDelta,
+        "chunksSplit": kgDelta > 0 && kgDelta < response.chunkDelta,
         "refinements": refinements,
         "pageSession": pageSession,
         "endedWith": endedWith
