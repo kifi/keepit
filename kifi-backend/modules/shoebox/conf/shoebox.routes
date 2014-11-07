@@ -303,6 +303,8 @@ GET     /feeds/libraries/top        @com.keepit.controllers.website.LibraryContr
 
 POST    /site/events                @com.keepit.controllers.tracking.EventProxyController.track()
 
+GET     /assets/sitemap.xml         @com.keepit.controllers.website.SiteMapController.sitemap()
+
 GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple(separateExisting: Boolean ?= false)
 POST    /site/keeps/remove          @com.keepit.controllers.website.KeepsController.unkeepMultiple()
