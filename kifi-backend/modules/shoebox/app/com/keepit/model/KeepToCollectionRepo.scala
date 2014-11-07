@@ -89,10 +89,6 @@ class KeepToCollectionRepoImpl @Inject() (
   }
 
   def getCollectionsForKeeps(keeps: Seq[Keep])(implicit session: RSession): Seq[Seq[Id[Collection]]] = {
-
-    println("\n\t\t getCollectionsForKeeps\n")
-    new Exception().printStackTrace()
-
     val keepIds = keeps.collect { case k if k.isActive => k.id.get }.toSet
     val collectionsForKeeps = collectionsForKeepCache.bulkGetOrElse(keepIds map CollectionsForKeepKey) { keys =>
       val missingKeeps = keys.map(_.keepId).toSet
