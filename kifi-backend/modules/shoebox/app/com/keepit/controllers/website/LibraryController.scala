@@ -11,6 +11,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
 import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import org.joda.time.DateTime
@@ -55,7 +56,7 @@ class LibraryController @Inject() (
   keepsCommander: KeepsCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   collectionRepo: CollectionRepo,
-  mode: Mode,
+  fortyTwoConfig: FortyTwoConfig,
   clock: Clock,
   val libraryCommander: LibraryCommander,
   val userActionsHelper: UserActionsHelper,
@@ -75,16 +76,14 @@ class LibraryController @Inject() (
     val libraries = libIds.map(libMap(_))
     val ownerIds = CollectionHelpers.dedupBy(libraries.map(_.ownerId))(id => id)
     val ownerMap = db.readOnlyMaster { implicit request => userRepo.getUsers(ownerIds) }
-    val formatter = DateTimeFormat.forPattern("E, d MMM y HH:mm:ss Z") // rfc822
-    val prefix = if (mode == Mode.Dev) "http://dev.ezkeep.com:9000" else "https://www.kifi.com"
-    val items = tops map {
+    val formatter = DateTimeFormat.forPattern("E, d MMM y HH:mm:ss Z") val items = tops map {
       case (libId, count) =>
         val lib = libMap(libId)
         val owner = ownerMap(lib.ownerId)
         <item>
-          <title>{ lib.slug.value }</title>
-          <description>{ lib.description.getOrElse("") }</description>
-          <link>{ s"$prefix${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
+          <title>{ lib.name }</title>
+          <description>{ lib.description.getOrElse(s"${owner.fullName}'s ${lib.name} Kifi Library") }</description>
+          <link>{ s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
           <pubDate>{ lib.createdAt.toString(formatter) }</pubDate>
         </item>
     }
@@ -92,7 +91,7 @@ class LibraryController @Inject() (
       <rss>
         <channel>
           <title>Top Libraries on Kifi</title>
-          <link>{ s"$prefix${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}" }</link>
+          <link>{ s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}" }</link>
           { items }
         </channel>
       </rss>
@@ -103,7 +102,7 @@ class LibraryController @Inject() (
     val combined = header.andThen(elems &> toBytes)
     log.info(s"[getTopLibraries] published #${libIds.size} libraries. ${libIds.take(20)} ...")
     Result(
-      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/xml")),
+      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
       body = combined
     )
   }
