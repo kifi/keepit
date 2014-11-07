@@ -99,11 +99,6 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
         invCookie.isDefined === true
         invCookie.exists(_.value == invite1.externalId.id) === true
 
-        // Facebook OpenGraph Tags should be set
-        val html = contentAsString(result)
-        html must contain("og:title")
-        html must contain("og:description")
-
         // now set user (sanity check)
         inject[FakeUserActionsHelper].setUser(user1)
         val request1 = FakeRequest()
