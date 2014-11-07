@@ -46,7 +46,7 @@ angular.module('kifi')
             return;
           }
 
-          scope.$error.name = libraryService.getLibraryNameError(scope.library.name, scope.modifyingExistingLibrary);
+          scope.$error.name = libraryService.getLibraryNameError(scope.library.name, scope.modalData && scope.modalData.library.name);
           if (scope.$error.name) {
             return;
           }
