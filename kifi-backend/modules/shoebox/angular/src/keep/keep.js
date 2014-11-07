@@ -154,7 +154,7 @@ angular.module('kifi')
           var img = { w: keep.summary.imageWidth, h: keep.summary.imageHeight };
           var cardWidth = element.find('.kf-keep-contents')[0].offsetWidth;
           var optimalWidth = Math.floor(cardWidth * 0.50); // ideal image size is 45% of card
-          var textHeight = parseInt($sizer.css('line-height'));
+          var textHeight = parseInt($sizer.css('line-height'), 10);
 
           $sizer[0].style.width = '';
 
