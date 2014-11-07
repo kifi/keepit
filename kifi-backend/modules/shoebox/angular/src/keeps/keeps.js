@@ -290,7 +290,7 @@ angular.module('kifi')
             var addedKeeps = data.successes;
             if (addedKeeps.length > 0) {
               libraryService.fetchLibrarySummaries(true);
-              scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, scope.librarySelection.library);
+              scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, clickedLibrary);
             }
           })['catch'](function () {
             modalService.open({
