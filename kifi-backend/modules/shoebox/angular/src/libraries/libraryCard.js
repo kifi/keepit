@@ -254,7 +254,7 @@ angular.module('kifi')
             return signupService.register({libraryId: scope.library.id});
           }
 
-          libraryService.trackEvent('user_followed_library', library, { action: 'followed' });
+          libraryService.trackEvent('user_clicked_page', library, { action: 'followed' });
 
           libraryService.joinLibrary(library.id).then(function (result) {
             if (result === 'already_joined') {
