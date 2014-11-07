@@ -84,7 +84,7 @@ angular.module('kifi')
 
     var registerModal = function () {
       if ($scope.userData.libraryId) {
-        $rootScope.$broadcast('trackLibraryEvent', 'view', { type: 'signupLibrary' });
+        $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signupLibrary' });
       }
 
       setModalScope(modalService.open({
@@ -100,7 +100,7 @@ angular.module('kifi')
       }
 
       if ($scope.userData.libraryId) {
-        $scope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickSignUpButton' });
+        $rootScope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickSignUpButton' });
       }
 
       modalService.close();
@@ -116,7 +116,7 @@ angular.module('kifi')
 
     $scope.fbAuthFromLibrary = function () {
       if ($scope.userData.libraryId) {
-        $scope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthFacebook' });
+        $rootScope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthFacebook' });
       }
       return $scope.fbAuth();
     };
@@ -178,7 +178,7 @@ angular.module('kifi')
     // 2nd Register modal
     var registerFinalizeModal = function () {
       if ($scope.userData.libraryId) {
-        $rootScope.$broadcast('trackLibraryEvent', 'view', { type: 'signup2Library' });
+        $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signup2Library' });
       }
 
       $scope.requestActive = false;
@@ -255,7 +255,7 @@ angular.module('kifi')
         }
 
         if ($scope.userData.libraryId) {
-          $rootScope.$broadcast('trackLibraryEvent', 'view', { type: 'installLibrary' });
+          $rootScope.$emit('trackLibraryEvent', 'view', { type: 'installLibrary' });
         }
 
         setModalScope(modalService.open({
