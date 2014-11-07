@@ -17,14 +17,14 @@
 
 @media only screen and (max-width: 1024px)
   .kf-sidebar
-    left: -135px
-    z-index: -1
+    left: 0
+    z-index: 1
     -webkit-transition: left sidebarTransitionDuration, z-index sidebarTransitionDuration 0
     transition: left sidebarTransitionDuration, z-index sidebarTransitionDuration 0
 
     .kf-tag-count
       position: static
 
-  .kf-sidebar-active .kf-sidebar
-    left: 0
-    z-index: 1
+  .kf-sidebar-inactive .kf-sidebar
+    left: -135px
+    z-index: -1
