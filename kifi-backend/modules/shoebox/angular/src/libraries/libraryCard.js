@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfLibraryCard', [
   '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'platformService', 'signupService', '$twitter',
+  'profileService', 'platformService', 'signupService', '$twitter', '$timeout',
   function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
-    profileService, platformService, signupService, $twitter) {
+    profileService, platformService, signupService, $twitter, $timeout) {
     return {
       restrict: 'A',
       replace: true,
@@ -87,6 +87,14 @@ angular.module('kifi')
             }
 
             followerPicsDiv.width(maxFollowersToShow >= 1 ? maxFollowersToShow * widthPerFollowerPic : 0);
+          });
+        }
+
+        function trackShareEvent(medium) {
+          $timeout(function () {
+            var attrs = { action: 'shareLibrary', subAction: medium };
+            var eventName = (scope.isUserLoggedOut ? 'visitor' : 'user') + '_clicked_page';
+            libraryService.trackEvent(eventName, scope.library, attrs);
           });
         }
 
@@ -212,10 +220,15 @@ angular.module('kifi')
         };
 
         scope.shareFB = function () {
+          trackShareEvent('facebook');
           $FB.ui({
             method: 'share',
             href: scope.library.shareFbUrl
           });
+        };
+
+        scope.shareTwitter = function () {
+          trackShareEvent('twitter');
         };
 
         // TODO: determine this on the server side in the library response. For now, doing it client side.
