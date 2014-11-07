@@ -52,6 +52,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   val description = clean(unsafeDescription)
   val firstName = clean(unsafeFirstName)
   val lastName = clean(unsafeLastName)
+  val fullName = s"$firstName $lastName"
 
   def formatOpenGraph: String = {
 

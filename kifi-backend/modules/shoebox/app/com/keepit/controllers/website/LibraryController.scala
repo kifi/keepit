@@ -97,6 +97,7 @@ class LibraryController @Inject() (
             <description>{ metaTags.description }</description>
             <link>{ s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
             <pubDate>{ metaTags.updatedAt.toString(formatter) }</pubDate>
+            <author>{ metaTags.fullName }</author>
           </item>
       }
       val rss =
