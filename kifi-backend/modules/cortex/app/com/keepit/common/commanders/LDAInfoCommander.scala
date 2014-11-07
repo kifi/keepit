@@ -3,11 +3,10 @@ package com.keepit.common.commanders
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
-import com.keepit.cortex.MiscPrefix
+import com.keepit.cortex.{ ModelVersions, MiscPrefix, PublishingVersions }
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel.{ LDAInfo, LDAInfoRepo }
 import com.keepit.cortex.models.lda._
-import com.keepit.cortex.PublishingVersions
 
 import scala.collection.mutable
 
@@ -17,7 +16,7 @@ class LDAInfoCommander @Inject() (
     topicInfoRepo: LDAInfoRepo,
     topicWordsStore: LDATopicWordsStore) {
 
-  private val availableVersions = List(PublishingVersions.denseLDAVersion)
+  private val availableVersions = ModelVersions.availableLDAVersions
   private val topicWordsCommander = LDATopicWordsCommander(topicWordsStore, availableVersions: _*)
   private val topicConfsCommander = LDAConfigCommander(db, topicInfoRepo, topicWordsCommander, availableVersions: _*)
 
