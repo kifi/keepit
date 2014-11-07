@@ -59,7 +59,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       s"""
          |<meta property="og:image" content="$image" />
          |<meta itemprop="image" content="$image">
-       """.stripMargin
+       """.stripMargin.trim
     } mkString ("\n")
 
     def twitterImageTags = images.headOption map { image =>
@@ -73,7 +73,6 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
     } getOrElse ""
 
     s"""
-      |<html itemscope itemtype="http://schema.org/Product">
       |<title>${title}</title>
       |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly"/>
       |<meta name="apple-mobile-web-app-capable" content="no"/>
