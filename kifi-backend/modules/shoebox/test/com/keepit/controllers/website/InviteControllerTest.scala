@@ -25,6 +25,7 @@ import org.specs2.mutable.Specification
 import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
+import com.keepit.commanders.InviteCommander
 
 class InviteControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -98,6 +99,14 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
         val invCookie = cookies(result).get("inv")
         invCookie.isDefined === true
         invCookie.exists(_.value == invite1.externalId.id) === true
+
+        // Facebook OpenGraph Tags should be set
+        val commander = inject[InviteCommander]
+        val html = contentAsString(result)
+        html must contain("og:title")
+        html must contain(commander.fbTitle(Some(user1.firstName)))
+        html must contain("og:description")
+        html must contain(commander.fbDescription)
 
         // now set user (sanity check)
         inject[FakeUserActionsHelper].setUser(user1)
