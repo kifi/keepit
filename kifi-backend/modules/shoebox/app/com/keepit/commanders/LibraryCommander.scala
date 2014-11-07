@@ -193,7 +193,16 @@ class LibraryCommander @Inject() (
 
     val followerInfosByLibraryId = libraries.map { library =>
       val (collaborators, followers, _, counts) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
-      library.id.get -> ((collaborators ++ followers).map(_.userId), counts)
+      val inviters: Seq[LibraryMembership] = viewerUserIdOpt.map { userId =>
+        db.readOnlyReplica { implicit session =>
+          libraryInviteRepo.getWithLibraryIdAndUserId(library.id.get, userId).filter { invite =>
+            invite.inviterId != library.ownerId
+          }.map { invite =>
+            libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, invite.inviterId)
+          }
+        }.flatten
+      }.getOrElse(Seq.empty)
+      library.id.get -> ((inviters ++ collaborators.filter(!inviters.contains(_)) ++ followers.filter(!inviters.contains(_))).map(_.userId), counts)
     }.toMap
 
     val usersById = {
