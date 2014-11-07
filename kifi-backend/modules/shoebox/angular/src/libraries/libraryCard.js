@@ -279,7 +279,7 @@ angular.module('kifi')
         };
 
         scope.unfollowLibrary = function (library) {
-          libraryService.trackEvent('user_followed_library', library, { action: 'unfollow' });
+          libraryService.trackEvent('user_clicked_page', library, { action: 'unfollow' });
           libraryService.leaveLibrary(library.id);
         };
 
