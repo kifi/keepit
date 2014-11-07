@@ -148,7 +148,7 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregisterCurrentLibrary);
 
-    $scope.$on('trackLibraryEvent', function (e, eventType, attributes) {
+    var deregisterTrackLibraryEvent = $rootScope.$on('trackLibraryEvent', function (e, eventType, attributes) {
       if (eventType === 'click') {
         if (!$rootScope.userLoggedIn) {
           libraryService.trackEvent('visitor_clicked_page', $scope.library, attributes);
@@ -159,6 +159,7 @@ angular.module('kifi')
         trackPageView(attributes);
       }
     });
+    $scope.$on('$destroy', deregisterTrackLibraryEvent);
 
     $scope.libaryKeepClicked = function (keep, event) {
       var target = event.target;
