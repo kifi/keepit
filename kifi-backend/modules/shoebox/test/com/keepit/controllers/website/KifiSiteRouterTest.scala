@@ -137,5 +137,13 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
       substitute("og:title", "Hi there!")("""<meta property="og:description" content="Connecting People With Knowledge" />""") === """<meta property="og:description" content="Connecting People With Knowledge" />"""
     }
 
+    "substitute link tags" in {
+      def substitute(rel: String, newRef: String)(html: String) = {
+        val (pattern, newValue) = KifiSiteRouter.substituteLink(rel, newRef)
+        pattern.replaceAllIn(html, newValue)
+      }
+      substitute("canonical", "http://www.kifi.com")("""<link rel="canonical" href="http://www.lemonde.fr" />""") === """<link rel="canonical" href="http://www.kifi.com"/>"""
+    }
+
   }
 }
