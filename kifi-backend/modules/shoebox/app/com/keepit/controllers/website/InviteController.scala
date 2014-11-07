@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.{ FailedInvitationException, FullSocialId, InviteCommander, InviteStatus }
 import com.keepit.common.akka.TimeoutFuture
-import com.keepit.common.controller.{ UserActions, UserActionsHelper, UserRequest, ShoeboxServiceController }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -152,7 +152,9 @@ class InviteController @Inject() (db: Database,
               }
               val openGraphTags = Map(
                 KifiSiteRouter.substituteMetaProperty("og:title", inviteCommander.fbTitle(inviterUserOpt.map(_.firstName))),
-                KifiSiteRouter.substituteMetaProperty("og:description", inviteCommander.fbDescription)
+                KifiSiteRouter.substituteMetaProperty("og:description", inviteCommander.fbDescription),
+                KifiSiteRouter.substituteMetaProperty("og:url", inviteCommander.acceptUrl(id)),
+                KifiSiteRouter.substituteLink("canonical", inviteCommander.acceptUrl(id))
               )
               resolve(MarketingSiteRouter.marketingSite(substitutions = openGraphTags).withCookies(Cookie("inv", invite.externalId.id)))
             }

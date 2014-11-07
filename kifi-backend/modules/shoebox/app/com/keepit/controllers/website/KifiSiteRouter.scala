@@ -46,6 +46,12 @@ object KifiSiteRouter {
     val newValue = s"""<meta property="$property" content="$newContent"/>"""
     pattern -> newValue
   }
+
+  def substituteLink(rel: String, newRef: String): (Regex, String) = {
+    val pattern = ("""<link\s+rel="""" + Pattern.quote(rel) + """"\s+href=".*"\s*/?>""").r
+    val newValue = s"""<link rel="$rel" href="$newRef"/>"""
+    pattern -> newValue
+  }
 }
 
 @Singleton // holds state for performance reasons

@@ -107,6 +107,8 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
         html must contain(commander.fbTitle(Some(user1.firstName)))
         html must contain("og:description")
         html must contain(commander.fbDescription)
+        html must contain("og:url")
+        html must contain(commander.acceptUrl(invite1.externalId))
 
         // now set user (sanity check)
         inject[FakeUserActionsHelper].setUser(user1)
