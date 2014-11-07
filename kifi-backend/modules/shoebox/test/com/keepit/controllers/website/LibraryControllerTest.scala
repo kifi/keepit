@@ -532,7 +532,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         // permission denied sharing a SECRET library that you don't own
         val request3 = FakeRequest("POST", testPath1).withBody(inputJson2)
         val result3 = libraryController.inviteUsersToLibrary(pubId1)(request3)
-        status(result3) must equalTo(BAD_REQUEST)
+        status(result3) must equalTo(FORBIDDEN)
         // success sharing a PUBLISHED library that you don't own
         val request4 = FakeRequest("POST", testPath2).withBody(inputJson2)
         val result4 = libraryController.inviteUsersToLibrary(pubId2)(request4)

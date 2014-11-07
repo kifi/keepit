@@ -220,7 +220,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         }
 
         // join a secret library (with no invite)
-        status(joinLibrary(user2, libPubId2)) === BAD_REQUEST
+        status(joinLibrary(user2, libPubId2)) === FORBIDDEN
         db.readWrite { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib2.id.get, user2.id.get).isEmpty === true
           libraryMembershipRepo.countWithLibraryId(lib2.id.get) === 1
