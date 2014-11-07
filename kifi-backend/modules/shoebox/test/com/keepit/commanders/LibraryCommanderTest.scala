@@ -193,21 +193,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryRepo.count === 0
         }
 
-        val noInvites = None
-        val inv2 = Some(userIron.externalId :: userAgent.externalId :: userHulk.externalId :: Nil)
-        val inv3 = Some(userHulk.externalId :: Nil)
+        val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers", visibility = LibraryVisibility.SECRET)
 
-        val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers",
-          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
+        val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
 
-        val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica",
-          visibility = LibraryVisibility.PUBLISHED, collaborators = noInvites, followers = inv2)
+        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.DISCOVERABLE)
 
-        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science",
-          visibility = LibraryVisibility.DISCOVERABLE, collaborators = inv3, followers = noInvites)
-
-        val lib5Request = LibraryAddRequest(name = "Invalid Param", slug = "",
-          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
+        val lib5Request = LibraryAddRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
 
         val libraryCommander = inject[LibraryCommander]
         val add1 = libraryCommander.addLibrary(lib1Request, userAgent.id.get)
@@ -230,16 +222,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           allMemberships.length === 3
           allMemberships.map(_.userId) === Seq(userAgent.id.get, userCaptain.id.get, userIron.id.get)
           allMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.OWNER, LibraryAccess.OWNER)
-
-          val allInvites = libraryInviteRepo.all
-          allInvites.length === 4
-          val invitePairs = for (i <- allInvites) yield (i.inviterId, i.userId.get)
-
-          invitePairs === (userCaptain.id.get, userIron.id.get) ::
-            (userCaptain.id.get, userAgent.id.get) ::
-            (userCaptain.id.get, userHulk.id.get) ::
-            (userIron.id.get, userHulk.id.get) ::
-            Nil
         }
 
         // test re-activating inactive library
