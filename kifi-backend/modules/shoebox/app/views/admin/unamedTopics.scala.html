@@ -1,6 +1,8 @@
-@(infos: Seq[com.keepit.cortex.dbmodel.LDAInfo], topicWords: Seq[String])(implicit request: com.keepit.common.controller.UserRequest[_])
+@(infos: Seq[com.keepit.cortex.dbmodel.LDAInfo], topicWords: Seq[String], version: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("unamed topics"){
+
+<h2>LDA version: @version</h2>
 
 
 <table id = "topic_words_table" class = "table table-bordered">
@@ -16,7 +18,7 @@
 
   @infos.zip(topicWords).map{ case (info, words) =>
     <tr>
-      <td class = "ids"><a href = "@{com.keepit.controllers.admin.routes.AdminLDAController.topicDetail(info.topicId)}">@info.topicId</a></td>
+      <td class = "ids"><a href = "@{com.keepit.controllers.admin.routes.AdminLDAController.topicDetail(info.topicId, version)}">@info.topicId</a></td>
       <td>@info.numOfDocs</td>
       <td><pre>@words</pre></td>
       <td class = "tnames"> <input type = "text" value = "@info.topicName"></td>
