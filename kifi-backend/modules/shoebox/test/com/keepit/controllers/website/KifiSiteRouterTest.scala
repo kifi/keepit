@@ -125,5 +125,17 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "substitute meta properties" in {
+      def substitute(property: String, newContent: String)(html: String) = {
+        val (pattern, newValue) = KifiSiteRouter.substituteMetaProperty(property, newContent)
+        pattern.replaceAllIn(html, newValue)
+      }
+      substitute("og:title", "Hi there!")("""<meta property="og:title" content="Connecting People With Knowledge" />""") === """<meta property="og:title" content="Hi there!"/>"""
+      substitute("og:title", "Hi there!")("""<meta property="og:title" content="Connecting People With Knowledge">""") === """<meta property="og:title" content="Hi there!"/>"""
+      substitute("og:title", "Hi there!")("""<meta property="og:title" content="Connecting People With Knowledge" >""") === """<meta property="og:title" content="Hi there!"/>"""
+      substitute("og:description", "Hi there!")("""<meta property="og:description" content="Connecting People With Knowledge" />""") === """<meta property="og:description" content="Hi there!"/>"""
+      substitute("og:title", "Hi there!")("""<meta property="og:description" content="Connecting People With Knowledge" />""") === """<meta property="og:description" content="Connecting People With Knowledge" />"""
+    }
+
   }
 }
