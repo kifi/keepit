@@ -19,14 +19,14 @@ import com.keepit.scraper.{ FakeScrapeSchedulerConfigModule, FakeScrapeScheduler
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.social.{ SocialId, SocialNetworks }
-import com.keepit.test.ShoeboxTestInjector
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.mindrot.jbcrypt.BCrypt
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
 
-class InviteControllerTest extends Specification with ShoeboxTestInjector {
+class InviteControllerTest extends Specification with ShoeboxApplicationInjector {
 
   val modules = Seq(
     FakeShoeboxServiceModule(),
@@ -80,7 +80,7 @@ class InviteControllerTest extends Specification with ShoeboxTestInjector {
 
   "InviteController" should {
     "acceptInvite should be public endpoint" in {
-      withDb(modules: _*) { implicit injector =>
+      running(new ShoeboxApplication(modules: _*)) {
         val (user1, email1, sui1, invite1) = setUp()
         val inviteController = inject[InviteController]
 
@@ -93,7 +93,7 @@ class InviteControllerTest extends Specification with ShoeboxTestInjector {
         val result = inviteController.acceptInvite(invite1.externalId)(request)
         val code = status(result)
         code !== FORBIDDEN
-        code === 303
+        code === 200
         // landing page at this point -- we'll make sure cookie is set
         val invCookie = cookies(result).get("inv")
         invCookie.isDefined === true
