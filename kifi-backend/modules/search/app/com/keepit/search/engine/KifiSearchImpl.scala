@@ -87,7 +87,7 @@ class KifiSearchImpl(
 
     // compute high score excluding others (an orphan uri sometimes makes results disappear)
     val highScore = {
-      var highScore = max(myHits.highScore, friendsHits.highScore)
+      val highScore = max(myHits.highScore, friendsHits.highScore)
       if (highScore > 0.0f) highScore else max(othersHits.highScore, highScore)
     }
 
