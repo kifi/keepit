@@ -47,11 +47,13 @@ angular.module('kifi')
         if (idxUser !== -1) {
           user = users[idxUser];
           lib.keeperPic = friendService.getPictureUrlForUser(user);
+          lib.owner = user;
           decompressedLibraries.push(lib);
           libUsers[idxUser] = true;
         } else {
           user = profileService.me;
           lib.keeperPic = friendService.getPictureUrlForUser(user);
+          lib.owner = user;
           if (!libraryService.isSystemLibrary(lib.id)) {
             decompressedLibraries.push(lib);
           }
@@ -144,6 +146,7 @@ angular.module('kifi')
       return resultsFetched.then(function (results) {
         var res = results[1];
         var resData = res.data;
+
         //$log.log('searchActionService.find() res', resData);
 
         var hits = resData.hits || [];
@@ -204,6 +207,9 @@ angular.module('kifi')
           count: numResults,
           keepers: keep.keepers.map(function (elem) {
             return elem.id;
+          }),
+          libraries: keep.libraries.map(function (elem) {
+            return [elem.id, elem.owner.id];
           }),
           tags: keep.tags,
           title: keep.summary.title,

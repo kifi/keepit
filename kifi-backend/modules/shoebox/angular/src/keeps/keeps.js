@@ -164,9 +164,13 @@ angular.module('kifi')
             }
             scope.editMode.enabled = true;
             scope.selection.toggleSelect(keep);
-          } else if (event.target.href && scope.keepClick) {
-            scope.keepClick(keep, event);
+          } else if (scope.keepClick) {
+            // the timeout is to prevent pop-up blocker
+            setTimeout(function () {
+              scope.keepClick(keep, event);
+            });
           }
+          return true;
         };
 
         scope.isMultiChecked = function (keeps) {
@@ -235,6 +239,7 @@ angular.module('kifi')
             libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
             scope.selection.unselectAll();
 
+            scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
             if (scope.availableKeeps.length < 10) {
               scope.scrollNext()(scope.availableKeeps.length);
             }
@@ -285,7 +290,7 @@ angular.module('kifi')
             var addedKeeps = data.successes;
             if (addedKeeps.length > 0) {
               libraryService.fetchLibrarySummaries(true);
-              scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, scope.librarySelection.library);
+              scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, clickedLibrary);
             }
           })['catch'](function () {
             modalService.open({
@@ -333,15 +338,6 @@ angular.module('kifi')
         }, function(enabled) {
           if (!enabled) {
             scope.selection.unselectAll();
-          }
-        });
-
-        scope.$watch('keepsLoading', function (newVal) {
-          // Size the keeps dynamically once the keeps are loaded and visible.
-          if (!newVal) {
-            scope.$evalAsync(function () {
-              sizeKeeps();
-            });
           }
         });
 

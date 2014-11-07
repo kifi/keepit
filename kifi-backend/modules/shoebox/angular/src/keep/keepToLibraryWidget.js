@@ -50,6 +50,7 @@ angular.module('kifi')
         var libraryList = null;
         var newLibraryNameInput = null;
 
+        var keptToLibraryIds = [];
         var selectedIndex = 0;
         var justScrolled = false;
         var removeTimeout = null;
@@ -180,7 +181,7 @@ angular.module('kifi')
           libraries.forEach(function (library) {
             library.keptTo = false;
 
-            if (_.indexOf(scope.keptToLibraryIds, library.id) !== -1) {
+            if (_.indexOf(keptToLibraryIds, library.id) !== -1) {
               library.keptTo = true;
               scope.widgetKeptInLibraries.push(library);
             } else {
@@ -290,8 +291,8 @@ angular.module('kifi')
           // Initialize state.
           //
           selectedIndex = 0;
+          keptToLibraryIds = scope.keptToLibraryIds || [];
 
-          scope.keptToLibraryIds = scope.keptToLibraryIds || [];
           scope.search = {};
           scope.showCreate = false;
           scope.newLibrary = {};

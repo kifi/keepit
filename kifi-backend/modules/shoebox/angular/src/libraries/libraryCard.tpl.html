@@ -88,7 +88,7 @@
     <div ng-if="canBeShared(library)" kf-library-share-search library="library" class="kf-keep-lib-footer-button-right"></div>
 
     <button ng-if="isPublic(library)" class="kf-keep-lib-footer-button library-button-with-icon kf-keep-lib-footer-twitter-button">
-      <a class="kf-keep-lib-footer-share-link" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}">
+      <a class="kf-keep-lib-footer-share-link" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}" ng-click="shareTwitter()">
         <span class="kf-keep-lib-footer-button-icon svg-twitter"></span>
         <span class="kf-keep-lib-footer-button-icon svg-twitter-white"></span><!-- for non-logged-in users -->
         <span class="kf-keep-lib-footer-share-link-text">Tweet</span>

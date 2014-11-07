@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfLibraryCard', [
   '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'platformService', 'signupService', '$twitter',
+  'profileService', 'platformService', 'signupService', '$twitter', '$timeout',
   function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
-    profileService, platformService, signupService, $twitter) {
+    profileService, platformService, signupService, $twitter, $timeout) {
     return {
       restrict: 'A',
       replace: true,
@@ -20,6 +20,12 @@ angular.module('kifi')
       },
       templateUrl: 'libraries/libraryCard.tpl.html',
       link: function (scope, element/*, attrs*/) {
+        //
+        // Internal data.
+        //
+        var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
+        //                   ↑↑↑ use this one ↑↑↑
+
         //
         // Scope data.
         //
@@ -81,6 +87,14 @@ angular.module('kifi')
             }
 
             followerPicsDiv.width(maxFollowersToShow >= 1 ? maxFollowersToShow * widthPerFollowerPic : 0);
+          });
+        }
+
+        function trackShareEvent(medium) {
+          $timeout(function () {
+            var attrs = { action: 'shareLibrary', subAction: medium };
+            var eventName = (scope.isUserLoggedOut ? 'visitor' : 'user') + '_clicked_page';
+            libraryService.trackEvent(eventName, scope.library, attrs);
           });
         }
 
@@ -206,10 +220,15 @@ angular.module('kifi')
         };
 
         scope.shareFB = function () {
+          trackShareEvent('facebook');
           $FB.ui({
             method: 'share',
             href: scope.library.shareFbUrl
           });
+        };
+
+        scope.shareTwitter = function () {
+          trackShareEvent('twitter');
         };
 
         // TODO: determine this on the server side in the library response. For now, doing it client side.
@@ -231,8 +250,11 @@ angular.module('kifi')
             platformService.goToAppOrStore($location.absUrl() + '?follow=true');
             return;
           } else if ($rootScope.userLoggedIn === false) {
+            libraryService.trackEvent('visitor_clicked_page', library, { action: 'followButton' });
             return signupService.register({libraryId: scope.library.id});
           }
+
+          libraryService.trackEvent('user_clicked_page', library, { action: 'followed' });
 
           libraryService.joinLibrary(library.id).then(function (result) {
             if (result === 'already_joined') {
@@ -257,6 +279,7 @@ angular.module('kifi')
         };
 
         scope.unfollowLibrary = function (library) {
+          libraryService.trackEvent('user_followed_library', library, { action: 'unfollow' });
           libraryService.leaveLibrary(library.id);
         };
 
@@ -277,7 +300,7 @@ angular.module('kifi')
               library: scope.library,
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
-                  libraryService.getLibraryByUserSlug(scope.username, data.library.slug, true).then(function (library) {
+                  libraryService.getLibraryByUserSlug(scope.username, data.library.slug, authToken, true).then(function (library) {
                     _.assign(scope.library, library);
                     augmentData();
                     adjustFollowerPicsSize();

@@ -169,7 +169,7 @@ class LibraryCommander @Inject() (
     (libInfo, accessStr)
   }
 
-  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[(Int, String), (Library, BasicUser, Int, Int)] = {
+  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Int)] = {
     db.readOnlyReplica { implicit s =>
       val library = libraryRepo.get(libraryId)
       if (library.visibility == LibraryVisibility.PUBLISHED ||
@@ -180,7 +180,7 @@ class LibraryCommander @Inject() (
         val followerCount = libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).apply(LibraryAccess.READ_ONLY)
         Right(library, owner, keepCount, followerCount)
       } else {
-        Left(403, "library_access_denied")
+        Left(LibraryFail(FORBIDDEN, "library_access_denied"))
       }
     }
   }
@@ -364,24 +364,15 @@ class LibraryCommander @Inject() (
       else { None }
     }
     badMessage match {
-      case Some(x) => Left(LibraryFail(x))
+      case Some(x) => Left(LibraryFail(BAD_REQUEST, x))
       case _ => {
         val validSlug = LibrarySlug(libAddReq.slug)
         db.readOnlyReplica { implicit s => libraryRepo.getByNameOrSlug(ownerId, libAddReq.name, validSlug) } match {
-          case Some(lib) =>
-            Left(LibraryFail("library_name_or_slug_exists"))
+          case Some(lib) if lib.name == libAddReq.name =>
+            Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
+          case Some(lib) if lib.slug == validSlug =>
+            Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
           case None =>
-            val (collaboratorIds, followerIds) = db.readOnlyReplica { implicit s =>
-              val collabs = libAddReq.collaborators.getOrElse(Seq()).map { x =>
-                val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
-                inviteeIdOpt.get
-              }
-              val follows = libAddReq.followers.getOrElse(Seq()).map { x =>
-                val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
-                inviteeIdOpt.get
-              }
-              (collabs, follows)
-            }
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {
@@ -399,10 +390,6 @@ class LibraryCommander @Inject() (
                   newLib
               }
             }
-            val bulkInvites1 = for (c <- collaboratorIds) yield LibraryInvite(libraryId = library.id.get, inviterId = ownerId, userId = Some(c), access = LibraryAccess.READ_WRITE)
-            val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, inviterId = ownerId, userId = Some(c), access = LibraryAccess.READ_ONLY)
-
-            inviteBulkUsers(bulkInvites1 ++ bulkInvites2)
             libraryAnalytics.createLibrary(ownerId, library, context)
             searchClient.updateLibraryIndex()
             Right(library)
@@ -425,15 +412,15 @@ class LibraryCommander @Inject() (
 
     val targetLib = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
     if (targetLib.ownerId != userId) {
-      Left(LibraryFail("permission_denied"))
+      Left(LibraryFail(FORBIDDEN, "permission_denied"))
     } else {
       def validName(name: String): Either[LibraryFail, String] = {
         if (Library.isValidName(name)) Right(name)
-        else Left(LibraryFail("invalid_name"))
+        else Left(LibraryFail(BAD_REQUEST, "invalid_name"))
       }
       def validSlug(slug: String): Either[LibraryFail, LibrarySlug] = {
         if (LibrarySlug.isValidSlug(slug)) Right(LibrarySlug(slug))
-        else Left(LibraryFail("invalid_slug"))
+        else Left(LibraryFail(BAD_REQUEST, "invalid_slug"))
       }
 
       val result = for {
@@ -467,12 +454,12 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[(Int, String)] = {
+  def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail] = {
     val oldLibrary = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
     if (oldLibrary.ownerId != userId) {
-      Some((FORBIDDEN, "permission_denied"))
+      Some(LibraryFail(FORBIDDEN, "permission_denied"))
     } else if (oldLibrary.kind == LibraryKind.SYSTEM_MAIN || oldLibrary.kind == LibraryKind.SYSTEM_SECRET) {
-      Some((BAD_REQUEST, "cant_delete_system_generated_library"))
+      Some(LibraryFail(BAD_REQUEST, "cant_delete_system_generated_library"))
     } else {
       val keepsInLibrary = db.readWrite { implicit s =>
         libraryMembershipRepo.getWithLibraryId(oldLibrary.id.get).map { m =>
@@ -690,9 +677,9 @@ class LibraryCommander @Inject() (
       libraryRepo.get(libraryId)
     }
     if (!(targetLib.ownerId == inviterId || targetLib.visibility == LibraryVisibility.PUBLISHED))
-      Left(LibraryFail("permission_denied"))
+      Left(LibraryFail(FORBIDDEN, "permission_denied"))
     else if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
-      Left(LibraryFail("cant_invite_to_system_generated_library"))
+      Left(LibraryFail(BAD_REQUEST, "cant_invite_to_system_generated_library"))
     else {
       val successInvites = db.readOnlyMaster { implicit s =>
         for (i <- inviteList) yield {
@@ -739,9 +726,9 @@ class LibraryCommander @Inject() (
       val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
 
       if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
-        Left(LibraryFail("cant_join_system_generated_library"))
+        Left(LibraryFail(FORBIDDEN, "cant_join_system_generated_library"))
       else if (lib.visibility != LibraryVisibility.PUBLISHED && listInvites.isEmpty)
-        Left(LibraryFail("cant_join_nonpublished_library"))
+        Left(LibraryFail(FORBIDDEN, "cant_join_nonpublished_library"))
       else {
         val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
@@ -773,9 +760,9 @@ class LibraryCommander @Inject() (
 
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit] = {
     db.readWrite { implicit s =>
-      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
-        case None => Left(LibraryFail("membership_not_found"))
-        case Some(mem) if mem.access == LibraryAccess.OWNER => Left(LibraryFail("cannot_leave_own_library"))
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
+        case None => Right()
+        case Some(mem) if mem.access == LibraryAccess.OWNER => Left(LibraryFail(BAD_REQUEST, "cannot_leave_own_library"))
         case Some(mem) => {
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           val lib = libraryRepo.get(libraryId)
@@ -839,7 +826,7 @@ class LibraryCommander @Inject() (
       collectionRepo.getByUserAndName(userId, tagName)
     } match {
       case None =>
-        Left(LibraryFail("tag_not_found"))
+        Left(LibraryFail(NOT_FOUND, "tag_not_found"))
       case Some(tag) =>
         val keeps = db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.getKeepsForTag(tag.id.get).map { kId => keepRepo.get(kId) }
@@ -853,7 +840,7 @@ class LibraryCommander @Inject() (
       collectionRepo.getByUserAndName(userId, tagName)
     } match {
       case None =>
-        Left(LibraryFail("tag_not_found"))
+        Left(LibraryFail(NOT_FOUND, "tag_not_found"))
       case Some(tag) =>
         val keeps = db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.getKeepsForTag(tag.id.get).map { kId => keepRepo.get(kId) }
@@ -993,19 +980,19 @@ class LibraryCommander @Inject() (
     (main, secret)
   }
 
-  def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug, followRedirect: Boolean = false): Either[(Int, String), Library] = {
+  def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug, followRedirect: Boolean = false): Either[LibraryFail, Library] = {
     val ownerIdentifier = ExternalId.asOpt[User](username).map(Left(_)) getOrElse Right(Username(username))
     val ownerOpt = ownerIdentifier match {
       case Left(externalId) => db.readOnlyMaster { implicit s => userRepo.getOpt(externalId).map((_, false)) }
       case Right(username) => userCommander.get.getUserByUsernameOrAlias(username)
     }
     ownerOpt match {
-      case None => Left((BAD_REQUEST, "invalid_username"))
+      case None => Left(LibraryFail(BAD_REQUEST, "invalid_username"))
       case Some((owner, isUserAlias)) =>
         getLibraryBySlugOrAlias(owner.id.get, slug) match {
-          case None => Left((NOT_FOUND, "no_library_found"))
+          case None => Left(LibraryFail(NOT_FOUND, "no_library_found"))
           case Some((library, isLibraryAlias)) =>
-            if ((isUserAlias || isLibraryAlias) && !followRedirect) Left((MOVED_PERMANENTLY, Library.formatLibraryPath(owner.username, owner.externalId, library.slug)))
+            if ((isUserAlias || isLibraryAlias) && !followRedirect) Left(LibraryFail(MOVED_PERMANENTLY, Library.formatLibraryPath(owner.username, owner.externalId, library.slug)))
             else Right(library)
         }
     }
@@ -1055,15 +1042,13 @@ object LibraryError {
   }
 }
 
-case class LibraryFail(message: String) extends AnyVal
+case class LibraryFail(status: Int, message: String)
 
 @json case class LibraryAddRequest(
   name: String,
   visibility: LibraryVisibility,
   description: Option[String] = None,
-  slug: String,
-  collaborators: Option[Seq[ExternalId[User]]],
-  followers: Option[Seq[ExternalId[User]]])
+  slug: String)
 
 case class LibraryInfo(
   id: PublicId[Library],
