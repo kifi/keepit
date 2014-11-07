@@ -16,25 +16,25 @@ POST    /internal/cortex/word2vec/queryUriSimilarity                            
 POST    /internal/cortex/word2vec/userUriSimilarity                                 @com.keepit.controllers.cortex.CortexController.userUriSimilarity
 POST    /internal/cortex/word2vec/feedUserUris                                      @com.keepit.controllers.cortex.CortexController.feedUserUris
 
-GET     /internal/cortex/lda/numOfTopics                                            @com.keepit.controllers.cortex.LDAController.numOfTopics
-GET     /internal/cortex/lda/showTopics                                             @com.keepit.controllers.cortex.LDAController.showTopics(fromId: Int, toId: Int, topN: Int)
-GET     /internal/cortex/lda/wordTopic                                              @com.keepit.controllers.cortex.LDAController.wordTopic(word)
-POST    /internal/cortex/lda/docTopic                                               @com.keepit.controllers.cortex.LDAController.docTopic
-GET     /internal/cortex/lda/confs                                                  @com.keepit.controllers.cortex.LDAController.ldaConfigurations
-POST    /internal/cortex/lda/saveEdits                                              @com.keepit.controllers.cortex.LDAController.saveEdits
-GET     /internal/cortex/lda/userUriInterest                                        @com.keepit.controllers.cortex.LDAController.userUriInterest(userId: Id[User], uriId: Id[NormalizedURI])
-POST    /internal/cortex/lda/batchUserUrisInterests                                 @com.keepit.controllers.cortex.LDAController.batchUserURIsInterests
-GET     /internal/cortex/lda/userTopicMean                                          @com.keepit.controllers.cortex.LDAController.userTopicMean(userId: Id[User])
-GET     /internal/cortex/lda/sampleURIs                                             @com.keepit.controllers.cortex.LDAController.sampleURIs(topicId: Int)
-GET     /internal/cortex/lda/getSimilarUsers                                        @com.keepit.controllers.cortex.LDAController.getSimilarUsers(userId: Id[User], topK: Int)
-GET     /internal/cortex/lda/userSimilarity                                         @com.keepit.controllers.cortex.LDAController.userSimilarity(userId1: Id[User], userId2: Id[User])
-GET     /internal/cortex/lda/unamedTopics                                           @com.keepit.controllers.cortex.LDAController.unamedTopics(limit: Int)
-POST    /internal/cortex/lda/getTopicNames                                          @com.keepit.controllers.cortex.LDAController.getTopicNames
-POST    /internal/cortex/lda/explainFeed                                            @com.keepit.controllers.cortex.LDAController.explainFeed
-GET     /internal/cortex/lda/uriKLDivergence                                        @com.keepit.controllers.cortex.LDAController.uriKLDivergence(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI])
-GET     /internal/cortex/lda/recomputeUserLDAStat                                   @com.keepit.controllers.cortex.LDAController.recomputeUserLDAStat
-GET     /internal/cortex/lda/libraryTopic                                           @com.keepit.controllers.cortex.LDAController.libraryTopic(libId: Id[Library])
-GET     /internal/cortex/lda/libraryInducedUserUriInterest                          @com.keepit.controllers.cortex.LDAController.libraryInducedUserUriInterest(userId: Id[User], uriId: Id[NormalizedURI])
-GET     /internal/cortex/lda/dumpFeature                                            @com.keepit.controllers.cortex.LDAController.dumpFeature(dataType: String, id: Long)
+GET     /internal/cortex/lda/numOfTopics                                            @com.keepit.controllers.cortex.LDAController.numOfTopics(version: Option[Int] ?= None)
+GET     /internal/cortex/lda/showTopics                                             @com.keepit.controllers.cortex.LDAController.showTopics(fromId: Int, toId: Int, topN: Int, version: Option[Int] ?= None)
+GET     /internal/cortex/lda/wordTopic                                              @com.keepit.controllers.cortex.LDAController.wordTopic(word, version: Option[Int] ?= None)
+POST    /internal/cortex/lda/docTopic                                               @com.keepit.controllers.cortex.LDAController.docTopic(version: Option[Int] ?= None)
+GET     /internal/cortex/lda/confs                                                  @com.keepit.controllers.cortex.LDAController.ldaConfigurations(version: Option[Int] ?= None)
+POST    /internal/cortex/lda/saveEdits                                              @com.keepit.controllers.cortex.LDAController.saveEdits(version: Option[Int] ?= None)
+GET     /internal/cortex/lda/userUriInterest                                        @com.keepit.controllers.cortex.LDAController.userUriInterest(userId: Id[User], uriId: Id[NormalizedURI], version: Option[Int] ?= None)
+POST    /internal/cortex/lda/batchUserUrisInterests                                 @com.keepit.controllers.cortex.LDAController.batchUserURIsInterests(version: Option[Int] ?= None)
+GET     /internal/cortex/lda/userTopicMean                                          @com.keepit.controllers.cortex.LDAController.userTopicMean(userId: Id[User], version: Option[Int] ?= None)
+GET     /internal/cortex/lda/sampleURIs                                             @com.keepit.controllers.cortex.LDAController.sampleURIs(topicId: Int, version: Option[Int] ?= None)
+GET     /internal/cortex/lda/getSimilarUsers                                        @com.keepit.controllers.cortex.LDAController.getSimilarUsers(userId: Id[User], topK: Int, version: Option[Int] ?= None)
+GET     /internal/cortex/lda/userSimilarity                                         @com.keepit.controllers.cortex.LDAController.userSimilarity(userId1: Id[User], userId2: Id[User], version: Option[Int] ?= None)
+GET     /internal/cortex/lda/unamedTopics                                           @com.keepit.controllers.cortex.LDAController.unamedTopics(limit: Int, version: Option[Int] ?= None)
+POST    /internal/cortex/lda/getTopicNames                                          @com.keepit.controllers.cortex.LDAController.getTopicNames(version: Option[Int] ?= None)
+POST    /internal/cortex/lda/explainFeed                                            @com.keepit.controllers.cortex.LDAController.explainFeed(version: Option[Int] ?= None)
+GET     /internal/cortex/lda/uriKLDivergence                                        @com.keepit.controllers.cortex.LDAController.uriKLDivergence(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI], version: Option[Int] ?= None)
+GET     /internal/cortex/lda/recomputeUserLDAStat                                   @com.keepit.controllers.cortex.LDAController.recomputeUserLDAStat(version: Option[Int] ?= None)
+GET     /internal/cortex/lda/libraryTopic                                           @com.keepit.controllers.cortex.LDAController.libraryTopic(libId: Id[Library], version: Option[Int] ?= None)
+GET     /internal/cortex/lda/libraryInducedUserUriInterest                          @com.keepit.controllers.cortex.LDAController.libraryInducedUserUriInterest(userId: Id[User], uriId: Id[NormalizedURI], version: Option[Int] ?= None)
+GET     /internal/cortex/lda/dumpFeature                                            @com.keepit.controllers.cortex.LDAController.dumpFeature(dataType: String, id: Long, version: Option[Int] ?= None)
 
 GET     /internal/cortex/data/sparseLDAFeaturesChanged        @com.keepit.controllers.cortex.CortexDataPipeController.getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)

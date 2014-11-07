@@ -19,6 +19,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Result
 
 import scala.concurrent.Future
+import scala.util.matching.Regex
+import java.util.regex.Pattern
 
 sealed trait Routeable
 private case class MovedPermanentlyRoute(url: String) extends Routeable
@@ -36,6 +38,20 @@ case class Path(requestPath: String) {
   val split = path.split("/").map(URLDecoder.decode(_, "UTF-8"))
   val primary = split.head
   val secondary = split.tail.headOption
+}
+
+object KifiSiteRouter {
+  def substituteMetaProperty(property: String, newContent: String): (Regex, String) = {
+    val pattern = ("""<meta\s+property="""" + Pattern.quote(property) + """"\s+content=".*"\s*/?>""").r
+    val newValue = s"""<meta property="$property" content="$newContent"/>"""
+    pattern -> newValue
+  }
+
+  def substituteLink(rel: String, newRef: String): (Regex, String) = {
+    val pattern = ("""<link\s+rel="""" + Pattern.quote(rel) + """"\s+href=".*"\s*/?>""").r
+    val newValue = s"""<link rel="$rel" href="$newRef"/>"""
+    pattern -> newValue
+  }
 }
 
 @Singleton // holds state for performance reasons

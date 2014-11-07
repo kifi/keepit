@@ -10,6 +10,7 @@ import play.api.mvc.{ Request, Controller }
 import play.api.{ Mode, Play }
 
 import scala.util.Try
+import scala.util.matching.Regex
 
 object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
 
@@ -36,7 +37,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
     }
   }
 
-  def landing(implicit request: Request[_]) = {
+  private def landing(implicit request: Request[_]) = {
     val pickOpt = Try {
       request.getQueryString("v").map(_.toInt)
     } recover {
@@ -57,7 +58,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
     }
   }
 
-  def marketingSite(path: String = "index")(implicit request: Request[_]) = {
+  def marketingSite(path: String = "index", substitutions: Map[Regex, String] = Map.empty)(implicit request: Request[_]) = {
     val file = if (path.isEmpty || path == "index") {
       landing
     } else {
@@ -72,7 +73,14 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
       }
     } else {
       maybeCachedIndex(file) map { content =>
-        Ok(content).as(HTML)
+        val updatedContent = substitutions.foldLeft(content) {
+          case (updatedContent, (pattern, newValue)) =>
+            if (pattern.findFirstIn(updatedContent).isEmpty) {
+              log.warn(s"Expected Pattern not found: $pattern in content for $path")
+            }
+            pattern.replaceAllIn(updatedContent, newValue)
+        }
+        Ok(updatedContent).as(HTML)
       } getOrElse {
         NotFound(views.html.error.notFound(path))
       }

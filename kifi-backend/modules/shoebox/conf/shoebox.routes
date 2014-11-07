@@ -131,6 +131,8 @@ GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryContro
 POST    /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.createLibrary()
 GET     /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.getLibrary(id: PublicId[Library])
 DELETE  /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.deleteLibrary(id: PublicId[Library])
+POST    /ext/libraries/:id/join     @com.keepit.controllers.ext.ExtLibraryController.joinLibrary(id: PublicId[Library])
+POST    /ext/libraries/:id/leave    @com.keepit.controllers.ext.ExtLibraryController.leaveLibrary(id: PublicId[Library])
 POST    /ext/libraries/:id/bookmarks @com.keepit.controllers.ext.ExtLibraryController.importBrowserBookmarks(id: PublicId[Library])
 POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id: PublicId[Library])
 GET     /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.getKeep(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)

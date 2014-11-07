@@ -53,8 +53,8 @@ class MobileLibraryController @Inject() (
             Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
           }
         })
-      case Left((respCode, msg)) =>
-        Future.successful(Status(respCode)(Json.obj("error" -> msg)))
+      case Left(fail) =>
+        Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
     }
   }
 
@@ -114,7 +114,7 @@ class MobileLibraryController @Inject() (
         val res = libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList)
         res match {
           case Left(fail) =>
-            BadRequest(Json.obj("error" -> fail.message))
+            Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(info) =>
             val res = info.map {
               case (Left(externalId), access) => Json.obj("user" -> externalId, "access" -> access)
@@ -135,7 +135,7 @@ class MobileLibraryController @Inject() (
         val res = libraryCommander.joinLibrary(request.userId, libId)
         res match {
           case Left(fail) =>
-            BadRequest(Json.obj("error" -> fail.message))
+            Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(lib) =>
             val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
             Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)))
@@ -162,7 +162,7 @@ class MobileLibraryController @Inject() (
       case Success(id) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         libraryCommander.leaveLibrary(id, request.userId) match {
-          case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+          case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(_) => Ok(JsString("success"))
         }
     }
