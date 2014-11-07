@@ -100,7 +100,7 @@ angular.module('kifi')
       }
 
       if ($scope.userData.libraryId) {
-        $rootScope.$broadcast('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickSignUpButton' });
+        $scope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickSignUpButton' });
       }
 
       modalService.close();
@@ -116,7 +116,7 @@ angular.module('kifi')
 
     $scope.fbAuthFromLibrary = function () {
       if ($scope.userData.libraryId) {
-        $rootScope.$broadcast('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthFacebook' });
+        $scope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthFacebook' });
       }
       return $scope.fbAuth();
     };

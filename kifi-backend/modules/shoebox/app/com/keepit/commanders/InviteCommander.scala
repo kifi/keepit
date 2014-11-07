@@ -323,7 +323,10 @@ class InviteCommander @Inject() (
     InviteStatus.clientHandle(saved)
   }
 
-  def acceptUrl(invitationId: ExternalId[Invitation]) = URLEncoder.encode(s"$baseUrl${routes.InviteController.acceptInvite(invitationId)}", "UTF-8")
+  def acceptUrl(invitationId: ExternalId[Invitation], encode: Boolean = true) = {
+    val url = s"$baseUrl${routes.InviteController.acceptInvite(invitationId)}"
+    if (encode) URLEncoder.encode(url, "UTF-8") else url
+  }
   def fbConfirmUrl(invitationId: ExternalId[Invitation], source: String) = URLEncoder.encode(s"$baseUrl${routes.InviteController.confirmInvite(invitationId, source, None, None)}", "UTF-8")
   def fbInviteUrl(invitationId: ExternalId[Invitation], socialId: SocialId, source: String): String = {
     val link = acceptUrl(invitationId)

@@ -150,11 +150,12 @@ class InviteController @Inject() (db: Database,
                   log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
                   Future.successful(None)
               }
+              val inviteUrl = inviteCommander.acceptUrl(id, false)
               val openGraphTags = Map(
                 KifiSiteRouter.substituteMetaProperty("og:title", inviteCommander.fbTitle(inviterUserOpt.map(_.firstName))),
                 KifiSiteRouter.substituteMetaProperty("og:description", inviteCommander.fbDescription),
-                KifiSiteRouter.substituteMetaProperty("og:url", inviteCommander.acceptUrl(id)),
-                KifiSiteRouter.substituteLink("canonical", inviteCommander.acceptUrl(id))
+                KifiSiteRouter.substituteMetaProperty("og:url", inviteUrl),
+                KifiSiteRouter.substituteLink("canonical", inviteUrl)
               )
               resolve(MarketingSiteRouter.marketingSite(substitutions = openGraphTags).withCookies(Cookie("inv", invite.externalId.id)))
             }

@@ -368,20 +368,11 @@ class LibraryCommander @Inject() (
       case _ => {
         val validSlug = LibrarySlug(libAddReq.slug)
         db.readOnlyReplica { implicit s => libraryRepo.getByNameOrSlug(ownerId, libAddReq.name, validSlug) } match {
-          case Some(lib) =>
-            Left(LibraryFail(BAD_REQUEST, "library_name_or_slug_exists"))
+          case Some(lib) if lib.name == libAddReq.name =>
+            Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
+          case Some(lib) if lib.slug == validSlug =>
+            Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
           case None =>
-            val (collaboratorIds, followerIds) = db.readOnlyReplica { implicit s =>
-              val collabs = libAddReq.collaborators.getOrElse(Seq()).map { x =>
-                val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
-                inviteeIdOpt.get
-              }
-              val follows = libAddReq.followers.getOrElse(Seq()).map { x =>
-                val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
-                inviteeIdOpt.get
-              }
-              (collabs, follows)
-            }
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {
@@ -399,10 +390,6 @@ class LibraryCommander @Inject() (
                   newLib
               }
             }
-            val bulkInvites1 = for (c <- collaboratorIds) yield LibraryInvite(libraryId = library.id.get, inviterId = ownerId, userId = Some(c), access = LibraryAccess.READ_WRITE)
-            val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, inviterId = ownerId, userId = Some(c), access = LibraryAccess.READ_ONLY)
-
-            inviteBulkUsers(bulkInvites1 ++ bulkInvites2)
             libraryAnalytics.createLibrary(ownerId, library, context)
             searchClient.updateLibraryIndex()
             Right(library)
@@ -1061,9 +1048,7 @@ case class LibraryFail(status: Int, message: String)
   name: String,
   visibility: LibraryVisibility,
   description: Option[String] = None,
-  slug: String,
-  collaborators: Option[Seq[ExternalId[User]]],
-  followers: Option[Seq[ExternalId[User]]])
+  slug: String)
 
 case class LibraryInfo(
   id: PublicId[Library],
