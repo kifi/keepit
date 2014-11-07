@@ -63,7 +63,7 @@ class LibraryController @Inject() (
   implicit val config: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
-  def getTopLibraries() = MaybeUserAction.async { request =>
+  def getTopLibraries() = Action.async { request =>
     val tops = db.readOnlyReplica { implicit ro =>
       import com.keepit.common.time._
       libraryMembershipRepo.mostMembersSince(20, clock.now().minusHours(24))
@@ -124,7 +124,7 @@ class LibraryController @Inject() (
       val toBytes = Enumeratee.map[Node] { n => n.toString.getBytes }
       val header = Enumerator("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes)
       val combined = header.andThen(elems &> toBytes)
-      log.info(s"[getTopLibraries(${request.userIdOpt})] published #${libIds.size} libraries. ${libIds.take(20)} ...")
+      log.info(s"[getTopLibraries] published #${libIds.size} libraries. ${libIds.take(20)} ...")
       Result(
         header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
         body = combined
