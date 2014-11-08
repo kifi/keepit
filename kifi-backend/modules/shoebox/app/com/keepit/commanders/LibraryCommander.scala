@@ -169,16 +169,16 @@ class LibraryCommander @Inject() (
     (libInfo, accessStr)
   }
 
-  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Int)] = {
+  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Int, Option[Boolean])] = {
     db.readOnlyReplica { implicit s =>
       val library = libraryRepo.get(libraryId)
-      if (library.visibility == LibraryVisibility.PUBLISHED ||
-        library.ownerId == viewerUserId ||
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId).isDefined) {
+      val mine = library.ownerId == viewerUserId
+      val following = if (mine) None else Some(libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId).isDefined)
+      if (library.visibility == LibraryVisibility.PUBLISHED || mine || following.get) {
         val owner = basicUserRepo.load(library.ownerId)
         val keepCount = keepRepo.getCountByLibrary(library.id.get)
         val followerCount = libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).apply(LibraryAccess.READ_ONLY)
-        Right(library, owner, keepCount, followerCount)
+        Right(library, owner, keepCount, followerCount, following)
       } else {
         Left(LibraryFail(FORBIDDEN, "library_access_denied"))
       }
