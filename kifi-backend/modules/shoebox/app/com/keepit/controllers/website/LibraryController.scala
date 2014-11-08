@@ -42,7 +42,7 @@ import com.keepit.common.controller.UserRequest
 import play.api.libs.json.JsObject
 import com.keepit.commanders.LibraryAddRequest
 
-import scala.xml.{ Node, Elem }
+import scala.xml.{ Unparsed, Node, Elem }
 
 class LibraryController @Inject() (
   db: Database,
@@ -63,7 +63,7 @@ class LibraryController @Inject() (
   implicit val config: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
-  def getTopLibraries() = MaybeUserAction { request =>
+  def getTopLibraries() = Action.async { request =>
     val tops = db.readOnlyReplica { implicit ro =>
       import com.keepit.common.time._
       libraryMembershipRepo.mostMembersSince(20, clock.now().minusHours(24))
@@ -74,39 +74,66 @@ class LibraryController @Inject() (
       libraryRepo.getLibraries(libIds.toSet)
     }
     val libraries = libIds.map(libMap(_))
-    val ownerIds = CollectionHelpers.dedupBy(libraries.map(_.ownerId))(id => id)
-    val ownerMap = db.readOnlyMaster { implicit ro => userRepo.getUsers(ownerIds) }
-    val formatter = DateTimeFormat.forPattern("E, d MMM y HH:mm:ss Z")
-    val items = tops map {
-      case (libId, count) =>
-        val lib = libMap(libId)
-        val owner = ownerMap(lib.ownerId)
-        <item>
-          <title>{ lib.name }</title>
-          <description>{ lib.description.getOrElse(s"${owner.fullName}'s ${lib.name} Kifi Library") }</description>
-          <link>{ s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
-          <guid>{}</guid>
-          <pubDate>{ lib.updatedAt.toString(formatter) }</pubDate>
-        </item>
-    }
-    val rss =
-      <rss version="2.0">
-        <channel>
-          <title>Top Libraries on Kifi</title>
-          <link>{ s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}" }</link>
-          { items }
-        </channel>
-      </rss>
+    val metaTagsF = Future.sequence(libraries.map { lib =>
+      libraryCommander.libraryMetaTags(lib) map { tags =>
+        lib.id.get -> (tags match {
+          case pub: PublicPageMetaFullTags => pub
+          case _ => throw new IllegalStateException(s"Failed to retrieve public meta tags for $lib; tags=$tags") // shouldn't happen (can add recovery)
+        })
+      }
+    })
 
-    val elems = Enumerator.enumerate(rss)
-    val toBytes = Enumeratee.map[Node] { n => n.toString.getBytes }
-    val header = Enumerator("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes)
-    val combined = header.andThen(elems &> toBytes)
-    log.info(s"[getTopLibraries(${request.userIdOpt})] published #${libIds.size} libraries. ${libIds.take(20)} ...")
-    Result(
-      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
-      body = combined
-    )
+    val logo = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png"
+    metaTagsF map { metaTags =>
+      val idToMetaTags = metaTags.toMap
+      val ownerIds = CollectionHelpers.dedupBy(libraries.map(_.ownerId))(id => id)
+      val ownerMap = db.readOnlyMaster { implicit ro => userRepo.getUsers(ownerIds) }
+      val formatter = DateTimeFormat.forPattern("E, d MMM y HH:mm:ss Z")
+      val items = tops map {
+        case (libId, count) =>
+          val lib = libMap(libId)
+          val metaTags = idToMetaTags(libId)
+          val owner = ownerMap(lib.ownerId)
+          val desc = Unparsed(
+            s"""
+               |<![CDATA[
+               |<img src="${metaTags.images.headOption.getOrElse(logo)}"/>
+               |${metaTags.description}
+               |]]>
+               |""".stripMargin)
+          <item>
+            <title>{ metaTags.title }</title>
+            <description>{ desc }</description>
+            <link>{ s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
+            <pubDate>{ metaTags.updatedAt.toString(formatter) }</pubDate>
+            <author>{ metaTags.fullName }</author>
+          </item>
+      }
+      val feedTitle = "Top Libraries on Kifi"
+      val rss =
+        <rss version="2.0">
+          <channel>
+            <title>{ feedTitle }</title>
+            <link>{ s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}" }</link>
+            <image>
+              <url>{ logo }</url>
+              <title>{ feedTitle }</title>
+              <link>{ fortyTwoConfig.applicationBaseUrl }</link>
+            </image>
+            { items }
+          </channel>
+        </rss>
+
+      val elems = Enumerator.enumerate(rss)
+      val toBytes = Enumeratee.map[Node] { n => n.toString.getBytes }
+      val header = Enumerator("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes)
+      val combined = header.andThen(elems &> toBytes)
+      log.info(s"[getTopLibraries] published #${libIds.size} libraries. ${libIds.take(20)} ...")
+      Result(
+        header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
+        body = combined
+      )
+    }
   }
 
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
