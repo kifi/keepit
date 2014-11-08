@@ -1766,9 +1766,26 @@ function searchOnServer(request, respond) {
 
   var o1, o1Time, o1Len;
   var o2, o2Time;
+  function tryParseChunks(text) {
+    var i = 1;
+    while (!o1 && i > 0) {
+      i = text.indexOf('}{"', i) + 1;
+      if (i > 0) {
+        try {
+          o1 = JSON.parse(text.substr(0, i));
+          o1Time = Date.now();
+          o1Len = i;
+          o2 = JSON.parse(text.substr(i));
+          o2Time = o1Time;
+        } catch (x) {}
+      }
+    }
+  }
 
   ajax('search', 'GET', '/ext/search', params, function (text) {
-    if (!o2) {
+    if (!o1) {
+      tryParseChunks(text);
+    } else if (!o2) {
       o2 = JSON.parse(text.substr(o1Len));
       o2Time = Date.now();
     }
@@ -1779,19 +1796,7 @@ function searchOnServer(request, respond) {
     var len = text.length;
     log('[search:progress]', len);
     if (!o1 && text.indexOf('}', len - 1) > 0) {
-      var i = 1;
-      while (!o1 && i > 0) {
-        i = text.indexOf('}{"', i) + 1;
-        if (i > 0) {
-          try {
-            o1 = JSON.parse(text.substr(0, i));
-            o1Time = Date.now();
-            o1Len = i;
-            o2 = JSON.parse(text.substr(i));
-            o2Time = o1Time;
-          } catch (x) {}
-        }
-      }
+      tryParseChunks(text);
       if (!o1) {
         try {
           o1 = JSON.parse(text);
