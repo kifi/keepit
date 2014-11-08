@@ -16,7 +16,7 @@ angular.module('kifi')
     $window.addEventListener('message', function (event) {
       if (event.data === 'show_left_column') {  // for guide
         $scope.$apply(function () {
-          $rootElement.find('html').addClass('kf-sidebar-inactive');
+          $rootElement.find('html').removeClass('kf-sidebar-inactive');
         });
       }
     });
