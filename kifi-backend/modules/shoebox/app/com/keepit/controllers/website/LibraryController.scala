@@ -108,8 +108,8 @@ class LibraryController @Inject() (
             <link>{ s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
             <pubDate>{ metaTags.updatedAt.toString(formatter) }</pubDate>
             <author>{ metaTags.fullName }</author>
-            <media:thumbnail url={ libImg }></media:thumbnail>
-            <media:content url={ libImg }>
+            <media:thumbnail url={ libImg } medium="image" />
+            <media:content url={ libImg } medium="image">
               <media:title type="html">{ metaTags.title }</media:title>
             </media:content>
           </item>
