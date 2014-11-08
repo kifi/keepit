@@ -5,6 +5,7 @@ import com.google.inject.{ Singleton, Inject }
 import com.keepit.commanders.LibraryCommander
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.cache._
+import com.keepit.common.net.{ DirectUrl, HttpClient }
 import com.keepit.common.time._
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
@@ -22,7 +23,7 @@ import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait SiteMapGeneratorPlugin extends Plugin {
-  def generate()
+  def submit()
 }
 
 class SiteMapGeneratorPluginImpl @Inject() (
@@ -33,30 +34,30 @@ class SiteMapGeneratorPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     for (app <- Play.maybeApplication) {
-      val (initDelay, freq) = if (Play.isDev) (30 seconds, 10 minutes) else (15 minutes, 60 minutes)
+      val (initDelay, freq) = (15 minutes, 60 minutes)
       log.info(s"[onStart] SiteMapGeneratorPlugin started with initDelay=$initDelay freq=$freq")
-      scheduleTaskOnLeader(actor.system, initDelay, freq, actor.ref, Generate)
+      scheduleTaskOnLeader(actor.system, initDelay, freq, actor.ref, SubmitSitemap)
     }
   }
 
-  override def generate() { actor.ref ! Generate }
-
+  override def submit() { actor.ref ! SubmitSitemap }
 }
 
-case class Generate()
+object SubmitSitemap
 
 // library-only for now
 class SiteMapGeneratorActor @Inject() (
     airbrake: AirbrakeNotifier,
-    db: Database,
-    generator: SiteMapGenerator,
-    userRepo: UserRepo,
-    libraryRepo: LibraryRepo,
-    libraryCommander: LibraryCommander) extends FortyTwoActor(airbrake) with Logging {
+    httpClient: HttpClient,
+    fortyTwoConfig: FortyTwoConfig) extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
-    case Generate =>
-    // todo: generate and save to disk, maybe
+    case SubmitSitemap =>
+      val sitemapUrl = java.net.URLEncoder.encode(s"${fortyTwoConfig.applicationBaseUrl}assets/sitemap.xml", "UTF-8")
+      val googleRes = httpClient.get(DirectUrl(s"http://www.google.com/webmasters/sitemaps/ping?sitemap=$sitemapUrl"))
+      log.info(s"submitted sitemap to google. res(${googleRes.status}): ${googleRes.body}")
+      val bingRes = httpClient.get(DirectUrl(s"http://www.bing.com/webmaster/ping.aspx?siteMap=$sitemapUrl"))
+      log.info(s"submitted sitemap to bing. res(${bingRes.status}): ${bingRes.body}")
   }
 
 }
