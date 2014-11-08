@@ -117,11 +117,7 @@ angular.module('kifi')
             $rootScope.$emit('librarySummariesChanged');
             scope.close();
             $location.path('/');
-          })['catch'](function () {
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html'
-            });
-          })['finally'](function () {
+          })['catch'](modalService.openGenericErrorModal)['finally'](function () {
             submitting = false;
           });
         };

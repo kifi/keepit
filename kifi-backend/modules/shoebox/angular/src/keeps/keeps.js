@@ -233,11 +233,7 @@ angular.module('kifi')
 
                 scope.selection.selectAll(selectedKeeps);
                 libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
-              })['catch'](function () {
-                modalService.open({
-                  template: 'common/modal/genericErrorModal.tpl.html'
-                });
-              });
+              })['catch'](modalService.openGenericErrorModal);
             });
 
             libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
@@ -247,11 +243,7 @@ angular.module('kifi')
             if (scope.availableKeeps.length < 10) {
               scope.scrollNext()(scope.availableKeeps.length);
             }
-          })['catch'](function () {
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html'
-            });
-          });
+          })['catch'](modalService.openGenericErrorModal);
         };
 
         scope.selectionPrivacyState = function (keeps) {
@@ -283,11 +275,7 @@ angular.module('kifi')
               scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, clickedLibrary);
             }
             libraryService.fetchLibrarySummaries(true);
-          })['catch'](function () {
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html'
-            });
-          });
+          })['catch'](modalService.openGenericErrorModal);
         };
 
         scope.onWidgetCopyLibraryClicked = function (clickedLibrary) {
@@ -300,11 +288,7 @@ angular.module('kifi')
               libraryService.fetchLibrarySummaries(true);
               scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, clickedLibrary);
             }
-          })['catch'](function () {
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html'
-            });
-          });
+          })['catch'](modalService.openGenericErrorModal);
         };
 
         scope.onWidgetMoveLibraryClicked = function (clickedLibrary) {
@@ -323,11 +307,7 @@ angular.module('kifi')
             libraryService.addToLibraryCount(currentLibraryId, -1 * selectedKeeps.length);
             scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
             scope.selection.unselectAll();
-          })['catch'](function () {
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html'
-            });
-          });
+          })['catch'](modalService.openGenericErrorModal);
         };
 
 

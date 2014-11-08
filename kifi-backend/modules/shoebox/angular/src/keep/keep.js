@@ -441,11 +441,7 @@ angular.module('kifi')
 
               libraryService.addToLibraryCount(clickedLibrary.id, -1);
               scope.$emit('keepRemoved', { url: scope.keep.url }, clickedLibrary);
-            })['catch'](function () {
-              modalService.open({
-                template: 'common/modal/genericErrorModal.tpl.html'
-              });
-            });
+            })['catch'](modalService.openGenericErrorModal);
 
           // Keep.
           } else {
@@ -466,12 +462,7 @@ angular.module('kifi')
             if (scope.keep && scope.keep.id) {
               keepToLibrary = keepActionService.copyToLibrary([scope.keep.id], clickedLibrary.id).then(function (result) {
                 if (result.successes.length > 0) {
-                  return keepActionService.fetchFullKeepInfo(scope.keep)
-                    .then(fetchKeepInfoCallback)['catch'](function () {
-                      modalService.open({
-                        template: 'common/modal/genericErrorModal.tpl.html'
-                      });
-                    });
+                  return keepActionService.fetchFullKeepInfo(scope.keep).then(fetchKeepInfoCallback);
                 }
               });
             } else {
@@ -479,21 +470,12 @@ angular.module('kifi')
               var keepInfo = { title: scope.keep.title, url: scope.keep.url };
               keepToLibrary = keepActionService.keepToLibrary([keepInfo], clickedLibrary.id).then(function (result) {
                 if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
-                  return keepActionService.fetchFullKeepInfo(result.keeps[0])
-                    .then(fetchKeepInfoCallback)['catch'](function () {
-                      modalService.open({
-                        template: 'common/modal/genericErrorModal.tpl.html'
-                      });
-                    });
+                  return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(fetchKeepInfoCallback);
                 }
               });
             }
 
-            keepToLibrary['catch'](function () {
-              modalService.open({
-                template: 'common/modal/genericErrorModal.tpl.html'
-              });
-            });
+            keepToLibrary['catch'](modalService.openGenericErrorModal);
           }
         };
 

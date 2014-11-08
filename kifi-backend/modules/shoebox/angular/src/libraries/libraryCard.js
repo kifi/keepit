@@ -191,11 +191,7 @@ angular.module('kifi')
           if (library.invite) {
             libraryService.declineToJoinLibrary(library.id).then(function () {
               library.invite.actedOn = true;
-            })['catch'](function () {
-              modalService.open({
-                template: 'common/modal/genericErrorModal.tpl.html'
-              });
-            });
+            })['catch'](modalService.openGenericErrorModal);
           }
         };
 
@@ -263,10 +259,10 @@ angular.module('kifi')
             }
 
             if (result === 'already_joined') {
-              scope.genericErrorMessage = 'You are already following this library!';
-              modalService.open({
-                template: 'common/modal/genericErrorModal.tpl.html',
-                scope: scope
+              modalService.openGenericErrorModal({
+                modalData: {
+                  genericErrorMessage: 'You are already following this library!'
+                }
               });
               return;
             }
@@ -280,20 +276,12 @@ angular.module('kifi')
 
             augmentData();
             adjustFollowerPicsSize();
-          })['catch'](function () {
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html'
-            });
-          });
+          })['catch'](modalService.openGenericErrorModal);
         };
 
         scope.unfollowLibrary = function (library) {
           libraryService.trackEvent('user_clicked_page', library, { action: 'unfollow' });
-          libraryService.leaveLibrary(library.id)['catch'](function () {
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html'
-            });
-          });
+          libraryService.leaveLibrary(library.id)['catch'](modalService.openGenericErrorModal);
         };
 
         scope.manageLibrary = function () {
@@ -304,7 +292,7 @@ angular.module('kifi')
               library: scope.library,
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
-                  libraryService.getLibraryByUserSlug(scope.username, data.library.slug, authToken, true).then(function (library) {
+                  return libraryService.getLibraryByUserSlug(scope.username, data.library.slug, authToken, true).then(function (library) {
                     _.assign(scope.library, library);
                     augmentData();
                     adjustFollowerPicsSize();
@@ -312,16 +300,8 @@ angular.module('kifi')
                     if (data.library.slug !== scope.librarySlug) {
                       $location.path('/' + scope.username + '/' + data.library.slug);
                     }
-                  })['catch'](function () {
-                    modalService.open({
-                      template: 'common/modal/genericErrorModal.tpl.html'
-                    });
                   });
-                })['catch'](function () {
-                  modalService.open({
-                    template: 'common/modal/genericErrorModal.tpl.html'
-                  });
-                });
+                })['catch'](modalService.openGenericErrorModal);
               }
             }
           });

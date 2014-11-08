@@ -24,11 +24,12 @@ angular.module('kifi')
         function followLibrary() {
           libraryService.joinLibrary(scope.library.id).then(function (result) {
             if (result === 'already_joined') {
-              scope.genericErrorMessage = 'You are already following this library!';
-              modalService.open({
-                template: 'common/modal/genericErrorModal.tpl.html',
-                scope: scope
+              modalService.openGenericErrorModal({
+                modalData: {
+                  genericErrorMessage: 'You are already following this library!'
+                }
               });
+
               return;
             } else {
               if ($location.path() === scope.library.url) {
@@ -37,21 +38,13 @@ angular.module('kifi')
                 $location.path(scope.library.url);
               }
             }
-          })['catch'](function () {
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html'
-            });
-          });
+          })['catch'](modalService.openGenericErrorModal);
         }
 
         function unfollowLibrary() {
           libraryService.leaveLibrary(scope.library.id).then(function () {
             $location.path(scope.library.url);
-          })['catch'](function () {
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html'
-            });
-          });
+          })['catch'](modalService.openGenericErrorModal);
         }
 
 
@@ -64,11 +57,12 @@ angular.module('kifi')
 
         scope.toggleFollow = function () {
           if (scope.isMine) {
-            scope.genericErrorMessage = 'You cannot follow your own libraries!';
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html',
-              scope: scope
+            modalService.openGenericErrorModal({
+              modalData: {
+                genericErrorMessage: 'You cannot follow your own libraries!'
+              }
             });
+
             return;
           }
 
