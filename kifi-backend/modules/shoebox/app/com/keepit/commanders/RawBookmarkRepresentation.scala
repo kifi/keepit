@@ -6,6 +6,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.{ Library, Normalization, URLFactory }
 import com.kifi.macros.json
 import play.api.libs.json.{ JsArray, JsObject, JsValue }
+import org.joda.time.DateTime
 
 /* RawBookmarkRepresentation is an input (not output) class for parsing JSON requests dealing with keeps.
  * The standard use case is parsing the request JSON, then keeping it.
@@ -19,7 +20,8 @@ import play.api.libs.json.{ JsArray, JsObject, JsValue }
   url: String,
   isPrivate: Option[Boolean],
   canonical: Option[String] = None,
-  openGraph: Option[String] = None)
+  openGraph: Option[String] = None,
+  keptAt: Option[DateTime] = None)
 
 @Singleton
 class RawBookmarkFactory @Inject() (airbrake: AirbrakeNotifier) {

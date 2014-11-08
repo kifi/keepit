@@ -82,9 +82,10 @@ class KeepRepoImpl @Inject() (
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.Nullable)
+    def keptAt = column[DateTime]("kept_at", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, inDisjointLib.?, urlId, url, bookmarkPath.?, isPrivate,
-      userId, state, source, kifiInstallation.?, seq, libraryId, visibility.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
+      userId, state, source, kifiInstallation.?, seq, libraryId, visibility.?, keptAt.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -115,7 +116,8 @@ class KeepRepoImpl @Inject() (
       kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]],
       seq = r.<<[SequenceNumber[Keep]],
       libraryId = r.<<[Option[Id[Library]]],
-      visibility = Some(r.<<[Option[LibraryVisibility]].getOrElse(Keep.isPrivateToVisibility(privateFlag)))
+      visibility = Some(r.<<[Option[LibraryVisibility]].getOrElse(Keep.isPrivateToVisibility(privateFlag))),
+      keptAt = r.<<[Option[DateTime]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
