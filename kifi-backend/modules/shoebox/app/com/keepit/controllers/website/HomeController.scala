@@ -71,6 +71,16 @@ class HomeController @Inject() (
     Ok(fortyTwoServices.currentVersion.toString)
   }
 
+  def robots = Action {
+    Ok(
+      """
+        |User-agent: *
+        |Disallow: /admin/
+        |
+        |SITEMAP: https://www.kifi.com/assets/sitemap.xml
+      """.stripMargin)
+  }
+
   def getKeepsCount = Action.async {
     keepsCommander.getKeepsCountFuture() imap { count =>
       Ok(count.toString)
