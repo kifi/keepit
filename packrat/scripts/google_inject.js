@@ -86,6 +86,7 @@ if (searchUrlRe.test(document.URL)) !function () {
         "filter": filter,
         "maxResults": response.prefs.maxResults,
         "kifiResults": response.hits.length,
+        "kifiResultsWithLibraries": response.hits.filter(hasLibrary).length,
         "kifiExpanded": response.expanded || false,
         "kifiTime": Math.max(-1, time.kifi.received - time.kifi.queried),
         "kifiShownTime": Math.max(-1, time.kifi.shown - time.kifi.queried),
@@ -310,16 +311,16 @@ if (searchUrlRe.test(document.URL)) !function () {
   }
 
   // TODO: also detect result selection via keyboard
-  $(document).on("mousedown", "#search h3.r a", function logSearchEvent(e) {
+  $(document).on('mousedown', '#search h3.r a', function logSearchEvent(e) {
     var href = this.href, $li = $(this).closest("li.g");
     var resIdx = $li.prevAll('li.g').length;
     var isKifi = $li[0].parentNode.id === 'kifi-res-list';
 
-    clicks[isKifi ? "kifi" : "google"].push(href);
+    clicks[isKifi ? 'kifi' : 'google'].push(href);
 
     if (href && resIdx >= 0) {
       var hit = isKifi ? response.hits[resIdx] : null;
-      api.port.emit("log_search_event", [
+      api.port.emit('log_search_event', [
         "clicked",
         {
           "origin": origin,
@@ -343,8 +344,9 @@ if (searchUrlRe.test(document.URL)) !function () {
             "isMyBookmark": hit.keepers.length > 0 && hit.keepers[0].id === response.me.id,
             "isPrivate": hit.secret || false,
             "count": hit.keepersTotal,
-            "keepers": hit.keepers.map(function (u) {return u.id}),
-            "tags": hit.tags || [],
+            "keepers": hit.keepers.map(getId),
+            "libraries": hit.libraries.map(getIdAndKeeperId),
+            "tags": hit.tags,
             "title": hit.title,
             "titleMatches": hit.matches.title.length,
             "urlMatches": hit.matches.url.length
@@ -946,6 +948,15 @@ if (searchUrlRe.test(document.URL)) !function () {
   }
   function idIs(id) {
     return function (o) {return o.id === id};
+  }
+  function getId(o) {
+    return o.id;
+  }
+  function getIdAndKeeperId(lib) {
+    return [lib.id, lib.keeper.id];
+  }
+  function hasLibrary(hit) {
+    return hit.libraries.length > 0;
   }
   function hasKeeperId(id) {
     return function (lib) { return lib.keeper.id === id; };
