@@ -94,10 +94,11 @@ class LibraryController @Inject() (
           val lib = libMap(libId)
           val metaTags = idToMetaTags(libId)
           val owner = ownerMap(lib.ownerId)
+          val libImg = metaTags.images.headOption.getOrElse(logo)
           val desc = Unparsed(
             s"""
                |<![CDATA[
-               |<img src="${metaTags.images.headOption.getOrElse(logo)}"/>
+               |<img src="$libImg"/>
                |${metaTags.description}
                |]]>
                |""".stripMargin)
@@ -107,11 +108,15 @@ class LibraryController @Inject() (
             <link>{ s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
             <pubDate>{ metaTags.updatedAt.toString(formatter) }</pubDate>
             <author>{ metaTags.fullName }</author>
+            <media:thumbnail url={ libImg }></media:thumbnail>
+            <media:content url={ libImg }>
+              <media:title type="html">{ metaTags.title }</media:title>
+            </media:content>
           </item>
       }
       val feedTitle = "Top Libraries on Kifi"
       val rss =
-        <rss version="2.0">
+        <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
           <channel>
             <title>{ feedTitle }</title>
             <link>{ s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}" }</link>
