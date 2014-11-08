@@ -34,7 +34,7 @@ class SiteMapGeneratorPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     for (app <- Play.maybeApplication) {
-      val (initDelay, freq) = (15 minutes, 60 minutes)
+      val (initDelay, freq) = (60 minutes, 60 minutes)
       log.info(s"[onStart] SiteMapGeneratorPlugin started with initDelay=$initDelay freq=$freq")
       scheduleTaskOnLeader(actor.system, initDelay, freq, actor.ref, SubmitSitemap)
     }
