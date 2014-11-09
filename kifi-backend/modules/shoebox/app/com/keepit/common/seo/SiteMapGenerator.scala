@@ -2,7 +2,6 @@ package com.keepit.common.seo
 
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.google.inject.{ Singleton, Inject }
-import com.keepit.commanders.LibraryCommander
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.cache._
 import com.keepit.common.net.{ DirectUrl, HttpClient }
@@ -17,7 +16,6 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ KeepRepo, UserRepo, Library, LibraryRepo }
 import org.joda.time.DateTime
 import play.api.{ Play, Plugin }
-import Play.current
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -79,8 +77,7 @@ class SiteMapGenerator @Inject() (
     keepRepo: KeepRepo,
     fortyTwoConfig: FortyTwoConfig,
     libraryRepo: LibraryRepo,
-    siteMapCache: SiteMapCache,
-    libraryCommander: LibraryCommander) extends Logging {
+    siteMapCache: SiteMapCache) extends Logging {
 
   def intern(): Future[String] = {
     siteMapCache.getOrElseFuture(SiteMapKey()) {
@@ -105,7 +102,7 @@ class SiteMapGenerator @Inject() (
 
       def path(lib: Library): String = {
         val owner = owners(lib.ownerId)
-        s"${fortyTwoConfig.applicationBaseUrl}{Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}"
+        s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}"
       }
 
       def lastMod(lib: Library): DateTime = {
@@ -134,7 +131,7 @@ class SiteMapGenerator @Inject() (
       s"""
          |<?xml-stylesheet type='text/xsl' href='sitemap.xsl'?>
          |${urlset.toString}
-       """.stripMargin
+       """.stripMargin.trim
     }
   }
 
