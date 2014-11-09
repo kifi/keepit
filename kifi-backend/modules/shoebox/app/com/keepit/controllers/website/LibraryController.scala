@@ -107,8 +107,8 @@ class LibraryController @Inject() (
             <description>{ desc }</description>
             <link>{ s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
             <pubDate>{ metaTags.updatedAt.toString(formatter) }</pubDate>
-            <author>{ metaTags.fullName }</author>
-            <media:thumbnail url={ libImg } medium="image" />
+            <dc:creator>{ metaTags.fullName }</dc:creator>
+            <media:thumbnail url={ libImg } medium="image"/>
             <media:content url={ libImg } medium="image">
               <media:title type="html">{ metaTags.title }</media:title>
             </media:content>
@@ -116,10 +116,11 @@ class LibraryController @Inject() (
       }
       val feedTitle = "Top Libraries on Kifi"
       val rss =
-        <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+        <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/">
           <channel>
             <title>{ feedTitle }</title>
             <link>{ s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}" }</link>
+            <description>{ feedTitle }</description>
             <image>
               <url>{ logo }</url>
               <title>{ feedTitle }</title>
