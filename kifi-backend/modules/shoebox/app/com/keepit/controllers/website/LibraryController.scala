@@ -95,6 +95,7 @@ class LibraryController @Inject() (
           val metaTags = idToMetaTags(libId)
           val owner = ownerMap(lib.ownerId)
           val libImg = metaTags.images.headOption.getOrElse(logo)
+          val itemUrl = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}"
           val desc = Unparsed(
             s"""
                |<![CDATA[
@@ -105,23 +106,26 @@ class LibraryController @Inject() (
           <item>
             <title>{ metaTags.title }</title>
             <description>{ desc }</description>
-            <link>{ s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
+            <link>{ itemUrl }</link>
+            <guid>{ itemUrl }</guid>
             <pubDate>{ metaTags.updatedAt.toString(formatter) }</pubDate>
-            <author>{ metaTags.fullName }</author>
-            <media:thumbnail url={ libImg }></media:thumbnail>
-            <media:content url={ libImg }>
+            <dc:creator>{ metaTags.fullName }</dc:creator>
+            <media:thumbnail url={ libImg } medium="image"/>
+            <media:content url={ libImg } medium="image">
               <media:title type="html">{ metaTags.title }</media:title>
             </media:content>
           </item>
       }
       val feedTitle = "Top Libraries on Kifi"
+      val channelUrl = s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}"
       val rss =
-        <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+        <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/">
           <channel>
             <title>{ feedTitle }</title>
-            <link>{ s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}" }</link>
+            <link>{ channelUrl }</link>
+            <description>{ feedTitle }</description>
             <image>
-              <url>{ logo }</url>
+              <url>{ channelUrl }</url>
               <title>{ feedTitle }</title>
               <link>{ fortyTwoConfig.applicationBaseUrl }</link>
             </image>
