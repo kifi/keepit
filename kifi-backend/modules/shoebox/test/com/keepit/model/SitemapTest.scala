@@ -61,23 +61,27 @@ class SitemapTest extends Specification with ShoeboxTestInjector {
       keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
         uriId = uri1.id.get, source = hover, createdAt = t1.plusDays(1),
         visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+
+      lib1
     }
   }
 
   "Sitemap" should {
     "basically work" in { // test read/write/save
       withDb() { implicit injector =>
-        setup()
+        val lib = setup()
         val sitemap = Await.result(inject[SiteMapGenerator].generate(), Duration.Inf)
+        val updateAt = ISO_8601_DAY_FORMAT.print(lib.updatedAt)
+
         sitemap ===
-          """
+          s"""
             |<?xml-stylesheet type='text/xsl' href='sitemap.xsl'?>
             |<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
             |          <url>
             |                <loc>
             |                  http://dev.ezkeep.com:9000/test/A
             |                </loc>
-            |                <lastmod>2014-11-08</lastmod>
+            |                <lastmod>$updateAt</lastmod>
             |              </url>
             |        </urlset>
           """.stripMargin.trim
