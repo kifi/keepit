@@ -64,8 +64,8 @@ class LibraryController @Inject() (
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
   def getTopLibraries() = Action.async { request =>
+    import com.keepit.common.time._
     val tops = db.readOnlyReplica { implicit ro =>
-      import com.keepit.common.time._
       libraryMembershipRepo.mostMembersSince(20, clock.now().minusHours(24))
     }
 
@@ -116,10 +116,11 @@ class LibraryController @Inject() (
             </media:content>
           </item>
       }
+      val year = currentDateTime.getYear
       val feedTitle = "Top Libraries on Kifi"
       val channelUrl = s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}"
       val rss =
-        <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/">
+        <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
           <channel>
             <title>{ feedTitle }</title>
             <link>{ channelUrl }</link>
@@ -129,6 +130,9 @@ class LibraryController @Inject() (
               <title>{ feedTitle }</title>
               <link>{ fortyTwoConfig.applicationBaseUrl }</link>
             </image>
+            <copyright>Copyright { year }, FortyTwo Inc.</copyright>
+            <atom:link ref="self" type="application/rss+xml" href={ channelUrl }/>
+            <atom:link ref="hub" href="https://pubsubhubbub.appspot.com/"/>
             { items }
           </channel>
         </rss>
