@@ -15,10 +15,10 @@ angular.module('kifi')
     var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
     //                   ↑↑↑ use this one ↑↑↑
 
+
     //
     // Internal functions
     //
-
     function trackPageView(attributes) {
       var url = $analytics.settings.pageTracking.basePath + $location.url();
       var library = $scope.library;

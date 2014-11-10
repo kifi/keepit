@@ -49,6 +49,12 @@ angular.module('kifi')
       controller: 'ManageTagCtrl'
     })
     // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
+    .when('/:username/:librarySlug/find', {
+      templateUrl: 'search/search.tpl.html',
+      controller: 'SearchCtrl',
+      reloadOnSearch: false
+    })
+
     .when('/:username/:librarySlug', {
       templateUrl: 'libraries/library.tpl.html',
       controller: 'LibraryCtrl'

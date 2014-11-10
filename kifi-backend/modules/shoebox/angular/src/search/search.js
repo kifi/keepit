@@ -3,14 +3,14 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$rootScope', '$location', '$routeParams', '$window', 'keepDecoratorService', 'searchActionService', 'libraryService',
-  function ($scope, $rootScope, $location, $routeParams, $window, keepDecoratorService, searchActionService, libraryService) {
+  '$scope', '$rootScope', '$location', '$q', '$routeParams', '$window', 'keepDecoratorService', 'searchActionService', 'libraryService',
+  function ($scope, $rootScope, $location, $q, $routeParams, $window, keepDecoratorService, searchActionService, libraryService) {
     //
     // Internal data.
     //
     var query;
-    var filter = $routeParams.f || 'm';
-    var library = $routeParams.l || '';
+    var filter;
+    var library;
 
     var lastResult = null;
     var selectedCount = 0;
@@ -27,23 +27,38 @@ angular.module('kifi')
     // Scope data.
     //
     function init() {
-      query = $routeParams.q || '';
-      filter = $routeParams.f || 'a';
-      library = $routeParams.l || '';
-      if (!query) { // No query or blank query.
-        $location.path('/');
+      var userName = $routeParams.username || '';
+      var librarySlug = $routeParams.librarySlug || '';
+      var libraryIdPromise = null;
+
+      if (userName && librarySlug) {
+        libraryIdPromise = libraryService.getLibraryByUserSlug(userName, librarySlug, true, false).then(function (library) {
+          return library.id;
+        });
+      } else {
+        libraryIdPromise = $q.when($routeParams.l || '');
       }
-      lastResult = null;
-      selectedCount = 0;
 
-      $scope.hasMore = true;
-      $scope.scrollDistance = '100%';
-      $scope.loading = false;
+      libraryIdPromise.then(function (libraryId) {
+        library = libraryId;
+        query = $routeParams.q || '';
+        filter = $routeParams.f || 'a';
 
-      $window.document.title = 'Kifi • ' + query;
+        if (!query) { // No query or blank query.
+          $location.path('/');
+        }
+        lastResult = null;
+        selectedCount = 0;
 
-      searchActionService.reset();
-      $scope.getNextKeeps(true);
+        $scope.hasMore = true;
+        $scope.scrollDistance = '100%';
+        $scope.loading = false;
+
+        $window.document.title = 'Kifi • ' + query;
+
+        searchActionService.reset();
+        $scope.getNextKeeps(true);
+      });
     }
 
     var newSearch = _.debounce(init, 250, {
@@ -233,7 +248,7 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregisterKeepAddedListener);
 
-    init();
 
+    init();
   }
 ]);

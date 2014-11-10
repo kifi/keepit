@@ -90,14 +90,17 @@ angular.module('kifi')
         $scope.clearInput();
       } else {
         $timeout(function() {
-          var libId = $scope.library.id;
+          // If we are not already on the search page.
           if ($location.path() !== '/find') {
-            if (libId) {
-              $location.url('/find?q=' + $scope.search.text + '&f=a' + '&l=' + libId);
+            if ($scope.library.url) {
+              $location.url($scope.library.url + '/find?q=' + $scope.search.text + '&f=a');
             } else {
               $location.url('/find?q=' + $scope.search.text);
             }
-          } else {
+          }
+
+          // If we are already on the search page.
+          else {
             $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
           }
         });
