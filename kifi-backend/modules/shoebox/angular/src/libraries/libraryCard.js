@@ -284,6 +284,7 @@ angular.module('kifi')
         scope.unfollowLibrary = function (library) {
           libraryService.trackEvent('user_clicked_page', library, { action: 'unfollow' });
           libraryService.leaveLibrary(library.id)['catch'](modalService.openGenericErrorModal);
+        };
 
         scope.followStick = function (isStuck) {
           if (isStuck) {
@@ -370,8 +371,8 @@ angular.module('kifi')
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', adjustFollowerPicsSizeOnResize);
         });
-      };
-    }
-  };
-}]);
+      }
+    };
+  }
+]);
 
