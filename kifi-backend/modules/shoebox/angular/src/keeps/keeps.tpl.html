@@ -1,5 +1,5 @@
 <div class="kf-main-keeps">
-  <div kf-sticky max-top="52" class="kf-keep-selection-tools" ng-if="editMode.enabled" ng-show="availableKeeps.length > 0">
+  <div kf-sticky max-top="52" sticky-width-mode="calculated" class="kf-keep-selection-tools" ng-if="editMode.enabled" ng-show="availableKeeps.length > 0">
     <div class="kf-keep-checkbox-icon sprite" ng-class="{ 'sprite-checkbox-icon': isUnchecked(availableKeeps), 'sprite-checkbox-icon-partial': isMultiChecked(availableKeeps), 'sprite-checkbox-icon-active': selection.isSelectedAll(availableKeeps) }" ng-click="selection.toggleSelectAll(availableKeeps)"></div>
     <div class="kf-keep-selection-tools-body">
       <div class="kf-keep-selected-count">
