@@ -66,7 +66,9 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
       .sortBy(row => row.id.asc)
       .take(batchSize)
       .list
-    (for (row <- rows if row.id inSet records.map(_.id.get).toSet) yield row.state).update(RawKeepStates.IMPORTING)
+    if (records.nonEmpty) {
+      (for (row <- rows if row.id inSet records.map(_.id.get).toSet) yield row.state).update(RawKeepStates.IMPORTING)
+    }
     records
   }
 

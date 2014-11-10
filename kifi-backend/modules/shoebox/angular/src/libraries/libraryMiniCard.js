@@ -14,19 +14,22 @@ angular.module('kifi')
       },
       templateUrl: 'libraries/libraryMiniCard.tpl.html',
       link: function (scope/*, element, attrs*/) {
-
         scope.library = _.cloneDeep(scope.refLibrary());
+        scope.showMiniCard = true;
+
+
         //
         // Internal helper methods.
         //
         function followLibrary() {
           libraryService.joinLibrary(scope.library.id).then(function (result) {
             if (result === 'already_joined') {
-              scope.genericErrorMessage = 'You are already following this library!';
-              modalService.open({
-                template: 'common/modal/genericErrorModal.tpl.html',
-                scope: scope
+              modalService.openGenericErrorModal({
+                modalData: {
+                  genericErrorMessage: 'You are already following this library!'
+                }
               });
+
               return;
             } else {
               if ($location.path() === scope.library.url) {
@@ -35,13 +38,13 @@ angular.module('kifi')
                 $location.path(scope.library.url);
               }
             }
-          });
+          })['catch'](modalService.openGenericErrorModal);
         }
 
         function unfollowLibrary() {
           libraryService.leaveLibrary(scope.library.id).then(function () {
             $location.path(scope.library.url);
-          });
+          })['catch'](modalService.openGenericErrorModal);
         }
 
 
@@ -54,11 +57,12 @@ angular.module('kifi')
 
         scope.toggleFollow = function () {
           if (scope.isMine) {
-            scope.genericErrorMessage = 'You cannot follow your own libraries!';
-            modalService.open({
-              template: 'common/modal/genericErrorModal.tpl.html',
-              scope: scope
+            modalService.openGenericErrorModal({
+              modalData: {
+                genericErrorMessage: 'You cannot follow your own libraries!'
+              }
             });
+
             return;
           }
 
@@ -86,6 +90,8 @@ angular.module('kifi')
             scope.library.owner.image = friendService.getPictureUrlForUser(scope.library.owner);
             scope.library.access = data.membership;
             scope.library.isMine = scope.library.access === 'owner';
+          })['catch'](function () {
+            scope.showMiniCard = false;
           });
         }
       }

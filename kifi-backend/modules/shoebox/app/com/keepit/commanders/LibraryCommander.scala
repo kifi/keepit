@@ -433,8 +433,8 @@ class LibraryCommander @Inject() (
               db.readOnlyMaster { implicit s =>
                 libraryRepo.getByNameAndUserId(userId, name)
               } match {
-                case Some(_) => Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
-                case None => Right(name)
+                case Some(other) if other.id.get != libraryId => Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
+                case _ => Right(name)
               }
             }
         }
@@ -450,8 +450,8 @@ class LibraryCommander @Inject() (
               db.readOnlyMaster { implicit s =>
                 libraryRepo.getBySlugAndUserId(userId, slug)
               } match {
-                case Some(_) => Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
-                case None => Right(slug)
+                case Some(other) if other.id.get != libraryId => Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
+                case _ => Right(slug)
               }
             }
         }
