@@ -286,6 +286,15 @@ angular.module('kifi')
           libraryService.leaveLibrary(library.id)['catch'](modalService.openGenericErrorModal);
         };
 
+        scope.followStick = function (isStuck) {
+          if (isStuck) {
+            angular.element('.kf-header-right').css({'margin-right': '150px'});
+          } else {
+            angular.element('.kf-header-right').css({'margin-right': ''});
+          }
+
+        }
+
         scope.manageLibrary = function () {
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html',

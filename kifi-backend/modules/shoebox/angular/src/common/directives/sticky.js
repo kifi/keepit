@@ -3,12 +3,13 @@
 angular.module('kifi')
 
 .directive('kfSticky', [
-  '$window',
-  function ($window) {
+  '$window', '$timeout',
+  function ($window, $timeout) {
     return {
       restrict: 'A',
       scope: {
-        'maxTop': '='
+        'maxTop': '=',
+        'onStick': '='
       },
       link: function (scope, element) {
         var $win = angular.element($window);
@@ -48,17 +49,22 @@ angular.module('kifi')
         var unregister;
 
         function onScroll(e) {
-          var originalWindowTopOffset = offsetTop - ($win.scrollTop() + e.originalEvent.deltaY);
+          var originalWindowTopOffset = offsetTop - ($win.scrollTop() + e.originalEvent.deltaY || 0);
           if (originalWindowTopOffset <= scope.maxTop) {
             if (!sticking) {
               updateProperties();
+              originalWindowTopOffset = offsetTop - ($win.scrollTop() + e.originalEvent.deltaY);
+              if (originalWindowTopOffset > scope.maxTop) {
+                return;
+              }
+
               element.css({
                 position: 'fixed',
                 top: scope.maxTop,
                 left: offsetLeft,
                 width: width,
                 height: height,
-                zIndex: 1
+                zIndex: 500
               });
 
               element.after(filler);
@@ -74,6 +80,7 @@ angular.module('kifi')
               }, true);
 
               sticking = true;
+              scope.onStick(true);
             }
           } else {
             if (sticking) {
@@ -91,14 +98,17 @@ angular.module('kifi')
               unregister();
 
               sticking = false;
+              scope.onStick(false);
             }
           }
         }
 
         $win.on('mousewheel', onScroll);
+        $win.on('touchmove', onScroll);
 
         scope.$on('$destroy', function () {
           $win.off('mousewheel', onScroll);
+          $win.off('touchmove', onScroll);
         });
       }
     };
