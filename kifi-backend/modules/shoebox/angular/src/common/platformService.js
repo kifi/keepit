@@ -16,7 +16,7 @@ angular.module('kifi')
     };
 
     var goToAppOrStore = function (url) {
-      var url = url || '//kifi.com';
+      url = url || '//kifi.com';
       var safeUrl;
       if (isSupportedMobilePlatform()) {
         if (isIPhone()) {
