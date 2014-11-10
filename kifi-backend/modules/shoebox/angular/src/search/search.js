@@ -11,10 +11,14 @@ angular.module('kifi')
     var query;
     var filter;
     var library;
-
     var lastResult = null;
     var selectedCount = 0;
+    var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
 
+
+    //
+    // Scope data.
+    //
     $scope.resultKeeps = [];
     $scope.resultTotals = {
       myTotal: 0,
@@ -24,27 +28,31 @@ angular.module('kifi')
 
 
     //
-    // Scope data.
+    // Internal methods.
     //
+    function getFilterCount(type) {
+      switch (type) {
+      case 'm':
+        return $scope.resultTotals.myTotal;
+      case 'f':
+        return $scope.resultTotals.friendsTotal;
+      case 'a':
+        return $scope.resultTotals.othersTotal;
+      }
+    }
+
     function init() {
       var userName = $routeParams.username || '';
       var librarySlug = $routeParams.librarySlug || '';
       var libraryIdPromise = null;
 
       if (userName && librarySlug) {
-        libraryIdPromise = libraryService.getLibraryByUserSlug(userName, librarySlug, true, false).then(function (library) {
+        libraryIdPromise = libraryService.getLibraryByUserSlug(userName, librarySlug, authToken, false).then(function (library) {
           $rootScope.$emit('libraryUrl', library);
           return library.id;
         });
       } else {
-        var libraryId = $routeParams.l || '';
-        libraryIdPromise = $q.when(libraryId);
-
-        if (libraryId) {
-          libraryService.getLibraryById(libraryId).then(function (library) {
-            $rootScope.$emit('libraryUrl', library);
-          });
-        }
+        libraryIdPromise = $q.when('');
       }
 
       libraryIdPromise.then(function (libraryId) {
@@ -66,28 +74,11 @@ angular.module('kifi')
 
         searchActionService.reset();
         $scope.getNextKeeps(true);
-      });
-    }
-
-    var newSearch = _.debounce(init, 250, {
-      'leading': true
-    });
-
-    $scope.$on('$routeUpdate', newSearch);
-
-
-    //
-    // Internal helper methods.
-    //
-    function getFilterCount(type) {
-      switch (type) {
-      case 'm':
-        return $scope.resultTotals.myTotal;
-      case 'f':
-        return $scope.resultTotals.friendsTotal;
-      case 'a':
-        return $scope.resultTotals.othersTotal;
-      }
+      })['catch'](function (resp) {
+        if (resp.status && resp.status === 403) {
+          // TODO(yiping): how should we handle this case?
+        }
+      });  //jshint ignore:line
     }
 
 
@@ -221,6 +212,10 @@ angular.module('kifi')
     //
     // Watches and event listeners.
     //
+    var newSearch = _.debounce(init, 250, {
+      'leading': true
+    });
+    $scope.$on('$routeUpdate', newSearch);
 
     // Report search analytics on unload.
     var onUnload = function () {
