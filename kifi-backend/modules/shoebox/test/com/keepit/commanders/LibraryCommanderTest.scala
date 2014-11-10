@@ -260,6 +260,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         mod3.isRight === true
         mod3.right.get.visibility === LibraryVisibility.PUBLISHED
 
+        val mod3NoChange = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
+          visibility = Some(LibraryVisibility.PUBLISHED))
+        mod3NoChange.isRight === true
+        mod3NoChange.right.get.visibility === LibraryVisibility.PUBLISHED
+
         val mod4 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userHulk.id.get,
           name = Some("HULK SMASH"))
         mod4.isRight === false
