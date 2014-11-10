@@ -120,7 +120,10 @@ td.old-version {
           @if(details.killed.contains(version._1)) {
             <span class="nuked">☠</span> <a class="unnuke" href="javascript:">resurrect</span>
           } else {
-            <a href="javascript:" class="gold">make it gold!</a> <a href="javascript:" class="nuke">毙 kill it</a>
+            <a href="javascript:" class="gold">make it gold!</a>
+            @if(version._1 > details.gold) {
+              <a href="javascript:" class="nuke">毙 kill it</a>
+            }
           }
         }
         </td>
