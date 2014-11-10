@@ -38,18 +38,25 @@ angular.module('kifi')
       profileService.savePrefs(save);
     };
 
+
     //
     // Watchers & Listeners
     //
     var deregisterLibraryChip = $rootScope.$on('libraryUrl', function (e, library) {
       $scope.library = library;
-      $scope.search.text = '';
+
+      if (!$scope.library.owner.picUrl) {
+        $scope.library.owner.picUrl = friendService.getPictureUrlForUser($scope.library.owner);
+      }
+
       if ($scope.library.id) {
         $scope.search.showName = true;
         $scope.stayInLibraryPath = $scope.library.url;
       } else {
         $scope.clearLibraryName();
       }
+
+      $scope.search.text = $routeParams.q || '';
     });
     $scope.$on('$destroy', deregisterLibraryChip);
 

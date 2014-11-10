@@ -33,10 +33,18 @@ angular.module('kifi')
 
       if (userName && librarySlug) {
         libraryIdPromise = libraryService.getLibraryByUserSlug(userName, librarySlug, true, false).then(function (library) {
+          $rootScope.$emit('libraryUrl', library);
           return library.id;
         });
       } else {
-        libraryIdPromise = $q.when($routeParams.l || '');
+        var libraryId = $routeParams.l || '';
+        libraryIdPromise = $q.when(libraryId);
+
+        if (libraryId) {
+          libraryService.getLibraryById(libraryId).then(function (library) {
+            $rootScope.$emit('libraryUrl', library);
+          });
+        }
       }
 
       libraryIdPromise.then(function (libraryId) {
