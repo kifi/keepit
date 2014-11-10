@@ -284,6 +284,15 @@ angular.module('kifi')
         scope.unfollowLibrary = function (library) {
           libraryService.trackEvent('user_clicked_page', library, { action: 'unfollow' });
           libraryService.leaveLibrary(library.id)['catch'](modalService.openGenericErrorModal);
+
+        scope.followStick = function (isStuck) {
+          if (isStuck) {
+            angular.element('html.kf-mobile .kf-header-right').css({'display': 'none'});
+            angular.element('.kf-header-right').css({'margin-right': '150px'});
+          } else {
+            angular.element('html.kf-mobile .kf-header-right').css({'display': ''});
+            angular.element('.kf-header-right').css({'margin-right': ''});
+          }
         };
 
         scope.manageLibrary = function () {
