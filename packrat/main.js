@@ -703,6 +703,12 @@ api.port.on({
       notifyKifiAppTabs({type: 'delete_library', libraryId: libraryId});
     }, respond.bind(null, false));
   },
+  follow_library: function (id, respond) {
+    ajax('POST', '/ext/libraries/' + id + '/join', respond.bind(null, true), respond.bind(null, false));
+  },
+  unfollow_library: function (id, respond) {
+    ajax('POST', '/ext/libraries/' + id + '/leave', respond.bind(null, true), respond.bind(null, false));
+  },
   get_keep: function (keepId, respond, tab) {
     var d = pageData[tab.nUri];
     if (d) {

@@ -1,10 +1,14 @@
-<div class="kifi-lc {{#secret}}kifi-secret{{/secret}}{{^secret}}kifi-public{{/secret}}">
+<kifi class="kifi-lc {{#secret}}kifi-secret{{/secret}}{{^secret}}kifi-public{{/secret}}">
   <div class="kifi-lc-pic"{{#owner}} style="background-image:url({{owner.pictureUrl}})"{{/owner}}></div>
   <div class="kifi-lc-owner">{{owner.name}}</div>
   <a class="kifi-lc-name {{#secret}}kifi-secret{{/secret}}{{^secret}}kifi-public{{/secret}}" href="{{origin}}{{path}}" target="_blank">{{name}}</a>
   <div class="kifi-lc-counts">
-    <div class="kifi-lc-count">Keeps<div class="kifi-lc-count-n">{{keeps}}</div></div>
-    <div class="kifi-lc-count">Followers<div class="kifi-lc-count-n">{{followers}}</div></div>
+    <div class="kifi-lc-count kifi-lc-keeps">Keeps<div class="kifi-lc-count-n">{{keeps}}</div></div>
+    <div class="kifi-lc-count kifi-lc-followers">Followers<div class="kifi-lc-count-n">{{followers}}</div></div>
+  </div>
+  <div class="kifi-lc-footer{{#owner}}{{#mine}} kifi-mine{{/mine}}{{^mine}} kifi-not-mine{{/mine}}{{/owner}} kifi-lc-progress-parent">
+    <a class="kifi-lc-follow{{#following}} kifi-following{{/following}}" href="javascript:"></a>
+    <a class="kifi-lc-visit" href="{{origin}}{{path}}" target="_blank">Visit library</a>
   </div>
   <div class="kifi-lc-tri"></div>
-</div>
+</kifi>

@@ -360,10 +360,11 @@ if (searchUrlRe.test(document.URL)) !function () {
 
   api.onEnd.push(function() {
     log("[google_inject:onEnd]");
-    $(window).off("hashchange unload");
+    $(window).off('hashchange unload');
     observer.disconnect();
-    $q.off("input");
+    $q.off('input');
     $qf.off("submit");
+    $res.find('.kifi-res-user,.kifi-res-users-n,.kifi-res-lib,.kifi-res-libs-n,.kifi-res-tags-n').hoverfu('destroy');
     $res.remove();
     $res.length = 0;
   });
@@ -553,9 +554,26 @@ if (searchUrlRe.test(document.URL)) !function () {
           position: {my: 'left-46 bottom-16', at: 'center top', of: $a, collision: 'none'},
           canLeaveFor: 600,
           click: 'toggle'});
+        ($a.data('hoverfu') || {}).$h.on('click', '.kifi-lc-follow[href]', function (e) {
+          var $btn = $(this).removeAttr('href');
+          var following = library.following;
+          var withOutcome = progress($btn.parent(), 'kifi-lc-progress', function (success) {
+            $btn.nextAll('.kifi-lc-progress').delay(300).fadeOut(300, function () {
+              $(this).remove();
+              $btn.prop('href', 'javascript:');
+            });
+            if (success) {
+              library.following = following = !following;
+              $btn.toggleClass('kifi-following', following);
+              var $n = $btn.closest('.kifi-lc').find('.kifi-lc-followers>.kifi-lc-count-n');
+              $n.text(Math.max(0, +$n.text() + (following ? 1 : -1)));
+            }
+          });
+          api.port.emit(following ? 'unfollow_library' : 'follow_library', library.id, withOutcome);
+        });
       });
       if (!library.owner) {
-        detailLibrary(library, function (lib) {
+        detailLibrary(library, function detail(lib, retryMs) {
           var $card = ($a.data('hoverfu') || {}).$h;
           if ($card) {
             $card.find('.kifi-lc-pic').css('background-image', 'url(' + lib.owner.pictureUrl + ')');
@@ -563,6 +581,13 @@ if (searchUrlRe.test(document.URL)) !function () {
             var $n = $card.find('.kifi-lc-count-n');
             $n.first().text(lib.keeps);
             $n.last().text(lib.followers);
+            $card.find('.kifi-lc-follow').toggleClass('kifi-following', !!lib.following);
+            $card.find('.kifi-lc-footer').toggleClass('kifi-mine', lib.mine).toggleClass('kifi-not-mine', !lib.mine);
+          } else if ((retryMs || (retryMs = 100)) < 2000) {
+            log('[detailLibrary] will retry after %ims', retryMs);
+            setTimeout(detail.bind(null, lib, retryMs * 2), retryMs);
+          } else {
+            log('[detailLibrary] will not retry');
           }
         });
       }
@@ -694,6 +719,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       $.extend(lib, o);
       lib.owner.pictureUrl = k.cdnBase + '/users/' + o.owner.id + '/pics/200/' + o.owner.pictureName;
       lib.owner.name = o.owner.firstName + ' ' + o.owner.lastName;
+      lib.mine = lib.owner.id === response.me.id;
       callback(lib);
     });
   }
@@ -941,6 +967,38 @@ if (searchUrlRe.test(document.URL)) !function () {
         return i;
       }
     }
+  }
+
+  function progress(parent, cssClass, finished) {
+    var $el = $('<div>').addClass(cssClass).appendTo(parent);
+    var frac = 0, ms = 10;
+    var timeout = setTimeout(function update() {
+      var left = .9 - frac;
+      frac += .06 * left;
+      $el[0].style.width = Math.min(frac * 100, 100) + '%';
+      if (left > .0001) {
+        timeout = setTimeout(update, ms);
+      }
+    }, ms);
+    return function (success) {
+      if (success) {
+        log('[progress:done]');
+        clearTimeout(timeout), timeout = null;
+        $el.removeClass('kifi-doing').on('transitionend', function (e) {
+          if (e.originalEvent.propertyName === 'clip') {
+            $el.off('transitionend');
+            finished(true);
+          }
+        }).addClass('kifi-done');
+      } else {
+        log('[progress:fail]');
+        clearTimeout(timeout), timeout = null;
+        $el.removeClass('kifi-doing').one('transitionend', function () {
+          $el.remove();
+          finished(false);
+        }).addClass('kifi-fail');
+      }
+    };
   }
 
   function getOffsetWidth(el) {
