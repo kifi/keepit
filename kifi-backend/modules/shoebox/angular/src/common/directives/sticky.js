@@ -13,9 +13,14 @@ angular.module('kifi')
          // widthMode supports 'calculate' and 'inherit' values
          // - calculated - try to calculate and explicitly set the same width as the element had
          // - ignored    - does not do any calculations to determine width; style.width is untouched
-        'stickyWidthMode': '@'
+        'stickyWidthMode': '@',
+        'stickyIf': '&'
       },
       link: function (scope, element) {
+        if (_.isFunction(scope.stickyIf) && !scope.stickyIf()) {
+          return;
+        }
+
         var $win = angular.element($window);
         var sticking = false;
 
