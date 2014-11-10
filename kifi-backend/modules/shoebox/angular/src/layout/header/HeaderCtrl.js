@@ -9,13 +9,14 @@ angular.module('kifi')
     $location, util, keyIndices, modalService, $timeout, searchActionService, $routeParams) {
 
     $scope.toggleMenu = function () {
-      $rootElement.find('html').toggleClass('kf-sidebar-active');
+      $rootElement.find('html').toggleClass('kf-sidebar-inactive');
     };
 
+    // reminder: this triggers left sidebar to show in case the default for small windows is to hide left sidebar
     $window.addEventListener('message', function (event) {
       if (event.data === 'show_left_column') {  // for guide
         $scope.$apply(function () {
-          $rootElement.find('html').addClass('kf-sidebar-active');
+          $rootElement.find('html').removeClass('kf-sidebar-inactive');
         });
       }
     });
