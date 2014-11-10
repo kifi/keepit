@@ -87,7 +87,9 @@ angular.module('kifi')
         }
 
         var filterTags = _.debounce(function (tagFilterTerm) {
-          tagFilterTerm = tagFilterTerm || '';
+          if (tagFilterTerm === null) {
+            return;
+          }
 
           var isFirst = true;
           _.each(scope.getSelectedKeeps(), function (keep) {
@@ -242,7 +244,7 @@ angular.module('kifi')
 
         scope.showAddTagDropdown = function () {
           scope.tagFilter.name = '';
-          filterTags(null);
+          filterTags('');
           scope.shouldGiveFocus = true;
           return scope.addingTag.enabled = true;
         };
