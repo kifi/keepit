@@ -1,18 +1,19 @@
 <div class="kf-main-search">
   <div class="kf-main-head">
-    <div class="kf-search-filters">
+    <div ng-if="$root.userLoggedIn" class="kf-search-filters">
       <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('a'), enabled: isEnabled('a') }" ng-href="{{getFilterUrl('a')}}">All keeps</a>
       <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('m'), enabled: isEnabled('m') }" ng-href="{{getFilterUrl('m')}}">Your keeps ({{resultTotals.myTotal}})</a>
       <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('f'), enabled: isEnabled('f') }" ng-href="{{getFilterUrl('f')}}">Friends keeps ({{resultTotals.friendsTotal}})</a>
     </div>
     <div class="kf-subtitle">
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
-      <div class="kf-edit-keeps" ng-click="toggleEdit()">
+      <div ng-if="$root.userLoggedIn" class="kf-edit-keeps" ng-click="toggleEdit()">
         <span class="sprite sprite-edit-pencil-icon"></span>
         <span class="kf-edit-keeps-label">{{editKeepsLabel()}}</span>
       </div>
     </div>
   </div>
+
   <div
     kf-keeps
     keeps="resultKeeps"

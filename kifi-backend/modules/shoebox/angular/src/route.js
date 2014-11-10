@@ -49,9 +49,17 @@ angular.module('kifi')
       controller: 'ManageTagCtrl'
     })
     // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
+    .when('/:username/:librarySlug/find', {
+      templateUrl: 'libraries/library.tpl.html',
+      controller: 'LibraryCtrl',
+      resolve: { librarySearch: function () { return true; } },
+      reloadOnSearch: false
+    })
+
     .when('/:username/:librarySlug', {
       templateUrl: 'libraries/library.tpl.html',
-      controller: 'LibraryCtrl'
+      controller: 'LibraryCtrl',
+      resolve: { librarySearch: function () { return false; } }
     });
     // ↑↑↑↑↑ Important: This needs to be last! ↑↑↑↑↑
 
