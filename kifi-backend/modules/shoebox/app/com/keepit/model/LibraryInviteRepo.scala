@@ -131,11 +131,11 @@ class LibraryInviteRepoImpl @Inject() (
       (userInvitees.map(_._1.get), emailInvitees.map(_._2.get))
     }
 
-    val invitesByUserId = {
+    lazy val invitesByUserId = {
       (for (r <- rows if r.libraryId === libraryId && r.state.inSet(includeStates) && r.userId.inSet(userIds)) yield r).list
     }.groupBy(_.userId.get).mapValues(_.toSet)
 
-    val invitesByEmailAddress = {
+    lazy val invitesByEmailAddress = {
       (for (r <- rows if r.libraryId === libraryId && r.state.inSet(includeStates) && r.emailAddress.inSet(emailAddresses)) yield r).list
     }.groupBy(_.emailAddress.get).mapValues(_.toSet)
 
