@@ -34,9 +34,9 @@ angular.module('kifi')
 ])
 
 .directive('kfKeepCard', [
-  '$document', '$rootScope', '$rootElement', 'installService', 'keepActionService', 'keepDecoratorService',
+  '$document', '$rootScope', '$rootElement', 'installService', 'keepDecoratorService',
   'libraryService', 'modalService', 'recoActionService', 'tagService', 'undoService', 'util',
-  function ($document, $rootScope, $rootElement, installService, keepActionService, keepDecoratorService,
+  function ($document, $rootScope, $rootElement, installService, keepDecoratorService,
             libraryService, modalService, recoActionService, tagService, undoService, util) {
     return {
       restrict: 'A',
@@ -127,22 +127,6 @@ angular.module('kifi')
 
         function updateSiteDescHtml(keep) {
           keep.descHtml = formatDesc(keep.siteName || keep.url);
-        }
-
-        function keepOne (keep) {
-          keepActionService.keepToLibrary([keep.url], keep.libraryId).then(function (resp) {
-            var keptItem = resp && resp.keeps && resp.keeps[0];
-
-            if (keptItem) {
-              keep.buildKeep(keptItem);
-              keep.makeKept();
-              libraryService.addToLibraryCount(keep.libraryId, 1);
-            }
-          });
-
-          if (_.isFunction(scope.keepCallback)) {
-            scope.keepCallback({ 'keep': keep });
-          }
         }
 
         function sizeImage(keep) {
@@ -292,57 +276,6 @@ angular.module('kifi')
 
         scope.showAddTag = function () {
           scope.addingTag.enabled = true;
-        };
-
-        scope.togglePrivate = function (keep) {
-          keepActionService.togglePrivateOne(keep);
-        };
-
-        scope.keepPublic = function (keep) {
-          keepOne(keep, false);
-        };
-
-        scope.keepPrivate = function (keep) {
-          keepOne(keep, true);
-        };
-
-        scope.unkeep = function (keep) {
-          keepActionService.unkeepFromLibrary(keep.libraryId, keep.id).then(function () {
-            keep.makeUnkept();
-
-            undoService.add('Keep deleted.', function () {
-              keepOne(keep);
-            });
-
-            libraryService.addToLibraryCount(keep.libraryId, -1);
-          });
-        };
-
-        scope.showKeepingToLibrary = function () {
-          scope.keepingToLibrary = true;
-        };
-
-        scope.keepToLibrary = function (keep) {
-          scope.data.selectedLibraryIds.forEach(function (libraryId) {
-            keepActionService.keepToLibrary([keep.url], libraryId).then(function (result) {
-              if (result.failures && result.failures.length) {
-                modalService.open({
-                  template: 'common/modal/genericErrorModal.tpl.html'
-                });
-              } else {
-                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
-                  var keep = new keepDecoratorService.Keep(fullKeep);
-                  keep.buildKeep(keep);
-                  keep.makeKept();
-
-                  libraryService.fetchLibrarySummaries(true);
-                  libraryService.addToLibraryCount(libraryId, 1);
-                });
-              }
-            });
-          });
-
-          scope.keepingToLibrary = false;
         };
 
         scope.getSingleSelectedKeep = function (keep) {
@@ -508,7 +441,7 @@ angular.module('kifi')
 
               libraryService.addToLibraryCount(clickedLibrary.id, -1);
               scope.$emit('keepRemoved', { url: scope.keep.url }, clickedLibrary);
-            });
+            })['catch'](modalService.openGenericErrorModal);
 
           // Keep.
           } else {
@@ -542,11 +475,7 @@ angular.module('kifi')
               });
             }
 
-            keepToLibrary['catch'](function () {
-              modalService.open({
-                template: 'common/modal/genericErrorModal.tpl.html'
-              });
-            });
+            keepToLibrary['catch'](modalService.openGenericErrorModal);
           }
         };
 

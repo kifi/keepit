@@ -88,7 +88,7 @@ angular.module('kifi')
                   scope.resetAndHide();
                 });
               }
-            });
+            })['catch'](modalService.openGenericErrorModal);
           } else {
             scope.state.invalidUrl = true;
           }

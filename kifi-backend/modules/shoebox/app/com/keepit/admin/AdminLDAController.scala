@@ -94,7 +94,7 @@ class AdminLDAController @Inject() (
     val names = (js \ "topic_names").as[JsArray].value.map { _.as[String] }
     val isActive = (js \ "topic_states").as[JsArray].value.map { _.as[Boolean] }
     val isNameable = (js \ "topic_nameable").as[JsArray].value.map { _.as[Boolean] }
-    val version = (js \ "version").as[String].trim.toInt
+    val version = (js \ "version").as[JsNumber].value.toInt
 
     val config = (0 until ids.size).map { i =>
       val (id, name, active, nameable) = (ids(i), names(i), isActive(i), isNameable(i))

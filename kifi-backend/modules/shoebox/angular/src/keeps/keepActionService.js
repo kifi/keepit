@@ -214,17 +214,6 @@ angular.module('kifi')
       });
     }
 
-    function togglePrivateMany(keeps) {
-      // If all the keeps were private, they will all become public.
-      // If all the keeps were public, they will all become private.
-      // If some of the keeps were private and some public, they will all become private.
-      return keepMany(keeps, !_.every(keeps, 'isPrivate'));
-    }
-
-    function togglePrivateOne(keep) {
-      return togglePrivateMany([keep]);
-    }
-
     function unkeepMany(keeps) {
       $analytics.eventTrack('user_clicked_page', {
         'action': 'unkeep',
@@ -282,8 +271,6 @@ angular.module('kifi')
       copyToLibrary: copyToLibrary,
       moveToLibrary: moveToLibrary,
       fetchFullKeepInfo: fetchFullKeepInfo,
-      togglePrivateOne: togglePrivateOne,
-      togglePrivateMany: togglePrivateMany,
       unkeepOne: unkeepOne,
       unkeepMany: unkeepMany,
       unkeepFromLibrary: unkeepFromLibrary,

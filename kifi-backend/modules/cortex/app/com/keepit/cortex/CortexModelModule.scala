@@ -26,11 +26,11 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
   @Singleton
   @Provides
   def ldaWordRepresenter(ldaStore: LDAModelStore): MultiVersionedLDAWordRepresenter = {
-    log.info("loading lda from model store")
-    val version = ModelVersions.denseLDAVersion
-    val lda = ldaStore.get(version).get
-    val wordRep = LDAWordRepresenter(version, lda)
-    MultiVersionedLDAWordRepresenter(wordRep)
+    val wordReps = ModelVersions.availableLDAVersions.map { version =>
+      val lda = ldaStore.get(version).get
+      LDAWordRepresenter(version, lda)
+    }
+    MultiVersionedLDAWordRepresenter(wordReps: _*)
   }
 
   @Singleton
@@ -71,10 +71,11 @@ case class CortexDevModelModule() extends CortexModelModule() {
   @Singleton
   @Provides
   def ldaWordRepresenter(ldaStore: LDAModelStore): MultiVersionedLDAWordRepresenter = {
-    val version = ModelVersions.denseLDAVersion
-    val lda = ldaStore.get(version).get
-    val wordRep = LDAWordRepresenter(version, lda)
-    MultiVersionedLDAWordRepresenter(wordRep)
+    val wordReps = ModelVersions.availableLDAVersions.map { version =>
+      val lda = ldaStore.get(version).get
+      LDAWordRepresenter(version, lda)
+    }
+    MultiVersionedLDAWordRepresenter(wordReps: _*)
   }
 
   @Singleton

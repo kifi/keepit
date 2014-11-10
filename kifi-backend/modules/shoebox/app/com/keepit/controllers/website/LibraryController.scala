@@ -11,18 +11,24 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
 import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import org.joda.time.DateTime
+import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter }
+import play.api.Mode.Mode
+import play.api.Mode.Mode
+import play.api.{ Mode, Play }
+import play.api.libs.iteratee.{ Enumeratee, Iteratee, Enumerator }
 import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.BodyParsers
+import play.api.mvc._
 
 import scala.concurrent.Future
 import scala.util.{ Success, Failure }
 import ImplicitHelper._
 import com.keepit.common.core._
-import com.keepit.common.json
+import com.keepit.common.{ CollectionHelpers, json }
 import com.keepit.common.json.TupleFormat
 import play.api.http.Status._
 import com.keepit.commanders.RawBookmarkRepresentation
@@ -30,12 +36,13 @@ import com.keepit.commanders.LibraryFail
 import play.api.libs.json.JsArray
 import scala.util.Failure
 import play.api.libs.json.JsString
-import scala.Some
 import scala.util.Success
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.controller.UserRequest
 import play.api.libs.json.JsObject
 import com.keepit.commanders.LibraryAddRequest
+
+import scala.xml.{ Unparsed, Node, Elem }
 
 class LibraryController @Inject() (
   db: Database,
@@ -48,12 +55,95 @@ class LibraryController @Inject() (
   keepsCommander: KeepsCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   collectionRepo: CollectionRepo,
+  fortyTwoConfig: FortyTwoConfig,
   clock: Clock,
   val libraryCommander: LibraryCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
+
+  def getTopLibraries() = Action.async { request =>
+    val tops = db.readOnlyReplica { implicit ro =>
+      import com.keepit.common.time._
+      libraryMembershipRepo.mostMembersSince(20, clock.now().minusHours(24))
+    }
+
+    val libIds = tops.map(_._1)
+    val libMap = db.readOnlyReplica { implicit ro =>
+      libraryRepo.getLibraries(libIds.toSet)
+    }
+    val libraries = libIds.map(libMap(_))
+    val metaTagsF = Future.sequence(libraries.map { lib =>
+      libraryCommander.libraryMetaTags(lib) map { tags =>
+        lib.id.get -> (tags match {
+          case pub: PublicPageMetaFullTags => pub
+          case _ => throw new IllegalStateException(s"Failed to retrieve public meta tags for $lib; tags=$tags") // shouldn't happen (can add recovery)
+        })
+      }
+    })
+
+    val logo = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png"
+    metaTagsF map { metaTags =>
+      val idToMetaTags = metaTags.toMap
+      val ownerIds = CollectionHelpers.dedupBy(libraries.map(_.ownerId))(id => id)
+      val ownerMap = db.readOnlyMaster { implicit ro => userRepo.getUsers(ownerIds) }
+      val formatter = DateTimeFormat.forPattern("E, d MMM y HH:mm:ss Z")
+      val items = tops map {
+        case (libId, count) =>
+          val lib = libMap(libId)
+          val metaTags = idToMetaTags(libId)
+          val owner = ownerMap(lib.ownerId)
+          val libImg = metaTags.images.headOption.getOrElse(logo)
+          val itemUrl = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}"
+          val desc = Unparsed(
+            s"""
+               |<![CDATA[
+               |<img src="$libImg"/>
+               |${metaTags.description}
+               |]]>
+               |""".stripMargin)
+          <item>
+            <title>{ metaTags.title }</title>
+            <description>{ desc }</description>
+            <link>{ itemUrl }</link>
+            <guid>{ itemUrl }</guid>
+            <pubDate>{ metaTags.updatedAt.toString(formatter) }</pubDate>
+            <dc:creator>{ metaTags.fullName }</dc:creator>
+            <media:thumbnail url={ libImg } medium="image"/>
+            <media:content url={ libImg } medium="image">
+              <media:title type="html">{ metaTags.title }</media:title>
+            </media:content>
+          </item>
+      }
+      val feedTitle = "Top Libraries on Kifi"
+      val channelUrl = s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}"
+      val rss =
+        <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/">
+          <channel>
+            <title>{ feedTitle }</title>
+            <link>{ channelUrl }</link>
+            <description>{ feedTitle }</description>
+            <image>
+              <url>{ channelUrl }</url>
+              <title>{ feedTitle }</title>
+              <link>{ fortyTwoConfig.applicationBaseUrl }</link>
+            </image>
+            { items }
+          </channel>
+        </rss>
+
+      val elems = Enumerator.enumerate(rss)
+      val toBytes = Enumeratee.map[Node] { n => n.toString.getBytes }
+      val header = Enumerator("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes)
+      val combined = header.andThen(elems &> toBytes)
+      log.info(s"[getTopLibraries] published #${libIds.size} libraries. ${libIds.take(20)} ...")
+      Result(
+        header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
+        body = combined
+      )
+    }
+  }
 
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
     val addRequest = request.body.as[LibraryAddRequest]

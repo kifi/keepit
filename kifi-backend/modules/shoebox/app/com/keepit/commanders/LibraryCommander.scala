@@ -193,7 +193,16 @@ class LibraryCommander @Inject() (
 
     val followerInfosByLibraryId = libraries.map { library =>
       val (collaborators, followers, _, counts) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
-      library.id.get -> ((collaborators ++ followers).map(_.userId), counts)
+      val inviters: Seq[LibraryMembership] = viewerUserIdOpt.map { userId =>
+        db.readOnlyReplica { implicit session =>
+          libraryInviteRepo.getWithLibraryIdAndUserId(library.id.get, userId).filter { invite =>
+            invite.inviterId != library.ownerId
+          }.map { invite =>
+            libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, invite.inviterId)
+          }
+        }.flatten
+      }.getOrElse(Seq.empty)
+      library.id.get -> ((inviters ++ collaborators.filter(!inviters.contains(_)) ++ followers.filter(!inviters.contains(_))).map(_.userId), counts)
     }.toMap
 
     val usersById = {
@@ -414,18 +423,43 @@ class LibraryCommander @Inject() (
     if (targetLib.ownerId != userId) {
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
     } else {
-      def validName(name: String): Either[LibraryFail, String] = {
-        if (Library.isValidName(name)) Right(name)
-        else Left(LibraryFail(BAD_REQUEST, "invalid_name"))
+      def validName(newNameOpt: Option[String]): Either[LibraryFail, String] = {
+        newNameOpt match {
+          case None => Right(targetLib.name)
+          case Some(name) =>
+            if (!Library.isValidName(name)) {
+              Left(LibraryFail(BAD_REQUEST, "invalid_name"))
+            } else {
+              db.readOnlyMaster { implicit s =>
+                libraryRepo.getByNameAndUserId(userId, name)
+              } match {
+                case Some(_) => Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
+                case None => Right(name)
+              }
+            }
+        }
       }
-      def validSlug(slug: String): Either[LibraryFail, LibrarySlug] = {
-        if (LibrarySlug.isValidSlug(slug)) Right(LibrarySlug(slug))
-        else Left(LibraryFail(BAD_REQUEST, "invalid_slug"))
+      def validSlug(newSlugOpt: Option[String]): Either[LibraryFail, LibrarySlug] = {
+        newSlugOpt match {
+          case None => Right(targetLib.slug)
+          case Some(slugStr) =>
+            if (!LibrarySlug.isValidSlug(slugStr)) {
+              Left(LibraryFail(BAD_REQUEST, "invalid_slug"))
+            } else {
+              val slug = LibrarySlug(slugStr)
+              db.readOnlyMaster { implicit s =>
+                libraryRepo.getBySlugAndUserId(userId, slug)
+              } match {
+                case Some(_) => Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
+                case None => Right(slug)
+              }
+            }
+        }
       }
 
       val result = for {
-        newName <- validName(name.getOrElse(targetLib.name)).right
-        newSlug <- validSlug(slug.getOrElse(targetLib.slug.value)).right
+        newName <- validName(name).right
+        newSlug <- validSlug(slug).right
       } yield {
         val newDescription: Option[String] = description.orElse(targetLib.description)
         val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
@@ -446,7 +480,7 @@ class LibraryCommander @Inject() (
             libraryAliasRepo.reclaim(ownerId, newSlug)
             libraryAliasRepo.alias(ownerId, targetLib.slug, targetLib.id.get)
           }
-          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription))
+          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, state = LibraryStates.ACTIVE))
         }
       }
       searchClient.updateLibraryIndex()

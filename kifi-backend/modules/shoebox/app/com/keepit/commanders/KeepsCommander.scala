@@ -247,17 +247,17 @@ class KeepsCommander @Inject() (
   }
 
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
-    val libraryMemberships = new mutable.HashMap[Id[Library], Option[LibraryMembership]]
     db.readOnlyMaster { implicit session =>
-      val grouped = keepRepo.getAllByUserAndUriIds(userId, uriIds).groupBy(_.uriId)
+      val allKeeps = keepRepo.getAllByUserAndUriIds(userId, uriIds)
+      val libraryMemberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(allKeeps.map(_.libraryId.get).toSet, userId)
+      val grouped = allKeeps.groupBy(_.uriId)
       uriIds.map { uriId =>
         grouped.get(uriId) match {
           case Some(keeps) =>
             val userKeeps = keeps.map { keep =>
               val mine = userId == keep.userId
               val libraryId = keep.libraryId.get
-              val libraryOpt = libraryMemberships.getOrElseUpdate(libraryId, libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId))
-              val removable = libraryOpt.exists(_.canWrite)
+              val removable = libraryMemberships.get(libraryId).exists(_.canWrite)
               BasicKeep(
                 id = keep.externalId,
                 mine = mine,
@@ -301,9 +301,7 @@ class KeepsCommander @Inject() (
       })
 
       val colls = db.readOnlyMaster { implicit s =>
-        keeps.map { keep =>
-          keepToCollectionRepo.getCollectionsForKeep(keep)
-        }
+        keepToCollectionRepo.getCollectionsForKeeps(keeps)
       }.map(collectionCommander.getBasicCollections)
 
       val allMyKeeps = perspectiveUserIdOpt.map { userId => getBasicKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[BasicKeep]]
