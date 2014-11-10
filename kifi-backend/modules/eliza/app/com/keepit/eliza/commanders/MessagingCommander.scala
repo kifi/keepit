@@ -233,7 +233,7 @@ class MessagingCommander @Inject() (
       }
     }
     val nUriOpt = uri.map { u => Await.result(shoebox.internNormalizedURI(u, scrapeWanted = true), 10 seconds) } // todo: Remove Await
-    statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ALWAYS)
+    statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ONE_IN_THOUSAND)
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val (thread, isNew) = db.readWrite { implicit session =>
       val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
@@ -654,7 +654,7 @@ class MessagingCommander @Inject() (
       messageThreadFut.map {
         case (_, messages) =>
           val tDiff = currentDateTime.getMillis - tStart.getMillis
-          statsd.timing(s"messaging.newMessage", tDiff, ALWAYS)
+          statsd.timing(s"messaging.newMessage", tDiff, ONE_IN_HUNDRED)
           (message, threadInfoOpt, messages)
       }
     }

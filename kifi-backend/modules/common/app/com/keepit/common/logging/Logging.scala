@@ -18,6 +18,7 @@ trait Logging {
   val ONE_IN_TEN = 0.1d
   val ONE_IN_HUNDRED = 0.01d
   val ONE_IN_THOUSAND = 0.001d
+  val ONE_IN_TEN_THOUSAND = 0.0001d
   implicit lazy val log = Logger(getClass)
   implicit lazy val statsd = new LoggingStatsdClient(Logger(s"statsd.${getClass.getCanonicalName}"))
 
