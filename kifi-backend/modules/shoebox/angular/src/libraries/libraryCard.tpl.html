@@ -72,7 +72,6 @@
           </div>
         </div>
       </div>
-
     </div>
   </div>
   <img ng-if="magicImage" class="kf-keep-lib-image" ng-src="{{magicImage}}">
@@ -83,7 +82,11 @@
     <button ng-if="isMyLibrary(library) && library.numKeeps > 0" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-edit-keeps-button" ng-click="toggleEditKeeps()">
       {{editKeepsText}}
     </button>
-    <button kf-sticky max-top="15" sticky-width-mode="ignored" on-stick="followStick" ng-if="canFollowLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-follow" ng-click="followLibrary(library)">Follow Library</button>
+    <button kf-sticky sticky-if="isUserLoggedOut" max-top="15" sticky-width-mode="ignored" on-stick="followStick"
+        ng-class="{stickable: isUserLoggedOut}" ng-if="canFollowLibrary(library)" ng-click="followLibrary(library)"
+        class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-follow">
+      Follow Library
+    </button>
     <button ng-if="alreadyFollowingLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-unfollow" ng-click="unfollowLibrary(library)"></button>
     <div ng-if="canBeShared(library)" kf-library-share-search library="library" class="kf-keep-lib-footer-button-right"></div>
 
