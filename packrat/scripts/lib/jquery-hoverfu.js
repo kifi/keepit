@@ -23,6 +23,9 @@
 //    show a new hover element, pop and hide every element on the stack first if
 //    the new one’s trigger element is not a descendant of the hover element at
 //    the top of the stack.
+//  - Introduce a custom event to make the API a bit cleaner and to allow
+//    auto-removal of an element's hover when the element is removed.
+//    http://benalman.com/news/2010/03/jquery-special-events/
 
 !function ($, doc) {
   'use strict';
