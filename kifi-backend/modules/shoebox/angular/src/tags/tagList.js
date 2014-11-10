@@ -87,9 +87,7 @@ angular.module('kifi')
         }
 
         var filterTags = _.debounce(function (tagFilterTerm) {
-          if (null === tagFilterTerm) {
-            return;
-          }
+          tagFilterTerm = tagFilterTerm || '';
 
           var isFirst = true;
           _.each(scope.getSelectedKeeps(), function (keep) {
