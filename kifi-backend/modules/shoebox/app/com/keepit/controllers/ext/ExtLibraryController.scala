@@ -76,13 +76,14 @@ class ExtLibraryController @Inject() (
     decode(libraryPubId) { libraryId =>
       libraryCommander.getLibraryWithOwnerAndCounts(libraryId, request.userId) match {
         case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
-        case Right((library, owner, keepCount, followerCount)) => Ok(Json.obj(
+        case Right((library, owner, keepCount, followerCount, following)) => Ok(Json.obj(
           "name" -> library.name,
           "slug" -> library.slug,
           "visibility" -> library.visibility,
           "owner" -> owner,
           "keeps" -> keepCount,
-          "followers" -> followerCount
+          "followers" -> followerCount,
+          "following" -> following
         ))
       }
     }
