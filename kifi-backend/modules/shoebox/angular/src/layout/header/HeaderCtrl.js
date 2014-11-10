@@ -24,7 +24,6 @@ angular.module('kifi')
     $scope.isFocused = false;
     $scope.library = {};
     $scope.search = { text: '', showName: false };
-    $scope.stayInLibraryPath = '';
 
     // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
     var calloutName = 'tag_callout_shown';
@@ -51,7 +50,6 @@ angular.module('kifi')
 
       if ($scope.library.id) {
         $scope.search.showName = true;
-        $scope.stayInLibraryPath = $scope.library.url;
       } else {
         $scope.clearLibraryName();
       }
@@ -81,47 +79,36 @@ angular.module('kifi')
 
     $scope.clearLibraryName = function () {
       $scope.search.showName = false;
-      $scope.stayInLibraryPath = '';
       $scope.library = {};
-      if ($location.path() === '/find') {
-        $location.search('l', '');
-      }
+      $scope.changeSearchInput();
     };
 
     $scope.search.text = $routeParams.q || '';
     $scope.changeSearchInput = _.debounce(function () {
-      if ($scope.search.text === '' && $scope.stayInLibraryPath !== '') {
-        $timeout(function() {
-          $location.url($scope.stayInLibraryPath);
-        }, 0);
-        $scope.clearInput();
-      } else {
-        $timeout(function() {
-          // If we are not already on the search page.
-          if ($location.path() !== '/find') {
-            if ($scope.library.url) {
+      $timeout(function() {
+        // We are not already on the search page.
+        if ($location.path() !== '/find') {
+          if ($scope.library && $scope.library.url) {
+            if ($scope.search.text) {
               $location.url($scope.library.url + '/find?q=' + $scope.search.text + '&f=a');
             } else {
-              $location.url('/find?q=' + $scope.search.text);
+              $location.url($scope.library.url);
             }
+          } else {
+            $location.url('/find?q=' + $scope.search.text);
           }
+        }
 
-          // If we are already on the search page.
-          else {
-            $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
-          }
-        });
-      }
+        // We are already on the search page.
+        else {
+          $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
+        }
+      });
     }, 100, {
       'leading': true
     });
 
     $scope.clearInput = function () {
-      if ($scope.stayInLibraryPath !== '') {
-        $timeout(function () {
-          $location.url($scope.stayInLibraryPath);
-        }, 0);
-      }
       $scope.search.text = '';
     };
 
