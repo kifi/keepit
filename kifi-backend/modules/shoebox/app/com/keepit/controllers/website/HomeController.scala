@@ -6,6 +6,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller._
 import com.keepit.common.core._
 import com.keepit.common.db.slick._
+import com.keepit.common.http._
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
 import com.keepit.common.service.FortyTwoServices
@@ -61,7 +62,18 @@ class HomeController @Inject() (
   def home = MaybeUserAction { implicit request =>
     request match {
       case r: NonUserRequest[_] =>
-        MarketingSiteRouter.marketingSite()
+        val userAgentOpt = request.userAgentOpt
+        if (userAgentOpt.exists(_.isMobile)) {
+          SafeFuture {
+            val context = new HeimdalContextBuilder()
+            context.addRequestInfo(request)
+            context += ("type", "landing")
+            heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
+          }
+          Ok(views.html.mobile.MobileRedirect(request.uri))
+        } else {
+          MarketingSiteRouter.marketingSite()
+        }
       case userRequest: UserRequest[_] =>
         AngularDistAssets.angularApp()
     }
