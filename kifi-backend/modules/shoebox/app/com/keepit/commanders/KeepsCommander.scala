@@ -247,31 +247,32 @@ class KeepsCommander @Inject() (
   }
 
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
-    db.readOnlyMaster { implicit session =>
+    val (allKeeps, libraryMemberships) = db.readOnlyMaster { implicit session =>
       val allKeeps = keepRepo.getAllByUserAndUriIds(userId, uriIds)
       val libraryMemberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(allKeeps.map(_.libraryId.get).toSet, userId)
-      val grouped = allKeeps.groupBy(_.uriId)
-      uriIds.map { uriId =>
-        grouped.get(uriId) match {
-          case Some(keeps) =>
-            val userKeeps = keeps.map { keep =>
-              val mine = userId == keep.userId
-              val libraryId = keep.libraryId.get
-              val removable = libraryMemberships.get(libraryId).exists(_.canWrite)
-              BasicKeep(
-                id = keep.externalId,
-                mine = mine,
-                removable = removable,
-                visibility = keep.visibility,
-                libraryId = Library.publicId(libraryId)
-              )
-            }.toSet
-            uriId -> userKeeps
-          case _ =>
-            uriId -> Set.empty[BasicKeep]
-        }
-      }.toMap
+      (allKeeps, libraryMemberships)
     }
+    val grouped = allKeeps.groupBy(_.uriId)
+    uriIds.map { uriId =>
+      grouped.get(uriId) match {
+        case Some(keeps) =>
+          val userKeeps = keeps.map { keep =>
+            val mine = userId == keep.userId
+            val libraryId = keep.libraryId.get
+            val removable = libraryMemberships.get(libraryId).exists(_.canWrite)
+            BasicKeep(
+              id = keep.externalId,
+              mine = mine,
+              removable = removable,
+              visibility = keep.visibility,
+              libraryId = Library.publicId(libraryId)
+            )
+          }.toSet
+          uriId -> userKeeps
+        case _ =>
+          uriId -> Set.empty[BasicKeep]
+      }
+    }.toMap
   }
 
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep], idealImageSize: ImageSize = KeepImageSize.Large.idealSize): Future[Seq[KeepInfo]] = {
