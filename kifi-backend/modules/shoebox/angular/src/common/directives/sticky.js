@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfSticky', [
-  '$window', '$timeout',
-  function ($window, $timeout) {
+  '$window',
+  function ($window) {
     return {
       restrict: 'A',
       scope: {
@@ -35,10 +35,6 @@ angular.module('kifi')
           borderLeftWidth, borderTopWidth, borderRightWidth, borderBottomWidth,
           offsetTop, offsetLeft,
           width, height;
-
-        function isTouchEvent(e) {
-          return e.originalEvent.touches && e.originalEvent.touches.length > 0;
-        }
 
         function updateProperties() {
           marginLeft = getCssPixelProperty('marginLeft');

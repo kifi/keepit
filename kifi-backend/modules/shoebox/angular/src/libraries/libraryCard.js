@@ -6,7 +6,7 @@ angular.module('kifi')
   '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
   'profileService', 'platformService', 'signupService', '$twitter', '$timeout',
   function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
-    profileService, platformService, signupService, $twitter, $timeout) {
+      profileService, platformService, signupService, $twitter, $timeout) {
     return {
       restrict: 'A',
       replace: true,
@@ -370,7 +370,8 @@ angular.module('kifi')
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', adjustFollowerPicsSizeOnResize);
         });
-      }
-    };
-  }
-]);
+      };
+    }
+  };
+}]);
+

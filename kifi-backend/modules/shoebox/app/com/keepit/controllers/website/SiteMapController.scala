@@ -1,5 +1,6 @@
 package com.keepit.controllers.website
 
+import play.api.mvc._
 import com.google.inject.Inject
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -11,8 +12,7 @@ class SiteMapController @Inject() (
     val userActionsHelper: UserActionsHelper,
     generator: SiteMapGenerator) extends AdminUserActions {
 
-  // expensive
-  def sitemap() = AdminUserPage.async { implicit request =>
+  def sitemap() = Action.async { implicit request =>
     generator.intern() map { elem =>
       Ok(elem).withHeaders("Content-Type" -> "text/xml")
     }
