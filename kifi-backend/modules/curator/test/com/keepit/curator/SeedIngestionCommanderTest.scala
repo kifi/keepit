@@ -190,10 +190,10 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           state = KeepStates.ACTIVE))
 
         shoebox.saveBookmarks(user1Keeps(3).copy(
-          createdAt = new DateTime(1997, 12, 14, 6, 44, 32)))
+          keptAt = Some(new DateTime(1997, 12, 14, 6, 44, 32))))
 
         shoebox.saveBookmarks(user2Keeps(3).copy(
-          createdAt = new DateTime(2022, 10, 1, 9, 18, 44)))
+          keptAt = Some(new DateTime(2022, 10, 1, 9, 18, 44))))
 
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readOnlyMaster { implicit session =>
