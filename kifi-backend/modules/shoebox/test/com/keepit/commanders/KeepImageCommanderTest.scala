@@ -212,6 +212,12 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         keepImage1.get.id !== keepImage2.get.id
         keepImage1.get.sourceFileHash === keepImage2.get.sourceFileHash
 
+        val bulk1 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ImageSize(200, 200))
+        bulk1.map(_.id).toSet === Set(keepImage1.get.id, keepImage2.get.id)
+
+        val bulk2 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ImageSize(100, 100))
+        bulk2.map(_.id).toSet === Set(keepImage1.get.id, keepImage2.get.id)
+
         {
           val savedF = commander.setKeepImageFromFile(fakeFile2, keep2.id.get, KeepImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
@@ -226,6 +232,9 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         keepImage2.get.id !== keepImage3.get.id
         keepImage1.get.sourceFileHash !== keepImage3.get.sourceFileHash
 
+        val bulk3 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ImageSize(100, 100))
+        bulk3.map(_.id).toSet === Set(keepImage1.get.id, keepImage3.get.id)
+
         {
           val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, KeepImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
@@ -235,8 +244,14 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         val keepImage4 = commander.getBestImageForKeep(keep2.id.get, ImageSize(100, 100))
         keepImage2.get.id === keepImage4.get.id
 
+        val bulk4 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ImageSize(100, 100))
+        bulk4.map(_.id).toSet === Set(keepImage1.get.id, keepImage2.get.id)
+
         commander.removeKeepImageForKeep(keep2.id.get)
         commander.getBestImageForKeep(keep2.id.get, ImageSize(100, 100)) === None
+
+        val bulk5 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ImageSize(100, 100))
+        bulk5.map(_.id).toSet === Set(keepImage1.get.id)
 
         db.readOnlyMaster { implicit session =>
           // Dependant on what sizes we do
