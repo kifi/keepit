@@ -159,106 +159,6 @@ class KeepsController @Inject() (
       .as("text/html")
   }
 
-  def keepMultiple(separateExisting: Boolean = false) = UserAction(parse.tolerantJson) { request =>
-    try {
-      Json.fromJson[RawBookmarksWithCollection](request.body).asOpt map { fromJson =>
-        val source = KeepSource.site
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-
-        val library = {
-          val (main, secret) = db.readWrite(libraryCommander.getMainAndSecretLibrariesForUser(request.userId)(_))
-          if (fromJson.keeps.headOption.flatMap(_.isPrivate).getOrElse(false)) {
-            secret
-          } else {
-            main
-          }
-        }
-
-        val (keeps, addedToCollection, failures, alreadyKeptOpt) = keepsCommander.keepMultiple(fromJson.keeps, library.id.get, request.userId, source, fromJson.collection, separateExisting)
-        log.info(s"kept ${keeps.size} keeps")
-        Ok(Json.obj(
-          "keeps" -> keeps,
-          "failures" -> failures,
-          "addedToCollection" -> addedToCollection
-        ) ++ (alreadyKeptOpt map (keeps => Json.obj("alreadyKept" -> keeps)) getOrElse Json.obj()))
-      } getOrElse {
-        log.error(s"can't parse object from request ${request.body} for user ${request.user}")
-        BadRequest(Json.obj("error" -> "Could not parse object from request body"))
-      }
-    } catch {
-      case e: Throwable =>
-        log.error(s"error keeping ${request.body}", e)
-        throw e
-    }
-  }
-
-  def unkeepMultiple() = UserAction { request =>
-    request.body.asJson.flatMap(Json.fromJson[Seq[RawBookmarkRepresentation]](_).asOpt) map { keepInfos =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val deactivatedKeepInfos = keepsCommander.unkeepMultiple(keepInfos, request.userId)
-      Ok(Json.obj(
-        "removedKeeps" -> deactivatedKeepInfos
-      ))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON array of keep with url from request body"))
-    }
-  }
-
-  def unkeepBatch() = UserAction(parse.tolerantJson) { request =>
-    implicit val keepFormat = ExternalId.format[Keep]
-    val idsOpt = (request.body \ "ids").asOpt[Seq[ExternalId[Keep]]]
-    idsOpt map { ids =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val (successes, failures) = keepsCommander.unkeepBatch(ids, request.userId)
-      Ok(Json.obj(
-        "removedKeeps" -> successes,
-        "errors" -> failures.map(id => Json.obj("id" -> id, "error" -> "not_found"))
-      ))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "parse_error"))
-    }
-  }
-
-  def unkeepBulk() = UserAction(parse.tolerantJson) { request =>
-    Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val deactivatedKeepInfos = keepsCommander.unkeepBulk(keepSet, request.userId)
-      Ok(Json.obj(
-        "removedKeeps" -> deactivatedKeepInfos
-      ))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON keep selection from request body"))
-    }
-  }
-
-  def rekeepBulk() = UserAction(parse.tolerantJson) { request =>
-    Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val numRekept = keepsCommander.rekeepBulk(keepSet, request.userId)
-      Ok(Json.obj("numRekept" -> numRekept))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON keep selection from request body"))
-    }
-  }
-
-  def makePublicBulk() = UserAction(parse.tolerantJson) { request =>
-    setKeepPrivacyBulk(request, false)
-  }
-
-  def makePrivateBulk() = UserAction(parse.tolerantJson) { request =>
-    setKeepPrivacyBulk(request, true)
-  }
-
-  private def setKeepPrivacyBulk(request: UserRequest[JsValue], isPrivate: Boolean) = {
-    Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val numUpdated = keepsCommander.setKeepPrivacyBulk(keepSet, request.userId, isPrivate)
-      Ok(Json.obj("numUpdated" -> numUpdated))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON keep selection from request body"))
-    }
-  }
-
   def tagKeeps(tagName: String) = UserAction(parse.tolerantJson) { implicit request =>
     val keepIds = (request.body \ "keepIds").as[Seq[ExternalId[Keep]]]
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
@@ -309,15 +209,6 @@ class KeepsController @Inject() (
         case None => NotFound(Json.obj("error" -> "Keep not found"))
         case Some(keep) => Ok(Json.obj("keep" -> KeepInfo.fromKeep(keep)))
       }
-    }
-  }
-
-  def unkeep(id: ExternalId[Keep]) = UserAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    keepsCommander.unkeep(id, request.userId) map { ki =>
-      Ok(Json.toJson(ki))
-    } getOrElse {
-      NotFound(Json.obj("error" -> "not_found"))
     }
   }
 

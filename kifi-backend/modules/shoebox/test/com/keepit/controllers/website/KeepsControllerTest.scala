@@ -601,54 +601,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
       }
     }
 
-    "keepMultiple" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-        }
-        val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
-        val withCollection =
-          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
-            Nil
-        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
-
-        val path = com.keepit.controllers.website.routes.KeepsController.keepMultiple().toString
-        path === "/site/keeps/add"
-
-        val json = Json.obj(
-          "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
-          "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
-        )
-        inject[FakeUserActionsHelper].setUser(user)
-        val controller = inject[KeepsController]
-        val request = FakeRequest("POST", path).withBody(json)
-        val result = controller.keepMultiple()(request)
-        status(result) must equalTo(OK)
-        contentType(result) must beSome("application/json")
-
-        sourceForTitle("title 11") === KeepSource.site
-        sourceForTitle("title 21") === KeepSource.site
-        sourceForTitle("title 31") === KeepSource.site
-
-        stateForTitle("title 11") === "active"
-        stateForTitle("title 21") === "active"
-        stateForTitle("title 31") === "active"
-
-        val expected = Json.parse(s"""
-          {
-            "keeps":[{"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"l7jlKlnA36Su"},
-                     {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"l7jlKlnA36Su"},
-                     {"id":"${externalIdForTitle("title 31")}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"l7jlKlnA36Su"}],
-            "failures":[],
-            "addedToCollection":3
-          }
-        """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
-      }
-    }
-
     "saveCollection create mode" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
@@ -697,264 +649,141 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val result = inject[KeepsController].saveCollection()(request)
         status(result) must equalTo(400)
       }
-    }
 
-    "unkeepBatch" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-        }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
-        val withCollection =
-          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
-            Nil
-        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
+      "reorder tags" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (user, oldOrdering, tagA, tagB, tagC, tagD) = inject[Database].readWrite { implicit session =>
+            val user1 = inject[UserRepo].save(User(firstName = "Tony", lastName = "Stark", username = Username("test2"), normalizedUsername = "test2"))
+            inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
 
-        inject[FakeUserActionsHelper].setUser(user)
-        val keepJson = Json.obj(
-          "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
-          "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
-        )
-        val keepReq = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.keepMultiple().toString).withBody(keepJson)
-        val keepRes = inject[KeepsController].keepMultiple()(keepReq)
-        status(keepRes) must equalTo(OK)
-        contentType(keepRes) must beSome("application/json")
-        val keepJsonRes = Json.parse(contentAsString(keepRes))
-        val keepIds = (keepJsonRes \ "keeps").as[Seq[JsObject]].map(k => (k \ "id").as[ExternalId[Keep]])
-        keepIds.length === withCollection.size
-        val expectedKeeps = Json.parse(s"""
-          [
-            {"id":"${keepIds(0)}","title":"title 11","url":"http://www.hi.com11","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
-            {"id":"${keepIds(1)}","title":"title 21","url":"http://www.hi.com21","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
-            {"id":"${keepIds(2)}","title":"title 31","url":"http://www.hi.com31","isPrivate":false,"libraryId":"l7jlKlnA36Su"}
-          ]
-        """)
-        (keepJsonRes \ "keeps") === expectedKeeps
+            val tagA = Collection(userId = user1.id.get, name = Hashtag("tagA"))
+            val tagB = Collection(userId = user1.id.get, name = Hashtag("tagB"))
+            val tagC = Collection(userId = user1.id.get, name = Hashtag("tagC"))
+            val tagD = Collection(userId = user1.id.get, name = Hashtag("tagD"))
 
-        sourceForTitle("title 11") === KeepSource.site
-        sourceForTitle("title 21") === KeepSource.site
-        sourceForTitle("title 31") === KeepSource.site
+            val collectionRepo = inject[CollectionRepo]
+            val collections = collectionRepo.save(tagA) ::
+              collectionRepo.save(tagB) ::
+              collectionRepo.save(tagC) ::
+              collectionRepo.save(tagD) ::
+              Nil
 
-        val path = com.keepit.controllers.website.routes.KeepsController.unkeepBatch().toString
-        path === "/site/keeps/delete" // remove already taken
-
-        implicit val keepFormat = ExternalId.format[Keep]
-        val json = Json.obj("ids" -> keepIds.take(2))
-        val request = FakeRequest("POST", path).withBody(json)
-
-        val result = inject[KeepsController].unkeepBatch()(request)
-        status(result) must equalTo(OK)
-        contentType(result) must beSome("application/json")
-
-        stateForTitle("title 31") === "active"
-        stateForTitle("title 11") === "inactive"
-        stateForTitle("title 21") === "inactive"
-
-        val expected = Json.parse(s"""
-          {
-            "removedKeeps":[
-              {"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"l7jlKlnA36Su"},
-              {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"l7jlKlnA36Su"}
-            ],
-            "errors":[]
+            val collectionIds = collections.map(_.externalId).toSeq
+            inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = UserValueName.USER_COLLECTION_ORDERING, value = Json.stringify(Json.toJson(collectionIds))))
+            (user1, collectionIds, tagA, tagB, tagC, tagD)
           }
-        """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
 
-        // todo: add test for error conditions
-      }
-    }
+          inject[FakeUserActionsHelper].setUser(user)
 
-    "unkeepMultiple" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-        }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
-        val withCollection =
-          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
-            Nil
+          val inputJson1 = Json.obj(
+            "tagId" -> tagA.externalId,
+            "newIndex" -> 2
+          )
+          val request1 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
+            updateCollectionIndexOrdering().toString).withBody(inputJson1)
 
-        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
+          val inputJson2 = Json.obj(
+            "tagId" -> tagD.externalId,
+            "newIndex" -> 0
+          )
+          val request2 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
+            updateCollectionIndexOrdering().toString).withBody(inputJson2)
 
-        inject[FakeUserActionsHelper].setUser(user)
-        val controller = inject[KeepsController]
-        val keepJson = Json.obj(
-          "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
-          "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
-        )
-        val keepReq = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.keepMultiple().toString).withBody(keepJson)
-        val keepRes = inject[KeepsController].keepMultiple()(keepReq)
-        status(keepRes) must equalTo(OK);
-        contentType(keepRes) must beSome("application/json");
+          val inputJson3 = Json.obj(
+            "tagId" -> tagB.externalId,
+            "newIndex" -> 3
+          )
+          val request3 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
+            updateCollectionIndexOrdering().toString).withBody(inputJson3)
 
-        sourceForTitle("title 11") === KeepSource.site
-        sourceForTitle("title 21") === KeepSource.site
-        sourceForTitle("title 31") === KeepSource.site
+          val result1 = inject[KeepsController].updateCollectionIndexOrdering()(request1)
+          status(result1) must equalTo(OK)
+          contentType(result1) must beSome("application/json")
 
-        val path = com.keepit.controllers.website.routes.KeepsController.unkeepMultiple().toString
-        path === "/site/keeps/remove"
-
-        val json = JsArray(withCollection.take(2) map { k => Json.toJson(k) })
-        val request = FakeRequest("POST", path).withJsonBody(json)
-
-        val result = inject[KeepsController].unkeepMultiple()(request)
-        status(result) must equalTo(OK)
-        contentType(result) must beSome("application/json")
-
-        stateForTitle("title 31") === "active"
-
-        stateForTitle("title 11") === "inactive"
-        stateForTitle("title 21") === "inactive"
-
-        val expected = Json.parse(s"""
-          {"removedKeeps":[
-            {"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"l7jlKlnA36Su"},
-            {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"l7jlKlnA36Su"}
-          ]}
-        """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
-      }
-    }
-
-    "reorder tags" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val (user, oldOrdering, tagA, tagB, tagC, tagD) = inject[Database].readWrite { implicit session =>
-          val user1 = inject[UserRepo].save(User(firstName = "Tony", lastName = "Stark", username = Username("test2"), normalizedUsername = "test2"))
-          inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
-
-          val tagA = Collection(userId = user1.id.get, name = Hashtag("tagA"))
-          val tagB = Collection(userId = user1.id.get, name = Hashtag("tagB"))
-          val tagC = Collection(userId = user1.id.get, name = Hashtag("tagC"))
-          val tagD = Collection(userId = user1.id.get, name = Hashtag("tagD"))
-
-          val collectionRepo = inject[CollectionRepo]
-          val collections = collectionRepo.save(tagA) ::
-            collectionRepo.save(tagB) ::
-            collectionRepo.save(tagC) ::
-            collectionRepo.save(tagD) ::
-            Nil
-
-          val collectionIds = collections.map(_.externalId).toSeq
-          inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = UserValueName.USER_COLLECTION_ORDERING, value = Json.stringify(Json.toJson(collectionIds))))
-          (user1, collectionIds, tagA, tagB, tagC, tagD)
-        }
-
-        inject[FakeUserActionsHelper].setUser(user)
-
-        val inputJson1 = Json.obj(
-          "tagId" -> tagA.externalId,
-          "newIndex" -> 2
-        )
-        val request1 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
-          updateCollectionIndexOrdering().toString).withBody(inputJson1)
-
-        val inputJson2 = Json.obj(
-          "tagId" -> tagD.externalId,
-          "newIndex" -> 0
-        )
-        val request2 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
-          updateCollectionIndexOrdering().toString).withBody(inputJson2)
-
-        val inputJson3 = Json.obj(
-          "tagId" -> tagB.externalId,
-          "newIndex" -> 3
-        )
-        val request3 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
-          updateCollectionIndexOrdering().toString).withBody(inputJson3)
-
-        val result1 = inject[KeepsController].updateCollectionIndexOrdering()(request1)
-        status(result1) must equalTo(OK)
-        contentType(result1) must beSome("application/json")
-
-        val expected1 = Json.parse(
-          s"""{"newCollection":[
+          val expected1 = Json.parse(
+            s"""{"newCollection":[
              |"${tagB.externalId}",
              |"${tagC.externalId}",
              |"${tagA.externalId}",
              |"${tagD.externalId}"]}
            """.stripMargin)
-        Json.parse(contentAsString(result1)) must equalTo(expected1)
+          Json.parse(contentAsString(result1)) must equalTo(expected1)
 
-        val result2 = inject[KeepsController].updateCollectionIndexOrdering()(request2)
-        status(result2) must equalTo(OK)
-        contentType(result2) must beSome("application/json")
+          val result2 = inject[KeepsController].updateCollectionIndexOrdering()(request2)
+          status(result2) must equalTo(OK)
+          contentType(result2) must beSome("application/json")
 
-        val expected2 = Json.parse(
-          s"""{"newCollection":[
+          val expected2 = Json.parse(
+            s"""{"newCollection":[
              |"${tagD.externalId}",
              |"${tagB.externalId}",
              |"${tagC.externalId}",
              |"${tagA.externalId}"]}
            """.stripMargin)
-        Json.parse(contentAsString(result2)) must equalTo(expected2)
+          Json.parse(contentAsString(result2)) must equalTo(expected2)
 
-        val result3 = inject[KeepsController].updateCollectionIndexOrdering()(request3)
-        status(result3) must equalTo(OK);
-        contentType(result3) must beSome("application/json");
+          val result3 = inject[KeepsController].updateCollectionIndexOrdering()(request3)
+          status(result3) must equalTo(OK);
+          contentType(result3) must beSome("application/json");
 
-        val expected3 = Json.parse(
-          s"""{"newCollection":[
+          val expected3 = Json.parse(
+            s"""{"newCollection":[
              |"${tagD.externalId}",
              |"${tagC.externalId}",
              |"${tagA.externalId}",
              |"${tagB.externalId}"]}
            """.stripMargin)
-        Json.parse(contentAsString(result3)) must equalTo(expected3)
-      }
-    }
-
-    "search tags for user" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val t1 = new DateTime(2014, 9, 1, 21, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val (user) = db.readWrite { implicit session =>
-          val user1 = userRepo.save(User(firstName = "Mega", lastName = "Tron", username = Username("test"), normalizedUsername = "test"))
-          inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
-          val tagA = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagA"), createdAt = t1))
-          val tagB = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagB"), createdAt = t1))
-          val tagC = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagC"), createdAt = t1.plusMinutes(1)))
-          val tagD = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagD"), createdAt = t1.plusMinutes(2)))
-
-          uriRepo.count === 0
-          val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
-          val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
-
-          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-
-          val mainLib = libraryRepo.getBySlugAndUserId(user1.id.get, LibrarySlug("main"))
-          val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1, state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get), inDisjointLib = mainLib.get.isDisjoint))
-          val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1, state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get), inDisjointLib = mainLib.get.isDisjoint))
-
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tagA.id.get, createdAt = t1.plusMinutes(1)))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tagA.id.get, createdAt = t1.plusMinutes(3)))
-          collectionRepo.save(tagA.copy(lastKeptTo = Some(t1.plusMinutes(3))))
-
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tagC.id.get, createdAt = t1.plusMinutes(4)))
-          collectionRepo.save(tagC.copy(lastKeptTo = Some(t1.plusMinutes(4))))
-
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tagD.id.get, createdAt = t1.plusMinutes(6)))
-          collectionRepo.save(tagD.copy(lastKeptTo = Some(t1.plusMinutes(6))))
-
-          (user1)
+          Json.parse(contentAsString(result3)) must equalTo(expected3)
         }
+      }
 
-        inject[FakeUserActionsHelper].setUser(user)
-        val request1 = FakeRequest("GET", com.keepit.controllers.website.routes.KeepsController.searchUserTags("").url)
-        val result1 = inject[KeepsController].searchUserTags("ta")(request1)
-        status(result1) must equalTo(OK)
-        contentType(result1) must beSome("application/json")
+      "search tags for user" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val t1 = new DateTime(2014, 9, 1, 21, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+          val (user) = db.readWrite { implicit session =>
+            val user1 = userRepo.save(User(firstName = "Mega", lastName = "Tron", username = Username("test"), normalizedUsername = "test"))
+            inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
+            val tagA = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagA"), createdAt = t1))
+            val tagB = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagB"), createdAt = t1))
+            val tagC = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagC"), createdAt = t1.plusMinutes(1)))
+            val tagD = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagD"), createdAt = t1.plusMinutes(2)))
 
-        val expected1 = Json.parse(
-          s"""
+            uriRepo.count === 0
+            val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
+            val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
+
+            val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+            val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+
+            val mainLib = libraryRepo.getBySlugAndUserId(user1.id.get, LibrarySlug("main"))
+            val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+              uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1, state = KeepStates.ACTIVE,
+              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get), inDisjointLib = mainLib.get.isDisjoint))
+            val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+              uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1, state = KeepStates.ACTIVE,
+              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get), inDisjointLib = mainLib.get.isDisjoint))
+
+            keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tagA.id.get, createdAt = t1.plusMinutes(1)))
+            keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tagA.id.get, createdAt = t1.plusMinutes(3)))
+            collectionRepo.save(tagA.copy(lastKeptTo = Some(t1.plusMinutes(3))))
+
+            keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tagC.id.get, createdAt = t1.plusMinutes(4)))
+            collectionRepo.save(tagC.copy(lastKeptTo = Some(t1.plusMinutes(4))))
+
+            keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tagD.id.get, createdAt = t1.plusMinutes(6)))
+            collectionRepo.save(tagD.copy(lastKeptTo = Some(t1.plusMinutes(6))))
+
+            (user1)
+          }
+
+          inject[FakeUserActionsHelper].setUser(user)
+          val request1 = FakeRequest("GET", com.keepit.controllers.website.routes.KeepsController.searchUserTags("").url)
+          val result1 = inject[KeepsController].searchUserTags("ta")(request1)
+          status(result1) must equalTo(OK)
+          contentType(result1) must beSome("application/json")
+
+          val expected1 = Json.parse(
+            s"""
            |{ "results":
               |[
               |  { "tag":"tagA","keepCount":2,"matches":[[0,2]] },
@@ -963,7 +792,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               |]
            | }
            """.stripMargin)
-        Json.parse(contentAsString(result1)) must equalTo(expected1)
+          Json.parse(contentAsString(result1)) must equalTo(expected1)
+        }
       }
     }
   }

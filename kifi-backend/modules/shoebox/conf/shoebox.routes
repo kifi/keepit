@@ -308,24 +308,16 @@ POST    /site/events                @com.keepit.controllers.tracking.EventProxyC
 GET     /assets/sitemap.xml         @com.keepit.controllers.website.SiteMapController.sitemap()
 
 GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
-POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple(separateExisting: Boolean ?= false)
-POST    /site/keeps/remove          @com.keepit.controllers.website.KeepsController.unkeepMultiple()
-POST    /site/keeps/delete          @com.keepit.controllers.website.KeepsController.unkeepBatch()
 GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()
 GET     /site/keeps/import/status   @com.keepit.controllers.website.KeepsController.importStatus()
 GET     /site/keeps/export          @com.keepit.controllers.website.KeepsController.exportKeeps()
 GET     /site/keeps/:id             @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 POST    /site/keeps/:id/update      @com.keepit.controllers.website.KeepsController.updateKeepInfo(id: ExternalId[Keep])
-POST    /site/keeps/:id/delete      @com.keepit.controllers.website.KeepsController.unkeep(id: ExternalId[Keep])
 #### Deprecated: Used by Android now, should be dropped by Nov 1, 2014
 POST    /site/keeps/screenshot      @com.keepit.controllers.website.KeepsController.getScreenshotUrl()
 #### Deprecated: Used by Android and iOS now, should be dropped by Nov 1, 2014 when both will use the new /m/1/eliza/notifications endpoint
 POST    /site/keeps/imageUrls       @com.keepit.controllers.website.KeepsController.getImageUrls()
 
-POST    /site/keeps/unkeep          @com.keepit.controllers.website.KeepsController.unkeepBulk()
-POST    /site/keeps/rekeep          @com.keepit.controllers.website.KeepsController.rekeepBulk()
-POST    /site/keeps/public          @com.keepit.controllers.website.KeepsController.makePublicBulk()
-POST    /site/keeps/private         @com.keepit.controllers.website.KeepsController.makePrivateBulk()
 POST    /site/keeps/tag             @com.keepit.controllers.website.KeepsController.tagKeepBulk()
 POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsController.untagKeepBulk()
 
