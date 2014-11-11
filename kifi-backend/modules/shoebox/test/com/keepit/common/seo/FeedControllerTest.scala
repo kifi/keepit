@@ -93,7 +93,7 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
   }
 
   "FeedController" should {
-    "supports new library feed" in {
+    "supports new libraries feed" in {
       withDb(modules: _*) { implicit injector =>
         val (u1, u2, lib1, lib2, lib3) = setup()
         val path = com.keepit.controllers.website.routes.FeedController.getNewLibraries().toString()
@@ -111,6 +111,27 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
         val items = (elem \\ "item")
         items.size === 3
         (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${Library.formatLibraryPath(u2.username, u2.externalId, lib3.slug)}"
+
+      }
+    }
+    "supports top libraries feed" in {
+      withDb(modules: _*) { implicit injector =>
+        val (u1, u2, lib1, lib2, lib3) = setup()
+        val path = com.keepit.controllers.website.routes.FeedController.getTopLibraries().toString()
+        path === "/feeds/libraries/top"
+
+        val feedController = inject[FeedController]
+        val request = FakeRequest("GET", path)
+        val result = feedController.getTopLibraries()(request)
+        status(result) === OK
+        contentType(result) === Some("application/rss+xml")
+        val stringResult = contentAsString(result)
+        val elem = XML.loadString(stringResult)
+        val channel = (elem \ "channel")
+        (channel \ "link").text.trim === s"http://dev.ezkeep.com:9000$path"
+        val items = (elem \\ "item")
+        items.size === 1
+        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${Library.formatLibraryPath(u1.username, u1.externalId, lib1.slug)}"
 
       }
     }
