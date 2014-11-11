@@ -1,19 +1,19 @@
-package com.keepit.controllers.admin
+package com.keepit.controllers.website
 
+import play.api.mvc._
 import com.google.inject.Inject
-import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
+import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.seo.SiteMapGenerator
 import play.api.libs.concurrent.Execution.Implicits._
 
-class AdminSiteMapController @Inject() (
+class SiteMapController @Inject() (
     airbrake: AirbrakeNotifier,
     val userActionsHelper: UserActionsHelper,
     generator: SiteMapGenerator) extends AdminUserActions {
 
-  // expensive
-  def generate() = AdminUserPage.async { implicit request =>
-    generator.generate() map { elem =>
+  def sitemap() = Action.async { implicit request =>
+    generator.intern() map { elem =>
       Ok(elem).withHeaders("Content-Type" -> "text/xml")
     }
   }

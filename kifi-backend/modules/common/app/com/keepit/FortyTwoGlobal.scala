@@ -32,7 +32,7 @@ import com.keepit.common.shutdown.ShutdownCommander
 import java.util.concurrent.atomic.AtomicLong
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
-    extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
+    extends WithFilters(new LoggingFilter()) with Logging with EmptyInjector {
 
   //used to identify instance of application. used to debug in test mode
   val globalId: ExternalId[FortyTwoGlobal] = ExternalId()

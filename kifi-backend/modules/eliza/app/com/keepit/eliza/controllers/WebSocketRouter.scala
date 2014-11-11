@@ -64,12 +64,12 @@ class WebSocketRouterImpl @Inject() (
         val createdAt = Json.fromJson[DateTime](msg(2) \ "createdAt")(DateTimeJsonFormat).get
         val now = currentDateTime
         val diff = now.getMillis - createdAt.getMillis
-        statsd.timing(s"websocket.delivery.$tag.message", diff, ALWAYS)
+        statsd.timing(s"websocket.delivery.$tag.message", diff, ONE_IN_TEN_THOUSAND)
       } else if (msg(0).as[String] == "notification") {
         val createdAt = Json.fromJson[DateTime](msg(1) \ "time").get
         val now = currentDateTime
         val diff = now.getMillis - createdAt.getMillis
-        statsd.timing(s"websocket.delivery.$tag.notice", diff, ALWAYS)
+        statsd.timing(s"websocket.delivery.$tag.notice", diff, ONE_IN_TEN_THOUSAND)
       }
     } catch {
       case ex: Throwable => log.warn(s"Error with statsd tacking: $ex")

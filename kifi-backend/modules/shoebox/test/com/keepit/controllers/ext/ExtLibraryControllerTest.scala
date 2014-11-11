@@ -21,7 +21,7 @@ import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
-import play.api.libs.json.{ Json, JsObject }
+import play.api.libs.json.{ Json, JsObject, JsNull }
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -141,7 +141,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "visibility" -> "secret",
           "owner" -> BasicUser.fromUser(user1),
           "keeps" -> 0,
-          "followers" -> 0)
+          "followers" -> 0,
+          "following" -> JsNull)
 
         status(getLibrary(user2, lib2PubId)) === OK
 

@@ -50,6 +50,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
+  def latestKeepInLibrary(libraryId: Id[Library])(implicit session: RSession): Option[DateTime]
 }
 
 @Singleton
@@ -437,5 +438,10 @@ class KeepRepoImpl @Inject() (
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
     import StaticQuery.interpolation
     sql"""select b.library_id, count(*) as cnt from bookmark b, library l where l.id = b.library_id and l.state='active' and l.visibility='published' and b.created_at > $since group by b.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
+  }
+
+  def latestKeepInLibrary(libraryId: Id[Library])(implicit session: RSession): Option[DateTime] = {
+    import StaticQuery.interpolation
+    sql"""select max(created_at) as cnt from bookmark where library_id = $libraryId and state='active'""".as[DateTime].firstOption
   }
 }

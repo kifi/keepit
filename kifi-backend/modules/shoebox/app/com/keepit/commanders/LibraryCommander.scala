@@ -169,16 +169,16 @@ class LibraryCommander @Inject() (
     (libInfo, accessStr)
   }
 
-  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Int)] = {
+  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Int, Option[Boolean])] = {
     db.readOnlyReplica { implicit s =>
       val library = libraryRepo.get(libraryId)
-      if (library.visibility == LibraryVisibility.PUBLISHED ||
-        library.ownerId == viewerUserId ||
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId).isDefined) {
+      val mine = library.ownerId == viewerUserId
+      val following = if (mine) None else Some(libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId).isDefined)
+      if (library.visibility == LibraryVisibility.PUBLISHED || mine || following.get) {
         val owner = basicUserRepo.load(library.ownerId)
         val keepCount = keepRepo.getCountByLibrary(library.id.get)
         val followerCount = libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).apply(LibraryAccess.READ_ONLY)
-        Right(library, owner, keepCount, followerCount)
+        Right(library, owner, keepCount, followerCount, following)
       } else {
         Left(LibraryFail(FORBIDDEN, "library_access_denied"))
       }
@@ -423,18 +423,43 @@ class LibraryCommander @Inject() (
     if (targetLib.ownerId != userId) {
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
     } else {
-      def validName(name: String): Either[LibraryFail, String] = {
-        if (Library.isValidName(name)) Right(name)
-        else Left(LibraryFail(BAD_REQUEST, "invalid_name"))
+      def validName(newNameOpt: Option[String]): Either[LibraryFail, String] = {
+        newNameOpt match {
+          case None => Right(targetLib.name)
+          case Some(name) =>
+            if (!Library.isValidName(name)) {
+              Left(LibraryFail(BAD_REQUEST, "invalid_name"))
+            } else {
+              db.readOnlyMaster { implicit s =>
+                libraryRepo.getByNameAndUserId(userId, name)
+              } match {
+                case Some(other) if other.id.get != libraryId => Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
+                case _ => Right(name)
+              }
+            }
+        }
       }
-      def validSlug(slug: String): Either[LibraryFail, LibrarySlug] = {
-        if (LibrarySlug.isValidSlug(slug)) Right(LibrarySlug(slug))
-        else Left(LibraryFail(BAD_REQUEST, "invalid_slug"))
+      def validSlug(newSlugOpt: Option[String]): Either[LibraryFail, LibrarySlug] = {
+        newSlugOpt match {
+          case None => Right(targetLib.slug)
+          case Some(slugStr) =>
+            if (!LibrarySlug.isValidSlug(slugStr)) {
+              Left(LibraryFail(BAD_REQUEST, "invalid_slug"))
+            } else {
+              val slug = LibrarySlug(slugStr)
+              db.readOnlyMaster { implicit s =>
+                libraryRepo.getBySlugAndUserId(userId, slug)
+              } match {
+                case Some(other) if other.id.get != libraryId => Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
+                case _ => Right(slug)
+              }
+            }
+        }
       }
 
       val result = for {
-        newName <- validName(name.getOrElse(targetLib.name)).right
-        newSlug <- validSlug(slug.getOrElse(targetLib.slug.value)).right
+        newName <- validName(name).right
+        newSlug <- validSlug(slug).right
       } yield {
         val newDescription: Option[String] = description.orElse(targetLib.description)
         val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
@@ -455,7 +480,7 @@ class LibraryCommander @Inject() (
             libraryAliasRepo.reclaim(ownerId, newSlug)
             libraryAliasRepo.alias(ownerId, targetLib.slug, targetLib.id.get)
           }
-          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription))
+          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, state = LibraryStates.ACTIVE))
         }
       }
       searchClient.updateLibraryIndex()

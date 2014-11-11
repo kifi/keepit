@@ -251,6 +251,7 @@ GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.Mobil
 ##########################################
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
+GET     /robots.txt                 @com.keepit.controllers.website.HomeController.robots
 GET     /blog                       @com.keepit.controllers.website.HomeController.moved(uri = "http://blog.kifi.com")
 GET     /blog/                      @com.keepit.controllers.website.HomeController.moved(uri = "http://blog.kifi.com")
 GET     /about                      @com.keepit.controllers.website.HomeController.route(path = "about")
@@ -302,6 +303,8 @@ GET     /feeds/libraries/top        @com.keepit.controllers.website.LibraryContr
 ##########################################
 
 POST    /site/events                @com.keepit.controllers.tracking.EventProxyController.track()
+
+GET     /assets/sitemap.xml         @com.keepit.controllers.website.SiteMapController.sitemap()
 
 GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple(separateExisting: Boolean ?= false)

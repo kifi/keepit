@@ -37,7 +37,6 @@ angular.module('kifi')
 
         scope.editSlug = function () {
           scope.emptySlug = !scope.library.slug;
-          scope.library.slug = util.generateSlug(scope.library.slug);
           scope.userHasEditedSlug = true;
         };
 
@@ -49,6 +48,10 @@ angular.module('kifi')
           scope.$error.name = libraryService.getLibraryNameError(scope.library.name, scope.modalData && scope.modalData.library.name);
           if (scope.$error.name) {
             return;
+          }
+
+          if (scope.userHasEditedSlug) {
+            scope.library.slug = util.generateSlug(scope.library.slug);
           }
 
           submitting = true;
@@ -78,20 +81,17 @@ angular.module('kifi')
 
             var error = err.data && err.data.error;
             switch (error) {
-              case 'library name already exists for user':  // deprecated
-              case 'library_name_exists':
-                scope.$error.general = 'You already have a library with this name. Pick another.';
-                break;
-              case 'invalid library name':  // deprecated
               case 'invalid_name':
+                scope.$error.general = 'The name you picked isn\'t valid. Try using only letters and numbers.';
+                break;
+              case 'invalid_slug':
+                scope.$error.general = 'The URL you picked isn\'t valid. Try using only letters and numbers.';
+                break;
+              case 'library_name_exists':
                 scope.$error.general = 'You already have a library with this name. Pick another.';
                 break;
               case 'library_slug_exists':
                 scope.$error.general = 'You already have a library with the same URL. Pick another.';
-                break;
-              case 'invalid library slug':  // deprecated
-              case 'invalid_slug':
-                scope.$error.general = 'The URL you picked isn\'t valid. Try using only letters and numbers.';
                 break;
               default:
                 scope.$error.general = 'Hmm, something went wrong. Try again later?';
@@ -114,10 +114,11 @@ angular.module('kifi')
 
           submitting = true;
           libraryService.deleteLibrary(scope.library.id).then(function () {
-            submitting = false;
             $rootScope.$emit('librarySummariesChanged');
             scope.close();
             $location.path('/');
+          })['catch'](modalService.openGenericErrorModal)['finally'](function () {
+            submitting = false;
           });
         };
 

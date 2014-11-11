@@ -40,6 +40,11 @@ case class StatModelDevStoreModule() extends ProdOrElseDevStoreModule(StatModelP
   val dim = 2
   val mapper = Map("scala" -> Array(1f, 0f), "kifi" -> Array(1f, 0f), "food" -> Array(0f, 1f), "recipe" -> Array(0f, 1f))
 
+  val dim2 = 2
+  val mapper2 = Map("ode" -> Array(1f, 0f), "pde" -> Array(1f, 0f), "bayes" -> Array(0f, 1f), "regression" -> Array(0f, 1f))
+
+  val ldas = List(DenseLDA(dim, mapper), DenseLDA(dim2, mapper2))
+
   @Singleton
   @Provides
   def ldaModelStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LDAModelStore = {
@@ -47,9 +52,7 @@ case class StatModelDevStoreModule() extends ProdOrElseDevStoreModule(StatModelP
       prodStoreModule.ldaModelStore(amazonS3Client, accessLog)
     ) getOrElse {
         val store = new InMemoryLDAModelStore
-        val version = ModelVersions.denseLDAVersion
-        val lda = DenseLDA(dim, mapper)
-        store.+=(version, lda)
+        (ModelVersions.availableLDAVersions.take(2) zip ldas).foreach { case (version, lda) => store.+=(version, lda) }
         store
       }
   }
