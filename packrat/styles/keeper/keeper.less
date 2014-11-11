@@ -442,9 +442,6 @@
     bottom: 2px;
     right: 2px;
   }
-  .kifi-hidden>& {
-    transition-delay: 0;
-  }
   // &:active,
   // &.kifi-at {
   //   background-color: blue;
@@ -475,6 +472,7 @@
   .kifi-hidden>& {
     -webkit-transform: rotate(30deg) scale(.8);
     transform: rotate(30deg) scale(.8);
+    transition-delay: 0s;
   }
 }
 .kifi-dock-messages {
@@ -502,6 +500,7 @@
   .kifi-hidden>& {
     -webkit-transform: rotate(20deg) scale(.8);
     transform: rotate(20deg) scale(.8);
+    transition-delay: 0s;
   }
 }
 .kifi-dock-compose {
@@ -529,6 +528,7 @@
   .kifi-hidden>& {
     -webkit-transform: rotate(10deg) scale(.8);
     transform: rotate(10deg) scale(.8);
+    transition-delay: 0s;
   }
 }
 .kifi-dock-messages>.kifi-count {
