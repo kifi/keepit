@@ -297,7 +297,8 @@ POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureCo
 ##########################################
 # Feeds (RSS)
 ##########################################
-GET     /feeds/libraries/top        @com.keepit.controllers.website.LibraryController.getTopLibraries()
+GET     /feeds/libraries/top        @com.keepit.controllers.website.FeedController.getTopLibraries()
+GET     /feeds/libraries/new        @com.keepit.controllers.website.FeedController.getNewLibraries()
 
 ##########################################
 # Web API
