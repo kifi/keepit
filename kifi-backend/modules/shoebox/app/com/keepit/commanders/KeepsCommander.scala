@@ -487,19 +487,6 @@ class KeepsCommander @Inject() (
     deactivatedKeepInfos
   }
 
-  def unkeepBatch(ids: Seq[ExternalId[Keep]], userId: Id[User])(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[ExternalId[Keep]]) = {
-    val (keeps, failures) = db.readWrite { implicit s =>
-      val keepMap = ids map { id =>
-        id -> keepRepo.getByExtIdAndUser(id, userId)
-      }
-      val (successes, failures) = keepMap.partition(_._2.nonEmpty)
-      val keeps = successes.map(_._2).flatten.map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
-      (keeps, failures.map(_._1))
-    }
-    finalizeUnkeeping(keeps, userId)
-    (keeps map KeepInfo.fromKeep, failures)
-  }
-
   def unkeep(extId: ExternalId[Keep], userId: Id[User])(implicit context: HeimdalContext): Option[KeepInfo] = {
     db.readWrite { implicit session =>
       keepRepo.getByExtIdAndUser(extId, userId).map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))

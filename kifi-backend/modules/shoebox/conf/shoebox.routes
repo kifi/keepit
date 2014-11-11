@@ -163,14 +163,9 @@ GET     /m/1/user/friends/recommended       @com.keepit.controllers.mobile.Mobil
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.MobilePageController.queryExtension(page: Int ?= 0, pageSize: Int ?= 1000)
 
-## Deprecated
 POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileKeepsController.keepMultiple()
-POST    /m/2/keeps/add                      @com.keepit.controllers.mobile.MobileKeepsController.addKeeps()
 POST    /m/1/keeps/addWithTags              @com.keepit.controllers.mobile.MobileKeepsController.addKeepWithTags()
-
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileKeepsController.unkeepMultiple()
-POST    /m/1/keeps/delete                   @com.keepit.controllers.mobile.MobileKeepsController.unkeepBatch()
-POST    /m/1/keeps/:id/delete               @com.keepit.controllers.mobile.MobileKeepsController.unkeep(id: ExternalId[Keep])
 
 #Used by both Android and iOS
 POST    /m/1/keeps/imageUrl                 @com.keepit.controllers.mobile.MobileKeepsController.getImageUrl()
