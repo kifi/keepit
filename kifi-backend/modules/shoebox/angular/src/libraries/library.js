@@ -4,21 +4,20 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
-  'modalService', 'profileService', 'util', '$window', '$analytics',
+  'modalService', 'profileService', 'util', '$window', '$analytics', 'librarySearch',
   function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
-            modalService, profileService, util, $window, $analytics) {
+            modalService, profileService, util, $window, $analytics, librarySearch) {
     //
     // Internal data.
     //
     var selectedCount = 0;
     var prePopulated = false;
-    var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
-    //                   ↑↑↑ use this one ↑↑↑
+    var authToken = $location.search().authToken || '';
+
 
     //
     // Internal functions
     //
-
     function trackPageView(attributes) {
       var url = $analytics.settings.pageTracking.basePath + $location.url();
       var library = $scope.library;
@@ -36,6 +35,7 @@ angular.module('kifi')
     //
     // Scope data.
     //
+    $scope.librarySearch = librarySearch;
     $scope.username = $routeParams.username;
     $scope.librarySlug = $routeParams.librarySlug;
     $scope.keeps = [];

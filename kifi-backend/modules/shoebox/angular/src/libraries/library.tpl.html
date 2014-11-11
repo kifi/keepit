@@ -1,7 +1,7 @@
 <div>
   <!-- Library page -->
   <div class="kf-main-library-keeps" ng-if="page === 'library'">
-    <div class="kf-library-card-header">
+    <div ng-hide="librarySearch && $root.userLoggedIn" class="kf-library-card-header">
       <div kf-library-card
         library="library"
         username="username"
@@ -12,33 +12,39 @@
       ></div>
       <div class="white-background"></div>
     </div>
-    <div class="kf-empty-state" ng-if="keeps.length === 0 && userIsOwner()" ng-show="!loading">
-      You don't have any keeps in this Library yet. You can:
-      <ul>
-        <li><a href="javascript:" ng-click="callAddKeep()"><span class="sprite sprite-add-link"></span>Add any page by pasting the URL here</a></li>
-        <li><a href="javascript:" ng-click="callImportBookmarks()"><span class="sprite sprite-import-bookmarks-icon"></span>Import your bookmarks from your browser</a></li>
-        <li><a href="javascript:" ng-click="callImportBookmarkFile()"><span class="sprite sprite-import-from-other-services-icon"></span>Import links from sites like Delicious, Pocket, Pinboard</a></li>
-        <li kf-max-version><a href="javascript:" ng-click="callTriggerInstall()"><span class="sprite sprite-install-extension-icon"></span>Install our browser extension on Chrome and Firefox</a></li>
-      </ul>
-    </div>
-    <div class="kf-empty-state" ng-if="keeps.length === 0 && !userIsOwner()" ng-show="!loading">
-      <p class="public-library-empty-explain">{{library.owner.firstName || 'The curator'}} hasn't added anything to this library yet.</p>
-      <p class="public-library-empty-explain" ng-hide="$root.userLoggedIn">Want to create and share your own libraries? <a href="/signup">Sign up</a> to join the Kifi family.</p>
+
+    <div ng-if="!librarySearch">
+      <div class="kf-empty-state" ng-if="keeps.length === 0 && userIsOwner()" ng-show="!loading">
+        You don't have any keeps in this Library yet. You can:
+        <ul>
+          <li><a href="javascript:" ng-click="callAddKeep()"><span class="sprite sprite-add-link"></span>Add any page by pasting the URL here</a></li>
+          <li><a href="javascript:" ng-click="callImportBookmarks()"><span class="sprite sprite-import-bookmarks-icon"></span>Import your bookmarks from your browser</a></li>
+          <li><a href="javascript:" ng-click="callImportBookmarkFile()"><span class="sprite sprite-import-from-other-services-icon"></span>Import links from sites like Delicious, Pocket, Pinboard</a></li>
+          <li kf-max-version><a href="javascript:" ng-click="callTriggerInstall()"><span class="sprite sprite-install-extension-icon"></span>Install our browser extension on Chrome and Firefox</a></li>
+        </ul>
+      </div>
+
+      <div class="kf-empty-state" ng-if="keeps.length === 0 && !userIsOwner()" ng-show="!loading">
+        <p class="public-library-empty-explain">{{library.owner.firstName || 'The curator'}} hasn't added anything to this library yet.</p>
+        <p class="public-library-empty-explain" ng-hide="$root.userLoggedIn">Want to create and share your own libraries? <a href="/signup">Sign up</a> to join the Kifi family.</p>
+      </div>
+
+      <div kf-keeps
+        library="library"
+        keeps="keeps"
+        keeps-loading="loading"
+        keeps-has-more="hasMore"
+        scroll-disabled="!hasMore"
+        scroll-distance="scrollDistance"
+        scroll-next="getNextKeeps"
+        edit-mode="editMode"
+        toggle-edit="toggleEdit"
+        update-selected-count="updateSelectedCount(numSelected)"
+        keep-click="libaryKeepClicked"
+      ></div>
     </div>
 
-    <div kf-keeps
-      library="library"
-      keeps="keeps"
-      keeps-loading="loading"
-      keeps-has-more="hasMore"
-      scroll-disabled="!hasMore"
-      scroll-distance="scrollDistance"
-      scroll-next="getNextKeeps"
-      edit-mode="editMode"
-      toggle-edit="toggleEdit"
-      update-selected-count="updateSelectedCount(numSelected)"
-      keep-click="libaryKeepClicked"
-    ></div>
+    <div ng-if="librarySearch" ng-include="'search/search.tpl.html'" ng-controller="SearchCtrl"></div>
   </div>
 
 

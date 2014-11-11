@@ -23,8 +23,8 @@ angular.module('kifi')
         //
         // Internal data.
         //
-        var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
-        //                   ↑↑↑ use this one ↑↑↑
+        var authToken = $location.search().authToken || '';
+
 
         //
         // Scope data.
