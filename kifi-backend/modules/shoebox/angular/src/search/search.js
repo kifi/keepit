@@ -10,6 +10,8 @@ angular.module('kifi')
     //
     var query;
     var filter;
+    var userName;
+    var librarySlug;
     var library;
     var lastResult = null;
     var selectedCount = 0;
@@ -42,8 +44,11 @@ angular.module('kifi')
     }
 
     function init() {
-      var userName = $routeParams.username || '';
-      var librarySlug = $routeParams.librarySlug || '';
+      query = $routeParams.q || '';
+      filter = $routeParams.f || 'a';
+      userName = $routeParams.username || '';
+      librarySlug = $routeParams.librarySlug || '';
+
       var libraryIdPromise = null;
 
       if (userName && librarySlug) {
@@ -57,8 +62,7 @@ angular.module('kifi')
 
       libraryIdPromise.then(function (libraryId) {
         library = libraryId;
-        query = $routeParams.q || '';
-        filter = $routeParams.f || 'a';
+
 
         if (!query) { // No query or blank query.
           $location.path('/');
@@ -154,7 +158,8 @@ angular.module('kifi')
       if ($scope.isEnabled(type)) {
         var count = getFilterCount(type);
         if (count) {
-          return '/find?q=' + query + '&f=' + type + (library?('&l=' + library):'');
+          var userNameSlug = (userName && librarySlug) ? '/' + userName + '/' + librarySlug : '';
+          return userNameSlug + '/find?q=' + query + '&f=' + type;
         }
       }
       return '';
