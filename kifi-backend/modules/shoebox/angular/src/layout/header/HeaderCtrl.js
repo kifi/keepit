@@ -60,8 +60,8 @@ angular.module('kifi')
     });
 
 
-    var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function () {
-      $scope.addKeeps();
+    var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function (e, library) {
+      $scope.addKeeps(library);
     });
     $scope.$on('$destroy', deregisterAddKeep);
 
@@ -141,9 +141,10 @@ angular.module('kifi')
       profileService.logout();
     };
 
-    $scope.addKeeps = function () {
+    $scope.addKeeps = function (library) {
       modalService.open({
-        template: 'keeps/addKeepsModal.tpl.html'
+        template: 'keeps/addKeepsModal.tpl.html',
+        modalData: { currentLib : library }
       });
     };
 
