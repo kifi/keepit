@@ -121,7 +121,7 @@ angular.module('kifi')
       $scope.loading = true;
       var searchedQuery = query;
 
-      searchActionService.find(query, filter, library, lastResult && lastResult.context).then(function (result) {
+      searchActionService.find(query, filter, library, lastResult && lastResult.context, $rootScope.userLoggedIn).then(function (result) {
         if (searchedQuery !== query) { // query was updated
           return;
         }

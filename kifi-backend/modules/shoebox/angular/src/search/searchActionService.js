@@ -30,50 +30,58 @@ angular.module('kifi')
       return JSON.parse(JSON.stringify(obj));
     }
 
-    function decompressHit(hit, users, libraries) {
+    function decompressHit(hit, users, libraries, userLoggedIn) {
       var decompressedKeepers = [];
       var decompressedLibraries = [];
-      var myLibraries = [];
+      var myLibraries = [];  // myLibraries doesn't seem to be used anywhere.
       var libUsers = {};
+
       hit.isMyBookmark = false;
       hit.keepers = hit.keepers || [];
       hit.libraries = hit.libraries || [];
 
-      for (var i=0; i<hit.libraries.length; i=i+2) {
+      for (var i = 0; i < hit.libraries.length; i = i + 2) {
         var idxLib = hit.libraries[i];
-        var idxUser = hit.libraries[i+1];
+        var idxUser = hit.libraries[i + 1];
         var lib = libraries[idxLib];
         var user;
+
         if (idxUser !== -1) {
           user = users[idxUser];
           lib.keeperPic = friendService.getPictureUrlForUser(user);
           lib.owner = user;
           decompressedLibraries.push(lib);
           libUsers[idxUser] = true;
-        } else {
+        }
+
+        else if (userLoggedIn) {
           user = profileService.me;
           lib.keeperPic = friendService.getPictureUrlForUser(user);
           lib.owner = user;
+
           if (!libraryService.isSystemLibrary(lib.id)) {
             decompressedLibraries.push(lib);
           }
+
           myLibraries.push(lib);
         }
       }
 
-      hit.keepers.forEach( function (keeperIdx) {
-        if (keeperIdx === -1) {
-          hit.isMyBookmark = true;
-        } else {
-          if (!libUsers[keeperIdx]){
-            decompressedKeepers.push(users[keeperIdx]);
+      if (userLoggedIn) {
+        hit.keepers.forEach(function (keeperIdx) {
+          if (keeperIdx === -1) {
+            hit.isMyBookmark = true;
           } else {
-            var user = copy(users[keeperIdx]);
-            user.hidden = true;
-            decompressedKeepers.push(user);
+            if (!libUsers[keeperIdx]){
+              decompressedKeepers.push(users[keeperIdx]);
+            } else {
+              var user = copy(users[keeperIdx]);
+              user.hidden = true;
+              decompressedKeepers.push(user);
+            }
           }
-        }
-      });
+        });
+      }
 
       hit.keepers = decompressedKeepers;
       hit.libraries = decompressedLibraries;
@@ -123,7 +131,7 @@ angular.module('kifi')
     //
     // Exposed API methods.
     //
-    function find(query, filter, library, context) {
+    function find(query, filter, library, context, userLoggedIn) {
       var url = routeService.search,
         reqData = {
           params: {
@@ -139,7 +147,7 @@ angular.module('kifi')
       //$log.log('searchActionService.find() req', reqData);
 
       var searchActionPromise = $http.get(url, reqData);
-      var librarySummariesPromise = libraryService.fetchLibrarySummaries(false);
+      var librarySummariesPromise = userLoggedIn ? libraryService.fetchLibrarySummaries(false) : true;
       var resultsFetched = $q.all([librarySummariesPromise, searchActionPromise]);
 
       // ensures that the libraries have been loaded before the hits are decompressed
@@ -151,8 +159,9 @@ angular.module('kifi')
 
         var hits = resData.hits || [];
         _.forEach(hits, function (hit) {
-          decompressHit(hit, resData.users, resData.libraries);
+          decompressHit(hit, resData.users, resData.libraries, userLoggedIn);
         });
+
         _.forEach(hits, processHit);
 
         $analytics.eventTrack('user_clicked_page', {
