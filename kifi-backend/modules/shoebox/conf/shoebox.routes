@@ -614,9 +614,6 @@ GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheCont
 GET     /admin/cache/clearLocalCaches          @com.keepit.controllers.admin.AdminCacheController.clearLocalCaches(service: String ?= "all", prefix: String ?= "")
 GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocketController.serviceView
 
-GET     /admin/electronicMails       @com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
-GET     /admin/electronicMails/:page @com.keepit.controllers.admin.ElectronicMailController.electronicMailsView(page: Int)
-
 GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])
 GET     /admin/searchConfig/:id/reset @com.keepit.controllers.admin.AdminSearchConfigController.resetUserConfig(id: Id[User])
