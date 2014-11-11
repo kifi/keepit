@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
-  'modalService', 'profileService', 'util', '$window', '$analytics',
+  'modalService', 'profileService', 'util', '$window', '$analytics', 'librarySearch',
   function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
-            modalService, profileService, util, $window, $analytics) {
+            modalService, profileService, util, $window, $analytics, librarySearch) {
     //
     // Internal data.
     //
@@ -35,6 +35,7 @@ angular.module('kifi')
     //
     // Scope data.
     //
+    $scope.librarySearch = librarySearch;
     $scope.username = $routeParams.username;
     $scope.librarySlug = $routeParams.librarySlug;
     $scope.keeps = [];
