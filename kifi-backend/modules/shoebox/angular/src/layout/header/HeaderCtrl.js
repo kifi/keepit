@@ -110,6 +110,7 @@ angular.module('kifi')
 
     $scope.clearInput = function () {
       $scope.search.text = '';
+      $scope.changeSearchInput();
     };
 
     var KEY_ESC = 27, KEY_DEL = 8;
