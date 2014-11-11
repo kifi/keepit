@@ -37,6 +37,7 @@ object UserAgent extends Logging {
   private val MAX_USER_AGENT_LENGTH = 512
   lazy val parser = UADetectorServiceFactory.getResourceModuleParser()
   lazy val iosAppRe = """^(iKeefee)/(\d+\.\d+)(\.\d+) \(Device-Type: (.+), OS: (iOS) (.+)\)$""".r("appName", "appVersion", "buildSuffix", "device", "os", "osVersion")
+  lazy val iosAppDeviceRe = """^(Kifi)\/\d+\sCFNetwork\/.+""".r("appName")
   lazy val androidAppRe = """(\w+)\/\d+\.\d+\.\d+ \(.+(Android) (\d+\.\d+\.\d+); (.+?) Build\/.+\)""".r("appName", "os", "osVersion", "device")
 
   private def normalize(str: String): String = if (str == "unknown") "" else str
@@ -53,6 +54,8 @@ object UserAgent extends Logging {
       case "" => UnknownUserAgent
       case iosAppRe(appName, appVersion, buildSuffix, device, os, osVersion) =>
         UserAgent(trimmed, appName, os, device, false, KifiIphoneAppTypeName, appVersion)
+      case iosAppDeviceRe(appName) =>
+        UserAgent(trimmed, appName, "iOS", "iOS", false, KifiIphoneAppTypeName, "unknown")
       case androidAppRe(appName, os, osVersion, device) =>
         UserAgent(trimmed, appName, os, os, false, typeName = "Android", version = "unknown")
       case _ =>
