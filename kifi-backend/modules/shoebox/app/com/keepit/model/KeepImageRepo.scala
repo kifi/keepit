@@ -9,6 +9,7 @@ import com.keepit.common.time.Clock
 trait KeepImageRepo extends Repo[KeepImage] {
   def getForKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[KeepImage]
   def getAllForKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[KeepImage]
+  def getAllForKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Seq[KeepImage]
   def getBySourceHash(hash: ImageHash)(implicit session: RSession): Seq[KeepImage]
 }
 
@@ -61,6 +62,10 @@ class KeepImageRepoImpl @Inject() (
   }
   def getAllForKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[KeepImage] = {
     getAllForKeepIdCompiled(keepId).list
+  }
+
+  def getAllForKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Seq[KeepImage] = {
+    (for (r <- rows if r.keepId.inSet(keepIds)) yield r).list
   }
 
   private val getBySourceHashCompiled = Compiled { hash: Column[ImageHash] =>
