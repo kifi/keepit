@@ -135,7 +135,7 @@ class BookmarkImporter @Inject() (
         val tags = Option(elem.attr("tags")).getOrElse("")
 
         val tagList = (lists + tags).split(",").map(_.trim).filter(_.nonEmpty).toList
-        val createdDate = Option(elem.attr("add_date")).map(x => new DateTime(x.toLong))
+        val createdDate: Option[DateTime] = Option(elem.attr("add_date")).map(x => Try(new DateTime(x.toLong)).toOption).flatten
 
         // This may be useful in the future, but we currently are not using them:
 
