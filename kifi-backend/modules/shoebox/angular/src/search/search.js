@@ -13,7 +13,7 @@ angular.module('kifi')
     var library;
     var lastResult = null;
     var selectedCount = 0;
-    var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
+    var authToken = $location.search().authToken || '';
 
 
     //

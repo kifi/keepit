@@ -12,8 +12,7 @@ angular.module('kifi')
     //
     var selectedCount = 0;
     var prePopulated = false;
-    var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
-    //                   ↑↑↑ use this one ↑↑↑
+    var authToken = $location.search().authToken || '';
 
 
     //
