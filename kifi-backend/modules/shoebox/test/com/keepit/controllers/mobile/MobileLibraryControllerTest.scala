@@ -59,10 +59,10 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           val lib1 = libraryRepo.save(Library(ownerId = userA.id.get, name = "Lib1", slug = LibrarySlug("lib1"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = userA.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = userB.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = userC.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
-          libraryInviteRepo.save(LibraryInvite(inviterId = userB.id.get, libraryId = lib1.id.get, userId = Some(userD.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
-          libraryInviteRepo.save(LibraryInvite(inviterId = userB.id.get, libraryId = lib1.id.get, emailAddress = Some(EmailAddress("earon@gmail.com")), access = LibraryAccess.READ_ONLY, createdAt = t1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = userB.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, createdAt = t1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = userC.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, createdAt = t1.plusMinutes(2)))
+          libraryInviteRepo.save(LibraryInvite(inviterId = userB.id.get, libraryId = lib1.id.get, userId = Some(userD.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1.plusMinutes(4)))
+          libraryInviteRepo.save(LibraryInvite(inviterId = userB.id.get, libraryId = lib1.id.get, emailAddress = Some(EmailAddress("earon@gmail.com")), access = LibraryAccess.READ_ONLY, createdAt = t1.plusMinutes(6)))
 
           (userA, userB, userC, userD, lib1)
         }
@@ -106,12 +106,12 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                  |"lastName":"H",
                  |"pictureName":"0.jpg","username":"test",
                  |"membership":"read_only",
-                 |"lastInvitedAt":${Json.toJson(t1)}
+                 |"lastInvitedAt":${Json.toJson(t1.plusMinutes(4))}
                 |},
                 |{
                   |"email":"earon@gmail.com",
                   |"membership":"read_only",
-                  |"lastInvitedAt":${Json.toJson(t1)}
+                  |"lastInvitedAt":${Json.toJson(t1.plusMinutes(6))}
                 |}
              |]
            |}""".stripMargin
