@@ -70,7 +70,6 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  @deprecated(message = "use addKeeps instead", since = "2014-03-28")
   def keepMultiple() = UserAction(parse.tolerantJson) { request =>
     val fromJson = request.body.as[RawBookmarksWithCollection]
     val source = KeepSource.mobile
@@ -87,25 +86,6 @@ class MobileKeepsController @Inject() (
     val (keeps, addedToCollection, _, _) = keepsCommander.keepMultiple(fromJson.keeps, libraryId, request.userId, source, fromJson.collection)
     Ok(Json.obj(
       "keeps" -> keeps,
-      "addedToCollection" -> addedToCollection
-    ))
-  }
-
-  def addKeeps() = UserAction(parse.tolerantJson) { request =>
-    val fromJson = request.body.as[RawBookmarksWithCollection]
-    val source = KeepSource.mobile
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    val libraryId = {
-      db.readWrite { implicit session =>
-        val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(request.userId)
-        fromJson.keeps.headOption.flatMap(_.isPrivate).map { priv =>
-          if (priv) secret.id.get else main.id.get
-        }.getOrElse(main.id.get)
-      }
-    }
-    val (keeps, addedToCollection, _, _) = keepsCommander.keepMultiple(fromJson.keeps, libraryId, request.userId, source, fromJson.collection)
-    Ok(Json.obj(
-      "keepCount" -> keeps.size,
       "addedToCollection" -> addedToCollection
     ))
   }
@@ -138,30 +118,6 @@ class MobileKeepsController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     request.body.asJson.flatMap(Json.fromJson[Seq[RawBookmarkRepresentation]](_).asOpt) map { rawBookmarks =>
       Ok(Json.obj("removedKeeps" -> keepsCommander.unkeepMultiple(rawBookmarks, request.userId)))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "parse_error"))
-    }
-  }
-
-  def unkeep(id: ExternalId[Keep]) = UserAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    keepsCommander.unkeep(id, request.userId) map { ki =>
-      Ok(Json.toJson(ki))
-    } getOrElse {
-      NotFound(Json.obj("error" -> "not_found"))
-    }
-  }
-
-  def unkeepBatch() = UserAction(parse.tolerantJson) { request =>
-    implicit val keepFormat = ExternalId.format[Keep]
-    val idsOpt = (request.body \ "ids").asOpt[Seq[ExternalId[Keep]]]
-    idsOpt map { ids =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-      val (successes, failures) = keepsCommander.unkeepBatch(ids, request.userId)
-      Ok(Json.obj(
-        "removedKeeps" -> successes,
-        "errors" -> failures.map(id => Json.obj("id" -> id, "error" -> "not_found"))
-      ))
     } getOrElse {
       BadRequest(Json.obj("error" -> "parse_error"))
     }
