@@ -161,6 +161,14 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregisterTrackLibraryEvent);
 
+    var deregisterUpdateLibrarySearch = $rootScope.$on('librarySearchChanged', function (e, librarySearch) {
+      debugger;
+      $scope.librarySearch = librarySearch;
+    });
+    $scope.$on('$destroy', deregisterUpdateLibrarySearch);
+
+
+    // TODO(yiping): move these to appropripate place and make sure that the title is working.
     $scope.libaryKeepClicked = function (keep, event) {
       var target = event.target;
       var eventAction = target.getAttribute('click-action');

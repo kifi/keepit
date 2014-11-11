@@ -2,11 +2,26 @@
 
 angular.module('kifi')
 
+.factory('locationNoReload', ['$location', '$route', '$rootScope',
+  function ($location, $route, $rootScope) {
+    $location.skipReload = function () {
+      var lastRoute = $route.current;
+      var un = $rootScope.$on('$locationChangeSuccess', function () {
+        $route.current = lastRoute;
+        un();
+      });
+
+      return $location;
+    };
+
+    return $location;
+}])
+
 .directive('kfLibraryCard', [
   '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'platformService', 'signupService', '$twitter', '$timeout',
+  'profileService', 'platformService', 'signupService', '$twitter', '$timeout', '$routeParams', 'locationNoReload',
   function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
-      profileService, platformService, signupService, $twitter, $timeout) {
+      profileService, platformService, signupService, $twitter, $timeout, $routeParams, locationNoReload) {
     return {
       restrict: 'A',
       replace: true,
@@ -34,6 +49,7 @@ angular.module('kifi')
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
         scope.editKeepsText = 'Edit Keeps';
+        scope.search = { 'text': $routeParams.q || '' };
 
         var magicImages = {
           'l7SZ3gr3kUQJ': '//djty7jcqog9qu.cloudfront.net/special-libs/l7SZ3gr3kUQJ.png',
@@ -341,8 +357,33 @@ angular.module('kifi')
               }
             });
           }
-
         };
+
+        scope.onSearchInputChange = _.debounce(function (query) {
+          var prevQuery = '';
+
+          $timeout(function () {
+            if (query) {
+              locationNoReload.skipReload().url(scope.library.url + '/find?q=' + query + '&f=a');
+
+              if (!prevQuery) {
+                $timeout(function () {
+                  $rootScope.$emit('librarySearchChanged', true);
+                });
+              }
+            } else {
+              locationNoReload.skipReload().url(scope.library.url);
+
+              $timeout(function () {
+                $rootScope.$emit('librarySearchChanged', false);
+              });
+            }
+
+            prevQuery = query;
+          });
+        }, 100, {
+          'leading': true
+        });
 
         //
         // Watches and listeners.
