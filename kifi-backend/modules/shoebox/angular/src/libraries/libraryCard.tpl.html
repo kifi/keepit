@@ -76,7 +76,7 @@
       </div>
     </div>
   </div>
-  <img ng-if="magicImage" class="kf-keep-lib-image" ng-src="{{magicImage}}">
+  <img ng-if="magicImage" class="kf-keep-lib-image" ng-src="{{magicImage}}" alt="{{library.name}}">
   <div class="kf-keep-footer clearfix">
     <button ng-if="isMyLibrary(library) && isUserLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right library-button-with-icon" ng-click="manageLibrary()">
       <span class="kf-keep-lib-footer-button-icon svg-pen"></span>Manage Library
