@@ -117,6 +117,7 @@ private[commanders] class NotificationJsonMaker @Inject() (
     shoebox.getUriSummary(
       URISummaryRequest(
         url = url,
+        uriId = Some(uriId),
         imageType = ImageType.IMAGE,
         minSize = ImageSize(65, 95),
         withDescription = false,

@@ -167,9 +167,6 @@ POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.Mobil
 POST    /m/1/keeps/addWithTags              @com.keepit.controllers.mobile.MobileKeepsController.addKeepWithTags()
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileKeepsController.unkeepMultiple()
 
-#Used by both Android and iOS
-POST    /m/1/keeps/imageUrl                 @com.keepit.controllers.mobile.MobileKeepsController.getImageUrl()
-
 GET     /m/1/keeps/count                    @com.keepit.controllers.mobile.MobileKeepsController.numKeeps()
 
 
@@ -220,8 +217,6 @@ POST    /m/1/user/:id/exclude                   @com.keepit.controllers.mobile.M
 
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
-
-GET     /m/1/discover/                          @com.keepit.controllers.mobile.MobileDiscoveryController.discover(withPageInfo: Boolean ?= true, limit: Int ?= -1)
 
 GET     /m/1/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecos(more: Boolean, recency: Float)
 GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
@@ -312,7 +307,6 @@ POST    /site/keeps/:id/update      @com.keepit.controllers.website.KeepsControl
 #### Deprecated: Used by Android now, should be dropped by Nov 1, 2014
 POST    /site/keeps/screenshot      @com.keepit.controllers.website.KeepsController.getScreenshotUrl()
 #### Deprecated: Used by Android and iOS now, should be dropped by Nov 1, 2014 when both will use the new /m/1/eliza/notifications endpoint
-POST    /site/keeps/imageUrls       @com.keepit.controllers.website.KeepsController.getImageUrls()
 
 POST    /site/keeps/tag             @com.keepit.controllers.website.KeepsController.tagKeepBulk()
 POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsController.untagKeepBulk()

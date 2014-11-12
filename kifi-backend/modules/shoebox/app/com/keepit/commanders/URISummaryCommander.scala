@@ -54,7 +54,7 @@ class URISummaryCommander @Inject() (
   }
 
   def getDefaultURISummary(uri: NormalizedURI, waiting: Boolean): Future[URISummary] = {
-    val uriSummaryRequest = URISummaryRequest(uri.url, ImageType.ANY, ImageSize(0, 0), withDescription = true, waiting = waiting, silent = false)
+    val uriSummaryRequest = URISummaryRequest(uri.url, Some(uri.id.get), ImageType.ANY, ImageSize(0, 0), withDescription = true, waiting = waiting, silent = false)
     getURISummaryForRequest(uriSummaryRequest, uri)
   }
 
@@ -70,9 +70,9 @@ class URISummaryCommander @Inject() (
    * Uses a URISummaryRequest to request an image for the page, for the given size constraints.
    * If no image is available, fetching is triggered (silent=false) but the promise is immediately resolved (waiting=false)
    */
-  def getImageURISummary(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[URISummary] = {
+  private def getImageURISummary(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[URISummary] = {
     val minSize = minSizeOpt getOrElse ImageSize(0, 0)
-    val request = URISummaryRequest(nUri.url, ImageType.ANY, minSize, false, false, false)
+    val request = URISummaryRequest(nUri.url, Some(nUri.id.get), ImageType.ANY, minSize, false, false, false)
     getURISummaryForRequest(request, nUri)
   }
 
