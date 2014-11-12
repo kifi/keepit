@@ -56,11 +56,9 @@ angular.module('kifi')
           user = profileService.me;
           lib.keeperPic = friendService.getPictureUrlForUser(user);
           lib.owner = user;
+          lib.isMine = lib.owner.id === profileService.me.id;
 
-          if (!libraryService.isSystemLibrary(lib.id)) {
-            decompressedLibraries.push(lib);
-          }
-
+          decompressedLibraries.push(lib);
           myLibraries.push(lib);
         }
       }
@@ -154,7 +152,6 @@ angular.module('kifi')
         var resData = res.data;
 
         //$log.log('searchActionService.find() res', resData);
-
         var hits = resData.hits || [];
         _.forEach(hits, function (hit) {
           decompressHit(hit, resData.users, resData.libraries, userLoggedIn);

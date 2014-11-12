@@ -8,12 +8,12 @@ angular.module('kifi')
       if (item.libraries && item.libraries.length > 0 && Array.isArray(item.libraries[0])) {
         var cleanedLibraries = [];
         var usersWithLibs = {};
-        item.libraries.forEach( function (lib) {
+
+        item.libraries.forEach(function (lib) {
           lib[0].keeperPic = friendService.getPictureUrlForUser(lib[1]);
-          if (lib[1].id !== profileService.me.id) {
-            usersWithLibs[lib[1].id] = true;
-            cleanedLibraries.push(lib[0]);
-          }
+          usersWithLibs[lib[1].id] = true;
+          lib[0].isMine = lib[1].id === profileService.me.id;
+          cleanedLibraries.push(lib[0]);
         });
 
         item.keepers.forEach(function (keeper) {
