@@ -73,18 +73,22 @@ class KeepImageCommanderImpl @Inject() (
   }
 
   def getBestImagesForKeeps(keepIds: Set[Id[Keep]], idealSize: ImageSize): Seq[KeepImage] = {
-    val grouped = db.readOnlyReplica { implicit session => keepImageRepo.getAllForKeepIds(keepIds) }.groupBy(_.keepId)
+    if (keepIds.nonEmpty) {
+      val grouped = db.readOnlyReplica { implicit session => keepImageRepo.getAllForKeepIds(keepIds) }.groupBy(_.keepId)
 
-    keepIds.toSeq.map { keepId =>
-      grouped.get(keepId) match {
-        case None =>
-          SafeFuture { autoSetKeepImage(keepId, localOnly = false, overwriteExistingChoice = false) }
-          None
-        case Some(images) =>
-          val validKeepImages = images.filter(_.state == KeepImageStates.ACTIVE)
-          KeepImageSize.pickBest(idealSize, validKeepImages)
-      }
-    }.flatten
+      keepIds.toSeq.map { keepId =>
+        grouped.get(keepId) match {
+          case None =>
+            SafeFuture { autoSetKeepImage(keepId, localOnly = false, overwriteExistingChoice = false) }
+            None
+          case Some(images) =>
+            val validKeepImages = images.filter(_.state == KeepImageStates.ACTIVE)
+            KeepImageSize.pickBest(idealSize, validKeepImages)
+        }
+      }.flatten
+    } else {
+      Seq.empty
+    }
   }
 
   def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String] = {

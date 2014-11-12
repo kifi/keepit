@@ -65,7 +65,11 @@ class KeepImageRepoImpl @Inject() (
   }
 
   def getAllForKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Seq[KeepImage] = {
-    (for (r <- rows if r.keepId.inSet(keepIds)) yield r).list
+    if (keepIds.nonEmpty) {
+      (for (r <- rows if r.keepId.inSet(keepIds)) yield r).list
+    } else {
+      Seq.empty
+    }
   }
 
   private val getBySourceHashCompiled = Compiled { hash: Column[ImageHash] =>
