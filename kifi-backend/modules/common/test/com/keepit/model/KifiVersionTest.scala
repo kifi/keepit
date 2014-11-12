@@ -22,12 +22,21 @@ class KifiVersionTest extends Specification {
       v(-1, 0) must throwA[Exception]
       v(0, 0, 0, -2) must throwA[Exception]
     }
-    "serialize back to a string " in {
+    "serialize back to a string" in {
       v(0, 0).toString === "0.0"
+      v(0, 0, -1).toString === "0.0"
       v(0, 0, 0).toString === "0.0.0"
-      v(0, 0, 0, 0).toString === "0.0.0.0"
+      v(0, 0, -1, -1).toString === "0.0"
       v(2, 0, 1, 0).toString === "2.0.1.0"
       v(12, 25, 2014, 111111111).toString === "12.25.2014.111111111"
+    }
+    "serialize back to a string without build number" in {
+      v(0, 0).toStringWithoutBuild === "0.0"
+      v(0, 0, -1).toStringWithoutBuild === "0.0"
+      v(0, 0, 0).toStringWithoutBuild === "0.0.0"
+      v(0, 0, -1, -1).toStringWithoutBuild === "0.0"
+      v(2, 0, 1, 0).toStringWithoutBuild === "2.0.1"
+      v(12, 25, 2014, 111111111).toStringWithoutBuild === "12.25.2014"
     }
     "order correctly" in {
       v(0, 0, 0) must be_<(v(1, 0))
@@ -75,12 +84,21 @@ class KifiVersionTest extends Specification {
       v(-1, 0) must throwA[Exception]
       v(0, 0, 0, -2) must throwA[Exception]
     }
-    "serialize back to a string " in {
+    "serialize back to a string" in {
       v(0, 0).toString === "0.0"
+      v(0, 0, -1).toString === "0.0"
       v(0, 0, 0).toString === "0.0.0"
-      v(0, 0, 0, 0).toString === "0.0.0.0"
+      v(0, 0, -1, -1).toString === "0.0"
       v(2, 0, 1, 0).toString === "2.0.1.0"
       v(12, 25, 2014, 111111111).toString === "12.25.2014.111111111"
+    }
+    "serialize back to a string without build number" in {
+      v(0, 0).toStringWithoutBuild === "0.0"
+      v(0, 0, -1).toStringWithoutBuild === "0.0"
+      v(0, 0, 0).toStringWithoutBuild === "0.0.0"
+      v(0, 0, -1, -1).toStringWithoutBuild === "0.0"
+      v(2, 0, 1, 0).toStringWithoutBuild === "2.0.1"
+      v(12, 25, 2014, 111111111).toStringWithoutBuild === "12.25.2014"
     }
     "order correctly" in {
       v(0, 0, 0) must be_<(v(1, 0))
@@ -128,12 +146,21 @@ class KifiVersionTest extends Specification {
       v(-1, 0) must throwA[Exception]
       v(0, 0, 0, -2) must throwA[Exception]
     }
-    "serialize back to a string " in {
+    "serialize back to a string" in {
       v(0, 0).toString === "0.0"
+      v(0, 0, -1).toString === "0.0"
       v(0, 0, 0).toString === "0.0.0"
-      v(0, 0, 0, 0).toString === "0.0.0.0"
+      v(0, 0, -1, -1).toString === "0.0"
       v(2, 0, 1, 0).toString === "2.0.1.0"
       v(12, 25, 2014, 111111111).toString === "12.25.2014.111111111"
+    }
+    "serialize back to a string without build number" in {
+      v(0, 0).toStringWithoutBuild === "0.0"
+      v(0, 0, -1).toStringWithoutBuild === "0.0"
+      v(0, 0, 0).toStringWithoutBuild === "0.0.0"
+      v(0, 0, -1, -1).toStringWithoutBuild === "0.0"
+      v(2, 0, 1, 0).toStringWithoutBuild === "2.0.1"
+      v(12, 25, 2014, 111111111).toStringWithoutBuild === "12.25.2014"
     }
     "order correctly" in {
       v(0, 0, 0) must be_<(v(1, 0))
