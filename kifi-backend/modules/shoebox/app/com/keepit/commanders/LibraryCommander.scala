@@ -100,6 +100,10 @@ class LibraryCommander @Inject() (
           if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
         }
 
+        val lowQualityLibrary: Boolean = {
+          keeps.size <= 3 || ((library.description.isEmpty || library.description.get.length <= 10) && keeps.size <= 6)
+        }
+
         PublicPageMetaFullTags(
           unsafeTitle = s"${library.name} by ${owner.firstName} ${owner.lastName} \u2022 Kifi",
           url = url,
@@ -110,7 +114,8 @@ class LibraryCommander @Inject() (
           createdAt = library.createdAt,
           updatedAt = library.updatedAt,
           unsafeFirstName = owner.firstName,
-          unsafeLastName = owner.lastName)
+          unsafeLastName = owner.lastName,
+          noIndex = lowQualityLibrary)
       }
     }
   }
