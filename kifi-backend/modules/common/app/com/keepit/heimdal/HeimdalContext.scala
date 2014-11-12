@@ -1,11 +1,12 @@
 package com.keepit.heimdal
 
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailTrackingParam
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import com.keepit.common.controller.UserRequest
-import com.keepit.model.{ User, NotificationCategory, KeepSource, ExperimentType }
+import com.keepit.model._
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.{ URI, UserAgent }
 import com.keepit.common.time.DateTimeJsonFormat
@@ -104,7 +105,7 @@ object HeimdalContextBuilder {
   }
 }
 
-class HeimdalContextBuilder {
+class HeimdalContextBuilder extends Logging {
   val data = new scala.collection.mutable.HashMap[String, ContextData]()
 
   def +=[T](key: String, value: T)(implicit toSimpleContextData: T => SimpleContextData): Unit = data(key) = value
@@ -122,10 +123,34 @@ class HeimdalContextBuilder {
     this += ("serviceZone", myAmazonInstanceInfo.info.availabilityZone)
   }
 
+  private def addKifiClientAndVersion(request: RequestHeader): Unit = {
+
+    val clientVersion = request.headers.get("X-Kifi-Client") getOrElse ""
+
+    def add(clientName: String, version: KifiVersion): Unit = {
+      this += ("client", clientName)
+      this += ("clientVersion", version.toStringWithoutBuild)
+      this += ("clientBuild", version.toString)
+    }
+
+    val parts = clientVersion.trim.split("\\s")
+    if (parts.size == 2) {
+      val (client, version) = (parts(0), parts(1))
+      client match {
+        case "BE" => add("browserExtension", KifiExtVersion(version))
+        case "iOS" => add("iOSApp", KifiIPhoneVersion(version))
+        case "iOS Extension" => add("iOSExtension", KifiIPhoneVersion(version))
+        case "Android" => add("androidApp", KifiAndroidVersion(version))
+        case _ => log.error(s"unsupported X-Kifi-Client header: ${clientVersion}")
+      }
+    }
+  }
+
   def addRequestInfo(request: RequestHeader): Unit = {
     this += ("doNotTrack", request.headers.get("do-not-track").exists(_ == "1"))
     addRemoteAddress(request.headers.get("X-Forwarded-For") getOrElse request.remoteAddress)
     addUserAgent(request.headers.get("User-Agent").getOrElse(""))
+    addKifiClientAndVersion(request)
 
     request match {
       case userRequest: UserRequest[_] =>
@@ -148,27 +173,26 @@ class HeimdalContextBuilder {
   def addUserAgent(userAgent: String): Unit = {
     this += ("userAgent", userAgent)
     userAgent match {
+      // These two are here for backwards compatiblity. Remove it soon!
       case UserAgent.iosAppRe(appName, appVersion, buildSuffix, device, os, osVersion) =>
         this += ("device", device)
         this += ("os", os)
         this += ("osVersion", osVersion)
-        this += ("client", "Kifi App")
+        this += ("client", "iOSApp")
         this += ("clientVersion", appVersion)
         this += ("clientBuild", appVersion + buildSuffix)
       case UserAgent.androidAppRe(appName, os, osVersion, device) =>
-        // versions are not available as of now. To be containted in the X-Kifi-client header
         this += ("device", device)
         this += ("os", os)
         this += ("osVersion", osVersion)
-        this += ("client", "android")
+        this += ("client", "androidApp")
       case _ =>
         val agent = UserAgent.parser.parse(userAgent)
         this += ("device", agent.getDeviceCategory.getName)
         this += ("os", agent.getOperatingSystem.getFamilyName)
         this += ("osVersion", agent.getOperatingSystem.getName)
-        this += ("client", agent.getName)
-        this += ("clientVersion", agent.getVersionNumber.getMajor)
-        this += ("clientBuild", agent.getVersionNumber.toVersionString)
+        this += ("agent", agent.getName)
+        this += ("agentVersion", agent.getVersionNumber.getMajor)
     }
   }
 
