@@ -537,8 +537,10 @@ if (searchUrlRe.test(document.URL)) !function () {
       var moreKeepers = data.raw.keepers.filter(function (u) {
         return !keepersPictured.some(idIs(u.id));
       });
+      var self = moreKeepers.length && moreKeepers[0].id === response.me.id;
       k.render('html/search/more_keepers', {
-        keepers: moreKeepers,
+        self: self,
+        keepers: self ? moreKeepers.slice(1) : moreKeepers,
         others: +$a.text() - moreKeepers.length
       }, function (html) {
         configureHover(html, {
