@@ -487,28 +487,6 @@ class KeepsCommander @Inject() (
     deactivatedKeepInfos
   }
 
-  def unkeepBulk(selection: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
-    val keeps = db.readWrite { implicit s =>
-      val keeps = getKeepsInBulkSelection(selection, userId)
-      keeps.map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
-    }
-    finalizeUnkeeping(keeps, userId)
-    keeps map KeepInfo.fromKeep
-  }
-
-  def unkeepBatch(ids: Seq[ExternalId[Keep]], userId: Id[User])(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[ExternalId[Keep]]) = {
-    val (keeps, failures) = db.readWrite { implicit s =>
-      val keepMap = ids map { id =>
-        id -> keepRepo.getByExtIdAndUser(id, userId)
-      }
-      val (successes, failures) = keepMap.partition(_._2.nonEmpty)
-      val keeps = successes.map(_._2).flatten.map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
-      (keeps, failures.map(_._1))
-    }
-    finalizeUnkeeping(keeps, userId)
-    (keeps map KeepInfo.fromKeep, failures)
-  }
-
   def unkeep(extId: ExternalId[Keep], userId: Id[User])(implicit context: HeimdalContext): Option[KeepInfo] = {
     db.readWrite { implicit session =>
       keepRepo.getByExtIdAndUser(extId, userId).map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
@@ -559,33 +537,11 @@ class KeepsCommander @Inject() (
     searchClient.updateKeepIndex()
   }
 
-  def rekeepBulk(selection: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Int = {
-    val keeps = db.readWrite { implicit s =>
-      val keeps = getKeepsInBulkSelection(selection, userId).filter(_.state != KeepStates.ACTIVE)
-      keeps.map(setKeepStateWithSession(_, KeepStates.ACTIVE, userId))
-    }
-    libraryAnalytics.rekeptPages(userId, keeps, context)
-    searchClient.updateKeepIndex()
-    keeps.length
-  }
-
   private def setKeepStateWithSession(keep: Keep, state: State[Keep], userId: Id[User])(implicit context: HeimdalContext, session: RWSession): Keep = {
     val saved = keepRepo.save(keep withState state)
     log.info(s"[unkeep($userId)] deactivated keep=$saved")
     keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = true) }
     saved
-  }
-
-  def setKeepPrivacyBulk(selection: BulkKeepSelection, userId: Id[User], isPrivate: Boolean)(implicit context: HeimdalContext): Int = {
-    val (oldKeeps, newKeeps) = db.readWrite { implicit s =>
-      val keeps = getKeepsInBulkSelection(selection, userId)
-      val oldKeeps = keeps.filter(_.isPrivate != isPrivate)
-      val newKeeps = oldKeeps.map(updateKeepWithSession(_, Some(isPrivate), None))
-      (oldKeeps, newKeeps)
-    }
-    (oldKeeps zip newKeeps) map { case (oldKeep, newKeep) => libraryAnalytics.updatedKeep(oldKeep, newKeep, context) }
-    searchClient.updateKeepIndex()
-    newKeeps.length
   }
 
   def updateKeep(keep: Keep, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext): Option[Keep] = {

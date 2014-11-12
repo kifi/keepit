@@ -22,7 +22,8 @@ case class RawKeep(
     originalJson: Option[JsValue] = None,
     state: State[RawKeep] = RawKeepStates.ACTIVE,
     tagIds: Option[String] = None,
-    libraryId: Option[Id[Library]]) extends Model[RawKeep] {
+    libraryId: Option[Id[Library]],
+    createdDate: Option[DateTime] = None) extends Model[RawKeep] {
   def withId(id: Id[RawKeep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }

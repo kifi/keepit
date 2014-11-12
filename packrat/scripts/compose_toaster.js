@@ -48,7 +48,6 @@ k.toaster = k.toaster || (function () {
       }
     },
     onHide: new Listeners(),
-    onHidden: new Listeners(),
     showing: function () {
       return !!$toast;
     }
@@ -107,26 +106,26 @@ k.toaster = k.toaster || (function () {
 
   function hide(e, trigger) {
     log('[toaster:hide]');
+    trigger = trigger || (e && e.keyCode === 27 ? 'esc' : undefined);
     api.port.off(handlers);
     $(document).data('esc').remove(hide);
     $toast.css('overflow', '')
-      .on('transitionend', $.proxy(onHidden, null, trigger || (e && e.keyCode === 27 ? 'esc' : undefined)))
+      .on('transitionend', onHidden)
       .addClass('kifi-down');
     if (trigger !== 'sent') {
       $toast.data('compose').save();
     }
     $toast = null;
     if (e) e.preventDefault();
-    k.toaster.onHide.dispatch();
+    k.toaster.onHide.dispatch(trigger);
   }
 
-  function onHidden(trigger, e) {
+  function onHidden(e) {
     if (e.target === this && e.originalEvent.propertyName === 'opacity') {
       log('[toaster:onHidden]');
       var $t = $(this);
       $t.data('compose').destroy();
       $t.remove();
-      k.toaster.onHidden.dispatch(trigger);
     }
   }
 

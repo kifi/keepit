@@ -163,14 +163,9 @@ GET     /m/1/user/friends/recommended       @com.keepit.controllers.mobile.Mobil
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.MobilePageController.queryExtension(page: Int ?= 0, pageSize: Int ?= 1000)
 
-## Deprecated
 POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileKeepsController.keepMultiple()
-POST    /m/2/keeps/add                      @com.keepit.controllers.mobile.MobileKeepsController.addKeeps()
 POST    /m/1/keeps/addWithTags              @com.keepit.controllers.mobile.MobileKeepsController.addKeepWithTags()
-
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileKeepsController.unkeepMultiple()
-POST    /m/1/keeps/delete                   @com.keepit.controllers.mobile.MobileKeepsController.unkeepBatch()
-POST    /m/1/keeps/:id/delete               @com.keepit.controllers.mobile.MobileKeepsController.unkeep(id: ExternalId[Keep])
 
 #Used by both Android and iOS
 POST    /m/1/keeps/imageUrl                 @com.keepit.controllers.mobile.MobileKeepsController.getImageUrl()
@@ -240,6 +235,7 @@ POST    /m/1/libraries/:id/decline              @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/leave                @com.keepit.controllers.mobile.MobileLibraryController.leaveLibrary(id: PublicId[Library])
 GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
 POST    /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.MobileLibraryController.inviteUsersToLibrary(id: PublicId[Library])
+GET     /m/1/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
 GET     /m/1/libraries/:id/members/suggest      @com.keepit.controllers.mobile.MobileLibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
 
 GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
@@ -296,7 +292,8 @@ POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureCo
 ##########################################
 # Feeds (RSS)
 ##########################################
-GET     /feeds/libraries/top        @com.keepit.controllers.website.LibraryController.getTopLibraries()
+GET     /feeds/libraries/top        @com.keepit.controllers.website.FeedController.getTopLibraries()
+GET     /feeds/libraries/new        @com.keepit.controllers.website.FeedController.getNewLibraries()
 
 ##########################################
 # Web API
@@ -307,24 +304,16 @@ POST    /site/events                @com.keepit.controllers.tracking.EventProxyC
 GET     /assets/sitemap.xml         @com.keepit.controllers.website.SiteMapController.sitemap()
 
 GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
-POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple(separateExisting: Boolean ?= false)
-POST    /site/keeps/remove          @com.keepit.controllers.website.KeepsController.unkeepMultiple()
-POST    /site/keeps/delete          @com.keepit.controllers.website.KeepsController.unkeepBatch()
 GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()
 GET     /site/keeps/import/status   @com.keepit.controllers.website.KeepsController.importStatus()
 GET     /site/keeps/export          @com.keepit.controllers.website.KeepsController.exportKeeps()
 GET     /site/keeps/:id             @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 POST    /site/keeps/:id/update      @com.keepit.controllers.website.KeepsController.updateKeepInfo(id: ExternalId[Keep])
-POST    /site/keeps/:id/delete      @com.keepit.controllers.website.KeepsController.unkeep(id: ExternalId[Keep])
 #### Deprecated: Used by Android now, should be dropped by Nov 1, 2014
 POST    /site/keeps/screenshot      @com.keepit.controllers.website.KeepsController.getScreenshotUrl()
 #### Deprecated: Used by Android and iOS now, should be dropped by Nov 1, 2014 when both will use the new /m/1/eliza/notifications endpoint
 POST    /site/keeps/imageUrls       @com.keepit.controllers.website.KeepsController.getImageUrls()
 
-POST    /site/keeps/unkeep          @com.keepit.controllers.website.KeepsController.unkeepBulk()
-POST    /site/keeps/rekeep          @com.keepit.controllers.website.KeepsController.rekeepBulk()
-POST    /site/keeps/public          @com.keepit.controllers.website.KeepsController.makePublicBulk()
-POST    /site/keeps/private         @com.keepit.controllers.website.KeepsController.makePrivateBulk()
 POST    /site/keeps/tag             @com.keepit.controllers.website.KeepsController.tagKeepBulk()
 POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsController.untagKeepBulk()
 
@@ -611,9 +600,6 @@ GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstance
 GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
 GET     /admin/cache/clearLocalCaches          @com.keepit.controllers.admin.AdminCacheController.clearLocalCaches(service: String ?= "all", prefix: String ?= "")
 GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocketController.serviceView
-
-GET     /admin/electronicMails       @com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
-GET     /admin/electronicMails/:page @com.keepit.controllers.admin.ElectronicMailController.electronicMailsView(page: Int)
 
 GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])

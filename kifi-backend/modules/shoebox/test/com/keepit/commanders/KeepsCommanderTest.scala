@@ -3,12 +3,9 @@ package com.keepit.commanders
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller._
-import com.keepit.common.db.Id
-import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
-import com.keepit.controllers.website.KeepsController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
@@ -19,9 +16,6 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
-import play.api.libs.json.{ JsArray, JsString, Json }
-import play.api.test.FakeRequest
-import play.api.test.Helpers._
 
 class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 

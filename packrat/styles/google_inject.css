@@ -84,7 +84,7 @@
 }
 .kifi-res-bar:not(:hover)>.kifi-res-bar-status[href][data-n='0'][data-of]::after {
   opacity: 0;
-  transition-delay: 0;
+  transition-delay: 0s;
 }
 .kifi-res-bar:hover>.kifi-res-bar-status[href]::after {
   color: inherit;

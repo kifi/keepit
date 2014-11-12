@@ -7,7 +7,6 @@ angular.module('kifi')
   function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepActionService, libraryService, modalService, tagService, util) {
     return {
       restrict: 'A',
-      scope: {},
       require: '^kfModal',
       templateUrl: 'keep/addKeep.tpl.html',
       link: function (scope, element, attrs, kfModalCtrl) {
@@ -57,7 +56,20 @@ angular.module('kifi')
           $document.off('keydown', processKey);
         });
 
-        scope.selectedLibrary = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
+        var writeableLibs = _.filter(libraryService.librarySummaries, function (lib) {
+          return lib.access !== 'read_only';
+        });
+
+        var defaultLib = _.find(writeableLibs, { 'kind': 'system_main' });
+        if (_.isEmpty(scope.modalData.currentLib)) {
+          scope.selectedLibrary = defaultLib;
+        } else {
+          scope.selectedLibrary = _.find(writeableLibs, { 'id': scope.modalData.currentLib.id });
+          if (!scope.selectedLibrary) {
+            scope.selectedLibrary = defaultLib;
+          }
+        }
+
         scope.onLibrarySelected = function (selectedLibrary) {
           scope.selectedLibrary = selectedLibrary;
         };
