@@ -100,7 +100,7 @@ angular.module('kifi')
             } else {  // jshint ignore:line
               $location.url($scope.library.url);
             }
-          } else {
+          } else if ($scope.search.text) {
             $location.url('/find?q=' + $scope.search.text);
           }
         }
