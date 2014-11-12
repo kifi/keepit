@@ -8,7 +8,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   'use strict';
   log('[keeper_scout]', location.hostname);
 
-  var whenMeKnown = [], tile, tileParent, tileObserver, tileCard, tileCount;
+  var whenMeKnown = [], tile, tileParent, tileObserver, tileCard;
   while ((tile = document.getElementById('kifi-tile'))) {
     tile.remove();
   }
@@ -25,14 +25,12 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     '<div class="kifi-tile-kept"></div></div>';
   tile["kifi:position"] = positionTile;
   tile.addEventListener('mouseover', function (e) {
-    if ((e.target === tileCount || tileCard.contains(e.target)) && e.isTrusted !== false) {
+    if ((tileCard.contains(e.target)) && e.isTrusted !== false) {
       loadAndDo('keeper', 'show');
     }
   });
 
   tileCard = tile.firstChild;
-  tileCount = document.createElement("span");
-  tileCount.className = 'kifi-count';
 
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener(('mozHidden' in document ? 'moz' : 'webkit') + 'fullscreenchange', onFullScreenChange);
@@ -154,12 +152,8 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   }
 
   function updateCount(n) {
-    if (n) {
-      tileCount.textContent = n;
-      tile.insertBefore(tileCount, tileCard.nextSibling);
-    } else if (tileCount.parentNode) {
-      tileCount.remove();
-    }
+    tileCard.firstChild.classList.toggle('kifi-dot', !!n);
+    tileCard.lastChild.classList.toggle('kifi-dot', !!n);
     tile.dataset.count = n;
   }
 
@@ -272,7 +266,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   api.onEnd.push(function() {
     document.removeEventListener('keydown', onKeyDown, true);
     cleanUpDom();
-    k.tile = k.me = tile = tileCard = tileCount = null;
+    k.tile = k.me = tile = tileCard = null;
   });
 
   return tile;
