@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .directive('kfLibraryCard', [
   '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'platformService', 'signupService', '$twitter', '$timeout', '$routeParams',
+  'profileService', 'platformService', 'signupService', '$twitter', '$timeout', '$routeParams', '$route',
   'locationNoReload',
   function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
-      profileService, platformService, signupService, $twitter, $timeout, $routeParams,
+      profileService, platformService, signupService, $twitter, $timeout, $routeParams, $route,
       locationNoReload) {
     return {
       restrict: 'A',
@@ -352,6 +352,12 @@ angular.module('kifi')
             if (query) {
               if (prevQuery) {
                 locationNoReload.skipReload().search('q', query).replace();
+
+                if (!$route.current.params.q) {
+                  $timeout(function () {
+                    $rootScope.$emit('librarySearched');
+                  });
+                }
               } else {
                 locationNoReload.skipReload().url(scope.library.url + '/find?q=' + query + '&f=a');
               }
@@ -360,7 +366,6 @@ angular.module('kifi')
               $routeParams.f = 'a';
 
               $timeout(function () {
-                $rootScope.$emit('librarySearched');
                 $rootScope.$emit('librarySearchChanged', true);
               });
             } else {
