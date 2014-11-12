@@ -66,6 +66,7 @@ class LibraryCommander @Inject() (
     applicationConfig: FortyTwoConfig,
     uriSummaryCommander: URISummaryCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
+    experimentCommander: LocalUserExperimentCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -593,7 +594,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def inviteBulkUsers(invites: Seq[LibraryInvite]): Future[Seq[ElectronicMail]] = {
+  def processInvites(invites: Seq[LibraryInvite]): Future[Seq[ElectronicMail]] = {
     val emailFutures = {
       // save invites
       db.readWrite { implicit s =>
@@ -639,7 +640,7 @@ class LibraryCommander @Inject() (
                 libraryInvitesAbuseMonitor.inspect(inviterId, None, invite.emailAddress, libId, key._2.length)
                 Right(invite.emailAddress.get)
             }
-            libraryInviteSender.get.inviteUserToLibrary(invite)
+            libraryInviteSender.get.sendInvite(invite)
           }
         }.toSeq.flatten
     }
@@ -747,7 +748,7 @@ class LibraryCommander @Inject() (
           (invite, (invitee, access))
         }
         val (invites, inviteesWithAccess) = invitesAndInvitees.unzip
-        inviteBulkUsers(invites)
+        processInvites(invites)
 
         libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
 
@@ -770,6 +771,33 @@ class LibraryCommander @Inject() (
       sticky = false,
       category = NotificationCategory.User.LIBRARY_FOLLOWED
     )
+  }
+
+  def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit = {
+    newKeeps.foreach { newKeep =>
+      if (newKeep.libraryId.get != library.id.get) { throw new IllegalArgumentException(s"Keep ${newKeep.id.get} does not belong to expected library ${library.id.get}") }
+    }
+    val (relevantFollowers, keepersById) = db.readOnlyReplica { implicit session =>
+      val relevantFollowers = libraryMembershipRepo.getWithLibraryId(library.id.get).map(_.userId).filter(experimentCommander.userHasExperiment(_, ExperimentType.NEW_KEEP_NOTIFICATIONS)).toSet
+      val keepersById = userRepo.getUsers(newKeeps.map(_.userId))
+      (relevantFollowers, keepersById)
+    }
+    newKeeps.foreach { newKeep =>
+      val toBeNotified = relevantFollowers - newKeep.userId
+      if (toBeNotified.nonEmpty) {
+        val keeper = keepersById(newKeep.userId)
+        elizaClient.sendGlobalNotification(
+          userIds = toBeNotified,
+          title = s"New Keep in ${library.name}",
+          body = s"${keeper.firstName} has just kept ${newKeep.title}",
+          linkText = "Check it out",
+          linkUrl = newKeep.url,
+          imageUrl = s3ImageStore.avatarUrlByUser(keeper),
+          sticky = false,
+          category = NotificationCategory.User.NEW_KEEP
+        )
+      }
+    }
   }
 
   def joinLibrary(userId: Id[User], libraryId: Id[Library])(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {

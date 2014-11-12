@@ -111,7 +111,7 @@ private[mail] class MailSenderActor @Inject() (
       }
     }
   }
-  private val notificationsToBeReported = NotificationCategory.User.all ++ NotificationCategory.NonUser.all
+  private val notificationsToBeReported = NotificationCategory.User.reportToAnalytics ++ NotificationCategory.NonUser.reportToAnalytics
   private def reportEmailNotificationSent(email: ElectronicMail): Unit = {
     if (notificationsToBeReported.contains(email.category)) {
       val sentAt = currentDateTime
@@ -152,11 +152,11 @@ private[mail] class MailSenderActor @Inject() (
 
         val context = contextBuilder.build
 
-        if (NotificationCategory.User.all.contains(email.category)) {
+        if (NotificationCategory.User.reportToAnalytics.contains(email.category)) {
           (toUsers ++ ccUsers).toSet[Id[User]].foreach { userId => heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
         }
 
-        if (NotificationCategory.NonUser.all.contains(email.category)) {
+        if (NotificationCategory.NonUser.reportToAnalytics.contains(email.category)) {
           (toNonUsers ++ ccNonUsers).toSet[String].foreach { address => heimdal.trackEvent(NonUserEvent(address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, sentAt)) }
         }
       }
