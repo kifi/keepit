@@ -2,6 +2,8 @@
 
 angular.module('kifi')
 
+// A wrapper around $location that updates the browser url without
+// reloading or changing the $route state.
 .factory('locationNoReload', ['$location', '$route', '$rootScope',
   function ($location, $route, $rootScope) {
     $location.skipReload = function () {

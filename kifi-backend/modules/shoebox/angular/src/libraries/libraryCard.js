@@ -353,6 +353,11 @@ angular.module('kifi')
               if (prevQuery) {
                 locationNoReload.skipReload().search('q', query).replace();
 
+                // When we search using the input inside the library card header, we don't
+                // want to reload the page. One consequence of this is that we need to kick
+                // SearchController to initialize a search when the search query changes if
+                // we initially started with a url that is a library url that has no search
+                // parameters.
                 if (!$route.current.params.q) {
                   $timeout(function () {
                     $rootScope.$emit('librarySearched');

@@ -52,9 +52,7 @@ angular.module('kifi')
           lib.owner = user;
           decompressedLibraries.push(lib);
           libUsers[idxUser] = true;
-        }
-
-        else if (userLoggedIn) {
+        } else if (userLoggedIn) {
           user = profileService.me;
           lib.keeperPic = friendService.getPictureUrlForUser(user);
           lib.owner = user;
