@@ -246,7 +246,13 @@ angular.module('kifi')
 
         scope.followLibrary = function (library) {
           if (platformService.isSupportedMobilePlatform()) {
-            platformService.goToAppOrStore($location.absUrl() + '?follow=true');
+            var url = $location.absUrl();
+            if (url.indexOf('?')) {
+              url = url + '&follow=true';
+            } else {
+              url = url + '?follow=true';
+            }
+            platformService.goToAppOrStore(url);
             return;
           } else if ($rootScope.userLoggedIn === false) {
             libraryService.trackEvent('visitor_clicked_page', library, { action: 'followButton' });
