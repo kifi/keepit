@@ -21,6 +21,7 @@ import org.joda.time.DateTime
 import play.api.libs.json.Json
 
 import scala.util.{ Failure, Random, Success, Try }
+import com.keepit.common.akka.SafeFuture
 
 case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
@@ -131,6 +132,7 @@ class KeepInterner @Inject() (
     } map { persistedBookmarksWithUri =>
       val bookmark = persistedBookmarksWithUri.bookmark
       if (persistedBookmarksWithUri.isNewKeep) {
+        if (library.kind == LibraryKind.USER_CREATED) SafeFuture { libraryCommander.notifyFollowersOfNewKeeps(library, bookmark) }
         libraryAnalytics.keptPages(userId, Seq(bookmark), context)
         heimdalClient.processKeepAttribution(userId, Seq(bookmark))
       }
