@@ -1,5 +1,8 @@
 <span class="kifi-res-mk-hover">
   <ul class="kifi-res-mk-list">
+  {{#self}}
+    <li class="kifi-res-mk-name">You</li>
+  {{/self}}
   {{#keepers}}
     <li class="kifi-res-mk-name">{{firstName}} {{lastName}}</li>
   {{/keepers}}
