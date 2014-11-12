@@ -39,11 +39,12 @@ object NotificationCategory {
 
     val LIBRARY_INVITATION = NotificationCategory("library_invitation")
     val LIBRARY_FOLLOWED = NotificationCategory("library_followed")
+    val NEW_KEEP = NotificationCategory("new_keep")
 
     val DIGEST = NotificationCategory("digest")
     val DIGEST_QA = NotificationCategory("digest_qa")
 
-    val all = Set(ANNOUNCEMENT, MESSAGE, EMAIL_KEEP, EMAIL_CONFIRMATION, RESET_PASSWORD, FRIEND_REQUEST,
+    val reportToAnalytics = Set(ANNOUNCEMENT, MESSAGE, EMAIL_KEEP, EMAIL_CONFIRMATION, RESET_PASSWORD, FRIEND_REQUEST,
       FRIEND_ACCEPTED, WELCOME, APPROVED, WAITLIST, WHO_KEPT_MY_KEEP, CONTACT_JOINED, CONNECTION_MADE,
       SOCIAL_FRIEND_JOINED, LIBRARY_INVITATION, DIGEST)
 
@@ -54,7 +55,7 @@ object NotificationCategory {
     val aboutFriends = Set(CONTACT_JOINED, CONNECTION_MADE, SOCIAL_FRIEND_JOINED)
 
     // Formatting Categories used in the extension
-    val triggered = Set(FRIEND_ACCEPTED, FRIEND_REQUEST, WHO_KEPT_MY_KEEP, CONTACT_JOINED, CONNECTION_MADE, SOCIAL_FRIEND_JOINED, LIBRARY_INVITATION, LIBRARY_FOLLOWED)
+    val triggered = Set(FRIEND_ACCEPTED, FRIEND_REQUEST, WHO_KEPT_MY_KEEP, CONTACT_JOINED, CONNECTION_MADE, SOCIAL_FRIEND_JOINED, LIBRARY_INVITATION, LIBRARY_FOLLOWED, NEW_KEEP)
     val global = Set(ANNOUNCEMENT)
     val kifiMessageFormattingCategory = Map.empty ++ triggered.map(_ -> "triggered") ++ global.map(_ -> "global")
   }
@@ -73,8 +74,9 @@ object NotificationCategory {
     val DISCUSSION_STARTED = NotificationCategory("discussion_started")
     val ADDED_TO_DISCUSSION = NotificationCategory("added_to_discussion")
     val DISCUSSION_UPDATES = NotificationCategory("discussion_updates")
+    val LIBRARY_INVITATION = NotificationCategory("library_invitation")
 
-    val all = Set(INVITATION, DISCUSSION_STARTED, DISCUSSION_UPDATES, ADDED_TO_DISCUSSION)
+    val reportToAnalytics = Set(INVITATION, DISCUSSION_STARTED, DISCUSSION_UPDATES, ADDED_TO_DISCUSSION, LIBRARY_INVITATION)
 
     // Formatting Categories used in the extension
     val fromFriends = Set(INVITATION, DISCUSSION_STARTED, ADDED_TO_DISCUSSION, DISCUSSION_UPDATES)

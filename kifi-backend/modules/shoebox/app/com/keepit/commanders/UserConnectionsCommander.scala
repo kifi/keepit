@@ -145,17 +145,20 @@ class UserConnectionsCommander @Inject() (
   }
 
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
-    val infos = db.readOnlyReplica { implicit s =>
+    db.readOnlyMaster { implicit s =>
       val searchFriends = searchFriendRepo.getSearchFriends(userId)
       val connectionIds = userConnectionRepo.getConnectedUsers(userId)
       val unfriendedIds = userConnectionRepo.getUnfriendedUsers(userId)
       val connections = connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true).toSeq
-      connections.map {
+
+      val list = connections.drop(page * pageSize).take(pageSize)
+      val basicUsers = basicUserRepo.loadAll(list.map(_._1).toSet)
+      val infos = list.map {
         case (friendId, unfriended) =>
-          ConnectionInfo(basicUserRepo.load(friendId), friendId, unfriended, searchFriends.contains(friendId))
+          ConnectionInfo(basicUsers(friendId), friendId, unfriended, searchFriends.contains(friendId))
       }
+      (infos, connectionIds.size)
     }
-    (infos.drop(page * pageSize).take(pageSize), infos.filterNot(_.unfriended).size)
   }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
