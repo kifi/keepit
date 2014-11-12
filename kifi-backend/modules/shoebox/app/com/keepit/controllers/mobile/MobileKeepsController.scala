@@ -203,32 +203,6 @@ class MobileKeepsController @Inject() (
     main ++ width ++ height
   }
 
-  // todo(ray): consolidate with web endpoint
-
-  def getImageUrl() = UserAction.async(parse.tolerantJson) { request => // WIP; test-only
-    val urlOpt = (request.body \ "url").asOpt[String]
-    log.info(s"[getImageUrl] body=${request.body} url=${urlOpt}")
-    urlOpt match {
-      case Some(url) => {
-        var minSizeOpt = (for {
-          minWidth <- (request.body \ "minWidth").asOpt[Int]
-          minHeight <- (request.body \ "minHeight").asOpt[Int]
-        } yield ImageSize(minWidth, minHeight))
-        val uriOpt = db.readOnlyMaster { implicit ro => normalizedURIInterner.getByUri(url) }
-        uriOpt match {
-          case None => Future.successful(NotFound(Json.obj("code" -> "uri_not_found")))
-          case Some(uri) => {
-            val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
-            uriSummaryCommander.getImageURISummary(uri, minSizeOpt) map { uriSummary =>
-              Ok(toJsObject(url, uri, screenshotUrlOpt, uriSummary.imageUrl, uriSummary.imageWidth, uriSummary.imageHeight))
-            }
-          }
-        }
-      }
-      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_argument")))
-    }
-  }
-
   def numKeeps() = UserAction { request =>
     Ok(Json.obj(
       "numKeeps" -> keepsCommander.numKeeps(request.userId)

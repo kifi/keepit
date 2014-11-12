@@ -48,7 +48,7 @@ class URISummaryController @Inject() (
       Future.sequence(nUris map (uriSummaryCommander.getDefaultURISummary(_, waiting)))
     } else {
       Future.sequence(nUris map { nUri =>
-        val uriSummaryRequest = URISummaryRequest(nUri.url, ImageType.ANY, ImageSize(0, 0), withDescription, waiting, silent)
+        val uriSummaryRequest = URISummaryRequest(nUri.url, Some(nUri.id.get), ImageType.ANY, ImageSize(0, 0), withDescription, waiting, silent)
         uriSummaryCommander.getURISummaryForRequest(uriSummaryRequest, nUri)
       })
     }
