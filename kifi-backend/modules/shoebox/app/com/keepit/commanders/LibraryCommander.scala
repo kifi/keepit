@@ -13,7 +13,7 @@ import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.mail.template.tags
 import com.keepit.common.mail.{ BasicContact, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.S3ImageStore
+import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time.Clock
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient, HeimdalContextBuilderFactory, UserEvent, UserEventTypes }
@@ -188,10 +188,10 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], maxMembersShown: Int, maxKeepsShown: Int, libraries: Seq[Library]): Future[Seq[FullLibraryInfo]] = {
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library]): Future[Seq[FullLibraryInfo]] = {
     val futureKeepInfosByLibraryId = libraries.map { library =>
       val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
-      library.id.get -> keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, keeps)
+      library.id.get -> keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, keeps, idealKeepImageSize)
     }.toMap
 
     val followerInfosByLibraryId = libraries.map { library =>
@@ -250,7 +250,7 @@ class LibraryCommander @Inject() (
   }
 
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], library: Library): Future[FullLibraryInfo] = {
-    createFullLibraryInfos(viewerUserIdOpt, 10, 10, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
+    createFullLibraryInfos(viewerUserIdOpt, 10, 10, KeepImageSize.Large.idealSize, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
   }
 
   def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], Map[LibraryAccess, Int]) = {

@@ -162,11 +162,20 @@ class MobileKeepsController @Inject() (
     Ok(Json.obj())
   }
 
-  def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean) = UserAction.async { request =>
+  def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
     val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
+
     keepOpt match {
       case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
-      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep)).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+      case Some(keep) if withFullInfo => {
+        val idealImageSize = {
+          for {
+            w <- idealImageWidth
+            h <- idealImageHeight
+          } yield ImageSize(w, h)
+        } getOrElse KeepImageSize.Large.idealSize
+        keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep), idealImageSize).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+      }
       case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
     }
   }

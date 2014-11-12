@@ -17,6 +17,7 @@ import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
+import com.keepit.common.store.ImageSize
 
 class MobileLibraryController @Inject() (
   db: Database,
@@ -168,14 +169,20 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
+        val idealImageSize = {
+          for {
+            w <- idealImageWidth
+            h <- idealImageHeight
+          } yield ImageSize(w, h)
+        } getOrElse KeepImageSize.Large.idealSize
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
-          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
+          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps, idealImageSize)
         } yield {
           Ok(Json.obj("keeps" -> keepInfos))
         }
