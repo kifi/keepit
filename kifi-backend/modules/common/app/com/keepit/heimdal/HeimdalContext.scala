@@ -128,7 +128,7 @@ class HeimdalContextBuilder {
 
     def add(clientName: String, version: KifiVersion): Unit = {
       this += ("client", clientName)
-      this += ("clientVersion", version.major + "." + version.minor + "." + version.patch)
+      this += ("clientVersion", version.toStringWithoutBuild)
       this += ("clientBuild", version.toString)
     }
 
