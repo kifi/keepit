@@ -39,7 +39,7 @@ angular.module('kifi')
       case 'f':
         return $scope.resultTotals.friendsTotal;
       case 'a':
-        return $scope.resultTotals.othersTotal;
+        return $scope.resultTotals.myTotal + $scope.resultTotals.friendsTotal + $scope.resultTotals.othersTotal;
       }
     }
 
