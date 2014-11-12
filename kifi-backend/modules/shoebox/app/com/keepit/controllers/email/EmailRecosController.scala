@@ -45,7 +45,6 @@ class EmailRecosController @Inject() (
       val (main, _) = db.readWrite(libraryCommander.getMainAndSecretLibrariesForUser(request.userId)(_))
       keepInterner.internRawBookmark(rawBookmark, request.userId, main, source)
 
-
       curator.updateUriRecommendationFeedback(request.userId, uri.id.get, UriRecommendationFeedback(kept = Some(true),
         clientType = Some(RecommendationClientType.Email)))
 
