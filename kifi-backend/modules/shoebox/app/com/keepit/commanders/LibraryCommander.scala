@@ -33,6 +33,8 @@ import scala.concurrent.duration.Duration
 import scala.util.Success
 import com.keepit.common.json
 import com.keepit.common.core._
+import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.model.RichContact
 
 class LibraryCommander @Inject() (
     db: Database,
@@ -55,6 +57,7 @@ class LibraryCommander @Inject() (
     airbrake: AirbrakeNotifier,
     searchClient: SearchServiceClient,
     elizaClient: ElizaServiceClient,
+    abookClient: ABookServiceClient,
     libraryAnalytics: LibraryAnalytics,
     libraryInviteSender: Provider[LibraryInviteEmailSender],
     heimdal: HeimdalServiceClient,
@@ -709,35 +712,47 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])])(implicit eventContext: HeimdalContext): Either[LibraryFail, Seq[(Either[ExternalId[User], EmailAddress], LibraryAccess)]] = {
+  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])])(implicit eventContext: HeimdalContext): Future[Either[LibraryFail, Seq[(Either[BasicUser, RichContact], LibraryAccess)]]] = {
     val targetLib = db.readOnlyMaster { implicit s =>
       libraryRepo.get(libraryId)
     }
     if (!(targetLib.ownerId == inviterId || targetLib.visibility == LibraryVisibility.PUBLISHED))
-      Left(LibraryFail(FORBIDDEN, "permission_denied"))
+      Future.successful(Left(LibraryFail(FORBIDDEN, "permission_denied")))
     else if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
-      Left(LibraryFail(BAD_REQUEST, "cant_invite_to_system_generated_library"))
+      Future.successful(Left(LibraryFail(BAD_REQUEST, "cant_invite_to_system_generated_library")))
     else {
-      val successInvites = db.readOnlyMaster { implicit s =>
-        for (i <- inviteList) yield {
+      val futureInvitedContactsByEmailAddress = {
+        val invitedEmailAddresses = inviteList.collect { case (Right(emailAddress), _, _) => emailAddress }
+        abookClient.internKifiContacts(inviterId, invitedEmailAddresses.map(BasicContact(_)): _*).imap { kifiContacts =>
+          (invitedEmailAddresses zip kifiContacts).toMap
+        }
+      }
+
+      val invitedBasicUsersById = {
+        val invitedUserIds = inviteList.collect { case (Left(userId), _, _) => userId }
+        db.readOnlyMaster { implicit s => basicUserRepo.loadAll(invitedUserIds.toSet) }
+      }
+
+      futureInvitedContactsByEmailAddress.map { invitedContactsByEmailAddress =>
+        val invitesAndInvitees = for (i <- inviteList) yield {
           val (recipient, inviteAccess, msgOpt) = i
           // TODO (aaron): if non-owners invite that's not READ_ONLY, we need to change API to present "partial" failures
           val access = if (targetLib.ownerId != inviterId) LibraryAccess.READ_ONLY else inviteAccess // force READ_ONLY invites for non-owners
-          val (inv, extId) = recipient match {
+          val (invite, invitee) = recipient match {
             case Left(id) =>
-              (LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(id), access = access, message = msgOpt), Left(userRepo.get(id).externalId))
+              (LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(id), access = access, message = msgOpt), Left(invitedBasicUsersById(id)))
             case Right(email) =>
-              (LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = access, message = msgOpt), Right(email))
+              (LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = access, message = msgOpt), Right(invitedContactsByEmailAddress(email)))
           }
-          (inv, (extId, access))
+          (invite, (invitee, access))
         }
+        val (invites, inviteesWithAccess) = invitesAndInvitees.unzip
+        inviteBulkUsers(invites)
+
+        libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
+
+        Right(inviteesWithAccess)
       }
-      val (inv1, res) = successInvites.unzip
-      inviteBulkUsers(inv1)
-
-      libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
-
-      Right(res)
     }
   }
 
