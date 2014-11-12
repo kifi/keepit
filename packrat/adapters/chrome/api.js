@@ -502,15 +502,6 @@ var api = (function createApi() {
     }
   }
 
-  var onXhrLoadEnd = errors.wrap(function onXhrLoadEnd(done, fail) {
-    var status = this.status;
-    if (status >= 200 && status < 300) {
-      if (done) done(status === 204 ? null : this.response);
-    } else {
-      if (fail) fail(this);
-    }
-  });
-
   function setPageAction(tabId, path) {
     chrome.pageAction.setIcon({tabId: tabId, path: {38: path}});
     chrome.pageAction.show(tabId);
@@ -617,22 +608,6 @@ var api = (function createApi() {
           portHandlers[k] = handlers[k];
         }
       }
-    },
-    request: function (method, uri, data, headers, done, fail) {
-      var xhr = new XMLHttpRequest();
-      xhr.open(method, uri, true);
-      if (data != null && data !== '') {
-        if (typeof data !== 'string') {
-          data = JSON.stringify(data);
-        }
-        xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
-      }
-      for (var name in headers) {
-        xhr.setRequestHeader(name, headers[name]);
-      }
-      xhr.responseType = 'json';
-      xhr.addEventListener('loadend', onXhrLoadEnd.bind(xhr, done, fail));
-      xhr.send(data);
     },
     util: {
       btoa: window.btoa.bind(window)
@@ -790,6 +765,7 @@ var api = (function createApi() {
       clearTimeout: window.clearTimeout.bind(window),
       clearInterval: window.clearInterval.bind(window)
     },
-    version: chrome.app.getDetails().version
+    version: chrome.app.getDetails().version,
+    xhr: XMLHttpRequest
   };
 }());

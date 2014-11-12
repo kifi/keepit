@@ -1,5 +1,6 @@
 package com.keepit.common.cache
 
+import com.keepit.common.seo.SiteMapCache
 import com.keepit.controllers.core.StateTokenCache
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 
@@ -282,6 +283,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def siteMapCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SiteMapCache(stats, accessLog, (innerRepo, 1 hours), (outerRepo, 1 hours))
+
+  @Singleton
+  @Provides
   def libraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new LibraryMetadataCache(stats, accessLog, (innerRepo, 1 minutes), (outerRepo, 30 days))
 
@@ -289,6 +295,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def libraryMemberIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new LibraryMembershipIdCache(stats, accessLog, (outerRepo, 10 days))
+
+  @Singleton
+  @Provides
+  def libraryMembershipCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new LibraryMembershipCountCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides

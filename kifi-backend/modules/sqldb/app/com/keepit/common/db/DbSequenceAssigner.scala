@@ -4,6 +4,8 @@ import com.keepit.common.db.slick.{ Database, Repo, SeqNumberFunction }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SequenceNumberAssignmentStalling, SequenceAssigner }
+import java.util.concurrent.atomic.AtomicInteger
+import scala.math._
 
 abstract class DbSequenceAssigner[M <: ModelWithSeqNumber[M]](
     db: Database,
@@ -11,14 +13,28 @@ abstract class DbSequenceAssigner[M <: ModelWithSeqNumber[M]](
     airbrake: AirbrakeNotifier) extends SequenceAssigner with Logging {
 
   val batchSize: Int = 20 // override this if necessary
+  private[this] val errorCount = new AtomicInteger(0)
 
   override def assignSequenceNumbers(): Unit = {
-    try {
-      while (db.readWrite { implicit session => repo.assignSequenceNumbers(batchSize) } > 0) {}
-    } catch {
-      case e: UnsupportedOperationException =>
-        reportUnsupported(e)
-        throw e
+    var done = false
+    var currentBatchSize = batchSize
+    while (!done) {
+      try {
+        done = (db.readWrite { implicit session => repo.assignSequenceNumbers(currentBatchSize) } <= 0)
+        errorCount.set(0)
+        currentBatchSize = batchSize
+      } catch {
+        case e: UnsupportedOperationException =>
+          reportUnsupported(e)
+          throw e
+        case e: Throwable =>
+          if (errorCount.getAndIncrement > 0) {
+            throw e
+          } else {
+            currentBatchSize = max(currentBatchSize / 2, 1)
+            log.warn(s"${this.getClass.getSimpleName} reduced batch size to $currentBatchSize")
+          }
+      }
     }
   }
 

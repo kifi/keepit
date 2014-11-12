@@ -4,18 +4,19 @@ angular.module('kifi')
 
 .controller('HeaderCtrl', [
   '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService',
-    '$location', 'util', 'keyIndices', 'modalService', 'libraryService', '$timeout', 'searchActionService', '$routeParams',
+    '$location', 'util', 'keyIndices', 'modalService', '$timeout', 'searchActionService', '$routeParams',
   function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService,
-    $location, util, keyIndices, modalService, libraryService, $timeout, searchActionService, $routeParams) {
+    $location, util, keyIndices, modalService, $timeout, searchActionService, $routeParams) {
 
     $scope.toggleMenu = function () {
-      $rootElement.find('html').toggleClass('kf-sidebar-active');
+      $rootElement.find('html').toggleClass('kf-sidebar-inactive');
     };
 
+    // reminder: this triggers left sidebar to show in case the default for small windows is to hide left sidebar
     $window.addEventListener('message', function (event) {
       if (event.data === 'show_left_column') {  // for guide
         $scope.$apply(function () {
-          $rootElement.find('html').addClass('kf-sidebar-active');
+          $rootElement.find('html').removeClass('kf-sidebar-inactive');
         });
       }
     });
@@ -59,8 +60,8 @@ angular.module('kifi')
     });
 
 
-    var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function () {
-      $scope.addKeeps();
+    var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function (e, library) {
+      $scope.addKeeps(library);
     });
     $scope.$on('$destroy', deregisterAddKeep);
 
@@ -140,9 +141,10 @@ angular.module('kifi')
       profileService.logout();
     };
 
-    $scope.addKeeps = function () {
+    $scope.addKeeps = function (library) {
       modalService.open({
-        template: 'keeps/addKeepsModal.tpl.html'
+        template: 'keeps/addKeepsModal.tpl.html',
+        modalData: { currentLib : library }
       });
     };
 

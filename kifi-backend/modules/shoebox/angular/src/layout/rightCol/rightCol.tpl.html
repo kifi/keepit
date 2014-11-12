@@ -43,8 +43,8 @@
       <li class="install-kifi">
         <a class="kf-footer-item-link" href="javascript:" ng-click="triggerInstall()">
           <span class="sprite sprite-install-extension-icon"></span>
-          <span ng-show="!installInProgress()">Install the extension</span>
-          <span ng-show="installInProgress()">Installing...</span>
+          <span ng-show="!installInProgress() && !installed()">Install the extension</span>
+          <span ng-show="installInProgress() && !installed()">Installing...</span>
           <span ng-show="installed()">Installed!</span>
         </a>
       </li>

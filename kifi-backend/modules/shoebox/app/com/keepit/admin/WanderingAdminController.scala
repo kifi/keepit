@@ -14,6 +14,8 @@ import play.api.mvc.{ Result }
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
 import scala.concurrent.duration._
+import com.keepit.commanders.LibraryInfo
+import com.keepit.social.BasicUser
 
 class WanderingAdminController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -21,10 +23,11 @@ class WanderingAdminController @Inject() (
     db: Database,
     userRepo: UserRepo,
     socialUserRepo: SocialUserInfoRepo,
+    libraryRepo: LibraryRepo,
     uriRepo: NormalizedURIRepo,
     clock: Clock) extends AdminUserActions {
 
-  private def doWander(wanderlust: Wanderlust): Future[(Seq[(User, Int)], Seq[(SocialUserInfo, Int)], Seq[(NormalizedURI, Int)], Seq[(String, Int)])] = {
+  private def doWander(wanderlust: Wanderlust): Future[(Seq[(User, Int)], Seq[(SocialUserInfo, Int)], Seq[(Library, User, Int)], Seq[(NormalizedURI, Int)], Seq[(String, Int)])] = {
     graphClient.wander(wanderlust).map { collisions =>
 
       val sortedUsers = db.readOnlyMaster { implicit session =>
@@ -35,13 +38,26 @@ class WanderingAdminController @Inject() (
         collisions.socialUsers.map { case (socialUserInfoId, count) => socialUserRepo.get(socialUserInfoId) -> count }
       }.toSeq.sortBy(-_._2)
 
+      val sortedLibraries = db.readOnlyReplica { implicit session =>
+        collisions.libraries.flatMap {
+          case (libraryId, count) =>
+            val library = libraryRepo.get(libraryId)
+            if (library.visibility != LibraryVisibility.PUBLISHED) {
+              None
+            } else {
+              val owner = userRepo.get(library.ownerId)
+              Some((library, owner, count))
+            }
+        }
+      }.toSeq.sortBy(-_._3)
+
       val sortedUris = db.readOnlyReplica { implicit session =>
         collisions.uris.map { case (uriId, count) => uriRepo.get(uriId) -> count }
       }.filter(_._1.restriction.isEmpty).toSeq.sortBy(-_._2)
 
       val sortedExtras = collisions.extra.toSeq.sortBy(-_._2)
 
-      (sortedUsers, sortedSocialUsers, sortedUris, sortedExtras)
+      (sortedUsers, sortedSocialUsers, sortedLibraries, sortedUris, sortedExtras)
     }
   }
 
@@ -52,7 +68,7 @@ class WanderingAdminController @Inject() (
           val availableVertexKinds = (graphKinds.vertexKinds -- Set("Thread", "Tag")).toSeq.sorted
           val userVertexType = availableVertexKinds.find(_.toLowerCase.startsWith("user")).get
           val wanderlust = Wanderlust(userVertexType, request.userId.id)
-          Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, None, Seq.empty, Seq.empty, Seq.empty, Seq.empty))
+          Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, None, Seq.empty, Seq.empty, Seq.empty, Seq.empty, Seq.empty))
         }
       }
 
@@ -76,16 +92,16 @@ class WanderingAdminController @Inject() (
         doWander(wanderlust).onComplete {
 
           case Failure(ex) => {
-            val view = Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, Some(Failure(ex)), Seq.empty, Seq.empty, Seq.empty, Seq.empty))
+            val view = Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, Some(Failure(ex)), Seq.empty, Seq.empty, Seq.empty, Seq.empty, Seq.empty))
             promisedResult.success(view)
           }
 
-          case Success((sortedUsers, sortedSocialUsers, sortedUris, sortedExtras)) => {
+          case Success((sortedUsers, sortedSocialUsers, sortedLibraries, sortedUris, sortedExtras)) => {
 
             val end = clock.now()
             val timing = end.getMillis - start.getMillis
 
-            val view = Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, Some(Success(timing)), sortedUsers, sortedSocialUsers, sortedUris, sortedExtras))
+            val view = Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, Some(Success(timing)), sortedUsers, sortedSocialUsers, sortedLibraries, sortedUris, sortedExtras))
             promisedResult.success(view)
           }
         }
@@ -103,7 +119,7 @@ class WanderingAdminController @Inject() (
       case Failure(ex) =>
         val view = Ok(views.html.admin.graph.fromParisWithLove(request.user, Failure[Long](ex), Seq.empty))
         promisedResult.success(view)
-      case Success((_, _, sortedUris, _)) =>
+      case Success((_, _, _, sortedUris, _)) =>
         val end = clock.now()
         val timing = end.getMillis - start.getMillis
         val view = Ok(views.html.admin.graph.fromParisWithLove(request.user, Success(timing), sortedUris))

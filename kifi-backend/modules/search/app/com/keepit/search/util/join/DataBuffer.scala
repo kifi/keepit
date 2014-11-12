@@ -12,7 +12,7 @@ object DataBuffer {
   // We encode the record type and the record size together into one short word (16-bit)
   // The first bit of the code is used as flag that indicates there is a record, so...
   val DESCRIPTOR_SIZE = 2
-  val MAX_RECTYPEID = 100 // this needs to fit in 7-bit
+  val MAX_RECTYPEID = 0x7F // this needs to fit in 7-bit
   val MAX_DATASIZE = 500 // this (byte size) divided by two (-> the number of short words) needs to fits in 8-bit
 
   @inline def taggedFloatBits(tag: Byte, value: Float): Int = (tag & 0xff) | (JFloat.floatToRawIntBits(value) & 0xffffff00)

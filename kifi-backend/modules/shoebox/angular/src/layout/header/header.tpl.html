@@ -13,8 +13,8 @@
 
           <img class="kf-search-bar-lib-owner-img" ng-show="search.showName" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
 
-          <div class="kf-search-bar-lib-name" ng-show="search.showName" ng-class="{ 'secret': library.visibility == 'secret', 'published': library.visibility == 'published', 'discoverable': library.visibility == 'discoverable' }"> {{library.name}} </div>
-          <div class="kf-search-bar-lib-name-clear" ng-show="search.showName" ng-class="{ 'secret': library.visibility == 'secret', 'published': library.visibility == 'published', 'discoverable': library.visibility == 'discoverable' }" ng-click="clearLibraryName()">&times;</div>
+          <div class="kf-search-bar-lib-name" ng-show="search.showName" ng-class="library.kind != 'user_created' ? 'system-created' : library.visibility == 'secret' ? 'secret' : 'published'"> {{library.name}} </div>
+          <div class="kf-search-bar-lib-name-clear" ng-show="search.showName" ng-class="library.kind != 'user_created' ? 'system-created' : library.visibility == 'secret' ? 'secret' : 'published'" ng-click="clearLibraryName()">&times;</div>
 
           <div class="kf-query-lib" ng-class="{'extend': !search.showName}">
             <input type="text" placeholder="Search Kifi…" ng-model="search.text" ng-focus="focusInput()" ng-blur="blurInput()" ng-change="changeSearchInput()" ng-keydown="onKeydown($event)">
@@ -24,7 +24,7 @@
     </div>
 
     <div class="kf-header-right">
-      <div class="sprite sprite-add-link" ng-click="addKeeps()">Add a link</div>
+      <div class="sprite sprite-add-link" ng-click="addKeeps(library)">Add a link</div>
       <div kf-callout class="kf-callout-bubble-bottom kf-callout-tags" ng-if="showCallout()">
           <div>Your tags are safe. Creating a new library from a tag is a snap.</div>
           <div class="kf-callout-bubble-action">

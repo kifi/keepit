@@ -50,7 +50,14 @@ class ImageFetcherImpl @Inject() (
         log.error(s"Url [$url] parsing error, ignoring image", e)
         return Future.successful(None) //just ignore
     }
-    WS.url(uriObj.toString()).withRequestTimeout(120000).get map { resp =>
+    val getFuture = try {
+      WS.url(uriObj.toString()).withRequestTimeout(120000).get
+    } catch {
+      case t: Throwable =>
+        airbrake.notify(s"Failed to request an image with url $url", trace.withCause(t))
+        return Future.successful(None) //just ignore
+    }
+    getFuture map { resp =>
       log.info(s"[fetchRawImage($url)] resp=${resp.statusText}")
       resp.status match {
         case Status.OK =>

@@ -22,7 +22,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
       withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 4, numUris = 9)
         val expectedUriToUserEdges = Seq(uris(0) -> Seq(users(0), users(1), users(2)), uris(1) -> Seq(users(1)), uris(2) -> Seq(users(2)), uris(3) -> Seq(users(3)))
-        saveBookmarksByURI(expectedUriToUserEdges)
+        val allKeeps = saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
         val (shardedCollectionIndexer, indexer, userGraphIndexer, _, searchFactory, shardedKeepIndexer, libraryIndexer) = initIndexes(store)
@@ -32,7 +32,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         setConnections(Map(users(0).id.get -> Set(users(1).id.get)))
         userGraphIndexer.update()
 
-        def myBookmarkExternalId = getBookmarkByUriAndUser(uris(0).id.get, users(0).id.get).get.externalId
+        def myBookmarkExternalId = allKeeps.find { keep => keep.uriId == uris(0).id.get && keep.userId == users(0).id.get }.get.externalId
 
         val searchConfig = noBoostConfig.overrideWith("myBookmarkBoost" -> "2", "sharingBoostInNetwork" -> "0.5", "sharingBoostOutOfNetwork" -> "0.1")
 

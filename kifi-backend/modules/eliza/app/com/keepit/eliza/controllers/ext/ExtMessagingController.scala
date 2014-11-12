@@ -94,7 +94,7 @@ class ExtMessagingController @Inject() (
     contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
     val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, source, None)(contextBuilder.build)
     val tDiff = currentDateTime.getMillis - tStart.getMillis
-    statsd.timing(s"messaging.replyMessage", tDiff, ALWAYS)
+    statsd.timing(s"messaging.replyMessage", tDiff, ONE_IN_HUNDRED)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
   }
 

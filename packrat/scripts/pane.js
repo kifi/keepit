@@ -154,14 +154,14 @@ k.pane = k.pane || function () {  // idempotent for Chrome
       .hoverfu('.kifi-pane-top-menu-a:not(.kifi-active)', function (configureHover) {
         var btn = this;
         k.render('html/keeper/titled_tip', {
-          dir: "below",
+          dir: 'below',
           cssClass: 'kifi-pane-settings-tip',
-          title: "Settings",
+          title: 'Settings',
           html: 'Customize your Kifi<br/>experience.'
         }, function (html) {
           configureHover(html, {
             mustHoverFor: 700, hideAfter: 3000, click: "hide",
-            position: {my: 'right top+10', at: 'right bottom', of: btn, collision: 'none'}
+            position: {my: 'right+6 top+10', at: 'right bottom', of: btn, collision: 'none'}
           });
         });
       })
@@ -278,6 +278,7 @@ k.pane = k.pane || function () {  // idempotent for Chrome
     }
     $pane.find('.kifi-pane-box').triggerHandler('kifi:removing');
     k.pane.onHide.dispatch();
+    $pane.find('.kifi-pane-head-logo,.kifi-pane-top-menu-a,.kifi-pane-x').hoverfu('destroy');
     $pane
     .data('state', 'closing')
     .off('transitionend') // onPaneShown

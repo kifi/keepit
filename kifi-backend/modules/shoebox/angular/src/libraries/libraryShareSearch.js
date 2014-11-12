@@ -316,6 +316,10 @@ angular.module('kifi')
         };
 
         scope.shareLibraryKifiFriend = function (result) {
+          $timeout(function () {
+            libraryService.trackEvent('user_clicked_page', scope.library, { action: 'shareLibrary', subAction: 'kifiFriend' });
+          });
+
           return shareLibrary({
             invites: [{
               type: 'user',
@@ -328,6 +332,10 @@ angular.module('kifi')
         };
 
         scope.shareLibraryExistingEmail = function (result) {
+          $timeout(function () {
+            libraryService.trackEvent('user_clicked_page', scope.library, { action: 'shareLibrary', subAction: 'existingEmail' });
+          });
+
           return shareLibrary({
             invites: [{
               type: 'email',
@@ -343,6 +351,10 @@ angular.module('kifi')
           if (!util.validateEmail(scope.search.name)) {
             return;
           }
+
+          $timeout(function () {
+            libraryService.trackEvent('user_clicked_page', scope.library, { action: 'shareLibrary', subAction: 'newEmail' });
+          });
 
           return shareLibrary({
             invites: [{

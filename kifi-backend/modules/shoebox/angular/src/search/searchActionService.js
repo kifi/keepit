@@ -47,11 +47,13 @@ angular.module('kifi')
         if (idxUser !== -1) {
           user = users[idxUser];
           lib.keeperPic = friendService.getPictureUrlForUser(user);
+          lib.owner = user;
           decompressedLibraries.push(lib);
           libUsers[idxUser] = true;
         } else {
           user = profileService.me;
           lib.keeperPic = friendService.getPictureUrlForUser(user);
+          lib.owner = user;
           if (!libraryService.isSystemLibrary(lib.id)) {
             decompressedLibraries.push(lib);
           }
@@ -78,7 +80,7 @@ angular.module('kifi')
       hit.myLibraries = myLibraries;
     }
 
-    function reportSearchAnalytics(endedWith, numResults) {
+    function reportSearchAnalytics(endedWith, numResults, numResultsWithLibraries) {
       var url = routeService.searchedAnalytics;
       if (lastSearchContext && lastSearchContext.query) {
         var origin = $location.$$protocol + '://' + $location.$$host;
@@ -94,6 +96,7 @@ angular.module('kifi')
           maxResults: lastSearchContext.maxResults,
           kifiExpanded: true,
           kifiResults: numResults,
+          kifiResultsWithLibraries: numResultsWithLibraries,
           kifiTime: lastSearchContext.kifiTime,
           kifiShownTime: lastSearchContext.kifiShownTime,
           kifiResultsClicked: lastSearchContext.clicks,
@@ -143,6 +146,7 @@ angular.module('kifi')
       return resultsFetched.then(function (results) {
         var res = results[1];
         var resData = res.data;
+
         //$log.log('searchActionService.find() res', resData);
 
         var hits = resData.hits || [];
@@ -182,12 +186,12 @@ angular.module('kifi')
       pageSession = createPageSession();
     }
 
-    function reportSearchAnalyticsOnUnload(numResults) {
-      reportSearchAnalytics('unload', numResults);
+    function reportSearchAnalyticsOnUnload(numResults, numResultsWithLibraries) {
+      reportSearchAnalytics('unload', numResults, numResultsWithLibraries);
     }
 
-    function reportSearchAnalyticsOnRefine(numResults) {
-      reportSearchAnalytics('refinement', numResults);
+    function reportSearchAnalyticsOnRefine(numResults, numResultsWithLibraries) {
+      reportSearchAnalytics('refinement', numResults, numResultsWithLibraries);
     }
 
     function reportSearchClickAnalytics(keep, resultPosition, numResults) {
@@ -197,7 +201,6 @@ angular.module('kifi')
         if ($location.$$port) {
           origin = origin + ':' + $location.$$port;
         }
-        var matches = keep.bookmark.matches || (keep.bookmark.matches = {});
         var hitContext = {
           isMyBookmark: keep.isMyBookmark,
           isPrivate: keep.isPrivate,
@@ -205,10 +208,13 @@ angular.module('kifi')
           keepers: keep.keepers.map(function (elem) {
             return elem.id;
           }),
+          libraries: keep.libraries.map(function (elem) {
+            return [elem.id, elem.owner.id];
+          }),
           tags: keep.tags,
-          title: keep.bookmark.title,
-          titleMatches: (matches.title || []).length,
-          urlMatches: (matches.url || []).length
+          title: keep.summary.title,
+          titleMatches: 0, //This broke with new search api (the information is no longer available). Needs to be investigated if we still need it.
+          urlMatches: 0
         };
         var data = {
           origin: origin,

@@ -175,27 +175,6 @@ function respondToTab(callbackId, page, response) {
   }
 }
 
-exports.request = function (method, url, data, headers, done, fail) {
-  var options = {
-    url: url,
-    headers: headers,
-    onComplete: onRequestEnd.bind(null, done, fail)
-  };
-  if (data != null && data !== '') {
-    options.contentType = 'application/json; charset=utf-8';
-    options.content = typeof data === 'string' ? data : JSON.stringify(data);
-  }
-  require('sdk/request').Request(options)[method.toLowerCase()]();
-};
-var onRequestEnd = errors.wrap(function onRequestEnd(done, fail, resp) {
-  var status = resp.status;
-  if (status >= 200 && status < 300) {
-    if (done) done(status === 204 ? null : resp.json);
-  } else {
-    if (fail) fail(resp);
-  }
-});
-
 exports.util = {
   btoa: function(str) {
     return require('sdk/base64').encode(str);
@@ -460,6 +439,7 @@ exports.timers = {
   clearInterval: timers.clearInterval.bind(timers)
 };
 exports.version = self.version;
+exports.xhr = require('sdk/net/xhr').XMLHttpRequest;
 
 // initializing tabs and pages
 

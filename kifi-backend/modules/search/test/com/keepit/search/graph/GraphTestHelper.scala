@@ -145,9 +145,4 @@ trait GraphTestHelper extends SearchTestInjector {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     await(fakeShoeboxServiceClient.getBookmarks(userId))
   }
-
-  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit injector: Injector): Option[Keep] = {
-    val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    await(fakeShoeboxServiceClient.getBookmarkByUriAndUser(uriId, userId))
-  }
 }

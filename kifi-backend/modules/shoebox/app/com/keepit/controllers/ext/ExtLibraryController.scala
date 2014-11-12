@@ -59,9 +59,10 @@ class ExtLibraryController @Inject() (
     val name = (body \ "name").as[String]
     val visibility = (body \ "visibility").as[LibraryVisibility]
     val slug = LibrarySlug.generateFromName(name)
-    val addRequest = LibraryAddRequest(name, visibility, description = None, slug, collaborators = None, followers = None)
+    val addRequest = LibraryAddRequest(name, visibility, description = None, slug)
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
-      case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+      case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
         Ok(Json.toJson(LibraryData(
           id = Library.publicId(lib.id.get),
@@ -74,14 +75,15 @@ class ExtLibraryController @Inject() (
   def getLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
       libraryCommander.getLibraryWithOwnerAndCounts(libraryId, request.userId) match {
-        case Left((status, message)) => Status(status)(Json.obj("error" -> message))
-        case Right((library, owner, keepCount, followerCount)) => Ok(Json.obj(
+        case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+        case Right((library, owner, keepCount, followerCount, following)) => Ok(Json.obj(
           "name" -> library.name,
           "slug" -> library.slug,
           "visibility" -> library.visibility,
           "owner" -> owner,
           "keeps" -> keepCount,
-          "followers" -> followerCount
+          "followers" -> followerCount,
+          "following" -> following
         ))
       }
     }
@@ -91,8 +93,28 @@ class ExtLibraryController @Inject() (
     decode(libraryPubId) { libraryId =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
       libraryCommander.removeLibrary(libraryId, request.userId) match {
-        case Some((status, message)) => Status(status)(Json.obj("error" -> message))
+        case Some(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
         case _ => NoContent
+      }
+    }
+  }
+
+  def joinLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
+    decode(libraryPubId) { libraryId =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+      libraryCommander.joinLibrary(request.userId, libraryId) match {
+        case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+        case Right(lib) => NoContent
+      }
+    }
+  }
+
+  def leaveLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
+    decode(libraryPubId) { libraryId =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+      libraryCommander.leaveLibrary(libraryId, request.userId) match {
+        case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+        case Right(_) => NoContent
       }
     }
   }

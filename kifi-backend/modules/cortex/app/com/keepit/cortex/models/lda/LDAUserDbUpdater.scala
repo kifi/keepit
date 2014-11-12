@@ -36,7 +36,7 @@ trait LDAUserDbUpdater extends BaseFeatureUpdater[Id[User], User, DenseLDA, Feat
 
 @Singleton
 class LDAUserDbUpdaterImpl @Inject() (
-    representer: LDAURIRepresenter,
+    representer: MultiVersionedLDAURIRepresenter,
     db: Database,
     keepRepo: CortexKeepRepo,
     uriTopicRepo: URILDATopicRepo,
@@ -48,10 +48,11 @@ class LDAUserDbUpdaterImpl @Inject() (
   private val modelName = StatModelName.LDA_USER
 
   def update(): Unit = {
-    implicit val version = representer.version
-    val tasks = fetchTasks
-    log.info(s"fetched ${tasks.size} tasks")
-    processTasks(tasks)
+    representer.versions.foreach { implicit version =>
+      val tasks = fetchTasks
+      log.info(s"fetched ${tasks.size} tasks")
+      processTasks(tasks)
+    }
   }
 
   private def fetchTasks(implicit version: ModelVersion[DenseLDA]): Seq[CortexKeep] = {
@@ -114,9 +115,9 @@ class LDAUserDbUpdaterImpl @Inject() (
     model.isEmpty || isOld(model.get.updatedAt) || recentlyKeptMany(userId)
   }
 
-  private def genFeature(topicCounts: Seq[(LDATopic, Int)]): Option[UserTopicMean] = {
+  private def genFeature(topicCounts: Seq[(LDATopic, Int)])(implicit version: ModelVersion[DenseLDA]): Option[UserTopicMean] = {
     if (topicCounts.isEmpty) return None
-    val arr = new Array[Float](representer.dimension)
+    val arr = new Array[Float](representer.getDimension(version).get)
     topicCounts.foreach { case (topic, cnt) => arr(topic.index) += cnt }
     val s = arr.sum
     Some(UserTopicMean(arr.map { x => x / s }))

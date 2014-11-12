@@ -25,6 +25,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
   def getAllPublishedLibraries()(implicit session: RSession): Seq[Library]
+  def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library]
   def pagePublished(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[Library]
   def countPublished(implicit session: RSession): Int
 }
@@ -89,22 +90,43 @@ class LibraryRepoImpl @Inject() (
     }
   }
 
-  private def getByNameAndUserCompiled(userId: Column[Id[User]], name: Column[String], excludeState: Option[State[Library]]) =
-    Compiled { (for (b <- rows if b.name === name && b.ownerId === userId && b.state =!= excludeState.orNull) yield b) }
-  def getByNameAndUserId(userId: Id[User], name: String, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
-    getByNameAndUserCompiled(userId, name, excludeState).firstOption
+  private val getByNameAndUserCompiled = Compiled { (userId: Column[Id[User]], name: Column[String]) =>
+    (for (b <- rows if b.name === name && b.ownerId === userId) yield b)
+  }
+  private val getByNameAndUserWithExcludeCompiled = Compiled { (userId: Column[Id[User]], name: Column[String], excludeState: Column[State[Library]]) =>
+    (for (b <- rows if b.name === name && b.ownerId === userId && b.state =!= excludeState) yield b)
+  }
+  def getByNameAndUserId(userId: Id[User], name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library] = {
+    excludeState match {
+      case None => getByNameAndUserCompiled(userId, name).firstOption
+      case Some(exclude) => getByNameAndUserWithExcludeCompiled(userId, name, exclude).firstOption
+    }
   }
 
-  private def getBySlugAndUserCompiled(userId: Column[Id[User]], slug: Column[LibrarySlug], excludeState: Option[State[Library]]) =
-    Compiled { (for (b <- rows if b.slug === slug && b.ownerId === userId && b.state =!= excludeState.orNull) yield b) }
-  def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
-    getBySlugAndUserCompiled(userId, slug, excludeState).firstOption
+  private val getBySlugAndUserCompiled = Compiled { (userId: Column[Id[User]], slug: Column[LibrarySlug]) =>
+    (for (b <- rows if b.slug === slug && b.ownerId === userId) yield b)
+  }
+  private val getBySlugAndUserWithExcludeCompiled = Compiled { (userId: Column[Id[User]], slug: Column[LibrarySlug], excludeState: Column[State[Library]]) =>
+    (for (b <- rows if b.slug === slug && b.ownerId === userId && b.state =!= excludeState) yield b)
+  }
+  def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library] = {
+    excludeState match {
+      case None => getBySlugAndUserCompiled(userId, slug).firstOption
+      case Some(exclude) => getBySlugAndUserWithExcludeCompiled(userId, slug, exclude).firstOption
+    }
   }
 
-  private def getByNameOrSlugCompiled(userId: Column[Id[User]], name: Column[String], slug: Column[LibrarySlug], excludeState: Option[State[Library]]) =
-    Compiled { (for (b <- rows if (b.name === name || b.slug === slug) && b.ownerId === userId && b.state =!= excludeState.orNull) yield b) }
-  def getByNameOrSlug(userId: Id[User], name: String, slug: LibrarySlug, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
-    getByNameOrSlugCompiled(userId, name, slug, excludeState).firstOption
+  private val getByNameOrSlugCompiled = Compiled { (userId: Column[Id[User]], name: Column[String], slug: Column[LibrarySlug]) =>
+    (for (b <- rows if (b.name === name || b.slug === slug) && b.ownerId === userId) yield b)
+  }
+  private val getByNameOrSlugWithExcludeCompiled = Compiled { (userId: Column[Id[User]], name: Column[String], slug: Column[LibrarySlug], excludeState: Column[State[Library]]) =>
+    (for (b <- rows if (b.name === name || b.slug === slug) && b.ownerId === userId && b.state =!= excludeState) yield b)
+  }
+  def getByNameOrSlug(userId: Id[User], name: String, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library] = {
+    excludeState match {
+      case None => getByNameOrSlugCompiled(userId, name, slug).firstOption
+      case Some(exclude) => getByNameOrSlugWithExcludeCompiled(userId, name, slug, exclude).firstOption
+    }
   }
 
   def getByUser(userId: Id[User], excludeState: Option[State[Library]], excludeAccess: Option[LibraryAccess])(implicit session: RSession): Seq[(LibraryMembership, Library)] = {
@@ -125,7 +147,7 @@ class LibraryRepoImpl @Inject() (
     invalidateCache(get(libraryId).copy(lastKept = updateTime))
   }
 
-  private def getOptCompiled(ownerId: Column[Id[User]], slug: Column[LibrarySlug]) = Compiled {
+  private val getOptCompiled = Compiled { (ownerId: Column[Id[User]], slug: Column[LibrarySlug]) =>
     (for (r <- rows if r.ownerId === ownerId && r.slug === slug) yield r)
   }
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library] = {
@@ -143,7 +165,7 @@ class LibraryRepoImpl @Inject() (
 
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {
     idCache.bulkGetOrElse(libraryIds.map(LibraryIdKey(_))) { missingKeys =>
-      getLibrariesCompiled(missingKeys.map(_.id)).list.map(library => LibraryIdKey(library.id.get) -> library).toMap
+      (for (r <- rows if r.id.inSet(libraryIds)) yield r).list.map(library => LibraryIdKey(library.id.get) -> library).toMap
     }.map { case (libraryKey, library) => libraryKey.id -> library }
   }
 
@@ -151,8 +173,8 @@ class LibraryRepoImpl @Inject() (
     (for (r <- rows if r.visibility === (LibraryVisibility("published"): LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).list
   }
 
-  private def getLibrariesCompiled(libraryIds: Set[Id[Library]]) = Compiled {
-    (for (r <- rows if r.id.inSet(libraryIds)) yield r)
+  def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library] = {
+    (for (r <- rows if r.visibility === (LibraryVisibility("published"): LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).sortBy(_.id.desc).take(size).list
   }
 
   def pagePublished(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[Library] = {

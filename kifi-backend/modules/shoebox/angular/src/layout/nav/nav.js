@@ -98,6 +98,19 @@ angular.module('kifi')
         });
         scope.$on('$destroy', deregisterChangedLibrary);
 
+        var deregisterLibraryVisited = $rootScope.$on('lastViewedLib', function (e, lib) {
+          if (lib.name) {
+            var idx = _.findIndex(scope.userLibsToShow, { 'name' : lib.name });
+            if (scope.userLibsToShow[idx]) {
+              scope.userLibsToShow[idx].lastViewed = Date.now();
+            }
+            if (scope.sortingMenu.option === 'last_viewed') {
+              updateNavLibs();
+            }
+          }
+        });
+        scope.$on('$destroy', deregisterLibraryVisited);
+
         scope.$watch(function () {
           return friendService.requests.length;
         }, function (value) {
@@ -159,7 +172,7 @@ angular.module('kifi')
         //
         var fuseOptions = {
            keys: ['name'],
-           threshold: 0.3 // 0 means exact match, 1 means match with anything
+           threshold: 0.3  // 0 means exact match, 1 means match with anything.
         };
         var librarySummarySearch = {};
         var invitedSummarySearch = {};

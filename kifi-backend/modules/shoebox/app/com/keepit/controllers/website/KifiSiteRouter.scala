@@ -1,30 +1,30 @@
 package com.keepit.controllers.website
 
+import java.net.{ URLDecoder, URLEncoder }
+
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.commanders.{ UserCommander, LibraryCommander }
-import com.keepit.common.db.Id
+import com.keepit.common.core._
+import com.keepit.common.controller._
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
-import com.keepit.common.controller._
-import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.KifiMobileAppLinkFlag
 import com.keepit.common.net.UserAgent
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
 import play.api.Play
-import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
-import ImplicitHelper._
-import java.net.{ URLEncoder, URLDecoder }
+import play.api.mvc.Result
 
 import scala.concurrent.Future
+import scala.util.matching.Regex
+import java.util.regex.Pattern
 
 sealed trait Routeable
 private case class MovedPermanentlyRoute(url: String) extends Routeable
-private case class Angular(headerload: Option[String], postload: Seq[MaybeUserRequest[_] => Future[String]] = Seq.empty) extends Routeable
+private case class Angular(headerload: Option[Future[String]], postload: Seq[MaybeUserRequest[_] => Future[String]] = Seq.empty) extends Routeable
 private case class SeeOtherRoute(url: String) extends Routeable
 private case class RedirectToLogin(originalUrl: String) extends Routeable
 private case object Error404 extends Routeable
@@ -38,6 +38,20 @@ case class Path(requestPath: String) {
   val split = path.split("/").map(URLDecoder.decode(_, "UTF-8"))
   val primary = split.head
   val secondary = split.tail.headOption
+}
+
+object KifiSiteRouter {
+  def substituteMetaProperty(property: String, newContent: String): (Regex, String) = {
+    val pattern = ("""<meta\s+property="""" + Pattern.quote(property) + """"\s+content=".*"\s*/?>""").r
+    val newValue = s"""<meta property="$property" content="$newContent"/>"""
+    pattern -> newValue
+  }
+
+  def substituteLink(rel: String, newRef: String): (Regex, String) = {
+    val pattern = ("""<link\s+rel="""" + Pattern.quote(rel) + """"\s+href=".*"\s*/?>""").r
+    val newValue = s"""<link rel="$rel" href="$newRef"/>"""
+    pattern -> newValue
+  }
 }
 
 @Singleton // holds state for performance reasons
@@ -66,7 +80,8 @@ class KifiSiteRouter @Inject() (
       MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission")
     } else if (request.path == "/" && request.userIdOpt.isEmpty) {
       //should we ever get to this line???
-      Redirect(com.keepit.controllers.website.routes.HomeController.home)
+      Redirect(com.keepit.controllers.website.routes.HomeController.
+        home)
     } else if (userAgentOpt.exists(_.isMobile) &&
       request.queryString.get(KifiMobileAppLinkFlag.key).exists(_.contains(KifiMobileAppLinkFlag.value))) {
       Ok(views.html.mobile.MobileRedirect(request.uri))
@@ -96,10 +111,11 @@ class KifiSiteRouter @Inject() (
   }
 
   def route(request: MaybeUserRequest[_]): Routeable = {
+    val userAgent = request.userAgentOpt.getOrElse(UserAgent.UnknownUserAgent)
     val path = Path(request.path)
     redirects.get(path.path).map { targetPath =>
       SeeOtherRoute(targetPath)
-    } orElse angularRouter.route(request, path) getOrElse Error404
+    } orElse angularRouter.route(request, path, userAgent) getOrElse Error404
   }
 
 }
@@ -111,8 +127,8 @@ class AngularRouter @Inject() (
     airbrake: AirbrakeNotifier,
     libraryMetadataCache: LibraryMetadataCache) {
 
-  def route(request: MaybeUserRequest[_], path: Path): Option[Routeable] = {
-    ngStaticPage(request, path) orElse userOrLibrary(request, path)
+  def route(request: MaybeUserRequest[_], path: Path, userAgent: UserAgent): Option[Routeable] = {
+    ngStaticPage(request, path) orElse userOrLibrary(request, path, userAgent)
   }
 
   def injectUser(request: MaybeUserRequest[_]) = Future {
@@ -138,7 +154,7 @@ class AngularRouter @Inject() (
   //private val dataOnEveryAngularPage = Seq(injectUser _) // todo: Have fun with this!
 
   // combined to re-use User lookup
-  private def userOrLibrary(request: MaybeUserRequest[_], path: Path): Option[Routeable] = {
+  private def userOrLibrary(request: MaybeUserRequest[_], path: Path, userAgent: UserAgent): Option[Routeable] = {
     if (path.split.length == 1 || path.split.length == 2) {
       val userOpt = userCommander.getUserByUsernameOrAlias(Username(path.primary))
 
@@ -156,7 +172,10 @@ class AngularRouter @Inject() (
                   val redir = "/" + (path.split.dropRight(1) :+ library.slug.value).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
                   if (isLibraryAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
                 } else {
-                  Some(Angular(Some(libMetadata(library)))) // great place to postload request data since we have `lib` available
+                  val metadata = if (userAgent.possiblyBot) {
+                    Some(libMetadata(library))
+                  } else None
+                  Some(Angular(metadata)) // great place to postload request data since we have `lib` available
                 }
             } getOrElse None
           }
@@ -166,14 +185,14 @@ class AngularRouter @Inject() (
     }
   }
 
-  private def libMetadata(library: Library): String = try {
-    libraryMetadataCache.getOrElse(LibraryMetadataKey(library.id.get)) {
-      libraryCommander.libraryMetaTags(library).formatOpenGraph
+  private def libMetadata(library: Library): Future[String] = try {
+    libraryMetadataCache.getOrElseFuture(LibraryMetadataKey(library.id.get)) {
+      libraryCommander.libraryMetaTags(library).imap(_.formatOpenGraph)
     }
   } catch {
     case e: Throwable =>
       airbrake.notify(s"on getting library metadata for $library", e)
-      ""
+      Future.successful("")
   }
 
   // Some means to serve Angular. The Seq is possible injected data to include

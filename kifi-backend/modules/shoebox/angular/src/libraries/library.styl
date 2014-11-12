@@ -209,12 +209,17 @@ invite-header-orange = #ff7c3c
 
   .kf-keep-lib-additional-followers
     display: inline-block
-    border-radius: 100%
-    width: 42px
+    border-radius: 21px
+    padding: 0 6px 0 5px
     height: 42px
     background-color: kifiBlack
     color: #fff
     vertical-align: top
+    cursor: pointer
+    min-width: 31px
+
+    &:hover
+      background-color: #444
 
   .kf-keep-lib-additional-followers-text
     display: block
@@ -237,11 +242,20 @@ invite-header-orange = #ff7c3c
     padding-left: 17px
 
   .kf-keep-lib-footer-button-follow
-    background: kifiBlack
+    border: none
+    background: #008aee
     color: white
+    &.stickable
+      z-index: 501
 
   .kf-keep-lib-footer-button-unfollow
-    color: #7eac4e
+    border: 1px solid #20a1f1
+    width: 81px
+    background: #fff
+    color: #20a1f1
+
+    &:hover
+      border: 1px solid redColor
 
     &::after
       content: 'Following'
@@ -256,6 +270,7 @@ invite-header-orange = #ff7c3c
 
   .kf-keep-lib-image
     width: 100%
+    padding-top: 30px
 
 // This should be in common; it's so messy right now.
 .kf-keep-lib-footer-button
@@ -271,7 +286,7 @@ invite-header-orange = #ff7c3c
   font-size: 13px
   color: #666
 
-  .kf-keep-lib-footer-share-link
+  .kf-keep-lib-footer-share-link-text
     color: #666
 
   &.kf-keep-lib-footer-twitter-button
@@ -282,6 +297,14 @@ invite-header-orange = #ff7c3c
       height: 16px
       padding: 8px 15px 8px 40px
 
+  &.kf-keep-lib-footer-twitter-button
+  &.kf-keep-lib-footer-facebook-button
+    .public-body &
+      background: #5b6273
+
+      .kf-keep-lib-footer-share-link-text
+        color: white
+
 .kf-keep-lib-footer-button-icon
   position: absolute
   top: 7px
@@ -291,6 +314,19 @@ invite-header-orange = #ff7c3c
   background-repeat: no-repeat
   background-position: center center
   background-size: contain
+
+  &.svg-twitter-white
+  &.svg-facebook-white
+    display: none
+
+  .public-body &
+    &.svg-twitter-white
+    &.svg-facebook-white
+      display: block
+
+    &.svg-twitter
+    &.svg-facebook
+      display: none
 
 .kf-library-share-search
   position: relative

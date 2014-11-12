@@ -44,17 +44,15 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
 }
 
 case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
-    createdAt: DateTime, updatedAt: DateTime, unsafeTags: Seq[String], unsafeFirstName: String, unsafeLastName: String) extends PublicPageMetaTags {
+    createdAt: DateTime, updatedAt: DateTime, unsafeFirstName: String, unsafeLastName: String) extends PublicPageMetaTags {
 
   def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
 
   val title = clean(unsafeTitle)
   val description = clean(unsafeDescription)
-  val tags = unsafeTags.distinct.filter(_.length > 1).take(100).map(clean)
   val firstName = clean(unsafeFirstName)
   val lastName = clean(unsafeLastName)
-
-  def tagList = tags.mkString(",")
+  val fullName = s"$firstName $lastName"
 
   def formatOpenGraph: String = {
 
@@ -62,7 +60,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       s"""
          |<meta property="og:image" content="$image" />
          |<meta itemprop="image" content="$image">
-       """.stripMargin
+       """.stripMargin.trim
     } mkString ("\n")
 
     def twitterImageTags = images.headOption map { image =>
@@ -76,7 +74,6 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
     } getOrElse ""
 
     s"""
-      |<html itemscope itemtype="http://schema.org/Product">
       |<title>${title}</title>
       |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly"/>
       |<meta name="apple-mobile-web-app-capable" content="no"/>
@@ -93,10 +90,8 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}" />
       |<meta property="fb:first_name" content="${firstName}" />
       |<meta property="fb:last_name" content="${lastName}" />
-      |<meta property="fb:tag" content="$tagList" />
       |<meta property="fb:admins" content="646386018,71105121,7800404,1343280666,1367777495,575533310,636721190" />
       |<meta name="description" content="$description">
-      |<meta name="keywords" content="$tagList">
       |<meta name="author" content="${firstName} ${lastName}">
       |<link rel="canonical" href="$url" />
       |<meta name="twitter:card" content="summary_large_image" />

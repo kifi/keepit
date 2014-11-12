@@ -50,7 +50,7 @@ trait LDAUserStatDbUpdater extends BaseFeatureUpdater[Id[User], User, DenseLDA, 
 
 @Singleton
 class LDAUserStatDbUpdaterImpl @Inject() (
-    representer: LDAURIRepresenter,
+    representer: MultiVersionedLDAURIRepresenter,
     db: Database,
     keepRepo: CortexKeepRepo,
     uriTopicRepo: URILDATopicRepo,
@@ -63,15 +63,17 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   protected val min_num_evidence = 5
 
   def update(): Unit = {
-    implicit val version = representer.version
-    val tasks = fetchTasks
-    log.info(s"fetched ${tasks.size} tasks")
-    processTasks(tasks)
+    representer.versions.foreach { implicit version =>
+      val tasks = fetchTasks
+      log.info(s"fetched ${tasks.size} tasks")
+      processTasks(tasks)
+    }
   }
 
   def updateUser(userId: Id[User]): Unit = {
-    implicit val version = representer.version
-    processUser(userId)
+    representer.versions.foreach { implicit version =>
+      processUser(userId)
+    }
   }
 
   private def fetchTasks(implicit version: ModelVersion[DenseLDA]): Seq[CortexKeep] = {

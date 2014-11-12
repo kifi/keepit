@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('libraryService', [
-  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService',
-  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService) {
+  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService', '$analytics',
+  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService, $analytics) {
     var librarySummaries = [],
         invitedSummaries = [];
 
@@ -126,6 +126,14 @@ angular.module('kifi')
       library.secondLine = lines[1];
     }
 
+    function duplicateName(name, oldName) {
+      return _.find(librarySummaries, function (librarySummary) {
+        return librarySummary.name === name &&
+               librarySummary.access === 'owner' &&
+               !(oldName && name === oldName);
+      });
+    }
+
 
     //
     // API methods.
@@ -143,6 +151,28 @@ angular.module('kifi')
         return _.some(librarySummaries, function (libSum) {
           return (libSum.kind === 'system_main' || libSum.kind === 'system_secret') && libSum.id === libraryId;
         });
+      },
+
+      getLibraryNameError: function (name, oldName) {
+        function hasInvalidCharacters (myString, invalidChars) {
+          return _.some(invalidChars, function (invalidChar) {
+            return myString.indexOf(invalidChar) !== -1;
+          });
+        }
+
+        if (!name.length) {
+          return 'Please enter a name for your library';
+        } else if (name.length < 3) {
+          return 'Please try a longer name';
+        } else if (name.length > 50) {
+          return 'Please try a shorter name';
+        } else if (hasInvalidCharacters(name, ['/', '\\', '"', '\''])) {
+          return 'Please no slashes or quotes in your library name';
+        } else if (duplicateName(name, oldName)) {
+          return 'You already have a library with this name';
+        }
+
+        return null;
       },
 
       fetchLibrarySummaries: function (invalidateCache) {
@@ -331,6 +361,30 @@ angular.module('kifi')
         if (recentLibraries.length > 3) {
           recentLibraries.shift();
         }
+      },
+
+      getCommonTrackingAttributes: function (library) {
+        var defaultAttributes = {
+          libraryId: library.id,
+          libraryOwnerUserId: library.owner.id,
+          libraryOwnerUserName: library.owner.username,
+          followerCount: library.numFollowers,
+          keepCount: library.numKeeps,
+          privacySetting: library.visibility,
+          source: 'site'
+        };
+
+        if (library.visibility === 'published') {
+          defaultAttributes.libraryName = library.name;
+        }
+
+        return defaultAttributes;
+      },
+
+      trackEvent: function (eventName, library, attributes) {
+        var defaultAttributes = api.getCommonTrackingAttributes(library);
+        attributes = _.extend(defaultAttributes, attributes || {});
+        $analytics.eventTrack(eventName, attributes);
       }
     };
 

@@ -31,7 +31,7 @@ class SendgridCommander @Inject() (
 
   val earliestAcceptableEventTime = new DateTime(2012, 7, 15, 0, 0)
   val alertEvents: Seq[SendgridEventType] = Seq(BOUNCE, SPAM_REPORT)
-  val unsubscribeEvents: Seq[SendgridEventType] = Seq(UNSUBSCRIBE, BOUNCE)
+  val unsubscribeEvents: Seq[SendgridEventType] = Seq(UNSUBSCRIBE, BOUNCE, SPAM_REPORT)
 
   def processNewEvents(events: Seq[SendgridEvent]): Unit = {
     events foreach report

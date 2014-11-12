@@ -82,21 +82,15 @@ class WebsiteSearchController @Inject() (
         val futureUriSummaries = shoeboxClient.getUriSummaries(uriIds)
         val futureBasicKeeps = {
           if (userId == SearchControllerUtil.nonUser) {
-            Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]])
+            Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]].withDefaultValue(Set.empty))
           } else {
             shoeboxClient.getBasicKeeps(userId, uriIds.toSet)
           }
         }
 
         getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>
-          val (allSecondaryFields, userIds, libraryIds) = writesAugmentationFields(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
           val librarySearcher = libraryIndexer.getSearcher
-          val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, libraryIds.toSet)
-
-          val futureUsers = {
-            val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
-            shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
-          }
+          val (allSecondaryFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
 
           val futureJsHits = for {
             summaries <- futureUriSummaries
@@ -119,15 +113,9 @@ class WebsiteSearchController @Inject() (
             }
           }
           for {
-            usersById <- futureUsers
+            (users, libraries) <- futureBasicUsersAndLibraries
             jsHits <- futureJsHits
           } yield {
-            val libraries = libraryIds.map { libId =>
-              val (library, visibility) = libraryRecordsAndVisibilityById(libId)
-              val owner = usersById(library.ownerId)
-              makeBasicLibrary(library, visibility, owner)
-            }
-            val users = userIds.map(usersById(_))
             (jsHits, users, libraries)
           }
         }

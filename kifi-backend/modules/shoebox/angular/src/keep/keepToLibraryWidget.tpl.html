@@ -4,22 +4,22 @@
 
     <div class="keep-to-library-search">
       <span class="keep-to-library-search-input-icon"></span>
-      <input class="keep-to-library-search-input" ng-model="search.name" placeholder="Search your libraries" ng-keydown="processKeyEvent($event)">
+      <input class="keep-to-library-search-input" ng-model="search.name" ng-change="onSearchInputChange(search.name)" placeholder="Search your libraries" ng-keydown="processKeyEvent($event)">
     </div>
 
     <div class="library-select-list">
       <div ng-if="widgetKeptInLibraries.length" class="library-group-header kept-to-libraries-group-header">Kept In</div>
       <ul ng-if="widgetKeptInLibraries.length" >
-        <li ng-repeat="library in widgetKeptInLibraries | filter:search" class="library-select-option"
+        <li ng-repeat="library in widgetKeptInLibraries" class="library-select-option"
           ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
           ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
           ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
         </li>
       </ul>
 
-      <div ng-if="widgetKeptInLibraries.length" class="library-group-header my-libraries-group-header">My Libraries</div>
-      <ul ng-if="widgetKeptInLibraries.length">
-        <li ng-repeat="library in widgetMyLibraries | filter:search" class="library-select-option"
+      <div ng-if="widgetKeptInLibraries.length && widgetMyLibraries.length" class="library-group-header my-libraries-group-header">My Libraries</div>
+      <ul ng-if="widgetKeptInLibraries.length && widgetMyLibraries.length">
+        <li ng-repeat="library in widgetMyLibraries" class="library-select-option"
           ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
           ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
           ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
@@ -28,7 +28,7 @@
 
       <div ng-if="!widgetKeptInLibraries.length && widgetRecentLibraries.length" class="library-group-header my-libraries-group-header">Recent Libraries</div>
       <ul ng-if="!widgetKeptInLibraries.length && widgetRecentLibraries.length">
-        <li ng-repeat="library in widgetRecentLibraries | filter:search" class="library-select-option"
+        <li ng-repeat="library in widgetRecentLibraries" class="library-select-option"
           ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
           ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
           ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
@@ -37,7 +37,7 @@
 
       <div ng-if="!widgetKeptInLibraries.length && widgetRecentLibraries.length" class="library-group-header my-libraries-group-header">Other Libraries</div>
       <ul ng-if="!widgetKeptInLibraries.length">
-        <li ng-repeat="library in widgetOtherLibraries | filter:search" class="library-select-option"
+        <li ng-repeat="library in widgetOtherLibraries" class="library-select-option"
           ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
           ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
           ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
@@ -64,19 +64,17 @@
         <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
       </span>
       <input class="keep-to-library-create-name-input" ng-model="newLibrary.name" placeholder="Inspiring videos, Recipes I love...">
+      <span ng-show="$error.name" class="keep-to-library-create-name-error">{{$error.name}}</span>
     </div>
     <div class="keep-to-library-create-heading">Make it private?</div>
     <div class="keep-to-library-create-visibility">
-      <span kf-library-visibility-checkbox library="newLibrary"></span>
-      <span ng-switch="newLibrary.visibility">
-        <span ng-switch-default>No, make it public.</span>
-        <span ng-switch-when="secret">Yes, make it private.</span>
+      <span class="keep-to-library-create-visibility-switch" kf-library-visibility-checkbox library="newLibrary"></span>
+      <span class="keep-to-library-create-visibility-explanation" ng-switch="newLibrary.visibility">
+        <span ng-switch-default><strong>Public</strong>. Anyone can see and follow this library.</span>
+        <span ng-switch-when="secret"><strong>Private</strong>. Only people you invite can see this library.</span>
       </span>
     </div>
-    <div ng-switch="newLibrary.visibility" class="keep-to-library-visibility-explanation">
-      <div ng-switch-default>Anyone will be able to see the keeps in this library.</div>
-      <div ng-switch-when="secret">Only you will be able to see the keeps in this library.</div>
-    </div>
+    <div ng-show="$error.general" class="keep-to-library-create-general-error">{{$error.general}}</div>
     <div class="keep-to-library-create-button-container">
       <button class="keep-to-library-create-button" ng-click="createLibrary(newLibrary)">Create Library</button>
     </div>

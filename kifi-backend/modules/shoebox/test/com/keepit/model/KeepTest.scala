@@ -46,14 +46,14 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1),
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
-      (user1, user2, uri1, uri2, uri3, url1, url2)
+      (user1, user2, uri1, uri2, uri3, url1, url2, lib1)
     }
   }
 
   "Bookmark" should {
     "load my keeps in pages before and after a given date" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, uri3, _, _) = setup()
+        val (user1, user2, uri1, uri2, uri3, _, _, _) = setup()
         db.readOnlyMaster { implicit s =>
           val marks = keepRepo.getByUser(user1.id.get, None, None, 3)
           marks.map(_.uriId) === Seq(uri3.id.get, uri2.id.get, uri1.id.get)
@@ -72,7 +72,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
     }
     "load all" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, _, _, _) = setup()
+        val (user1, user2, uri1, uri2, _, _, _, lib) = setup()
         val cxAll = db.readOnlyMaster { implicit s =>
           keepRepo.all
         }
@@ -80,9 +80,17 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         all.map(_.title) === Seq(Some("G1"), Some("A1"), Some("A2"), None)
       }
     }
+    "latestKeepInLibrary" in {
+      withDb() { implicit injector =>
+        val (user1, user2, uri1, uri2, _, _, _, lib) = setup()
+        db.readOnlyMaster { implicit s =>
+          keepRepo.latestKeepInLibrary(lib.id.get).get === new DateTime(2013, 3, 23, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        }
+      }
+    }
     "load by user" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, _, _, _) = setup()
+        val (user1, user2, uri1, uri2, _, _, _, _) = setup()
         db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(user1.id.get).map(_.title) === Seq(Some("G1"), Some("A1"), Some("A2"))
           keepRepo.getByUser(user2.id.get).map(_.title) === Seq(None)
@@ -91,7 +99,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
     }
     "load by uri" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, _, _, _) = setup()
+        val (user1, user2, uri1, uri2, _, _, _, _) = setup()
         db.readOnlyMaster { implicit s =>
           keepRepo.getByUri(uri1.id.get).map(_.title) === Seq(Some("G1"), None)
           keepRepo.getByUri(uri2.id.get).map(_.title) === Seq(Some("A1"))
@@ -129,7 +137,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
     }
     "count by user" in {
       withDb() { implicit injector =>
-        val (user1, user2, _, _, _, _, _) = setup()
+        val (user1, user2, _, _, _, _, _, _) = setup()
         db.readOnlyMaster { implicit s =>
           keepRepo.getCountByUser(user1.id.get) === 3
           keepRepo.getCountByUser(user2.id.get) === 1
@@ -141,7 +149,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
 
     "invalidate cache when delete" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, _, url1, _) = setup()
+        val (user1, user2, uri1, uri2, _, url1, _, _) = setup()
         db.readWrite { implicit s =>
           keepRepo.count === 4
           val bm = keepRepo.getByUriAndUser(uri1.id.get, user1.id.get)
@@ -165,7 +173,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
 
     "get by exclude state should work" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, url1, _, _) = setup()
+        val (user1, user2, uri1, uri2, url1, _, _, _) = setup()
         db.readWrite { implicit s =>
           val bm = keepRepo.getByUriAndUser(uri1.id.get, user1.id.get)
           keepRepo.save(bm.get.withActive(false))

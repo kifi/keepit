@@ -4,22 +4,30 @@
 .kf-logged-out.kf-mobile
 
   .kf-header.public-header
-    height: 100px
+    height: 120px
+
+    .public-header-link
+      color: #1990EA
+
+    .public-header-dot
+      display: inline-block
+      position: relative
+      top: -2px
 
     .kf-header-left
       width: 450px
-      margin-top: 17px
+      margin-top: 23px
 
       .public-header-tagline
-        font-size: 22px
+        font-size: 20px
         width: 200px
         display inline-block
         line-height: 24px
         vertical-align middle
 
       .kifi-clover-logo-icon
-        height: 56px
-        width 56px
+        height: 75px
+        width 75px
 
       .kf-header-logo
         margin: 0 15px 0 20px
@@ -29,7 +37,7 @@
     .kf-header-right
       vertical-align middle
       font-size: 28px
-      line-height: 102px
+      line-height: 120px
 
       .public-header-dot
         font-size: 20px
@@ -44,7 +52,10 @@
 
       .library-card
 
-        .kf-keep-lib-name.kf-keep-lib-name.kf-keep-lib-name.kf-keep-lib-name
+        .kf-keep-lib-name-container
+          padding-top: 70px
+
+          .kf-keep-lib-name
             font-size 55px
 
         .kf-keep-lib-info
@@ -68,9 +79,15 @@
               font-size: 30px
               line-height 35px
 
-          .kf-keep-lib-description
-            font-size: 30px
-            line-height 40px
+          .kf-keep-lib-description-container
+            padding-bottom: 25px
+
+            .kf-keep-lib-description
+              font-size: 30px
+              line-height 40px
+
+          .kf-keep-lib-stats-and-followers
+            padding-top: 6px
 
           .kf-keep-lib-metrics
             display block
@@ -78,14 +95,15 @@
             text-align: center
             font-size: 30px
             line-height 30px
-            margin: 30px 0
+            margin: 30px 0 38px
 
             .kf-keep-lib-keeps-followers-stats
               font-size: 30px
               line-height 30px
 
             .kf-keep-lib-stats-number
-              font-size: 30px
+              font-size: 35px
+              line-height: 42px
 
           .kf-keep-lib-follower-preview
             text-align: center
@@ -114,29 +132,28 @@
 
     .kf-main-keeps
 
+      .kf-keep-description
+        font-size 30px
+        line-height 42px
+
       .kf-keep
          border-radius 30px
-         margin-top: 20px
+         margin-top: 40px
 
         .kf-keep-contents
-          padding 30px 10px 10px
+          padding 55px 10px 35px
 
           .kf-keep-title
             font-size: 46px
             line-height 52px
-            // Will it work?
-            -webkit-line-clamp: 2
-            -webkit-box-orient: vertical
-            display: -webkit-box
-            overflow-y: hidden
-            margin-bottom: 10px
+            margin-bottom: 20px
 
 
           .kf-keep-subtitle
             font-size: 32px
-            height: 36px
+            height: 50px
             line-height 28px
-            overflow-x: hidden
+            overflow: hidden
 
             .kf-keep-dot
             .kf-keep-time
@@ -152,12 +169,8 @@
               font-size: 32px
               height: 40px
 
-          .kf-keep-description
-            font-size 30px
-            line-height 42px
-
         .kf-keep-who
-          margin-bottom: 20px
+          margin-bottom: 40px
 
           .kf-keep-who-text
             font-size: 28px

@@ -8,7 +8,6 @@
       </button>
       {{modalTitle}}
     </h1>
-
     <div class="dialog-body">
       <div ng-if="modifyingExistingLibrary" class="manage-lib-followers-info">
         <p class="manage-lib-followers-stats">
@@ -21,7 +20,7 @@
       </div>
 
       <div class="manage-lib-content">
-        <div ng-hide="showFollowers" class="dialog-text manage-lib-default-content">
+        <div ng-hide="showFollowers" ng-if="!viewFollowersFirst" class="dialog-text manage-lib-default-content">
           <div class="manage-lib-input-wrapper">
             <div class="manage-lib-input-title">
               <span class="manage-lib-heading">Name</span>
@@ -54,10 +53,11 @@
                   <div ng-switch-default class="manage-lib-choice-card-img svg-public-library-icon"></div>
                   <div ng-switch-when="secret" class="manage-lib-choice-card-img svg-private-library-icon"></div>
                 </div>
+
+                <div ng-if="$error.general" class="manage-lib-error">{{$error.general}}</div>
               </div>
             </div>
 
-            <div ng-if="$error.general" class="manage-lib-input-wrapper manage-lib-error">{{$error.general}}</div>
         </div>
 
         <div class="manage-lib-members-content" smart-scroll scroll-distance="memberScrollDistance" scroll-disabled="isMemberScrollDisabled()" scroll-next="memberScrollNext()">

@@ -114,7 +114,7 @@ keep-to-library-lib-icon =
   .library-select-list
     max-height: 305px
     overflow-x: hidden
-    overflow-y: scroll
+    overflow-y: auto
 
   .library-select-option
     position: relative
@@ -135,7 +135,7 @@ keep-to-library-lib-icon =
 
   .keep-to-library-lib-icon-container
     position: absolute
-    top: 8px
+    top: 14px
     left: 14px
 
   .keep-to-library-lib-icon
@@ -225,11 +225,10 @@ keep-to-library-lib-icon =
   .keep-to-library-create-name-input-container
     position: relative
     box-sizing: border-box
-    padding: 17px 25px 15px 46px
+    padding: 20px 25px 20px 46px
     font-weight: 600
     background-color: #fff
     white-space: nowrap
-    overflow: hidden
 
   .keep-to-library-create-name-input
     border: none
@@ -237,11 +236,28 @@ keep-to-library-lib-icon =
     font-size: 12px
     placeholder secondaryTextGray
 
-  .keep-to-library-create-visibility
-    margin-top: 10px
+  .keep-to-library-create-name-error
+    pop-over 40px 18px redColor
+    font-size: 11px
+    font-weight: 500
 
-  .keep-to-library-visibility-explanation
-    padding: 15px 30px 35px
+  .keep-to-library-create-visibility
+    margin: 15px 0
+
+  .keep-to-library-create-visibility-switch
+  .keep-to-library-create-visibility-explanation
+    display: inline-block
+    vertical-align: top
+
+  .keep-to-library-create-visibility-explanation
+    width: 145px
+    font-size: 12px
+
+  .keep-to-library-create-general-error
+    padding: 10px
+    background-color: redColor
+    color: #fff
+    text-align: center
 
   .keep-to-library-create-button-container
     padding: 10px

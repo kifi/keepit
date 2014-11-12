@@ -46,23 +46,19 @@ angular.module('kifi')
         // Internal data.
         //
         var widget = null;
-        var selectedIndex = 0;
         var searchInput = null;
         var libraryList = null;
+        var newLibraryNameInput = null;
+
+        var keptToLibraryIds = [];
+        var selectedIndex = 0;
         var justScrolled = false;
         var removeTimeout = null;
         var resetJustScrolledTimeout = null;
-        var newLibraryNameInput = null;
         var submitting = false;
+        var allLibraries = [];
         var widgetLibraries = [];
-
-
-        //
-        // Scope data.
-        //
-        scope.search = {};
-        scope.showCreate = false;
-        scope.newLibrary = {};
+        var libraryNameSearch = null;
 
 
         //
@@ -170,8 +166,51 @@ angular.module('kifi')
           }
         }
 
+        function groupWidgetLibraries(libraries) {
+          // Libraries are divided into two possible groupings:
+          // (1) "Kept In" libraries followed by "My Libraries"; and
+          // (2) "Recent Libraries" followed by "Other Libraries".
+          //
+          // If there are any kept-in libraries, the first grouping is displayed.
 
-        function initWidget () {
+          scope.widgetKeptInLibraries = [];
+          scope.widgetMyLibraries = [];
+          scope.widgetRecentLibraries = [];
+          scope.widgetOtherLibraries = [];
+
+          libraries.forEach(function (library) {
+            library.keptTo = false;
+
+            if (_.indexOf(keptToLibraryIds, library.id) !== -1) {
+              library.keptTo = true;
+              scope.widgetKeptInLibraries.push(library);
+            } else {
+              library.keptTo = false;
+              scope.widgetMyLibraries.push(library);
+            }
+
+            if (_.indexOf(libraryService.recentLibraries, library.id) !== -1) {
+              scope.widgetRecentLibraries.push(library);
+            } else {
+              scope.widgetOtherLibraries.push(library);
+            }
+          });
+
+          // widgetLibraries is the list of libraries being displayed in the widget.
+          if (scope.widgetKeptInLibraries.length) {
+            widgetLibraries = scope.widgetKeptInLibraries.concat(scope.widgetMyLibraries);
+          } else {
+            widgetLibraries = scope.widgetRecentLibraries.concat(scope.widgetOtherLibraries);
+          }
+
+          // Select the top listed library.
+          selectedIndex = 0;
+          if (widgetLibraries.length) {
+            widgetLibraries[selectedIndex].selected = true;
+          }
+        }
+
+        function initWidget() {
           //
           // Create widget.
           //
@@ -251,62 +290,32 @@ angular.module('kifi')
           //
           // Initialize state.
           //
-          var keptToLibraryIds = scope.keptToLibraryIds || [];
-          scope.search = {};
           selectedIndex = 0;
-          libraryList = widget.find('.library-select-list');
-          searchInput = widget.find('.keep-to-library-search-input');
+          keptToLibraryIds = scope.keptToLibraryIds || [];
+
+          scope.search = {};
           scope.showCreate = false;
           scope.newLibrary = {};
+          scope.$error = {};
+
+          libraryList = widget.find('.library-select-list');
+          searchInput = widget.find('.keep-to-library-search-input');
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
 
           //
           // Group widget libraries.
           //
-
-          // Libraries are divided into two possible groupings:
-          // (1) "Kept In" libraries followed by "My Libraries"; and
-          // (2) "Recent Libraries" followed by "Other Libraries".
-          //
-          // If there are any kept-in libraries, the first grouping is displayed.
-
-          var libraries = _.filter(libraryService.librarySummaries, function (lib) {
+          allLibraries = _.filter(libraryService.librarySummaries, function (lib) {
             return lib.access !== 'read_only';
           });
 
-          scope.widgetKeptInLibraries = [];
-          scope.widgetMyLibraries = [];
-          scope.widgetRecentLibraries = [];
-          scope.widgetOtherLibraries = [];
-
-          libraries.forEach(function (library) {
-            library.keptTo = false;
-
-            if (_.indexOf(keptToLibraryIds, library.id) !== -1) {
-              library.keptTo = true;
-              scope.widgetKeptInLibraries.push(library);
-            } else {
-              library.keptTo = false;
-              scope.widgetMyLibraries.push(library);
-            }
-
-            if (_.indexOf(libraryService.recentLibraries, library.id) !== -1) {
-              scope.widgetRecentLibraries.push(library);
-            } else {
-              scope.widgetOtherLibraries.push(library);
-            }
+          libraryNameSearch = new Fuse(allLibraries, {
+            keys: ['name'],
+            threshold: 0.3  // 0 means exact match, 1 means match with anything.
           });
 
-          // widgetLibraries is the list of libraries being displayed in the widget.
-          if (scope.widgetKeptInLibraries.length) {
-            widgetLibraries = scope.widgetKeptInLibraries.concat(scope.widgetMyLibraries);
-          } else {
-            widgetLibraries = scope.widgetRecentLibraries.concat(scope.widgetOtherLibraries);
-          }
-
-          // Select the top listed library.
-          widgetLibraries[selectedIndex].selected = true;
+          groupWidgetLibraries(allLibraries);
 
 
           //
@@ -331,6 +340,11 @@ angular.module('kifi')
 
         scope.onUnhover = function (library) {
           library.selected = false;
+        };
+
+        scope.onSearchInputChange = function (name) {
+          var matchedLibraries = libraryNameSearch.search(name);
+          groupWidgetLibraries(!name ? allLibraries : matchedLibraries);
         };
 
         scope.processKeyEvent = function ($event) {
@@ -372,6 +386,10 @@ angular.module('kifi')
                 invokeWidgetCallbacks(widgetLibraries[selectedIndex]);
                 removeWidget();
               } else {
+                // If there are no libraries shown, prepopulate the create-library
+                // name input field with the search query.
+                scope.newLibrary.name = scope.search.name;
+
                 scope.showCreatePanel();
               }
               break;
@@ -387,6 +405,13 @@ angular.module('kifi')
         scope.showCreatePanel = function () {
           scope.showCreate = true;
 
+          // If there are no libraries shown, prepopulate the create-library
+          // name input field with the search query.
+          if (!widget.find('.library-select-option').length) {
+            scope.newLibrary.name = scope.search.name;
+          }
+
+
           // Wait for the creation panel to be shown, and then focus on the
           // input.
           $timeout(function () {
@@ -396,19 +421,25 @@ angular.module('kifi')
 
         scope.hideCreatePanel = function () {
           scope.showCreate = false;
-          scope.search = {};
 
           // Wait for the libraries panel to be shown, and then focus on the
-          // search input.
+          // search input and scroll back to the top.
           $timeout(function () {
             searchInput.focus();
+            libraryList.scrollTop(0);
           }, 0);
         };
 
         scope.createLibrary = function (library) {
-          if (submitting || !library.name || (library.name.length < 3)) {
+          if (submitting || !library.name) {
             return;
           }
+
+          scope.$error.name = libraryService.getLibraryNameError(library.name);
+          if (scope.$error.name) {
+            return;
+          }
+          scope.$error = {};
 
           library.slug = util.generateSlug(library.name);
           library.visibility = library.visibility || 'published';
@@ -420,10 +451,36 @@ angular.module('kifi')
                 removeWidget();
               });
             });
+          })['catch'](function (err) {
+            var error = err.data && err.data.error;
+            switch (error) {
+              case 'library name already exists for user':  // deprecated
+              case 'library_name_exists':
+                scope.$error.general = 'You already have a library with this name';
+                break;
+              case 'invalid library name':  // deprecated
+              case 'invalid_name':
+                scope.$error.general = 'You already have a library with this name';
+                break;
+              default:
+                scope.$error.general = 'Hmm, something went wrong. Try again later?';
+                break;
+            }
           })['finally'](function () {
             submitting = false;
           });
         };
+
+
+        //
+        // Watches and listeners.
+        //
+        scope.$watch('newLibrary.name', function (newVal, oldVal) {
+          if (newVal !== oldVal) {
+            // Clear the error popover when the user changes the name field.
+            scope.$error.name = null;
+          }
+        });
 
 
         init();

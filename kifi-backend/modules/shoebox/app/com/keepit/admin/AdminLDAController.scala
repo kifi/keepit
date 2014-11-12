@@ -3,10 +3,11 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.cortex.CortexServiceClient
+import com.keepit.cortex.core.ModelVersion
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json._
 import scala.concurrent.Future
-import com.keepit.cortex.models.lda.{ LDATopicDetail, LDATopicConfiguration }
+import com.keepit.cortex.models.lda.{ DenseLDA, LDATopicDetail, LDATopicConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.common.db.Id
@@ -24,9 +25,15 @@ class AdminLDAController @Inject() (
 
   val MAX_WIDTH = 15
 
-  def index() = AdminUserPage.async { implicit request =>
-    cortex.ldaNumOfTopics.map { n =>
-      Ok(html.admin.lda(n))
+  implicit def int2Version(n: Int) = Some(ModelVersion[DenseLDA](n))
+
+  val defaultVersion = ModelVersion[DenseLDA](2) // TODO soon: get this from cortex client
+
+  def index() = versionPage(defaultVersion)
+
+  def versionPage(version: ModelVersion[DenseLDA]) = AdminUserPage.async { implicit request =>
+    cortex.ldaNumOfTopics(Some(version)).map { n =>
+      Ok(html.admin.lda(n, version.version))
     }
   }
 
@@ -44,10 +51,11 @@ class AdminLDAController @Inject() (
 
   def showTopics() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
-    val fromId = body.get("fromId").get.toInt
-    val toId = body.get("toId").get.toInt
-    val topN = body.get("topN").get.toInt
-    cortex.ldaShowTopics(fromId, toId, topN).map { res =>
+    val fromId = body.get("fromId").get.trim.toInt
+    val toId = body.get("toId").get.trim.toInt
+    val topN = body.get("topN").get.trim.toInt
+    val version = body.get("version").get.trim.toInt
+    cortex.ldaShowTopics(fromId, toId, topN)(version).map { res =>
       val ids = res.map { _.topicId }
       val topics = res.map { x => getFormatted(x.topicWords) }
       val names = res.map { _.config.topicName }
@@ -71,7 +79,8 @@ class AdminLDAController @Inject() (
   def wordTopic() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val word = body.get("word").get
-    val futureMsg = cortex.ldaWordTopic(word).flatMap {
+    val version = body.get("version").get.trim.toInt
+    val futureMsg = cortex.ldaWordTopic(word)(version).flatMap {
       case Some(arr) => showTopTopicDistributions(arr)
       case None => Future.successful("word not in dictionary")
     }
@@ -85,20 +94,22 @@ class AdminLDAController @Inject() (
     val names = (js \ "topic_names").as[JsArray].value.map { _.as[String] }
     val isActive = (js \ "topic_states").as[JsArray].value.map { _.as[Boolean] }
     val isNameable = (js \ "topic_nameable").as[JsArray].value.map { _.as[Boolean] }
+    val version = (js \ "version").as[JsNumber].value.toInt
 
     val config = (0 until ids.size).map { i =>
       val (id, name, active, nameable) = (ids(i), names(i), isActive(i), isNameable(i))
       id.trim() -> LDATopicConfiguration(name, active, nameable)
     }.toMap
 
-    cortex.saveEdits(config)
+    cortex.saveEdits(config)(version)
     Ok
   }
 
   def docTopic() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val doc = body.get("doc").get
-    val futureMsg = cortex.ldaDocTopic(doc).flatMap {
+    val version = body.get("version").get.trim.toInt
+    val futureMsg = cortex.ldaDocTopic(doc)(version).flatMap {
       case Some(arr) => showTopTopicDistributions(arr)
       case None => Future.successful("not enough information.")
     }
@@ -109,7 +120,8 @@ class AdminLDAController @Inject() (
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
     val uriId = body.get("uriId").get.toLong
-    val score = cortex.userUriInterest(Id[User](userId), Id[NormalizedURI](uriId))
+    val version = body.get("version").get.trim.toInt
+    val score = cortex.userUriInterest(Id[User](userId), Id[NormalizedURI](uriId))(version)
     score.map { score =>
       val (globalScore, recencyScore, libScore) = (score.global, score.recency, score.libraryInduced)
       val globalMsg = "globalScore: " + globalScore.map { _.toString }.getOrElse("n/a")
@@ -123,8 +135,9 @@ class AdminLDAController @Inject() (
   def userTopicMean() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
+    val version = body.get("version").get.trim.toInt
 
-    cortex.userTopicMean(Id[User](userId)).flatMap {
+    cortex.userTopicMean(Id[User](userId))(version).flatMap {
       case (global, recent) =>
         val globalMsgFut = global match {
           case Some(arr) => showTopTopicDistributions(arr, topK = 10)
@@ -147,13 +160,13 @@ class AdminLDAController @Inject() (
 
   }
 
-  def topicDetail(topicId: Int) = AdminUserPage.async { implicit request =>
+  def topicDetail(topicId: Int, version: Int) = AdminUserPage.async { implicit request =>
     cortex.sampleURIsForTopic(topicId).map {
       case (uriIds, scores) =>
         val uris = db.readOnlyReplica { implicit s =>
           uriIds.map { id => uriRepo.get(id) }
         }
-        Ok(html.admin.ldaDetail(LDATopicDetail(topicId, uris, scores)))
+        Ok(html.admin.ldaDetail(version, LDATopicDetail(topicId, uris, scores)))
     }
   }
 
@@ -167,19 +180,21 @@ class AdminLDAController @Inject() (
 
   }
 
-  def unamedTopics(limit: Int) = AdminUserPage.async { implicit request =>
-    cortex.unamedTopics(limit).map {
+  def unamedTopics(limit: Int, versionOpt: Option[Int]) = AdminUserPage.async { implicit request =>
+    val version = versionOpt.flatMap { int2Version(_) } getOrElse defaultVersion
+    cortex.unamedTopics(limit)(Some(version)).map {
       case (topicInfo, topicWords) =>
         val words = topicWords.map { case words => getFormatted(words) }
-        Ok(html.admin.unamedTopics(topicInfo, words))
+        Ok(html.admin.unamedTopics(topicInfo, words, version.version))
     }
   }
 
   def libraryTopic() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val libId = Id[Library](body.get("libId").get.toLong)
+    val version = body.get("version").get.trim.toInt
 
-    val msgFut = cortex.libraryTopic(libId).flatMap { feat =>
+    val msgFut = cortex.libraryTopic(libId)(version).flatMap { feat =>
       feat match {
         case Some(arr) => showTopTopicDistributions(arr, topK = 10)
         case None => Future.successful("not enough information")

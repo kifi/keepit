@@ -153,11 +153,6 @@ trait SearchTestHelper { self: SearchTestInjector =>
     inject[MonitoredAwait].result(future, 3 seconds, "getBookmarks: this should not fail")
   }
 
-  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit injector: Injector): Option[Keep] = {
-    val future = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].getBookmarkByUriAndUser(uriId, userId)
-    inject[MonitoredAwait].result(future, 3 seconds, "getBookmarkByUriAndUser: this should not fail")
-  }
-
   def getUriIdsInCollection(collectionId: Id[Collection])(implicit injector: Injector): Seq[KeepUriAndTime] = {
     val future = inject[ShoeboxServiceClient].getUriIdsInCollection(collectionId)
     inject[MonitoredAwait].result(future, 3 seconds, "getUriIdsInCollection: this should not fail")

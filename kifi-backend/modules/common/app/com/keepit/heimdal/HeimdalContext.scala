@@ -100,7 +100,7 @@ object HeimdalContextBuilder {
   val userFields = Set("userCreatedAt", "daysSinceUserJoined")
   def getUserFields(user: User): Map[String, ContextData] = {
     val daysSinceUserJoined = (currentDateTime.getMillis.toFloat - user.createdAt.getMillis) / (24 * 3600 * 1000)
-    Seq("userCreatedAt" -> ContextDate(user.createdAt), "daysSinceUserJoined" -> ContextDoubleData(daysSinceUserJoined - daysSinceUserJoined % 0.01)).toMap
+    Seq("userCreatedAt" -> ContextDate(user.createdAt), "daysSinceUserJoined" -> ContextDoubleData(daysSinceUserJoined - daysSinceUserJoined % 0.0001)).toMap
   }
 }
 

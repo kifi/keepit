@@ -4,15 +4,16 @@ import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.mobile.ImplicitHelper._
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsObject, JsString, Json }
+import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
@@ -21,6 +22,7 @@ class MobileLibraryController @Inject() (
   db: Database,
   libraryRepo: LibraryRepo,
   keepRepo: KeepRepo,
+  userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -51,8 +53,8 @@ class MobileLibraryController @Inject() (
             Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
           }
         })
-      case Left((respCode, msg)) =>
-        Future.successful(Status(respCode)(Json.obj("error" -> msg)))
+      case Left(fail) =>
+        Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
     }
   }
 
@@ -87,17 +89,53 @@ class MobileLibraryController @Inject() (
     Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
   }
 
+  def inviteUsersToLibrary(pubId: PublicId[Library]) = UserAction(parse.tolerantJson) { request =>
+    val idTry = Library.decodePublicId(pubId)
+    idTry match {
+      case Failure(ex) =>
+        BadRequest(Json.obj("error" -> "invalid_id"))
+      case Success(id) =>
+        val invites = (request.body \ "invites").as[JsArray].value
+        val msgOpt = (request.body \ "message").asOpt[String]
+        val message = if (msgOpt == Some("")) None else msgOpt
+
+        val validInviteList = db.readOnlyMaster { implicit s =>
+          invites.map { i =>
+            val access = (i \ "access").as[LibraryAccess]
+            val id = (i \ "type").as[String] match {
+              case "user" if userRepo.getOpt((i \ "id").as[ExternalId[User]]).nonEmpty =>
+                Left(userRepo.getOpt((i \ "id").as[ExternalId[User]]).get.id.get)
+              case "email" => Right((i \ "id").as[EmailAddress])
+            }
+            (id, access, message)
+          }
+        }
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        val res = libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList)
+        res match {
+          case Left(fail) =>
+            Status(fail.status)(Json.obj("error" -> fail.message))
+          case Right(info) =>
+            val res = info.map {
+              case (Left(externalId), access) => Json.obj("user" -> externalId, "access" -> access)
+              case (Right(email), access) => Json.obj("email" -> email, "access" -> access)
+            }
+            Ok(Json.toJson(res))
+        }
+    }
+  }
+
   def joinLibrary(pubId: PublicId[Library]) = UserAction { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         val res = libraryCommander.joinLibrary(request.userId, libId)
         res match {
           case Left(fail) =>
-            BadRequest(Json.obj("error" -> fail.message))
+            Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(lib) =>
             val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
             Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)))
@@ -122,8 +160,9 @@ class MobileLibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         libraryCommander.leaveLibrary(id, request.userId) match {
-          case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+          case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(_) => Ok(JsString("success"))
         }
     }
@@ -140,6 +179,32 @@ class MobileLibraryController @Inject() (
         } yield {
           Ok(Json.obj("keeps" -> keepInfos))
         }
+    }
+  }
+
+  def getLibraryMembers(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+    if (limit > 30) { BadRequest(Json.obj("error" -> "invalid_limit")) }
+    else Library.decodePublicId(pubId) match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_id"))
+      case Success(libraryId) =>
+        val library = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
+        val showInvites = request.userIdOpt.map(uId => uId == library.ownerId).getOrElse(false)
+        val (collaborators, followers, inviteesWithInvites, _) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = showInvites)
+        val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
+        Ok(Json.obj("members" -> maybeMembers))
+    }
+  }
+
+  def suggestMembers(pubId: PublicId[Library], query: Option[String], limit: Int) = (UserAction andThen LibraryViewAction(pubId)).async { request =>
+    request match {
+      case req: UserRequest[_] => {
+        if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
+        else Library.decodePublicId(pubId) match {
+          case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
+          case Success(libraryId) => libraryCommander.suggestMembers(req.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
+        }
+      }
+      case _ => Future.successful(Forbidden)
     }
   }
 

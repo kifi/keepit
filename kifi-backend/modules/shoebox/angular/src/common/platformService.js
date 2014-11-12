@@ -3,13 +3,9 @@
 angular.module('kifi')
 
 .factory('platformService', [
-  '$window',
-  function ($window) {
+  '$window', '$q', 'env', '$timeout',
+  function ($window, $q, env, $timeout) {
 
-    var timer,
-      heartbeat,
-      lastInterval,
-      isRunning = false;
 
     var isAndroid = function () {
       return (/Android/).test(navigator.userAgent);
@@ -19,45 +15,79 @@ angular.module('kifi')
       return (/iPhone|iPod/).test(navigator.userAgent);
     };
 
-    function abortNavigation() {
-        clearTimeout(timer);
-        clearTimeout(heartbeat);
-        isRunning = false;
-    }
-
-    $window.addEventListener('pageshow', abortNavigation, false);
-    $window.addEventListener('pagehide', abortNavigation, false);
-
-    // for browsers except Safari (which do not support pageshow and pagehide properly)
-    function intervalHeartbeat() {
-        var now = +new Date(), diff = now - lastInterval - 200;
-        lastInterval = now;
-        if (diff > 1000) {
-          abortNavigation();
-        }
-    }
-
     var goToAppOrStore = function (url) {
+      url = url || '//kifi.com';
       var safeUrl;
-      if (!isRunning && isSupportedMobilePlatform()) {
-        isRunning = true;
-        lastInterval = +new Date();
-        heartbeat = setInterval(intervalHeartbeat, 200);
+      if (isSupportedMobilePlatform()) {
         if (isIPhone()) {
-          safeUrl = url.replace(/https?:/, '');
-          $window.location = 'kifi:' + safeUrl;
+          safeUrl = 'kifi:' + url.replace(/https?:/, '');
+
+          if (url.indexOf('branch', url.length - 'branch'.length) !== -1) { // url ends with 'branch'
+            createBranchLink({
+              url: safeUrl
+            }).then(function (url) {
+              $window.location = url;
+            });
+          } else {
+            $timeout(function () {
+              $window.location = safeUrl;
+            }, 200);
+            $timeout(function () {
+              $window.location = 'itms://itunes.apple.com/us/app/kifi/id740232575';
+            }, 225);
+          }
         } else if (isAndroid()) {
           safeUrl = url.replace(/https?:\/\/((www.)?kifi.com)?\/?/, '');
           $window.location = 'intent://' + safeUrl + '#Intent;package=com.kifi;scheme=kifi;action=com.kifi.intent.action.APP_EVENT;end;';
         }
-        timer = setTimeout(goToMobileStore, 2000);
       }
     };
 
-    var goToMobileStore = function () {
-      if (isIPhone()) {
-        $window.location = 'itms://itunes.apple.com/us/app/kifi/id740232575';
+
+    var Branch;
+
+    var branchInit = function () {
+      if (Branch) {
+        return $q.when(Branch);
       }
+      var deferred = $q.defer();
+
+      // Because jshint complains `isDev` is never used because Branch_Init is ignored.
+      var isDev = env.dev; // jshint ignore:line
+
+      /* jshint ignore:start */
+      // https://github.com/BranchMetrics/Web-SDK#quick-install
+      var config = {
+        app_id: '58363010934112339',
+        debug: env.dev,
+        init_callback: function () {
+          Branch = window.branch;
+          deferred.resolve(window.branch);
+        }
+      };
+      var Branch_Init=function(a){self=this,self.app_id=a.app_id,self.debug=a.debug,self.init_callback=a.init_callback,self
+      .queued=[],this.init=function(){for(var a=["close","logout","track","identify","createLink","showReferrals","showCredits",
+      "redeemCredits","appBanner"],b=0;b<a.length;b++)self[a[b]]=function(a){return function(){self.queued.push([a].concat(Array
+      .prototype.slice.call(arguments,0)))}}(a[b])},self.init();var b=document.createElement("script");b.type="text/javascript",
+      b.async=!0,b.src="https://bnc.lt/_r",document.getElementsByTagName("head")[0].appendChild(b),self._r=function(){if(
+      void 0!==window.browser_fingerprint_id){var a=document.createElement("script");a.type="text/javascript",a.async=!0,a
+      .src="https://s3-us-west-1.amazonaws.com/branch-sdk/branch.min.js",document.getElementsByTagName("head")[0].appendChild(a)
+      }else window.setTimeout("self._r()",100)},self._r()};window.branch=new Branch_Init(config);
+      /* jshint ignore:end */
+
+      return deferred.promise;
+    };
+
+    var createBranchLink = function (data) {
+      var deferred = $q.defer();
+      branchInit().then(function (branch) {
+        branch.createLink({
+          data: data
+        }, function (url){
+          deferred.resolve(url);
+        });
+      });
+      return deferred.promise;
     };
 
     var isSupportedMobilePlatform = function () {

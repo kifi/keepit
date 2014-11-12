@@ -103,9 +103,9 @@ class AllKeepSeedIngestionHelper @Inject() (
         uriId = keep.uriId,
         url = keep.url,
         userId = None,
-        firstKept = keep.createdAt,
-        lastKept = keep.createdAt,
-        lastSeen = keep.createdAt,
+        firstKept = keep.keptAt.getOrElse(keep.createdAt),
+        lastKept = keep.keptAt.getOrElse(keep.createdAt),
+        lastSeen = keep.keptAt.getOrElse(keep.createdAt),
         priorScore = None,
         timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0,
         discoverable = !keep.isPrivate && keep.state == KeepStates.ACTIVE
@@ -113,7 +113,7 @@ class AllKeepSeedIngestionHelper @Inject() (
     } else {
       val discoverable = rawSeedItems(0).discoverable || (!keep.isPrivate && keep.state == KeepStates.ACTIVE)
       rawSeedItems.foreach { rawSeedItem =>
-        updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, if (keep.state == KeepStates.ACTIVE) 1 else 0, discoverable)
+        updateRawSeedItem(rawSeedItem, keep.uriId, keep.keptAt.getOrElse(keep.createdAt), if (keep.state == KeepStates.ACTIVE) 1 else 0, discoverable)
       }
     }
   }
@@ -153,7 +153,7 @@ class AllKeepSeedIngestionHelper @Inject() (
       }
 
       rawSeedItems.foreach { rawSeedItem =>
-        updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, countChange, discoverable)
+        updateRawSeedItem(rawSeedItem, keep.uriId, keep.keptAt.getOrElse(keep.createdAt), countChange, discoverable)
       }
     } else {
       airbrake.notify(s"Missing RSI: keepId ${keepInfo.keepId}, oldUriId ${keepInfo.uriId}, newUriId ${keep.uriId}. Skipping this keep update.")

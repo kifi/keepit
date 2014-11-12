@@ -1,0 +1,9 @@
+-J-Xms1g
+-J-Xmx4g
+-J-Xss4M
+-J-XX:+CMSClassUnloadingEnabled
+-J-XX:ReservedCodeCacheSize=2g
+-J-XX:+HeapDumpOnOutOfMemoryError
+-J-XX:+DoEscapeAnalysis
+-J-XX:+UseCodeCacheFlushing
+-J-XX:+UseConcMarkSweepGC
