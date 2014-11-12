@@ -186,6 +186,7 @@ angular.module('kifi')
           }
 
           $sizer.text(keep.summary.trimmedDesc);
+
           function calcHeightDelta(guessWidth) {
             function tryWidth(width) {
               $sizer[0].style.width = width + 'px';
@@ -227,7 +228,6 @@ angular.module('kifi')
           //var calcTextWidth = 100 - asideWidthPercent;
           var linesToShow = Math.ceil((bestRes.hi / textHeight)); // line height
           var calcTextHeight = linesToShow * textHeight;
-          scope.linesToShow = linesToShow;
 
           keep.sizeCard = function () {
             var $content = element.find('.kf-keep-content-line');
