@@ -296,6 +296,8 @@ angular.module('kifi')
           }
         };
 
+        scope.followButtonMaxTop = platformService.isSupportedMobilePlatform() ? 25 : 15;
+
         scope.manageLibrary = function () {
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html',
