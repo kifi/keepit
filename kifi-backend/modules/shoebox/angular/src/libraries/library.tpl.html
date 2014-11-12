@@ -1,7 +1,7 @@
 <div>
   <!-- Library page -->
   <div class="kf-main-library-keeps" ng-if="page === 'library'" ng-class="{'library-search': librarySearch}">
-    <div ng-hide="librarySearch && $root.userLoggedIn" class="kf-library-card-header">
+    <div ng-if="!librarySearch || !$root.userLoggedIn" class="kf-library-card-header">
       <div kf-library-card
         library="library"
         username="username"
@@ -13,7 +13,7 @@
       <div class="white-background"></div>
     </div>
 
-    <div ng-if="!librarySearch">
+    <div ng-if="!librarySearch || !$root.userLoggedIn">
       <div class="kf-empty-state" ng-if="keeps.length === 0 && userIsOwner()" ng-show="!loading">
         You don't have any keeps in this Library yet. You can:
         <ul>
@@ -44,7 +44,7 @@
       ></div>
     </div>
 
-    <div ng-if="librarySearch" ng-include="'search/search.tpl.html'" ng-controller="SearchCtrl"></div>
+    <div ng-if="librarySearch && $root.userLoggedIn" ng-include="'search/search.tpl.html'" ng-controller="SearchCtrl"></div>
   </div>
 
 
