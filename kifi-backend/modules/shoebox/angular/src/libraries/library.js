@@ -31,6 +31,10 @@ angular.module('kifi')
       $analytics.pageTrack(url, trackLibraryAttributes);
     }
 
+    function setTitle(lib) {
+      $window.document.title = lib.name + ' by ' + lib.owner.firstName + ' ' + lib.owner.lastName + ' • Kifi' ;
+    }
+
 
     //
     // Scope data.
@@ -50,6 +54,7 @@ angular.module('kifi')
     $scope.userIsOwner = function () {
       return $scope.library && $scope.library.owner.id === profileService.me.id;
     };
+
 
     //
     // Scope methods.
@@ -103,10 +108,20 @@ angular.module('kifi')
       selectedCount = numSelected;
     };
 
+    $scope.libraryKeepClicked = function (keep, event) {
+      var target = event.target;
+      var eventAction = target.getAttribute('click-action');
+      if ($scope.$root.userLoggedIn) {
+        libraryService.trackEvent('user_clicked_page', $scope.library, { action: eventAction });
+      } else {
+        libraryService.trackEvent('visitor_clicked_page', $scope.library, { action: eventAction });
+      }
+    };
+
+
     //
     // Watches and listeners.
     //
-
     $scope.$watch('library.id', function (id) {
       $rootScope.$broadcast('currentLibraryChanged', $scope.library);
       if (id) {
@@ -165,22 +180,6 @@ angular.module('kifi')
       $scope.librarySearch = librarySearch;
     });
     $scope.$on('$destroy', deregisterUpdateLibrarySearch);
-
-
-    // TODO(yiping): move these to appropripate place and make sure that the title is working.
-    $scope.libaryKeepClicked = function (keep, event) {
-      var target = event.target;
-      var eventAction = target.getAttribute('click-action');
-      if ($scope.$root.userLoggedIn) {
-        libraryService.trackEvent('user_clicked_page', $scope.library, { action: eventAction });
-      } else {
-        libraryService.trackEvent('visitor_clicked_page', $scope.library, { action: eventAction });
-      }
-    };
-
-    var setTitle = function (lib) {
-      $window.document.title = lib.name + ' by ' + lib.owner.firstName + ' ' + lib.owner.lastName + ' • Kifi' ;
-    };
 
 
     //
