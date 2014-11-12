@@ -24,7 +24,7 @@
 
       <!-- Description only or Description + Small Image-->
       <div class="kf-keep-content-line">
-        <div class="kf-keep-small-image" ng-if="showSmallImage(keep) && !isYoutubeCard">
+        <div class="kf-keep-small-image" ng-if="showSmallImage(keep)">
           <a ng-href="{{keep.url}}" target="_blank" rel="nofollow">
             <img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="articleImageSmall">
           </a>
@@ -45,7 +45,7 @@
 
       <div ng-if="isYoutubeCard" class="kf-keep-youtube-content">
         <div kf-youtube video-id=youtubeId></div>
-        <div kf-ellipsis data-ng-bind="keep.summary.description" data-max-num-lines=4></div>
+        <div kf-ellipsis data-ng-bind="keep.summary.description" data-max-num-lines=3 class="kf-keep-description"></div>
       </div>
 
     </div>

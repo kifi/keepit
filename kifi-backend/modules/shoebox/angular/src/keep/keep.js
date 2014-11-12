@@ -271,11 +271,12 @@ angular.module('kifi')
         };
 
         scope.showSmallImage = function (keep) {
-          return keep.hasSmallImage && !useBigLayout;
+          return keep.hasSmallImage && !useBigLayout && !scope.isYoutubeCard;
         };
 
         scope.showBigImage = function (keep) {
-          return keep.hasBigImage || (keep.summary && useBigLayout);
+          var bigImageReady = keep.hasBigImage || (keep.summary && useBigLayout);
+          return bigImageReady && !scope.isYoutubeCard;
         };
 
         scope.hasTag = function (keep) {
