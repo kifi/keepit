@@ -15,16 +15,16 @@
       <div class="lib-followers-content">
         <div class="lib-followers-content-list" smart-scroll scroll-distance="followerScrollDistance" scroll-disabled="isFollowerScrollDisabled()" scroll-next="followerScrollNext()">
 
-          <ul class="lib-followers-list">
+          <ul class="lib-followers-list" itemscope itemtype="http://data-vocabulary.org/Person">
             <li class="lib-follower lib-owner">
-              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image">
-              <div class="lib-follower-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
+              <div class="lib-follower-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
             </li>
 
-            <li class="lib-follower" ng-repeat="follower in followerList">
+            <li class="lib-follower" ng-repeat="follower in followerList" itemscope itemtype="http://data-vocabulary.org/Person">
               <div class="lib-follower-user" ng-if="follower.id">
-                <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image">
-                <div class="lib-follower-name">{{follower.firstName}} {{follower.lastName}}</div>
+                <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{follower.firstName}} {{follower.lastName}}">
+                <div class="lib-follower-name" itemprop="name">{{follower.firstName}} {{follower.lastName}}</div>
               </div>
             </li>
           </ul>
