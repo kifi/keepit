@@ -146,11 +146,10 @@ class LibraryController @Inject() (
     Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
   }
 
-  def inviteUsersToLibrary(pubId: PublicId[Library]) = UserAction(parse.tolerantJson) { request =>
-    val idTry = Library.decodePublicId(pubId)
-    idTry match {
+  def inviteUsersToLibrary(pubId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
+    Library.decodePublicId(pubId) match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid_id"))
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(id) =>
         val invites = (request.body \ "invites").as[JsArray].value
         val msgOpt = (request.body \ "message").asOpt[String]
@@ -168,16 +167,15 @@ class LibraryController @Inject() (
           }
         }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        val res = libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList)
-        res match {
+        libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
-          case Right(info) =>
-            val res = info.map {
-              case (Left(externalId), access) => Json.obj("user" -> externalId, "access" -> access)
-              case (Right(email), access) => Json.obj("email" -> email, "access" -> access)
+          case Right(inviteesWithAccess) =>
+            val result = inviteesWithAccess.map {
+              case (Left(user), access) => Json.obj("user" -> user.externalId, "access" -> access)
+              case (Right(contact), access) => Json.obj("email" -> contact.email, "access" -> access)
             }
-            Ok(Json.toJson(res))
+            Ok(Json.toJson(result))
         }
     }
   }
