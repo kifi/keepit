@@ -199,6 +199,8 @@ class KeepInterner @Inject() (
     else
       keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
 
+    val trimmedTitle = title.map(_.trim).filter(_.length > 0)
+
     val (isNewKeep, wasInactiveKeep, internedKeep) = currentBookmarkOpt match {
       case Some(bookmark) =>
         val wasInactiveKeep = !bookmark.isActive
@@ -209,7 +211,7 @@ class KeepInterner @Inject() (
         }
 
         val savedKeep = bookmark.copy(
-          title = title orElse bookmark.title orElse uri.title,
+          title = trimmedTitle orElse bookmark.title orElse uri.title,
           state = KeepStates.ACTIVE,
           visibility = library.visibility,
           libraryId = Some(library.id.get)
@@ -224,7 +226,7 @@ class KeepInterner @Inject() (
       case None =>
         val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
         val keptAtResolved = keptAt.orElse(Some(currentDateTime))
-        val keep = Keep(title = title, userId = userId, uriId = uri.id.get, urlId = urlObj.id.get, url = url, source = source, visibility = library.visibility, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint, keptAt = keptAt.orElse(Some(currentDateTime)))
+        val keep = Keep(title = trimmedTitle, userId = userId, uriId = uri.id.get, urlId = urlObj.id.get, url = url, source = source, visibility = library.visibility, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint, keptAt = keptAt.orElse(Some(currentDateTime)))
         (true, false, keepRepo.save(keep))
     }
     if (wasInactiveKeep) {
