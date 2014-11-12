@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailTrackingParam
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -104,7 +105,7 @@ object HeimdalContextBuilder {
   }
 }
 
-class HeimdalContextBuilder {
+class HeimdalContextBuilder extends Logging {
   val data = new scala.collection.mutable.HashMap[String, ContextData]()
 
   def +=[T](key: String, value: T)(implicit toSimpleContextData: T => SimpleContextData): Unit = data(key) = value
@@ -140,7 +141,7 @@ class HeimdalContextBuilder {
         case "iOS" => add("iOSApp", KifiIPhoneVersion(version))
         case "iOS Extension" => add("iOSExtension", KifiIPhoneVersion(version))
         case "Android" => add("androidApp", KifiAndroidVersion(version))
-        case _ =>
+        case _ => log.error(s"unsupported X-Kifi-Client header: ${clientVersion}")
       }
     }
   }
