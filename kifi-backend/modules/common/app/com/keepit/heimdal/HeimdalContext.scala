@@ -122,26 +122,24 @@ class HeimdalContextBuilder {
     this += ("serviceZone", myAmazonInstanceInfo.info.availabilityZone)
   }
 
-  private def addVersion(request: RequestHeader): Unit = {
+  private def addKifiClientAndVersion(request: RequestHeader): Unit = {
 
     val clientVersion = request.headers.get("X-Kifi-Client") getOrElse ""
-    val userAgentStr = request.headers.get("User-Agent").getOrElse("")
-    val agent = UserAgent.parser.parse(userAgentStr)
 
-    def addKifiClientVersion(clientName: String, version: KifiVersion): Unit = {
+    def add(clientName: String, version: KifiVersion): Unit = {
+      this += ("client", clientName)
       this += ("clientVersion", version.major + "." + version.minor + "." + version.patch)
       this += ("clientBuild", version.toString)
-      this += ("client", clientName)
     }
 
-    val parts = clientVersion.split("\\s")
+    val parts = clientVersion.trim.split("\\s")
     if (parts.size == 2) {
       val (client, version) = (parts(0), parts(1))
       client match {
-        case "BE" => addKifiClientVersion(agent.getName, KifiExtVersion(version)) // Chrome, Firefox, Chromium, Opera, etc
-        case "iOS" => addKifiClientVersion("Kifi App", KifiIPhoneVersion(version))
-        case "iOS Extension" => addKifiClientVersion("Kifi iOS Extension", KifiIPhoneVersion(version))
-        case "Android" => addKifiClientVersion("android", KifiAndroidVersion(version))
+        case "BE" => add("browserExtension", KifiExtVersion(version))
+        case "iOS" => add("iOSApp", KifiIPhoneVersion(version))
+        case "iOS Extension" => add("iOSExtension", KifiIPhoneVersion(version))
+        case "Android" => add("androidApp", KifiAndroidVersion(version))
         case _ =>
       }
     }
@@ -151,7 +149,7 @@ class HeimdalContextBuilder {
     this += ("doNotTrack", request.headers.get("do-not-track").exists(_ == "1"))
     addRemoteAddress(request.headers.get("X-Forwarded-For") getOrElse request.remoteAddress)
     addUserAgent(request.headers.get("User-Agent").getOrElse(""))
-    addVersion(request)
+    addKifiClientAndVersion(request)
 
     request match {
       case userRequest: UserRequest[_] =>
@@ -179,14 +177,14 @@ class HeimdalContextBuilder {
         this += ("device", device)
         this += ("os", os)
         this += ("osVersion", osVersion)
-        this += ("client", "Kifi App")
+        this += ("client", "iOSApp")
         this += ("clientVersion", appVersion)
         this += ("clientBuild", appVersion + buildSuffix)
       case UserAgent.androidAppRe(appName, os, osVersion, device) =>
         this += ("device", device)
         this += ("os", os)
         this += ("osVersion", osVersion)
-        this += ("client", "android")
+        this += ("client", "androidApp")
       case _ =>
         val agent = UserAgent.parser.parse(userAgent)
         this += ("device", agent.getDeviceCategory.getName)
@@ -194,7 +192,6 @@ class HeimdalContextBuilder {
         this += ("osVersion", agent.getOperatingSystem.getName)
         this += ("agent", agent.getName)
         this += ("agentVersion", agent.getVersionNumber.getMajor)
-        this += ("agentBuild", agent.getVersionNumber.toVersionString)
     }
   }
 
