@@ -44,7 +44,7 @@ angular.module('kifi')
     var deregisterLibraryChip = $rootScope.$on('libraryUrl', function (e, library) {
       $scope.library = library;
 
-      if (!$scope.library.owner.picUrl) {
+      if ($scope.library.owner && !$scope.library.owner.picUrl) {
         $scope.library.owner.picUrl = friendService.getPictureUrlForUser($scope.library.owner);
       }
 
