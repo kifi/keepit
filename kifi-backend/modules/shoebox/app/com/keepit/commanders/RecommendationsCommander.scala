@@ -247,7 +247,7 @@ class RecommendationsCommander @Inject() (
       lib.visibility == LibraryVisibility.PUBLISHED
     }
 
-    libCommander.createFullLibraryInfos(Some(userId), maxMembersShown = 10, maxKeepsShown = 0, curatedLibraries).map { fullLibraryInfos =>
+    libCommander.createFullLibraryInfos(Some(userId), maxMembersShown = 10, maxKeepsShown = 0, KeepImageSize.Large.idealSize, curatedLibraries).map { fullLibraryInfos =>
       fullLibraryInfos.map { libInfo =>
         val item = LibRecoItemInfo(
           id = libInfo.id,
