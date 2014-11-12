@@ -128,9 +128,9 @@ class HeimdalContextBuilder {
     val userAgentStr = request.headers.get("User-Agent").getOrElse("")
     val agent = UserAgent.parser.parse(userAgentStr)
 
-    def addKifiClientVersion(clientName: String, version: KifiVersion): Unit = {
+    def addKifiVersion(clientName: String, version: KifiVersion): Unit = {
       this += ("clientVersion", version.major + "." + version.minor + "." + version.patch)
-      this += ("clientBuild", version.toString)
+      this += ("clientBuild", version.build)
       this += ("client", clientName)
     }
 
@@ -138,10 +138,10 @@ class HeimdalContextBuilder {
     if (parts.size == 2) {
       val (client, version) = (parts(0), parts(1))
       client match {
-        case "BE" => addKifiClientVersion(agent.getName, KifiExtVersion(version)) // Chrome, Firefox, Chromium, Opera, etc
-        case "iOS" => addKifiClientVersion("Kifi App", KifiIPhoneVersion(version))
-        case "iOS Extension" => addKifiClientVersion("Kifi iOS Extension", KifiIPhoneVersion(version))
-        case "Android" => addKifiClientVersion("android", KifiAndroidVersion(version))
+        case "BE" => addKifiVersion(agent.getName, KifiExtVersion(version)) // Chrome, Firefox, Chromium, Opera, etc
+        case "iOS" => addKifiVersion("Kifi App", KifiIPhoneVersion(version))
+        case "iOS Extension" => addKifiVersion("Kifi iOS Extension", KifiIPhoneVersion(version))
+        case "Android" => addKifiVersion("android", KifiAndroidVersion(version))
         case _ =>
       }
     }
@@ -180,8 +180,6 @@ class HeimdalContextBuilder {
         this += ("os", os)
         this += ("osVersion", osVersion)
         this += ("client", "Kifi App")
-        this += ("clientVersion", appVersion)
-        this += ("clientBuild", appVersion + buildSuffix)
       case UserAgent.androidAppRe(appName, os, osVersion, device) =>
         this += ("device", device)
         this += ("os", os)
@@ -193,8 +191,6 @@ class HeimdalContextBuilder {
         this += ("os", agent.getOperatingSystem.getFamilyName)
         this += ("osVersion", agent.getOperatingSystem.getName)
         this += ("agent", agent.getName)
-        this += ("agentVersion", agent.getVersionNumber.getMajor)
-        this += ("agentBuild", agent.getVersionNumber.toVersionString)
     }
   }
 
