@@ -63,7 +63,6 @@ angular.module('kifi')
       libraryIdPromise.then(function (libraryId) {
         library = libraryId;
 
-
         if (!query) { // No query or blank query.
           $location.path('/');
         }
@@ -255,6 +254,11 @@ angular.module('kifi')
       });
     });
     $scope.$on('$destroy', deregisterKeepAddedListener);
+
+    var deregisterUpdateLibrarySearch = $rootScope.$on('librarySearched', function () {
+      init();
+    });
+    $scope.$on('$destroy', deregisterUpdateLibrarySearch);
 
 
     init();

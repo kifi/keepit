@@ -162,7 +162,6 @@ angular.module('kifi')
     $scope.$on('$destroy', deregisterTrackLibraryEvent);
 
     var deregisterUpdateLibrarySearch = $rootScope.$on('librarySearchChanged', function (e, librarySearch) {
-      debugger;
       $scope.librarySearch = librarySearch;
     });
     $scope.$on('$destroy', deregisterUpdateLibrarySearch);

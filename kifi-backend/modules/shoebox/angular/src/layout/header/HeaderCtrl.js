@@ -90,8 +90,14 @@ angular.module('kifi')
         if ($location.path() !== '/find') {
           if ($scope.library && $scope.library.url) {
             if ($scope.search.text) {
-              $location.url($scope.library.url + '/find?q=' + $scope.search.text + '&f=a');
-            } else {
+              /* jshint ignore:start */
+              if ($routeParams.q) {
+                $location.search('q', $scope.search.text).replace();
+              } else {
+                $location.url($scope.library.url + '/find?q=' + $scope.search.text + '&f=a');
+              }
+              /* jshint ignore:end */
+            } else {  // jshint ignore:line
               $location.url($scope.library.url);
             }
           } else {

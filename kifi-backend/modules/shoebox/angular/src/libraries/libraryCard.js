@@ -19,9 +19,11 @@ angular.module('kifi')
 
 .directive('kfLibraryCard', [
   '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'platformService', 'signupService', '$twitter', '$timeout', '$routeParams', 'locationNoReload',
+  'profileService', 'platformService', 'signupService', '$twitter', '$timeout', '$routeParams',
+  'locationNoReload',
   function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
-      profileService, platformService, signupService, $twitter, $timeout, $routeParams, locationNoReload) {
+      profileService, platformService, signupService, $twitter, $timeout, $routeParams,
+      locationNoReload) {
     return {
       restrict: 'A',
       replace: true,
@@ -39,6 +41,7 @@ angular.module('kifi')
         // Internal data.
         //
         var authToken = $location.search().authToken || '';
+        var prevQuery = '';
 
 
         //
@@ -360,17 +363,21 @@ angular.module('kifi')
         };
 
         scope.onSearchInputChange = _.debounce(function (query) {
-          var prevQuery = '';
-
           $timeout(function () {
             if (query) {
-              locationNoReload.skipReload().url(scope.library.url + '/find?q=' + query + '&f=a');
-
-              if (!prevQuery) {
-                $timeout(function () {
-                  $rootScope.$emit('librarySearchChanged', true);
-                });
+              if (prevQuery) {
+                locationNoReload.skipReload().search('q', query).replace();
+              } else {
+                locationNoReload.skipReload().url(scope.library.url + '/find?q=' + query + '&f=a');
               }
+
+              $routeParams.q = query;
+              $routeParams.f = 'a';
+
+              $timeout(function () {
+                $rootScope.$emit('librarySearched');
+                $rootScope.$emit('librarySearchChanged', true);
+              });
             } else {
               locationNoReload.skipReload().url(scope.library.url);
 
