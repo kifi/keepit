@@ -35,6 +35,8 @@ import views.html
 import com.keepit.typeahead.{ KifiUserTypeahead, TypeaheadHit, SocialUserTypeahead }
 import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.abook.model.RichContact
+import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.json.TupleFormat
 
 case class UserStatistics(
   user: User,
@@ -84,6 +86,7 @@ class AdminUserController @Inject() (
     socialUserRawInfoStore: SocialUserRawInfoStore,
     keepRepo: KeepRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    libraryInviteRepo: LibraryInviteRepo,
     socialConnectionRepo: SocialConnectionRepo,
     searchFriendRepo: SearchFriendRepo,
     userConnectionRepo: UserConnectionRepo,
@@ -875,5 +878,20 @@ class AdminUserController @Inject() (
 
   def reNormalizedUsername(readOnly: Boolean, max: Int) = Action { implicit request =>
     Ok(userCommander.reNormalizedUsername(readOnly, max).toString)
+  }
+
+  def internKifiContactsFromLibraryInvites() = AdminUserPage.async { implicit request =>
+    val invitedEmailAddressesByInviterId = db.readOnlyReplica { implicit session =>
+      libraryInviteRepo.all()
+    }.collect { case invite if invite.emailAddress.isDefined => (invite.inviterId, invite.emailAddress.get) }.groupBy(_._1).mapValues(_.map(_._2))
+    val futureInternedContacts = FutureHelpers.foldLeft(invitedEmailAddressesByInviterId)(Map.empty[Id[User], Seq[RichContact]]) {
+      case (internedContacts, (inviterId, emailAddresses)) =>
+        abookClient.internKifiContacts(inviterId, emailAddresses.map(BasicContact(_)): _*).map { contacts => internedContacts + (inviterId -> contacts) }
+    }
+    futureInternedContacts.map { internedContacts =>
+      implicit val f = TupleFormat.tuple2Format[Id[User], Seq[RichContact]]
+      val result = Json.toJson(internedContacts.toSeq)
+      Ok(result)
+    }
   }
 }
