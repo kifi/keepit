@@ -541,9 +541,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
           if (o.keepers.length && !lastCreatedAt) {
             $tile.hoverfu(function (configureHover) {
               // TODO: preload friend pictures
-              k.render('html/keeper/keepers', setKeepersAndCounts(o.keepers, o.otherKeeps, {
-                cssClass: 'kifi-keepers-promo' + ($tile.find('.kifi-count').length ? ' kifi-above-count' : '')
-              }), function (html) {
+              k.render('html/keeper/keepers', setKeepersAndCounts(o.keepers, o.otherKeeps, {cssClass: 'kifi-keepers-promo'}), function (html) {
                 if (lastCreatedAt) return;
                 var $promo = $(html).on('transitionend', function unhoverfu(e) {
                   if (e.target === this && !this.classList.contains('kifi-showing') && e.originalEvent.propertyName === 'opacity') {
