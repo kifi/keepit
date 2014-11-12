@@ -42,9 +42,9 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
     def version: Int
   }
   private object Version1 extends LandingVersion { val version = 1 }
-  private object Version2 extends LandingVersion { val version = 1 }
+  private object Version2 extends LandingVersion { val version = 2 }
 
-  private def landing(implicit request: Request[_]): String = {
+  def landing(implicit request: Request[_]): String = {
     val possiblyBot = request.userAgentOpt.map(_.possiblyBot).getOrElse(true)
     val version: LandingVersion = if (possiblyBot) {
       Version2
