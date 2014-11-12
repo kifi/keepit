@@ -1,6 +1,6 @@
 <div>
   <!-- Library page -->
-  <div class="kf-main-library-keeps" ng-if="page === 'library'">
+  <div class="kf-main-library-keeps" ng-if="page === 'library'" ng-class="{'library-search': librarySearch}">
     <div ng-hide="librarySearch && $root.userLoggedIn" class="kf-library-card-header">
       <div kf-library-card
         library="library"
