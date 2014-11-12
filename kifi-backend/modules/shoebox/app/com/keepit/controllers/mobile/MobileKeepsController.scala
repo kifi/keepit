@@ -162,11 +162,20 @@ class MobileKeepsController @Inject() (
     Ok(Json.obj())
   }
 
-  def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean) = UserAction.async { request =>
+  def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
     val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
+
     keepOpt match {
       case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
-      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep)).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+      case Some(keep) if withFullInfo => {
+        val idealImageSize = {
+          for {
+            w <- idealImageWidth
+            h <- idealImageHeight
+          } yield ImageSize(w, h)
+        } getOrElse KeepImageSize.Large.idealSize
+        keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep), idealImageSize).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+      }
       case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
     }
   }
@@ -192,32 +201,6 @@ class MobileKeepsController @Inject() (
     val width = (imageWidthOpt map { width => Json.obj("imgWidth" -> width) } getOrElse Json.obj())
     val height = (imageHeightOpt map { height => Json.obj("imgHeight" -> height) } getOrElse Json.obj())
     main ++ width ++ height
-  }
-
-  // todo(ray): consolidate with web endpoint
-
-  def getImageUrl() = UserAction.async(parse.tolerantJson) { request => // WIP; test-only
-    val urlOpt = (request.body \ "url").asOpt[String]
-    log.info(s"[getImageUrl] body=${request.body} url=${urlOpt}")
-    urlOpt match {
-      case Some(url) => {
-        var minSizeOpt = (for {
-          minWidth <- (request.body \ "minWidth").asOpt[Int]
-          minHeight <- (request.body \ "minHeight").asOpt[Int]
-        } yield ImageSize(minWidth, minHeight))
-        val uriOpt = db.readOnlyMaster { implicit ro => normalizedURIInterner.getByUri(url) }
-        uriOpt match {
-          case None => Future.successful(NotFound(Json.obj("code" -> "uri_not_found")))
-          case Some(uri) => {
-            val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
-            uriSummaryCommander.getImageURISummary(uri, minSizeOpt) map { uriSummary =>
-              Ok(toJsObject(url, uri, screenshotUrlOpt, uriSummary.imageUrl, uriSummary.imageWidth, uriSummary.imageHeight))
-            }
-          }
-        }
-      }
-      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_argument")))
-    }
   }
 
   def numKeeps() = UserAction { request =>

@@ -53,6 +53,7 @@ class ElizaEmailCommander @Inject() (
   def getSummarySmall(thread: MessageThread) = {
     val fut = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
+      uriId = Some(thread.uriId.get),
       imageType = ImageType.IMAGE,
       minSize = ImageSize(183, 96),
       withDescription = true,
@@ -66,6 +67,7 @@ class ElizaEmailCommander @Inject() (
   def getSummaryBig(thread: MessageThread) = {
     val fut = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
+      uriId = Some(thread.uriId.get),
       imageType = ImageType.IMAGE,
       minSize = ImageSize(620, 200),
       withDescription = false,
