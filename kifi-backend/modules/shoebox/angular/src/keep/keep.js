@@ -82,6 +82,7 @@ angular.module('kifi')
         var useBigLayout = false;
         var strippedSchemeRe = /^https?:\/\//;
         var domainTrailingSlashRe = /^([^\/]*)\/$/;
+        var youtubeLinkRe = /.*(?:youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=)([^#\&\?]*).*/;
 
         var tagDragMask = element.find('.kf-tag-drag-mask');
         var mouseX, mouseY;
@@ -94,7 +95,8 @@ angular.module('kifi')
         scope.isDragTarget = false;
         scope.isDragging = false;
         scope.userLoggedIn = $rootScope.userLoggedIn;
-
+        scope.isYoutubeCard = false;
+        scope.youtubeId = '';
 
         //
         // Internal methods.
@@ -113,6 +115,17 @@ angular.module('kifi')
           }
           return text;
         }
+
+        function isYoutubeCard(url) {
+          var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
+          var match = url.substr(strippedSchemeLen).match(youtubeLinkRe);
+          if (match && match[1]) {
+            scope.isYoutubeCard = true;
+            scope.youtubeId = match[1];
+          }
+          return match;
+        }
+        isYoutubeCard(scope.keep.url);
 
         function formatDesc(url, matches) {
           if (url) {
@@ -173,7 +186,6 @@ angular.module('kifi')
           }
 
           $sizer.text(keep.summary.trimmedDesc);
-
           function calcHeightDelta(guessWidth) {
             function tryWidth(width) {
               $sizer[0].style.width = width + 'px';
@@ -215,6 +227,7 @@ angular.module('kifi')
           //var calcTextWidth = 100 - asideWidthPercent;
           var linesToShow = Math.ceil((bestRes.hi / textHeight)); // line height
           var calcTextHeight = linesToShow * textHeight;
+          scope.linesToShow = linesToShow;
 
           keep.sizeCard = function () {
             var $content = element.find('.kf-keep-content-line');
