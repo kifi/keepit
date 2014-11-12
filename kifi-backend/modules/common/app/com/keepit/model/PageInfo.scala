@@ -193,8 +193,7 @@ object ImageInfo {
 }
 
 case class URISummaryRequest(
-    url: String,
-    uriId: Option[Id[NormalizedURI]],
+    uriId: Id[NormalizedURI],
     imageType: ImageType,
     minSize: ImageSize = ImageSize(0, 0),
     withDescription: Boolean,
@@ -206,8 +205,7 @@ case class URISummaryRequest(
 
 object URISummaryRequest {
   implicit val format = (
-    (__ \ 'url).format[String] and
-    (__ \ 'uriId).formatNullable[Id[NormalizedURI]] and
+    (__ \ 'uriId).format[Id[NormalizedURI]] and
     (__ \ 'imageType).format[ImageType] and
     (__ \ 'width).format[ImageSize] and
     (__ \ 'withDescription).format[Boolean] and

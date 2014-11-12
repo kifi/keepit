@@ -54,7 +54,7 @@ class URISummaryCommander @Inject() (
   }
 
   def getDefaultURISummary(uri: NormalizedURI, waiting: Boolean): Future[URISummary] = {
-    val uriSummaryRequest = URISummaryRequest(uri.url, Some(uri.id.get), ImageType.ANY, ImageSize(0, 0), withDescription = true, waiting = waiting, silent = false)
+    val uriSummaryRequest = URISummaryRequest(uri.id.get, ImageType.ANY, ImageSize(0, 0), withDescription = true, waiting = waiting, silent = false)
     getURISummaryForRequest(uriSummaryRequest, uri)
   }
 
@@ -72,7 +72,7 @@ class URISummaryCommander @Inject() (
    */
   private def getImageURISummary(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[URISummary] = {
     val minSize = minSizeOpt getOrElse ImageSize(0, 0)
-    val request = URISummaryRequest(nUri.url, Some(nUri.id.get), ImageType.ANY, minSize, false, false, false)
+    val request = URISummaryRequest(nUri.id.get, ImageType.ANY, minSize, false, false, false)
     getURISummaryForRequest(request, nUri)
   }
 
@@ -81,16 +81,10 @@ class URISummaryCommander @Inject() (
    * and only the image is found, the image should still be returned
    */
   def getURISummaryForRequest(request: URISummaryRequest): Future[URISummary] = {
-    val nUri = timing(s"calculating normalized uri for request with url ${request.url}") {
-      getNormalizedURIForRequest(request)
+    val nUri = db.readOnlyReplica { implicit session =>
+      normalizedUriRepo.get(request.uriId)
     }
-    nUri match {
-      case Some(uri) =>
-        getURISummaryForRequest(request, uri)
-      case None =>
-        log.warn(s"could not find normalized uri for ${request.url}")
-        Future.successful(URISummary())
-    }
+    getURISummaryForRequest(request, nUri)
   }
 
   //todo(Léo): swap url for uriId in URISummaryRequest and stop propagating the entire NormalizedURI in this code
@@ -112,13 +106,6 @@ class URISummaryCommander @Inject() (
       }
       if (request.waiting) fetchedSummaryFuture.imap(_.getOrElse(existingSummary)) else Future.successful(existingSummary)
     }
-  }
-
-  private def getNormalizedURIForRequest(request: URISummaryRequest): Option[NormalizedURI] = {
-    if (request.silent)
-      db.readOnlyMaster { implicit session => normalizedURIInterner.getByUri(request.url) }
-    else
-      db.readWrite { implicit session => Some(normalizedURIInterner.internByUri(request.url)) }
   }
 
   private def getExistingSummaryForRequest(request: URISummaryRequest, nUri: NormalizedURI): URISummary = {
