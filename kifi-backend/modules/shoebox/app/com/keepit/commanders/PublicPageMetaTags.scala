@@ -44,7 +44,7 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
 }
 
 case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
-    createdAt: DateTime, updatedAt: DateTime, unsafeFirstName: String, unsafeLastName: String) extends PublicPageMetaTags {
+    createdAt: DateTime, updatedAt: DateTime, unsafeFirstName: String, unsafeLastName: String, noIndex: Boolean) extends PublicPageMetaTags {
 
   def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
 
@@ -72,6 +72,12 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
     def facebookIdTag = facebookId.map { id =>
       s"""<meta property="article:author" content="$id"/>"""
     } getOrElse ""
+
+    def noIndexTag = if (noIndex) {
+      """
+        |<meta name="robots" content="noindex">
+      """.stripMargin
+    } else ""
 
     s"""
       |<title>${title}</title>
@@ -110,6 +116,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |<meta name="twitter:dnt" content="on">
       |<meta itemprop="name" content="$title">
       |<meta itemprop="description" content="$description">
+      |$noIndexTag
     """.stripMargin
   }
 }
