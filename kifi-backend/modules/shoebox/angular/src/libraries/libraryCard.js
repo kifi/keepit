@@ -247,7 +247,7 @@ angular.module('kifi')
         scope.followLibrary = function (library) {
           if (platformService.isSupportedMobilePlatform()) {
             var url = $location.absUrl();
-            if (url.indexOf('?')) {
+            if (url.indexOf('?') !== -1) {
               url = url + '&follow=true';
             } else {
               url = url + '?follow=true';
