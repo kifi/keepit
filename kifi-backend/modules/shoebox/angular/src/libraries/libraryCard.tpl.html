@@ -31,6 +31,10 @@
           <div class="kf-keep-lib-curator">Curator:</div>
           <div class="kf-keep-lib-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
         </div>
+
+        <div ng-if="!recommendation && isUserLoggedOut && false" class="kf-keep-lib-search">
+          <input class="kf-keep-lib-search-input" type="text" placeholder="Search this library" ng-model="search.text" ng-focus="" ng-blur="" ng-change="onSearchInputChange(search.text)" ng-keydown="">
+        </div>
       </div>
 
       <div ng-switch="clippedDescription" class="kf-keep-lib-description-container">
