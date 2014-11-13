@@ -36,6 +36,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getAllActiveIds()(implicit session: RSession): Seq[Id[User]]
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
+  def getAllUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
   def getByUsername(username: Username)(implicit session: RSession): Option[User]
   def getRecentActiveUsers(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Seq[Id[User]]
 }
@@ -214,6 +215,17 @@ class UserRepoImpl @Inject() (
           case u if u.state != UserStates.INACTIVE =>
             (UserIdKey(u.id.get) -> u)
         }.toMap
+      }
+      valueMap.map { case (k, v) => (k.id -> v) }
+    }
+  }
+  def getAllUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User] = {
+    if (ids.isEmpty) Map.empty[Id[User], User]
+    else {
+      val valueMap = idCache.bulkGetOrElse(ids.map(UserIdKey(_)).toSet) { keys =>
+        val missing = keys.map(_.id)
+        val users = (for (f <- rows if f.id.inSet(missing)) yield f).list
+        users.map { u => (UserIdKey(u.id.get) -> u) }.toMap
       }
       valueMap.map { case (k, v) => (k.id -> v) }
     }
