@@ -8,7 +8,7 @@ angular.module('kifi')
 
     function videoIdToSrc(videoId) {
       return '//www.youtube.com/v/' + videoId +
-        '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=0&hd=1&autohide=1&color=white&iv_load_policy=3';
+        '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=1&hd=1&autohide=1&color=white&iv_load_policy=3';
     }
 
     function videoEmbed(src) {
