@@ -21,7 +21,7 @@ angular.module('kifi')
 
     function imageEmbed(src) {
       var videoImg = '<img src="' + src + '" width="100%" height="100%">';
-      var playImg = '<img class="kf-youtube-play" src="http://www.clker.com/cliparts/Z/C/1/n/M/2/youtube-style-play-button-md.png">';
+      var playImg = '<img class="kf-youtube-play" src="http://lh4.googleusercontent.com/-CPSDAus0Z7s/AAAAAAAAAAI/AAAAAAAAABQ/B7u3agfdbIY/photo.jpg">';
       return videoImg + playImg;
     }
 
