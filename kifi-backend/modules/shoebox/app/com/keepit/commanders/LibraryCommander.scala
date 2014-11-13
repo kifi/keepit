@@ -790,7 +790,7 @@ class LibraryCommander @Inject() (
         elizaClient.sendGlobalNotification(
           userIds = toBeNotified,
           title = s"New Keep in ${library.name}",
-          body = s"${keeper.firstName} has just kept ${newKeep.title}",
+          body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
           linkText = "Go to Library",
           linkUrl = "https://kifi.com" + Library.formatLibraryPath(owner.username, owner.externalId, library.slug),
           imageUrl = s3ImageStore.avatarUrlByUser(keeper),
