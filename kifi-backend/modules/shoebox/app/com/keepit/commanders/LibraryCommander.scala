@@ -777,21 +777,22 @@ class LibraryCommander @Inject() (
     newKeeps.foreach { newKeep =>
       if (newKeep.libraryId.get != library.id.get) { throw new IllegalArgumentException(s"Keep ${newKeep.id.get} does not belong to expected library ${library.id.get}") }
     }
-    val (relevantFollowers, keepersById) = db.readOnlyReplica { implicit session =>
+    val (relevantFollowers, usersById) = db.readOnlyReplica { implicit session =>
       val relevantFollowers = libraryMembershipRepo.getWithLibraryId(library.id.get).map(_.userId).filter(experimentCommander.userHasExperiment(_, ExperimentType.NEW_KEEP_NOTIFICATIONS)).toSet
-      val keepersById = userRepo.getUsers(newKeeps.map(_.userId))
-      (relevantFollowers, keepersById)
+      val usersById = userRepo.getUsers(newKeeps.map(_.userId) :+ library.ownerId)
+      (relevantFollowers, usersById)
     }
+    val owner = usersById(library.ownerId)
     newKeeps.foreach { newKeep =>
       val toBeNotified = relevantFollowers - newKeep.userId
       if (toBeNotified.nonEmpty) {
-        val keeper = keepersById(newKeep.userId)
+        val keeper = usersById(newKeep.userId)
         elizaClient.sendGlobalNotification(
           userIds = toBeNotified,
           title = s"New Keep in ${library.name}",
           body = s"${keeper.firstName} has just kept ${newKeep.title}",
-          linkText = "Check it out",
-          linkUrl = newKeep.url,
+          linkText = "Go to Library",
+          linkUrl = "https://kifi.com" + Library.formatLibraryPath(owner.username, owner.externalId, library.slug),
           imageUrl = s3ImageStore.avatarUrlByUser(keeper),
           sticky = false,
           category = NotificationCategory.User.NEW_KEEP
