@@ -122,46 +122,52 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int = {
-    val ids = (for {
-      c <- rows if c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)
-    } yield c.id).list
+    if (users.nonEmpty) {
+      val ids = (for {
+        c <- rows if c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)
+      } yield c.id).list
 
-    ids.foreach { id =>
-      (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.UNFRIENDED, deferredSeqNum())
-    }
-
-    (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
-      friendRequestRepo.getByRecipient(userId).filter(users contains _.senderId)) map { friendRequest =>
-        friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
+      ids.foreach { id =>
+        (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.UNFRIENDED, deferredSeqNum())
       }
 
-    (users + userId) foreach invalidateCache
-    ids.size
+      (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
+        friendRequestRepo.getByRecipient(userId).filter(users contains _.senderId)) map { friendRequest =>
+          friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
+        }
+
+      (users + userId) foreach invalidateCache
+      ids.size
+    } else {
+      0
+    }
   }
 
-  def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession) {
-    val ids = (for {
-      c <- rows if (c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)) &&
-        (if (requested) c.state =!= UserConnectionStates.ACTIVE else c.state === UserConnectionStates.INACTIVE)
-    } yield c.id).list
+  def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession): Unit = {
+    if (users.nonEmpty) {
+      val ids = (for {
+        c <- rows if (c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)) &&
+          (if (requested) c.state =!= UserConnectionStates.ACTIVE else c.state === UserConnectionStates.INACTIVE)
+      } yield c.id).list
 
-    ids.foreach { id =>
-      (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.ACTIVE, deferredSeqNum())
-    }
-
-    val toInsert = users -- {
-      (for (c <- rows if c.user1 === userId) yield c.user2) union
-        (for (c <- rows if c.user2 === userId) yield c.user1)
-    }.list.toSet
-
-    (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
-      friendRequestRepo.getByRecipient(userId).filter(users contains _.senderId)) map { friendRequest =>
-        friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.ACCEPTED))
+      ids.foreach { id =>
+        (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.ACTIVE, deferredSeqNum())
       }
 
-    (users + userId) foreach invalidateCache
+      val toInsert = users -- {
+        (for (c <- rows if c.user1 === userId) yield c.user2) union
+          (for (c <- rows if c.user2 === userId) yield c.user1)
+      }.list.toSet
 
-    rows.insertAll(toInsert.map { connId => UserConnection(user1 = userId, user2 = connId, seq = deferredSeqNum()) }.toSeq: _*)
+      (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
+        friendRequestRepo.getByRecipient(userId).filter(users contains _.senderId)) map { friendRequest =>
+          friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.ACCEPTED))
+        }
+
+      (users + userId) foreach invalidateCache
+
+      rows.insertAll(toInsert.map { connId => UserConnection(user1 = userId, user2 = connId, seq = deferredSeqNum()) }.toSeq: _*)
+    }
   }
 
   def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection] = super.getBySequenceNumber(seq, fetchSize)

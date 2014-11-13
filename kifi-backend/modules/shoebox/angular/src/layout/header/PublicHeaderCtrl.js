@@ -8,13 +8,18 @@ angular.module('kifi')
 
     $scope.join = function ($event) {
       $event.preventDefault();
-      $scope.$emit('getCurrentLibrary', { callback: function (lib) {
-        var userData;
-        if (lib && lib.id) {
-          userData = { libraryId: lib.id };
-        }
-        signupService.register(userData);
-      }});
+
+      if (platformService.isSupportedMobilePlatform()) {
+        platformService.goToAppOrStore();
+      } else {
+        $scope.$emit('getCurrentLibrary', { callback: function (lib) {
+          var userData;
+          if (lib && lib.id) {
+            userData = { libraryId: lib.id };
+          }
+          signupService.register(userData);
+        }});
+      }
     };
 
     $scope.login = function ($event) {

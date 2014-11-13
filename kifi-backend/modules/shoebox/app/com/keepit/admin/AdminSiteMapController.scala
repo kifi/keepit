@@ -14,7 +14,7 @@ class AdminSiteMapController @Inject() (
   // expensive
   def generate() = AdminUserPage.async { implicit request =>
     generator.generate() map { elem =>
-      Ok(elem).withHeaders("Content-Type" -> "application/xml")
+      Ok(elem).withHeaders("Content-Type" -> "text/xml")
     }
   }
 }

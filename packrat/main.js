@@ -56,7 +56,7 @@ function clearDataCache() {
     notice.context.version = api.version;
     notice.context.userAgent = api.browser.userAgent;
     notice.context.userId = me && me.id;
-    api.request('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, {}, function (o) {
+    sendXhr('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, {}, function (o) {
       log('[airbrake]', o.url);
     });
   });
@@ -143,12 +143,13 @@ function insertUpdateChronologically(arr, o, timePropName) {
 
 var httpMethodRe = /^(?:GET|HEAD|POST|PUT|DELETE)$/;
 var httpHeaders = {'X-Kifi-Client': 'BE ' + api.version};
-function ajax(service, method, uri, data, done, fail) {  // method and uri are required
+
+function ajax(service, method, uri, data, done, fail, progress) {  // method and uri are required
   if (httpMethodRe.test(service)) { // shift args if service is missing
-    fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
+    progress = fail, fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
   }
   if (typeof data === 'function') {  // shift args if data is missing and done is present
-    fail = done, done = data, data = null;
+    progress = fail, fail = done, done = data, data = null;
   }
 
   if (data && method === 'GET') {
@@ -166,24 +167,66 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
   }
 
   uri = serviceNameToUri(service) + uri;
-  api.request(
-    method, uri, data, httpHeaders, done,
-    fail || (method === 'GET' ? onGetFail.bind(null, uri, done, 1) : null));
+  var headers = progress ? extend({Accept: 'text/plain'}, httpHeaders) :  httpHeaders;
+  sendXhr(
+    method, uri, data, headers, done,
+    fail || (method === 'GET' ? onGetFail.bind(null, uri, headers, done, progress, 1) : null),
+    progress);
 }
 
-function onGetFail(uri, done, failures, req) {
+function onGetFail(uri, headers, done, progress, failures, req) {
   if ([403,404].indexOf(req.status) < 0) {
     if (failures < 10) {
       var ms = failures * 2000;
       log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms');
+      var fail = onGetFail.bind(null, uri, headers, done, progress, failures + 1);
       api.timers.setTimeout(
-        api.request.bind(api, 'GET', uri, null, httpHeaders, done, onGetFail.bind(null, uri, done, failures + 1)),
+        sendXhr.bind(null, 'GET', uri, null, headers, done, fail, progress),
         ms);
     } else {
       log('[onGetFail]', req.status, uri, failures, 'failures, giving up');
     }
   }
 }
+
+function sendXhr(method, uri, data, headers, done, fail, progress) {
+  var xhr = new api.xhr();
+  xhr.open(method, uri, true);
+  if (data != null && data !== '') {
+    if (typeof data !== 'string') {
+      data = JSON.stringify(data);
+    }
+    xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
+  }
+  for (var name in headers) {
+    xhr.setRequestHeader(name, headers[name]);
+  }
+  xhr.addEventListener('loadend', onXhrLoadEnd.bind(xhr, done, fail));
+  if (progress) {
+    xhr.addEventListener('progress', onXhrProgress.bind(xhr, progress));
+    xhr.responseType = 'text';
+  } else {
+    xhr.responseType = 'json';
+  }
+  xhr.send(data);
+}
+
+var onXhrLoadEnd = api.errors.wrap(function onXhrLoadEnd(done, fail) {
+  var status = this.status;
+  if (status >= 200 && status < 300) {
+    if (done) done(status === 204 ? null : this.response);
+  } else {
+    if (fail) fail(this);
+  }
+});
+
+var onXhrProgress = api.errors.wrap(function onXhrProgress(progress) {
+  var status = this.status;
+  if (status >= 200 && status < 300) {
+    progress(this.response);
+  }
+});
+
 
 // ===== Event logging
 
@@ -569,9 +612,12 @@ api.port.on({
         // fix tile on active tab
         api.tabs.emit(tab, 'kept', {kept: d.howKept(), fail: true});
       });
-      if (!data.libraryId && !d.keeps.length) {
-        // assume success for instant tile flip on active tab
-        api.tabs.emit(tab, 'kept', {kept: libraryId === mySysLibIds[0] ? 'public' : 'private'});
+      if (!data.libraryId) {
+        // assume success for instant tile feedback on active tab
+        api.tabs.emit(tab, 'kept', {
+          kept: libraryId === mySysLibIds[0] ? 'public' : 'private',
+          duplicate: d.keeps.some(libraryIdIs(libraryId))
+        });
       }
       storeRecentLib(libraryId);
     }
@@ -659,6 +705,12 @@ api.port.on({
       }
       notifyKifiAppTabs({type: 'delete_library', libraryId: libraryId});
     }, respond.bind(null, false));
+  },
+  follow_library: function (id, respond) {
+    ajax('POST', '/ext/libraries/' + id + '/join', respond.bind(null, true), respond.bind(null, false));
+  },
+  unfollow_library: function (id, respond) {
+    ajax('POST', '/ext/libraries/' + id + '/leave', respond.bind(null, true), respond.bind(null, false));
   },
   get_keep: function (keepId, respond, tab) {
     var d = pageData[tab.nUri];
@@ -1721,10 +1773,47 @@ function searchOnServer(request, respond) {
     v: api.version,
     w: request.whence};
 
-  ajax('search', 'GET', '/ext/search', params, function (resp) {
-    var o = resp[0];
-    log('[searchOnServer] %i hits, show:', o.hits.length, o.show);
-    respond(pimpSearchResponse(resp, request.filter, o.hits.length < params.n && (params.c || params.f)));
+  var o1, o1Time, o1Len;
+  var o2, o2Time;
+  function tryParseChunks(text) {
+    var i = 1;
+    while (!o1 && i > 0) {
+      i = text.indexOf('}{"', i) + 1;
+      if (i > 0) {
+        try {
+          o1 = JSON.parse(text.substr(0, i));
+          o1Time = Date.now();
+          o1Len = i;
+          o2 = JSON.parse(text.substr(i));
+          o2Time = o1Time;
+        } catch (x) {}
+      }
+    }
+  }
+
+  ajax('search', 'GET', '/ext/search', params, function (text) {
+    if (!o1) {
+      tryParseChunks(text);
+    } else if (!o2) {
+      o2 = JSON.parse(text.substr(o1Len));
+      o2Time = Date.now();
+    }
+    o1.chunkDelta = o2Time - o1Time;
+    log('[searchOnServer] %i hits, cutPoint: %i, chunkDelta: %ims', o1.hits.length, o1.cutPoint, o1.chunkDelta);
+    respond(pimpSearchResponse([o1, o2], request.filter, o1.hits.length < params.n && (params.c || params.f)));
+  }, null, function progress(text) {
+    var len = text.length;
+    log('[search:progress]', len);
+    if (!o1 && text.indexOf('}', len - 1) > 0) {
+      tryParseChunks(text);
+      if (!o1) {
+        try {
+          o1 = JSON.parse(text);
+          o1Time = Date.now();
+          o1Len = len;
+        } catch (x) {}
+      }
+    }
   });
   return true;
 }

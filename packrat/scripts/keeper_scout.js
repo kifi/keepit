@@ -8,7 +8,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   'use strict';
   log('[keeper_scout]', location.hostname);
 
-  var whenMeKnown = [], tile, tileParent, tileObserver, tileCard, tileCount;
+  var whenMeKnown = [], tile, tileParent, tileObserver, tileCard;
   while ((tile = document.getElementById('kifi-tile'))) {
     tile.remove();
   }
@@ -19,20 +19,15 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   tile.id = 'kifi-tile';
   tile.className = 'kifi-tile kifi-root';
   tile.style.display = "none";
-  tile.innerHTML =
-    '<div class="kifi-tile-card">' +
-    '<div class="kifi-tile-keep"></div>' +
-    '<div class="kifi-tile-kept"></div></div>';
+  tile.innerHTML = '<div class="kifi-tile-card"></div><div class="kifi-tile-dot"></div>';
   tile["kifi:position"] = positionTile;
   tile.addEventListener('mouseover', function (e) {
-    if ((e.target === tileCount || tileCard.contains(e.target)) && e.isTrusted !== false) {
+    if ((tileCard.contains(e.target)) && e.isTrusted !== false) {
       loadAndDo('keeper', 'show');
     }
   });
 
   tileCard = tile.firstChild;
-  tileCount = document.createElement("span");
-  tileCount.className = 'kifi-count';
 
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener(('mozHidden' in document ? 'moz' : 'webkit') + 'fullscreenchange', onFullScreenChange);
@@ -75,13 +70,27 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     kept: function(o) {
       if (o.kept) {
         tile.dataset.kept = o.kept;
+        if ('duplicate' in o) {
+          if (o.duplicate) {
+            loadAndDo('keeper', 'showKeepBox');
+          } else {
+            tileCard.textContent = '';
+            tileCard.clientHeight; // forces layout
+            tileCard.addEventListener(animationend(), function end(e) {
+              tileCard.removeEventListener(e.type, end);
+              tileCard.textContent = '';
+            });
+            tileCard.innerHTML = o.kept === 'public' ?
+              '<div class="kifi-tile-icon-keep"></div>' :
+              '<div class="kifi-tile-icon-lock"></div>';
+          }
+        }
       } else if (o.kept === null) {
         tile.removeAttribute('data-kept');
       }
       if (o.fail && !tile.querySelector('.kifi-keeper') && !tile.classList.contains('kifi-shake')) {
-        var eventType = 'animationName' in tile.style ? 'animationend' : 'webkitAnimationEnd';
-        tile.addEventListener(eventType, function end() {
-          tile.removeEventListener(eventType, end);
+        tile.addEventListener(animationend(), function end(e) {
+          tile.removeEventListener(e.type, end);
           tile.classList.remove('kifi-shake');
         });
         tile.classList.add('kifi-shake');
@@ -111,8 +120,6 @@ k.tile = k.tile || function () {  // idempotent for Chrome
             toggleLoginDialog();
           } else if (k.keepBox && k.keepBox.showing()) {
             k.keepBox.keep(e.altKey);
-          } else if (tile && (kept = tile.dataset.kept) && (kept === 'private') === e.altKey) {
-            loadAndDo('keeper', 'showKeepBox');
           } else {
             api.port.emit('keep', withTitles(withUrls({secret: e.altKey})));
           }
@@ -154,13 +161,11 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   }
 
   function updateCount(n) {
-    if (n) {
-      tileCount.textContent = n;
-      tile.insertBefore(tileCount, tileCard.nextSibling);
-    } else if (tileCount.parentNode) {
-      tileCount.remove();
-    }
     tile.dataset.count = n;
+  }
+
+  function animationend() {
+    return 'animationName' in tile.style ? 'animationend' : 'webkitAnimationEnd';
   }
 
   function toggleLoginDialog() {
@@ -272,7 +277,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   api.onEnd.push(function() {
     document.removeEventListener('keydown', onKeyDown, true);
     cleanUpDom();
-    k.tile = k.me = tile = tileCard = tileCount = null;
+    k.tile = k.me = tile = tileCard = null;
   });
 
   return tile;

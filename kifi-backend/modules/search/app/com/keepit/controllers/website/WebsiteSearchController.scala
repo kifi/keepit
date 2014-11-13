@@ -82,7 +82,7 @@ class WebsiteSearchController @Inject() (
         val futureUriSummaries = shoeboxClient.getUriSummaries(uriIds)
         val futureBasicKeeps = {
           if (userId == SearchControllerUtil.nonUser) {
-            Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]])
+            Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]].withDefaultValue(Set.empty))
           } else {
             shoeboxClient.getBasicKeeps(userId, uriIds.toSet)
           }

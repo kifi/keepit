@@ -33,6 +33,9 @@ trait KifiVersion {
     Seq(major) ++ (if (minor >= 0) Some(minor) ++ (if (patch >= 0) Some(patch) ++ (if (build >= 0) Some(build) else Nil) else Nil) else Nil) mkString "."
   }
 
+  def toStringWithoutBuild = {
+    Seq(major) ++ (if (minor >= 0) Some(minor) ++ (if (patch >= 0) Some(patch) else Nil) else Nil) mkString "."
+  }
 }
 
 case class KifiExtVersion(major: Short, minor: Short, patch: Short = -1, build: Int = -1) extends KifiVersion with Ordered[KifiExtVersion] {

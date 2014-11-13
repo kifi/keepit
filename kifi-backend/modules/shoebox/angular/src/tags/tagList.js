@@ -87,7 +87,7 @@ angular.module('kifi')
         }
 
         var filterTags = _.debounce(function (tagFilterTerm) {
-          if (null === tagFilterTerm) {
+          if (tagFilterTerm === null) {
             return;
           }
 
@@ -244,7 +244,7 @@ angular.module('kifi')
 
         scope.showAddTagDropdown = function () {
           scope.tagFilter.name = '';
-          filterTags(null);
+          filterTags('');
           scope.shouldGiveFocus = true;
           return scope.addingTag.enabled = true;
         };

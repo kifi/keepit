@@ -4,9 +4,11 @@ angular.module('kifi')
 
 .directive('kfLibraryCard', [
   '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'platformService', 'signupService', '$twitter', '$timeout',
+  'profileService', 'platformService', 'signupService', '$twitter', '$timeout', '$routeParams', '$route',
+  'locationNoReload',
   function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
-    profileService, platformService, signupService, $twitter, $timeout) {
+      profileService, platformService, signupService, $twitter, $timeout, $routeParams, $route,
+      locationNoReload) {
     return {
       restrict: 'A',
       replace: true,
@@ -23,8 +25,9 @@ angular.module('kifi')
         //
         // Internal data.
         //
-        var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
-        //                   ↑↑↑ use this one ↑↑↑
+        var authToken = $location.search().authToken || '';
+        var prevQuery = '';
+
 
         //
         // Scope data.
@@ -34,6 +37,7 @@ angular.module('kifi')
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
         scope.editKeepsText = 'Edit Keeps';
+        scope.search = { 'text': $routeParams.q || '' };
 
         var magicImages = {
           'l7SZ3gr3kUQJ': '//djty7jcqog9qu.cloudfront.net/special-libs/l7SZ3gr3kUQJ.png',
@@ -50,7 +54,9 @@ angular.module('kifi')
           'lCaeGbBOh5YT': '//djty7jcqog9qu.cloudfront.net/special-libs/lCaeGbBOh5YT.png',
           'lEc2xD0eNU9f': '//djty7jcqog9qu.cloudfront.net/special-libs/lEc2xD0eNU9f.png',
           'l8SVuYHq9Qo5': '//djty7jcqog9qu.cloudfront.net/special-libs/l8SVuYHq9Qo5.jpg',
-          'l5jqAsWp5j8Y': '//djty7jcqog9qu.cloudfront.net/special-libs/l5jqAsWp5j8Y.jpg'
+          'l5jqAsWp5j8Y': '//djty7jcqog9qu.cloudfront.net/special-libs/l5jqAsWp5j8Y.jpg',
+          'l8zOB62bja1e': '//djty7jcqog9qu.cloudfront.net/special-libs/l8zOB62bja1e.jpg',
+          'l0XQspLziYol': '//djty7jcqog9qu.cloudfront.net/special-libs/l0XQspLziYol.jpg'
         };
         scope.magicImage = magicImages[scope.library.id];
 
@@ -189,8 +195,9 @@ angular.module('kifi')
 
         scope.ignoreInvitation = function (library) {
           if (library.invite) {
-            library.invite.actedOn = true;
-            libraryService.declineToJoinLibrary(library.id);
+            libraryService.declineToJoinLibrary(library.id).then(function () {
+              library.invite.actedOn = true;
+            })['catch'](modalService.openGenericErrorModal);
           }
         };
 
@@ -242,12 +249,14 @@ angular.module('kifi')
         };
 
         scope.followLibrary = function (library) {
-          if (library.invite) {
-            library.invite.actedOn = true;
-          }
-
           if (platformService.isSupportedMobilePlatform()) {
-            platformService.goToAppOrStore($location.absUrl() + '?follow=true');
+            var url = $location.absUrl();
+            if (url.indexOf('?') !== -1) {
+              url = url + '&follow=true';
+            } else {
+              url = url + '?follow=true';
+            }
+            platformService.goToAppOrStore(url);
             return;
           } else if ($rootScope.userLoggedIn === false) {
             libraryService.trackEvent('visitor_clicked_page', library, { action: 'followButton' });
@@ -257,11 +266,15 @@ angular.module('kifi')
           libraryService.trackEvent('user_clicked_page', library, { action: 'followed' });
 
           libraryService.joinLibrary(library.id).then(function (result) {
+            if (library.invite) {
+              library.invite.actedOn = true;
+            }
+
             if (result === 'already_joined') {
-              scope.genericErrorMessage = 'You are already following this library!';
-              modalService.open({
-                template: 'common/modal/genericErrorModal.tpl.html',
-                scope: scope
+              modalService.openGenericErrorModal({
+                modalData: {
+                  genericErrorMessage: 'You are already following this library!'
+                }
               });
               return;
             }
@@ -275,13 +288,25 @@ angular.module('kifi')
 
             augmentData();
             adjustFollowerPicsSize();
-          });
+          })['catch'](modalService.openGenericErrorModal);
         };
 
         scope.unfollowLibrary = function (library) {
-          libraryService.trackEvent('user_followed_library', library, { action: 'unfollow' });
-          libraryService.leaveLibrary(library.id);
+          libraryService.trackEvent('user_clicked_page', library, { action: 'unfollow' });
+          libraryService.leaveLibrary(library.id)['catch'](modalService.openGenericErrorModal);
         };
+
+        scope.followStick = function (isStuck) {
+          if (isStuck) {
+            angular.element('html.kf-mobile .kf-header-right').css({'display': 'none'});
+            angular.element('.kf-header-right').css({'margin-right': '150px'});
+          } else {
+            angular.element('html.kf-mobile .kf-header-right').css({'display': ''});
+            angular.element('.kf-header-right').css({'margin-right': ''});
+          }
+        };
+
+        scope.followButtonMaxTop = platformService.isSupportedMobilePlatform() ? 25 : 15;
 
         scope.manageLibrary = function () {
           modalService.open({
@@ -291,16 +316,16 @@ angular.module('kifi')
               library: scope.library,
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
-                  libraryService.getLibraryByUserSlug(scope.username, data.library.slug, authToken, true).then(function (library) {
+                  return libraryService.getLibraryByUserSlug(scope.username, data.library.slug, authToken, true).then(function (library) {
                     _.assign(scope.library, library);
                     augmentData();
                     adjustFollowerPicsSize();
-                  });
 
-                  if (data.library.slug !== scope.librarySlug) {
-                    $location.path('/' + scope.username + '/' + data.library.slug);
-                  }
-                });
+                    if (data.library.slug !== scope.librarySlug) {
+                      $location.path('/' + scope.username + '/' + data.library.slug);
+                    }
+                  });
+                })['catch'](modalService.openGenericErrorModal);
               }
             }
           });
@@ -328,8 +353,47 @@ angular.module('kifi')
               }
             });
           }
-
         };
+
+        scope.onSearchInputChange = _.debounce(function (query) {
+          $timeout(function () {
+            if (query) {
+              if (prevQuery) {
+                locationNoReload.skipReload().search('q', query).replace();
+
+                // When we search using the input inside the library card header, we don't
+                // want to reload the page. One consequence of this is that we need to kick
+                // SearchController to initialize a search when the search query changes if
+                // we initially started with a url that is a library url that has no search
+                // parameters.
+                if (!$route.current.params.q) {
+                  $timeout(function () {
+                    $rootScope.$emit('librarySearched');
+                  });
+                }
+              } else {
+                locationNoReload.skipReload().url(scope.library.url + '/find?q=' + query + '&f=a');
+              }
+
+              $routeParams.q = query;
+              $routeParams.f = 'a';
+
+              $timeout(function () {
+                $rootScope.$emit('librarySearchChanged', true);
+              });
+            } else {
+              locationNoReload.skipReload().url(scope.library.url);
+
+              $timeout(function () {
+                $rootScope.$emit('librarySearchChanged', false);
+              });
+            }
+
+            prevQuery = query;
+          });
+        }, 100, {
+          'leading': true
+        });
 
         //
         // Watches and listeners.
@@ -362,3 +426,4 @@ angular.module('kifi')
     };
   }
 ]);
+

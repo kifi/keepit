@@ -1,12 +1,15 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders._
+import com.keepit.commanders.{ LibraryAddRequest, RawBookmarkRepresentation, _ }
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller._
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.controller.{ UserRequest, _ }
+import com.keepit.common.core._
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.json
+import com.keepit.common.json.TupleFormat
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
@@ -14,35 +17,11 @@ import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
-import org.joda.time.DateTime
-import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter }
-import play.api.Mode.Mode
-import play.api.Mode.Mode
-import play.api.{ Mode, Play }
-import play.api.libs.iteratee.{ Enumeratee, Iteratee, Enumerator }
-import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc._
+import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
 
 import scala.concurrent.Future
-import scala.util.{ Success, Failure }
-import ImplicitHelper._
-import com.keepit.common.core._
-import com.keepit.common.{ CollectionHelpers, json }
-import com.keepit.common.json.TupleFormat
-import play.api.http.Status._
-import com.keepit.commanders.RawBookmarkRepresentation
-import com.keepit.commanders.LibraryFail
-import play.api.libs.json.JsArray
-import scala.util.Failure
-import play.api.libs.json.JsString
-import scala.util.Success
-import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.controller.UserRequest
-import play.api.libs.json.JsObject
-import com.keepit.commanders.LibraryAddRequest
-
-import scala.xml.{ Node, Elem }
+import scala.util.{ Failure, Success }
 
 class LibraryController @Inject() (
   db: Database,
@@ -62,52 +41,6 @@ class LibraryController @Inject() (
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
-
-  def getTopLibraries() = MaybeUserAction { request =>
-    val tops = db.readOnlyReplica { implicit ro =>
-      import com.keepit.common.time._
-      libraryMembershipRepo.mostMembersSince(20, clock.now().minusHours(24))
-    }
-
-    val libIds = tops.map(_._1)
-    val libMap = db.readOnlyReplica { implicit ro =>
-      libraryRepo.getLibraries(libIds.toSet)
-    }
-    val libraries = libIds.map(libMap(_))
-    val ownerIds = CollectionHelpers.dedupBy(libraries.map(_.ownerId))(id => id)
-    val ownerMap = db.readOnlyMaster { implicit ro => userRepo.getUsers(ownerIds) }
-    val formatter = DateTimeFormat.forPattern("E, d MMM y HH:mm:ss Z")
-    val items = tops map {
-      case (libId, count) =>
-        val lib = libMap(libId)
-        val owner = ownerMap(lib.ownerId)
-        <item>
-          <title>{ lib.name }</title>
-          <description>{ lib.description.getOrElse(s"${owner.fullName}'s ${lib.name} Kifi Library") }</description>
-          <link>{ s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}" }</link>
-          <guid>{}</guid>
-          <pubDate>{ lib.updatedAt.toString(formatter) }</pubDate>
-        </item>
-    }
-    val rss =
-      <rss version="2.0">
-        <channel>
-          <title>Top Libraries on Kifi</title>
-          <link>{ s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.LibraryController.getTopLibraries().url.toString()}" }</link>
-          { items }
-        </channel>
-      </rss>
-
-    val elems = Enumerator.enumerate(rss)
-    val toBytes = Enumeratee.map[Node] { n => n.toString.getBytes }
-    val header = Enumerator("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes)
-    val combined = header.andThen(elems &> toBytes)
-    log.info(s"[getTopLibraries(${request.userIdOpt})] published #${libIds.size} libraries. ${libIds.take(20)} ...")
-    Result(
-      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
-      body = combined
-    )
-  }
 
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
     val addRequest = request.body.as[LibraryAddRequest]
@@ -213,11 +146,10 @@ class LibraryController @Inject() (
     Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
   }
 
-  def inviteUsersToLibrary(pubId: PublicId[Library]) = UserAction(parse.tolerantJson) { request =>
-    val idTry = Library.decodePublicId(pubId)
-    idTry match {
+  def inviteUsersToLibrary(pubId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
+    Library.decodePublicId(pubId) match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid_id"))
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(id) =>
         val invites = (request.body \ "invites").as[JsArray].value
         val msgOpt = (request.body \ "message").asOpt[String]
@@ -235,16 +167,15 @@ class LibraryController @Inject() (
           }
         }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        val res = libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList)
-        res match {
+        libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
-          case Right(info) =>
-            val res = info.map {
-              case (Left(externalId), access) => Json.obj("user" -> externalId, "access" -> access)
-              case (Right(email), access) => Json.obj("email" -> email, "access" -> access)
+          case Right(inviteesWithAccess) =>
+            val result = inviteesWithAccess.map {
+              case (Left(user), access) => Json.obj("user" -> user.externalId, "access" -> access)
+              case (Right(contact), access) => Json.obj("email" -> contact.email, "access" -> access)
             }
-            Ok(Json.toJson(res))
+            Ok(Json.toJson(result))
         }
     }
   }
@@ -300,7 +231,7 @@ class LibraryController @Inject() (
         val numKeepsF = libraryCommander.getKeepsCount(libraryId)
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
-          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
+          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps, KeepImageSize.Large.idealSize)
           numKeeps <- numKeepsF
         } yield {
           Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "numKeeps" -> numKeeps))

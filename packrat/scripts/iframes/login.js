@@ -93,7 +93,7 @@ document.addEventListener('keydown', function (e) {
   s.textContent = ['api_key:' + appIds.linkedin, 'onLoad:onLoadLinkedInApi', 'authorize:true', 'credentials_cookie:true'].join('\n');
   document.head.appendChild(s);
 
-  var proceed = withJQuery.bind(s, creds, pics, on);
+  var proceed = withJQuery.bind(null, creds, pics, on);
   var loading = Array.prototype.slice.call(document.head.querySelectorAll('script[data-loading=true]'));
   if (loading.length === 0) {
     proceed();
@@ -110,11 +110,9 @@ document.addEventListener('keydown', function (e) {
 }(function (creds, pics, on) {
   'use strict';
 
-  (function (script) {
-    var s = document.createElement('SCRIPT');
-    s.src = script.src.replace('jquery', 'jquery-ui-position');
-    document.body.appendChild(s);
-  })(this);
+  $('<script>')
+  .prop('src', document.head.querySelector('script[src$="jquery.js"]').src.replace('jquery', 'jquery-ui-position'))
+  .appendTo('body');
 
   $.postJson = function (uri, data) {
     return $.ajax({

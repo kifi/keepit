@@ -34,9 +34,9 @@ angular.module('kifi')
 ])
 
 .directive('kfKeepCard', [
-  '$document', '$rootScope', '$rootElement', 'installService', 'keepActionService', 'keepDecoratorService',
+  '$document', '$rootScope', '$rootElement', 'installService', 'keepDecoratorService',
   'libraryService', 'modalService', 'recoActionService', 'tagService', 'undoService', 'util',
-  function ($document, $rootScope, $rootElement, installService, keepActionService, keepDecoratorService,
+  function ($document, $rootScope, $rootElement, installService, keepDecoratorService,
             libraryService, modalService, recoActionService, tagService, undoService, util) {
     return {
       restrict: 'A',
@@ -82,6 +82,7 @@ angular.module('kifi')
         var useBigLayout = false;
         var strippedSchemeRe = /^https?:\/\//;
         var domainTrailingSlashRe = /^([^\/]*)\/$/;
+        var youtubeLinkRe = /.*(?:youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=)([^#\&\?]*).*/;
 
         var tagDragMask = element.find('.kf-tag-drag-mask');
         var mouseX, mouseY;
@@ -94,11 +95,17 @@ angular.module('kifi')
         scope.isDragTarget = false;
         scope.isDragging = false;
         scope.userLoggedIn = $rootScope.userLoggedIn;
-
+        scope.isYoutubeCard = false;
+        scope.youtubeId = '';
 
         //
         // Internal methods.
         //
+        function init() {
+          updateSiteDescHtml(scope.keep);
+          isYoutubeCard(scope.keep.url);
+        }
+
         function bolded(text, start, len) {
           return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
         }
@@ -114,6 +121,16 @@ angular.module('kifi')
           return text;
         }
 
+        function isYoutubeCard(url) {
+          var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
+          var match = url.substr(strippedSchemeLen).match(youtubeLinkRe);
+          if (match && match[1]) {
+            scope.isYoutubeCard = true;
+            scope.youtubeId = match[1];
+          }
+          return match;
+        }
+
         function formatDesc(url, matches) {
           if (url) {
             var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
@@ -127,22 +144,6 @@ angular.module('kifi')
 
         function updateSiteDescHtml(keep) {
           keep.descHtml = formatDesc(keep.siteName || keep.url);
-        }
-
-        function keepOne (keep) {
-          keepActionService.keepToLibrary([keep.url], keep.libraryId).then(function (resp) {
-            var keptItem = resp && resp.keeps && resp.keeps[0];
-
-            if (keptItem) {
-              keep.buildKeep(keptItem);
-              keep.makeKept();
-              libraryService.addToLibraryCount(keep.libraryId, 1);
-            }
-          });
-
-          if (_.isFunction(scope.keepCallback)) {
-            scope.keepCallback({ 'keep': keep });
-          }
         }
 
         function sizeImage(keep) {
@@ -274,11 +275,12 @@ angular.module('kifi')
         };
 
         scope.showSmallImage = function (keep) {
-          return keep.hasSmallImage && !useBigLayout;
+          return keep.hasSmallImage && !useBigLayout && !scope.isYoutubeCard;
         };
 
         scope.showBigImage = function (keep) {
-          return keep.hasBigImage || (keep.summary && useBigLayout);
+          var bigImageReady = keep.hasBigImage || (keep.summary && useBigLayout);
+          return bigImageReady && !scope.isYoutubeCard;
         };
 
         scope.hasTag = function (keep) {
@@ -292,57 +294,6 @@ angular.module('kifi')
 
         scope.showAddTag = function () {
           scope.addingTag.enabled = true;
-        };
-
-        scope.togglePrivate = function (keep) {
-          keepActionService.togglePrivateOne(keep);
-        };
-
-        scope.keepPublic = function (keep) {
-          keepOne(keep, false);
-        };
-
-        scope.keepPrivate = function (keep) {
-          keepOne(keep, true);
-        };
-
-        scope.unkeep = function (keep) {
-          keepActionService.unkeepFromLibrary(keep.libraryId, keep.id).then(function () {
-            keep.makeUnkept();
-
-            undoService.add('Keep deleted.', function () {
-              keepOne(keep);
-            });
-
-            libraryService.addToLibraryCount(keep.libraryId, -1);
-          });
-        };
-
-        scope.showKeepingToLibrary = function () {
-          scope.keepingToLibrary = true;
-        };
-
-        scope.keepToLibrary = function (keep) {
-          scope.data.selectedLibraryIds.forEach(function (libraryId) {
-            keepActionService.keepToLibrary([keep.url], libraryId).then(function (result) {
-              if (result.failures && result.failures.length) {
-                modalService.open({
-                  template: 'common/modal/genericErrorModal.tpl.html'
-                });
-              } else {
-                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
-                  var keep = new keepDecoratorService.Keep(fullKeep);
-                  keep.buildKeep(keep);
-                  keep.makeKept();
-
-                  libraryService.fetchLibrarySummaries(true);
-                  libraryService.addToLibraryCount(libraryId, 1);
-                });
-              }
-            });
-          });
-
-          scope.keepingToLibrary = false;
         };
 
         scope.getSingleSelectedKeep = function (keep) {
@@ -453,7 +404,7 @@ angular.module('kifi')
         //
         // On link.
         //
-        updateSiteDescHtml(scope.keep);
+        init();
       }
     };
   }
@@ -508,7 +459,7 @@ angular.module('kifi')
 
               libraryService.addToLibraryCount(clickedLibrary.id, -1);
               scope.$emit('keepRemoved', { url: scope.keep.url }, clickedLibrary);
-            });
+            })['catch'](modalService.openGenericErrorModal);
 
           // Keep.
           } else {
@@ -542,11 +493,7 @@ angular.module('kifi')
               });
             }
 
-            keepToLibrary['catch'](function () {
-              modalService.open({
-                template: 'common/modal/genericErrorModal.tpl.html'
-              });
-            });
+            keepToLibrary['catch'](modalService.openGenericErrorModal);
           }
         };
 

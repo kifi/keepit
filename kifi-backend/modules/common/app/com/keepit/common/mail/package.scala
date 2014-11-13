@@ -26,6 +26,7 @@ package object template {
     val fullName = TagLabel("fullName")
     val avatarUrl = TagLabel("avatarUrl")
     val libraryName = TagLabel("libraryName")
+    val libraryUrl = TagLabel("libraryUrl")
     val unsubscribeUrl = TagLabel("unsubscribeUrl")
     val unsubscribeUserUrl = TagLabel("unsubscribeUserUrl")
     val unsubscribeEmailUrl = TagLabel("unsubscribeEmailUrl")
@@ -65,6 +66,8 @@ package object template {
     def userExternalId(id: Id[User]) = Tag1(tags.userExternalId, id).toHtml
 
     def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
+
+    def libraryUrl(id: Id[Library]) = Tag1(tags.libraryUrl, id).toHtml
 
     val unsubscribeUrl = Tag0(tags.unsubscribeUrl).toHtml
 

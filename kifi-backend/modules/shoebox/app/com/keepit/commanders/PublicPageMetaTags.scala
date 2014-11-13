@@ -44,7 +44,7 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
 }
 
 case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
-    createdAt: DateTime, updatedAt: DateTime, unsafeFirstName: String, unsafeLastName: String) extends PublicPageMetaTags {
+    createdAt: DateTime, updatedAt: DateTime, unsafeFirstName: String, unsafeLastName: String, noIndex: Boolean) extends PublicPageMetaTags {
 
   def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
 
@@ -52,6 +52,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   val description = clean(unsafeDescription)
   val firstName = clean(unsafeFirstName)
   val lastName = clean(unsafeLastName)
+  val fullName = s"$firstName $lastName"
 
   def formatOpenGraph: String = {
 
@@ -59,7 +60,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       s"""
          |<meta property="og:image" content="$image" />
          |<meta itemprop="image" content="$image">
-       """.stripMargin
+       """.stripMargin.trim
     } mkString ("\n")
 
     def twitterImageTags = images.headOption map { image =>
@@ -72,8 +73,13 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       s"""<meta property="article:author" content="$id"/>"""
     } getOrElse ""
 
+    def noIndexTag = if (noIndex) {
+      """
+        |<meta name="robots" content="noindex">
+      """.stripMargin
+    } else ""
+
     s"""
-      |<html itemscope itemtype="http://schema.org/Product">
       |<title>${title}</title>
       |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly"/>
       |<meta name="apple-mobile-web-app-capable" content="no"/>
@@ -110,6 +116,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |<meta name="twitter:dnt" content="on">
       |<meta itemprop="name" content="$title">
       |<meta itemprop="description" content="$description">
+      |$noIndexTag
     """.stripMargin
   }
 }

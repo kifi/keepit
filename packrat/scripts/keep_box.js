@@ -57,7 +57,6 @@ k.keepBox = k.keepBox || (function () {
       }
     },
     onHide: new Listeners(),
-    onHidden: new Listeners(),
     showing: function () {
       return !!$box;
     },
@@ -121,23 +120,23 @@ k.keepBox = k.keepBox || (function () {
   var hideInterval;
   function hide(e, trigger) {
     clearInterval(hideInterval), hideInterval = null;
+    trigger = trigger || (e && e.keyCode === 27 ? 'esc' : undefined);
     log('[keepBox:hide]', trigger);
     $(document).data('esc').remove(hide);
     $box.find('.kifi-keep-box-view').triggerHandler('kifi-hide');
     $box
       .css('overflow', '')
-      .on('transitionend', $.proxy(onHidden, null, trigger || (e && e.keyCode === 27 ? 'esc' : undefined)))
+      .on('transitionend', onHidden)
       .addClass('kifi-down');
     $box = null;
     if (e) e.preventDefault();
-    k.keepBox.onHide.dispatch();
+    k.keepBox.onHide.dispatch(trigger);
   }
 
-  function onHidden(trigger, e) {
+  function onHidden(e) {
     if (e.target === this && e.originalEvent.propertyName === 'opacity') {
       log('[keepBox:onHidden]');
       $(this).remove();
-      k.keepBox.onHidden.dispatch(trigger);
     }
   }
 

@@ -116,7 +116,7 @@ private[commanders] class NotificationJsonMaker @Inject() (
   private def fetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[URISummary] = uriSummaryRequestLimiter.withLockFuture {
     shoebox.getUriSummary(
       URISummaryRequest(
-        url = url,
+        uriId = uriId,
         imageType = ImageType.IMAGE,
         minSize = ImageSize(65, 95),
         withDescription = false,

@@ -79,6 +79,8 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
     db.readWrite { implicit session =>
       val nUri1 = normalizedURIInterner.internByUri("http://www.adomain.com")
       val nUri2 = normalizedURIInterner.internByUri("http://www.anotherdomain.com")
+      val nUri3 = normalizedURIInterner.internByUri("http://www.anotherdomain2.com")
+      val nUri4 = normalizedURIInterner.internByUri("http://www.anotherdomain3.com")
       val image1 = imageInfo.save(ImageInfo(
         uriId = nUri1.id.get,
         url = Some("http://www.google.com/test1.jpg"),
@@ -130,7 +132,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         priority = Some(4)
       ))
 
-      (image1.url.get, image2.url.get, image3.url.get, image4.url.get, image5.url.get)
+      (image1.url.get, image2.url.get, image3.url.get, image4.url.get, image5.url.get, nUri1, nUri2, nUri3, nUri4)
     }
 
   }
@@ -166,32 +168,32 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
 
     "find image from repo" in {
       withDb(modules: _*) { implicit injector =>
-        val (imageUrl1, imageUrl2, imageUrl3, imageUrl4, imageUrl5) = setup()
+        val (imageUrl1, imageUrl2, imageUrl3, imageUrl4, imageUrl5, nUri1, nUri2, nUri3, nUri4) = setup()
         val URISummaryCommander = inject[URISummaryCommander]
 
         // get image for url request
-        val request1 = URISummaryRequest("http://www.adomain.com", ImageType.IMAGE, ImageSize(800, 800), false, true, false)
+        val request1 = URISummaryRequest(nUri1.id.get, ImageType.IMAGE, ImageSize(800, 800), false, true, false)
         val result1fut = URISummaryCommander.getURISummaryForRequest(request1) map { _.imageUrl }
         result1fut must beSome(imageUrl4).await
 
-        val request2 = URISummaryRequest("http://www.anotherdomain.com", ImageType.IMAGE, ImageSize(800, 800), false, false, true)
+        val request2 = URISummaryRequest(nUri2.id.get, ImageType.IMAGE, ImageSize(800, 800), false, false, true)
         val result2fut = URISummaryCommander.getURISummaryForRequest(request2) map { _.imageUrl }
         result2fut must beSome(imageUrl2).await
 
-        val request3 = URISummaryRequest("http://www.adomain.com", ImageType.IMAGE, ImageSize(10000, 10000), false, false, true)
+        val request3 = URISummaryRequest(nUri1.id.get, ImageType.IMAGE, ImageSize(10000, 10000), false, false, true)
         val result3fut = URISummaryCommander.getURISummaryForRequest(request3) map { _.imageUrl }
         result3fut must beNone.await
 
-        val request4 = URISummaryRequest("http://www.notexistingdomain.com", ImageType.IMAGE, ImageSize(10, 10), false, false, true)
+        val request4 = URISummaryRequest(nUri3.id.get, ImageType.IMAGE, ImageSize(10, 10), false, false, true)
         val result4fut = URISummaryCommander.getURISummaryForRequest(request4) map { _.imageUrl }
         result4fut must beNone.await
 
-        val request5 = URISummaryRequest("http://www.adomain.com", ImageType.SCREENSHOT, ImageSize(800, 800), false, false, true)
+        val request5 = URISummaryRequest(nUri1.id.get, ImageType.SCREENSHOT, ImageSize(800, 800), false, false, true)
         val result5fut = URISummaryCommander.getURISummaryForRequest(request5) map { _.imageUrl }
         result5fut must beSome(imageUrl3).await
 
         // should give no results
-        val request = URISummaryRequest("http://www.notexistingdomain2.com", ImageType.IMAGE, ImageSize(10, 10), false, true, true)
+        val request = URISummaryRequest(nUri4.id.get, ImageType.IMAGE, ImageSize(10, 10), false, true, true)
         val result6Fut = URISummaryCommander.getURISummaryForRequest(request) map { _.imageUrl }
         result6Fut must beNone.await
       }
@@ -200,8 +202,13 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
     "find image from clients" in {
       withDb(modules: _*) { implicit injector =>
         val URISummaryCommander = inject[URISummaryCommander]
-        val embedlyRequest = URISummaryRequest("http://www.notexistingdomain2.com", ImageType.IMAGE, ImageSize(10, 10), false, true, false)
-        val pagePeekerRequest = URISummaryRequest("http://www.notexistingdomain3.com", ImageType.SCREENSHOT, ImageSize(10, 10), false, true, false)
+        val (nUri1, nUri2) = db.readWrite { implicit session =>
+          val nUri1 = normalizedURIInterner.internByUri("http://www.adomain.com")
+          val nUri2 = normalizedURIInterner.internByUri("http://www.anotherdomain.com")
+          (nUri1, nUri2)
+        }
+        val embedlyRequest = URISummaryRequest(nUri1.id.get, ImageType.IMAGE, ImageSize(10, 10), false, true, false)
+        val pagePeekerRequest = URISummaryRequest(nUri2.id.get, ImageType.SCREENSHOT, ImageSize(10, 10), false, true, false)
 
         type Partial = PartialFunction[Option[String], MatchResult[_]]
 

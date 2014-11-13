@@ -200,7 +200,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           }
           iterateeAndEnumeratorFuture
         case None => Future.successful {
-          statsd.incrementOne(s"websocket.anonymous", ONE_IN_TEN)
+          statsd.incrementOne(s"websocket.anonymous", ONE_IN_HUNDRED)
           accessLog.add(connectTimer.done(method = "DISCONNECT", body = "disconnecting anonymous user"))
           Right((Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof))
         }
@@ -232,13 +232,13 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     asyncIteratee(streamSession, versionOpt) { jsArr =>
       Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
         val action = jsArr.value(0).as[String]
-        statsd.time(s"websocket.handler.$action", ALWAYS) { t =>
+        statsd.time(s"websocket.handler.$action", ONE_IN_HUNDRED) { t =>
           val timer = accessLog.timer(WS_IN)
           val payload = jsArr.value.tail
           try {
             handler(payload)
           } finally {
-            statsd.incrementOne(s"websocket.handler.$action.$agentFamily", ONE_IN_TEN)
+            statsd.incrementOne(s"websocket.handler.$action.$agentFamily", ONE_IN_HUNDRED)
             accessLog.add(timer.done(url = action, trackingId = socketInfo.trackingId, method = "MESSAGE", query = payload.toString()))
           }
         }

@@ -31,7 +31,7 @@ class SendgridCommander @Inject() (
 
   val earliestAcceptableEventTime = new DateTime(2012, 7, 15, 0, 0)
   val alertEvents: Seq[SendgridEventType] = Seq(BOUNCE, SPAM_REPORT)
-  val unsubscribeEvents: Seq[SendgridEventType] = Seq(UNSUBSCRIBE, BOUNCE)
+  val unsubscribeEvents: Seq[SendgridEventType] = Seq(UNSUBSCRIBE, BOUNCE, SPAM_REPORT)
 
   def processNewEvents(events: Seq[SendgridEvent]): Unit = {
     events foreach report
@@ -81,7 +81,7 @@ class SendgridCommander @Inject() (
         contextBuilder.build
       }
 
-      val relevantUsers = if (NotificationCategory.User.all.contains(email.category)) {
+      val relevantUsers = if (NotificationCategory.User.reportToAnalytics.contains(email.category)) {
         db.readOnlyReplica { implicit s => emailAddressRepo.getByAddress(address).map(_.userId).toSet }(captureLocation)
       } else Set.empty
 
@@ -99,7 +99,7 @@ class SendgridCommander @Inject() (
           heimdalClient.trackEvent(UserEvent(userId, builder.build, UserEventTypes.WAS_NOTIFIED, eventTime))
         }
       }
-      else if (NotificationCategory.NonUser.all.contains(email.category)) {
+      else if (NotificationCategory.NonUser.reportToAnalytics.contains(email.category)) {
         heimdalClient.trackEvent(NonUserEvent(address.address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, eventTime))
       }
     }

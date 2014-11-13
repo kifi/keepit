@@ -17,6 +17,7 @@ import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
+import com.keepit.common.store.ImageSize
 
 class MobileLibraryController @Inject() (
   db: Database,
@@ -89,11 +90,10 @@ class MobileLibraryController @Inject() (
     Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
   }
 
-  def inviteUsersToLibrary(pubId: PublicId[Library]) = UserAction(parse.tolerantJson) { request =>
-    val idTry = Library.decodePublicId(pubId)
-    idTry match {
+  def inviteUsersToLibrary(pubId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
+    Library.decodePublicId(pubId) match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid_id"))
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(id) =>
         val invites = (request.body \ "invites").as[JsArray].value
         val msgOpt = (request.body \ "message").asOpt[String]
@@ -111,16 +111,15 @@ class MobileLibraryController @Inject() (
           }
         }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        val res = libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList)
-        res match {
+        libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
-          case Right(info) =>
-            val res = info.map {
-              case (Left(externalId), access) => Json.obj("user" -> externalId, "access" -> access)
-              case (Right(email), access) => Json.obj("email" -> email, "access" -> access)
+          case Right(inviteesWithAccess) =>
+            val result = inviteesWithAccess.map {
+              case (Left(user), access) => Json.obj("user" -> user.externalId, "access" -> access)
+              case (Right(contact), access) => Json.obj("email" -> contact.email, "access" -> access)
             }
-            Ok(Json.toJson(res))
+            Ok(Json.toJson(result))
         }
     }
   }
@@ -168,17 +167,36 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
+        val idealImageSize = {
+          for {
+            w <- idealImageWidth
+            h <- idealImageHeight
+          } yield ImageSize(w, h)
+        } getOrElse KeepImageSize.Large.idealSize
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
-          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
+          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps, idealImageSize)
         } yield {
           Ok(Json.obj("keeps" -> keepInfos))
         }
+    }
+  }
+
+  def getLibraryMembers(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+    if (limit > 30) { BadRequest(Json.obj("error" -> "invalid_limit")) }
+    else Library.decodePublicId(pubId) match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_id"))
+      case Success(libraryId) =>
+        val library = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
+        val showInvites = request.userIdOpt.map(uId => uId == library.ownerId).getOrElse(false)
+        val (collaborators, followers, inviteesWithInvites, _) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = showInvites)
+        val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
+        Ok(Json.obj("members" -> maybeMembers))
     }
   }
 

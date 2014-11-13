@@ -51,7 +51,7 @@ class NormalizedURIInterner @Inject() (
    */
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     log.debug(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
-    statsd.time(key = "normalizedURIRepo.internByUri", ONE_IN_TEN) { timer =>
+    statsd.time(key = "normalizedURIRepo.internByUri", ONE_IN_THOUSAND) { timer =>
       val resUri = getByUriOrPrenormalize(url) match {
         case Success(Left(uri)) =>
           if (candidates.nonEmpty) {
@@ -59,20 +59,20 @@ class NormalizedURIInterner @Inject() (
               updateQueue.send(NormalizationUpdateTask(uri.id.get, false, candidates))
             }
           }
-          statsd.timing("normalizedURIRepo.internByUri.in_db", timer, ALWAYS)
+          statsd.timing("normalizedURIRepo.internByUri.in_db", timer, ONE_IN_THOUSAND)
           uri
         case Success(Right(prenormalizedUrl)) =>
           val normalization = SchemeNormalizer.findSchemeNormalization(prenormalizedUrl)
           urlHashCache.get(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(prenormalizedUrl))) match {
             case Some(cached) =>
               airbrake.notify(s"prenormalizedUrl [$prenormalizedUrl] already in cache [$cached] skipping save")
-              statsd.timing("normalizedURIRepo.internByUri.in_cache", timer, ALWAYS)
+              statsd.timing("normalizedURIRepo.internByUri.in_cache", timer, ONE_IN_THOUSAND)
               cached
             case None =>
               val candidate = NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization)
               val newUri = try {
                 val saved = normalizedURIRepo.save(candidate)
-                statsd.timing("normalizedURIRepo.internByUri.new", timer, ALWAYS)
+                statsd.timing("normalizedURIRepo.internByUri.new", timer, ONE_IN_THOUSAND)
                 saved
               } catch {
                 case sqlException: SQLException =>
@@ -80,12 +80,12 @@ class NormalizedURIInterner @Inject() (
                   normalizedURIRepo.deleteCache(candidate)
                   normalizedURIRepo.getByNormalizedUrl(prenormalizedUrl) match {
                     case None =>
-                      statsd.timing("normalizedURIRepo.internByUri.new.error.not_recovered", timer, ALWAYS)
+                      statsd.timing("normalizedURIRepo.internByUri.new.error.not_recovered", timer, ONE_IN_THOUSAND)
                       throw new UriInternException(s"could not find existing url $candidate in the db", sqlException)
                     case Some(fromDb) =>
                       log.warn(s"recovered url $fromDb from the db via urlHash")
                       //This situation is likely a race condition. In this case we better clear out the cache and let the next call go the the source of truth (the db)
-                      statsd.timing("normalizedURIRepo.internByUri.new.error.recovered", timer, ALWAYS)
+                      statsd.timing("normalizedURIRepo.internByUri.new.error.recovered", timer, ONE_IN_THOUSAND)
                       fromDb
                   }
                 case t: Throwable =>
@@ -95,7 +95,7 @@ class NormalizedURIInterner @Inject() (
               session.onTransactionSuccess {
                 updateQueue.send(NormalizationUpdateTask(newUri.id.get, true, candidates))
               }
-              statsd.timing("normalizedURIRepo.internByUri.new.url_save", timer, ALWAYS)
+              statsd.timing("normalizedURIRepo.internByUri.new.url_save", timer, ONE_IN_THOUSAND)
               newUri
           }
         case Failure(ex) =>
@@ -109,15 +109,14 @@ class NormalizedURIInterner @Inject() (
           normalizedURIRepo.deleteCache(uriCandidate)
           normalizedURIRepo.getByNormalizedUrl(url) match {
             case None =>
-              statsd.timing("normalizedURIRepo.internByUri.fail.not_found", timer, ALWAYS)
+              statsd.timing("normalizedURIRepo.internByUri.fail.not_found", timer, ONE_IN_THOUSAND)
               throw new UriInternException(s"could not parse or find url in db: $url", ex)
             case Some(fromDb) =>
               scrapeRepo.getByUriId(fromDb.id.get) match {
                 case Some(scrapeInfo) =>
-                  scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
-                  statsd.timing("normalizedURIRepo.internByUri.fail.found.scraped", timer, ALWAYS)
+                  statsd.timing("normalizedURIRepo.internByUri.fail.found.scraped", timer, ONE_IN_THOUSAND)
                 case None =>
-                  statsd.timing("normalizedURIRepo.internByUri.fail.found.not_scraped", timer, ALWAYS)
+                  statsd.timing("normalizedURIRepo.internByUri.fail.found.not_scraped", timer, ONE_IN_THOUSAND)
                 //fine...
               }
               throw new UriInternException(s"Uri was in the db despite a normalization failure: $fromDb", ex)
@@ -134,14 +133,14 @@ class NormalizedURIInterner @Inject() (
       val normalizedUri = normalizedURIRepo.getByNormalizedUrl(prenormalizedUrl) map {
         case uri if uri.state == NormalizedURIStates.REDIRECTED =>
           val nuri = normalizedURIRepo.get(uri.redirect.get)
-          statsd.timing(key = "normalizedURIRepo.getByUriOrPrenormalize.redirected", timer, ALWAYS)
+          statsd.timing(key = "normalizedURIRepo.getByUriOrPrenormalize.redirected", timer, ONE_IN_THOUSAND)
           log.info(s"following a redirection path for $url on uri $nuri")
           if (uri.normalization == Some(Normalization.MOVED) && uri.url.contains("kifi.com")) {
             airbrake.notify(s"Permanent redirect on kifi.com may no longer be valid: ${uri.id.get}: ${uri.url} to ${nuri.id.get}: ${nuri.url}.")
           }
           nuri
         case uri =>
-          statsd.timing(key = "normalizedURIRepo.getByUriOrPrenormalize.not_redirected", timer, ALWAYS)
+          statsd.timing(key = "normalizedURIRepo.getByUriOrPrenormalize.not_redirected", timer, ONE_IN_THOUSAND)
           uri
       }
       log.debug(s"[getByUriOrPrenormalize($url)] located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
@@ -149,13 +148,13 @@ class NormalizedURIInterner @Inject() (
     }
   }
 
-  def normalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.normalize", ALWAYS) { implicit timer =>
+  def normalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.normalize", ONE_IN_THOUSAND) { implicit timer =>
     getByUri(uriString).map(uri => Success(uri.url)) getOrElse prenormalize(uriString)
   }
 
   private def prenormalize(uriString: String)(implicit timer: Timer): Try[String] = {
     val prenormalized = normalizationService.prenormalize(uriString)
-    statsd.timing(key = "normalizedURIRepo.prenormalize", timer, ALWAYS)
+    statsd.timing(key = "normalizedURIRepo.prenormalize", timer, ONE_IN_THOUSAND)
     prenormalized
   }
 

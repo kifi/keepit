@@ -282,7 +282,7 @@ class NotificationCommander @Inject() (
     messagingAnalytics.sentPushNotificationForThread(userId, notification)
   }
 
-  def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity], unreadCount: Int): Unit = {
+  def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {
     SafeFuture {
       val authorActivityInfos = orderedActivityInfo.filter(_.lastActive.isDefined)
       val lastSeenOpt: Option[DateTime] = orderedActivityInfo.filter(_.userId == userId).head.lastSeen
@@ -315,6 +315,10 @@ class NotificationCommander @Inject() (
 
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted)
       shoebox.createDeepLink(message.from.asUser, userId, thread.uriId.get, thread.deepLocator)
+
+      val unreadCount = db.readOnlyMaster { implicit session =>
+        userThreadRepo.getUnreadUnmutedThreadCount(userId)
+      }
 
       notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
       notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))

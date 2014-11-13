@@ -92,11 +92,10 @@ class NormalizationServiceImpl @Inject() (
     allCandidates.filter(isRelevant(currentReference, _))
   }
 
-  private def findVariations(referenceUrl: String): Seq[(Normalization, NormalizedURI)] = db.readOnlyMaster { implicit session =>
-    for {
-      (normalization, urlVariation) <- SchemeNormalizer.generateVariations(referenceUrl)
-      uri <- normalizedURIRepo.getByNormalizedUrl(urlVariation)
-    } yield (normalization, uri)
+  private def findVariations(referenceUrl: String): Seq[(Normalization, NormalizedURI)] = {
+    val variations = SchemeNormalizer.generateVariations(referenceUrl)
+    val uris = db.readOnlyMaster { implicit session => normalizedURIRepo.getByNormalizedUrls(variations.map(_._2)) }
+    variations.collect { case (normalization, urlVariation) if uris.contains(urlVariation) => (normalization, uris(urlVariation)) }
   }
 
   private def isRelevant(currentReference: NormalizationReference, candidate: NormalizationCandidate): Boolean = {

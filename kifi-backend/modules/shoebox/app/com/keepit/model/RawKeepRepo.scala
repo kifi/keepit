@@ -35,7 +35,8 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
     def originalJson = column[Option[JsValue]]("original_json", O.Nullable)
     def tagIds = column[String]("tag_ids", O.Nullable) // Comma separated list of references to `collection.id`
     def libraryId = column[Id[Library]]("library_id", O.Nullable)
-    def * = (id.?, userId, createdAt, updatedAt, url, title.?, isPrivate, importId.?, source, kifiInstallationId.?, originalJson, state, tagIds.?, libraryId.?) <> ((RawKeep.apply _).tupled, RawKeep.unapply _)
+    def createdDate = column[DateTime]("created_date", O.Nullable)
+    def * = (id.?, userId, createdAt, updatedAt, url, title.?, isPrivate, importId.?, source, kifiInstallationId.?, originalJson, state, tagIds.?, libraryId.?, createdDate.?) <> ((RawKeep.apply _).tupled, RawKeep.unapply _)
   }
 
   def table(tag: Tag) = new RawKeepTable(tag)
@@ -66,7 +67,9 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
       .sortBy(row => row.id.asc)
       .take(batchSize)
       .list
-    (for (row <- rows if row.id inSet records.map(_.id.get).toSet) yield row.state).update(RawKeepStates.IMPORTING)
+    if (records.nonEmpty) {
+      (for (row <- rows if row.id inSet records.map(_.id.get).toSet) yield row.state).update(RawKeepStates.IMPORTING)
+    }
     records
   }
 
