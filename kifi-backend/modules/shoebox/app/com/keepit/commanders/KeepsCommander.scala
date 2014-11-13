@@ -351,10 +351,9 @@ class KeepsCommander @Inject() (
     val keepImageOpt = keepImageCommander.getBestImageForKeep(keep.id.get, idealImageSize)
     futureSummary.map { summary =>
       keepImageOpt match {
-        case Some(keepImage) =>
-          val url = keepImageCommander.getUrl(keepImage)
-          summary.copy(imageUrl = Some(url), imageWidth = Some(keepImage.width), imageHeight = Some(keepImage.height))
         case None => summary
+        case Some(keepImage) =>
+          summary.copy(imageUrl = keepImage.map(keepImageCommander.getUrl(_)), imageWidth = keepImage.map(_.width), imageHeight = keepImage.map(_.height))
       }
     }
   }

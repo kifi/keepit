@@ -3,7 +3,8 @@ package com.keepit.controllers.cortex
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.cortex.PublishingVersions
-import com.keepit.cortex.core.ModelVersion
+import com.keepit.cortex.core.{ CortexVersionCommander, ModelVersion }
+import com.keepit.macros.MonitoredAwaitMacro
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.common.controller.CortexServiceController
@@ -14,8 +15,12 @@ import com.keepit.cortex.models.lda.{ DenseLDA, LDAUserURIInterestScores, LDATop
 import com.keepit.model.{ Library, User, NormalizedURI }
 import com.keepit.common.db.Id
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 class LDAController @Inject() (
   lda: LDACommander,
+  versionCommander: CortexVersionCommander,
   representer: LDARepresenterCommander,
   infoCommander: LDAInfoCommander)
     extends CortexServiceController with Logging {
@@ -23,6 +28,14 @@ class LDAController @Inject() (
   private val defaultVersion = PublishingVersions.denseLDAVersion
 
   implicit def toVersion(implicit version: Option[Int]): ModelVersion[DenseLDA] = version.map { ModelVersion[DenseLDA](_) } getOrElse defaultVersion
+
+  private def getVersionForUser(versionOpt: Option[ModelVersion[DenseLDA]], userIdOpt: Option[Id[User]]): ModelVersion[DenseLDA] = {
+    (versionOpt, userIdOpt) match {
+      case (Some(v), _) => v
+      case (None, Some(uid)) => Await.result(versionCommander.getLDAVersionForUser(uid), 1 second) // use of Await is temp. (Only during model experimenting)
+      case (None, None) => defaultVersion
+    }
+  }
 
   def numOfTopics(implicit version: Option[Int]) = Action { request =>
     Ok(JsNumber(lda.numOfTopics))
@@ -73,11 +86,12 @@ class LDAController @Inject() (
     Ok(Json.toJson(LDAUserURIInterestScores(scores2.global, scores1.recency, score3)))
   }
 
-  def batchUserURIsInterests(implicit version: Option[Int]) = Action(parse.tolerantJson) { request =>
+  def batchUserURIsInterests(implicit versionOpt: Option[Int]) = Action(parse.tolerantJson) { request =>
     val js = request.body
     val userId = (js \ "userId").as[Id[User]]
     val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
-    val scores = lda.batchUserURIsInterests(userId, uriIds)
+    val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, Some(userId))
+    val scores = lda.batchUserURIsInterests(userId, uriIds)(version)
     Ok(Json.toJson(scores))
   }
 
@@ -120,18 +134,21 @@ class LDAController @Inject() (
     Ok(Json.obj("infos" -> infos, "words" -> words))
   }
 
-  def getTopicNames(implicit version: Option[Int]) = Action(parse.tolerantJson) { request =>
+  def getTopicNames(implicit versionOpt: Option[Int]) = Action(parse.tolerantJson) { request =>
     val js = request.body
     val uriIds = (js \ "uris").as[Seq[Id[NormalizedURI]]]
-    val res = lda.getTopicNames(uriIds)
+    val userId = (js \ "user").asOpt[Id[User]]
+    val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, userId)
+    val res = lda.getTopicNames(uriIds)(version)
     Ok(Json.toJson(res))
   }
 
-  def explainFeed(implicit version: Option[Int]) = Action(parse.tolerantJson) { request =>
+  def explainFeed(implicit versionOpt: Option[Int]) = Action(parse.tolerantJson) { request =>
     val js = request.body
     val userId = (js \ "user").as[Id[User]]
     val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
-    val explain = lda.explainFeed(userId, uris)
+    val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, Some(userId))
+    val explain = lda.explainFeed(userId, uris)(version)
     Ok(Json.toJson(explain))
   }
 

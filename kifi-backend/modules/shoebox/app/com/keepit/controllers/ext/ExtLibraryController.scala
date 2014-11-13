@@ -143,7 +143,7 @@ class ExtLibraryController @Inject() (
             val tags = db.readOnlyReplica { implicit s =>
               collectionRepo.getTagsByKeepId(keep.id.get)
             }
-            val image = keepImageCommander.getBestImageForKeep(keep.id.get, ExtLibraryController.defaultImageSize).map(keepImageCommander.getUrl)
+            val image = keepImageCommander.getBestImageForKeep(keep.id.get, ExtLibraryController.defaultImageSize).flatten.map(keepImageCommander.getUrl)
             (tags, image)
           }
 
@@ -171,7 +171,7 @@ class ExtLibraryController @Inject() (
         case Left((status, code)) => Status(status)(Json.obj("error" -> code))
         case Right(keep) =>
           val idealSize = imgSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
-          val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, idealSize).map(keepImageCommander.getUrl)
+          val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, idealSize).flatten.map(keepImageCommander.getUrl)
           val tags = db.readOnlyReplica { implicit s =>
             collectionRepo.getTagsByKeepId(keep.id.get)
           }

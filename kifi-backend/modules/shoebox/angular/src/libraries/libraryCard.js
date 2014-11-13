@@ -251,7 +251,7 @@ angular.module('kifi')
         scope.followLibrary = function (library) {
           if (platformService.isSupportedMobilePlatform()) {
             var url = $location.absUrl();
-            if (url.indexOf('?')) {
+            if (url.indexOf('?') !== -1) {
               url = url + '&follow=true';
             } else {
               url = url + '?follow=true';
@@ -305,6 +305,8 @@ angular.module('kifi')
             angular.element('.kf-header-right').css({'margin-right': ''});
           }
         };
+
+        scope.followButtonMaxTop = platformService.isSupportedMobilePlatform() ? 25 : 15;
 
         scope.manageLibrary = function () {
           modalService.open({

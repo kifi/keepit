@@ -80,7 +80,7 @@
       </div>
     </div>
   </div>
-  <img ng-if="magicImage" class="kf-keep-lib-image" ng-src="{{magicImage}}">
+  <img ng-if="magicImage" class="kf-keep-lib-image" ng-src="{{magicImage}}" alt="{{library.name}}">
   <div class="kf-keep-footer clearfix">
     <button ng-if="isMyLibrary(library) && isUserLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right library-button-with-icon" ng-click="manageLibrary()">
       <span class="kf-keep-lib-footer-button-icon svg-pen"></span>Manage Library
@@ -88,7 +88,7 @@
     <button ng-if="isMyLibrary(library) && library.numKeeps > 0" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-edit-keeps-button" ng-click="toggleEditKeeps()">
       {{editKeepsText}}
     </button>
-    <button kf-sticky sticky-if="isUserLoggedOut" max-top="15" sticky-width-mode="ignored" on-stick="followStick"
+    <button kf-sticky sticky-if="isUserLoggedOut" max-top="followButtonMaxTop" sticky-width-mode="ignored" on-stick="followStick"
         ng-class="{stickable: isUserLoggedOut}" ng-if="canFollowLibrary(library)" ng-click="followLibrary(library)"
         class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-follow">
       Follow Library
