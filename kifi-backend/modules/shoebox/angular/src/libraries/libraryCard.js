@@ -4,9 +4,11 @@ angular.module('kifi')
 
 .directive('kfLibraryCard', [
   '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'platformService', 'signupService', '$twitter', '$timeout',
+  'profileService', 'platformService', 'signupService', '$twitter', '$timeout', '$routeParams', '$route',
+  'locationNoReload',
   function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
-      profileService, platformService, signupService, $twitter, $timeout) {
+      profileService, platformService, signupService, $twitter, $timeout, $routeParams, $route,
+      locationNoReload) {
     return {
       restrict: 'A',
       replace: true,
@@ -23,8 +25,9 @@ angular.module('kifi')
         //
         // Internal data.
         //
-        var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
-        //                   ↑↑↑ use this one ↑↑↑
+        var authToken = $location.search().authToken || '';
+        var prevQuery = '';
+
 
         //
         // Scope data.
@@ -34,6 +37,7 @@ angular.module('kifi')
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
         scope.editKeepsText = 'Edit Keeps';
+        scope.search = { 'text': $routeParams.q || '' };
 
         var magicImages = {
           'l7SZ3gr3kUQJ': '//djty7jcqog9qu.cloudfront.net/special-libs/l7SZ3gr3kUQJ.png',
@@ -246,7 +250,13 @@ angular.module('kifi')
 
         scope.followLibrary = function (library) {
           if (platformService.isSupportedMobilePlatform()) {
-            platformService.goToAppOrStore($location.absUrl() + '?follow=true');
+            var url = $location.absUrl();
+            if (url.indexOf('?')) {
+              url = url + '&follow=true';
+            } else {
+              url = url + '?follow=true';
+            }
+            platformService.goToAppOrStore(url);
             return;
           } else if ($rootScope.userLoggedIn === false) {
             libraryService.trackEvent('visitor_clicked_page', library, { action: 'followButton' });
@@ -341,8 +351,47 @@ angular.module('kifi')
               }
             });
           }
-
         };
+
+        scope.onSearchInputChange = _.debounce(function (query) {
+          $timeout(function () {
+            if (query) {
+              if (prevQuery) {
+                locationNoReload.skipReload().search('q', query).replace();
+
+                // When we search using the input inside the library card header, we don't
+                // want to reload the page. One consequence of this is that we need to kick
+                // SearchController to initialize a search when the search query changes if
+                // we initially started with a url that is a library url that has no search
+                // parameters.
+                if (!$route.current.params.q) {
+                  $timeout(function () {
+                    $rootScope.$emit('librarySearched');
+                  });
+                }
+              } else {
+                locationNoReload.skipReload().url(scope.library.url + '/find?q=' + query + '&f=a');
+              }
+
+              $routeParams.q = query;
+              $routeParams.f = 'a';
+
+              $timeout(function () {
+                $rootScope.$emit('librarySearchChanged', true);
+              });
+            } else {
+              locationNoReload.skipReload().url(scope.library.url);
+
+              $timeout(function () {
+                $rootScope.$emit('librarySearchChanged', false);
+              });
+            }
+
+            prevQuery = query;
+          });
+        }, 100, {
+          'leading': true
+        });
 
         //
         // Watches and listeners.

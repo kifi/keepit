@@ -83,15 +83,20 @@ class EmailTemplateProcessorImpl @Inject() (
       val avatarUrlUserIds = needs.collect { case AvatarUrlNeeded(id) => id }
       val libraryIds = needs.collect { case LibraryNeeded(id) => id }
 
-      val usersF = getUsers(userIds.toSeq)
       val userImageUrlsF = getUserImageUrls(avatarUrlUserIds.toSeq)
-      val librariesF = getLibraries(libraryIds)
+
+      // fetches all libraries to get the ownerId: Id[User] values and adds them to
+      // the set of Id[User]s to load User models from
+      val usersAndLibrariesF = getLibraries(libraryIds) flatMap { libraries =>
+        val ownerIds = libraries.map { case (id, library) => library.ownerId }.toSet
+        val allUserIds = userIds ++ ownerIds
+        getUsers(allUserIds.toSeq) map { users => (users, libraries) }
+      }
 
       for {
-        users <- usersF
+        (users, libraries) <- usersAndLibrariesF
         userImageUrls <- userImageUrlsF
         tipHtmlOpt <- tipHtmlF
-        libraries <- librariesF
       } yield {
         val input = DataNeededResult(users = users, imageUrls = userImageUrls, libraries = libraries)
         val includedTip = tipHtmlOpt.map(_._1)
@@ -139,6 +144,9 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.lastName => basicUser.lastName
         case tags.fullName => basicUser.firstName + " " + basicUser.lastName
         case tags.avatarUrl => toHttpsUrl(input.imageUrls(userId))
+        case tags.libraryUrl =>
+          val libOwner = input.users(library.ownerId)
+          config.applicationBaseUrl + Library.formatLibraryPath(libOwner.username, libOwner.externalId, library.slug)
         case tags.libraryName => library.name
         case tags.unsubscribeUrl =>
           getUnsubUrl(emailToSend.to match {
@@ -181,7 +189,7 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.firstName | tags.lastName | tags.fullName |
           tags.unsubscribeUserUrl | tags.userExternalId => UserNeeded(userId)
         case tags.avatarUrl => AvatarUrlNeeded(userId)
-        case tags.libraryName =>
+        case tags.libraryName | tags.libraryUrl =>
           val libId = tagArgs(0).as[Id[Library]]
           LibraryNeeded(libId)
         case _ => NothingNeeded

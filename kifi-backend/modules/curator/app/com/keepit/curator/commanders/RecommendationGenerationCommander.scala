@@ -203,7 +203,7 @@ class RecommendationGenerationCommander @Inject() (
 
       toBeSaved.map { items =>
         saveScoredSeedItems(items, userId, newState)
-        precomputeRecommendationsForUser(userId, boostedKeepers)
+        precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
         seedItems.nonEmpty
       }
     }

@@ -21,6 +21,8 @@ import org.specs2.mutable.{ SpecificationLike }
 
 import scala.concurrent._
 import scala.concurrent.duration.Duration
+import com.keepit.social.BasicUser
+import com.keepit.abook.model.RichContact
 
 class LibraryCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
@@ -522,12 +524,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (Left(userAgent.id.get), LibraryAccess.READ_ONLY, None),
           (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
           (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
-        val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)
+        val res1 = Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds"))
         res1.isRight === true
-        res1.right.get === Seq((Left(userIron.externalId), LibraryAccess.READ_ONLY),
-          (Left(userAgent.externalId), LibraryAccess.READ_ONLY),
-          (Left(userHulk.externalId), LibraryAccess.READ_ONLY),
-          (Right(thorEmail), LibraryAccess.READ_ONLY))
+        res1.right.get === Seq((Left(BasicUser.fromUser(userIron)), LibraryAccess.READ_ONLY),
+          (Left(BasicUser.fromUser(userAgent)), LibraryAccess.READ_ONLY),
+          (Left(BasicUser.fromUser((userHulk))), LibraryAccess.READ_ONLY),
+          (Right(RichContact(thorEmail)), LibraryAccess.READ_ONLY))
 
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 4
@@ -545,10 +547,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val inviteList2_RW = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
         val inviteList2_RO = Seq((Left(userIron.id.get), LibraryAccess.READ_ONLY, None))
         // Scumbag Ironman tries to invite himself for READ_ONLY access (OK for Published Library)
-        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO).isRight === true
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO), Duration(5, "seconds")).isRight === true
 
         // Scumbag Ironman tries to invite himself for READ_WRITE access (NOT OK for Published Library)
-        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW).isRight === true
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW), Duration(5, "seconds")).isRight === true
       }
     }
 
@@ -1050,7 +1052,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val allInvites = db.readOnlyMaster { implicit s =>
           libraryInviteRepo.all
         }
-        Await.result(libraryCommander.inviteBulkUsers(allInvites), Duration(10, "seconds"))
+        Await.result(libraryCommander.processInvites(allInvites), Duration(10, "seconds"))
         eliza.inbox.size === 4
         eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_INVITATION && t._4.endsWith("/0.jpg")) === 4
         eliza.inbox.count(t => t._3 == "https://www.kifi.com/captainamerica/murica") === 3

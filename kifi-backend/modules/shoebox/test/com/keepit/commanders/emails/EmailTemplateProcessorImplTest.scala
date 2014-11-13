@@ -61,6 +61,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           |<img src="${avatarUrl(id3)}" alt="${fullName(id3)}"/>
           |<img src="${avatarUrl(id4)}" alt="${fullName(id4)}"/>
           |Join my library: ${libraryName(library.id.get)}
+          |liburl: ${libraryUrl(library.id.get)}
           |<a href="$unsubscribeUrl">Unsubscribe Me</a>
           |<a href="${unsubscribeUrl(id3)}">Unsubscribe User</a>
           |<a href="${unsubscribeUrl(user3.primaryEmail.get)}">Unsubscribe Email</a>
@@ -70,6 +71,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           s"""
           |${firstName(id2)} ${lastName(id2)} and ${fullName(id1)} joined!
           |Join my library: ${libraryName(library.id.get)}
+          |liburl: ${libraryUrl(library.id.get)}
           |${avatarUrl(id3)}
           |unsub1 $unsubscribeUrl
           |unsub2 ${unsubscribeUrl(id3)}
@@ -100,6 +102,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         output must contain("<title>Test Email!!!</title>")
         output must contain("Aaron Paul and Bryan Cranston joined!")
         output must contain("Join my library: Avengers Missions")
+        output must contain("liburl: http://dev.ezkeep.com:9000/test/avengers")
         output must contain("""<img src="https://cloudfront/users/1/pics/100/0.jpg" alt="Aaron Paul"/>""")
         output must contain("""<img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Bryan Cranston"/>""")
         output must contain("""<img src="https://cloudfront/users/3/pics/100/0.jpg" alt="Anna Gunn"/>""")
@@ -108,6 +111,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         val text = processed.textBody.get.value
         text must contain("Bryan Cranston and Aaron Paul joined!")
         text must contain("Join my library: Avengers Missions")
+        text must contain("liburl: http://dev.ezkeep.com:9000/test/avengers")
         text must contain("https://cloudfront/users/3/pics/100/0.jpg")
         text must contain("unsub1 https://www.kifi.com/unsubscribe/")
         text must contain("unsub2 https://www.kifi.com/unsubscribe/")
