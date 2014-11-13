@@ -1,7 +1,7 @@
 <div class="kf-keep-tags-new">
   <ul class="kf-tag-list-new clearfix">
     <li class="kf-keep-tag-new" data-id="{{tag.id}}" ng-repeat="tag in tagsToShow">
-      <div class="kf-keep-tag-link-new"><a ng-href="{{searchTagUrl(tag.name)}}">{{tag.name}}</a></div>
+      <div class="kf-keep-tag-link-new"><a ng-href="{{searchTagUrl(tag.name)}}" ng-click="onTagClick()">{{tag.name}}</a></div>
       <div class="kf-keep-tag-x-new" ng-if="!tag.readOnly" ng-click="removeTag(tag.name)">×</div>
     </li>
     <li class="kf-keep-tag-add-tag-wrapper" ng-if="!readOnlyMode()">
