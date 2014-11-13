@@ -9,7 +9,7 @@ k.guide.step3 = k.guide.step3 || function () {
       lit: '.kifi-tile-card',
       pad: [20, 40],
       arrow: {dx: 130, dy: 87, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -70, gap: 10}},
-      allow: {type: 'mouseover', target: '.kifi-tile-keep,.kifi-tile-kept'},
+      allow: {type: 'mouseover', target: '.kifi-tile-card'},
     },
     {
       lit: {bottom: 8, right: 164, width: 49, height: 49},
