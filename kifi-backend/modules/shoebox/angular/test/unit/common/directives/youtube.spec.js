@@ -38,17 +38,16 @@ describe('kifi.youtube', function () {
       element.remove();
     });
 
-    it('should append an embed element as a child', function () {
-      var child = element.find('embed')[0];
-      expect(child.nodeName).toBe('EMBED');
-      expect(child.type).toBe('application/x-shockwave-flash');
+    it('should append an iframe element as a child', function () {
+      var child = element.find('img')[0];
+      expect(child.nodeName).toBe('IMG');
       expect(iScope.videoId).toBe(vid);
       expect(child.src).toContain(vid);
       expect(child.src).toContain('youtube.com');
     });
 
     it('should update src whenever videoId is changed', function () {
-      var child = element.find('embed')[0];
+      var child = element.find('img')[0];
       expect(iScope.videoId).toBe(vid);
       expect(child.src).toContain(vid);
 
@@ -56,7 +55,7 @@ describe('kifi.youtube', function () {
       scope.videoId = newVid;
       scope.$digest();
 
-      child = element.find('embed')[0];
+      child = element.find('img')[0];
       expect(iScope.videoId).toBe(newVid);
       expect(child.src).not.toContain(vid);
       expect(child.src).toContain(newVid);
