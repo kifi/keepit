@@ -235,12 +235,10 @@ angular.module('kifi')
           keep.sizeCard = function () {
             var $content = element.find('.kf-keep-content-line');
             //$content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
-            if ($content && $content.length > 0) {
-              $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
-              $content.find('.kf-keep-image').on('error', function () {
-                $content.find('.kf-keep-small-image').hide();
-              });
-            }
+            $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
+            $content.find('.kf-keep-image').on('error', function () {
+              $content.find('.kf-keep-small-image').hide();
+            });
           };
         }
 

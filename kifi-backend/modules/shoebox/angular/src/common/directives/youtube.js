@@ -7,13 +7,16 @@ angular.module('kifi')
   function () {
 
     function videoIdToSrc(videoId) {
-      return '//www.youtube.com/v/' + videoId +
-        '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=1&hd=1&autohide=1&color=white&iv_load_policy=3';
+      // return '//www.youtube.com/v/' + videoId +
+        // '&rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=1&hd=1&autohide=1&color=white&iv_load_policy=3';
+      return '//www.youtube.com/embed/' + videoId +
+        '?rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=1&hd=1&autohide=1&color=white&iv_load_policy=3';
     }
 
     function videoEmbed(src) {
-      return '<embed src="' + src +
-        '" type="application/x-shockwave-flash" allowfullscreen="true" style="width:100%; height: 100%;" allowscriptaccess="always"></embed>';
+      // return '<embed src="' + src +'"
+      //    type="application/x-shockwave-flash" allowfullscreen="true" style="width:100%; height: 100%;" allowscriptaccess="always"></embed>';
+      return '<iframe width="100%" height="100%" src="' + src + '" frameborder="none" allowfullscreen="true" allowscriptaccess="always"/>';
     }
 
     return {
