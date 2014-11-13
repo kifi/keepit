@@ -5,6 +5,16 @@ angular.module('util', [])
 .factory('util', [
   '$document', '$window',
   function ($document, $window) {
+    var HTML_ESCAPE_CHARS = /[&<>"'\/]/g;
+    var HTML_ESCAPES = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      '\'': '&#x27;',
+      '/': '&#x2F;'
+    };
+
     return {
       startsWith: function (str, prefix) {
         return str === prefix || str.lastIndexOf(prefix, 0) === 0;
@@ -85,6 +95,13 @@ angular.module('util', [])
       validateUrl: function (keepUrl) {
         // Extremely simple for now, can be developed in the future
         return keepUrl.indexOf('.') !== -1;
+      },
+      htmlEscape: function (text) {
+        function htmlEscapeReplace(ch) {
+          return HTML_ESCAPES[ch];
+        }
+
+        return text == null ? '' : String(text).replace(HTML_ESCAPE_CHARS, htmlEscapeReplace);
       },
       generateSlug: function (name) {
         return name.toLowerCase().replace(/[^\w\s-]|_/g, '').replace(/\s+/g, '-').replace(/^-/, '').substr(0, 50).replace(/-$/, '');
