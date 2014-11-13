@@ -192,7 +192,9 @@ angular.module('kifi')
           if (!keep.summary.trimmedDesc) {
             var trimmed = trimDesc(keep.summary.description);
             if (trimmed === false) {
-              scope.cardType = 'big';
+              if (scope.cardType === 'small') {
+                scope.cardType = 'big';
+              }
               useBigLayout = true;
               return;
             }
