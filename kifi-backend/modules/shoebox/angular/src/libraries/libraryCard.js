@@ -141,21 +141,19 @@ angular.module('kifi')
             follower.picUrl = friendService.getPictureUrlForUser(follower);
           });
 
-          var linkedDescription = processUrls(scope.library.description);
-          scope.library.formattedDescription = '<p>' + linkedDescription.replace(/\n+/, '<p>');
-
           var maxLength = 150;
-          if (linkedDescription && linkedDescription.length > maxLength && !scope.isUserLoggedOut) {
+          if (scope.library.description && scope.library.description.length > maxLength && !scope.isUserLoggedOut) {
             // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
             var clipLastIndex = maxLength;
-            var lastSpaceIndex = linkedDescription.lastIndexOf(' ', maxLength);
+            var lastSpaceIndex = scope.library.description.lastIndexOf(' ', maxLength);
             if (lastSpaceIndex !== -1) {
               clipLastIndex = lastSpaceIndex + 1;  // Grab the space too.
             }
 
-            scope.library.shortDescription = linkedDescription.substr(0, clipLastIndex);
+            scope.library.shortDescription = processUrls(scope.library.description.substr(0, clipLastIndex));
             scope.clippedDescription = true;
           }
+          scope.library.formattedDescription = '<p>' + processUrls(scope.library.description).replace(/\n+/, '<p>');
 
           scope.library.shareUrl = env.origin + scope.library.url;
           scope.library.shareFbUrl = scope.library.shareUrl +
