@@ -214,7 +214,7 @@ class LibraryCommander @Inject() (
 
     val usersById = {
       val allUsersShown = libraries.flatMap { library => followerInfosByLibraryId(library.id.get)._1 :+ library.ownerId }.toSet
-      db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUsersShown) }
+      db.readOnlyReplica { implicit s => basicUserRepo.loadAll(allUsersShown) }
     }
 
     val countsByLibraryId = db.readOnlyReplica { implicit s =>
@@ -231,7 +231,7 @@ class LibraryCommander @Inject() (
       futureKeepInfosByLibraryId(lib.id.get).map { keepInfos =>
         val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(lib.id.get)
         val owner = usersById(lib.ownerId)
-        val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_)).filter(_.active)
+        val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_))
         FullLibraryInfo(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -758,7 +758,7 @@ class LibraryCommander @Inject() (
   }
 
   def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Unit = {
-    val (follower, owner) = db.readOnlyMaster { implicit session =>
+    val (follower, owner) = db.readOnlyReplica { implicit session =>
       userRepo.get(newFollowerId) -> userRepo.get(lib.ownerId)
     }
     elizaClient.sendGlobalNotification(
@@ -777,7 +777,7 @@ class LibraryCommander @Inject() (
     newKeeps.foreach { newKeep =>
       if (newKeep.libraryId.get != library.id.get) { throw new IllegalArgumentException(s"Keep ${newKeep.id.get} does not belong to expected library ${library.id.get}") }
     }
-    val (relevantFollowers, usersById) = db.readOnlyMaster { implicit session =>
+    val (relevantFollowers, usersById) = db.readOnlyReplica { implicit session =>
       val relevantFollowers = libraryMembershipRepo.getWithLibraryId(library.id.get).map(_.userId).filter(experimentCommander.userHasExperiment(_, ExperimentType.NEW_KEEP_NOTIFICATIONS)).toSet
       val usersById = userRepo.getUsers(newKeeps.map(_.userId) :+ library.ownerId)
       (relevantFollowers, usersById)
