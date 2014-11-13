@@ -214,7 +214,7 @@ kifi.form = (function () {
           $signup2EmailForm.css('display', 'block').layout();
           $('body').addClass('finalizing droppable');
           $('.signup-1').hide();
-          $('html').data('trackType', 'signup2Email');
+          $('html').attr('data-track-type', 'signup2Email')
           setTimeout($.fn.focus.bind($('.form-first-name')), 100);
         }
       }).fail(function (xhr) {
