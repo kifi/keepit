@@ -95,7 +95,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
                       "id":"4e5f7b8c-951b-4497-8661-123456789004",
                       "firstName":"Woody",
                       "lastName":"Allen",
-                      "pictureName":"face.jpg","username":"test"
+                      "pictureName":"face.jpg","username":"test", "active":true
                     },
                   "isFriend":false
                 }
@@ -131,7 +131,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
                 "id":"4e5f7b8c-951b-4497-8661-123456789001",
                 "firstName":"firstName1",
                 "lastName":"lastName1",
-                "pictureName":"picName1.jpg","username":"test"
+                "pictureName":"picName1.jpg","username":"test", "active":true
               },
               "status":"requested"
             },
@@ -141,7 +141,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
                 "id":"4e5f7b8c-951b-4497-8661-123456789002",
                 "firstName":"firstName2",
                 "lastName":"lastName2",
-                "pictureName":"picName2.jpg","username":"test"
+                "pictureName":"picName2.jpg","username":"test", "active":true
               },
               "status":"friend"
             },
@@ -150,7 +150,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
                 "id":"4e5f7b8c-951b-4497-8661-123456789003",
                 "firstName":"firstName3",
                 "lastName":"lastName3",
-                "pictureName":"picName3.jpg","username":"test"
+                "pictureName":"picName3.jpg","username":"test", "active":true
               },
               "status":""
             }
@@ -184,7 +184,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
                 "id":"4e5f7b8c-951b-4497-8661-123456789004",
                 "firstName":"Woody",
                 "lastName":"Allen",
-                "pictureName":"face.jpg","username":"test"
+                "pictureName":"face.jpg","username":"test", "active":true
               },
               "status":""
             }

@@ -121,7 +121,7 @@ class MessageFetchingCommander @Inject() (
           }
           auxModifiedFuture.map {
             case (text, aux) =>
-              m.copy(auxData = Some(aux), text = text, user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", Username("sssss"))))
+              m.copy(auxData = Some(aux), text = text, user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", Username("sssss"), active = true)))
           }
         case None =>
           Promise.successful(m).future

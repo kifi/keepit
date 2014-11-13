@@ -58,7 +58,8 @@ object BasicUserSerializer {
           firstName = in.readString,
           lastName = in.readString,
           pictureName = in.readString,
-          username = Username("")
+          username = Username(""),
+          active = true
         )
       case 2 => // with username
         BasicUser(
@@ -69,7 +70,8 @@ object BasicUserSerializer {
           username = {
             val u = in.readString
             Username(u)
-          }
+          },
+          active = true
         )
       case _ =>
         throw new Exception(s"invalid data [version=${version}]")

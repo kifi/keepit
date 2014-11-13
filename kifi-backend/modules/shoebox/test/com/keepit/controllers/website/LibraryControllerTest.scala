@@ -158,7 +158,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |  "firstName":"${basicUser1.firstName}",
              |  "lastName":"${basicUser1.lastName}",
              |  "pictureName":"${basicUser1.pictureName}",
-             |  "username":"${basicUser1.username.value}"
+             |  "username":"${basicUser1.username.value}",
+             |  "active":true
              |  },
              |"numKeeps":0,
              |"numFollowers":0,
@@ -252,7 +253,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |  "firstName":"${basicUser1.firstName}",
              |  "lastName":"${basicUser1.lastName}",
              |  "pictureName":"${basicUser1.pictureName}",
-             |  "username":"${basicUser1.username.value}"
+             |  "username":"${basicUser1.username.value}",
+             |  "active":true
              |  },
              |"followers":[],
              |"keeps":[],
@@ -287,7 +289,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |  "firstName":"${basicUser1.firstName}",
              |  "lastName":"${basicUser1.lastName}",
              |  "pictureName":"${basicUser1.pictureName}",
-             |  "username":"${basicUser1.username.value}"
+             |  "username":"${basicUser1.username.value}",
+             |  "active":true
              |},
              |"followers":[],
              |"keeps":[],
@@ -368,7 +371,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  "firstName":"${basicUser1.firstName}",
                |  "lastName":"${basicUser1.lastName}",
                |  "pictureName":"${basicUser1.pictureName}",
-               |  "username":"${basicUser1.username.value}"
+               |  "username":"${basicUser1.username.value}",
+               |  "active":true
                |  },
                |"followers":[],
                |"keeps":[],
@@ -436,7 +440,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |  "firstName":"${basicUser1.firstName}",
                   |  "lastName":"${basicUser1.lastName}",
                   |  "pictureName":"${basicUser1.pictureName}",
-                  |  "username":"${basicUser1.username.value}"
+                  |  "username":"${basicUser1.username.value}",
+                  |  "active":true
                   |  },
                   |"numKeeps":0,
                   |"numFollowers":0,
@@ -454,7 +459,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |  "firstName":"${basicUser2.firstName}",
                   |  "lastName":"${basicUser2.lastName}",
                   |  "pictureName":"${basicUser2.pictureName}",
-                  |  "username":"${basicUser2.username.value}"
+                  |  "username":"${basicUser2.username.value}", "active":true
                   |  },
                   |"numKeeps":0,
                   |"numFollowers":1,
@@ -474,12 +479,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                     |  "firstName":"${basicUser2.firstName}",
                     |  "lastName":"${basicUser2.lastName}",
                     |  "pictureName":"${basicUser2.pictureName}",
-                    |  "username":"${basicUser2.username.value}"
+                    |  "username":"${basicUser2.username.value}",
+                    |  "active":true
                     |  },
                     |"numKeeps":0,
                     |"numFollowers":0,
                     |"kind":"user_created",
-                    |"inviter":{"id":"${user2.externalId}","firstName":"Baron","lastName":"B","pictureName":"0.jpg","username":"bhsu"},
+                    |"inviter":{"id":"${user2.externalId}","firstName":"Baron","lastName":"B","pictureName":"0.jpg","username":"bhsu", "active":true},
                     |"access":"read_insert"
                   |}
               | ]
@@ -609,7 +615,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |  "firstName":"${basicUser2.firstName}",
              |  "lastName":"${basicUser2.lastName}",
              |  "pictureName":"${basicUser2.pictureName}",
-             |  "username":"${basicUser2.username.value}"
+             |  "username":"${basicUser2.username.value}",
+             |  "active":true
              |  },
              |"numKeeps":0,
              |"numFollowers":1,
@@ -897,7 +904,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  {"id":"${user2.externalId}",
                |  "firstName":"Luigi",
                |  "lastName":"Plumber",
-               |  "pictureName":"0.jpg","username":"test",
+               |  "pictureName":"0.jpg","username":"test", "active":true,
                |  "membership":"read_write"}
                |]
              |}""".stripMargin))
@@ -915,12 +922,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  {"id":"${user3.externalId}",
                |  "firstName":"Bowser",
                |  "lastName":"Koopa",
-               |  "pictureName":"0.jpg","username":"test",
+               |  "pictureName":"0.jpg","username":"test", "active":true,
                |  "membership":"read_only"},
                |  {"id":"${user4.externalId}",
                |  "firstName":"Peach",
                |  "lastName":"Princess",
-               |  "pictureName":"0.jpg","username":"test",
+               |  "pictureName":"0.jpg","username":"test", "active":true,
                |  "membership":"read_only",
                |  "lastInvitedAt":${Json.toJson(t1.plusHours(3))}},
                |  {"email":"sonic@sega.co.jp",
@@ -943,7 +950,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  {"id":"${user3.externalId}",
                |  "firstName":"Bowser",
                |  "lastName":"Koopa",
-               |  "pictureName":"0.jpg","username":"test",
+               |  "pictureName":"0.jpg","username":"test", "active":true,
                |  "membership":"read_only"}
                |]
              |}""".stripMargin))
