@@ -101,6 +101,11 @@ angular.module('kifi')
         //
         // Internal methods.
         //
+        function init() {
+          updateSiteDescHtml(scope.keep);
+          isYoutubeCard(scope.keep.url);
+        }
+
         function bolded(text, start, len) {
           return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
         }
@@ -125,7 +130,6 @@ angular.module('kifi')
           }
           return match;
         }
-        isYoutubeCard(scope.keep.url);
 
         function formatDesc(url, matches) {
           if (url) {
@@ -400,7 +404,7 @@ angular.module('kifi')
         //
         // On link.
         //
-        updateSiteDescHtml(scope.keep);
+        init();
       }
     };
   }
