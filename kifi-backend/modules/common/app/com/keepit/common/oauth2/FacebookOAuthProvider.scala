@@ -32,7 +32,7 @@ class FacebookOAuthProvider @Inject() (airbrake: AirbrakeNotifier) extends OAuth
   val providerId = ProviderIds.Facebook
 
   def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {
-    WS.url(MeApi + accessToken).get() map { response =>
+    WS.url(MeApi + accessToken.token).get() map { response =>
       log.info(s"[getUserProfileInfo] response=${response.body} status=${response.statusText}")
       val me = response.json
       (me \ Error).asOpt[JsObject] match {
