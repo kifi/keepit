@@ -84,7 +84,7 @@ class LibraryCommander @Inject() (
         //facebook OG recommends:
         //We suggest that you use an image of at least 1200x630 pixels.
         val imageUrls: Seq[String] = {
-          val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, KeepImageSize.XLarge.idealSize)
+          val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, KeepImageSize.XLarge.idealSize).values.flatten.toSeq
           val sorted: Seq[KeepImage] = images.sortWith {
             case (image1, image2) =>
               (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)

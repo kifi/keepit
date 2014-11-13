@@ -24,8 +24,8 @@ import scala.util.{ Failure, Success, Try }
 trait KeepImageCommander {
 
   def getUrl(keepImage: KeepImage): String
-  def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[KeepImage]
-  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], idealSize: ImageSize): Seq[KeepImage]
+  def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[Option[KeepImage]]
+  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], idealSize: ImageSize): Map[Id[Keep], Option[KeepImage]]
   def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String]
 
   def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean = true, overwriteExistingChoice: Boolean = false): Future[ImageProcessDone]
@@ -56,31 +56,31 @@ class KeepImageCommanderImpl @Inject() (
     s3ImageConfig.cdnBase + "/" + keepImage.imagePath
   }
 
-  def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[KeepImage] = {
-    val allKeepImages = db.readOnlyReplica { implicit session =>
+  def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[Option[KeepImage]] = {
+    val keepImages = db.readOnlyReplica { implicit session =>
       keepImageRepo.getAllForKeepId(keepId)
     }
-    if (allKeepImages.isEmpty) SafeFuture { autoSetKeepImage(keepId, localOnly = false, overwriteExistingChoice = false) }
-    val validKeepImages = allKeepImages.filter(_.state == KeepImageStates.ACTIVE)
-    KeepImageSize.pickBest(idealSize, validKeepImages)
+    if (keepImages.isEmpty) {
+      SafeFuture { autoSetKeepImage(keepId, localOnly = false, overwriteExistingChoice = false) }
+      None
+    } else Some {
+      val validKeepImages = keepImages.filter(_.state == KeepImageStates.ACTIVE)
+      KeepImageSize.pickBest(idealSize, validKeepImages)
+    }
   }
 
-  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], idealSize: ImageSize): Seq[KeepImage] = {
-    if (keepIds.nonEmpty) {
-      val grouped = db.readOnlyReplica { implicit session => keepImageRepo.getAllForKeepIds(keepIds) }.groupBy(_.keepId)
-
-      keepIds.toSeq.map { keepId =>
-        grouped.get(keepId) match {
-          case None =>
-            SafeFuture { autoSetKeepImage(keepId, localOnly = false, overwriteExistingChoice = false) }
-            None
-          case Some(images) =>
-            val validKeepImages = images.filter(_.state == KeepImageStates.ACTIVE)
-            KeepImageSize.pickBest(idealSize, validKeepImages)
-        }
-      }.flatten
+  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], idealSize: ImageSize): Map[Id[Keep], Option[KeepImage]] = {
+    if (keepIds.isEmpty) {
+      Map.empty[Id[Keep], Option[KeepImage]]
     } else {
-      Seq.empty
+      val allImagesByKeepId = db.readOnlyReplica { implicit session => keepImageRepo.getAllForKeepIds(keepIds) }.groupBy(_.keepId)
+      (keepIds -- allImagesByKeepId.keys).foreach { missingKeepId =>
+        SafeFuture { autoSetKeepImage(missingKeepId, localOnly = false, overwriteExistingChoice = false) }
+      }
+      allImagesByKeepId.mapValues { keepImages =>
+        val validKeepImages = keepImages.filter(_.state == KeepImageStates.ACTIVE)
+        KeepImageSize.pickBest(idealSize, validKeepImages)
+      }
     }
   }
 
