@@ -38,13 +38,13 @@ trait CortexServiceClient extends ServiceClient {
   def ldaDocTopic(doc: String)(implicit version: LDAVersionOpt = None): Future[Option[Array[Float]]]
   def saveEdits(configs: Map[String, LDATopicConfiguration])(implicit version: LDAVersionOpt): Unit
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt = None): Future[LDAUserURIInterestScores]
-  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt): Future[Seq[LDAUserURIInterestScores]]
+  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[LDAUserURIInterestScores]]
   def userTopicMean(userId: Id[User])(implicit version: LDAVersionOpt = None): Future[(Option[Array[Float]], Option[Array[Float]])]
   def sampleURIsForTopic(topic: Int)(implicit version: LDAVersionOpt = None): Future[(Seq[Id[NormalizedURI]], Seq[Float])]
   def getSimilarUsers(userId: Id[User], topK: Int)(implicit version: LDAVersionOpt = None): Future[(Seq[Id[User]], Seq[Float])] // with scores
   def unamedTopics(limit: Int = 20)(implicit version: LDAVersionOpt = None): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] // with topicWords
-  def getTopicNames(uris: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt): Future[Seq[Option[String]]]
-  def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt): Future[Seq[Seq[Id[Keep]]]]
+  def getTopicNames(uris: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Option[String]]]
+  def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Seq[Id[Keep]]]]
   def libraryTopic(libId: Id[Library])(implicit version: LDAVersionOpt = None): Future[Option[Array[Float]]]
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
@@ -161,7 +161,7 @@ class CortexServiceClientImpl(
     call(Cortex.internal.userUriInterest(userId, uriId)).map { r => r.json.as[LDAUserURIInterestScores] }
   }
 
-  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt): Future[Seq[LDAUserURIInterestScores]] = {
+  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[LDAUserURIInterestScores]] = {
     val payload = Json.obj("userId" -> userId, "uriIds" -> Json.toJson(uriIds))
     call(Cortex.internal.batchUserURIsInterests, payload, callTimeouts = longTimeout).map { r => (r.json).as[Seq[LDAUserURIInterestScores]] }
   }
@@ -204,12 +204,12 @@ class CortexServiceClientImpl(
     }
   }
 
-  def getTopicNames(uris: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt): Future[Seq[Option[String]]] = {
+  def getTopicNames(uris: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Option[String]]] = {
     val payload = Json.obj("uris" -> uris)
     call(Cortex.internal.getTopicNames, payload).map { r => (r.json).as[Seq[Option[String]]] }
   }
 
-  def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt): Future[Seq[Seq[Id[Keep]]]] = {
+  def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Seq[Id[Keep]]]] = {
     val payload = Json.obj("user" -> userId, "uris" -> uriIds)
     call(Cortex.internal.explainFeed, payload).map { r => (r.json).as[Seq[Seq[Id[Keep]]]] }
   }
