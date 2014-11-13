@@ -25,7 +25,7 @@ angular.module('kifi')
     },
     compile: function(/*elem, attr, linker*/) {
 
-      return function(scope, element, attributes) {
+      return function(scope, element) {
         var copyElement = element.clone()
           .css({
             'display': 'block',
@@ -51,7 +51,7 @@ angular.module('kifi')
             var currentHeight = copyElement.height();
             var currentNumLines = currentHeight / heightPerLine;
             var maxIndex = scope.ngBind.length;
-            var maxNumLines = attributes.maxNumLines || 1;
+            var maxNumLines = scope.maxNumLines || currentNumLines;
 
             if (currentHeight === 0) {
               element.html(scope.ngBind);
