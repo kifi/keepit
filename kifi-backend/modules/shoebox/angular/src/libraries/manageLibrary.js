@@ -55,11 +55,18 @@ angular.module('kifi')
           }
 
           submitting = true;
+          var saveData = {
+            id: scope.library.id,
+            name: scope.library.name,
+            description: scope.library.description,
+            slug: scope.library.slug,
+            visibility: scope.library.visibility
+          };
           var promise;
           if (scope.modifyingExistingLibrary && scope.library.id) {
-            promise = libraryService.modifyLibrary(scope.library);
+            promise = libraryService.modifyLibrary(saveData);
           } else {
-            promise = libraryService.createLibrary(scope.library);
+            promise = libraryService.createLibrary(saveData);
           }
 
           promise.then(function (resp) {
