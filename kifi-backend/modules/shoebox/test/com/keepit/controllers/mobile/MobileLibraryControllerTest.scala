@@ -79,14 +79,14 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                    |"id":"${userB.externalId}",
                    |"firstName":"Baron",
                    |"lastName":"H",
-                   |"pictureName":"0.jpg","username":"test",
+                   |"pictureName":"0.jpg","username":"test", "active":true,
                    |"membership":"read_only"
                  |},
                |{
                  |"id":"${userC.externalId}",
                  |"firstName":"Caron",
                  |"lastName":"H",
-                 |"pictureName":"0.jpg","username":"test",
+                 |"pictureName":"0.jpg","username":"test", "active":true,
                  |"membership":"read_only"
                |}
                |]
@@ -104,7 +104,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                  |"id":"${userD.externalId}",
                  |"firstName":"Daron",
                  |"lastName":"H",
-                 |"pictureName":"0.jpg","username":"test",
+                 |"pictureName":"0.jpg","username":"test", "active":true,
                  |"membership":"read_only",
                  |"lastInvitedAt":${Json.toJson(t1.plusMinutes(4))}
                 |},

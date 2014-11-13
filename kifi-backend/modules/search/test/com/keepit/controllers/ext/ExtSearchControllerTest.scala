@@ -80,7 +80,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
                           "firstName":"Vorname",
                           "lastName":"Nachname",
                           "pictureName":"1.jpg",
-                          "username":"vorname"
+                          "username":"vorname", "active":true
                         }
                       ],
                     "score":0.9990000128746033,
@@ -225,7 +225,7 @@ class FixedResultSearchCommander extends SearchCommander {
             0.5f, // recencyScore
             false // usefulPage
           )
-        ).set("basicUsers", JsArray(Seq(Json.toJson(BasicUser(ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), "Vorname", "Nachname", "1.jpg", Username("vorname"))))))
+        ).set("basicUsers", JsArray(Seq(Json.toJson(BasicUser(ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), "Vorname", "Nachname", "1.jpg", Username("vorname"), active = true)))))
       ),
       1, // myTotal
       12, // friendsTotal

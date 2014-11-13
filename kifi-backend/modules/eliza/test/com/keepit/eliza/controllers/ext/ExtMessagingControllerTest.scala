@@ -95,14 +95,14 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
                   "firstName":"Shanee",
                   "lastName":"Smith",
                   "pictureName":"0.jpg",
-                  "username": "test"
+                  "username": "test", "active":true
                 },
                 {
                   "id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484",
                   "firstName":"Shachaf",
                   "lastName":"Smith",
                   "pictureName":"0.jpg",
-                  "username": "test"
+                  "username": "test", "active":true
                 }
               ],
               "digest": "test me out",
@@ -126,7 +126,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
                 "url": "https://admin.kifi.com/admin/searchExperiments",
                 "nUrl": "https://admin.kifi.com/admin/searchExperiments",
                 "user":{
-                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username": "test"
+                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username": "test", "active":true
                 },
                 "participants":
                 [
@@ -135,14 +135,14 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
                     "firstName":"Shanee",
                     "lastName":"Smith",
                     "pictureName":"0.jpg",
-                    "username": "test"
+                    "username": "test", "active":true
                   },
                   {
                     "id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484",
                     "firstName":"Shachaf",
                     "lastName":"Smith",
                     "pictureName":"0.jpg",
-                    "username": "test"
+                    "username": "test", "active":true
                   }
                 ]
               }]

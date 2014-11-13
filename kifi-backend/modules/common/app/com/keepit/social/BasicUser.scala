@@ -39,7 +39,8 @@ case class BasicUser(
     firstName: String,
     lastName: String,
     pictureName: String,
-    username: Username) extends BasicUserLikeEntity {
+    username: Username,
+    active: Boolean) extends BasicUserLikeEntity {
 
   override def asBasicUser = Some(this)
   def fullName = s"$firstName $lastName"
@@ -55,7 +56,8 @@ object BasicUser {
     (__ \ 'firstName).format[String] and
     (__ \ 'lastName).format[String] and
     (__ \ 'pictureName).format[String] and
-    (__ \ 'username).format[Username]
+    (__ \ 'username).format[Username] and
+    (__ \ 'active).format[Boolean]
   )(BasicUser.apply, unlift(BasicUser.unapply))
 
   implicit val mapUserIdToInt = mapOfIdToObjectFormat[User, Int]
@@ -68,13 +70,14 @@ object BasicUser {
       firstName = user.firstName,
       lastName = user.lastName,
       pictureName = user.pictureName.getOrElse(S3UserPictureConfig.defaultName) + ".jpg",
-      username = user.username
+      username = user.username,
+      active = user.state == UserStates.ACTIVE
     )
   }
 }
 
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
-  override val version = 9
+  override val version = 10
   val namespace = "basic_user_userid"
   def toKey(): String = userId.id.toString
 }

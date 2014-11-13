@@ -215,12 +215,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                   "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
                   "firstName":"Shanee",
                   "lastName":"Smith",
-                  "pictureName":"0.jpg","username":"test"
+                  "pictureName":"0.jpg","username":"test", "active":true
                 },{
                   "id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484",
                   "firstName":"Shachaf",
                   "lastName":"Smith",
-                  "pictureName":"0.jpg","username":"test"
+                  "pictureName":"0.jpg","username":"test", "active":true
                 }
               ],
               "digest": "test me out",
@@ -244,12 +244,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                 "url": "https://admin.kifi.com/admin/searchExperiments",
                 "nUrl": "https://admin.kifi.com/admin/searchExperiments",
                 "user":{
-                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"
+                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test", "active":true
                 },
                 "participants":
                   [
-                    {"id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
-                    {"id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484","firstName":"Shachaf","lastName":"Smith","pictureName":"0.jpg","username":"test"}
+                    {"id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test", "active":true},
+                    {"id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484","firstName":"Shachaf","lastName":"Smith","pictureName":"0.jpg","username":"test", "active":true}
                   ]
               }]
           }
@@ -311,12 +311,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                 "id": "${shanee.externalId.id}",
                 "firstName": "Shanee",
                 "lastName": "Smith",
-                "pictureName": "0.jpg","username":"test"
+                "pictureName": "0.jpg","username":"test", "active":true
               },{
                 "id": "${shachaf.externalId.id}",
                 "firstName": "Shachaf",
                 "lastName": "Smith",
-                "pictureName": "0.jpg","username":"test"
+                "pictureName": "0.jpg","username":"test", "active":true
               }
             ],
             "messages": [
@@ -409,12 +409,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                   "id": "${shanee.externalId.id}",
                   "firstName": "Shanee",
                   "lastName": "Smith",
-                  "pictureName": "0.jpg","username":"test"
+                  "pictureName": "0.jpg","username":"test", "active":true
                 },{
                   "id": "${shachaf.externalId.id}",
                   "firstName": "Shachaf",
                   "lastName": "Smith",
-                  "pictureName": "0.jpg","username":"test"
+                  "pictureName": "0.jpg","username":"test", "active":true
                 }
               ],
               "messages": $expectedMessages
@@ -460,12 +460,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                   "id": "${shanee.externalId.id}",
                   "firstName": "Shanee",
                   "lastName": "Smith",
-                  "pictureName": "0.jpg","username":"test"
+                  "pictureName": "0.jpg","username":"test", "active":true
                 },{
                   "id": "${shachaf.externalId.id}",
                   "firstName": "Shachaf",
                   "lastName": "Smith",
-                  "pictureName": "0.jpg","username":"test"
+                  "pictureName": "0.jpg","username":"test", "active":true
                 }
               ],
               "messages": $expectedMessages2
@@ -498,12 +498,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                   "id": "${shanee.externalId.id}",
                   "firstName": "Shanee",
                   "lastName": "Smith",
-                  "pictureName": "0.jpg","username":"test"
+                  "pictureName": "0.jpg","username":"test", "active":true
                 },{
                   "id": "${shachaf.externalId.id}",
                   "firstName": "Shachaf",
                   "lastName": "Smith",
-                  "pictureName": "0.jpg","username":"test"
+                  "pictureName": "0.jpg","username":"test", "active":true
                 }
               ],
               "messages": $expectedMessages3
@@ -600,12 +600,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                 "id": "${shanee.externalId.id}",
                 "firstName": "Shanee",
                 "lastName": "Smith",
-                "pictureName": "0.jpg","username":"test"
+                "pictureName": "0.jpg","username":"test", "active":true
               },{
                 "id": "${shachaf.externalId.id}",
                 "firstName": "Shachaf",
                 "lastName": "Smith",
-                "pictureName": "0.jpg","username":"test"
+                "pictureName": "0.jpg","username":"test", "active":true
               }
             ],
             "messages": [
