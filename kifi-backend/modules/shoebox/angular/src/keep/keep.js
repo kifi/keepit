@@ -275,7 +275,8 @@ angular.module('kifi')
         };
 
         scope.showSmallImage = function (keep) {
-          return keep.hasSmallImage && !useBigLayout && !scope.isYoutubeCard;
+          var hasImage = keep.summary.imageWidth > 110 && keep.summary.imageHeight > 110;
+          return hasImage && keep.hasSmallImage && !useBigLayout && !scope.isYoutubeCard;
         };
 
         scope.showBigImage = function (keep) {
