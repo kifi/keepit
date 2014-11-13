@@ -31,11 +31,7 @@
         </div>
 
         <div class="kf-keep-info-wrap" ng-if="!isYoutubeCard">
-          <div class="kf-keep-info">
-            <div class="kf-keep-description">
-              {{keep.summary.description}}
-            </div>
-          </div>
+          <div kf-ellipsis data-ng-bind="keep.summary.description" data-max-num-lines="linesToShow" class="kf-keep-description"></div>
         </div>
 
       </div>

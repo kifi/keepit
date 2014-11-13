@@ -229,23 +229,18 @@ angular.module('kifi')
           }
 
           var asideWidthPercent = Math.floor(((cardWidth - bestRes.guess) / cardWidth) * 100);
-          //var calcTextWidth = 100 - asideWidthPercent;
           var linesToShow = Math.ceil((bestRes.hi / textHeight)); // line height
-          var calcTextHeight = linesToShow * textHeight;
+          scope.linesToShow = linesToShow;
 
           keep.sizeCard = function () {
             var $content = element.find('.kf-keep-content-line');
             //$content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
-            $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
-            if (calcTextHeight > 20) {
-              element.find('.kf-keep-info').css({
-                'height': calcTextHeight + 'px'
-              }).addClass('kf-dyn-positioned');
+            if ($content && $content.length > 0) {
+              $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
+              $content.find('.kf-keep-image').on('error', function () {
+                $content.find('.kf-keep-small-image').hide();
+              });
             }
-
-            $content.find('.kf-keep-image').on('error', function () {
-              $content.find('.kf-keep-small-image').hide();
-            });
           };
         }
 
