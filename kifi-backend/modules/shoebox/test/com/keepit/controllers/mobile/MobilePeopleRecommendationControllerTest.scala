@@ -38,13 +38,13 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
           contentType(resultF) must beSome("application/json")
           Json.parse(contentAsString(resultF)) === Json.parse(s"""
                |{"users":[
-               |{"id":"${users(1).externalId}","firstName":"Bryan","lastName":"Cranston","username":"test2", "active":true,"pictureName":"0.jpg",
-               |"mutualFriends":[{"id":"${users(2).externalId}","firstName":"Anna","lastName":"Gunn","username":"test3","pictureName":"0.jpg", "active":true,"numFriends":3}]},
-               |{"id":"${users(2).externalId}","firstName":"Anna","lastName":"Gunn","username":"test3", "active":true,"pictureName":"0.jpg",
-               |"mutualFriends":[{"id":"${users(1).externalId}","firstName":"Bryan","lastName":"Cranston","username":"test2","pictureName":"0.jpg", "active":true,"numFriends":3}]},
-               |{"id":"${users(3).externalId}","firstName":"Dean","lastName":"Norris","username":"test4", "active":true,"pictureName":"0.jpg",
-               |"mutualFriends":[{"id":"${users(1).externalId}","firstName":"Bryan","lastName":"Cranston","pictureName":"0.jpg","username":"test2", "active":true,"numFriends":3},
-               |{"id":"${users(2).externalId}","firstName":"Anna","lastName":"Gunn","pictureName":"0.jpg", "active":true,"username":"test3","numFriends":3}]}
+               |{"id":"${users(1).externalId}","firstName":"Bryan","lastName":"Cranston","username":"test2","pictureName":"0.jpg",
+               |"mutualFriends":[{"id":"${users(2).externalId}","firstName":"Anna","lastName":"Gunn","username":"test3","pictureName":"0.jpg","numFriends":3}]},
+               |{"id":"${users(2).externalId}","firstName":"Anna","lastName":"Gunn","username":"test3","pictureName":"0.jpg",
+               |"mutualFriends":[{"id":"${users(1).externalId}","firstName":"Bryan","lastName":"Cranston","username":"test2","pictureName":"0.jpg","numFriends":3}]},
+               |{"id":"${users(3).externalId}","firstName":"Dean","lastName":"Norris","username":"test4","pictureName":"0.jpg",
+               |"mutualFriends":[{"id":"${users(1).externalId}","firstName":"Bryan","lastName":"Cranston","pictureName":"0.jpg","username":"test2","numFriends":3},
+               |{"id":"${users(2).externalId}","firstName":"Anna","lastName":"Gunn","pictureName":"0.jpg","username":"test3","numFriends":3}]}
                |]}
              """.stripMargin)
 
