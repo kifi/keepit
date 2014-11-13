@@ -82,6 +82,7 @@ angular.module('kifi')
         var useBigLayout = false;
         var strippedSchemeRe = /^https?:\/\//;
         var domainTrailingSlashRe = /^([^\/]*)\/$/;
+        var youtubeLinkRe = /.*(?:youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=)([^#\&\?]*).*/;
 
         var tagDragMask = element.find('.kf-tag-drag-mask');
         var mouseX, mouseY;
@@ -94,11 +95,17 @@ angular.module('kifi')
         scope.isDragTarget = false;
         scope.isDragging = false;
         scope.userLoggedIn = $rootScope.userLoggedIn;
-
+        scope.isYoutubeCard = false;
+        scope.youtubeId = '';
 
         //
         // Internal methods.
         //
+        function init() {
+          updateSiteDescHtml(scope.keep);
+          isYoutubeCard(scope.keep.url);
+        }
+
         function bolded(text, start, len) {
           return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
         }
@@ -112,6 +119,16 @@ angular.module('kifi')
             }
           }
           return text;
+        }
+
+        function isYoutubeCard(url) {
+          var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
+          var match = url.substr(strippedSchemeLen).match(youtubeLinkRe);
+          if (match && match[1]) {
+            scope.isYoutubeCard = true;
+            scope.youtubeId = match[1];
+          }
+          return match;
         }
 
         function formatDesc(url, matches) {
@@ -258,11 +275,12 @@ angular.module('kifi')
         };
 
         scope.showSmallImage = function (keep) {
-          return keep.hasSmallImage && !useBigLayout;
+          return keep.hasSmallImage && !useBigLayout && !scope.isYoutubeCard;
         };
 
         scope.showBigImage = function (keep) {
-          return keep.hasBigImage || (keep.summary && useBigLayout);
+          var bigImageReady = keep.hasBigImage || (keep.summary && useBigLayout);
+          return bigImageReady && !scope.isYoutubeCard;
         };
 
         scope.hasTag = function (keep) {
@@ -386,7 +404,7 @@ angular.module('kifi')
         //
         // On link.
         //
-        updateSiteDescHtml(scope.keep);
+        init();
       }
     };
   }

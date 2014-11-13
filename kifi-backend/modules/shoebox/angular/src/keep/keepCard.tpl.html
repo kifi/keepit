@@ -14,32 +14,40 @@
         <div class="kf-keep-loader" ng-show="false"></div>
         <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{keep.titleAttr}}" ng-bind-html="keep.titleHtml" ng-click="clickCallback({ 'keep': keep, event: $event })" rel="nofollow" click-action="articleTitle"></a>
       </div>
+      <div class="kf-keep-subtitle">
+        <span class="kf-keep-subtitle-element kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></span>
+        <span class="kf-keep-subtitle-element kf-keep-dot" ng-if="keep.createdAt">·</span>
+        <span class="kf-keep-time" ng-show="keep.createdAt">kept&nbsp;<time class="kf-keep-subtitle-element" ng-attr-datetime="{{keep.createdAt}}" am-time-ago="keep.createdAt"></time></span>
+        <span class="kf-keep-subtitle-element kf-keep-dot" ng-if="keep.summary.wordCount && keep.readTime">·</span>
+        <div class="kf-keep-subtitle-element kf-keep-read-time" ng-show="keep.summary.wordCount && keep.readTime"><span class="sprite sprite-small-clock"></span>{{keep.readTime}} read</div>
+      </div>
 
+      <!-- Description only or Description + Small Image-->
       <div class="kf-keep-content-line">
-        <div class="kf-keep-subtitle">
-          <span class="kf-keep-subtitle-element kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></span>
-          <span class="kf-keep-subtitle-element kf-keep-dot" ng-if="keep.createdAt">·</span>
-          <span class="kf-keep-time" ng-show="keep.createdAt">kept&nbsp;<time class="kf-keep-subtitle-element" ng-attr-datetime="{{keep.createdAt}}" am-time-ago="keep.createdAt"></time></span>
-          <span class="kf-keep-subtitle-element kf-keep-dot" ng-if="keep.summary.wordCount && keep.readTime">·</span>
-          <div class="kf-keep-subtitle-element kf-keep-read-time" ng-show="keep.summary.wordCount && keep.readTime"><span class="sprite sprite-small-clock"></span>{{keep.readTime}} read</div>
-        </div>
-
         <div class="kf-keep-small-image" ng-if="showSmallImage(keep)">
           <a ng-href="{{keep.url}}" target="_blank" rel="nofollow">
             <img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="articleImageSmall">
           </a>
         </div>
 
-        <div class="kf-keep-info-wrap">
+        <div class="kf-keep-info-wrap" ng-if="!isYoutubeCard">
           <div class="kf-keep-info">
             <div class="kf-keep-description">
               {{keep.summary.description}}
             </div>
           </div>
         </div>
+
       </div>
 
-      <a ng-href="{{keep.url}}" target="_blank" rel="nofollow"><img class="kf-keep-big-image" ng-if="showBigImage(keep)" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="articleImageBig"></a>
+      <!-- Large Image or Special Card -->
+      <a ng-href="{{keep.url}}" target="_blank" rel="nofollow"><img class="kf-keep-big-image" ng-if="showBigImage(keep) && !isYoutubeCard" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="articleImageBig"></a>
+
+      <div ng-if="isYoutubeCard" class="kf-keep-youtube-content">
+        <div kf-youtube video-id=youtubeId></div>
+        <div kf-ellipsis data-ng-bind="keep.summary.description" data-max-num-lines=3 class="kf-keep-description"></div>
+      </div>
+
     </div>
 
     <div class="kf-keep-who" ng-if="keep.showSocial">
