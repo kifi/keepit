@@ -181,6 +181,10 @@ class HeimdalContextBuilder extends Logging {
         this += ("client", "iOSApp")
         this += ("clientVersion", appVersion)
         this += ("clientBuild", appVersion + buildSuffix)
+      case UserAgent.iosAppDeviceRe(appName) =>
+        this += ("device", "iphone")
+        this += ("os", "iOS")
+        this += ("client", "iOSApp")
       case UserAgent.androidAppRe(appName, os, osVersion, device) =>
         this += ("device", device)
         this += ("os", os)
