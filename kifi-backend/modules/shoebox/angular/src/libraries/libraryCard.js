@@ -5,10 +5,10 @@ angular.module('kifi')
 .directive('kfLibraryCard', [
   '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
   'profileService', 'platformService', 'signupService', '$twitter', '$timeout', '$routeParams', '$route',
-  'locationNoReload',
+  'locationNoReload', 'util',
   function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
       profileService, platformService, signupService, $twitter, $timeout, $routeParams, $route,
-      locationNoReload) {
+      locationNoReload, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -25,6 +25,7 @@ angular.module('kifi')
         //
         // Internal data.
         //
+        var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
         var authToken = $location.search().authToken || '';
         var prevQuery = '';
 
@@ -104,18 +105,20 @@ angular.module('kifi')
           });
         }
 
-        function processUrls(text) {
-          var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
 
+        function processUrls(text) {
           var parts = text.split(uriRe);
+
           for (var i = 1; i < parts.length; i += 3) {
             var uri = parts[i];
             var scheme = parts[i+1];
-            var url = (scheme ? '' : 'http://') + uri;
+            var url = (scheme ? '' : 'http://') + util.htmlEscape(uri);
 
             parts[i] = '<a target="_blank" href="' + url + '">' + url;
             parts[i+1] = '</a>';
+            parts[i-1] = util.htmlEscape(parts[i-1]);
           }
+          parts[parts.length-1] = util.htmlEscape(parts[parts.length-1]);
 
           return parts.join('');
         }
@@ -138,18 +141,19 @@ angular.module('kifi')
             follower.picUrl = friendService.getPictureUrlForUser(follower);
           });
 
-          scope.library.formattedDescription = processUrls('<p>' + angular.element('<div>').text(scope.library.description).text().replace(/\n+/, '<p>'));
+          var linkedDescription = processUrls(scope.library.description);
+          scope.library.formattedDescription = '<p>' + linkedDescription.replace(/\n+/, '<p>');
 
           var maxLength = 150;
-          if (scope.library.description && scope.library.description.length > maxLength && !scope.isUserLoggedOut) {
+          if (linkedDescription && linkedDescription.length > maxLength && !scope.isUserLoggedOut) {
             // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
             var clipLastIndex = maxLength;
-            var lastSpaceIndex = scope.library.description.lastIndexOf(' ', maxLength);
+            var lastSpaceIndex = linkedDescription.lastIndexOf(' ', maxLength);
             if (lastSpaceIndex !== -1) {
               clipLastIndex = lastSpaceIndex + 1;  // Grab the space too.
             }
 
-            scope.library.shortDescription = scope.library.description.substr(0, clipLastIndex);
+            scope.library.shortDescription = linkedDescription.substr(0, clipLastIndex);
             scope.clippedDescription = true;
           }
 
