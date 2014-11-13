@@ -17,7 +17,7 @@ class RecommendationCleanupCommander @Inject() (
   def cleanupLowMasterScoreRecos(overrideLimit: Option[Int] = None, overrideTimeCutoff: Option[DateTime] = None): Unit = {
     val userToClean = db.readOnlyReplica { implicit session => uriRecoRepo.getUsersWithRecommendations() }.toSeq
     db.readWriteBatch(userToClean) { (session, userId) =>
-      uriRecoRepo.cleanupLowMasterScoreRecos(userId, overrideLimit.getOrElse(defaultLimitNumRecosForUser), overrideTimeCutoff.getOrElse(currentDateTime.minusDays(7)))(session)
+      uriRecoRepo.cleanupLowMasterScoreRecos(userId, overrideLimit.getOrElse(defaultLimitNumRecosForUser), overrideTimeCutoff.getOrElse(currentDateTime.minusDays(4)))(session)
     }.foreach {
       case (userId, res) =>
         res match {
