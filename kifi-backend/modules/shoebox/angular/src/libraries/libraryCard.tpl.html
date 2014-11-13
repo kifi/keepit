@@ -32,7 +32,7 @@
           <div class="kf-keep-lib-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
         </div>
 
-        <div ng-if="!recommendation && isUserLoggedOut && false" class="kf-keep-lib-search">
+        <div ng-if="!recommendation && isUserLoggedOut" class="kf-keep-lib-search">
           <input class="kf-keep-lib-search-input" type="text" placeholder="Search this library" ng-model="search.text" ng-focus="" ng-blur="" ng-change="onSearchInputChange(search.text)" ng-keydown="">
         </div>
       </div>
