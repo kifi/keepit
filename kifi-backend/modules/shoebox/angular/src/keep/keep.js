@@ -95,7 +95,7 @@ angular.module('kifi')
         scope.isDragTarget = false;
         scope.isDragging = false;
         scope.userLoggedIn = $rootScope.userLoggedIn;
-        scope.isYoutubeCard = false;
+        scope.cardType = '';
         scope.youtubeId = '';
 
         //
@@ -103,7 +103,7 @@ angular.module('kifi')
         //
         function init() {
           updateSiteDescHtml(scope.keep);
-          isYoutubeCard(scope.keep.url);
+          setCardType(scope.keep.url);
         }
 
         function bolded(text, start, len) {
@@ -125,10 +125,19 @@ angular.module('kifi')
           var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
           var match = url.substr(strippedSchemeLen).match(youtubeLinkRe);
           if (match && match[1]) {
-            scope.isYoutubeCard = true;
             scope.youtubeId = match[1];
           }
-          return match;
+          return scope.youtubeId;
+        }
+
+        function setCardType(url) {
+          if (isYoutubeCard(url)) {
+            scope.cardType = 'youtube';
+          } else if (scope.keep.hasBigImage) {
+            scope.cardType = 'big';
+          } else {
+            scope.cardType = 'small';
+          }
         }
 
         function formatDesc(url, matches) {
@@ -183,6 +192,9 @@ angular.module('kifi')
           if (!keep.summary.trimmedDesc) {
             var trimmed = trimDesc(keep.summary.description);
             if (trimmed === false) {
+              if (scope.cardType === 'small') {
+                scope.cardType = 'big';
+              }
               useBigLayout = true;
               return;
             }
@@ -229,20 +241,13 @@ angular.module('kifi')
           }
 
           var asideWidthPercent = Math.floor(((cardWidth - bestRes.guess) / cardWidth) * 100);
-          //var calcTextWidth = 100 - asideWidthPercent;
           var linesToShow = Math.ceil((bestRes.hi / textHeight)); // line height
-          var calcTextHeight = linesToShow * textHeight;
+          scope.linesToShow = linesToShow;
 
           keep.sizeCard = function () {
             var $content = element.find('.kf-keep-content-line');
             //$content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
             $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
-            if (calcTextHeight > 20) {
-              element.find('.kf-keep-info').css({
-                'height': calcTextHeight + 'px'
-              }).addClass('kf-dyn-positioned');
-            }
-
             $content.find('.kf-keep-image').on('error', function () {
               $content.find('.kf-keep-small-image').hide();
             });
@@ -275,12 +280,13 @@ angular.module('kifi')
         };
 
         scope.showSmallImage = function (keep) {
-          return keep.hasSmallImage && !useBigLayout && !scope.isYoutubeCard;
+          var hasImage = keep.summary.imageWidth > 110 && keep.summary.imageHeight > 110;
+          return hasImage && keep.hasSmallImage && !useBigLayout && scope.cardType === 'small';
         };
 
         scope.showBigImage = function (keep) {
           var bigImageReady = keep.hasBigImage || (keep.summary && useBigLayout);
-          return bigImageReady && !scope.isYoutubeCard;
+          return bigImageReady && scope.cardType === 'big';
         };
 
         scope.hasTag = function (keep) {
