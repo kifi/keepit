@@ -62,6 +62,7 @@ object ExperimentType {
   val LIBRARIES = ExperimentType("libraries")
   val SEND_DIGEST_EMAIL_ON_REFRESH = ExperimentType("send_digest_email_on_refresh")
   val GRAPH_BASED_PEOPLE_TO_INVITE = ExperimentType("graph_based_people_to_invite")
+  val CORTEX_NEW_MODEL = ExperimentType("cortex_new_model")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::

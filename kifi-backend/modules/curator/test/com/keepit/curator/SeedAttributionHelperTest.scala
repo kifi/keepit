@@ -3,6 +3,8 @@ package com.keepit.curator
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.FakeCortexServiceClientImpl
+import com.keepit.cortex.core.{ ModelVersion, CortexVersionCommander }
+import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.curator.commanders.SeedAttributionHelper
 import com.keepit.curator.model._
 import com.keepit.graph.FakeGraphServiceClientImpl
@@ -50,6 +52,10 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
     }
   }
 
+  val fakeCortexVersionCommander = new CortexVersionCommander(null) {
+    override def getExperimentalLDAVersionForUser(userId: Id[User]): Future[Option[ModelVersion[DenseLDA]]] = Future.successful(None)
+  }
+
   val emptyScore = UriScores(
     socialScore = 0f,
     popularityScore = 0f,
@@ -85,7 +91,7 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
           }
         }
 
-        val attrHelper = new SeedAttributionHelper(db, repo, fakeCortex, fakeSearch, inject[CuratorLibraryMembershipInfoRepo])
+        val attrHelper = new SeedAttributionHelper(db, repo, fakeCortex, fakeCortexVersionCommander, fakeSearch, inject[CuratorLibraryMembershipInfoRepo])
 
         val itemsWithAttr = Await.result(attrHelper.getAttributions(scoredItems), Duration(5, "seconds"))
         itemsWithAttr(0).attribution.topic.get.topicName === "topic_1"
@@ -105,6 +111,9 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
         itemsWithAttr(4).attribution.user === None
         itemsWithAttr(4).attribution.topic.get.topicName === "topic_4"
         itemsWithAttr(4).attribution.keep.get.keeps.map { _.id }.toList === List(4)
+
+        val emtpyAttrs = Await.result(attrHelper.getAttributions(Seq()), Duration(5, "seconds"))
+        emtpyAttrs.size === 0
       }
     }
   }

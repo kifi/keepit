@@ -1,6 +1,7 @@
 package com.keepit.curator
 
 import com.keepit.common.cache.FakeCacheModule
+import com.keepit.common.commanders.{ FakeRemoteUserExperimentModule, FakeRemoteUserExperimentCommander }
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time._
@@ -18,6 +19,7 @@ import scala.concurrent.duration.Duration
 
 class UriScoringHelperTest extends Specification with CuratorTestInjector {
   val modules = Seq(
+    FakeRemoteUserExperimentModule(),
     FakeGraphServiceModule(),
     FakeHttpClientModule(),
     FakeCortexServiceClientModule(),

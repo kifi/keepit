@@ -2,6 +2,7 @@ package com.keepit.curator.commanders
 
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
+import com.keepit.cortex.core.CortexVersionCommander
 import com.keepit.curator.model.{ SeedItemWithMultiplier, CuratorKeepInfoRepo, Keepers, ScoredSeedItem, UriScores }
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
@@ -20,6 +21,7 @@ class UriScoringHelper @Inject() (
     graph: GraphServiceClient,
     keepInfoRepo: CuratorKeepInfoRepo,
     cortex: CortexServiceClient,
+    cortexVersion: CortexVersionCommander,
     heimdal: HeimdalServiceClient,
     publicScoring: PublicUriScoringHelper) extends Logging {
 
@@ -28,14 +30,22 @@ class UriScoringHelper @Inject() (
   }
 
   private def getRawInterestScores(items: Seq[SeedItemWithMultiplier]): Future[(Seq[Float], Seq[Float], Seq[Float])] = {
-    val interestScores = cortex.batchUserURIsInterests(items.head.userId, items.map(_.uriId))
-    interestScores.map { scores =>
-      scores.map { score =>
-        val (overallOpt, recentOpt, libOpt) = (score.global, score.recency, score.libraryInduced)
-        (overallOpt.map(uis => if (uis.confidence > 0.3 && uis.score > 0) uis.score else 0f).getOrElse(0f),
-          recentOpt.map(uis => if (uis.confidence > 0.2 && uis.score > 0) uis.score else 0f).getOrElse(0f),
-          libOpt.map { uis => if (uis.confidence > 0.2 && uis.score > 0) uis.score else 0f }.getOrElse(0f))
-      }.unzip3
+    val userIdOpt = items.headOption.map(_.userId)
+
+    userIdOpt match {
+      case None => Future.successful((Seq(), Seq(), Seq()))
+      case Some(userId) =>
+        cortexVersion.getExperimentalLDAVersionForUser(userId).flatMap { implicit versionOpt =>
+          val interestScores = cortex.batchUserURIsInterests(items.head.userId, items.map(_.uriId))
+          interestScores.map { scores =>
+            scores.map { score =>
+              val (overallOpt, recentOpt, libOpt) = (score.global, score.recency, score.libraryInduced)
+              (overallOpt.map(uis => if (uis.confidence > 0.3 && uis.score > 0) uis.score else 0f).getOrElse(0f),
+                recentOpt.map(uis => if (uis.confidence > 0.2 && uis.score > 0) uis.score else 0f).getOrElse(0f),
+                libOpt.map { uis => if (uis.confidence > 0.2 && uis.score > 0) uis.score else 0f }.getOrElse(0f))
+            }.unzip3
+          }
+        }
     }
   }
 

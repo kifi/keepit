@@ -3,6 +3,7 @@ package com.keepit.curator.commanders
 import com.google.inject.{ Inject }
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.CortexServiceClient
+import com.keepit.cortex.core.CortexVersionCommander
 import com.keepit.curator.model._
 import com.keepit.search.{ SearchServiceClient }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -15,6 +16,7 @@ class SeedAttributionHelper @Inject() (
     db: Database,
     keepRepo: CuratorKeepInfoRepo,
     cortex: CortexServiceClient,
+    cortexVersion: CortexVersionCommander,
     search: SearchServiceClient,
     libMemRepo: CuratorLibraryMembershipInfoRepo) {
 
@@ -81,20 +83,29 @@ class SeedAttributionHelper @Inject() (
   private def getKeepAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[KeepAttribution]]] = {
     require(seeds.map(_.userId).toSet.size <= 1, "Batch keep attribution must be all for the same user")
 
-    val empty = Seq.fill(seeds.size)(None)
     seeds.headOption.map { _.userId } match {
-      case None => Future.successful(empty)
+      case None => Future.successful(Seq())
       case Some(userId) =>
         val uriIds = seeds.map { _.uriId }
-        cortex.explainFeed(userId, uriIds).map { res =>
-          res.map { keepIds => if (!keepIds.isEmpty) Some(KeepAttribution(keepIds)) else None }
+        cortexVersion.getExperimentalLDAVersionForUser(userId).flatMap { implicit versionOpt =>
+          cortex.explainFeed(userId, uriIds).map { res =>
+            res.map { keepIds => if (!keepIds.isEmpty) Some(KeepAttribution(keepIds)) else None }
+          }
         }
     }
   }
 
   private def getTopicAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[TopicAttribution]]] = {
-    cortex.getTopicNames(seeds.map { _.uriId }).map { names =>
-      names.map { nameOpt => nameOpt.map { TopicAttribution(_) } }
+    require(seeds.map(_.userId).toSet.size <= 1, "Batch topic attribution must be all for the same user")
+
+    seeds.headOption.map { _.userId } match {
+      case None => Future.successful(Seq())
+      case Some(userId) =>
+        cortexVersion.getExperimentalLDAVersionForUser(userId).flatMap { implicit versionOpt =>
+          cortex.getTopicNames(seeds.map { _.uriId }).map { names =>
+            names.map { nameOpt => nameOpt.map { TopicAttribution(_) } }
+          }
+        }
     }
   }
 
