@@ -104,6 +104,22 @@ angular.module('kifi')
           });
         }
 
+        function processUrls(text) {
+          var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
+
+          var parts = text.split(uriRe);
+          for (var i = 1; i < parts.length; i += 3) {
+            var uri = parts[i];
+            var scheme = parts[i+1];
+            var url = (scheme ? '' : 'http://') + uri;
+
+            parts[i] = '<a target="_blank" href="' + url + '">' + url;
+            parts[i+1] = '</a>';
+          }
+
+          return parts.join('');
+        }
+
         // Data augmentation.
         // TODO(yiping): make new libraryDecoratorService to do this. Then, DRY up the code that is
         // currently in nav.js too.
@@ -122,9 +138,9 @@ angular.module('kifi')
             follower.picUrl = friendService.getPictureUrlForUser(follower);
           });
 
-          var maxLength = 150;
-          scope.library.formattedDescription = '<p>' + angular.element('<div>').text(scope.library.description).text().replace(/\n+/, '<p>');
+          scope.library.formattedDescription = processUrls('<p>' + angular.element('<div>').text(scope.library.description).text().replace(/\n+/, '<p>'));
 
+          var maxLength = 150;
           if (scope.library.description && scope.library.description.length > maxLength && !scope.isUserLoggedOut) {
             // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
             var clipLastIndex = maxLength;
