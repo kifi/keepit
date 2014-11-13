@@ -19,8 +19,8 @@ angular.module('kifi')
       var safeUrl;
       if (isSupportedMobilePlatform()) {
         if (isIPhone()) {
-          safeUrl = 'kifi:' + url.replace(/https?:/, '');
-          var branchIdx = url.indexOf('branch');
+          safeUrl = 'kifi:' + (url || '//kifi.com').replace(/https?:/, '');
+          var branchIdx = (url || '').indexOf('branch');
           if (branchIdx !== -1 && branchIdx > url.indexOf('?')) { // url ends with 'branch'
             createBranchLink({
               url: safeUrl

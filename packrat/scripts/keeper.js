@@ -273,6 +273,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     $slider.find('.kifi-keep-btn,.kifi-dock-btn').hoverfu('destroy');
     $slider.remove(), $slider = null;
 
+    $(k.tile).find('.kifi-tile-dot').remove().appendTo(k.tile); // invisible dot chrome bug workaround
+
     if (extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
       extMsgIntroEligible = false;
       api.port.emit('prefs', function (prefs) {
@@ -469,7 +471,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
           $btn.removeClass('kifi-unkept kifi-private kifi-public').addClass('kifi-' + (o.kept || 'unkept'));
         }
         if (o.fail && !$btn.hasClass('kifi-shake')) {
-          $btn.one('animationName' in k.tile.style ? 'animationend' : 'webkitAnimationEnd', $.fn.removeClass.bind($btn, 'kifi-shake'))
+          $btn.one('animationend', $.fn.removeClass.bind($btn, 'kifi-shake'))
           .addClass('kifi-shake');
         }
       }
