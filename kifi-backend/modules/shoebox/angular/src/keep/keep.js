@@ -95,7 +95,7 @@ angular.module('kifi')
         scope.isDragTarget = false;
         scope.isDragging = false;
         scope.userLoggedIn = $rootScope.userLoggedIn;
-        scope.isYoutubeCard = false;
+        scope.cardType = '';
         scope.youtubeId = '';
 
         //
@@ -103,7 +103,7 @@ angular.module('kifi')
         //
         function init() {
           updateSiteDescHtml(scope.keep);
-          isYoutubeCard(scope.keep.url);
+          setCardType(scope.keep.url);
         }
 
         function bolded(text, start, len) {
@@ -125,10 +125,19 @@ angular.module('kifi')
           var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
           var match = url.substr(strippedSchemeLen).match(youtubeLinkRe);
           if (match && match[1]) {
-            scope.isYoutubeCard = true;
             scope.youtubeId = match[1];
           }
-          return match;
+          return scope.youtubeId;
+        }
+
+        function setCardType(url) {
+          if (isYoutubeCard(url)) {
+            scope.cardType = 'youtube';
+          } else if (scope.keep.hasBigImage) {
+            scope.cardType = 'big';
+          } else {
+            scope.cardType = 'small';
+          }
         }
 
         function formatDesc(url, matches) {
@@ -183,6 +192,7 @@ angular.module('kifi')
           if (!keep.summary.trimmedDesc) {
             var trimmed = trimDesc(keep.summary.description);
             if (trimmed === false) {
+              scope.cardType = 'big';
               useBigLayout = true;
               return;
             }
@@ -269,12 +279,12 @@ angular.module('kifi')
 
         scope.showSmallImage = function (keep) {
           var hasImage = keep.summary.imageWidth > 110 && keep.summary.imageHeight > 110;
-          return hasImage && keep.hasSmallImage && !useBigLayout && !scope.isYoutubeCard;
+          return hasImage && keep.hasSmallImage && !useBigLayout && scope.cardType === 'small';
         };
 
         scope.showBigImage = function (keep) {
           var bigImageReady = keep.hasBigImage || (keep.summary && useBigLayout);
-          return bigImageReady && !scope.isYoutubeCard;
+          return bigImageReady && scope.cardType === 'big';
         };
 
         scope.hasTag = function (keep) {
