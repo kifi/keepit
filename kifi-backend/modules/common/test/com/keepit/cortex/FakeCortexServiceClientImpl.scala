@@ -42,7 +42,7 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
   override def sampleURIsForTopic(topic: Int)(implicit version: LDAVersionOpt = None): Future[(Seq[Id[NormalizedURI]], Seq[Float])] = ???
   override def getSimilarUsers(userId: Id[User], topK: Int)(implicit version: LDAVersionOpt = None): Future[(Seq[Id[User]], Seq[Float])] = ???
   override def unamedTopics(limit: Int = 20)(implicit version: LDAVersionOpt = None): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] = ???
-  override def getTopicNames(uris: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Option[String]]] = Future.successful(Seq.fill(uris.length)(None))
+  override def getTopicNames(uris: Seq[Id[NormalizedURI]], userIdOpt: Option[Id[User]])(implicit version: LDAVersionOpt = None): Future[Seq[Option[String]]] = Future.successful(Seq.fill(uris.length)(None))
   override def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Seq[Id[Keep]]]] = Future.successful(Seq.fill(uriIds.length)(Seq()))
   override def libraryTopic(libId: Id[Library])(implicit version: LDAVersionOpt = None): Future[Option[Array[Float]]] = ???
 
