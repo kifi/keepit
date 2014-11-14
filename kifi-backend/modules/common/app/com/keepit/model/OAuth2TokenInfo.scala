@@ -6,14 +6,16 @@ import securesocial.core.OAuth2Info
 
 // replaces securesocial.core.OAuth2Info
 @json case class OAuth2TokenInfo(
-  accessToken: OAuth2AccessToken,
-  tokenType: Option[String] = None,
-  expiresIn: Option[Int] = None,
-  refreshToken: Option[String] = None)
+    accessToken: OAuth2AccessToken,
+    tokenType: Option[String] = None,
+    expiresIn: Option[Int] = None,
+    refreshToken: Option[String] = None) {
+  implicit def toOAuth2Info: OAuth2Info = OAuth2Info(accessToken.token, tokenType, expiresIn, refreshToken)
+}
 
 object OAuth2TokenInfo {
-  implicit def toOAuth2Info(token: OAuth2TokenInfo) =
+  implicit def toOAuth2Info(token: OAuth2TokenInfo): OAuth2Info =
     OAuth2Info(token.accessToken.token, token.tokenType, token.expiresIn, token.refreshToken)
-  implicit def fromOAuth2Info(old: OAuth2Info) =
+  implicit def fromOAuth2Info(old: OAuth2Info): OAuth2TokenInfo =
     OAuth2TokenInfo(accessToken = OAuth2AccessToken(old.accessToken), old.tokenType, old.expiresIn, old.refreshToken)
 }

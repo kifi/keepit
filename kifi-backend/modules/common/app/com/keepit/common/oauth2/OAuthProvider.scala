@@ -44,6 +44,18 @@ case class UserProfileInfo(
   lastNameOpt: Option[String],
   pictureUrl: Option[java.net.URL])
 
+object UserProfileInfo {
+  implicit def toUserProfileInfo(identity: securesocial.core.Identity) = UserProfileInfo(
+    ProviderIds.toProviderId(identity.identityId.providerId),
+    ProviderUserId(identity.identityId.userId),
+    identity.fullName,
+    identity.email.map(EmailAddress(_)),
+    Some(identity.firstName),
+    Some(identity.lastName),
+    identity.avatarUrl.map(new java.net.URL(_))
+  )
+}
+
 trait OAuthProvider {
 
   def providerId: ProviderId
@@ -54,11 +66,15 @@ trait OAuthProvider {
 
 }
 
+trait ProviderRegistry {
+  def get(providerId: ProviderId): Option[OAuthProvider]
+}
+
 @Singleton
-class OAuthProviderRegistry @Inject() (
+class ProviderRegistryImpl @Inject() (
     airbrake: AirbrakeNotifier,
     fbProvider: FacebookOAuthProvider,
-    lnkdProvider: LinkedInOAuthProvider) extends Logging {
+    lnkdProvider: LinkedInOAuthProvider) extends ProviderRegistry with Logging {
   def get(providerId: ProviderId): Option[OAuthProvider] = {
     providerId match {
       case ProviderIds.Facebook => Some(fbProvider)

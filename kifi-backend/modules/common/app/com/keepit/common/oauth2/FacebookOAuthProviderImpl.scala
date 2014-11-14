@@ -14,7 +14,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import play.api.Play.current
 
-@ImplementedBy(classOf[FacebookOAuthProviderImpl])
 trait FacebookOAuthProvider extends OAuthProvider {
 
   val MeApi = "https://graph.facebook.com/me?fields=name,first_name,last_name,picture,email&return_ssl_resources=1&access_token="

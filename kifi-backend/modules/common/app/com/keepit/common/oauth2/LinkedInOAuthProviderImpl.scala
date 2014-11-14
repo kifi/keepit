@@ -13,7 +13,6 @@ import play.api.libs.ws.WS
 
 import scala.concurrent.Future
 
-@ImplementedBy(classOf[LinkedInOAuthProviderImpl])
 trait LinkedInOAuthProvider extends OAuthProvider {
   val providerId = ProviderIds.LinkedIn
 }

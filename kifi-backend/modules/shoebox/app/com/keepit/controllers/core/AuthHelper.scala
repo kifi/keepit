@@ -5,7 +5,8 @@ import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
-import com.keepit.common.oauth2.{ OAuthProviderRegistry, OAuth2AccessToken, ProviderId }
+import com.keepit.common.oauth2.adaptor.SecureSocialAdaptor
+import com.keepit.common.oauth2.{ OAuth2AccessToken, ProviderIds, ProviderRegistry }
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
 import securesocial.core._
@@ -37,9 +38,10 @@ import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.performance._
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
+import scala.concurrent.duration._
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
@@ -50,7 +52,7 @@ class AuthHelper @Inject() (
     db: Database,
     clock: Clock,
     airbrakeNotifier: AirbrakeNotifier,
-    providerRegistry: OAuthProviderRegistry,
+    providerRegistry: ProviderRegistry,
     authCommander: AuthCommander,
     userRepo: UserRepo,
     userCredRepo: UserCredRepo,
@@ -519,21 +521,19 @@ class AuthHelper @Inject() (
     }
   }
 
-  def doAccessTokenLogin(providerName: String, oAuth2Info: OAuth2Info)(implicit request: Request[JsValue]): Result = {
-    (for {
-      provider <- Registry.providers.get(providerName)
-    } yield {
-      Try {
-        provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oAuth2Info)))
-      } match {
-        case Success(socialUser) =>
+  def doAccessTokenLogin(providerName: String, oAuth2Info: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
+    providerRegistry.get(ProviderIds.toProviderId(providerName)) match {
+      case None =>
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
+      case Some(provider) =>
+        provider.getUserProfileInfo(OAuth2AccessToken(oAuth2Info.accessToken)) map { info =>
+          val socialUser = SecureSocialAdaptor.toSocialUser(info, AuthenticationMethod.OAuth2)
           authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
-        case Failure(t) =>
-          log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during fillProfile; token=${oAuth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
-          BadRequest(Json.obj("error" -> "invalid_token"))
-      }
-    }) getOrElse {
-      BadRequest(Json.obj("error" -> "invalid_arguments"))
+        } recover {
+          case t: Throwable =>
+            log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oAuth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+            BadRequest(Json.obj("error" -> "invalid_token"))
+        }
     }
   }
 

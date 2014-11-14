@@ -1,10 +1,33 @@
 package com.keepit.common.oauth2
 
 import com.google.inject.{ Singleton, Provides }
+import com.keepit.model.OAuth2TokenInfo
+
+import scala.concurrent.Future
+
+trait FakeOAuthProvider extends OAuthProvider {
+
+  var profileInfo = UserProfileInfo(providerId, ProviderUserId("asdf"), "Foo Bar", None, None, None, None)
+  var longTermTokenOpt: Option[OAuth2TokenInfo] = None
+
+  def setProfileInfo(info: UserProfileInfo) { profileInfo = info }
+  def setLongTermToken(token: OAuth2TokenInfo) { longTermTokenOpt = Some(token) }
+
+  def exchangeLongTermToken(tokenInfo: OAuth2TokenInfo): Future[OAuth2TokenInfo] = Future.successful { longTermTokenOpt getOrElse tokenInfo }
+  def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = Future.successful { profileInfo }
+
+}
+
+@Singleton
+class FakeFacebookOAuthProvider extends FacebookOAuthProvider with FakeOAuthProvider
+@Singleton
+class FakeLinkedInOAuthProvider extends LinkedInOAuthProvider with FakeOAuthProvider
 
 case class FakeOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
   def configure(): Unit = {
-
+    bind[ProviderRegistry].to[ProviderRegistryImpl]
+    bind[FacebookOAuthProvider].to[FakeFacebookOAuthProvider]
+    bind[LinkedInOAuthProvider].to[FakeLinkedInOAuthProvider]
   }
 
   @Provides
