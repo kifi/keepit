@@ -227,7 +227,11 @@ class RecommendationsCommander @Inject() (
       })
     }
 
-    for (uriRecos <- uriRecosFut; libRecos <- topPublicLibraryRecos(userId)) yield libRecos ++ uriRecos
+    if (userExperimentCommander.userHasExperiment(userId, ExperimentType.LIBRARIES)) {
+      for (uriRecos <- uriRecosFut; libRecos <- topPublicLibraryRecos(userId)) yield libRecos ++ uriRecos
+    } else {
+      uriRecosFut
+    }
 
   }
 
