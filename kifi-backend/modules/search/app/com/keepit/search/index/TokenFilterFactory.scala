@@ -132,9 +132,6 @@ object WrapperTokenFilterFactory {
   def apply(constructor: Constructor[TokenStream]) = new TokenFilterFactory {
     def apply(tokenStream: TokenStream) = constructor.newInstance(tokenStream)
   }
-  def apply(constructor: Constructor[TokenStream], version: Version) = new TokenFilterFactory {
-    def apply(tokenStream: TokenStream) = constructor.newInstance(version, tokenStream)
-  }
 }
 
 class FrenchElisionFilter(tokenStream: TokenStream)

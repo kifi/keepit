@@ -149,18 +149,12 @@ class Analyzer(tokenizerFactory: TokenizerFactory,
 
   def withFilter[T <: TokenFilter](implicit m: ClassTag[T]): Analyzer = {
     try {
-      val constructor = m.runtimeClass.getConstructor(classOf[Version], classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
-      withFilter(WrapperTokenFilterFactory(constructor, Version.LATEST))
+      val constructor = m.runtimeClass.getConstructor(classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
+      withFilter(WrapperTokenFilterFactory(constructor))
     } catch {
       case ex: NoSuchMethodException =>
-        try {
-          val constructor = m.runtimeClass.getConstructor(classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
-          withFilter(WrapperTokenFilterFactory(constructor))
-        } catch {
-          case ex: NoSuchMethodException =>
-            log.error("failed to find a filter constructor: %s".format(m.runtimeClass.toString))
-            this
-        }
+        log.error("failed to find a filter constructor: %s".format(m.runtimeClass.toString))
+        this
     }
   }
 
