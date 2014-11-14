@@ -13,7 +13,7 @@ import scala.util.Random
 
 class KeepLangsTest extends Specification {
 
-  private[this] val config = new IndexWriterConfig(Version.LUCENE_47, DefaultAnalyzer.defaultAnalyzer)
+  private[this] val config = new IndexWriterConfig(Version.LATEST, DefaultAnalyzer.defaultAnalyzer)
 
   private[this] val langs1 = Seq(
     "es", "es", "es", "es", "es", "es", "es", "es", "es", "es", // 10x

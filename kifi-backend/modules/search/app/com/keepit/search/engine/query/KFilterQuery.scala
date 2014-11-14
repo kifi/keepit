@@ -23,8 +23,8 @@ abstract class KFilterQuery extends Query with ProjectableQuery {
 
       override def explain(context: AtomicReaderContext, doc: Int): Explanation = underlying.explain(context, doc)
 
-      override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-        underlying.scorer(context, scoreDocsInOrder, topScorer, acceptDocs)
+      override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+        underlying.scorer(context, acceptDocs)
       }
 
       override def getQuery(): Query = underlying.getQuery()

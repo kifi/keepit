@@ -65,7 +65,7 @@ class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Wei
 
   override def explain(context: AtomicReaderContext, doc: Int) = {
     val reader = context.reader
-    val sc = scorer(context, true, false, reader.getLiveDocs);
+    val sc = scorer(context, reader.getLiveDocs);
     val exists = (sc != null && sc.advance(doc) == doc);
 
     val result = new ComplexExplanation()
@@ -106,11 +106,11 @@ class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Wei
     result
   }
 
-  override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    val sourceScorer = sourceWeight.scorer(context, true, false, acceptDocs)
+  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+    val sourceScorer = sourceWeight.scorer(context, acceptDocs)
     if (sourceScorer == null) null
     else {
-      val conditionScorer = conditionWeight.scorer(context, true, false, acceptDocs)
+      val conditionScorer = conditionWeight.scorer(context, acceptDocs)
       if (conditionScorer == null) null
       else new ConditionalScorer(this, sourceScorer, conditionScorer)
     }
