@@ -2,7 +2,7 @@ package com.keepit.social.providers
 
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.logging.Logging
-import com.keepit.common.oauth2.FacebookOAuthProvider
+import com.keepit.common.oauth2.FacebookOAuthProviderImpl
 import com.keepit.common.oauth2.adaptor.SecureSocialProviderHelper
 import com.keepit.social.UserIdentityProvider
 
@@ -23,6 +23,6 @@ class FacebookProvider(app: Application)
   }
 
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal] // fail hard
-  lazy val provider = global.injector.instance[FacebookOAuthProvider]
+  lazy val provider = global.injector.instance[FacebookOAuthProviderImpl]
 
 }

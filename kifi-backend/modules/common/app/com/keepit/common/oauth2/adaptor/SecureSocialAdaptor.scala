@@ -1,7 +1,7 @@
 package com.keepit.common.oauth2.adaptor
 
 import com.keepit.common.oauth2.{ OAuth2AccessToken, OAuthProvider, UserProfileInfo }
-import securesocial.core.{ OAuth2Provider, AuthenticationMethod, IdentityId, SocialUser }
+import securesocial.core._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.duration._

@@ -5,6 +5,7 @@ import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
+import com.keepit.common.oauth2.{ OAuthProviderRegistry, OAuth2AccessToken, ProviderId }
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
 import securesocial.core._
@@ -49,6 +50,7 @@ class AuthHelper @Inject() (
     db: Database,
     clock: Clock,
     airbrakeNotifier: AirbrakeNotifier,
+    providerRegistry: OAuthProviderRegistry,
     authCommander: AuthCommander,
     userRepo: UserRepo,
     userCredRepo: UserCredRepo,

@@ -1,22 +1,39 @@
 package com.keepit.common.oauth2
 
+import com.google.inject.{ Singleton, Inject }
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
+import com.keepit.model.OAuth2TokenInfo
 
 import scala.concurrent.Future
 
-class AuthException(msg: String, cause: Throwable) extends Throwable(msg, cause) {
-  def this(msg: String) = this(msg, null)
+sealed abstract class ProviderId(val id: String) {
+  override def toString() = s"[ProviderId($id)]"
 }
-
-sealed abstract class ProviderId(val id: String)
 object ProviderIds {
   object Facebook extends ProviderId("facebook")
   object LinkedIn extends ProviderId("linkedin")
+  def toProviderId(id: String) = id match {
+    case Facebook.id => Facebook
+    case LinkedIn.id => LinkedIn
+    case _ => throw new IllegalArgumentException(s"[toProviderId] id=$id not supported")
+  }
 }
 
 case class ProviderUserId(val id: String) extends AnyVal
 
-case class OAuth2AccessToken(val token: String) extends AnyVal
+case class OAuth2AccessToken(val token: String) extends AnyVal {
+  override def toString() = s"[OAuth2AccessToken] ${token.take(5)}...${token.takeRight(5)}"
+}
+
+object OAuth2AccessToken {
+  import play.api.libs.json._
+  implicit val format = Format(__.read[String].map(OAuth2AccessToken(_)),
+    new Writes[OAuth2AccessToken] {
+      def writes(o: OAuth2AccessToken) = JsString(o.token)
+    })
+}
 
 case class UserProfileInfo(
   providerId: ProviderId,
@@ -33,4 +50,20 @@ trait OAuthProvider {
 
   def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo]
 
+  def exchangeLongTermToken(tokenInfo: OAuth2TokenInfo): Future[OAuth2TokenInfo]
+
+}
+
+@Singleton
+class OAuthProviderRegistry @Inject() (
+    airbrake: AirbrakeNotifier,
+    fbProvider: FacebookOAuthProvider,
+    lnkdProvider: LinkedInOAuthProvider) extends Logging {
+  def get(providerId: ProviderId): Option[OAuthProvider] = {
+    providerId match {
+      case ProviderIds.Facebook => Some(fbProvider)
+      case ProviderIds.LinkedIn => Some(lnkdProvider)
+      case _ => None
+    }
+  }
 }

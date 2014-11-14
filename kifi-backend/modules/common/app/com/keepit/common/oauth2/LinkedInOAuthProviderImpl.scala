@@ -1,10 +1,11 @@
 package com.keepit.common.oauth2
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.social.providers.LinkedInProvider
+import com.keepit.model.OAuth2TokenInfo
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.JsArray
@@ -12,14 +13,32 @@ import play.api.libs.ws.WS
 
 import scala.concurrent.Future
 
+@ImplementedBy(classOf[LinkedInOAuthProviderImpl])
+trait LinkedInOAuthProvider extends OAuthProvider {
+  val providerId = ProviderIds.LinkedIn
+}
+
+object LinkedInOAuthProvider {
+  val Api = "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,email-address,formatted-name,picture-urls::(original);secure=true)?format=json&oauth2_access_token="
+  val LinkedIn = "linkedin"
+  val ErrorCode = "errorCode"
+  val Message = "message"
+  val RequestId = "requestId"
+  val Timestamp = "timestamp"
+  val Id = "id"
+  val FirstName = "firstName"
+  val LastName = "lastName"
+  val EmailAddr = "emailAddress"
+  val FormattedName = "formattedName"
+  val PictureUrl = "pictureUrls"
+}
+
 @Singleton
-class LinkedInOAuthProvider @Inject() (airbrake: AirbrakeNotifier) extends OAuthProvider with Logging {
+class LinkedInOAuthProviderImpl @Inject() (airbrake: AirbrakeNotifier) extends LinkedInOAuthProvider with Logging {
 
-  val providerId: ProviderId = ProviderIds.LinkedIn
-
-  import com.keepit.social.providers.LinkedInProvider._
+  import LinkedInOAuthProvider._
   def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {
-    WS.url(LinkedInProvider.Api + accessToken).withRequestTimeout(120000).get() map { response =>
+    WS.url(Api + accessToken).withRequestTimeout(120000).get() map { response =>
       val me = response.json
       (me \ ErrorCode).asOpt[Int] match {
         case Some(code) => {
@@ -50,5 +69,8 @@ class LinkedInOAuthProvider @Inject() (airbrake: AirbrakeNotifier) extends OAuth
       }
     }
   }
+
+  // not supported -- LinkedIn OAuth limitations
+  def exchangeLongTermToken(tokenInfo: OAuth2TokenInfo): Future[OAuth2TokenInfo] = Future.successful(tokenInfo)
 
 }
