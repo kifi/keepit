@@ -31,7 +31,7 @@
         </div>
 
         <div class="kf-keep-info-wrap" ng-if="cardType=='small'">
-          <div kf-ellipsis ng-bind="keep.summary.description" max-num-lines="linesToShow" class="kf-keep-description"></div>
+          <div kf-ellipsis large-text="keep.summary.description" max-num-lines="linesToShow" class="kf-keep-description"></div>
         </div>
 
       </div>
@@ -41,7 +41,7 @@
 
       <div ng-if="cardType=='youtube'" class="kf-keep-youtube-content">
         <div kf-youtube video-id=youtubeId></div>
-        <div kf-ellipsis ng-bind="keep.summary.description" max-num-lines=3 class="kf-keep-description"></div>
+        <div kf-ellipsis large-text="keep.summary.description" max-num-lines=3 class="kf-keep-description"></div>
       </div>
 
     </div>

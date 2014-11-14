@@ -98,7 +98,7 @@
                 <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
               </div>
               <div class="kf-nav-lib-info">
-                <div kf-ellipsis ng-bind="library.name" max-num-lines=2 class="kf-nav-lib-name"></div>
+                <div kf-ellipsis large-text="library.name" max-num-lines=2 class="kf-nav-lib-name"></div>
                 <div class="kf-nav-lib-text">
                   <ng-pluralize count="library.numKeeps"
                                 when="{'0': '',
@@ -124,7 +124,7 @@
                 <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
               </div>
               <div class="kf-nav-lib-info">
-                <div kf-ellipsis ng-bind="library.name" max-num-lines=2 class="kf-nav-lib-name"></div>
+                <div kf-ellipsis large-text="library.name" max-num-lines=2 class="kf-nav-lib-name"></div>
                 <div class="kf-nav-lib-text">invitation pending</div>
               </div>
             </a>

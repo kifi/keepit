@@ -20,7 +20,7 @@
 
       <div ng-switch="recommendation" class="kf-keep-lib-name-container kf-keep-title">
         <a ng-switch-when="true" class="kf-keep-lib-name" ng-href="{{library.url}}" ng-attr-title="{{library.name}}" ng-bind-html="library.name"></a>
-        <span ng-switch-when="false" class="kf-keep-lib-name" title="{{library.name}}" kf-ellipsis ng-bind="library.name" max-num-lines=2 num-reloads=3></span>
+        <span ng-switch-when="false" class="kf-keep-lib-name" title="{{library.name}}" kf-ellipsis large-text="library.name" max-num-lines=2 num-reloads=3></span>
       </div>
     </div>
 

@@ -19,7 +19,7 @@ angular.module('kifi')
   return {
     restrict :'A',
     scope: {
-      ngBind: '=',
+      largeText: '=',
       ellipsisAppend: '@',
       maxNumLines: '=',
       numReloads: '='
@@ -41,25 +41,25 @@ angular.module('kifi')
         var lastWindowWidth = 0;
 
         function buildEllipsis() {
-          if (typeof(scope.ngBind) !== 'undefined') {
+          if (typeof(scope.largeText) !== 'undefined') {
             copyElement.css('width', element.width());
 
             // measure height of one line
             copyElement.html('x');
             var heightPerLine = copyElement.height();
 
-            copyElement.html(scope.ngBind);
+            copyElement.html(scope.largeText);
             var currentHeight = copyElement.height();
             var currentNumLines = currentHeight / heightPerLine;
-            var maxIndex = scope.ngBind.length;
+            var maxIndex = scope.largeText.length;
             var maxNumLines = scope.maxNumLines || currentNumLines;
 
             if (currentHeight === 0) {
-              element.html(scope.ngBind);
+              element.html(scope.largeText);
               return;
             }
             if (currentNumLines <= maxNumLines) { // entire name fits
-              element.html(scope.ngBind);
+              element.html(scope.largeText);
               return;
             }
 
@@ -69,12 +69,12 @@ angular.module('kifi')
                 '<span>&hellip;</span>';
 
             // binary search for correct maxIndex
-            var hi = scope.ngBind.length;
+            var hi = scope.largeText.length;
             var lo = 0;
 
             while (hi - lo > 1) {
               maxIndex = lo + Math.floor((hi - lo)/2);
-              copyElement.html(scope.ngBind.substr(0, maxIndex) + appendString);
+              copyElement.html(scope.largeText.substr(0, maxIndex) + appendString);
               currentHeight = copyElement.height();
               currentNumLines = currentHeight / heightPerLine;
 
@@ -85,7 +85,7 @@ angular.module('kifi')
               }
             }
             maxIndex = lo;
-            element.html(scope.ngBind.substr(0, maxIndex) + appendString);
+            element.html(scope.largeText.substr(0, maxIndex) + appendString);
           }
         }
 
@@ -104,10 +104,10 @@ angular.module('kifi')
         //
         // Watchers
         //
-        // Execute ellipsis truncate on ngBind update
-        scope.$watch('ngBind', buildEllipsis);
+        // Execute ellipsis truncate on largeText update
+        scope.$watch('largeText', buildEllipsis);
 
-        // Execute ellipsis truncate on ngBind update
+        // Execute ellipsis truncate on largeText update
         scope.$watch('ellipsisAppend', buildEllipsis);
 
         // When window width or height changes - re-init truncation
