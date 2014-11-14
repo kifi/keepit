@@ -19,15 +19,36 @@ invite-header-orange = #ff7c3c
 
 // For library cards that are displayed when there
 // is no logged in user.
+animation-duration = 0.2s
+
 .library-card.loggedOutUser
   border: none
   box-shadow: none
   padding-bottom: 20px
+  max-height: 1200px
+  transition: max-height 0.1s ease 0.1s
+
+  &::before
+    position: absolute
+    top: 0
+    left: -5000px
+    display: block
+    width: 9999px
+    height: 100%
+    background-color: #fff
+    content: ''
+    z-index: -1
+
+  .kf-keep-lib-header
+    max-height: 500px
+    transition: max-height animation-duration ease
 
   .kf-keep-lib-name-container
     width: 100%
     height: auto
+    max-height: 500px
     padding-top: 20px
+    transition: opacity 0.1s ease, max-height animation-duration ease
 
   .kf-keep-lib-name
     text-align: center
@@ -41,6 +62,30 @@ invite-header-orange = #ff7c3c
 
   .kf-keep-lib-info
     margin: 36px 40px 0
+    transition: margin-top animation-duration ease
+
+  .kf-keep-lib-description-container
+  .kf-keep-lib-stats-and-followers
+  .kf-keep-footer
+    max-height: 500px
+    transition: opacity 0.1s ease, max-height animation-duration ease
+
+// During library search
+.library-card.library-search-in-progress
+  max-height: 80px
+
+  .kf-keep-lib-header
+    max-height: 0
+
+  .kf-keep-lib-name-container
+  .kf-keep-lib-description-container
+  .kf-keep-lib-stats-and-followers
+  .kf-keep-footer
+    opacity: 0
+    max-height: 0
+
+  .kf-keep-lib-info
+    margin-top: 0
 
 .public-library-empty-explain
   font-size: 18px

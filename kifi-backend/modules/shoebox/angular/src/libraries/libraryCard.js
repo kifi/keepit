@@ -38,6 +38,7 @@ angular.module('kifi')
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
         scope.editKeepsText = 'Edit Keeps';
+        scope.librarySearchInProgress = false;
         scope.search = { 'text': $routeParams.q || '' };
 
         var magicImages = {
@@ -170,12 +171,26 @@ angular.module('kifi')
             '&kcid=na-vf_twitter-library_invite-lid_' + scope.library.id);
           scope.library.shareText = 'Discover this amazing @Kifi library about ' + scope.library.name + '!';
 
-          if (scope.$root.userLoggedIn === false) {
-            scope.$evalAsync(function () {
-              angular.element('.white-background').height(element.height() + 20);
+          // Figure out whether this library is a library that the user has been invited to.
+          // If so, display an invite header.
+          var promise = null;
+          if (libraryService.invitedSummaries.length) {
+            promise = $q.when(libraryService.invitedSummaries);
+          } else {
+            promise = libraryService.fetchLibrarySummaries(true).then(function () {
+              return libraryService.invitedSummaries;
             });
           }
 
+          promise.then(function (invitedSummaries) {
+            var maybeLib = _.find(invitedSummaries, { 'id' : scope.library.id });
+            if (maybeLib) {
+              scope.library.invite = {
+                inviterName: maybeLib.inviter.firstName + ' ' + maybeLib.inviter.lastName,
+                actedOn: false
+              };
+            }
+          });
         }
 
         function preloadSocial () {
@@ -356,6 +371,10 @@ angular.module('kifi')
               }
             });
           }
+        };
+
+        scope.onSearchInputFocus = function () {
+          scope.librarySearchInProgress = true;
         };
 
         scope.onSearchInputChange = _.debounce(function (query) {
