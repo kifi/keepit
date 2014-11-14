@@ -64,6 +64,17 @@ animation-duration = 0.2s
     margin: 36px 40px 0
     transition: margin-top animation-duration ease
 
+  .kf-keep-lib-owner
+    position: relative
+    left: 0
+    transition: left 0.1s ease 0.2s
+
+  .kf-keep-lib-search
+    transition: right 0.1s ease 0.2s
+
+  .kf-keep-lib-search-input
+    transition: width 0.1s ease 0.2s
+
   .kf-keep-lib-description-container
   .kf-keep-lib-stats-and-followers
   .kf-keep-footer
@@ -71,6 +82,16 @@ animation-duration = 0.2s
     transition: opacity 0.1s ease, max-height animation-duration ease
 
 // During library search
+@keyframes fadeout-fadein {
+  0%
+    opacity: 1
+
+  50%
+    opacity: 0
+
+  100%
+    opacity: 1
+
 .library-card.library-search-in-progress
   max-height: 80px
 
@@ -86,6 +107,16 @@ animation-duration = 0.2s
 
   .kf-keep-lib-info
     margin-top: 0
+
+  .kf-keep-lib-owner
+    left: -55px
+
+  .kf-keep-lib-search
+    right: -115px
+
+  .kf-keep-lib-search-input
+    width: 510px
+    animation: 0.3s fadeout-fadein
 
 .public-library-empty-explain
   font-size: 18px
@@ -208,14 +239,14 @@ animation-duration = 0.2s
 
   .kf-keep-lib-search
     position: absolute
-    top: 10px
+    top: 4px
     right: 0
 
   .kf-keep-lib-search-input
     border: 1px solid #ccc
     border-radius: 10px
     font-size: 14px
-    padding: 3px 8px
+    padding: 8px 8px
     width: 140px
 
   .kf-keep-lib-description-container
