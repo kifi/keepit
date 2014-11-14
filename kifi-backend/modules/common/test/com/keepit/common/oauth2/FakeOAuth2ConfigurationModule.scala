@@ -7,14 +7,13 @@ import scala.concurrent.Future
 
 trait FakeOAuthProvider extends OAuthProvider {
 
-  var profileInfo = UserProfileInfo(providerId, ProviderUserId("asdf"), "Foo Bar", None, None, None, None)
   var longTermTokenOpt: Option[OAuth2TokenInfo] = None
-
-  def setProfileInfo(info: UserProfileInfo) { profileInfo = info }
-  def setLongTermToken(token: OAuth2TokenInfo) { longTermTokenOpt = Some(token) }
-
+  def setLongTermToken(f: => OAuth2TokenInfo) { longTermTokenOpt = Some(f) }
   def exchangeLongTermToken(tokenInfo: OAuth2TokenInfo): Future[OAuth2TokenInfo] = Future.successful { longTermTokenOpt getOrElse tokenInfo }
-  def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = Future.successful { profileInfo }
+
+  var profileInfo = Future.successful(UserProfileInfo(providerId, ProviderUserId("asdf"), "Foo Bar", None, None, None, None))
+  def setProfileInfo(f: => Future[UserProfileInfo]) { profileInfo = f }
+  def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = profileInfo
 
 }
 

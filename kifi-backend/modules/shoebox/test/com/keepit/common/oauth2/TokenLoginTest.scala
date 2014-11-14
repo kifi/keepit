@@ -3,6 +3,7 @@ package com.keepit.common.oauth2
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.auth.AuthException
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ KifiSession, FakeUserActionsModule }
 import com.keepit.common.db.ExternalId
@@ -28,6 +29,8 @@ import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core.{ AuthenticationMethod, IdentityId, OAuth2Info, SocialUser }
 import KifiSession._
+
+import scala.concurrent.Future
 
 class TokenLoginTest extends Specification with ShoeboxApplicationInjector {
 
@@ -76,7 +79,7 @@ class TokenLoginTest extends Specification with ShoeboxApplicationInjector {
       running(new ShoeboxApplication(modules: _*)) {
         val (socialUser, user, sui) = setup()
         val fakeProvider = inject[FakeFacebookOAuthProvider]
-        fakeProvider.setProfileInfo(socialUser)
+        fakeProvider.setProfileInfo(Future.successful(socialUser))
 
         val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(socialUser.oAuth2Info.get)
         val authController = inject[AuthController]
@@ -116,6 +119,32 @@ class TokenLoginTest extends Specification with ShoeboxApplicationInjector {
 
         val json = contentAsJson(result)
         (json \ "error").as[String] === "user_not_found" // success!
+        (json \ "sessionId").asOpt[String].isDefined === false // sessionId shouldn't be set
+      }
+    }
+    "report invalid token" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val (socialUser, _, _) = setup()
+        val fakeProvider = inject[FakeFacebookOAuthProvider]
+        fakeProvider.setProfileInfo {
+          Future.failed(new AuthException("invalid token")) // facebook reports errors
+        }
+
+        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(socialUser.oAuth2Info.get)
+        val authController = inject[AuthController]
+        val path = com.keepit.controllers.core.routes.AuthController.accessTokenLogin("facebook").toString()
+        path === "/auth/token-login/facebook"
+
+        val payload = Json.toJson(oauth2TokenInfo)
+        val request = FakeRequest("POST", path).withBody(payload)
+        val result = authController.accessTokenLogin("facebook")(request)
+        status(result) === BAD_REQUEST
+
+        val sess = session(result)
+        sess.getUserId.isDefined === false
+
+        val json = contentAsJson(result)
+        (json \ "error").as[String] === "invalid_token" // success!
         (json \ "sessionId").asOpt[String].isDefined === false // sessionId shouldn't be set
       }
     }
