@@ -124,4 +124,27 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
 object PublicPageMetaTags {
   val siteName = "Kifi"
   val appId = "104629159695560"
+  /**
+   * http://www.swellpath.com/2014/05/update-new-title-tag-meta-description-character-lengths/
+   * Magic numbers:
+   * Google trimms descriptions with more then 115 characters
+   * Google does not like descriptions with less then 60 characters
+   * This function adds a bit of diversity to the description tags and tries to keep them longer then 70 characters.
+   */
+  def generateMetaTagsDescription(description: Option[String], ownerName: String, libraryName: String): String = {
+    val base = description match {
+      case None =>
+        s"$ownerName's $libraryName Kifi Library"
+      case Some(desc) =>
+        val cleaned = desc.trim
+        if (cleaned.size > 70) cleaned
+        else s"$ownerName's $libraryName Kifi Library: $cleaned"
+    }
+    if (base.size > 70) base
+    else {
+      val extended = s"$base. Kifi -- Connecting people with knowledge"
+      if (extended.size > 80) extended
+      else s"$base. Kifi -- the smartest way to collect, discover, and share knowledge"
+    }
+  }
 }
