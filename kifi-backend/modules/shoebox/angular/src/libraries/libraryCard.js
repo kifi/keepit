@@ -107,7 +107,7 @@ angular.module('kifi')
 
 
         function processUrls(text) {
-          var parts = (text || '').split(uriRe);
+          var parts = text.split(uriRe);
 
           for (var i = 1; i < parts.length; i += 3) {
             var uri = parts[i];
@@ -127,6 +127,11 @@ angular.module('kifi')
         // TODO(yiping): make new libraryDecoratorService to do this. Then, DRY up the code that is
         // currently in nav.js too.
         function augmentData() {
+          // Libraries created with the extension do not have the description field.
+          if (!scope.library.description) {
+            scope.library.description = '';
+          }
+
           // TODO(yiping): get real owner data when owner is not user.
           if (!scope.library.owner) {
             scope.library.owner = profileService.me;
