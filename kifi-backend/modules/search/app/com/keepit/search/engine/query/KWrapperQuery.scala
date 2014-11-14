@@ -51,7 +51,7 @@ class KWrapperWeight(query: KWrapperQuery, subWeight: Weight) extends Weight wit
     out += ((this, 1.0f))
   }
 
-  override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    subWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs)
+  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+    subWeight.scorer(context, acceptDocs)
   }
 }

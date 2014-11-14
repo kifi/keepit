@@ -36,7 +36,7 @@ class KBoostWeight(override val query: KBoostQuery, override val searcher: Index
   }
 
   override def explain(context: AtomicReaderContext, doc: Int) = {
-    val sc = scorer(context, true, false, context.reader.getLiveDocs)
+    val sc = scorer(context, context.reader.getLiveDocs)
     val exists = (sc != null && sc.advance(doc) == doc)
 
     val result = new ComplexExplanation()
@@ -77,7 +77,7 @@ class KBoostWeight(override val query: KBoostQuery, override val searcher: Index
     result
   }
 
-  override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
+  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
     throw new UnsupportedOperationException()
   }
 

@@ -5,7 +5,7 @@ import com.keepit.classify._
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.store.KifInstallationStore
+import com.keepit.common.store.KifiInstallationStore
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ SystemEventTypes, HeimdalContext, SystemEvent, HeimdalServiceClient }
@@ -33,7 +33,7 @@ class SliderAdminController @Inject() (
   domainToTagRepo: DomainToTagRepo,
   domainRepo: DomainRepo,
   userRepo: UserRepo,
-  kifiInstallationStore: KifInstallationStore,
+  kifiInstallationStore: KifiInstallationStore,
   userValueRepo: UserValueRepo,
   domainTagImporter: DomainTagImporter,
   heimdal: HeimdalServiceClient,

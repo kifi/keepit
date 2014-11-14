@@ -5,7 +5,6 @@ import com.keepit.model.{ Username, User, ExperimentType }
 import com.keepit.social.BasicUser
 import com.keepit.search.index.{ IndexDirectory, Indexable, Indexer, DefaultAnalyzer }
 import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
-import org.apache.lucene.util.Version
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -19,7 +18,6 @@ import com.keepit.common.mail.EmailAddress
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 
 object UserIndexer {
-  val luceneVersion = Version.LUCENE_47
 
   val FULLNAME_FIELD = "u_fullname"
   val EMAILS_FIELD = "u_emails"
@@ -58,8 +56,7 @@ object BasicUserSerializer {
           firstName = in.readString,
           lastName = in.readString,
           pictureName = in.readString,
-          username = Username(""),
-          active = true
+          username = Username("")
         )
       case 2 => // with username
         BasicUser(
@@ -70,8 +67,7 @@ object BasicUserSerializer {
           username = {
             val u = in.readString
             Username(u)
-          },
-          active = true
+          }
         )
       case _ =>
         throw new Exception(s"invalid data [version=${version}]")

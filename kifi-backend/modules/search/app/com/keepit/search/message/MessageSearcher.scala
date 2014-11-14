@@ -33,8 +33,7 @@ class MessageSearcher(searcher: Searcher, config: SearchConfig, clock: Clock) {
       val timestampDocVals = reader.getNumericDocValues(ThreadIndexFields.updatedAtField)
       var docNumber = scorer.nextDoc()
       while (docNumber != NO_MORE_DOCS) {
-        val resultBytes = new BytesRef()
-        resultDocVals.get(scorer.docID(), resultBytes)
+        val resultBytes = resultDocVals.get(scorer.docID())
         val resultString = new String(resultBytes.bytes, resultBytes.offset, resultBytes.length, UTF8)
         val updatedAtMillis = timestampDocVals.get(scorer.docID())
         val timeDecay = Math.exp(-(clock.now().getMillis - updatedAtMillis) / halfLifeMillis).toFloat

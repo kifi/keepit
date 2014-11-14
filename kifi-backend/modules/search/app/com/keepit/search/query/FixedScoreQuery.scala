@@ -49,16 +49,15 @@ class FixedScoreWeight(query: FixedScoreQuery, searcher: IndexSearcher) extends 
   override def normalize(norm: Float, topLevelBoost: Float): Unit = subWeight.normalize(norm, topLevelBoost)
 
   override def explain(context: AtomicReaderContext, doc: Int) = {
-    val sc = scorer(context, true, false, context.reader.getLiveDocs)
+    val sc = scorer(context, context.reader.getLiveDocs)
     val exists = (sc != null && sc.advance(doc) == doc)
 
     val result = new ComplexExplanation()
     if (exists) {
       val score = sc.score
 
-      val ret = new ComplexExplanation()
       result.setDescription("fixed score:")
-      result.setValue(query.getBoost)
+      result.setValue(score)
       result.setMatch(true)
     } else {
       result.setDescription("fixed score, doesn't match id %d".format(doc))
@@ -69,8 +68,8 @@ class FixedScoreWeight(query: FixedScoreQuery, searcher: IndexSearcher) extends 
     result
   }
 
-  override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, liveDocs: Bits): Scorer = {
-    val subScorer = subWeight.scorer(context, true, false, liveDocs)
+  override def scorer(context: AtomicReaderContext, liveDocs: Bits): Scorer = {
+    val subScorer = subWeight.scorer(context, liveDocs)
     if (subScorer == null) null else new FixedScoreScorer(this, subScorer, query.getBoost)
   }
 }

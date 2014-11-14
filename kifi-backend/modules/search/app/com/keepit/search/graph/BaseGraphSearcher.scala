@@ -38,8 +38,7 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
       val fieldName = addNumberSuffix(field, iter)
       val docValues = reader.getBinaryDocValues(fieldName)
       if (docValues != null) {
-        var ref = new BytesRef()
-        docValues.get(docid, ref)
+        val ref = docValues.get(docid)
         if (ref.length > 0) {
           if (ref.length == MAX_BINARY_FIELD_LENGTH) {
             bytesRefs.append(new BytesRef(ref.bytes, ref.offset, ref.length - 1)) //last byte is EOF symbol and is dropped. We still have something left

@@ -40,7 +40,7 @@ class RecencyWeight(query: RecencyQuery, subWeight: Weight) extends Weight {
   override def normalize(norm: Float, topLevelBoost: Float): Unit = {}
 
   override def explain(context: AtomicReaderContext, doc: Int) = {
-    val sc = scorer(context, true, false, context.reader.getLiveDocs)
+    val sc = scorer(context, context.reader.getLiveDocs)
     val exists = (sc != null && sc.advance(doc) == doc)
 
     val result = new ComplexExplanation()
@@ -59,8 +59,8 @@ class RecencyWeight(query: RecencyQuery, subWeight: Weight) extends Weight {
 
   def getQuery(): RecencyQuery = query
 
-  override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    val subScorer = subWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs)
+  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+    val subScorer = subWeight.scorer(context, acceptDocs)
     if (subScorer == null) null else {
       val docValues = context.reader.getNumericDocValues(query.timeStampField)
       if (docValues == null) null else {

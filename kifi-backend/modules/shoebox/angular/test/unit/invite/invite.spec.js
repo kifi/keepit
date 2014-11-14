@@ -117,7 +117,7 @@ describe('kifi.invite', function () {
 
     it('shows a success message after server response ok', function () {
       $httpBackend.expectGET(basicUserInfoUrl).respond(200,
-        '{"id":"' + fakeSocialId + '","firstName":"John","lastName":"Doe","pictureName":"123.jpg","username":"johndoe", "active":true}');
+        '{"id":"' + fakeSocialId + '","firstName":"John","lastName":"Doe","pictureName":"123.jpg","username":"johndoe"}');
 
       compile();
       $httpBackend.flush();

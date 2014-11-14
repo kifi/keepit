@@ -9,8 +9,8 @@ import play.api.libs.json.Json
 class BasicUserTest extends Specification {
 
   "BasicUser formats" should {
-    val basicUser1 = BasicUser(externalId = ExternalId[User]("58328718-0222-47bf-9b12-d2d781cb8b0c"), firstName = "Chris", lastName = "Christie", pictureName = "1.jpg", username = Username("cc"), active = true)
-    val basicUser2 = BasicUser(externalId = ExternalId[User]("9813c3a2-f283-4056-ac9f-04d2e39d15a2"), firstName = "Janet", lastName = "Jackson", pictureName = "2.jpg", username = Username("jj"), active = true)
+    val basicUser1 = BasicUser(externalId = ExternalId[User]("58328718-0222-47bf-9b12-d2d781cb8b0c"), firstName = "Chris", lastName = "Christie", pictureName = "1.jpg", username = Username("cc"))
+    val basicUser2 = BasicUser(externalId = ExternalId[User]("9813c3a2-f283-4056-ac9f-04d2e39d15a2"), firstName = "Janet", lastName = "Jackson", pictureName = "2.jpg", username = Username("jj"))
     val userId1 = Id[User](1)
     val userId2 = Id[User](2)
     val userId3 = Id[User](3)

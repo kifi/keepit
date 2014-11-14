@@ -207,6 +207,7 @@ kifi.form = (function () {
         email: email,
         password: password
       }).done(function (data) {
+        Tracker.track($('html').data('trackViewEvent'));
         animation.update(1);
         animation.success();
         if (!navigate(data)) {
