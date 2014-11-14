@@ -161,7 +161,7 @@ class AdminLDAController @Inject() (
   }
 
   def topicDetail(topicId: Int, version: Int) = AdminUserPage.async { implicit request =>
-    cortex.sampleURIsForTopic(topicId).map {
+    cortex.sampleURIsForTopic(topicId)(int2Version(version)).map {
       case (uriIds, scores) =>
         val uris = db.readOnlyReplica { implicit s =>
           uriIds.map { id => uriRepo.get(id) }
