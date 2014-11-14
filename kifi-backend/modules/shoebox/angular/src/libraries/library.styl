@@ -19,8 +19,6 @@ invite-header-orange = #ff7c3c
 
 // For library cards that are displayed when there
 // is no logged in user.
-animation-duration = 0.2s
-
 .library-card.loggedOutUser
   border: none
   box-shadow: none
@@ -41,14 +39,14 @@ animation-duration = 0.2s
 
   .kf-keep-lib-header
     max-height: 500px
-    transition: max-height animation-duration ease
+    transition: max-height 0.2s ease
 
   .kf-keep-lib-name-container
     width: 100%
     height: auto
     max-height: 500px
     padding-top: 20px
-    transition: opacity 0.1s ease, max-height animation-duration ease
+    transition: opacity 0.1s ease, max-height 0.2s ease
 
   .kf-keep-lib-name
     text-align: center
@@ -62,7 +60,7 @@ animation-duration = 0.2s
 
   .kf-keep-lib-info
     margin: 36px 40px 0
-    transition: margin-top animation-duration ease
+    transition: margin-top 0.2s ease
 
   .kf-keep-lib-owner
     position: relative
@@ -79,7 +77,7 @@ animation-duration = 0.2s
   .kf-keep-lib-stats-and-followers
   .kf-keep-footer
     max-height: 500px
-    transition: opacity 0.1s ease, max-height animation-duration ease
+    transition: opacity 0.1s ease, max-height 0.2s ease
 
 // During library search
 @keyframes fadeout-fadein {
@@ -116,7 +114,7 @@ animation-duration = 0.2s
 
   .kf-keep-lib-search-input
     width: 510px
-    animation: 0.3s fadeout-fadein
+    animation: 0.2s fadeout-fadein 0.1s
 
 .public-library-empty-explain
   font-size: 18px
