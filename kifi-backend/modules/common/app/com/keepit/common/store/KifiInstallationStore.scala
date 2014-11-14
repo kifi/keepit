@@ -14,15 +14,15 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 case class KifiInstallationDetails(gold: KifiExtVersion, killed: Seq[KifiExtVersion])
 
-trait KifInstallationStore extends ObjectStore[String, KifiInstallationDetails] {
+trait KifiInstallationStore extends ObjectStore[String, KifiInstallationDetails] {
   protected val defaultValue = KifiInstallationDetails(KifiExtVersion("2.8.55"), Nil)
   def get(): KifiInstallationDetails
   def getRaw(): KifiInstallationDetails
   def set(newDetails: KifiInstallationDetails)
 }
 
-class S3KifInstallationStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[KifiInstallationDetails] = S3KifInstallationStoreImpl.detailsFormat)
-    extends S3JsonStore[String, KifiInstallationDetails] with KifInstallationStore {
+class S3KifiInstallationStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[KifiInstallationDetails] = S3KifiInstallationStoreImpl.detailsFormat)
+    extends S3JsonStore[String, KifiInstallationDetails] with KifiInstallationStore {
   private val s3Get = (id: String) => super.get(id)
   private val kifiInstallationKey = "browser_extension"
 
@@ -41,7 +41,7 @@ class S3KifInstallationStoreImpl(val bucketName: S3Bucket, val amazonS3Client: A
   })
 
   override def get(id: String): Option[KifiInstallationDetails] = {
-    Some(cachedValue(id))
+    Some(cachedValue.get(id))
   }
   def get(): KifiInstallationDetails = cachedValue.get(kifiInstallationKey)
   def getRaw(): KifiInstallationDetails = s3Get(kifiInstallationKey).getOrElse(defaultValue)
@@ -59,7 +59,7 @@ class S3KifInstallationStoreImpl(val bucketName: S3Bucket, val amazonS3Client: A
   }
 }
 
-object S3KifInstallationStoreImpl {
+object S3KifiInstallationStoreImpl {
   implicit val versionFormat = new Format[KifiExtVersion] {
     def reads(json: JsValue) = JsSuccess(KifiExtVersion(json.as[String]))
     def writes(version: KifiExtVersion) = JsString(version.toString)
@@ -67,7 +67,7 @@ object S3KifInstallationStoreImpl {
   implicit val detailsFormat = Json.format[KifiInstallationDetails]
 }
 
-class InMemoryKifInstallationStoreImpl extends InMemoryObjectStore[String, KifiInstallationDetails] with KifInstallationStore {
+class InMemoryKifiInstallationStoreImpl extends InMemoryObjectStore[String, KifiInstallationDetails] with KifiInstallationStore {
   private val kifiInstallationKey = "browser_extension"
   def get(): KifiInstallationDetails = get(kifiInstallationKey).getOrElse(defaultValue)
   def getRaw(): KifiInstallationDetails = get()
