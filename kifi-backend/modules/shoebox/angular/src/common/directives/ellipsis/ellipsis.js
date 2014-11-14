@@ -21,7 +21,8 @@ angular.module('kifi')
     scope: {
       ngBind: '=',
       ellipsisAppend: '@',
-      maxNumLines: '='
+      maxNumLines: '=',
+      numReloads: '='
     },
     compile: function(/*elem, attr, linker*/) {
 
@@ -91,10 +92,11 @@ angular.module('kifi')
         // font-changes will affect sizing, but ng-bind applies first!
         // todo (aaron): find something better than this hack
         var numIntervals = 0;
+        var maxIntervals = scope.numReloads || 0;
         $timeout(function intervalRebuild() {
           buildEllipsis();
           numIntervals++;
-          if (numIntervals < 3) {
+          if (numIntervals < maxIntervals) {
             $timeout(intervalRebuild, 1000);
           }
         }, 200);
