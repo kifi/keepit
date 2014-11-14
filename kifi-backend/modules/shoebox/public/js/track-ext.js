@@ -14,6 +14,7 @@
 	var DEFAULT_SOURCE_VALUE = 'body';
 
 	var Tracker = win.Tracker = {
+		track: track,
 		trackClick: function (el) {
 			try {
 				var $el = $(el),
