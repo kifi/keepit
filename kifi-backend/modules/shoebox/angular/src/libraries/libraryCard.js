@@ -107,7 +107,7 @@ angular.module('kifi')
 
 
         function processUrls(text) {
-          var parts = text.split(uriRe);
+          var parts = (text || '').split(uriRe);
 
           for (var i = 1; i < parts.length; i += 3) {
             var uri = parts[i];
