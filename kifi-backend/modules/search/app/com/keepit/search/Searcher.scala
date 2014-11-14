@@ -98,7 +98,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
       indexReader.getContext.leaves.foreach { subReaderContext =>
         val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
         if (!subReader.skip) {
-          val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
+          val scorer = weight.scorer(subReaderContext, subReader.getLiveDocs)
           if (scorer != null) {
             f(scorer, subReader)
           }
@@ -133,10 +133,9 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   }
 
   def getDecodedDocValue[T](field: String, reader: AtomicReader, docid: Int)(implicit decode: (Array[Byte], Int, Int) => T): Option[T] = {
-    var docValues = reader.getBinaryDocValues(field)
+    val docValues = reader.getBinaryDocValues(field)
     if (docValues != null) {
-      var ref = new BytesRef()
-      docValues.get(docid, ref)
+      val ref = docValues.get(docid)
       Some(decode(ref.bytes, ref.offset, ref.length))
     } else {
       None

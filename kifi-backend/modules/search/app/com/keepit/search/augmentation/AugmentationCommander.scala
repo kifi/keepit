@@ -133,8 +133,7 @@ class AugmentationCommanderImpl @Inject() (
       val docs = reader.termDocsEnum(uriTerm)
 
       def getKeepRecord(docId: Int): KeepRecord = {
-        val ref = new BytesRef()
-        recordDocValue.get(docId, ref)
+        val ref = recordDocValue.get(docId)
         KeepRecord.fromByteArray(ref.bytes, ref.offset, ref.length)
       }
 

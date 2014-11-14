@@ -47,5 +47,5 @@ class NullWeight(query: NullQuery) extends Weight {
     result
   }
 
-  override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, liveDocs: Bits): Scorer = null
+  override def scorer(context: AtomicReaderContext, liveDocs: Bits): Scorer = null
 }

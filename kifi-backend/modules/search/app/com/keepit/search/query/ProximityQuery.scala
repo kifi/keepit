@@ -115,7 +115,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
   }
 
   override def explain(context: AtomicReaderContext, doc: Int) = {
-    val sc = scorer(context, true, false, context.reader.getLiveDocs);
+    val sc = scorer(context, context.reader.getLiveDocs);
     val exists = (sc != null && sc.advance(doc) == doc);
     val termsString = query.terms.map { t => if (t.size == 1) t.head.toString else t.mkString("(", ",", ")") }.mkString(",")
     val phrases = if (query.phrases.isEmpty) {
@@ -152,7 +152,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
   def getQuery() = query
 
-  override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
+  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
     val buf = new ArrayBuffer[PositionAndId](termIdMap.size)
     termIdMap.foreach {
       case (equivTerms, id) =>

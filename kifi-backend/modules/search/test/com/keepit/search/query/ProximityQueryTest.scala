@@ -21,7 +21,7 @@ import com.keepit.search.SearchConfig
 
 class ProximityQueryTest extends Specification {
 
-  val config = new IndexWriterConfig(Version.LUCENE_47, DefaultAnalyzer.defaultAnalyzer)
+  val config = new IndexWriterConfig(Version.LATEST, DefaultAnalyzer.defaultAnalyzer)
 
   val gapPenalty = SearchConfig.defaultConfig.asFloat("proximityGapPenalty")
 
@@ -71,7 +71,7 @@ class ProximityQueryTest extends Specification {
       var q = ProximityQuery(mkProxTerms(new Term("B", "abc"), new Term("B", "def")), gapPenalty = gapPenalty, powerFactor = 1f)
       var weight = searcher.createNormalizedWeight(q)
 
-      var scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      var scorer = weight.scorer(readerContext, reader.getLiveDocs)
       val buf = new ArrayBuffer[(Int, Float)]()
       var doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
@@ -87,7 +87,7 @@ class ProximityQueryTest extends Specification {
 
       (weight != null) === true
 
-      scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      scorer = weight.scorer(readerContext, reader.getLiveDocs)
       buf.clear
       doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
@@ -102,7 +102,7 @@ class ProximityQueryTest extends Specification {
       var q = ProximityQuery(mkProxTerms(new Term("B", "aaa"), new Term("B", "bbb"), new Term("B", "ccc"), new Term("B", "ddd")), gapPenalty = gapPenalty, powerFactor = 1f)
       var weight = searcher.createNormalizedWeight(q)
 
-      var scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      var scorer = weight.scorer(readerContext, reader.getLiveDocs)
       val buf = new ArrayBuffer[(Int, Float)]()
       var doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
@@ -118,7 +118,7 @@ class ProximityQueryTest extends Specification {
 
       (weight != null) === true
 
-      scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      scorer = weight.scorer(readerContext, reader.getLiveDocs)
       buf.clear
       doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
@@ -133,7 +133,7 @@ class ProximityQueryTest extends Specification {
       var q = ProximityQuery(mkProxTerms(new Term("B", "aaa"), new Term("B", "bbb"), new Term("B", "ccc"), new Term("B", "ddd")), gapPenalty = gapPenalty, powerFactor = 1f)
       var weight = searcher.createNormalizedWeight(q)
 
-      var scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      var scorer = weight.scorer(readerContext, reader.getLiveDocs)
       var buf = new ArrayBuffer[(Int, Float)]()
       var doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
@@ -147,7 +147,7 @@ class ProximityQueryTest extends Specification {
       q = ProximityQuery(mkProxTerms(new Term("B", "aaa"), new Term("B", "ccc"), new Term("B", "bbb"), new Term("B", "ddd")), gapPenalty = gapPenalty, powerFactor = 1f)
       weight = searcher.createNormalizedWeight(q)
 
-      scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      scorer = weight.scorer(readerContext, reader.getLiveDocs)
       buf = new ArrayBuffer[(Int, Float)]()
       doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
@@ -165,7 +165,7 @@ class ProximityQueryTest extends Specification {
       var q = ProximityQuery(mkProxTerms(new Term("B", "abc"), new Term("B", "abc"), new Term("B", "def")), gapPenalty = gapPenalty, powerFactor = 1f)
       var weight = searcher.createNormalizedWeight(q)
 
-      var scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      var scorer = weight.scorer(readerContext, reader.getLiveDocs)
       val buf = new ArrayBuffer[(Int, Float)]()
       var doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
@@ -181,7 +181,7 @@ class ProximityQueryTest extends Specification {
 
       (weight != null) === true
 
-      scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      scorer = weight.scorer(readerContext, reader.getLiveDocs)
       buf.clear
       doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
@@ -198,7 +198,7 @@ class ProximityQueryTest extends Specification {
       var q = ProximityQuery(Seq(Seq(new Term("B", "abc"), new Term("B", "aaa")), Seq(new Term("B", "def"))), gapPenalty = gapPenalty, powerFactor = 1f)
       var weight = searcher.createNormalizedWeight(q)
 
-      var scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      var scorer = weight.scorer(readerContext, reader.getLiveDocs)
       val buf = new ArrayBuffer[(Int, Float)]()
       var doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
@@ -214,7 +214,7 @@ class ProximityQueryTest extends Specification {
 
       (weight != null) === true
 
-      scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      scorer = weight.scorer(readerContext, reader.getLiveDocs)
       buf.clear
       doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
@@ -230,7 +230,7 @@ class ProximityQueryTest extends Specification {
       val weight = searcher.createNormalizedWeight(q)
       (weight != null) === true
 
-      val scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      val scorer = weight.scorer(readerContext, reader.getLiveDocs)
       scorer === null
     }
     "make a phrase dictionary correctly" in {

@@ -1,22 +1,15 @@
 package com.keepit.search.engine
 
-import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.explain.{ TargetedScorer, DirectExplainContext }
-import com.keepit.search.graph.library.LibraryFields
-import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
-import com.keepit.search.article.{ ArticleFields, ArticleVisibility }
-import com.keepit.search.engine.query.{ QueryProjector, KWeight }
-import com.keepit.search.graph.keep.KeepFields
-import com.keepit.search.index.{ IdMapper, WrappedSubReader }
-import com.keepit.search.util.LongArraySet
-import com.keepit.search.util.join.{ BloomFilter, DataBuffer, DataBufferWriter }
-import org.apache.lucene.index.{ NumericDocValues, Term, AtomicReaderContext }
-import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import com.keepit.search.Searcher
+import com.keepit.search.engine.query.KWeight
+import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.util.join.DataBuffer
+import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.{ Query, Weight, Scorer }
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Future
 
 trait ScoreVectorSource {
   def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit
@@ -49,7 +42,7 @@ trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOpt
       indexReaderContexts.foreach { readerContext =>
         var i = 0
         while (i < scorers.length) {
-          scorers(i) = weights(i)._1.scorer(readerContext, true, false, readerContext.reader.getLiveDocs)
+          scorers(i) = weights(i)._1.scorer(readerContext, readerContext.reader.getLiveDocs)
           i += 1
         }
         writeScoreVectors(readerContext, scorers, coreSize, dataBuffer, directScoreContext)

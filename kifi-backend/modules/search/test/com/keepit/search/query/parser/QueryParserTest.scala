@@ -1,31 +1,15 @@
 package com.keepit.search.query.parser
 
-import com.keepit.search.Lang
 import org.specs2.specification.Scope
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.libs.json.Json
-import play.api.test._
-import play.api.test.Helpers._
-import org.apache.lucene.analysis.core.WhitespaceAnalyzer
-import org.apache.lucene.document.Document
-import org.apache.lucene.document.Field
-import org.apache.lucene.index.IndexReader
-import org.apache.lucene.index.IndexWriter
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.TermQuery
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.BooleanClause
-import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.Query
-import org.apache.lucene.store.RAMDirectory
 
 class QueryParserTest extends Specification {
 
   private trait QueryParserScope extends Scope {
-    val analyzer = new org.apache.lucene.analysis.standard.StandardAnalyzer(org.apache.lucene.util.Version.LUCENE_47)
+    val analyzer = new org.apache.lucene.analysis.standard.StandardAnalyzer()
     val parser = new QueryParser(analyzer, analyzer) with DefaultSyntax
   }
 
