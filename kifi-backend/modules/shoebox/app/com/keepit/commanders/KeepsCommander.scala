@@ -275,7 +275,7 @@ class KeepsCommander @Inject() (
     }.toMap
   }
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep], idealImageSize: ImageSize = KeepImageSize.Large.idealSize): Future[Seq[KeepInfo]] = {
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep], idealImageSize: ImageSize): Future[Seq[KeepInfo]] = {
     if (keeps.isEmpty) Future.successful(Seq.empty[KeepInfo])
     else {
       val augmentationFuture = {
@@ -351,10 +351,9 @@ class KeepsCommander @Inject() (
     val keepImageOpt = keepImageCommander.getBestImageForKeep(keep.id.get, idealImageSize)
     futureSummary.map { summary =>
       keepImageOpt match {
-        case Some(keepImage) =>
-          val url = keepImageCommander.getUrl(keepImage)
-          summary.copy(imageUrl = Some(url), imageWidth = Some(keepImage.width), imageHeight = Some(keepImage.height))
         case None => summary
+        case Some(keepImage) =>
+          summary.copy(imageUrl = keepImage.map(keepImageCommander.getUrl(_)), imageWidth = keepImage.map(_.width), imageHeight = keepImage.map(_.height))
       }
     }
   }
@@ -384,7 +383,7 @@ class KeepsCommander @Inject() (
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
 
-        decorateKeepsIntoKeepInfos(Some(userId), keeps).map { keepInfos =>
+        decorateKeepsIntoKeepInfos(Some(userId), keeps, KeepImageSize.Large.idealSize).map { keepInfos =>
           (keepInfos, clickCounts, rkCounts).zipped.map {
             case (keepInfo, clickCount, rkCount) =>
               keepInfo.copy(clickCount = clickCount, rekeepCount = rkCount)
@@ -738,7 +737,7 @@ class KeepsCommander @Inject() (
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    val keepsWithTags = keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId = None) match {
+    keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId = None) match {
       case Failure(e) => Left(e.getMessage)
       case Success((keep, _)) =>
         val tags = db.readWrite { implicit s =>
@@ -763,7 +762,6 @@ class KeepsCommander @Inject() (
         }
         Right((KeepInfo.fromKeep(keep), tags))
     }
-    keepsWithTags
   }
 
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {

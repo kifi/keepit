@@ -100,55 +100,6 @@ class KeepsController @Inject() (
     }.getOrElse(Future.successful(BadRequest(JsString("0"))))
   }
 
-  // todo: add uriId, sizes, colors, etc.
-  private def toJsObject(url: String, uri: NormalizedURI, pageInfoOpt: Option[PageInfo]): Future[JsObject] = {
-    val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
-    uriSummaryCommander.getURIImage(uri) map { imgUrlOpt =>
-      (screenshotUrlOpt, imgUrlOpt) match {
-        case (None, None) =>
-          Json.obj("url" -> url, "uriId" -> uri.id.get)
-        case (None, Some(imgUrl)) =>
-          Json.obj("url" -> url, "imgUrl" -> imgUrl)
-        case (Some(ssUrl), None) =>
-          Json.obj("url" -> url, "screenshotUrl" -> ssUrl)
-        case (Some(ssUrl), Some(imgUrl)) =>
-          Json.obj("url" -> url, "imgUrl" -> imgUrl, "screenshotUrl" -> ssUrl)
-      }
-    }
-  }
-
-  // todo(martin) - looks like this endpoint is not being used, consider removing
-  def getImageUrls() = UserAction.async(parse.tolerantJson) { request => // WIP; test-only
-    val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
-    log.info(s"[getImageUrls] body=${request.body} urls=${urlsOpt}")
-    urlsOpt match {
-      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_arguments")))
-      case Some(urls) => {
-        val tuples = db.readOnlyReplica { implicit ro =>
-          urls.map { s =>
-            s -> normalizedURIInterner.getByUri(s)
-          }
-        }
-        val tuplesF = tuples map {
-          case (url, uriOpt) =>
-            val (uriOpt, pageInfoOpt) = db.readOnlyMaster { implicit ro =>
-              val uriOpt = normalizedURIInterner.getByUri(url)
-              val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
-              (uriOpt, pageInfoOpt)
-            }
-            uriOpt match {
-              case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
-              case Some(uri) =>
-                toJsObject(url, uri, pageInfoOpt) // todo: batch
-            }
-        }
-        Future.sequence(tuplesF) map { res =>
-          Ok(Json.toJson(res))
-        }
-      }
-    }
-  }
-
   def exportKeeps() = UserAction { request =>
     val exports: Seq[KeepExport] = db.readOnlyReplica { implicit ro =>
       keepRepo.getKeepExports(request.userId)
@@ -188,7 +139,7 @@ class KeepsController @Inject() (
     val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
     keepOpt match {
       case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
-      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep)).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep), KeepImageSize.Large.idealSize).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
       case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
     }
   }

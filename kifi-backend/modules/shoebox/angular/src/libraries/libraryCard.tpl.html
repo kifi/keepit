@@ -25,17 +25,21 @@
     </div>
 
     <div class="kf-keep-lib-info">
-      <div class="kf-keep-lib-owner">
-        <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image">
+      <div class="kf-keep-lib-owner" itemscope itemtype="http://data-vocabulary.org/Person">
+        <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
         <div class="kf-keep-lib-owner-text">
           <div class="kf-keep-lib-curator">Curator:</div>
-          <div class="kf-keep-lib-owner-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+          <div class="kf-keep-lib-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+        </div>
+
+        <div ng-if="!recommendation && isUserLoggedOut && false" class="kf-keep-lib-search">
+          <input class="kf-keep-lib-search-input" type="text" placeholder="Search this library" ng-model="search.text" ng-focus="" ng-blur="" ng-change="onSearchInputChange(search.text)" ng-keydown="">
         </div>
       </div>
 
       <div ng-switch="clippedDescription" class="kf-keep-lib-description-container">
         <p ng-switch-when="true" class="kf-keep-lib-description">
-          {{library.shortDescription}}&hellip;
+          <span ng-bind-html="library.shortDescription"></span>&hellip;
           <a href="javascript:" class="kf-desc-more" ng-click="showLongDescription()">More</a>
         </p>
         <p ng-switch-when="false" class="kf-keep-lib-description" ng-bind-html="library.formattedDescription"></p>
@@ -56,7 +60,7 @@
 
         <div class="kf-keep-lib-follower-preview">
           <div class="kf-keep-lib-follower-pics">
-            <span ng-repeat="follower in followersToShow">
+            <span ng-repeat="follower in followersToShow" itemscope itemtype="http://data-vocabulary.org/Person">
               <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
                 class="kf-keep-lib-user-image"
                 kf-who-tooltip
@@ -64,6 +68,8 @@
                 ng-mouseenter="showTooltip()"
                 ng-mouseleave="hideTooltip()"
                 ng-click="hideTooltip()"
+                itemprop="photo"
+                alt="{{follower.firstName}} {{follower.lastName}}"
               >
             </span>
           </div>
@@ -74,7 +80,7 @@
       </div>
     </div>
   </div>
-  <img ng-if="magicImage" class="kf-keep-lib-image" ng-src="{{magicImage}}">
+  <img ng-if="magicImage" class="kf-keep-lib-image" ng-src="{{magicImage}}" alt="{{library.name}}">
   <div class="kf-keep-footer clearfix">
     <button ng-if="isMyLibrary(library) && isUserLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right library-button-with-icon" ng-click="manageLibrary()">
       <span class="kf-keep-lib-footer-button-icon svg-pen"></span>Manage Library
@@ -82,7 +88,7 @@
     <button ng-if="isMyLibrary(library) && library.numKeeps > 0" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-edit-keeps-button" ng-click="toggleEditKeeps()">
       {{editKeepsText}}
     </button>
-    <button kf-sticky sticky-if="isUserLoggedOut" max-top="15" sticky-width-mode="ignored" on-stick="followStick"
+    <button kf-sticky sticky-if="isUserLoggedOut" max-top="followButtonMaxTop" sticky-width-mode="ignored" on-stick="followStick"
         ng-class="{stickable: isUserLoggedOut}" ng-if="canFollowLibrary(library)" ng-click="followLibrary(library)"
         class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-follow">
       Follow Library

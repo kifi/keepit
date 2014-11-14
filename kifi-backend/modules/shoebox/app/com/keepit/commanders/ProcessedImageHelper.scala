@@ -1,24 +1,33 @@
 package com.keepit.commanders
 
 import java.awt.image.BufferedImage
-import java.io.{ FileInputStream, ByteArrayOutputStream, ByteArrayInputStream }
+import java.io._
 import java.math.BigInteger
+import java.net.URLConnection
 import java.security.MessageDigest
 import javax.imageio.ImageIO
 
-import com.keepit.common.core._
-import com.keepit.common.logging.Logging
+import com.keepit.common.core.File
+import com.keepit.common.net.WebService
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store.ImageSize
-import com.keepit.model.{ KeepImage, ImageHash, ImageFormat }
+import com.keepit.model.{ ImageFormat, ImageHash, KeepImage }
+import org.imgscalr.Scalr
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.{ Json, JsString }
-import play.api.mvc.{ Results, Controller }
+import play.api.libs.iteratee.Iteratee
+import play.api.libs.ws.WS
+import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success, Try }
 
-trait KeepImageHelper {
+trait ProcessedImageHelper {
   val log: Logger
+  val webService: WebService
+
   // Returns Set of bounding box sizes
   protected def calcSizesForImage(image: BufferedImage): Set[Int] = {
     val sizes = KeepImageSize.allSizes.map { size =>
@@ -77,11 +86,11 @@ trait KeepImageHelper {
   }
 
   protected val mimeTypeToImageFormat: String => Option[ImageFormat] = {
-    case "image/jpeg" | "image/jpg" => Some(ImageFormat.JPG)
-    case "image/png" => Some(ImageFormat.PNG)
-    case "image/tiff" => Some(ImageFormat("tiff"))
-    case "image/bmp" => Some(ImageFormat("bmp"))
-    case "image/gif" => Some(ImageFormat("gif"))
+    case t if t.startsWith("image/jpeg") || t.startsWith("image/jpg") => Some(ImageFormat.JPG)
+    case t if t.startsWith("image/png") => Some(ImageFormat.PNG)
+    case t if t.startsWith("image/tiff") => Some(ImageFormat("tiff"))
+    case t if t.startsWith("image/bmp") => Some(ImageFormat("bmp"))
+    case t if t.startsWith("image/gif") => Some(ImageFormat("gif"))
     case _ => None
   }
 
@@ -103,6 +112,66 @@ trait KeepImageHelper {
         Success((is, os.size))
       case Success(false) => Failure(new RuntimeException(s"No valid writer for $format"))
       case Failure(ex) => Failure(ex)
+    }
+  }
+
+  protected def resizeImage(image: BufferedImage, boundingBox: Int): Try[BufferedImage] = Try {
+    val img = Scalr.resize(image, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, boundingBox)
+    log.info(s"[kic] Bounding box $boundingBox resized to ${img.getHeight} x ${img.getWidth}")
+    img
+  }
+
+  protected def detectImageType(file: TemporaryFile): Option[ImageFormat] = {
+    val is = new BufferedInputStream(new FileInputStream(file.file))
+    val formatOpt = Option(URLConnection.guessContentTypeFromStream(is)).flatMap { mimeType =>
+      mimeTypeToImageFormat(mimeType)
+    }.orElse {
+      imageFilenameToFormat(file.file.getName)
+    }
+    is.close()
+    formatOpt
+  }
+
+  private val remoteFetchConsolidater = new RequestConsolidator[String, (ImageFormat, TemporaryFile)](2.minutes)
+
+  protected def fetchRemoteImage(imageUrl: String, timeoutMs: Int = 20000): Future[(ImageFormat, TemporaryFile)] = {
+    remoteFetchConsolidater(imageUrl) { imageUrl =>
+      webService.url(imageUrl).withRequestTimeout(20000).withFollowRedirects(true).getStream().flatMap {
+        case (headers, streamBody) =>
+          val formatOpt = headers.headers.get("Content-Type").flatMap(_.headOption)
+            .flatMap(mimeTypeToImageFormat).orElse {
+              imageFilenameToFormat(imageUrl.substring(imageUrl.lastIndexOf(".") + 1))
+            }
+
+          if (headers.status != 200) {
+            Future.failed(new RuntimeException(s"Image returned non-200 code, ${headers.status}, $imageUrl"))
+          } else if (formatOpt.isEmpty) {
+            Future.failed(new RuntimeException(s"Unknown image type, ${headers.headers.get("Content-Type")}, $imageUrl"))
+          } else {
+            val tempFile = TemporaryFile(prefix = "remote-file", suffix = "." + formatOpt.get.value)
+            tempFile.file.deleteOnExit()
+            val outputStream = new FileOutputStream(tempFile.file)
+
+            val maxSize = 1024 * 1024 * 16
+
+            var len = 0
+            val iteratee = Iteratee.foreach[Array[Byte]] { bytes =>
+              len += bytes.length
+              if (len > maxSize) { // max original size
+                outputStream.close()
+                throw new Exception(s"Original image too large (> $len bytes): $imageUrl")
+              } else {
+                outputStream.write(bytes)
+              }
+            }
+
+            streamBody.run(iteratee).andThen {
+              case result =>
+                outputStream.close()
+                result.get
+            }.map(_ => (formatOpt.get, tempFile))
+          }
+      }
     }
   }
 

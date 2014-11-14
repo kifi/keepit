@@ -27,6 +27,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getIdAndSeqChanged(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[UriIdAndSeq]
   def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
+  def getByNormalizedUrls(normalizedUrls: Seq[String])(implicit session: RSession): Map[String, NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
@@ -172,6 +173,19 @@ class NormalizedURIRepoImpl @Inject() (
     urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
       (for (t <- rows if t.urlHash === hash) yield t).firstOption
     }
+  }
+
+  def getByNormalizedUrls(normalizedUrls: Seq[String])(implicit session: RSession): Map[String, NormalizedURI] = {
+    val hashes = normalizedUrls.map(NormalizedURI.hashUrl(_)).toSet
+    val result = urlHashCache.bulkGetOrElseOpt(hashes map NormalizedURIUrlHashKey) { keys =>
+      val urlHashes = keys.map(_.urlHash)
+      val fetched = (for (t <- rows if t.urlHash.inSet(urlHashes)) yield t).list.map { u =>
+        u.urlHash -> u
+      }.toMap
+
+      keys.map { k => k -> fetched.get(k.urlHash) }.toMap
+    }
+    result.collect { case (_, Some(uri)) => uri.url -> uri }
   }
 
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI] =

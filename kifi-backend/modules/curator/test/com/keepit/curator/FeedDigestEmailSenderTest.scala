@@ -7,7 +7,7 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.FakeHealthcheckModule
-import com.keepit.common.mail.template.helpers.libraryName
+import com.keepit.common.mail.template.helpers.{ libraryName, libraryUrl }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -319,14 +319,19 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val email = shoebox.sentMail(0)
         val html = email.htmlBody.value
 
+        implicit def libId(id: Int) = Id[Library](id.toLong)
+        def libName(id: Id[Library]): String = libraryName(id).body
+        def libUrl(id: Id[Library]): String = libraryUrl(id).body
+
+        // match the html with strings we expect to be in it
+        Seq(libName(4), libUrl(4), libName(1), libUrl(1), libName(2), libUrl(2),
+          "whitehouse&#8203;.gov", "craigslist", "The Verge").foreach { str: String =>
+            html must contain(str)
+          }
+
         // keep from library 3 should not be there because it is already a recommendation from the feed
-        html must not contain "into a library you follow: " + libraryName(Id[Library](3))
-        html must contain("into a library you follow: " + libraryName(Id[Library](1)))
-        html must contain("into a library you follow: " + libraryName(Id[Library](2)))
-        html must contain("into a library you follow: " + libraryName(Id[Library](4)))
-        html must contain("whitehouse&#8203;.gov")
-        html must contain("craigslist")
-        html must contain("The Verge")
+        html must not contain libName(3)
+        html must not contain libUrl(3)
       }
     }
   }

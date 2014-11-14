@@ -80,8 +80,7 @@ class KifiSiteRouter @Inject() (
       MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission")
     } else if (request.path == "/" && request.userIdOpt.isEmpty) {
       //should we ever get to this line???
-      Redirect(com.keepit.controllers.website.routes.HomeController.
-        home)
+      Redirect(com.keepit.controllers.website.routes.HomeController.home)
     } else if (userAgentOpt.exists(_.isMobile) &&
       request.queryString.get(KifiMobileAppLinkFlag.key).exists(_.contains(KifiMobileAppLinkFlag.value))) {
       Ok(views.html.mobile.MobileRedirect(request.uri))

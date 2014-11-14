@@ -3,6 +3,7 @@ package com.keepit.controllers.website
 import java.io.StringWriter
 
 import com.keepit.common.logging.Logging
+import com.keepit.common.http._
 import controllers.AssetsBuilder
 import org.apache.commons.io.IOUtils
 import play.api.Play.current
@@ -37,25 +38,37 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
     }
   }
 
-  private def landing(implicit request: Request[_]) = {
-    val pickOpt = Try {
-      request.getQueryString("v").map(_.toInt)
-    } recover {
-      case t: Throwable =>
-        log.error(s"[landing] Caught exception $t while parsing queryParam(v):${request.queryString("v")}")
-        None
-    } get
+  private trait LandingVersion {
+    def version: Int
+  }
+  private object Version1 extends LandingVersion { val version = 1 }
+  private object Version2 extends LandingVersion { val version = 2 }
 
-    pickOpt match {
-      case Some(idx) if (idx == 1 || idx == 2) =>
-        "index." + idx
-      case _ =>
-        val ip = request.remoteAddress // remoteAddress looks up 'X-Forwarded-For'
-        val hash = (Math.abs(ip.hashCode()) % 100) // rough
-        val winner = if (hash < 50) "index.1" else "index.2"
-        log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$winner")
-        winner
+  def landing(implicit request: Request[_]): String = {
+    val possiblyBot = request.userAgentOpt.map(_.possiblyBot).getOrElse(true)
+    val version: LandingVersion = if (possiblyBot) {
+      Version2
+    } else {
+      val pickOpt = Try {
+        request.getQueryString("v").map(_.toInt)
+      } recover {
+        case t: Throwable =>
+          log.error(s"[landing] Caught exception $t while parsing queryParam(v):${request.queryString("v")}")
+          None
+      } get
+
+      pickOpt match {
+        case Some(idx) if idx == 1 => Version1
+        case Some(idx) if idx == 2 => Version2
+        case _ =>
+          val ip = request.remoteAddress // remoteAddress looks up 'X-Forwarded-For'
+          val hash = (Math.abs(ip.hashCode()) % 100) // rough
+          val winner = if (hash < 50) Version1 else Version2
+          log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$winner")
+          winner
+      }
     }
+    s"index.${version.version}"
   }
 
   def marketingSite(path: String = "index", substitutions: Map[Regex, String] = Map.empty)(implicit request: Request[_]) = {

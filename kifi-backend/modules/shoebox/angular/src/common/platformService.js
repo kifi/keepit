@@ -16,13 +16,12 @@ angular.module('kifi')
     };
 
     var goToAppOrStore = function (url) {
-      url = url || '//kifi.com';
       var safeUrl;
       if (isSupportedMobilePlatform()) {
         if (isIPhone()) {
-          safeUrl = 'kifi:' + url.replace(/https?:/, '');
-
-          if (url.indexOf('branch', url.length - 'branch'.length) !== -1) { // url ends with 'branch'
+          safeUrl = 'kifi:' + (url || '//kifi.com').replace(/https?:/, '');
+          var branchIdx = (url || '').indexOf('branch');
+          if (branchIdx !== -1 && branchIdx > url.indexOf('?')) { // url ends with 'branch'
             createBranchLink({
               url: safeUrl
             }).then(function (url) {
@@ -37,6 +36,7 @@ angular.module('kifi')
             }, 225);
           }
         } else if (isAndroid()) {
+          url = url || 'kifi.com';
           safeUrl = url.replace(/https?:\/\/((www.)?kifi.com)?\/?/, '');
           $window.location = 'intent://' + safeUrl + '#Intent;package=com.kifi;scheme=kifi;action=com.kifi.intent.action.APP_EVENT;end;';
         }

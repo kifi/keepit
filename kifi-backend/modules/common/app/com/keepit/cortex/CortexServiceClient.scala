@@ -43,7 +43,7 @@ trait CortexServiceClient extends ServiceClient {
   def sampleURIsForTopic(topic: Int)(implicit version: LDAVersionOpt = None): Future[(Seq[Id[NormalizedURI]], Seq[Float])]
   def getSimilarUsers(userId: Id[User], topK: Int)(implicit version: LDAVersionOpt = None): Future[(Seq[Id[User]], Seq[Float])] // with scores
   def unamedTopics(limit: Int = 20)(implicit version: LDAVersionOpt = None): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] // with topicWords
-  def getTopicNames(uris: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Option[String]]]
+  def getTopicNames(uris: Seq[Id[NormalizedURI]], userIdOpt: Option[Id[User]])(implicit version: LDAVersionOpt = None): Future[Seq[Option[String]]]
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Seq[Id[Keep]]]]
   def libraryTopic(libId: Id[Library])(implicit version: LDAVersionOpt = None): Future[Option[Array[Float]]]
 
@@ -204,8 +204,8 @@ class CortexServiceClientImpl(
     }
   }
 
-  def getTopicNames(uris: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Option[String]]] = {
-    val payload = Json.obj("uris" -> uris)
+  def getTopicNames(uris: Seq[Id[NormalizedURI]], userIdOpt: Option[Id[User]])(implicit version: LDAVersionOpt = None): Future[Seq[Option[String]]] = {
+    val payload = Json.obj("uris" -> uris, "user" -> userIdOpt)
     call(Cortex.internal.getTopicNames, payload).map { r => (r.json).as[Seq[Option[String]]] }
   }
 

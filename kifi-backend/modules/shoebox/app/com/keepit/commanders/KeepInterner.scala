@@ -21,6 +21,7 @@ import org.joda.time.DateTime
 import play.api.libs.json.Json
 
 import scala.util.{ Failure, Random, Success, Try }
+import com.keepit.common.akka.SafeFuture
 
 case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
@@ -131,6 +132,7 @@ class KeepInterner @Inject() (
     } map { persistedBookmarksWithUri =>
       val bookmark = persistedBookmarksWithUri.bookmark
       if (persistedBookmarksWithUri.isNewKeep) {
+        if (library.kind == LibraryKind.USER_CREATED) SafeFuture { libraryCommander.notifyFollowersOfNewKeeps(library, bookmark) }
         libraryAnalytics.keptPages(userId, Seq(bookmark), context)
         heimdalClient.processKeepAttribution(userId, Seq(bookmark))
       }
@@ -199,6 +201,8 @@ class KeepInterner @Inject() (
     else
       keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
 
+    val trimmedTitle = title.map(_.trim).filter(_.length > 0)
+
     val (isNewKeep, wasInactiveKeep, internedKeep) = currentBookmarkOpt match {
       case Some(bookmark) =>
         val wasInactiveKeep = !bookmark.isActive
@@ -209,7 +213,7 @@ class KeepInterner @Inject() (
         }
 
         val savedKeep = bookmark.copy(
-          title = title orElse bookmark.title orElse uri.title,
+          title = trimmedTitle orElse bookmark.title orElse uri.title,
           state = KeepStates.ACTIVE,
           visibility = library.visibility,
           libraryId = Some(library.id.get)
@@ -224,7 +228,7 @@ class KeepInterner @Inject() (
       case None =>
         val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
         val keptAtResolved = keptAt.orElse(Some(currentDateTime))
-        val keep = Keep(title = title, userId = userId, uriId = uri.id.get, urlId = urlObj.id.get, url = url, source = source, visibility = library.visibility, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint, keptAt = keptAt.orElse(Some(currentDateTime)))
+        val keep = Keep(title = trimmedTitle, userId = userId, uriId = uri.id.get, urlId = urlObj.id.get, url = url, source = source, visibility = library.visibility, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint, keptAt = keptAt.orElse(Some(currentDateTime)))
         (true, false, keepRepo.save(keep))
     }
     if (wasInactiveKeep) {

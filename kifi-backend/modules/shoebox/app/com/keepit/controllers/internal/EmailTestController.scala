@@ -66,11 +66,11 @@ class EmailTestController @Inject() (
       case "libraryInviteUser" =>
         implicit val config = PublicIdConfiguration("secret key")
         val invite = LibraryInvite(libraryId = libraryId, inviterId = userId, userId = Some(friendId), access = LibraryAccess.READ_ONLY, message = msg)
-        emailSenderProvider.libraryInvite.inviteUserToLibrary(invite).map(_.get)
+        emailSenderProvider.libraryInvite.sendInvite(invite).map(_.get)
       case "libraryInviteNonUser" =>
         implicit val config = PublicIdConfiguration("secret key")
         val invite = LibraryInvite(libraryId = libraryId, inviterId = userId, emailAddress = Some(sendTo), userId = None, access = LibraryAccess.READ_ONLY, message = msg)
-        emailSenderProvider.libraryInvite.inviteUserToLibrary(invite).map(_.get)
+        emailSenderProvider.libraryInvite.sendInvite(invite).map(_.get)
       case "confirm" => emailSenderProvider.confirmation.sendToUser(UserEmailAddress(userId = userId, address = sendTo).withVerificationCode(currentDateTime))
       case "tip" if tip.isDefined =>
         val emailTip = EmailTip(tip.get).get
