@@ -63,7 +63,7 @@ trait ProcessedImageHelper {
   // Returns None if image could not be read.
   protected def validateAndLoadImageFile(file: File): Try[BufferedImage] = {
     // ImageIO both can return null and throw exceptions. Isolate them.
-    Try(Option(ImageIO.read(file))).map(t => Try(t.get)).flatten.map { image =>
+    Try(Option(ImageIO.read(file))).map(t => Try(t.getOrElse(throw new Exception("ImageIO returned null image")))).flatten.map { image =>
       log.info(s"Validated and loaded. ${image.getHeight} x ${image.getWidth}")
       image
     }

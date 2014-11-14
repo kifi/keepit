@@ -154,7 +154,7 @@ class AngularRouter @Inject() (
 
   // combined to re-use User lookup
   private def userOrLibrary(request: MaybeUserRequest[_], path: Path, userAgent: UserAgent): Option[Routeable] = {
-    if (path.split.length == 1 || path.split.length == 2) {
+    if (path.split.length > 0) {
       val userOpt = userCommander.getUserByUsernameOrAlias(Username(path.primary))
 
       userOpt.flatMap {
@@ -165,18 +165,20 @@ class AngularRouter @Inject() (
           } else if (path.split.length == 1) { // user profile page
             Some(Angular(None)) // great place to postload request data since we have `user` available
           } else {
-            libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(path.secondary.get)) map {
-              case (library, isLibraryAlias) =>
-                if (library.slug.value != path.secondary.get) { // slug normalization or alias
-                  val redir = "/" + (path.split.dropRight(1) :+ library.slug.value).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
-                  if (isLibraryAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
-                } else {
-                  val metadata = if (userAgent.possiblyBot) {
-                    Some(libMetadata(library))
-                  } else None
-                  Some(Angular(metadata)) // great place to postload request data since we have `lib` available
-                }
-            } getOrElse None
+            path.secondary.flatMap { secondary =>
+              libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(secondary)).map {
+                case (library, isLibraryAlias) =>
+                  if (library.slug.value != secondary) { // slug normalization or alias
+                    val redir = "/" + (path.split.dropRight(1) :+ library.slug.value).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
+                    if (isLibraryAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
+                  } else {
+                    val metadata = if (userAgent.possiblyBot) {
+                      Some(libMetadata(library))
+                    } else None
+                    Some(Angular(metadata)) // great place to postload request data since we have `lib` available
+                  }
+              } getOrElse None
+            }
           }
       }
     } else {
