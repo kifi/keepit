@@ -373,16 +373,12 @@ class FeedDigestEmailSender @Inject() (
   }
 
   private def getKeepsForLibrary(userId: Id[User], max: Int, exclude: Set[Id[NormalizedURI]]): Future[Seq[DigestLibraryItem]] = {
-    userExperimentCommander.getExperimentsByUser(userId) flatMap { experiments =>
-      if (experiments.contains(ExperimentType.LIBRARIES)) {
-        for {
-          keeps <- shoebox.newKeepsInLibrary(userId, LIBRARY_KEEPS_TO_FETCH)
-          dedupedKeeps = keeps.filterNot(c => exclude.contains(c.uriId))
-          candidates <- getLibraryKeepAttributions(userId, dedupedKeeps)
-          digestLibraryItems <- FutureHelpers.findMatching(candidates, max, isEmailWorthy, transformLibraryCandidate).map(_.flatten)
-        } yield digestLibraryItems
-      } else Future.successful(Seq.empty)
-    }
+    for {
+      keeps <- shoebox.newKeepsInLibrary(userId, LIBRARY_KEEPS_TO_FETCH)
+      dedupedKeeps = keeps.filterNot(c => exclude.contains(c.uriId))
+      candidates <- getLibraryKeepAttributions(userId, dedupedKeeps)
+      digestLibraryItems <- FutureHelpers.findMatching(candidates, max, isEmailWorthy, transformLibraryCandidate).map(_.flatten)
+    } yield digestLibraryItems
   }
 
   private def getRecoKeepers(candidate: DigestItemCandidate): DigestItemKeepers = {
