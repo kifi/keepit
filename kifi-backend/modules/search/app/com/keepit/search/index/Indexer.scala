@@ -89,14 +89,14 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     s
   }
 
-  def warmUpIndexDirectory(): Unit = indexDirectory.asFile().map(_.listFiles().toSet).foreach { directoryFiles =>
+  def warmUpIndexDirectory(): Unit = indexDirectory.asFile().map(_.list().toSet).foreach { existingFileNames =>
     log.info(s"warming up an index directory [${indexDirectory.toString}]...")
     val startTime = System.currentTimeMillis
     val reader: DirectoryReader = searcher.indexReader.inner
     val buffer = new Array[Byte](1 << 16)
 
     reader.getIndexCommit().getFileNames().foreach { filename =>
-      if (directoryFiles.contains(filename)) {
+      if (existingFileNames.contains(filename)) {
         var remaining = indexDirectory.fileLength(filename)
         val input = indexDirectory.openInput(filename, new IOContext)
         while (remaining > 0) {
@@ -190,9 +190,9 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     ))
   }
 
-  def indexSize = indexDirectory.asFile().map(_.listFiles().toSet).map { directoryFiles =>
+  def indexSize = indexDirectory.asFile().map(_.list().toSet).map { existingFileNames =>
     searcher.indexReader.inner.getIndexCommit().getFileNames().collect {
-      case filename if directoryFiles.contains(filename) =>
+      case filename if existingFileNames.contains(filename) =>
         indexDirectory.fileLength(filename)
     }.sum
   }
