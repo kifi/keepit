@@ -230,7 +230,7 @@ class ShoeboxController @Inject() (
   def getBasicUsers() = Action(parse.tolerantJson) { request =>
     val userIds = request.body.as[JsArray].value.map { x => Id[User](x.as[Long]) }
     val users = db.readOnlyMaster { implicit s => //using cache
-      userIds.map { userId => userId.id.toString -> Json.toJson(basicUserRepo.load(userId)) }.toMap
+      basicUserRepo.loadAll(userIds.toSet).map { case (id, bu) => id.id.toString -> Json.toJson(bu) }.toMap
     }
     Ok(Json.toJson(users))
   }

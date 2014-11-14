@@ -26,26 +26,22 @@
       <div class="kf-keep-content-line">
         <div class="kf-keep-small-image" ng-if="showSmallImage(keep)">
           <a ng-href="{{keep.url}}" target="_blank" rel="nofollow">
-            <img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="articleImageSmall">
+            <img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="articleImageSmall" alt="{{keep.titleAttr}}">
           </a>
         </div>
 
-        <div class="kf-keep-info-wrap" ng-if="!isYoutubeCard">
-          <div class="kf-keep-info">
-            <div class="kf-keep-description">
-              {{keep.summary.description}}
-            </div>
-          </div>
+        <div class="kf-keep-info-wrap" ng-if="cardType=='small'">
+          <div kf-ellipsis full-text="keep.summary.description" max-num-lines="linesToShow" class="kf-keep-description"></div>
         </div>
 
       </div>
 
       <!-- Large Image or Special Card -->
-      <a ng-href="{{keep.url}}" target="_blank" rel="nofollow"><img class="kf-keep-big-image" ng-if="showBigImage(keep) && !isYoutubeCard" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="articleImageBig"></a>
+      <a ng-href="{{keep.url}}" target="_blank" rel="nofollow"><img class="kf-keep-big-image" ng-if="showBigImage(keep)" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="articleImageBig"></a>
 
-      <div ng-if="isYoutubeCard" class="kf-keep-youtube-content">
+      <div ng-if="cardType=='youtube'" class="kf-keep-youtube-content">
         <div kf-youtube video-id=youtubeId></div>
-        <div kf-ellipsis data-ng-bind="keep.summary.description" data-max-num-lines=3 class="kf-keep-description"></div>
+        <div kf-ellipsis full-text="keep.summary.description" max-num-lines=3 class="kf-keep-description"></div>
       </div>
 
     </div>

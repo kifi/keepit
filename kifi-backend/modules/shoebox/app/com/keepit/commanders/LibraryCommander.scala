@@ -84,7 +84,7 @@ class LibraryCommander @Inject() (
         //facebook OG recommends:
         //We suggest that you use an image of at least 1200x630 pixels.
         val imageUrls: Seq[String] = {
-          val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, KeepImageSize.XLarge.idealSize)
+          val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, KeepImageSize.XLarge.idealSize).values.flatten.toSeq
           val sorted: Seq[KeepImage] = images.sortWith {
             case (image1, image2) =>
               (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)
@@ -110,7 +110,7 @@ class LibraryCommander @Inject() (
           unsafeTitle = s"${library.name} by ${owner.firstName} ${owner.lastName} \u2022 Kifi",
           url = url,
           urlPathOnly = urlPathOnly,
-          unsafeDescription = library.description.getOrElse(s"${owner.fullName}'s ${library.name} Kifi Library"),
+          unsafeDescription = PublicPageMetaTags.generateMetaTagsDescription(library.description, owner.fullName, library.name),
           images = imageUrls,
           facebookId = facebookId,
           createdAt = library.createdAt,
@@ -790,7 +790,7 @@ class LibraryCommander @Inject() (
         elizaClient.sendGlobalNotification(
           userIds = toBeNotified,
           title = s"New Keep in ${library.name}",
-          body = s"${keeper.firstName} has just kept ${newKeep.title}",
+          body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
           linkText = "Go to Library",
           linkUrl = "https://kifi.com" + Library.formatLibraryPath(owner.username, owner.externalId, library.slug),
           imageUrl = s3ImageStore.avatarUrlByUser(keeper),

@@ -85,6 +85,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
           libraryCommander.addLibrary(libraryRequest, user1.id.get)
         }
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/awesome-lib"))) must beAnInstanceOf[Angular]
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/awesome-lib/whatever?q=weee"))) must beAnInstanceOf[Angular]
 
         libraryCommander.modifyLibrary(library.id.get, library.ownerId, slug = Some("most-awesome-lib"))
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/awesome-lib"))) === MovedPermanentlyRoute("/abe.z1234/most-awesome-lib")

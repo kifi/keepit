@@ -93,7 +93,7 @@ class SeedAttributionHelper @Inject() (
   }
 
   private def getTopicAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[TopicAttribution]]] = {
-    cortex.getTopicNames(seeds.map { _.uriId }).map { names =>
+    cortex.getTopicNames(seeds.map { _.uriId }, seeds.headOption.map { _.userId }).map { names =>
       names.map { nameOpt => nameOpt.map { TopicAttribution(_) } }
     }
   }
