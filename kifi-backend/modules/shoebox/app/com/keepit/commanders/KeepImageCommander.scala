@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
 import java.sql.SQLException
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
@@ -65,7 +67,7 @@ class KeepImageCommanderImpl @Inject() (
       None
     } else Some {
       val validKeepImages = keepImages.filter(_.state == KeepImageStates.ACTIVE)
-      KeepImageSize.pickBest(idealSize, validKeepImages)
+      ProcessedImageSize.pickBest(idealSize, validKeepImages)
     }
   }
 
@@ -79,7 +81,7 @@ class KeepImageCommanderImpl @Inject() (
       }
       allImagesByKeepId.mapValues { keepImages =>
         val validKeepImages = keepImages.filter(_.state == KeepImageStates.ACTIVE)
-        KeepImageSize.pickBest(idealSize, validKeepImages)
+        ProcessedImageSize.pickBest(idealSize, validKeepImages)
       }
     }
   }
@@ -434,5 +436,32 @@ class KeepImageCommanderImpl @Inject() (
     }.toOption.flatten
   }
 
+}
+
+sealed trait ImageProcessState
+sealed trait ImageProcessDone extends ImageProcessState
+sealed trait ImageProcessSuccess extends ImageProcessDone
+sealed trait KeepImageStoreInProgress extends ImageProcessState
+sealed abstract class KeepImageStoreFailure(val reason: String) extends ImageProcessState with ImageProcessDone
+sealed abstract class KeepImageStoreFailureWithException(ex: Throwable, reason: String) extends KeepImageStoreFailure(reason)
+object ImageProcessState {
+  // In-progress
+  case class ImageLoadedAndHashed(file: TemporaryFile, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends KeepImageStoreInProgress
+  case class ImageValid(image: BufferedImage, format: ImageFormat, hash: ImageHash) extends KeepImageStoreInProgress
+  case class ReadyToPersist(key: String, format: ImageFormat, is: ByteArrayInputStream, image: BufferedImage, bytes: Int) extends KeepImageStoreInProgress
+  case class UploadedImage(key: String, format: ImageFormat, image: BufferedImage) extends KeepImageStoreInProgress
+
+  // Failures
+  case class UpstreamProviderFailed(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "upstream_provider_failed")
+  case object UpstreamProviderNoImage extends KeepImageStoreFailure("upstream_provider_no_image")
+  case class SourceFetchFailed(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "source_fetch_failed")
+  case class HashFailed(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "image_hash_failed")
+  case class InvalidImage(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "invalid_image")
+  case class DbPersistFailed(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "db_persist_failed")
+  case class CDNUploadFailed(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "cdn_upload_failed")
+
+  // Success
+  case object StoreSuccess extends ImageProcessState with ImageProcessSuccess
+  case class ExistingStoredImagesFound(images: Seq[KeepImage]) extends ImageProcessState with ImageProcessSuccess
 }
 

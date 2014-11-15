@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.net.WebService
 import com.keepit.common.performance._
 
 import com.keepit.common.cache.TransactionalCaching
@@ -28,6 +30,7 @@ import com.keepit.common.service.RequestConsolidator
 import scala.concurrent.duration._
 import com.keepit.common.core._
 
+@Singleton
 class URISummaryCommander @Inject() (
     normalizedUriRepo: NormalizedURIRepo,
     normalizedURIInterner: NormalizedURIInterner,
@@ -43,7 +46,8 @@ class URISummaryCommander @Inject() (
     imageFetcher: ImageFetcher,
     uriSummaryCache: URISummaryCache,
     airbrake: AirbrakeNotifier,
-    clock: Clock) extends Logging {
+    clock: Clock,
+    val webService: WebService) extends Logging with ProcessedImageHelper {
 
   /**
    * Gets the default URI Summary
@@ -164,27 +168,19 @@ class URISummaryCommander @Inject() (
       val stopper = Stopwatch("fetching from scraper embedly info for ${nUri.id} -> ${nUri.url}")
       val future = fetchFromEmbedly(nUri, minSize)
       future.onComplete { res =>
-        stopper.stop()
+        stopper.stop() tap { _ => log.info(stopper.toString) }
+        res.map(_.map(s => resizeImage(nUri, s)))
       }
       future
     } else {
       Future.successful(None)
     }
-    embedlyResultFut flatMap { embedlyResultOpt =>
-      val shouldFetchFromPagePeeker = false // todo(Léo, Andrew): move away from PagePeeker
-      /* (imageType == ImageType.SCREENSHOT || imageType == ImageType.ANY) && // Request accepts screenshots
-          (embedlyResultOpt.isEmpty || embedlyResultOpt.get.imageUrl.isEmpty) // Couldn't find appropriate Embedly image */
-      if (shouldFetchFromPagePeeker) {
-        fetchFromPagePeeker(nUri, minSize) map { imageInfoOpt =>
-          val imageUrlOpt = imageInfoOpt flatMap { getS3URL(_, nUri) }
-          val widthOpt = imageInfoOpt flatMap (_.width)
-          val heightOpt = imageInfoOpt flatMap (_.height)
-          val title = embedlyResultOpt flatMap { _.title }
-          val description = embedlyResultOpt flatMap { _.description }
-          Some(URISummary(imageUrlOpt, title, description, widthOpt, heightOpt))
-        }
-      } else Future.successful(embedlyResultOpt)
-    }
+    embedlyResultFut
+  }
+
+  val resizeLock = new ReactiveLock(2)
+  private def resizeImage(nUri: NormalizedURI, uriSummary: URISummary) = {
+    uriSummary
   }
 
   /**

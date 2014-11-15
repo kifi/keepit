@@ -30,7 +30,7 @@
 }
 
 <div class="signup"@if(view == "signup" || view == "signup2Email" || view == "signup2Social") { style="display:block"}>
-  <form class="signup-1" data-title="Sign up" action="@routes.userPasswordSignup()" novalidate@if(view == "signup") { style="display:block"} data-track-source="signup1">
+  <form class="signup-1" data-title="Sign up" action="@routes.userPasswordSignup()" novalidate@if(view == "signup") { style="display:block"} data-track-source="signup1" method="POST">
     <div class="form-sides">
       <div class="form-l">
         <h3>Use a social network</h3>
@@ -58,7 +58,7 @@
   </form>
 
 
-  <form class="signup-2 signup-2-email" data-title="Finalize your account" action="@routes.userPassFinalizeAccountAction()" novalidate@if(view == "signup2Email") { style="display:block"} data-track-source="signup2Email">
+  <form class="signup-2 signup-2-email" data-title="Finalize your account" action="@routes.userPassFinalizeAccountAction()" novalidate@if(view == "signup2Email") { style="display:block"} data-track-source="signup2Email" method="POST">
     @if(view == "signup2Email") {
       <div class="signup-resume">
         <div class="signup-2-label">Welcome back</div>
@@ -95,7 +95,7 @@
   </form>
 
   @if(view == "signup2Social") {
-  <form class="signup-2 signup-2-social" novalidate data-first="@firstName" data-last="@lastName" action="@routes.socialFinalizeAccountAction()" novalidate@if(view == "signup2Social") { style="display:block"} data-track-source="signup2Social">
+  <form class="signup-2 signup-2-social" novalidate data-first="@firstName" data-last="@lastName" action="@routes.socialFinalizeAccountAction()" novalidate@if(view == "signup2Social") { style="display:block"} data-track-source="signup2Social" method="POST">
     <div class="social-info">
       <div class="social-photo form-photo"@if(picturePath != ""){ style="background-image:url(@picturePath)"}></div>
       <div class="social-text-info">
