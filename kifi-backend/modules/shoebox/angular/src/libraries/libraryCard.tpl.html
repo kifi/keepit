@@ -35,6 +35,8 @@
         <div ng-if="!recommendation && isUserLoggedOut" class="kf-keep-lib-search">
           <input class="kf-keep-lib-search-input" type="text" placeholder="Search this library" ng-model="search.text" ng-focus="onSearchInputFocus()" ng-blur="" ng-change="onSearchInputChange(search.text)" ng-keydown="">
         </div>
+
+        <a class="dialog-x" href="javascript:" ng-click="onSearchExit()"></a>
       </div>
 
       <div ng-switch="clippedDescription" class="kf-keep-lib-description-container">

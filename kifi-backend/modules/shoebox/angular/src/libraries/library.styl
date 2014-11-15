@@ -10,7 +10,6 @@ invite-header-orange = #ff7c3c
 .kf-logged-out .kf-library-card-header
   background-color: #fff
 
-
   .kf-logged-out &
     margin-bottom: -30px
 
@@ -59,7 +58,7 @@ invite-header-orange = #ff7c3c
     font-family: Merriweather, Lato, Helvetica, Arial, sans-serif
 
   .kf-keep-lib-info
-    margin: 36px 40px 0
+    margin: 30px 40px 0
     transition: margin-top 0.2s ease
 
   .kf-keep-lib-owner
@@ -73,6 +72,9 @@ invite-header-orange = #ff7c3c
   .kf-keep-lib-search-input
     transition: width 0.1s ease 0.2s
 
+  .dialog-x
+    display: none
+
   .kf-keep-lib-description-container
   .kf-keep-lib-stats-and-followers
   .kf-keep-footer
@@ -80,18 +82,18 @@ invite-header-orange = #ff7c3c
     transition: opacity 0.1s ease, max-height 0.2s ease
 
 // During library search
-@keyframes fadeout-fadein {
+@keyframes fadeout-fadein
   0%
     opacity: 1
 
-  50%
+  33%
     opacity: 0
 
   100%
     opacity: 1
 
 .library-card.library-search-in-progress
-  max-height: 80px
+  max-height: 90px
 
   .kf-keep-lib-header
     max-height: 0
@@ -110,11 +112,17 @@ invite-header-orange = #ff7c3c
     left: -55px
 
   .kf-keep-lib-search
-    right: -115px
+    right: -100px
 
   .kf-keep-lib-search-input
-    width: 510px
-    animation: 0.2s fadeout-fadein 0.1s
+    width: 495px
+    animation: 0.8s fadeout-fadein
+
+  .dialog-x
+    display: block
+    top: 0px
+    right: -110px
+    animation: 0.8s fade-in
 
 .public-library-empty-explain
   font-size: 18px
@@ -218,6 +226,7 @@ invite-header-orange = #ff7c3c
   .kf-keep-lib-owner
     position: relative
     padding-bottom: 10px
+    padding-top: 5px
 
   .kf-keep-lib-user-image
     display: inline-block
@@ -237,7 +246,7 @@ invite-header-orange = #ff7c3c
 
   .kf-keep-lib-search
     position: absolute
-    top: 4px
+    top: 10px
     right: 0
 
   .kf-keep-lib-search-input

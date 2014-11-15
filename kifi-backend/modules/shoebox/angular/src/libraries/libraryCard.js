@@ -377,6 +377,12 @@ angular.module('kifi')
           scope.librarySearchInProgress = true;
         };
 
+        scope.onSearchExit = function () {
+          scope.librarySearchInProgress = false;
+          scope.search.text = '';
+          scope.onSearchInputChange(scope.search.text);
+        };
+
         scope.onSearchInputChange = _.debounce(function (query) {
           $timeout(function () {
             if (query) {
