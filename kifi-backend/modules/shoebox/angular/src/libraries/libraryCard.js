@@ -18,7 +18,8 @@ angular.module('kifi')
         librarySlug: '=',
         recommendation: '=',
         loading: '=',
-        toggleEdit: '='
+        toggleEdit: '=',
+        librarySearch: '='
       },
       templateUrl: 'libraries/libraryCard.tpl.html',
       link: function (scope, element/*, attrs*/) {
@@ -38,7 +39,7 @@ angular.module('kifi')
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
         scope.editKeepsText = 'Edit Keeps';
-        scope.librarySearchInProgress = false;
+        scope.librarySearchInProgress = scope.librarySearch;
         scope.search = { 'text': $routeParams.q || '' };
 
         var magicImages = {
