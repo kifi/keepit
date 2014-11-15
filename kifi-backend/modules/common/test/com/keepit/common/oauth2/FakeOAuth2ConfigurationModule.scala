@@ -1,6 +1,7 @@
 package com.keepit.common.oauth2
 
 import com.google.inject.{ Singleton, Provides }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.model.OAuth2TokenInfo
 
 import scala.concurrent.Future
@@ -11,9 +12,12 @@ trait FakeOAuthProvider extends OAuthProvider {
   def setLongTermToken(f: => OAuth2TokenInfo) { longTermTokenOpt = Some(f) }
   def exchangeLongTermToken(tokenInfo: OAuth2TokenInfo): Future[OAuth2TokenInfo] = Future.successful { longTermTokenOpt getOrElse tokenInfo }
 
-  var profileInfo = Future.successful(UserProfileInfo(providerId, ProviderUserId("asdf"), "Foo Bar", None, None, None, None))
-  def setProfileInfo(f: => Future[UserProfileInfo]) { profileInfo = f }
-  def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = profileInfo
+  var profileInfo = UserProfileInfo(providerId, ProviderUserId("asdf"), "Foo Bar", Some(EmailAddress("bar@foo.com")), Some("Foo"), Some("Bar"), Some(new java.net.URL("http://www.picture.com/foobar")))
+  def setProfileInfo(info: UserProfileInfo) { profileInfo = info }
+
+  var profileInfoF = () => Future.successful(profileInfo)
+  def setProfileInfoF(f: () => Future[UserProfileInfo]) { profileInfoF = f }
+  def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = profileInfoF.apply()
 
 }
 
