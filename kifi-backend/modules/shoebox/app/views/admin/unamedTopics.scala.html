@@ -1,8 +1,10 @@
 @(infos: Seq[com.keepit.cortex.dbmodel.LDAInfo], topicWords: Seq[String], version: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@admin("unamed topics"){
+@admin("unnamed topics"){
 
 <h2>LDA version: @version</h2>
+<div>This page shows up to 5 unnamed topics. They are ordered by number of docs in the topic in decreasing order.</div>
+<div>For different versions, try /admin/cortex/lda/unamedTopics?version=xyz</div>
 
 
 <table id = "topic_words_table" class = "table table-bordered">
