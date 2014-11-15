@@ -380,8 +380,11 @@ angular.module('kifi')
 
         scope.onSearchExit = function () {
           scope.librarySearchInProgress = false;
-          scope.search.text = '';
-          scope.onSearchInputChange(scope.search.text);
+          $rootScope.$emit('librarySearchChanged', false);
+
+          $timeout(function () {
+            scope.search.text = '';
+          });
         };
 
         scope.onSearchInputChange = _.debounce(function (query) {

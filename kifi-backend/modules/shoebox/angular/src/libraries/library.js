@@ -13,6 +13,7 @@ angular.module('kifi')
     var selectedCount = 0;
     var prePopulated = false;
     var authToken = $location.search().authToken || '';
+    var prevLibrarySearch = false;
 
 
     //
@@ -182,7 +183,9 @@ angular.module('kifi')
     $scope.$on('$destroy', deregisterTrackLibraryEvent);
 
     var deregisterUpdateLibrarySearch = $rootScope.$on('librarySearchChanged', function (e, librarySearch) {
+      prevLibrarySearch = $scope.librarySearch;
       $scope.librarySearch = librarySearch;
+      $scope.librarySearchFallingEdge = prevLibrarySearch && !$scope.librarySearch;
     });
     $scope.$on('$destroy', deregisterUpdateLibrarySearch);
 

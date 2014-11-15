@@ -23,7 +23,7 @@ invite-header-orange = #ff7c3c
   box-shadow: none
   padding-bottom: 20px
   max-height: 1200px
-  transition: max-height 0.1s ease 0.1s
+  transition: max-height 0.2s ease
 
   &::before
     position: absolute
@@ -36,6 +36,7 @@ invite-header-orange = #ff7c3c
     content: ''
     z-index: -1
 
+  .kf-keep-body
   .kf-keep-lib-header
     max-height: 500px
     transition: max-height 0.2s ease
@@ -45,7 +46,7 @@ invite-header-orange = #ff7c3c
     height: auto
     max-height: 500px
     padding-top: 20px
-    transition: opacity 0.1s ease, max-height 0.2s ease
+    transition: opacity 0.2s ease, max-height 0.2s ease
 
   .kf-keep-lib-name
     text-align: center
@@ -64,13 +65,13 @@ invite-header-orange = #ff7c3c
   .kf-keep-lib-owner
     position: relative
     left: 0
-    transition: left 0.1s ease 0.2s
+    transition: left 0.3s ease
 
   .kf-keep-lib-search
-    transition: right 0.1s ease 0.2s
+    transition: right 0.3s ease
 
   .kf-keep-lib-search-input
-    transition: width 0.1s ease 0.2s
+    transition: width 0.3s ease
 
   .dialog-x
     display: none
@@ -79,23 +80,32 @@ invite-header-orange = #ff7c3c
   .kf-keep-lib-stats-and-followers
   .kf-keep-footer
     max-height: 500px
-    transition: opacity 0.1s ease, max-height 0.2s ease
+    transition: opacity 0.2s ease 0.1s, max-height 0.2s ease
 
 
 // During library search
-@keyframes fadeout-fadein
+@keyframes fade-out-fade-in
   0%
     opacity: 1
-
   33%
     opacity: 0
+  100%
+    opacity: 1
 
+@keyframes fade-in-slow
+  0%
+    opacity: 0
+  70%
+    opacity: 0
   100%
     opacity: 1
 
 .library-search .library-card
 .library-card.library-search-in-progress
   max-height: 90px
+
+  .kf-keep-body
+    max-height: 90px
 
   .kf-keep-lib-header
     max-height: 0
@@ -118,23 +128,29 @@ invite-header-orange = #ff7c3c
 
   .kf-keep-lib-search-input
     width: 495px
-    animation: 0.8s fadeout-fadein
 
   .dialog-x
     display: block
     top: 0px
     right: -110px
-    animation: 0.8s fade-in
+
+.library-card.library-search-in-progress
+  .kf-keep-lib-search-input
+    animation: 0.8s fade-out-fade-in
+
+  .dialog-x
+    animation: 0.8s fade-in-slow
+
+.library-search .library-card
+.library-search-falling-edge .library-card
+  .kf-keep-lib-search-input
+  .dialog-x
+    animation: none
 
 .public-library-empty-explain
   font-size: 18px
   margin: 0
   color: #666
-
-.library-search .library-card
-  .kf-keep-lib-search-input
-  .dialog-x
-    animation: none
 
 .library-card
   // Do not display text on buttons when the card is very narrow

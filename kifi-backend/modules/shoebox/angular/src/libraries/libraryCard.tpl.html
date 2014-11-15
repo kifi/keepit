@@ -33,7 +33,7 @@
         </div>
 
         <div ng-if="!recommendation && isUserLoggedOut" class="kf-keep-lib-search">
-          <input class="kf-keep-lib-search-input" type="text" placeholder="Search this library" ng-model="search.text" ng-focus="onSearchInputFocus()" ng-blur="" ng-change="onSearchInputChange(search.text)" ng-keydown="">
+          <input class="kf-keep-lib-search-input" type="text" placeholder="Search this library" ng-model="search.text" ng-focus="onSearchInputFocus()" ng-change="onSearchInputChange(search.text)">
         </div>
 
         <a class="dialog-x" href="javascript:" ng-click="onSearchExit()"></a>
