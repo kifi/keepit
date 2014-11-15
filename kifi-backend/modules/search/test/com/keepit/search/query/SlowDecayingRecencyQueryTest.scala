@@ -14,7 +14,7 @@ import scala.math._
 
 class SlowDecayingRecencyQueryTest extends Specification {
 
-  private[this] val config = new IndexWriterConfig(Version.LUCENE_47, DefaultAnalyzer.defaultAnalyzer)
+  private[this] val config = new IndexWriterConfig(Version.LATEST, DefaultAnalyzer.defaultAnalyzer)
 
   private[this] var seen = Set.empty[Long]
   private[this] val rnd = new Random()
@@ -51,7 +51,7 @@ class SlowDecayingRecencyQueryTest extends Specification {
     val searcher = new IndexSearcher(reader)
     val query = new SlowDecayingRecencyQuery(new MatchAllDocsQuery(), "createdAt", 1.0f, range / 2)
     val weight = searcher.createNormalizedWeight(query)
-    val scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+    val scorer = weight.scorer(readerContext, reader.getLiveDocs)
 
     val idDocValues = reader.getNumericDocValues("id")
     val buf = new ArrayBuffer[(Long, Float)]()
@@ -71,7 +71,7 @@ class SlowDecayingRecencyQueryTest extends Specification {
     val searcher = new IndexSearcher(reader)
     val query = new SlowDecayingRecencyQuery(new MatchAllDocsQuery(), "createdAt", boostStrength, range / 2)
     val weight = searcher.createNormalizedWeight(query)
-    val scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+    val scorer = weight.scorer(readerContext, reader.getLiveDocs)
 
     val idDocValues = reader.getNumericDocValues("id")
     val buf = new ArrayBuffer[(Long, Float)]()

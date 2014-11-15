@@ -110,7 +110,7 @@ class LibraryCommander @Inject() (
           unsafeTitle = s"${library.name} by ${owner.firstName} ${owner.lastName} \u2022 Kifi",
           url = url,
           urlPathOnly = urlPathOnly,
-          unsafeDescription = library.description.getOrElse(s"${owner.fullName}'s ${library.name} Kifi Library"),
+          unsafeDescription = PublicPageMetaTags.generateMetaTagsDescription(library.description, owner.fullName, library.name),
           images = imageUrls,
           facebookId = facebookId,
           createdAt = library.createdAt,

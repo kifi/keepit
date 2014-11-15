@@ -20,8 +20,8 @@ angular.module('kifi')
     }
 
     function imageEmbed(src) {
-      var videoImg = '<img src="' + src + '" width="100%" height="100%">';
-      var playImg = '<img class="kf-youtube-play" src="http://lh4.googleusercontent.com/-CPSDAus0Z7s/AAAAAAAAAAI/AAAAAAAAABQ/B7u3agfdbIY/photo.jpg">';
+      var videoImg = '<div class="kf-youtube-img" style="background-image:url(' + src + ')"></div>';
+      var playImg = '<div class="kf-youtube-play"></div>';
       return videoImg + playImg;
     }
 

@@ -50,7 +50,7 @@ class LDADbUpdaterImpl @Inject() (
   import com.keepit.cortex.models.lda.UpdateAction._
   import com.keepit.model.NormalizedURIStates.SCRAPED
 
-  private val fetchSize = 1000
+  private val fetchSize = 3000
   private val sparsity = 10
 
   assume(sparsity >= 3)

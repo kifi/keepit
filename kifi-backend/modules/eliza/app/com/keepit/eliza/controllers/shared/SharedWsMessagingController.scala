@@ -22,7 +22,7 @@ import akka.actor.ActorSystem
 
 import com.google.inject.Inject
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.store.KifInstallationStore
+import com.keepit.common.store.KifiInstallationStore
 
 class SharedWsMessagingController @Inject() (
   messagingCommander: MessagingCommander,
@@ -32,7 +32,7 @@ class SharedWsMessagingController @Inject() (
   protected val websocketRouter: WebSocketRouter,
   amazonInstanceInfo: AmazonInstanceInfo,
   threadRepo: MessageThreadRepo,
-  val kifInstallationStore: KifInstallationStore,
+  val kifInstallationStore: KifiInstallationStore,
   protected val shoebox: ShoeboxServiceClient,
   protected val impersonateCookie: ImpersonateCookie,
   protected val actorSystem: ActorSystem,
