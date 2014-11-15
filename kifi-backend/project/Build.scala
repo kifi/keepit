@@ -17,10 +17,9 @@ object ApplicationBuild extends Build {
 
   lazy val searchDependencies = Seq(
     "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
-    "org.apache.lucene" % "lucene-core" % "4.7.0",
-    "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0",
-    "org.apache.lucene" % "lucene-analyzers-kuromoji" % "4.7.0",
-    "org.apache.lucene" % "lucene-suggest" % "4.7.0"
+    "org.apache.lucene" % "lucene-core" % "4.10.2",
+    "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2",
+    "org.apache.lucene" % "lucene-analyzers-kuromoji" % "4.10.2"
   )
 
   lazy val elizaDependencies = Seq(
@@ -55,7 +54,7 @@ object ApplicationBuild extends Build {
   lazy val abookDependencies = Seq()
 
   lazy val scraperDependencies = Seq(
-    "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0",
+    "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2",
     "org.apache.httpcomponents" % "httpclient" % "4.3.1",
     "org.apache.tika" % "tika-parsers" % "1.5"
   )

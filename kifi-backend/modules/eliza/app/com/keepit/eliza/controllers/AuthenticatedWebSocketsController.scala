@@ -32,7 +32,7 @@ import org.joda.time.DateTime
 import play.api.libs.json.JsArray
 import com.keepit.social.SocialId
 import com.keepit.common.net.UserAgent
-import com.keepit.common.store.KifInstallationStore
+import com.keepit.common.store.KifiInstallationStore
 import com.keepit.common.logging.{ AccessLogTimer, AccessLog }
 import com.keepit.common.logging.Access.WS_IN
 import org.apache.commons.lang3.RandomStringUtils
@@ -63,7 +63,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val websocketRouter: WebSocketRouter
   protected val shoutdownListener: WebsocketsShutdownListener
 
-  val kifInstallationStore: KifInstallationStore
+  val kifInstallationStore: KifiInstallationStore
   val accessLog: AccessLog
 
   protected def onConnect(socket: SocketInfo): Unit

@@ -1,18 +1,9 @@
 package com.keepit.search.index
 
-import org.apache.lucene.index.AtomicReader
-import org.apache.lucene.index.DirectoryReader
-import org.apache.lucene.index.IndexReader
-import org.apache.lucene.index.MultiReader
-import org.apache.lucene.index.SegmentReader
-import org.apache.lucene.index.StoredFieldVisitor
-import org.apache.lucene.index.NumericDocValues
-import org.apache.lucene.index.BinaryDocValues
-import org.apache.lucene.index.SortedDocValues
-import org.apache.lucene.index.SortedSetDocValues
+import org.apache.lucene.index._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
-import org.apache.lucene.index.SlowCompositeReaderWrapper
+import org.apache.lucene.index.AtomicReader.CoreClosedListener
 
 object WrappedIndexReader {
 
@@ -107,5 +98,9 @@ class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMa
   override def fields() = inner.fields()
   override def getLiveDocs() = inner.getLiveDocs()
   override def getDocsWithField(field: String) = inner.getDocsWithField(field)
+  override def addCoreClosedListener(listener: CoreClosedListener): Unit = inner.addCoreClosedListener(listener)
+  override def removeCoreClosedListener(listener: CoreClosedListener): Unit = inner.removeCoreClosedListener(listener)
+  override def checkIntegrity(): Unit = inner.checkIntegrity()
+  override def getSortedNumericDocValues(field: String): SortedNumericDocValues = inner.getSortedNumericDocValues(field)
   protected def doClose() = {}
 }

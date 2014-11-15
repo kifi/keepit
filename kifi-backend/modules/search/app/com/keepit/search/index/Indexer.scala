@@ -63,7 +63,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   val commitBatchSize = 1000
 
-  protected def indexWriterConfig = new IndexWriterConfig(Version.LUCENE_47, DefaultAnalyzer.defaultAnalyzer)
+  protected def indexWriterConfig = new IndexWriterConfig(Version.LATEST, DefaultAnalyzer.defaultAnalyzer)
 
   private[this] var indexWriter: IndexWriter = null
 
@@ -89,14 +89,14 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     s
   }
 
-  def warmUpIndexDirectory(): Unit = {
+  def warmUpIndexDirectory(): Unit = indexDirectory.asFile().map(_.list().toSet).foreach { existingFileNames =>
     log.info(s"warming up an index directory [${indexDirectory.toString}]...")
     val startTime = System.currentTimeMillis
     val reader: DirectoryReader = searcher.indexReader.inner
     val buffer = new Array[Byte](1 << 16)
 
     reader.getIndexCommit().getFileNames().foreach { filename =>
-      if (indexDirectory.fileExists(filename)) {
+      if (existingFileNames.contains(filename)) {
         var remaining = indexDirectory.fileLength(filename)
         val input = indexDirectory.openInput(filename, new IOContext)
         while (remaining > 0) {
@@ -190,10 +190,11 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     ))
   }
 
-  def indexSize = {
-    Some(searcher.indexReader.inner.getIndexCommit().getFileNames().map { filename =>
-      if (indexDirectory.fileExists(filename)) indexDirectory.fileLength(filename) else 0L
-    }.sum)
+  def indexSize = indexDirectory.asFile().map(_.list().toSet).map { existingFileNames =>
+    searcher.indexReader.inner.getIndexCommit().getFileNames().collect {
+      case filename if existingFileNames.contains(filename) =>
+        indexDirectory.fileLength(filename)
+    }.sum
   }
 
   def indexDocuments(indexables: Iterator[Indexable[T, S]], commitBatchSize: Int, refresh: Boolean = true): Unit = {

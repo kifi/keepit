@@ -29,9 +29,9 @@ case class ElizaProdStoreModule() extends StoreModule {
 
   @Singleton
   @Provides
-  def kifiInstallationStore(amazonS3Client: AmazonS3, accessLog: AccessLog): KifInstallationStore = {
+  def kifiInstallationStore(amazonS3Client: AmazonS3, accessLog: AccessLog): KifiInstallationStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.install.bucket").get)
-    new S3KifInstallationStoreImpl(bucketName, amazonS3Client, accessLog)
+    new S3KifiInstallationStoreImpl(bucketName, amazonS3Client, accessLog)
   }
 }
 
@@ -58,9 +58,9 @@ case class ElizaDevStoreModule() extends StoreModule {
 
   @Singleton
   @Provides
-  def kifInstallationStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): KifInstallationStore =
+  def kifInstallationStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): KifiInstallationStore =
     whenConfigured("amazon.s3.install.bucket") {
       val bucketName = S3Bucket(current.configuration.getString("amazon.s3.install.bucket").get)
-      new S3KifInstallationStoreImpl(bucketName, amazonS3ClientProvider.get, accessLog)
-    }.getOrElse(new InMemoryKifInstallationStoreImpl())
+      new S3KifiInstallationStoreImpl(bucketName, amazonS3ClientProvider.get, accessLog)
+    }.getOrElse(new InMemoryKifiInstallationStoreImpl())
 }
