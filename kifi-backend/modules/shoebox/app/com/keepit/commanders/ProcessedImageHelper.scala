@@ -115,12 +115,6 @@ trait ProcessedImageHelper {
     }
   }
 
-  protected def resizeImage(image: BufferedImage, boundingBox: Int): Try[BufferedImage] = Try {
-    val img = Scalr.resize(image, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, boundingBox)
-    log.info(s"[kic] Bounding box $boundingBox resized to ${img.getHeight} x ${img.getWidth}")
-    img
-  }
-
   protected def detectImageType(file: TemporaryFile): Option[ImageFormat] = {
     val is = new BufferedInputStream(new FileInputStream(file.file))
     val formatOpt = Option(URLConnection.guessContentTypeFromStream(is)).flatMap { mimeType =>
