@@ -10,9 +10,19 @@
 .kf-nav-lib-item
   height: 45px
   width: 230px
-  padding: 12px 0 0 0
+  padding: 10px 0 0 0
   user-select: none
   font-size: 12px
+
+.kf-nav-lib-separator
+  margin: 10px 0
+  line-height: 30px
+  background-color: separatorColor
+
+.kf-nav-lib-separator-title
+  padding-left: 45px
+  font-size: 14px
+  color: textDarkGrey
 
 ////////////////////////////
 ////// Library Icons ///////
@@ -116,7 +126,7 @@
     padding: 3px 10px
     box-sizing: border-box
     background-color: transparent
-    color: textDarkGray
+    color: textDarkColor
     white-space: nowrap
     font-size: 13px
     font-weight: 200
@@ -167,41 +177,56 @@
 .dropdown-menu-content
   position: absolute
   top: 30px
-  left: 130px
-  width: 115px
+  left: 65px
+  width: 185px
   z-index: 1
-
-.dropdown-menu-content > li:first-child
-  border-radius: 8px 8px 0 0
-
-.dropdown-menu-content > li:last-child
-  border-radius: 0 0 8px 8px
-
-.dropdown-option
-  position: relative
-  height: 36px
-  width: 100%
-  padding-top: 11px
-  box-sizing: border-box
-  border: 1px solid #e6e6e6
   background-color: #fff
-  text-align: center
-  font-size: 11px
+  border-radius: 8px
+  border: 1px solid separatorColor
+
+.dropdown-menu-title
+  padding-left: 10px
+  line-height: 35px
+  color: textDarkColor
+  font-size: 13px
+  font-weight: bold
+
+.dropdown-menu-switch
+  padding-left: 10px
+  line-height: 40px
+  font-size: 13px
+  color: textDarkColor
+  font-weight: bold
+  border-top: 1px solid separatorColor
+
+.dropdown-switch-option
+  color: textLightGrey
   font-weight: 200
-  color: countGreyColor
+  font-size: 12px
   cursor: pointer
 
-.dropdown-option:hover
-  box-sizing: border-box
-  border: 1px solid blueColor
-  background-color: #fff
+  &.set
+    color: blueColor
+    cursor: default
+    font-weight: bold
 
-.dropdown-option:active
-  color: #fff
-  background-color: blueColor
+.dropdown-option
+  padding-left: 10px
+  line-height: 27px
+  color: textLightGrey
+  font-weight: 200
+  font-size: 13px
+  cursor: pointer
 
-.dropdown-option-check
-  position: absolute
-  left: 5px
-  top: 10px
+  &:hover
+    color: blueColor
+
+  &:active
+    background-color: blueColor
+    color: #fff
+
+  &.set
+    color: blueColor
+    background-color: #fff
+    cursor: default
 
