@@ -6,7 +6,7 @@ import com.keepit.common.performance._
 
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
-import com.google.inject.Inject
+import com.google.inject.{Singleton, Inject}
 import scala.concurrent.Future
 import java.util.concurrent.TimeoutException
 import com.keepit.model._
