@@ -146,13 +146,13 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
 
   "KeepImageSize" should {
     "have several image sizes" in {
-      KeepImageSize.allSizes.length must be_>(3)
+      ProcessedImageSize.allSizes.length must be_>(3)
     }
 
     "pick the closest KeepImageSize to a given ImageSize" in {
-      KeepImageSize(ImageSize(0, 0)) === KeepImageSize.Small
-      KeepImageSize(ImageSize(1000, 100)) === KeepImageSize.Medium
-      KeepImageSize(ImageSize(900, 900)) === KeepImageSize.Large
+      ProcessedImageSize(ImageSize(0, 0)) === ProcessedImageSize.Small
+      ProcessedImageSize(ImageSize(1000, 100)) === ProcessedImageSize.Medium
+      ProcessedImageSize(ImageSize(900, 900)) === ProcessedImageSize.Large
     }
 
     "pick the best KeepImage for a target size" in {
@@ -164,8 +164,8 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
         height <- 10 to 150 by 17
       } yield genKeepImage(width * 9, height * 9)
 
-      KeepImageSize.pickBest(ImageSize(201, 399), keepImages).get.imageSize === ImageSize(189, 396)
-      KeepImageSize.pickBest(ImageSize(800, 840), keepImages).get.imageSize === ImageSize(783, 855)
+      ProcessedImageSize.pickBest(ImageSize(201, 399), keepImages).get.imageSize === ImageSize(189, 396)
+      ProcessedImageSize.pickBest(ImageSize(800, 840), keepImages).get.imageSize === ImageSize(783, 855)
 
     }
   }
