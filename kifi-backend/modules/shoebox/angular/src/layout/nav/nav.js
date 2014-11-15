@@ -222,6 +222,8 @@ angular.module('kifi')
           scope.userLibsToShow = newLists[0];
           scope.invitedLibsToShow = newLists[1];
           scope.myLibsToShow = newLists[2]; // should be [] if myLibsFirst false
+
+          scope.$broadcast('refreshScroll');
           return scope.userLibsToShow.concat(scope.invitedLibsToShow).concat(scope.myLibsToShow);
         };
 
