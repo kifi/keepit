@@ -84,7 +84,7 @@
     <div class="kf-scrollable-libs" antiscroll="{ autoHide: false }">
       <ul class="kf-nav-lib-users">
         <li class="kf-nav-lib-separator" ng-show="sortingMenu.myLibsFirst && myLibsToShow.length > 0">
-          <div class="kf-nav-lib-separator-title">Your Libraries</div>
+          <div class="kf-nav-lib-separator-title">YOUR LIBRARIES</div>
         </li>
         <li ng-show="sortingMenu.myLibsFirst" ng-repeat="library in myLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
           <div class="kf-nav-link-box">
@@ -120,10 +120,10 @@
 
 
         <li class="kf-nav-lib-separator" ng-show="!sortingMenu.myLibsFirst && userLibsToShow.length > 0">
-          <div class="kf-nav-lib-separator-title">All Libraries</div>
+          <div class="kf-nav-lib-separator-title">ALL LIBRARIES</div>
         </li>
         <li class="kf-nav-lib-separator" ng-show="sortingMenu.myLibsFirst && userLibsToShow.length > 0">
-          <div class="kf-nav-lib-separator-title">Others' Libraries</div>
+          <div class="kf-nav-lib-separator-title">LIBRARIES YOU FOLLOW</div>
         </li>
         <li ng-repeat="library in userLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
           <div class="kf-nav-link-box">
@@ -157,7 +157,7 @@
           </div>
         </li>
         <li class="kf-nav-lib-separator" ng-show="invitedLibsToShow.length > 0">
-          <div class="kf-nav-lib-separator-title">Invites to Libraries</div>
+          <div class="kf-nav-lib-separator-title">INVITATIONS</div>
         </li>
         <li ng-repeat="library in invitedLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
           <div class="kf-nav-link-box">
