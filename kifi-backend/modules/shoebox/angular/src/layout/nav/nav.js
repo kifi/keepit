@@ -54,9 +54,7 @@ angular.module('kifi')
           var newLists = sortLibraries(allUserLibs, libraryService.invitedSummaries);
           scope.userLibsToShow = newLists[0];
           scope.invitedLibsToShow  = newLists[1];
-          if (scope.sortingMenu.myLibsFirst) {
-            scope.myLibsToShow = newLists[2];
-          }
+          scope.myLibsToShow = newLists[2];  // should be [] if myLibsFirst false
           librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
           invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
 
@@ -223,9 +221,7 @@ angular.module('kifi')
           var newLists = sortLibraries(newLibs, newInvited);
           scope.userLibsToShow = newLists[0];
           scope.invitedLibsToShow = newLists[1];
-          if (scope.sortingMenu.myLibsFirst) {
-            scope.myLibsToShow = newLists[2];
-          }
+          scope.myLibsToShow = newLists[2]; // should be [] if myLibsFirst false
           return scope.userLibsToShow.concat(scope.invitedLibsToShow).concat(scope.myLibsToShow);
         };
 
