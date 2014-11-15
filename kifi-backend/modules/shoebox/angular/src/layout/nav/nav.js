@@ -24,9 +24,10 @@ angular.module('kifi')
         //
         scope.mainLib = {};
         scope.secretLib = {};
+        scope.myLibsToShow = [];
         scope.userLibsToShow = [];
         scope.invitedLibsToShow = [];
-        scope.sortingMenu = { show : false, option : '' };
+        scope.sortingMenu = { show : false, option : '', myLibsFirst : true };
 
         scope.counts = {
           friendsCount: friendService.totalFriends(),
@@ -50,9 +51,10 @@ angular.module('kifi')
           scope.secretLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_secret' });
           allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
 
-          var newList = sortLibraries(allUserLibs, libraryService.invitedSummaries);
-          scope.userLibsToShow = newList[0];
-          scope.invitedLibsToShow  = newList[1];
+          var newLists = sortLibraries(allUserLibs, libraryService.invitedSummaries);
+          scope.userLibsToShow = newLists[0];
+          scope.invitedLibsToShow  = newLists[1];
+          scope.myLibsToShow = newLists[2];  // should be [] if myLibsFirst false
           librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
           invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
 
@@ -100,12 +102,12 @@ angular.module('kifi')
 
         var deregisterLibraryVisited = $rootScope.$on('lastViewedLib', function (e, lib) {
           if (lib.name) {
-            var idx = _.findIndex(scope.userLibsToShow, { 'name' : lib.name });
-            if (scope.userLibsToShow[idx]) {
-              scope.userLibsToShow[idx].lastViewed = Date.now();
+            var idx = _.findIndex(allUserLibs, { 'name' : lib.name });
+            if (allUserLibs[idx]) {
+              allUserLibs[idx].lastViewed = Date.now();
             }
             if (scope.sortingMenu.option === 'last_viewed') {
-              updateNavLibs();
+              scope.changeList();
             }
           }
         });
@@ -135,6 +137,12 @@ angular.module('kifi')
               profileService.savePrefs( { library_sorting_pref: scope.sortingMenu.option });
             }
           }
+        });
+
+        scope.$watch(function() {
+          return scope.sortingMenu.myLibsFirst;
+        }, function () {
+          scope.changeList();
         });
 
         // on resizing window -> trigger new turn -> reset library list height
@@ -210,13 +218,11 @@ angular.module('kifi')
             newLibs = librarySummarySearch.search(term);
             newInvited = invitedSummarySearch.search(term);
           }
-          var newList = sortLibraries(newLibs, newInvited);
-          newLibs = newList[0];
-          newInvited = newList[1];
-
-          scope.userLibsToShow = newLibs;
-          scope.invitedLibsToShow = newInvited;
-          return scope.userLibsToShow.concat(scope.invitedLibsToShow);
+          var newLists = sortLibraries(newLibs, newInvited);
+          scope.userLibsToShow = newLists[0];
+          scope.invitedLibsToShow = newLists[1];
+          scope.myLibsToShow = newLists[2]; // should be [] if myLibsFirst false
+          return scope.userLibsToShow.concat(scope.invitedLibsToShow).concat(scope.myLibsToShow);
         };
 
         function sortLibraries(userLibs, invitedLibs) {
@@ -249,7 +255,13 @@ angular.module('kifi')
               newInvited = sortByKept(newInvited);
               break;
           }
-          return [newLibs, newInvited];
+          var newMyLibs = [];
+          if (scope.sortingMenu.myLibsFirst && newLibs.length > 0) {
+            var split = _.groupBy(newLibs, function(lib) { return lib.isMine ? 'mine' : 'notMine'; });
+            newLibs = split.notMine || [];
+            newMyLibs = split.mine || [];
+          }
+          return [newLibs, newInvited, newMyLibs];
         }
 
         function sortByKept(libs) {
