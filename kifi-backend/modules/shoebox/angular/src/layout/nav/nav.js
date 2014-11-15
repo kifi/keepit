@@ -41,9 +41,7 @@ angular.module('kifi')
           if (scrollableLibList.offset()) {
             scrollableLibList.height(w.height() - (scrollableLibList.offset().top - w[0].pageYOffset));
           }
-          if (scope.refreshScroll) {
-            scope.refreshScroll();
-          }
+          scope.$broadcast('refreshScroll');
         }
 
         function updateNavLibs() {
@@ -222,6 +220,8 @@ angular.module('kifi')
           scope.userLibsToShow = newLists[0];
           scope.invitedLibsToShow = newLists[1];
           scope.myLibsToShow = newLists[2]; // should be [] if myLibsFirst false
+
+          scope.$broadcast('refreshScroll');
           return scope.userLibsToShow.concat(scope.invitedLibsToShow).concat(scope.myLibsToShow);
         };
 
