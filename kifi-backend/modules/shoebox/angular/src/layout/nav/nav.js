@@ -41,9 +41,7 @@ angular.module('kifi')
           if (scrollableLibList.offset()) {
             scrollableLibList.height(w.height() - (scrollableLibList.offset().top - w[0].pageYOffset));
           }
-          if (scope.refreshScroll) {
-            scope.refreshScroll();
-          }
+          scope.$broadcast('refreshScroll');
         }
 
         function updateNavLibs() {
