@@ -55,8 +55,6 @@ class SocialConnectionRepoImpl @Inject() (
 
   def table(tag: Tag) = new SocialConnectionTable(tag)
 
-  private val sequence = db.getSequence[SocialConnection]("social_connection_sequence")
-
   override def save(socialConnection: SocialConnection)(implicit session: RWSession): SocialConnection = {
     val toSave = socialConnection.copy(seq = sequence.incrementAndGet())
     super.save(toSave)

@@ -46,8 +46,6 @@ class UserEmailAddressRepoImpl @Inject() (
   def table(tag: Tag) = new UserEmailAddressTable(tag)
   initTable()
 
-  private val sequence = db.getSequence[UserEmailAddress]("email_address_sequence")
-
   override def save(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
     val toSave = emailAddress.copy(seq = sequence.incrementAndGet())
     userRepo.save(userRepo.get(emailAddress.userId)) // just to bump up user seqNum

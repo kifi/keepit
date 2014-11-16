@@ -22,8 +22,6 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[Phrase]("phrase_sequence")
-
   type RepoImpl = PhraseTable
   class PhraseTable(tag: Tag) extends RepoTable[Phrase](db, tag, "phrase") with SeqNumberColumn[Phrase] {
     def phrase = column[String]("phrase", O.NotNull)

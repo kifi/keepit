@@ -54,17 +54,6 @@ class EContactRepoImpl @Inject() (
 
   def table(tag: Tag) = new EContactTable(tag)
 
-  private val sequence = db.getSequence[EContact]("econtact_sequence")
-
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "econtact", limit)
-  }
-
-  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
-    sql"""select min(seq) from econtact where seq < 0""".as[Option[Long]].first
-  }
-
   override def save(contact: EContact)(implicit session: RWSession): EContact = {
     val toSave = contact.copy(seq = deferredSeqNum())
     super.save(toSave)

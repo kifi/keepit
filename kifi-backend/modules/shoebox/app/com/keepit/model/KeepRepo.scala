@@ -66,8 +66,6 @@ class KeepRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[Keep]("bookmark_sequence")
-
   type RepoImpl = KeepTable
   class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with NamedColumns with SeqNumberColumn[Keep] {
     def title = column[String]("title", O.Nullable) //indexd

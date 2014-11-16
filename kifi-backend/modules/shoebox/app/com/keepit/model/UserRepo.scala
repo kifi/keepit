@@ -57,8 +57,6 @@ class UserRepoImpl @Inject() (
   import DBSession._
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[User]("user_sequence")
-
   private lazy val expRepo = expRepoProvider.get
 
   type RepoImpl = UserTable
