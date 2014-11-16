@@ -26,8 +26,6 @@ class PageInfoRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[PageInfo]("page_info_sequence")
-
   type RepoImpl = PageInfoTable
   class PageInfoTable(tag: Tag) extends RepoTable[PageInfo](db, tag, "page_info") with SeqNumberColumn[PageInfo] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
