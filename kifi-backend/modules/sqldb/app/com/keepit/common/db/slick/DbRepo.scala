@@ -247,7 +247,7 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
 
   def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
     import StaticQuery.interpolation
-    sql"""select min(seq) from ${_taggedTable.tableName} where seq < 0""".as[Option[Long]].first
+    sql"""select min(seq) from #${_taggedTable.tableName} where seq < 0""".as[Option[Long]].first
   }
 }
 
