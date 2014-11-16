@@ -3,7 +3,7 @@ package com.keepit.model
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics }
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.db.{ State, SequenceNumber, Id }
+import com.keepit.common.db.{ DbSequenceAssigner, State, SequenceNumber, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.service.RequestConsolidator
@@ -11,6 +11,9 @@ import com.keepit.common.time.Clock
 import com.keepit.social.{ SocialNetworks, SocialNetworkType }
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
+import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 @ImplementedBy(classOf[SocialConnectionRepoImpl])
 trait SocialConnectionRepo extends Repo[SocialConnection] with SeqNumberFunction[SocialConnection] {
@@ -56,7 +59,7 @@ class SocialConnectionRepoImpl @Inject() (
   def table(tag: Tag) = new SocialConnectionTable(tag)
 
   override def save(socialConnection: SocialConnection)(implicit session: RWSession): SocialConnection = {
-    val toSave = socialConnection.copy(seq = sequence.incrementAndGet())
+    val toSave = socialConnection.copy(seq = deferredSeqNum())
     super.save(toSave)
   }
 
@@ -177,3 +180,20 @@ class SocialConnectionRepoImpl @Inject() (
     query.as[(Id[SocialUserInfo], Id[SocialUserInfo], State[SocialConnection], SequenceNumber[SocialConnection], SocialNetworkType)].list()
   }
 }
+
+trait SocialConnectionSequencingPlugin extends SequencingPlugin
+
+class SocialConnectionSequencingPluginImpl @Inject() (
+    override val actor: ActorInstance[SocialConnectionSequencingActor],
+    override val scheduling: SchedulingProperties) extends SocialConnectionSequencingPlugin {
+
+  override val interval: FiniteDuration = 20 seconds
+}
+
+@Singleton
+class SocialConnectionSequenceNumberAssigner @Inject() (db: Database, repo: SocialConnectionRepo, airbrake: AirbrakeNotifier)
+  extends DbSequenceAssigner[SocialConnection](db, repo, airbrake)
+
+class SocialConnectionSequencingActor @Inject() (
+  assigner: SocialConnectionSequenceNumberAssigner,
+  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)
