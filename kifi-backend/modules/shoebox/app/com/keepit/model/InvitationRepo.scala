@@ -11,7 +11,7 @@ import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, Sequenc
 import com.keepit.common.time.Clock
 
 import org.joda.time.DateTime
-
+import scala.concurrent.duration._
 import scala.collection.mutable
 import scala.concurrent.duration.FiniteDuration
 import scala.slick.jdbc.{ StaticQuery => Q }
