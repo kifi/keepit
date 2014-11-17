@@ -32,6 +32,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def getMemberCountSinceForLibrary(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def countByLibraryAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
+  def countsByLibraryAccess(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
 }
 
 @Singleton
@@ -192,10 +193,18 @@ class LibraryMembershipRepoImpl @Inject() (
 
   def countByLibraryAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int = {
     libraryMembershipCountCache.getOrElse(LibraryMembershipCountKey(userId, access)) {
-      StaticQuery.queryNA[Int](s"select count(user_id) from library_membership where user_id = $userId and access = '${access.value}' group by user_id").firstOption.getOrElse(0)
+      StaticQuery.queryNA[Int](s"select count(*) from library_membership where user_id = $userId and access = '${access.value}' ").firstOption.getOrElse(0)
     }
   }
 
+  def countsByLibraryAccess(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int] = {
+    libraryMembershipCountCache.bulkGetOrElse(accesses.map(LibraryMembershipCountKey(userId, _))) { keys =>
+      import StaticQuery.interpolation
+      val counts = sql"select access, count(*) from library_membership where user_id = $userId group by access".as[(String, Int)].list().toMap
+
+      keys.toSeq.map(k => k -> counts.getOrElse(k.access.value, 0)).toMap
+    }.map { case (k, v) => k.access -> v }
+  }
 }
 
 trait LibraryMembershipSequencingPlugin extends SequencingPlugin
