@@ -12,6 +12,7 @@ class RenormalizedURLTest extends Specification with ShoeboxTestInjector {
     "work" in {
       withDb() { implicit injector =>
         val repo = inject[RenormalizedURLRepo]
+        val seqAssigner = inject[RenormalizedURLSeqAssigner]
 
         db.readWrite { implicit s =>
           (1 to 5).map { i =>
@@ -19,6 +20,8 @@ class RenormalizedURLTest extends Specification with ShoeboxTestInjector {
             repo.save(tmp)
           }
         }
+
+        seqAssigner.assignSequenceNumbers()
 
         implicit def intToSeq(x: Int) = SequenceNumber(x)
 
