@@ -13,6 +13,7 @@ class ChangedURITest extends Specification with ShoeboxTestInjector {
     "work" in {
       withDb() { implicit injector =>
         val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val seqAssigner = inject[ChangedURISeqAssigner]
 
         db.readOnlyMaster { implicit s =>
           changedURIRepo.getHighestSeqNum() === Some(SequenceNumber.ZERO)
@@ -26,6 +27,8 @@ class ChangedURITest extends Specification with ShoeboxTestInjector {
           }
         }
 
+        seqAssigner.assignSequenceNumbers()
+
         var changes = db.readOnlyMaster { implicit s =>
           changedURIRepo.getChangesSince(SequenceNumber.ZERO, -1, ChangedURIStates.ACTIVE)
         }
@@ -38,6 +41,8 @@ class ChangedURITest extends Specification with ShoeboxTestInjector {
             changedURIRepo.save(tmp)
           }
         }
+
+        seqAssigner.assignSequenceNumbers()
 
         changes = db.readOnlyMaster { implicit s =>
           changedURIRepo.getChangesSince(lastSeq, -1, ChangedURIStates.ACTIVE)

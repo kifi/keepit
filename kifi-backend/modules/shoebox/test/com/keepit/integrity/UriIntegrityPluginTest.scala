@@ -20,6 +20,7 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val bmRepo = inject[KeepRepo]
+        val seqAssigner = inject[ChangedURISeqAssigner]
         val plugin = inject[UriIntegrityPlugin]
         plugin.onStart()
 
@@ -70,6 +71,7 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
         // merge
         plugin.handleChangedUri(URIMigration(uris(0).id.get, uris(1).id.get))
+        seqAssigner.assignSequenceNumbers()
         plugin.batchURIMigration()
 
         // check redirection
@@ -114,6 +116,7 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
         val collectionRepo = inject[CollectionRepo]
         val keepToCollectionRepo = inject[KeepToCollectionRepo]
         val bmRepo = inject[KeepRepo]
+        val seqAssigner = inject[ChangedURISeqAssigner]
         val plugin = inject[UriIntegrityPlugin]
         plugin.onStart()
 
@@ -204,7 +207,7 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
         plugin.handleChangedUri(URIMigration(uris(0).id.get, betterUris(0).id.get))
         plugin.handleChangedUri(URIMigration(uris(1).id.get, betterUris(1).id.get))
         plugin.handleChangedUri(URIMigration(uris(2).id.get, betterUris(2).id.get))
-
+        seqAssigner.assignSequenceNumbers()
         plugin.batchURIMigration()
 
         db.readOnlyMaster { implicit s =>
