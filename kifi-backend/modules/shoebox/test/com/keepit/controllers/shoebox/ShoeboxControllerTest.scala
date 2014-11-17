@@ -69,8 +69,9 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
   }
 
   def setupSomePhrases()(implicit injector: Injector) = {
-    inject[Database].readWrite { implicit s =>
-      val phrases = List(
+    var seqAssigner = inject[PhraseSequenceNumberAssigner]
+    val phrases = db.readWrite { implicit s =>
+      List(
         phraseRepo.save(Phrase(phrase = "planck constant", lang = Lang("en"), source = "quantum physics")),
         phraseRepo.save(Phrase(phrase = "wave-particle duality", lang = Lang("en"), source = "quantum physics")),
         phraseRepo.save(Phrase(phrase = "schrodinger equation", lang = Lang("en"), source = "quantum physics")),
@@ -78,8 +79,9 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
         phraseRepo.save(Phrase(phrase = "grandeur extensive", lang = Lang("fr"), source = "physique statistique")),
         phraseRepo.save(Phrase(phrase = "gaz parfait", lang = Lang("fr"), source = "physique statistique"))
       )
-      phrases
     }
+    seqAssigner.assignSequenceNumbers()
+    phrases
   }
 
   "ShoeboxController" should {
