@@ -103,7 +103,7 @@ class AdminLibraryController @Inject() (
 
       val statsByLibraryId = {
         val pagedLibrariesById = pagePublished.map(lib => (lib.id.get -> lib)).toMap
-        val allLibraryIds = pagedLibrariesById.keySet ++ topDailyFollower.map(_._1) ++ topDailyFollower.map(_._1)
+        val allLibraryIds = pagedLibrariesById.keySet ++ topDailyFollower.map(_._1) ++ topDailyKeeps.map(_._1)
         val librariesById = {
           val missingLibraryIds = allLibraryIds -- pagedLibrariesById.keys
           val missingLibraries = if (missingLibraryIds.nonEmpty) libraryRepo.getLibraries(missingLibraryIds) else Map.empty
