@@ -14,7 +14,11 @@ import com.keepit.integrity.{ UriIntegrityPlugin, DataIntegrityPlugin }
 import com.keepit.common.integration.AutogenReaperPlugin
 import com.keepit.normalizer.NormalizationUpdaterPlugin
 import com.keepit.common.concurrent.{ ForkJoinExecContextPlugin }
+<<<<<<< HEAD
+import com.keepit.model.{ SocialUserInfoSequencingPlugin, LibrarySequencingPlugin, LibraryMembershipSequencingPlugin, UrlPatternRuleRepo }
+=======
 import com.keepit.model._
+>>>>>>> 3aafdd7830c04189740cb4f6c19ee92c07cbcd39
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
@@ -59,5 +63,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[InvitationSequencingPlugin] != null) // make sure its not lazy loaded
     require(injector.instance[RenormalizedURLSeqPlugin] != null) // make sure its not lazy loaded
     require(injector.instance[CollectionSeqPlugin] != null) // make sure its not lazy loaded
+    require(injector.instance[SocialUserInfoSequencingPlugin] != null) //make sure its not lazy loaded
   }
 }
