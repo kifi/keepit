@@ -5,9 +5,9 @@ import com.keepit.common.actor.ActorInstance
 
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.{DbSequenceAssigner, Id, State}
+import com.keepit.common.db.{ DbSequenceAssigner, Id, State }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.plugin.{SequencingActor, SchedulingProperties, SequencingPlugin}
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time.Clock
 
 import org.joda.time.DateTime
@@ -175,8 +175,8 @@ class InvitationRepoImpl @Inject() (
 trait InvitationSequencingPlugin extends SequencingPlugin
 
 class InvitationSequencingPluginImpl @Inject() (
-  override val actor: ActorInstance[InvitationSequencingActor],
-  override val scheduling: SchedulingProperties) extends InvitationSequencingPlugin {
+    override val actor: ActorInstance[InvitationSequencingActor],
+    override val scheduling: SchedulingProperties) extends InvitationSequencingPlugin {
 
   override val interval: FiniteDuration = 20 seconds
 }
