@@ -5,7 +5,7 @@
 k.panes.settings = k.panes.settings || function () {
   'use strict';
   var handlers = {settings: update};
-  var subordinates = {keeper: 'sensitive', search: 'max-results'};
+  var subordinates = {search: 'max-results'};
   var box;
   return {
     render: function ($paneBox) {
@@ -39,7 +39,6 @@ k.panes.settings = k.panes.settings || function () {
       updateCheckbox('kifi-popups', o.popups);
       updateCheckbox('kifi-emails', o.emails);
       updateCheckbox('kifi-keeper', o.keeper);
-      updateCheckbox('kifi-sensitive', o.sensitive);
       updateCheckbox('kifi-search', o.search);
       var sel = box.querySelector('select[name=kifi-max-results]');
       sel.dataset.val = sel.value = o.maxResults;
