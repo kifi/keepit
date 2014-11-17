@@ -54,7 +54,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {
-    inject[Database].readWrite { implicit s =>
+    db.readWrite { implicit s =>
 
       val user1965 = userRepo.save(User(firstName = "Richard", lastName = "Feynman", username = Username("test"), normalizedUsername = "test"))
       val user1933 = userRepo.save(User(firstName = "Paul", lastName = "Dirac", username = Username("test2"), normalizedUsername = "test2"))
@@ -69,18 +69,21 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
   }
 
   def setupSomePhrases()(implicit injector: Injector) = {
-    var seqAssigner = inject[PhraseSequenceNumberAssigner]
     val phrases = db.readWrite { implicit s =>
-      List(
-        phraseRepo.save(Phrase(phrase = "planck constant", lang = Lang("en"), source = "quantum physics")),
-        phraseRepo.save(Phrase(phrase = "wave-particle duality", lang = Lang("en"), source = "quantum physics")),
-        phraseRepo.save(Phrase(phrase = "schrodinger equation", lang = Lang("en"), source = "quantum physics")),
-        phraseRepo.save(Phrase(phrase = "hypothèse ergodique", lang = Lang("fr"), source = "physique statistique")),
-        phraseRepo.save(Phrase(phrase = "grandeur extensive", lang = Lang("fr"), source = "physique statistique")),
-        phraseRepo.save(Phrase(phrase = "gaz parfait", lang = Lang("fr"), source = "physique statistique"))
-      )
+      val p1 = phraseRepo.save(Phrase(phrase = "planck constant", lang = Lang("en"), source = "quantum physics"))
+      Thread.sleep(2) // need a bit of space so sequence numbers do not get mixed up
+      val p2 = phraseRepo.save(Phrase(phrase = "wave-particle duality", lang = Lang("en"), source = "quantum physics"))
+      Thread.sleep(2)
+      val p3 = phraseRepo.save(Phrase(phrase = "schrodinger equation", lang = Lang("en"), source = "quantum physics"))
+      Thread.sleep(2)
+      val p4 = phraseRepo.save(Phrase(phrase = "hypothèse ergodique", lang = Lang("fr"), source = "physique statistique"))
+      Thread.sleep(2)
+      val p5 = phraseRepo.save(Phrase(phrase = "grandeur extensive", lang = Lang("fr"), source = "physique statistique"))
+      Thread.sleep(2)
+      val p6 = phraseRepo.save(Phrase(phrase = "gaz parfait", lang = Lang("fr"), source = "physique statistique"))
+      List(p1, p2, p3, p4, p5, p6)
     }
-    seqAssigner.assignSequenceNumbers()
+    inject[PhraseSequenceNumberAssigner].assignSequenceNumbers()
     phrases
   }
 
