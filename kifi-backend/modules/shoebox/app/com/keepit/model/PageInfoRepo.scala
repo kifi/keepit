@@ -56,7 +56,7 @@ class PageInfoRepoImpl @Inject() (
   }
 
   override def save(model: PageInfo)(implicit session: RWSession): PageInfo = {
-    val toSave = model.copy(seq = sequence.incrementAndGet(), title = model.title.map(_.take(2000)))
+    val toSave = model.copy(seq = deferredSeqNum(), title = model.title.map(_.take(2000)))
     log.info(s"[PageInfoRepo.save] $toSave")
     super.save(toSave)
   }

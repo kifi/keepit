@@ -3,10 +3,10 @@ package com.keepit.model
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{DbSequenceAssigner, SequenceNumber, State}
+import com.keepit.common.db.{ DbSequenceAssigner, SequenceNumber, State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.plugin.{SequencingActor, SchedulingProperties, SequencingPlugin}
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import scala.slick.util.CloseableIterator
 import com.keepit.common.time.Clock
 import com.keepit.search.Lang
