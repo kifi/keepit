@@ -176,8 +176,7 @@ trait InvitationSequencingPlugin extends SequencingPlugin
 
 class InvitationSequencingPluginImpl @Inject() (
     override val actor: ActorInstance[InvitationSequencingActor],
-    override val scheduling: SchedulingProperties) extends InvitationSequencingPlugin {
-}
+    override val scheduling: SchedulingProperties) extends InvitationSequencingPlugin
 
 @Singleton
 class InvitationSequenceNumberAssigner @Inject() (db: Database, repo: InvitationRepo, airbrake: AirbrakeNotifier) extends DbSequenceAssigner[Invitation](db, repo, airbrake)
