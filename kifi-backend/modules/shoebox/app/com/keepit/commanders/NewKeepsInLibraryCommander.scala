@@ -37,19 +37,13 @@ class NewKeepsInLibraryCommander @Inject() (
       while (libraryKeeps.size < max && libs.nonEmpty) {
         val libraryMembership: LibraryMembership = libs.pop()
         val since = lastDateToGetKeepsFrom(libraryMembership)
-        val keeps = keepRepo.getKeepsFromLibrarySince(since, libraryMembership.libraryId, max) filterNot pornUrl filterNot {
-          keep => keptByUser(keep, userId)
-        }
-        if (keeps.nonEmpty) libraryKeeps.append(mutable.Stack(keeps: _*))
+        val keeps = keepRepo.getKeepsFromLibrarySince(since, libraryMembership.libraryId, max) filterNot pornUrl
+        val keptByUser = keepRepo.getByUserAndUriIds(userId, keeps.map(_.uriId).toSet)
+        val keepsNotKeptByUser = keeps.filterNot(keptByUser.contains)
+        if (keeps.nonEmpty) libraryKeeps.append(mutable.Stack(keepsNotKeptByUser: _*))
       }
       libraryKeeps
     }
-  }
-
-  private def keptByUser(keep: Keep, userId: Id[User])(implicit session: RSession): Boolean = {
-    val kept = keepRepo.getByUriAndUser(keep.uriId, userId).isDefined
-    if (kept) log.info(s"keep uriId=${keep.uriId} was kept by userId=$userId, filtering out")
-    kept
   }
 
   private def pornUrl(keep: Keep)(implicit session: RSession): Boolean = {
