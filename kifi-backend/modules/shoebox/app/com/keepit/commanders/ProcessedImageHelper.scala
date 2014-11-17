@@ -86,7 +86,7 @@ trait ProcessedImageHelper {
   }
 
   protected val mimeTypeToImageFormat: String => Option[ImageFormat] = {
-    case t if t.startsWith("image/jpeg") || t.startsWith("image/jpg") => Some(ImageFormat.JPG)
+    case t if t.startsWith("image/jpeg") => Some(ImageFormat.JPG)
     case t if t.startsWith("image/png") => Some(ImageFormat.PNG)
     case t if t.startsWith("image/tiff") => Some(ImageFormat("tiff"))
     case t if t.startsWith("image/bmp") => Some(ImageFormat("bmp"))
