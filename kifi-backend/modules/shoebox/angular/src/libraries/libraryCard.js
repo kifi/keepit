@@ -376,11 +376,18 @@ angular.module('kifi')
 
         scope.onSearchInputFocus = function () {
           scope.librarySearchInProgress = true;
+          angular.element('.kf-header-right').css({
+            'transition': 'margin-right 0.4s ease',
+            'margin-right': '150px'
+          });
         };
 
         scope.onSearchExit = function () {
           scope.librarySearchInProgress = false;
           $rootScope.$emit('librarySearchChanged', false);
+          angular.element('.kf-header-right').css({
+            'margin-right': '0'
+          });
 
           $timeout(function () {
             scope.search.text = '';
