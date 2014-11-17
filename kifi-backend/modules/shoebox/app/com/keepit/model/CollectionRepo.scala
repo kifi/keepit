@@ -1,11 +1,14 @@
 package com.keepit.model
 
 import com.keepit.commanders.{ BasicCollectionByIdKey, BasicCollectionByIdCache }
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ SequenceNumber, State, ExternalId, Id }
+import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -127,7 +130,7 @@ class CollectionRepoImpl @Inject() (
   }
 
   override def save(model: Collection)(implicit session: RWSession): Collection = {
-    val newModel = model.copy(seq = sequence.incrementAndGet())
+    val newModel = model.copy(seq = deferredSeqNum())
     session.onTransactionSuccess {
       Try {
         val tag = SendableTag.from(model.summary)
@@ -196,3 +199,14 @@ class CollectionRepoImpl @Inject() (
   }
 }
 
+trait CollectionSeqPlugin extends SequencingPlugin
+
+class CollectionSeqPluginImpl @Inject() (override val actor: ActorInstance[CollectionSeqActor], override val scheduling: SchedulingProperties)
+  extends CollectionSeqPlugin
+
+@Singleton
+class CollectionSeqAssigner @Inject() (db: Database, repo: CollectionRepo, airbrake: AirbrakeNotifier)
+  extends DbSequenceAssigner[Collection](db, repo, airbrake)
+
+class CollectionSeqActor @Inject() (assigner: CollectionSeqAssigner, airbrake: AirbrakeNotifier)
+  extends SequencingActor(assigner, airbrake)
