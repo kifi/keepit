@@ -78,7 +78,7 @@ trait ChangedURISeqPlugin extends SequencingPlugin
 
 class ChangedURISeqPluginImpl @Inject() (override val actor: ActorInstance[ChangedURISeqActor], override val scheduling: SchedulingProperties)
     extends ChangedURISeqPlugin {
-  override val interval: FiniteDuration = 20 seconds
+  override val interval: FiniteDuration = 10 seconds
 }
 
 @Singleton

@@ -1,11 +1,14 @@
 package com.keepit.model
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick._
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ DbSequenceAssigner, Id, SequenceNumber, State }
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.Clock
-import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db.State
+
+import scala.concurrent.duration._
 
 @ImplementedBy(classOf[RenormalizedURLRepoImpl])
 trait RenormalizedURLRepo extends Repo[RenormalizedURL] with SeqNumberFunction[RenormalizedURL] {
@@ -36,7 +39,7 @@ class RenormalizedURLRepoImpl @Inject() (
   initTable()
 
   override def save(model: RenormalizedURL)(implicit session: RWSession) = {
-    val newModel = model.copy(seq = sequence.incrementAndGet())
+    val newModel = model.copy(seq = deferredSeqNum())
     super.save(newModel)
   }
 
@@ -68,3 +71,18 @@ class RenormalizedURLRepoImpl @Inject() (
   }
 
 }
+
+trait RenormalizedURLSeqPlugin extends SequencingPlugin
+
+class RenormalizedURLSeqPluginImpl @Inject() (override val actor: ActorInstance[RenormalizedURLSeqActor], override val scheduling: SchedulingProperties)
+    extends RenormalizedURLSeqPlugin {
+  override val interval: FiniteDuration = 10 seconds
+}
+
+@Singleton
+class RenormalizedURLSeqAssigner @Inject() (db: Database, repo: RenormalizedURLRepo, airbrake: AirbrakeNotifier)
+  extends DbSequenceAssigner[RenormalizedURL](db, repo, airbrake)
+
+class RenormalizedURLSeqActor @Inject() (assigner: RenormalizedURLSeqAssigner, airbrake: AirbrakeNotifier)
+  extends SequencingActor(assigner, airbrake)
+
