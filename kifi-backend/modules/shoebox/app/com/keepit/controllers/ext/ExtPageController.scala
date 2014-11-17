@@ -21,7 +21,7 @@ class ExtPageController @Inject() (
     URI.parse(url) match {
       case Success(_) =>
         val info = pageCommander.getPageDetails(url, request.userId, request.experiments)
-        Ok(Json.toJson(info))
+        Ok(Json.toJson(info.copy(sensitive = false)))
       case Failure(e) =>
         log.error(s"Error parsing url: $url", e)
         BadRequest(Json.obj("error" -> s"Error parsing url: $url"))
@@ -33,7 +33,7 @@ class ExtPageController @Inject() (
     URI.parse(url) match {
       case Success(uri) =>
         pageCommander.getPageInfo(uri, request.userId, request.experiments).map { info =>
-          Ok(Json.toJson(info))
+          Ok(Json.toJson(info.copy(sensitive = false)))
         }
       case Failure(e) =>
         log.error(s"Error parsing url: $url", e)
