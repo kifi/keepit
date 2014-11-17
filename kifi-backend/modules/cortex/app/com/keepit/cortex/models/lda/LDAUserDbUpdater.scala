@@ -9,6 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.cortex.ModelVersions
 import com.keepit.cortex.core.{ ModelVersion, StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
@@ -97,7 +98,7 @@ class LDAUserDbUpdaterImpl @Inject() (
       }
       val (snaphShotChanged, tosave) = updateSnapshotIfNecessary(newModel)
       db.readWrite { implicit s => userTopicRepo.save(tosave) }
-      if (snaphShotChanged) { curator.refreshUserRecos(user) }
+      if (snaphShotChanged && version == ModelVersions.denseLDAVersion) { curator.refreshUserRecos(user) }
     }
   }
 

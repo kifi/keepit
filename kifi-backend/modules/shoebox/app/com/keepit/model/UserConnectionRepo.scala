@@ -46,8 +46,6 @@ class UserConnectionRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[UserConnection]("user_connection_sequence")
-
   override def save(model: UserConnection)(implicit session: RWSession): UserConnection = {
     // setting a negative sequence number for deferred assignment
     val seqNum = deferredSeqNum()
@@ -171,13 +169,4 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection] = super.getBySequenceNumber(seq, fetchSize)
-
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "user_connection", limit)
-  }
-
-  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
-    sql"""select min(seq) from user_connection where seq < 0""".as[Option[Long]].first
-  }
 }

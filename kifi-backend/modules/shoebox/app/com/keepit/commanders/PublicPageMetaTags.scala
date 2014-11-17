@@ -36,8 +36,8 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
   def formatOpenGraph: String =
     s"""
       |<meta name="robots" content="noindex">
-      |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly"/>
-      |<meta name="apple-mobile-web-app-capable" content="no"/>
+      |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly">
+      |<meta name="apple-mobile-web-app-capable" content="no">
       |<meta name="google-play-app" content="app-id=com.kifi">
     """.stripMargin
 
@@ -58,7 +58,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
 
     def ogImageTags = images map { image =>
       s"""
-         |<meta property="og:image" content="$image" />
+         |<meta property="og:image" content="$image">
          |<meta itemprop="image" content="$image">
        """.stripMargin.trim
     } mkString ("\n")
@@ -70,7 +70,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
     } getOrElse ("")
 
     def facebookIdTag = facebookId.map { id =>
-      s"""<meta property="article:author" content="$id"/>"""
+      s"""<meta property="article:author" content="$id">"""
     } getOrElse ""
 
     def noIndexTag = if (noIndex) {
@@ -81,32 +81,36 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
 
     s"""
       |<title>${title}</title>
-      |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly"/>
-      |<meta name="apple-mobile-web-app-capable" content="no"/>
+      |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly">
+      |<meta name="apple-mobile-web-app-capable" content="no">
       |<meta name="google-play-app" content="app-id=com.kifi">
-      |<meta property="og:description" content="${description}" />
-      |<meta property="og:title" content="${title}" />
-      |<meta property="og:type" content="blog" />
-      |<meta property="og:published_time" content="${ISO_8601_DAY_FORMAT.print(createdAt)}" />
-      |<meta property="og:modified_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}" />
+      |<meta property="og:description" content="${description}">
+      |<meta property="og:title" content="${title}">
+      |<meta property="og:type" content="article">
+      |<meta name="author" content="${firstName} ${lastName}">
+      |<meta property="article:published_time" content="${ISO_8601_DAY_FORMAT.print(createdAt)}">
+      |<meta property="article:modified_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}">
+      |<meta property="al:iphone:url" content="kifi:/$urlPathOnly">
+      |<meta property="al:iphone:app_store_id" content="740232575">
+      |<meta property="al:iphone:app_name" content="Kifi iPhone App">
+      |<meta property="al:android:url" content="kifi:/$urlPathOnly">
+      |<meta property="al:android:package" content="com.kifi">
+      |<meta property="al:android:app_name" content="Kifi Android App">
+      |<meta property="al:android:class" content="com.kifi.SplashActivity">
       |$ogImageTags
       |$facebookIdTag
-      |<meta property="og:url" content="$url" />
-      |<meta property="og:site_name" content="Kifi - Connecting People With Knowledge" />
-      |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}" />
-      |<meta property="fb:first_name" content="${firstName}" />
-      |<meta property="fb:last_name" content="${lastName}" />
-      |<meta property="fb:admins" content="646386018,71105121,7800404,1343280666,1367777495,575533310,636721190" />
+      |<meta property="og:url" content="$url">
+      |<meta property="og:site_name" content="Kifi - Connecting People With Knowledge">
+      |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}">
       |<meta name="description" content="$description">
-      |<meta name="author" content="${firstName} ${lastName}">
-      |<link rel="canonical" href="$url" />
-      |<meta name="twitter:card" content="summary_large_image" />
-      |<meta name="twitter:site" content="@kifi" />
-      |<meta name="twitter:creator" content="@kifi" />
+      |<link rel="canonical" href="$url">
+      |<meta name="twitter:card" content="summary_large_image">
+      |<meta name="twitter:site" content="@kifi">
+      |<meta name="twitter:creator" content="@kifi">
       |<meta name="twitter:title" content="${title}">
       |<meta name="twitter:description" content="${description}">
-      |<meta name="twitter:url" content="$url" />
-      |<meta name="twitter:app:name:iphone" content="Kifi Iphone App">
+      |<meta name="twitter:url" content="$url">
+      |<meta name="twitter:app:name:iphone" content="Kifi iPhone App">
       |<meta name="twitter:app:id:iphone" content="740232575">
       |<meta name="twitter:app:url:iphone" content="kifi:/$urlPathOnly">
       |<meta name="twitter:app:name:googleplay" content="Kifi Android App">

@@ -84,7 +84,7 @@ class LibraryCommander @Inject() (
         //facebook OG recommends:
         //We suggest that you use an image of at least 1200x630 pixels.
         val imageUrls: Seq[String] = {
-          val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, KeepImageSize.XLarge.idealSize).values.flatten.toSeq
+          val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, ProcessedImageSize.XLarge.idealSize).values.flatten.toSeq
           val sorted: Seq[KeepImage] = images.sortWith {
             case (image1, image2) =>
               (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)
@@ -254,7 +254,7 @@ class LibraryCommander @Inject() (
   }
 
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], library: Library): Future[FullLibraryInfo] = {
-    createFullLibraryInfos(viewerUserIdOpt, 10, 10, KeepImageSize.Large.idealSize, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
+    createFullLibraryInfos(viewerUserIdOpt, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
   }
 
   def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], Map[LibraryAccess, Int]) = {
