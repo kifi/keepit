@@ -298,16 +298,9 @@ class AdminUserController @Inject() (
   def allFakeUsersView = fakeUsersView(0)
 
   private def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
-    val bySocial: Seq[Id[User]] = socialUserIds map { socialUserId =>
-      invitationRepo.getByRecipientSocialUserId(socialUserId).map(_.senderUserId).flatten
-    } flatten
-    val byEmail: Seq[Id[User]] = emails map { email =>
-      invitationRepo.getByRecipientEmailAddress(email.address).map(_.senderUserId).flatten
-    } flatten
-    val all: Seq[Id[User]] = (byEmail ++ bySocial).toSet.toSeq
-    all map { userId =>
-      userRepo.get(userId)
-    }
+    val invites = invitationRepo.getByRecipientSocialUserIdsAndEmailAddresses(socialUserIds.toSet, emails.map(_.address).toSet)
+    val inviters = invites.map(_.senderUserId).flatten
+    userRepo.getAllUsers(inviters).values.toSeq
   }
 
   private def userStatistics(user: User, socialUserInfos: Map[Id[User], Seq[SocialUserInfo]])(implicit s: RSession): UserStatistics = {
