@@ -23,8 +23,6 @@ class RenormalizedURLRepoImpl @Inject() (
     val urlRepo: URLRepoImpl) extends DbRepo[RenormalizedURL] with RenormalizedURLRepo with SeqNumberDbFunction[RenormalizedURL] {
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[RenormalizedURL]("renormalized_url_sequence")
-
   type RepoImpl = RenormalizedURLTable
 
   class RenormalizedURLTable(tag: Tag) extends RepoTable[RenormalizedURL](db, tag, "renormalized_url") with SeqNumberColumn[RenormalizedURL] {

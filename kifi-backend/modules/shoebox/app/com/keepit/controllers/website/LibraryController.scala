@@ -231,7 +231,7 @@ class LibraryController @Inject() (
         val numKeepsF = libraryCommander.getKeepsCount(libraryId)
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
-          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps, KeepImageSize.Large.idealSize)
+          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps, ProcessedImageSize.Large.idealSize)
           numKeeps <- numKeepsF
         } yield {
           Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "numKeeps" -> numKeeps))

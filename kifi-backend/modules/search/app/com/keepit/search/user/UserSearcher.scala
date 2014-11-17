@@ -46,7 +46,6 @@ class UserSearcher(searcher: Searcher) {
   }
 
   private def genHitsPriorityQueue(query: Query, searchFilter: UserSearchFilter, queueSize: Int)(scoreFunc: UserHit => Float)(additionalCheck: UserHit => Boolean): ScoredUserHitPQ = {
-    val idFilter = searchFilter.idFilter
     val pq = new ScoredUserHitPQ(queueSize)
 
     searcher.search(query) { (scorer, reader) =>
@@ -56,8 +55,7 @@ class UserSearcher(searcher: Searcher) {
       while (doc != NO_MORE_DOCS) {
         val id = mapper.getId(doc)
         if (id >= 0 && searchFilter.accept(id)) {
-          var ref = new BytesRef()
-          bv.get(doc, ref)
+          val ref = bv.get(doc)
           val user = BasicUserSerializer.fromByteArray(ref.bytes, ref.offset, ref.length)
           val userId = Id[User](id)
           val isFriend = searchFilter.getKifiFriends.contains(id)

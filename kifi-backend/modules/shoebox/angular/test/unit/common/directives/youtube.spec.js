@@ -38,28 +38,27 @@ describe('kifi.youtube', function () {
       element.remove();
     });
 
-    it('should append an embed element as a child', function () {
-      var child = element.find('embed')[0];
-      expect(child.nodeName).toBe('EMBED');
-      expect(child.type).toBe('application/x-shockwave-flash');
+    it('should append a div element as a child', function () {
+      var child = element.find('div')[0];
+      expect(child.nodeName).toBe('DIV');
       expect(iScope.videoId).toBe(vid);
-      expect(child.src).toContain(vid);
-      expect(child.src).toContain('youtube.com');
+      expect(child.style.backgroundImage).toContain(vid);
+      expect(child.style.backgroundImage).toContain('img.youtube.com');
     });
 
     it('should update src whenever videoId is changed', function () {
-      var child = element.find('embed')[0];
+      var child = element.find('div')[0];
       expect(iScope.videoId).toBe(vid);
-      expect(child.src).toContain(vid);
+      expect(child.style.backgroundImage).toContain(vid);
 
       var newVid = 'NEW_VIDEO_ID';
       scope.videoId = newVid;
       scope.$digest();
 
-      child = element.find('embed')[0];
+      child = element.find('div')[0];
       expect(iScope.videoId).toBe(newVid);
-      expect(child.src).not.toContain(vid);
-      expect(child.src).toContain(newVid);
+      expect(child.style.backgroundImage).not.toContain(vid);
+      expect(child.style.backgroundImage).toContain(newVid);
     });
   });
 

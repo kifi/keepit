@@ -22,7 +22,7 @@ trait KeepRecencyEvaluator { self: DebugOption =>
 
   protected def getRecencyScorer(readerContext: AtomicReaderContext): RecencyScorer = {
     // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
-    recencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
+    recencyWeight.scorer(readerContext, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
   }
 
   private[this] lazy val slowDecayingRecencyQuery = {
@@ -35,7 +35,7 @@ trait KeepRecencyEvaluator { self: DebugOption =>
 
   protected def getSlowDecayingRecencyScorer(readerContext: AtomicReaderContext): RecencyScorer = {
     // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
-    slowDecayingRecencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
+    slowDecayingRecencyWeight.scorer(readerContext, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
   }
 
   @inline

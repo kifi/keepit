@@ -15,10 +15,7 @@ import org.apache.lucene.analysis.lv.LatvianAnalyzer
 import org.apache.lucene.analysis.ro.RomanianAnalyzer
 import org.apache.lucene.analysis.snowball.SnowballFilter
 import org.apache.lucene.analysis.th.ThaiAnalyzer
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
-import org.apache.lucene.analysis.tokenattributes.TypeAttribute
-import org.apache.lucene.analysis.tokenattributes.TypeAttributeImpl
+import org.apache.lucene.analysis.tokenattributes._
 import org.apache.lucene.analysis.tr.TurkishAnalyzer
 import org.apache.lucene.analysis.{ Analyzer => LAnalyzer }
 import org.apache.lucene.analysis.TokenFilter
@@ -27,8 +24,7 @@ import org.apache.lucene.analysis.core.StopFilter
 import org.apache.lucene.analysis.util.CharArraySet
 import org.apache.lucene.analysis.util.ElisionFilter
 import org.apache.lucene.analysis.util.WordlistLoader
-import org.apache.lucene.util.IOUtils
-import org.apache.lucene.util.Version
+import org.apache.lucene.util.{ Version, IOUtils }
 import org.tartarus.snowball.ext.DanishStemmer
 import org.tartarus.snowball.ext.DutchStemmer
 import org.tartarus.snowball.ext.RomanianStemmer
@@ -36,13 +32,14 @@ import org.tartarus.snowball.ext.TurkishStemmer
 import org.tartarus.snowball.SnowballProgram
 import scala.reflect.ClassTag
 import org.apache.lucene.analysis.ja.JapaneseAnalyzer
+import java.nio.charset.StandardCharsets
 
 trait TokenFilterFactory {
   def apply(tokenSteam: TokenStream): TokenStream
 }
 
 class StopFilterFactory(val stopWords: CharArraySet) extends TokenFilterFactory {
-  def apply(tokenStream: TokenStream) = new StopFilter(LuceneVersion.version, tokenStream, stopWords)
+  def apply(tokenStream: TokenStream) = new StopFilter(tokenStream, stopWords)
 }
 
 object TokenFilterFactories {
@@ -80,8 +77,8 @@ class StopFilterFactories {
   private def loadFromSnowball(stopWordFile: String): TokenFilterFactory = {
     var reader: Reader = null
     try {
-      reader = IOUtils.getDecodingReader(classOf[SnowballFilter], stopWordFile, IOUtils.CHARSET_UTF_8)
-      val stopSet = WordlistLoader.getSnowballWordSet(reader, LuceneVersion.version)
+      reader = IOUtils.getDecodingReader(classOf[SnowballFilter], stopWordFile, StandardCharsets.UTF_8)
+      val stopSet = WordlistLoader.getSnowballWordSet(reader)
       load(stopSet)
     } catch {
       case ex: IOException =>
@@ -99,8 +96,8 @@ class StopFilterFactories {
     try {
       val file = "stopwords.txt"
       val clazz = m.runtimeClass
-      reader = IOUtils.getDecodingReader(clazz.getResourceAsStream(file), IOUtils.CHARSET_UTF_8)
-      val stopSet = WordlistLoader.getWordSet(reader, comment, new CharArraySet(LuceneVersion.version, 16, ignoreCase))
+      reader = IOUtils.getDecodingReader(clazz.getResourceAsStream(file), StandardCharsets.UTF_8)
+      val stopSet = WordlistLoader.getWordSet(reader, comment, new CharArraySet(16, ignoreCase))
       load(stopSet)
     } catch {
       case ex: IOException =>
@@ -135,9 +132,6 @@ object WrapperTokenFilterFactory {
   def apply(constructor: Constructor[TokenStream]) = new TokenFilterFactory {
     def apply(tokenStream: TokenStream) = constructor.newInstance(tokenStream)
   }
-  def apply(constructor: Constructor[TokenStream], version: Version) = new TokenFilterFactory {
-    def apply(tokenStream: TokenStream) = constructor.newInstance(version, tokenStream)
-  }
 }
 
 class FrenchElisionFilter(tokenStream: TokenStream)
@@ -148,8 +142,7 @@ class FrenchElisionFilter(tokenStream: TokenStream)
 class SymbolDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStream) {
   val termAttr = addAttribute(classOf[CharTermAttribute])
   val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
-  val typeAttr = tokenStream.getAttribute(classOf[TypeAttribute]).asInstanceOf[TypeAttributeImpl]
-  val tokenType = new TypeAttributeAccessor
+  val tokenAttr = tokenStream.getAttribute(classOf[TypeAttribute]).asInstanceOf[PackedTokenAttributeImpl]
 
   var tokenStart = 0
   var buffer = Array.empty[Char]
@@ -199,7 +192,7 @@ class SymbolDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStre
     if (cnt == 0 || cnt == len / 2 || cnt == len) {
       false // regular word or acronym
     } else {
-      if (tokenType(typeAttr) == alphanum) {
+      if (tokenAttr.`type`() == alphanum) {
 
         if (buffer.length < src.length) buffer = new Array[Char](src.length) // resize buffer
         Array.copy(src, 0, buffer, 0, len)
@@ -239,14 +232,3 @@ class EmptyTokenFilter(tokenStream: TokenStream) extends TokenFilter(tokenStream
     true
   }
 }
-
-class TypeAttributeAccessor extends TypeAttributeImpl {
-  var tokenType: String = TypeAttribute.DEFAULT_TYPE
-  override def setType(tt: String) { tokenType = tt }
-
-  def apply(ta: TypeAttributeImpl) = {
-    ta.copyTo(this)
-    tokenType
-  }
-}
-

@@ -2,11 +2,7 @@ package com.keepit.search.index
 
 import com.keepit.search.Lang
 import org.specs2.mutable._
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
-import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
-import org.apache.lucene.analysis.tokenattributes.TypeAttribute
-import org.apache.lucene.analysis.tokenattributes.TypeAttributeImpl
+import org.apache.lucene.analysis.tokenattributes._
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.util.CharArraySet
 import java.io.Reader
@@ -135,15 +131,14 @@ class DefaultAnalyzerTest extends Specification {
   }
 
   private def toTokenList(ts: TokenStream): List[Token] = {
-    val typeAttr = ts.getAttribute(classOf[TypeAttribute]).asInstanceOf[TypeAttributeImpl]
+    val typeAttr = ts.getAttribute(classOf[TypeAttribute]).asInstanceOf[PackedTokenAttributeImpl]
     val termAttr = ts.getAttribute(classOf[CharTermAttribute])
     val posIncrAttr = ts.getAttribute(classOf[PositionIncrementAttribute])
-    val typeAcc = new TypeAttributeAccessor
 
     var ret: List[Token] = Nil
     ts.reset()
     while (ts.incrementToken) {
-      ret = Token(typeAcc(typeAttr), new String(termAttr.buffer, 0, termAttr.length), posIncrAttr.getPositionIncrement) :: ret
+      ret = Token(typeAttr.`type`(), new String(termAttr.buffer, 0, termAttr.length), posIncrAttr.getPositionIncrement) :: ret
     }
     ts.end()
     ts.close()

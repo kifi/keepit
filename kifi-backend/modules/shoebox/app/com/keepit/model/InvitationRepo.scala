@@ -59,8 +59,6 @@ class InvitationRepoImpl @Inject() (
 
   def table(tag: Tag) = new InvitationTable(tag)
 
-  private val sequence = db.getSequence[Invitation]("invitation_sequence")
-
   private implicit val userIdTypeMapper = userRepo.idMapper
   private implicit val userStateMapper = userRepo.stateTypeMapper
 

@@ -1,7 +1,7 @@
 package com.keepit.shoebox
 
 import com.keepit.inject.AppScoped
-import com.keepit.model.{ LibraryMembershipSequencingPluginImpl, LibraryMembershipSequencingPlugin, LibrarySequencingPluginImpl, LibrarySequencingPlugin }
+import com.keepit.model._
 import net.codingwell.scalaguice.ScalaModule
 
 case class ShoeboxDbSequencingModule() extends ScalaModule {
@@ -12,5 +12,7 @@ case class ShoeboxDbSequencingModule() extends ScalaModule {
     bind[LibrarySequencingPlugin].to[LibrarySequencingPluginImpl].in[AppScoped]
     bind[LibraryMembershipSequencingPlugin].to[LibraryMembershipSequencingPluginImpl].in[AppScoped]
     bind[PageInfoSequencingPlugin].to[PageInfoSequencingPluginImpl].in[AppScoped]
+    bind[SocialConnectionSequencingPlugin].to[SocialConnectionSequencingPluginImpl].in[AppScoped]
+    bind[ChangedURISeqPlugin].to[ChangedURISeqPluginImpl].in[AppScoped]
   }
 }

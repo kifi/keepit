@@ -51,8 +51,6 @@ class CollectionRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[Collection]("collection_sequence")
-
   type RepoImpl = CollectionTable
 
   class CollectionTable(tag: Tag) extends RepoTable[Collection](db, tag, "collection") with ExternalIdColumn[Collection] with SeqNumberColumn[Collection] {

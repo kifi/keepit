@@ -40,8 +40,6 @@ class EmailAccountRepoImpl @Inject() (
   def table(tag: Tag) = new EmailAccountTable(tag)
   initTable()
 
-  private val sequence = db.getSequence[EmailAccount]("email_account_sequence")
-
   override def save(emailAccount: EmailAccount)(implicit session: RWSession): EmailAccount = {
     val toSave = emailAccount.copy(seq = deferredSeqNum())
     super.save(toSave)
@@ -84,15 +82,6 @@ class EmailAccountRepoImpl @Inject() (
 
   def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]] = {
     getByAddress(address).filter(_.verified).flatMap(_.userId)
-  }
-
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "email_account", limit)
-  }
-
-  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
-    sql"""select min(seq) from email_account where seq < 0""".as[Option[Long]].first
   }
 }
 

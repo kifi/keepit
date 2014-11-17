@@ -63,8 +63,6 @@ class SocialUserInfoRepoImpl @Inject() (
   private val REFRESHING_STATES = SocialUserInfoStates.FETCHED_USING_SELF :: SocialUserInfoStates.FETCH_FAIL :: Nil
   private val REFRESH_FREQUENCY = 2
 
-  private val sequence = db.getSequence[SocialUserInfo]("social_user_info_sequence")
-
   override def save(socialUserInfo: SocialUserInfo)(implicit session: RWSession): SocialUserInfo = {
     val toSave = socialUserInfo.copy(seq = sequence.incrementAndGet())
     super.save(toSave)

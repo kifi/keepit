@@ -19,10 +19,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   tile.id = 'kifi-tile';
   tile.className = 'kifi-tile kifi-root';
   tile.style.display = "none";
-  tile.innerHTML =
-    '<div class="kifi-tile-card">' +
-    '<div class="kifi-tile-keep"></div>' +
-    '<div class="kifi-tile-kept"></div></div>';
+  tile.innerHTML = '<div class="kifi-tile-card"></div><div class="kifi-tile-dot"></div>';
   tile["kifi:position"] = positionTile;
   tile.addEventListener('mouseover', function (e) {
     if ((tileCard.contains(e.target)) && e.isTrusted !== false) {
@@ -73,13 +70,27 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     kept: function(o) {
       if (o.kept) {
         tile.dataset.kept = o.kept;
+        if ('duplicate' in o) {
+          if (o.duplicate) {
+            loadAndDo('keeper', 'showKeepBox');
+          } else {
+            tileCard.textContent = '';
+            tileCard.clientHeight; // forces layout
+            tileCard.addEventListener(animationend(), function end(e) {
+              tileCard.removeEventListener(e.type, end);
+              tileCard.textContent = '';
+            });
+            tileCard.innerHTML = o.kept === 'public' ?
+              '<div class="kifi-tile-icon-keep"></div>' :
+              '<div class="kifi-tile-icon-lock"></div>';
+          }
+        }
       } else if (o.kept === null) {
         tile.removeAttribute('data-kept');
       }
       if (o.fail && !tile.querySelector('.kifi-keeper') && !tile.classList.contains('kifi-shake')) {
-        var eventType = 'animationName' in tile.style ? 'animationend' : 'webkitAnimationEnd';
-        tile.addEventListener(eventType, function end() {
-          tile.removeEventListener(eventType, end);
+        tile.addEventListener(animationend(), function end(e) {
+          tile.removeEventListener(e.type, end);
           tile.classList.remove('kifi-shake');
         });
         tile.classList.add('kifi-shake');
@@ -109,8 +120,6 @@ k.tile = k.tile || function () {  // idempotent for Chrome
             toggleLoginDialog();
           } else if (k.keepBox && k.keepBox.showing()) {
             k.keepBox.keep(e.altKey);
-          } else if (tile && (kept = tile.dataset.kept) && (kept === 'private') === e.altKey) {
-            loadAndDo('keeper', 'showKeepBox');
           } else {
             api.port.emit('keep', withTitles(withUrls({secret: e.altKey})));
           }
@@ -152,9 +161,11 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   }
 
   function updateCount(n) {
-    tileCard.firstChild.classList.toggle('kifi-dot', !!n);
-    tileCard.lastChild.classList.toggle('kifi-dot', !!n);
     tile.dataset.count = n;
+  }
+
+  function animationend() {
+    return 'animationName' in tile.style ? 'animationend' : 'webkitAnimationEnd';
   }
 
   function toggleLoginDialog() {

@@ -207,6 +207,7 @@ kifi.form = (function () {
         email: email,
         password: password
       }).done(function (data) {
+        Tracker.track($('html').data('trackViewEvent'));
         animation.update(1);
         animation.success();
         if (!navigate(data)) {
@@ -214,7 +215,7 @@ kifi.form = (function () {
           $signup2EmailForm.css('display', 'block').layout();
           $('body').addClass('finalizing droppable');
           $('.signup-1').hide();
-          $('html').data('trackType', 'signup2Email');
+          $('html').attr('data-track-type', 'signup2Email')
           setTimeout($.fn.focus.bind($('.form-first-name')), 100);
         }
       }).fail(function (xhr) {

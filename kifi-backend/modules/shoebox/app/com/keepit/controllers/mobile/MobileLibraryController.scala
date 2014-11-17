@@ -177,7 +177,7 @@ class MobileLibraryController @Inject() (
             w <- idealImageWidth
             h <- idealImageHeight
           } yield ImageSize(w, h)
-        } getOrElse KeepImageSize.Large.idealSize
+        } getOrElse ProcessedImageSize.Large.idealSize
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
           keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps, idealImageSize)
