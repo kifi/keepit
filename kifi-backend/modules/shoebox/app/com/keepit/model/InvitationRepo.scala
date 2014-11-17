@@ -177,8 +177,6 @@ trait InvitationSequencingPlugin extends SequencingPlugin
 class InvitationSequencingPluginImpl @Inject() (
     override val actor: ActorInstance[InvitationSequencingActor],
     override val scheduling: SchedulingProperties) extends InvitationSequencingPlugin {
-
-  override val interval: FiniteDuration = 20 seconds
 }
 
 @Singleton
