@@ -5,7 +5,8 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{ AlertingActor, UnsupportedActorMessage }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
-import com.keepit.model.User
+import com.keepit.model.{ User, NotificationCategory }
+import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 
 import play.api.libs.json.Json
 
@@ -62,7 +63,8 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
 class AirbrakeSender @Inject() (
   httpClient: HttpClient,
   healthcheck: HealthcheckPlugin,
-  pagerDutySender: PagerDutySender)
+  pagerDutySender: PagerDutySender,
+  systemAdminMailSender: SystemAdminMailSender)
     extends Logging {
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -74,7 +76,15 @@ class AirbrakeSender @Inject() (
         firstErrorReported = true
         val he = healthcheck.addError(AirbrakeError(ex, message = Some("Fail to send airbrake message")))
         log.error(s"can't deal with error: $he")
-        pagerDutySender.openIncident("Airbrake HttpClient Error!", ex)
+        if (ex.getMessage.contains("Project is rate limited")) {
+          pagerDutySender.openIncident("Airbrake over Rate Limit!", ex)
+        } else {
+          systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG,
+            to = Seq(SystemEmailAddress.ENG),
+            category = NotificationCategory.System.HEALTHCHECK,
+            subject = s"[WARNING] Could not send airbrake error (Airbrake down?)",
+            htmlBody = ex.getMessage))
+        }
       }
     }
   }
