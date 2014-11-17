@@ -106,6 +106,8 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit session =>
           uris.drop(1).map { uri => changedURIRepo.save(ChangedURI(oldUriId = uri.id.get, newUriId = uris(0).id.get, state = ChangedURIStates.APPLIED)) }
         }
+        val seqAssigner = inject[ChangedURISeqAssigner]
+        seqAssigner.assignSequenceNumbers()
         cleaner.cleanNormalizedURIsByChangedURIs(readOnly = false)
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
