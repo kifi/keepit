@@ -3,11 +3,9 @@
  *  inputs:
  *  (required) ng-bind
  *  (optional) ellipsisAppend - string to append at end of truncated text
- *  (optional) ellipsisSymbol - string to use as ellipsis - default is '...'
  *
  *  how to use:
  *  <p data-ellipsis data-ng-bind="longName"></p>
- *  <p data-ellipsis data-ng-bind="longName" data-ellipsis-symbol="---"></p>
  *  <p data-ellipsis data-ng-bind="longName" data-ellipsis-append="read more"></p>
  *
  */
@@ -41,32 +39,29 @@ angular.module('kifi')
         var lastWindowWidth = 0;
 
         function buildEllipsis() {
-          if (typeof(scope.fullText) !== 'undefined') {
+          if (typeof scope.fullText === 'string') {
             copyElement.css('width', element.width());
 
             // measure height of one line
-            copyElement.html('x');
+            copyElement.text('x');
             var heightPerLine = copyElement.height();
 
-            copyElement.html(scope.fullText);
+            copyElement.text(scope.fullText);
             var currentHeight = copyElement.height();
             var currentNumLines = currentHeight / heightPerLine;
             var maxIndex = scope.fullText.length;
             var maxNumLines = scope.maxNumLines || currentNumLines;
 
             if (currentHeight === 0) {
-              element.html(scope.fullText);
+              element.text(scope.fullText);
               return;
             }
             if (currentNumLines <= maxNumLines) { // entire name fits
-              element.html(scope.fullText);
+              element.text(scope.fullText);
               return;
             }
 
-            var appendString =
-              (typeof(scope.ellipsisAppend) !== 'undefined' && scope.ellipsisAppend !== '') ?
-                scope.ellipsisAppend :
-                '<span>&hellip;</span>';
+            var appendString = typeof scope.ellipsisAppend === 'string' && scope.ellipsisAppend || '\u2026';
 
             // binary search for correct maxIndex
             var hi = scope.fullText.length;
@@ -74,7 +69,7 @@ angular.module('kifi')
 
             while (hi - lo > 1) {
               maxIndex = lo + Math.floor((hi - lo)/2);
-              copyElement.html(scope.fullText.substr(0, maxIndex) + appendString);
+              copyElement.text(scope.fullText.substr(0, maxIndex) + appendString);
               currentHeight = copyElement.height();
               currentNumLines = currentHeight / heightPerLine;
 
@@ -85,7 +80,7 @@ angular.module('kifi')
               }
             }
             maxIndex = lo;
-            element.html(scope.fullText.substr(0, maxIndex) + appendString);
+            element.text(scope.fullText.substr(0, maxIndex) + appendString);
           }
         }
 
