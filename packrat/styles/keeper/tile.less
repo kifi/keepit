@@ -1,0 +1,142 @@
+.kifi-tile {
+  position: fixed;
+  z-index: 999999999991 !important;
+  bottom: 0;
+  right: 0;
+  left: auto;
+  top: auto;
+  width: 49px;
+  height: 49px;
+  border: solid transparent;
+  border-width: 5px 7px 8px;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+  text-align: center;
+  transition: -webkit-transform .12s ease-in-out;
+  transition: transform .12s ease-in-out;
+  &.kifi-0s {
+    transition: none;
+  }
+  &[kifi-fullscreen] {
+    display: none;
+  }
+}
+
+@svgKifiDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 12"><g fill="%D"><path d="M2.8,6.6h0.5l1.6-2.4h3.4L5.5,7.9L8.2,12H4.9L3.2,9.1H2.8V12H0V0.7h2.8V6.6z"/><path d="M10.6,0.5c0.2,0,0.4,0,0.6,0.1c0.2,0.1,0.4,0.2,0.5,0.3c0.1,0.1,0.3,0.3,0.3,0.5c0.1,0.2,0.1,0.4,0.1,0.6c0,0.2,0,0.4-0.1,0.6c-0.1,0.2-0.2,0.4-0.3,0.5c-0.1,0.1-0.3,0.3-0.5,0.3c-0.2,0.1-0.4,0.1-0.6,0.1c-0.2,0-0.4,0-0.6-0.1C9.8,3.5,9.6,3.4,9.5,3.2C9.3,3.1,9.2,2.9,9.2,2.7C9.1,2.5,9,2.3,9,2.1c0-0.2,0-0.4,0.1-0.6c0.1-0.2,0.2-0.4,0.3-0.5C9.6,0.8,9.8,0.7,10,0.6C10.2,0.5,10.4,0.5,10.6,0.5z M12,12H9.2V4.4H12V12z"/><path d="M19.4,4.3h-1.7V4.1c0-0.3,0.1-0.6,0.2-0.7c0.1-0.1,0.3-0.2,0.6-0.2c0.2,0,0.4,0,0.6,0.1c0.1,0,0.3,0.1,0.4,0.2V0.7c-0.2,0-0.3-0.1-0.5-0.1c-0.3,0-0.6-0.1-0.9-0.1c-0.5,0-0.9,0.1-1.2,0.2c-0.4,0.1-0.7,0.4-1,0.6c-0.3,0.3-0.5,0.6-0.6,1.1C15,2.9,14.9,3.4,14.9,4v0.3h-1.3v2.5h1.3l0,5.2h2.8l0-5.2h1.7V4.3z"/><path d="M22.4,0.5c0.2,0,0.4,0,0.6,0.1c0.2,0.1,0.4,0.2,0.5,0.3c0.1,0.1,0.3,0.3,0.3,0.5C24,1.6,24,1.9,24,2.1c0,0.2,0,0.4-0.1,0.6c-0.1,0.2-0.2,0.4-0.3,0.5c-0.1,0.1-0.3,0.3-0.5,0.3c-0.2,0.1-0.4,0.1-0.6,0.1c-0.2,0-0.4,0-0.6-0.1c-0.2-0.1-0.4-0.2-0.5-0.3c-0.1-0.1-0.3-0.3-0.3-0.5c-0.1-0.2-0.1-0.4-0.1-0.6c0-0.2,0-0.4,0.1-0.6c0.1-0.2,0.2-0.4,0.3-0.5s0.3-0.3,0.5-0.3C22,0.5,22.2,0.5,22.4,0.5z M23.8,12H21V4.4h2.8V12z"/></g></svg>';
+@svgKeepDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 9.7"><path fill="%D" d="M6,3.3c0-4.4-6-4.5-6,0c0,4.5,6,6.4,6,6.4s6-2,6-6.4C12-1.1,6-1.1,6,3.3z"/></svg>';
+@svgLockDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7.5 10.5"><path fill="%D" d="M6.9,4.6V3.3C6.9,1.5,5.5,0,3.8,0S0.6,1.5,0.6,3.3v1.3C0.3,4.6,0,4.9,0,5.2v4.6c0,0.4,0.3,0.7,0.6,0.7h6.2c0.3,0,0.6-0.3,0.6-0.7V5.2C7.5,4.9,7.2,4.6,6.9,4.6z M5.6,4.6H1.9V3.3c0-1.1,0.8-2,1.9-2s1.9,0.9,1.9,2V4.6z"/></svg>';
+@icon-flash-duration: 1s;
+
+.kifi-tile-card {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border: 3px solid rgba(196,196,196,.3);
+  border-radius: 50% !important;
+  background: rgba(51,51,51,.4) padding-box;
+  box-shadow: inset 0 0 1px 1px rgba(0,0,0,.12);
+  transition: background-color (@icon-flash-duration / 4) linear;
+  [data-kept=public]>& {
+    background-color: rgba(95,184,110,.8);
+  }
+  [data-kept=private]>& {
+    background-color: rgba(227,102,71,.8);
+  }
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    @url: %(@svgKifiDataUrl, #fff);
+    background: url(@url) center/24px 12px no-repeat padding-box;
+  }
+  &:not(:empty)::before {
+    -webkit-animation: kifi-fade-out-in @icon-flash-duration 1;
+    animation: kifi-fade-out-in @icon-flash-duration 1;
+  }
+}
+.kifi-tile-icon-keep,
+.kifi-tile-icon-lock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  opacity: 0;
+  -webkit-animation: kifi-pulse-fade @icon-flash-duration 1;
+  animation: kifi-pulse-fade @icon-flash-duration 1;
+}
+.kifi-tile-icon-keep {
+  @url: %(@svgKeepDataUrl, #fff);
+  background: url(@url) center / 16px 13px no-repeat;
+}
+.kifi-tile-icon-lock {
+  @url: %(@svgLockDataUrl, #fff);
+  background: url(@url) center / 10.75px 15.75px no-repeat;
+  background-position: center 7px;
+}
+
+@keyframes kifi-fade-out-in {
+  0% {opacity: 1}
+  20% {opacity: 0}
+  80% {opacity: 0}
+  100% {opacity: 1}
+}
+@-webkit-keyframes kifi-fade-out-in {
+  0% {opacity: 1}
+  20% {opacity: 0}
+  80% {opacity: 0}
+  100% {opacity: 1}
+}
+
+@keyframes kifi-pulse-fade {
+  0% {transform: scale(.2); opacity: 0}
+  10% {transform: scale(.2); opacity: 0}
+  44% {transform: scale(1); opacity: 1}
+  56% {transform: scale(1); opacity: 1}
+  90% {transform: scale(.2); opacity: 0}
+  100% {transform: scale(.2); opacity: 0}
+}
+@-webkit-keyframes kifi-pulse-fade {
+  0% {-webkit-transform: scale(.2); opacity: 0}
+  10% {-webkit-transform: scale(.2); opacity: 0}
+  44% {-webkit-transform: scale(1); opacity: 1}
+  56% {-webkit-transform: scale(1); opacity: 1}
+  90% {-webkit-transform: scale(.2); opacity: 0}
+  100% {-webkit-transform: scale(.2); opacity: 0}
+}
+
+.kifi-shake {
+  -webkit-animation: kifi-shake .15s 2 linear;
+  animation: kifi-shake .15s 2 linear;
+}
+@keyframes kifi-shake {
+  0% {transform: translate(3px, 0)}
+  50% {transform: translate(-3px, 0)}
+  100% {transform: none}
+}
+@-webkit-keyframes kifi-shake {
+  0% {-webkit-transform: translate(3px, 0)}
+  50% {-webkit-transform: translate(-3px, 0)}
+  100% {-webkit-transform: none}
+}
+
+.kifi-tile-dot {
+  position: absolute;
+  top: 2px;
+  left: -1px;
+  height: 6px;
+  width: 6px;
+  border-radius: 50%;
+  border: 1px solid #cc2413;
+  background: #e74c3c;
+  :not([data-count])>&,
+  [data-count='0']>& {
+    display: none;
+  }
+}

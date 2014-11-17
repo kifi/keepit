@@ -6,7 +6,7 @@ import org.apache.lucene.search.{ DocIdSetIterator, Weight, Scorer }
 object TargetedScorer {
 
   def apply(readerContext: AtomicReaderContext, weight: Weight, targetId: Long, resolver: Resolver) = {
-    val subScorer = weight.scorer(readerContext, true, false, readerContext.reader.getLiveDocs)
+    val subScorer = weight.scorer(readerContext, readerContext.reader.getLiveDocs)
     if (subScorer != null) new TargetedScorer(weight, subScorer, targetId, resolver) else null
   }
 

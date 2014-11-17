@@ -19,13 +19,14 @@ angular.module('kifi')
   return {
     restrict :'A',
     scope: {
-      ngBind: '=',
+      fullText: '=',
       ellipsisAppend: '@',
-      maxNumLines: '='
+      maxNumLines: '=',
+      numReloads: '='
     },
     compile: function(/*elem, attr, linker*/) {
 
-      return function(scope, element, attributes) {
+      return function(scope, element) {
         var copyElement = element.clone()
           .css({
             'display': 'block',
@@ -40,25 +41,25 @@ angular.module('kifi')
         var lastWindowWidth = 0;
 
         function buildEllipsis() {
-          if (typeof(scope.ngBind) !== 'undefined') {
+          if (typeof(scope.fullText) !== 'undefined') {
             copyElement.css('width', element.width());
 
             // measure height of one line
             copyElement.html('x');
             var heightPerLine = copyElement.height();
 
-            copyElement.html(scope.ngBind);
+            copyElement.html(scope.fullText);
             var currentHeight = copyElement.height();
             var currentNumLines = currentHeight / heightPerLine;
-            var maxIndex = scope.ngBind.length;
-            var maxNumLines = attributes.maxNumLines || 1;
+            var maxIndex = scope.fullText.length;
+            var maxNumLines = scope.maxNumLines || currentNumLines;
 
             if (currentHeight === 0) {
-              element.html(scope.ngBind);
+              element.html(scope.fullText);
               return;
             }
             if (currentNumLines <= maxNumLines) { // entire name fits
-              element.html(scope.ngBind);
+              element.html(scope.fullText);
               return;
             }
 
@@ -68,12 +69,12 @@ angular.module('kifi')
                 '<span>&hellip;</span>';
 
             // binary search for correct maxIndex
-            var hi = scope.ngBind.length;
+            var hi = scope.fullText.length;
             var lo = 0;
 
             while (hi - lo > 1) {
               maxIndex = lo + Math.floor((hi - lo)/2);
-              copyElement.html(scope.ngBind.substr(0, maxIndex) + appendString);
+              copyElement.html(scope.fullText.substr(0, maxIndex) + appendString);
               currentHeight = copyElement.height();
               currentNumLines = currentHeight / heightPerLine;
 
@@ -84,17 +85,18 @@ angular.module('kifi')
               }
             }
             maxIndex = lo;
-            element.html(scope.ngBind.substr(0, maxIndex) + appendString);
+            element.html(scope.fullText.substr(0, maxIndex) + appendString);
           }
         }
 
         // font-changes will affect sizing, but ng-bind applies first!
         // todo (aaron): find something better than this hack
         var numIntervals = 0;
+        var maxIntervals = scope.numReloads || 0;
         $timeout(function intervalRebuild() {
           buildEllipsis();
           numIntervals++;
-          if (numIntervals < 3) {
+          if (numIntervals < maxIntervals) {
             $timeout(intervalRebuild, 1000);
           }
         }, 200);
@@ -102,10 +104,10 @@ angular.module('kifi')
         //
         // Watchers
         //
-        // Execute ellipsis truncate on ngBind update
-        scope.$watch('ngBind', buildEllipsis);
+        // Execute ellipsis truncate on fullText update
+        scope.$watch('fullText', buildEllipsis);
 
-        // Execute ellipsis truncate on ngBind update
+        // Execute ellipsis truncate on fullText update
         scope.$watch('ellipsisAppend', buildEllipsis);
 
         // When window width or height changes - re-init truncation

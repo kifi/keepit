@@ -49,8 +49,6 @@ class NormalizedURIRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[NormalizedURI]("normalized_uri_sequence")
-
   type RepoImpl = NormalizedURITable
   class NormalizedURITable(tag: Tag) extends RepoTable[NormalizedURI](db, tag, "normalized_uri") with ExternalIdColumn[NormalizedURI] with SeqNumberColumn[NormalizedURI] {
     def title = column[String]("title")
@@ -217,14 +215,5 @@ class NormalizedURIRepoImpl @Inject() (
     assert(info.size == uriIds.distinct.size, s"looks like some uriIds are missing in normalized_uri_repo")
     val m = info.map { case (id, noRestriction, state) => (id, noRestriction && (state == NormalizedURIStates.SCRAPED)) }.toMap
     uriIds.map { id => m(id) }
-  }
-
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "normalized_uri", limit)
-  }
-
-  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
-    sql"""select min(seq) from normalized_uri where seq < 0""".as[Option[Long]].first
   }
 }

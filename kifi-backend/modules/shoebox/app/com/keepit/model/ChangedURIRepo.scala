@@ -25,8 +25,6 @@ class ChangedURIRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[ChangedURI]("changed_uri_sequence")
-
   type RepoImpl = ChangedURITable
 
   class ChangedURITable(tag: Tag) extends RepoTable[ChangedURI](db, tag, "changed_uri") with SeqNumberColumn[ChangedURI] {

@@ -74,7 +74,7 @@ object BasicUser {
 }
 
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
-  override val version = 9
+  override val version = 11
   val namespace = "basic_user_userid"
   def toKey(): String = userId.id.toString
 }

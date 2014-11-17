@@ -612,9 +612,12 @@ api.port.on({
         // fix tile on active tab
         api.tabs.emit(tab, 'kept', {kept: d.howKept(), fail: true});
       });
-      if (!data.libraryId && !d.keeps.length) {
-        // assume success for instant tile flip on active tab
-        api.tabs.emit(tab, 'kept', {kept: libraryId === mySysLibIds[0] ? 'public' : 'private'});
+      if (!data.libraryId) {
+        // assume success for instant tile feedback on active tab
+        api.tabs.emit(tab, 'kept', {
+          kept: libraryId === mySysLibIds[0] ? 'public' : 'private',
+          duplicate: d.keeps.some(libraryIdIs(libraryId))
+        });
       }
       storeRecentLib(libraryId);
     }

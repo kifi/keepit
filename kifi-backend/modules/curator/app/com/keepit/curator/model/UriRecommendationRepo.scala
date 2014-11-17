@@ -22,8 +22,9 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getDigestRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int, masterScoreThreshold: Float = 0f)(implicit session: RSession): Seq[UriRecommendation]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RWSession): Boolean
   def incrementDeliveredCount(recoId: Id[UriRecommendation], withLastPushedAt: Boolean = false)(implicit session: RWSession): Unit
-  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Boolean
+  def cleanupLowMasterScoreRecos(userId: Id[User], limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Unit
   def getUriIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[NormalizedURI]]
+  def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]]
 }
 
 @Singleton
@@ -130,29 +131,22 @@ class UriRecommendationRepoImpl @Inject() (
     sqlu"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
   }
 
-  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Boolean = {
+  def cleanupLowMasterScoreRecos(userId: Id[User], limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Unit = {
     import StaticQuery.interpolation
-    val userIds = (for (row <- rows) yield row.userId).list.distinct
+    sqlu"""
+      DELETE FROM uri_recommendation WHERE user_id=$userId AND master_score < (SELECT MIN(master_score) FROM (
+        SELECT master_score FROM uri_recommendation WHERE user_id=$userId ORDER BY master_score DESC LIMIT $limitNumRecosForUser
+      ) AS mScoreTable) AND updated_at < $before""".first()
 
-    userIds.foldLeft(true) { (updated, userId) =>
-      val limitScore =
-        sql"""SELECT MIN(master_score)
-              FROM (
-	              SELECT master_score
-	              FROM uri_recommendation
-	              WHERE state=${UriRecommendationStates.ACTIVE} AND user_id=$userId
-	              ORDER BY master_score DESC LIMIT $limitNumRecosForUser
-              ) AS mScoreTable""".as[Float].first
-
-      ((for (
-        row <- byUser(userId)(rows) |> active if row.updatedAt < before && row.masterScore < limitScore
-      ) yield (row.state, row.updatedAt)).
-        update((UriRecommendationStates.INACTIVE, currentDateTime)) > 0) || updated
-    }
   }
 
   def getUriIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[NormalizedURI]] = {
     (for (row <- byUser(userId)(rows)) yield row.uriId).list.toSet
+  }
+
+  def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]] = {
+    import StaticQuery.interpolation
+    sql"SELECT DISTINCT user_id FROM uri_recommendation".as[Id[User]].list.toSet
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}

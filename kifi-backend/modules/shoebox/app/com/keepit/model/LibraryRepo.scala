@@ -41,7 +41,6 @@ class LibraryRepoImpl @Inject() (
 
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
-  private val sequence = db.getSequence[Library]("library_sequence")
 
   type RepoImpl = LibraryTable
   class LibraryTable(tag: Tag) extends RepoTable[Library](db, tag, "library") with SeqNumberColumn[Library] {
@@ -152,15 +151,6 @@ class LibraryRepoImpl @Inject() (
   }
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library] = {
     getOptCompiled(ownerId, slug).firstOption
-  }
-
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "library", limit)
-  }
-
-  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
-    sql"""select min(seq) from library where seq < 0""".as[Option[Long]].first
   }
 
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {

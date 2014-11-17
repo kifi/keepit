@@ -45,7 +45,6 @@ class LibraryMembershipRepoImpl @Inject() (
 
   import DBSession._
   import db.Driver.simple._
-  private val sequence = db.getSequence[LibraryMembership]("library_membership_sequence")
 
   type RepoImpl = LibraryMemberTable
 
@@ -189,15 +188,6 @@ class LibraryMembershipRepoImpl @Inject() (
         libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
       }
     }
-  }
-
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "library_membership", limit)
-  }
-
-  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
-    sql"""select min(seq) from library_membership where seq < 0""".as[Option[Long]].first
   }
 
   def countByLibraryAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int = {

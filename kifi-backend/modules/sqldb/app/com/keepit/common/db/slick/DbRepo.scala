@@ -13,6 +13,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.keepit.common.logging.Logging
 import scala.slick.lifted.{ AbstractTable, BaseTag }
+import scala.slick.jdbc.StaticQuery
 
 sealed trait RepoModification[M <: Model[M]] {
   val model: M
@@ -191,6 +192,7 @@ trait SeqNumberFunction[M <: ModelWithSeqNumber[M]] { self: Repo[M] =>
 trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[M] { self: DbRepo[M] =>
   import db.Driver.simple._
 
+  protected lazy val sequence = db.getSequence[M](_taggedTable.tableName + "_sequence")
   protected def tableWithSeq(tag: Tag) = table(tag).asInstanceOf[SeqNumberColumn[M]]
   protected def rowsWithSeq = TableQuery(tableWithSeq)
 
@@ -209,7 +211,7 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
   protected def deferredSeqNum(): SequenceNumber[M] = SequenceNumber[M](clock.now.getMillis() - Long.MaxValue)
 
   def assignSequenceNumbers(limit: Int)(implicit session: RWSession): Int = {
-    throw new UnsupportedOperationException("deferred sequence number assignment is not supported")
+    assignSequenceNumbers(sequence, _taggedTable.tableName, limit)
   }
 
   protected def assignSequenceNumbers(sequence: DbSequence[M], tableName: String, limit: Int)(implicit session: RWSession): Int = {
@@ -244,7 +246,8 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
   }
 
   def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    throw new UnsupportedOperationException("deferred sequence number assignment is not supported")
+    import StaticQuery.interpolation
+    sql"""select min(seq) from #${_taggedTable.tableName} where seq < 0""".as[Option[Long]].first
   }
 }
 
