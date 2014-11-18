@@ -196,8 +196,17 @@ k.pane = k.pane || function () {  // idempotent for Chrome
             }
           }
         }
-        api.port.emit('get_suppressed', function (suppressed) {
-          $menu.find('.kifi-hide-on-site').toggleClass('kifi-checked', !!suppressed);
+        api.port.emit('get_menu_data', function (o) {
+          $menu.find('.kifi-hide-on-site').toggleClass('kifi-checked', !!o.suppressed);
+          if (!o.packaged) {
+            $menu
+            .append('<div class="kifi-pane-top-menu-item kifi-toggle-mode">Toggle Prod/Local (' + MOD_KEYS.c + '-Shift-L)</div>')
+            .on('mouseup', '.kifi-toggle-mode', function (e) {
+              if (e.originalEvent.isTrusted === false) return;
+              e.preventDefault();
+              api.port.emit('toggle_mode');
+            })
+          }
         });
       })
       .on('mouseup', '.kifi-silence-duration', function (e) {

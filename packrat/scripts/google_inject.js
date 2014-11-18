@@ -26,7 +26,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   log('[google_inject]');
 
   var origin = location.origin;
-  var $res = $(k.render('html/search/google', {images: api.url('images')}));   // a reference to our search results (kept so that we can reinsert when removed)
+  var $res = $(k.render('html/search/google'));   // a reference to our search results (kept so that we can reinsert when removed)
   var $bar = $res.find('.kifi-res-bar');
   var $kifi = $res.find('.kifi-res-bar-kifi');
   var $status = $bar.find('.kifi-res-bar-status');
@@ -676,7 +676,8 @@ if (searchUrlRe.test(document.URL)) !function () {
         hits: hitsData,
         images: api.url('images'),
         filter: response.filter && response.filter.who !== 'a',
-        mayHaveMore: response.mayHaveMore
+        mayHaveMore: response.mayHaveMore,
+        fixedColor: ~(response.experiments || []).indexOf('visited_fixed')
       }, {
         google_hit: 'google_hit'
       }));

@@ -11,6 +11,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.common.json.TraversableFormat
 import scala.slick.jdbc.StaticQuery
+import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[UserConnectionRepoImpl])
 trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[UserConnection] {
@@ -21,6 +22,7 @@ trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[Use
   def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession)
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int
   def getConnectionCount(userId: Id[User])(implicit session: RSession): Int
+  def getConnectionCounts(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit
   def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection]
 }
@@ -74,6 +76,23 @@ class UserConnectionRepoImpl @Inject() (
         c <- rows if (c.user1 === userId || c.user2 === userId) && c.state === UserConnectionStates.ACTIVE
       } yield c).length).first
     }
+  }
+  def getConnectionCounts(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
+    import StaticQuery.interpolation
+    import scala.collection.JavaConversions._
+
+    val ret = connCountCache.bulkGetOrElse(userIds map UserConnectionCountKey) { keys =>
+      val missingIds = keys.map(_.userId)
+      val missingIdsString = missingIds.mkString(",")
+      val query = sql"""select usr, count(*) from (
+        select user_1 usr from user_connection where user_1 in (#${missingIdsString}) and state = 'active'
+        union all
+        select user_2 usr from user_connection where user_2 in (#${missingIdsString}) and state = 'active'
+        ) c group by usr"""
+      val results = query.as[(Id[User], Int)].list
+      results.map { case (userId, cnt) => UserConnectionCountKey(userId) -> cnt }.toMap
+    }
+    ret.map { case (key, count) => key.userId -> count }.toMap
   }
 
   type RepoImpl = UserConnectionTable
