@@ -48,7 +48,7 @@ angular.module('kifi')
             }, 10000);
           });
         } else if (isFirefox && supported) {
-          InstallTrigger.install({
+          $window.InstallTrigger.install({
             Kifi: {
               URL: '/extensions/firefox/kifi.xpi',
               IconURL: '/extensions/firefox/kifi.png'
