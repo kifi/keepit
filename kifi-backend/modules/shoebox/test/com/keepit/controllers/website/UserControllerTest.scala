@@ -1,30 +1,27 @@
 package com.keepit.controllers.website
 
+import com.keepit.common.db.ExternalId
 import com.keepit.common.oauth2.FakeOAuth2ConfigurationModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
 
-import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
-import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
-import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication }
+import com.keepit.test.{ ShoeboxTestInjector }
 
-import play.api.libs.json.{ JsArray, Json, JsNull }
+import play.api.libs.json.{ Json, JsNull }
 import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
-import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
+import com.keepit.shoebox.{ FakeShoeboxServiceModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGraphModule }
+import com.keepit.common.social.{ FakeSocialGraphModule }
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.scraper.{ FakeScrapeSchedulerModule }
 
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -259,6 +256,33 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val request6 = FakeRequest("DELETE", path).withBody(Json.obj("email" -> address1))
         val result6: Future[Result] = userController.removeEmail()(request6)
         status(result6) must equalTo(BAD_REQUEST) // cannot delete primary email
+      }
+    }
+
+    "get friends" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val userConnectionRepo = inject[UserConnectionRepo]
+        val (userGW, userAL, userTJ, userJA, userBF) = db.readWrite { implicit session =>
+          val userGW = userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GDubs"), normalizedUsername = "gdubs"))
+          val userAL = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("abe"), normalizedUsername = "abe"))
+          val userTJ = userRepo.save(User(firstName = "Thomas", lastName = "Jefferson", username = Username("TJ"), normalizedUsername = "tj"))
+          val userJA = userRepo.save(User(firstName = "John", lastName = "Adams", username = Username("jayjayadams"), normalizedUsername = "jayjayadams"))
+          val userBF = userRepo.save(User(firstName = "Ben", lastName = "Franklin", username = Username("Benji"), normalizedUsername = "benji"))
+          userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userAL.id.get))
+          userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userTJ.id.get))
+          userConnectionRepo.save(UserConnection(user1 = userJA.id.get, user2 = userGW.id.get))
+          (userGW, userAL, userTJ, userJA, userBF)
+        }
+        val userController = inject[UserController]
+
+        inject[FakeUserActionsHelper].setUser(userGW)
+        val request1 = FakeRequest("GET", routes.UserController.friends().url)
+        val result1: Future[Result] = userController.friends(0, 5)(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        val resultJson = contentAsJson(result1)
+        val resultIds = (resultJson \\ "id").map(_.as[ExternalId[User]])
+        resultIds === List(userAL.externalId, userTJ.externalId, userJA.externalId)
       }
     }
 
