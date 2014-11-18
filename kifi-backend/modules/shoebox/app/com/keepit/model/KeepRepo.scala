@@ -121,12 +121,13 @@ class KeepRepoImpl @Inject() (
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
 
+  // Note: if you decide to use update() instead of save(), please ensure deferredSeqNum is used
   override def save(model: Keep)(implicit session: RWSession) = {
     assert(model.isPrimary && model.state != KeepStates.DUPLICATE || !model.isPrimary && model.state != KeepStates.ACTIVE,
       s"trying to save a keep in an inconsistent state: primary=${model.isPrimary} state=${model.state}")
 
-    val newModel = if (KeepSource.imports.contains(model.source)) {
-      model.copy(seq = deferredSeqNum())
+    val newModel = if (model.id.isDefined || KeepSource.imports.contains(model.source)) {
+      model.copy(seq = deferredSeqNum()) // Always use deferred for imports or updates
     } else {
       model.copy(seq = sequence.incrementAndGet())
     }
