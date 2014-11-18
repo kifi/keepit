@@ -96,7 +96,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]]
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
-  def isSensitiveURI(uri: String): Future[Boolean]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
   def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
@@ -604,13 +603,6 @@ class ShoeboxServiceClientImpl @Inject() (
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]] = {
     call(Shoebox.internal.getSearchFriendsChanged(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Seq[SearchFriend]](r.json).get
-    }
-  }
-
-  def isSensitiveURI(uri: String): Future[Boolean] = {
-    val payload = Json.obj("uri" -> uri)
-    call(Shoebox.internal.isSensitiveURI(), payload).map { r =>
-      Json.fromJson[Boolean](r.json).get
     }
   }
 

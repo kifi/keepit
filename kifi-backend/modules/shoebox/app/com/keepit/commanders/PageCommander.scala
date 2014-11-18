@@ -80,8 +80,6 @@ class PageCommander @Inject() (
       }.getOrElse((None, false))
       (nUriStr, nUri, getKeepersFutureOpt, domain, keep, tags, position, neverOnSite, host)
     }
-    val sensitive: Boolean = !experiments.contains(ExperimentType.NOT_SENSITIVE) &&
-      (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
 
     val shown = nUri map { uri => historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id) } getOrElse false
 
@@ -92,7 +90,7 @@ class PageCommander @Inject() (
       keep.map { k => if (k.isPrivate) "private" else "public" },
       keep.map(_.externalId),
       tags.map { t => SendableTag.from(t.summary) },
-      position, neverOnSite, sensitive, shown, keepers, keeps)
+      position, neverOnSite, shown, keepers, keeps)
   }
 
   def isSensitiveURI(uri: String): Boolean = {
@@ -116,8 +114,6 @@ class PageCommander @Inject() (
       }
       (nUri, nUriStr, domain, position, neverOnSite, host)
     }
-    val sensitive: Boolean = !experiments.contains(ExperimentType.NOT_SENSITIVE) &&
-      (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
 
     val shown = nUriOpt.map { normUri => historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id) } getOrElse false
     nUriOpt.map { normUri =>
@@ -135,10 +131,10 @@ class PageCommander @Inject() (
       val keepsData = keepsCommander.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
 
       getKeepersFuture.map { keepers =>
-        KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, keepers, keepsData)
+        KeeperPageInfo(nUriStr, position, neverOnSite, shown, keepers, keepsData)
       }
     }.getOrElse {
-      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, Seq.empty[BasicUser], Seq.empty[KeepData])) // todo: add in otherKeepers?
+      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], Seq.empty[KeepData])) // todo: add in otherKeepers?
     }
   }
 }
