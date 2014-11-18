@@ -41,6 +41,7 @@ import com.keepit.common.performance._
 import scala.concurrent.{ Await, Future }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.common.core._
 import scala.concurrent.duration._
 
 object AuthHelper {
@@ -474,15 +475,26 @@ class AuthHelper @Inject() (
               OAuth2TokenInfo.fromOAuth2Info(oauth2InfoOrig)
           }
           longTermTokenInfoF map { oauth2InfoNew =>
-            authCommander.getSocialUserOpt(filledUser.identityId) match {
+            val updatedUser = filledUser.copy(oAuth2Info = Some(oauth2InfoNew))
+            authCommander.getSocialUserOpt(updatedUser.identityId) match {
               case None =>
-                val saved = UserService.save(UserIdentity(None, filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), allowSignup = false))
-                val payload = if (filledUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
+                db.readWrite { implicit rw =>
+                  // userId must not be set in this case
+                  socialRepo.save(SocialUserInfo(
+                    fullName = updatedUser.fullName,
+                    pictureUrl = updatedUser.avatarUrl,
+                    state = SocialUserInfoStates.FETCHED_USING_SELF,
+                    socialId = SocialId(updatedUser.identityId.userId),
+                    networkType = SocialNetworkType(updatedUser.identityId.providerId),
+                    credentials = Some(updatedUser)
+                  ))
+                } tap { sui => log.info(s"[doAccessTokenSignup] created socialUserInfo(${sui.id}) $updatedUser") }
+                val payload = if (updatedUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
                   Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
                 else
                   Json.obj("code" -> "continue_signup")
-                log.info(s"[accessTokenSignup($providerName)] created social user(${saved.identityId}) email=${saved.email}; payload=$payload")
-                Authenticator.create(saved).fold(
+                log.info(s"[accessTokenSignup($providerName)] created social user(${updatedUser.identityId}) email=${updatedUser.email}; payload=$payload")
+                Authenticator.create(updatedUser).fold(
                   error => throw error,
                   authenticator =>
                     Ok(payload ++ Json.obj("sessionId" -> authenticator.id))
@@ -494,11 +506,11 @@ class AuthHelper @Inject() (
                   socialRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
                 } match {
                   case None => // kifi user does not exist
-                    val payload = if (filledUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
+                    val payload = if (updatedUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
                       Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
                     else
                       Json.obj("code" -> "continue_signup")
-                    log.info(s"[accessTokenSignup($providerName)] no kifi user associated with ${filledUser.identityId} email=${filledUser.email}; payload=$payload")
+                    log.info(s"[accessTokenSignup($providerName)] no kifi user associated with ${updatedUser.identityId} email=${updatedUser.email}; payload=$payload")
                     Authenticator.create(identity).fold(
                       error => throw error,
                       authenticator =>

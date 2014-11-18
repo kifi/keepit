@@ -144,6 +144,12 @@ class TokenAuthTest extends Specification with ShoeboxApplicationInjector {
         val json = contentAsJson(result)
         (json \ "code").as[String] === "connect_option" // success!
         (json \ "sessionId").asOpt[String].isDefined === true // sessionId is set
+
+        val suiOpt = db.readOnlyMaster { implicit ro =>
+          socialUserInfoRepo.getOpt(SocialId(lnkdInfo.userId.id), SocialNetworks.LINKEDIN)
+        }
+        suiOpt.isDefined == true
+        suiOpt.exists { sui => sui.userId.isEmpty } === true // userId must not be set in this case
       }
     }
     "(login) handle successful token login" in {

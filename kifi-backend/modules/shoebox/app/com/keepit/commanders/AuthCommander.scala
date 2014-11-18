@@ -135,7 +135,6 @@ class AuthCommander @Inject() (
         authMethod = AuthenticationMethod.UserPassword,
         passwordInfo = Some(passwordInfo)
       ),
-      allowSignup = true,
       isComplete = isComplete
     )
 
