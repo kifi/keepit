@@ -15,7 +15,7 @@ import com.keepit.common.net.UserAgent
 import com.keepit.common.social.{ FacebookSocialGraph, LinkedInSocialGraph }
 import com.keepit.heimdal.{ ContextDoubleData, ContextStringData, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
 import com.keepit.model.{ KifiExtVersion, KifiInstallation, KifiInstallationPlatform, KifiInstallationRepo, KifiInstallationStates }
-import com.keepit.model.{ Library, URLPatternRepo, UserStates }
+import com.keepit.model.{ ExperimentType, Library, URLPatternRepo, UserExperiment, UserExperimentRepo, UserStates }
 import com.keepit.social.BasicUser
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -32,6 +32,7 @@ class ExtAuthController @Inject() (
   libraryCommander: LibraryCommander,
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
+  userExperimentRepo: UserExperimentRepo,
   kifiInstallationCookie: KifiInstallationCookie,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
@@ -83,6 +84,12 @@ class ExtAuthController @Inject() (
 
     if (isUpdate || isInstall) {
       SafeFuture {
+        if (version >= KifiExtVersion(3, 3, 18) && !request.experiments.contains(ExperimentType.VISITED)) {
+          db.readWrite { implicit s =>
+            userExperimentRepo.save(UserExperiment(userId = userId, experimentType = ExperimentType.VISITED))
+          }
+        }
+
         val contextBuilder = heimdalContextBuilder()
         contextBuilder.addRequestInfo(request)
         contextBuilder += ("extensionVersion", installation.version.toString)
