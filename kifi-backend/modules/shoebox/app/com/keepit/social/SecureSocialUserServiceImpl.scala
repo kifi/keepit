@@ -83,14 +83,13 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   def save(identity: Identity): SocialUser = reportExceptions {
-    val (userId, socialUser, allowSignup, isComplete) = getUserIdAndSocialUser(identity)
+    val (userId, socialUser, isComplete) = getUserIdAndSocialUser(identity)
     log.info(s"[save] persisting (social|42) user $socialUser")
     val socialUserInfo = internUser(
       SocialId(socialUser.identityId.userId),
       SocialNetworkType(socialUser.identityId.providerId),
       socialUser,
       userId,
-      allowSignup,
       isComplete)
     require(socialUserInfo.credentials.isDefined, s"social user info's credentials is not defined: $socialUserInfo")
     if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
@@ -115,10 +114,10 @@ class SecureSocialUserPluginImpl @Inject() (
     experiments.foreach(setExp)
   }
 
-  private def getUserIdAndSocialUser(identity: Identity): (Option[Id[User]], SocialUser, Boolean, Boolean) = {
+  private def getUserIdAndSocialUser(identity: Identity): (Option[Id[User]], SocialUser, Boolean) = {
     identity match {
-      case UserIdentity(userId, socialUser, allowSignup, isComplete) => (userId, socialUser, allowSignup, isComplete)
-      case ident => (None, SocialUser(ident), false, true)
+      case UserIdentity(userId, socialUser, isComplete) => (userId, socialUser, isComplete)
+      case ident => (None, SocialUser(ident), true)
     }
   }
 
@@ -135,11 +134,8 @@ class SecureSocialUserPluginImpl @Inject() (
     u
   }
 
-  private def getOrCreateUser(existingUserOpt: Option[User], allowSignup: Boolean, isComplete: Boolean, socialUser: SocialUser): Option[User] = existingUserOpt orElse {
-    if (allowSignup) {
-      val userOpt: Option[User] = Some(createUser(socialUser, isComplete))
-      userOpt
-    } else None
+  private def getOrCreateUser(existingUserOpt: Option[User], isComplete: Boolean, socialUser: SocialUser): Option[User] = {
+    existingUserOpt orElse Some(createUser(socialUser, isComplete))
   }
 
   private def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Unit = timing(s"saveVerifiedEmail $userId") {
@@ -160,7 +156,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def internUser(
     socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
-    userId: Option[Id[User]], allowSignup: Boolean, isComplete: Boolean): SocialUserInfo = timing(s"intern user $socialId") {
+    userId: Option[Id[User]], isComplete: Boolean): SocialUserInfo = timing(s"intern user $socialId") {
 
     log.debug(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId isComplete=$isComplete")
 
@@ -211,7 +207,7 @@ class SecureSocialUserPluginImpl @Inject() (
         sui
 
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
-        val userOpt = getOrCreateUser(existingUserOpt, allowSignup, isComplete, socialUser)
+        val userOpt = getOrCreateUser(existingUserOpt, isComplete, socialUser)
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
@@ -245,7 +241,7 @@ class SecureSocialUserPluginImpl @Inject() (
         sui
 
       case None =>
-        val userOpt = getOrCreateUser(existingUserOpt, allowSignup, isComplete, socialUser)
+        val userOpt = getOrCreateUser(existingUserOpt, isComplete, socialUser)
         log.info("creating new SocialUserInfo for %s".format(userOpt))
 
         val userInfo = SocialUserInfo(userId = userOpt.flatMap(_.id), //verify saved

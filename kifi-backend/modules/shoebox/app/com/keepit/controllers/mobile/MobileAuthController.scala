@@ -201,7 +201,7 @@ class MobileAuthController @Inject() (
           } match {
             case Failure(err) => BadRequest(Json.obj("error" -> "invalid token"))
             case Success(filledUser) =>
-              val saved = UserService.save(UserIdentity(Some(request.userId), filledUser)) // todo: check allowSignup
+              val saved = UserService.save(UserIdentity(Some(request.userId), filledUser))
               log.info(s"[accessTokenSignup($providerName)] created social user: $saved")
               Ok(Json.obj("code" -> "link_created"))
           }

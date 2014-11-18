@@ -8,7 +8,6 @@ import securesocial.core.SocialUser
 class UserIdentity(
   val userId: Option[Id[User]],
   val socialUser: SocialUser,
-  val allowSignup: Boolean,
   val isComplete: Boolean)
     extends SocialUser(
       socialUser.identityId,
@@ -27,8 +26,7 @@ object UserIdentity {
   def apply(
     userId: Option[Id[User]],
     socialUser: SocialUser,
-    allowSignup: Boolean = false,
-    isComplete: Boolean = true) = new UserIdentity(userId, socialUser, allowSignup, isComplete)
+    isComplete: Boolean = true) = new UserIdentity(userId, socialUser, isComplete)
 
-  def unapply(u: UserIdentity) = Some(u.userId, u.socialUser, u.allowSignup, u.isComplete)
+  def unapply(u: UserIdentity) = Some(u.userId, u.socialUser, u.isComplete)
 }
