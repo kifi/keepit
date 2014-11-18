@@ -11,6 +11,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.common.json.TraversableFormat
 import scala.slick.jdbc.StaticQuery
+import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[UserConnectionRepoImpl])
 trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[UserConnection] {
@@ -77,14 +78,19 @@ class UserConnectionRepoImpl @Inject() (
     }
   }
   def getConnectionCounts(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
+    import StaticQuery.interpolation
+    import scala.collection.JavaConversions._
+
     val ret = connCountCache.bulkGetOrElse(userIds map UserConnectionCountKey) { keys =>
       val missingIds = keys.map(_.userId)
-      val query =
-        ((for (c <- rows if c.user1.inSet(missingIds) && c.state === UserConnectionStates.ACTIVE) yield (c.user1, 1)) union
-          (for (c <- rows if c.user2.inSet(missingIds) && c.state === UserConnectionStates.ACTIVE) yield (c.user2, 1)))
-      query.groupBy(_._1).map { case (userId, c) => userId -> c.length }.run.map {
-        case (userId, cnt) => UserConnectionCountKey(userId) -> cnt
-      }.toMap
+      val missingIdsString = missingIds.mkString(",")
+      val query = sql"""select usr, count(*) from (
+        select user_1 usr from user_connection where user_1 in (#${missingIdsString}) and state = 'active'
+        union all
+        select user_2 usr from user_connection where user_2 in (#${missingIdsString}) and state = 'active'
+        ) c group by usr"""
+      val results = query.as[(Id[User], Int)].list
+      results.map { case (userId, cnt) => UserConnectionCountKey(userId) -> cnt }.toMap
     }
     ret.map { case (key, count) => key.userId -> count }.toMap
   }
