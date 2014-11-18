@@ -16,28 +16,10 @@ class ShoeboxDbCallbackHelper @Inject() (
   config: ScraperConfig,
   shoeboxServiceClient: ShoeboxServiceClient,
   shoeboxScraperClient: ShoeboxScraperClient)
-    extends SyncShoeboxDbCallbacks with ShoeboxDbCallbacks with Logging {
+    extends ShoeboxDbCallbacks with Logging {
 
   implicit val serviceCallTimeout = config.serviceCallTimeout
   implicit val fjCtx = ExecutionContext.fj
-
-  private val normalizedUriLock = new ReentrantLock()
-  private val recordPermanentRedirectLock = new ReentrantLock()
-
-  private def await[T](awaitable: Awaitable[T]) = Await.result(awaitable, config.syncAwaitTimeout seconds)
-
-  def syncGetLatestKeep(url: String): Option[Keep] = await(getLatestKeep(url))
-  def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = {
-    try {
-      recordPermanentRedirectLock.lock()
-      log.info(s"[${recordPermanentRedirectLock.getQueueLength}] about to persist redirected $uri")
-      val saved = await(recordPermanentRedirect(uri, redirect))
-      log.info(s"[${recordPermanentRedirectLock.getQueueLength}] done with persist redirected $uri")
-      saved
-    } finally {
-      recordPermanentRedirectLock.unlock()
-    }
-  }
 
   def assignTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = shoeboxScraperClient.assignScrapeTasks(zkId, max)
   def getNormalizedUri(uri: NormalizedURI): Future[Option[NormalizedURI]] = {
@@ -61,11 +43,6 @@ class ShoeboxDbCallbackHelper @Inject() (
   }
 
   def updateURIRestriction(uriId: Id[NormalizedURI], r: Option[Restriction]): Future[Unit] = shoeboxServiceClient.updateURIRestriction(uriId, r)
-}
-
-trait SyncShoeboxDbCallbacks {
-  def syncGetLatestKeep(url: String): Option[Keep]
-  def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI
 }
 
 trait ShoeboxDbCallbacks {

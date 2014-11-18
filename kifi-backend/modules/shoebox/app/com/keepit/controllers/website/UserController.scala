@@ -66,12 +66,13 @@ class UserController @Inject() (
   def friends(page: Int, pageSize: Int) = UserAction { request =>
     val (connectionsPage, total) = userConnectionsCommander.getConnectionsPage(request.userId, page, pageSize)
     val friendsJsons = db.readOnlyMaster { implicit s =>
+      val friendCounts = userConnectionRepo.getConnectionCounts(connectionsPage.map(_.userId).toSet)
       connectionsPage.map {
         case ConnectionInfo(friend, friendId, unfriended, unsearched) =>
           Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
             "searchFriend" -> unsearched,
             "unfriended" -> unfriended,
-            "friendCount" -> userConnectionRepo.getConnectionCount(friendId)
+            "friendCount" -> friendCounts(friendId)
           )
       }
     }
