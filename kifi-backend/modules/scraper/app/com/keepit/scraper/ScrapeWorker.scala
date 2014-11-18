@@ -349,7 +349,7 @@ class ScrapeWorkerImpl @Inject() (
       Future.successful(updateRedirectRestriction(uri, filtered.head))
     } else {
       hasFishy301(uri) flatMap { isFishy =>
-        if (isFishy) {
+        if (isFishy && filtered.headOption.isDefined) {
           Future.successful(updateRedirectRestriction(uri, filtered.head))
         } else resolve(filtered)
       }
