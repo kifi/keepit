@@ -36,7 +36,6 @@ class ScrapeWorkerImpl @Inject() (
     extractorFactory: ExtractorFactory,
     articleStore: ArticleStore,
     pornDetectorFactory: PornDetectorFactory,
-    syncHelper: SyncShoeboxDbCallbacks,
     dbHelper: ShoeboxDbCallbacks,
     shoeboxScraperClient: ShoeboxScraperClient,
     shoeboxClient: ShoeboxServiceClient,
@@ -333,20 +332,27 @@ class ScrapeWorkerImpl @Inject() (
   }
 
   // Watch out: the NormalizedURI may come back as REDIRECTED
-  private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): Future[NormalizedURI] = Future.successful {
-    redirects.dropWhile(!_.isLocatedAt(uri.url)) match {
-      case Seq(redirect, _*) if !redirect.isPermanent || hasFishy301(uri) =>
-        if (redirect.isPermanent) log.warn(s"Found fishy $redirect for $uri") else log.warn(s"Found non permanent $redirect for $uri")
-        updateRedirectRestriction(uri, redirect)
-      case permanentsRedirects =>
-        HttpRedirect.resolvePermanentRedirects(uri.url, permanentsRedirects).map { absoluteDestination =>
-          val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, uri.url, absoluteDestination)
-          log.debug(s"Found permanent $validRedirect for $uri")
-          syncHelper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), validRedirect)
-        } getOrElse {
-          permanentsRedirects.headOption.foreach(relative301 => log.warn(s"Ignoring relative permanent $relative301 for $uri"))
-          removeRedirectRestriction(uri)
-        }
+  private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
+    @inline def resolve(permanentsRedirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
+      HttpRedirect.resolvePermanentRedirects(uri.url, permanentsRedirects).map { absoluteDestination =>
+        val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, uri.url, absoluteDestination)
+        log.debug(s"Found permanent $validRedirect for $uri")
+        dbHelper.recordPermanentRedirect(removeRedirectRestriction(uri), validRedirect)
+      } getOrElse {
+        permanentsRedirects.headOption.foreach(relative301 => log.warn(s"Ignoring relative permanent $relative301 for $uri"))
+        Future.successful(removeRedirectRestriction(uri))
+      }
+    }
+
+    val filtered = redirects.dropWhile(!_.isLocatedAt(uri.url))
+    if (filtered.headOption.exists(redirect => !redirect.isPermanent)) {
+      Future.successful(updateRedirectRestriction(uri, filtered.head))
+    } else {
+      hasFishy301(uri) flatMap { isFishy =>
+        if (isFishy && filtered.headOption.isDefined) {
+          Future.successful(updateRedirectRestriction(uri, filtered.head))
+        } else resolve(filtered)
+      }
     }
   }
 
@@ -360,16 +366,19 @@ class ScrapeWorkerImpl @Inject() (
     if (Restriction.redirects.contains(restriction)) uri.copy(restriction = Some(restriction)) else removeRedirectRestriction(uri)
   }
 
-  private def hasFishy301(movedUri: NormalizedURI): Boolean = {
-    val hasFishy301Restriction = movedUri.restriction == Some(Restriction.http(301))
-    lazy val isFishy = syncHelper.syncGetLatestKeep(movedUri.url).filter(_.createdAt.isAfter(currentDateTime.minusHours(1))) match {
-      case Some(recentKeep) if recentKeep.source != KeepSource.bookmarkImport => true
-      case Some(importedBookmark) =>
-        val parsedBookmarkUrl = URI.parse(importedBookmark.url).get
-        (parsedBookmarkUrl != movedUri.url) && (httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP).statusCode != HttpStatus.SC_MOVED_PERMANENTLY)
-      case None => false
+  private def hasFishy301(movedUri: NormalizedURI): Future[Boolean] = {
+    if (movedUri.restriction == Some(Restriction.http(301))) Future.successful(true)
+    else {
+      dbHelper.getLatestKeep(movedUri.url).map { keepOpt =>
+        keepOpt.filter(_.createdAt.isAfter(currentDateTime.minusHours(1))) match {
+          case Some(recentKeep) if recentKeep.source != KeepSource.bookmarkImport => true
+          case Some(importedBookmark) =>
+            val parsedBookmarkUrl = URI.parse(importedBookmark.url).get
+            (parsedBookmarkUrl != movedUri.url) && (httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP).statusCode != HttpStatus.SC_MOVED_PERMANENTLY)
+          case None => false
+        }
+      }
     }
-    hasFishy301Restriction || isFishy
   }
 
   private def recordScrapedNormalization(uri: NormalizedURI, signature: Signature, canonicalUrl: String, alternateUrls: Set[String]): Future[Unit] = {
