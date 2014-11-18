@@ -34,7 +34,11 @@ object OAuth2Providers {
 import OAuth2Providers._
 
 case class DevOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
-  def configure(): Unit = {}
+  def configure(): Unit = {
+    bind[ProviderRegistry].to[ProviderRegistryImpl]
+    bind[FacebookOAuthProvider].to[FacebookOAuthProviderImpl]
+    bind[LinkedInOAuthProvider].to[LinkedInOAuthProviderImpl]
+  }
 
   @Provides
   @Singleton
@@ -49,7 +53,11 @@ case class DevOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
 }
 
 case class ProdOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
-  def configure(): Unit = {}
+  def configure(): Unit = {
+    bind[ProviderRegistry].to[ProviderRegistryImpl]
+    bind[FacebookOAuthProvider].to[FacebookOAuthProviderImpl]
+    bind[LinkedInOAuthProvider].to[LinkedInOAuthProviderImpl]
+  }
 
   @Provides
   @Singleton

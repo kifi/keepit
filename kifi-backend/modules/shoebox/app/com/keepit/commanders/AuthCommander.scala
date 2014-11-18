@@ -10,7 +10,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail._
-import com.keepit.common.oauth2.{ OAuth2ProviderConfiguration, OAuth2Configuration }
+import com.keepit.common.oauth2.{ ProviderIds, ProviderRegistry, OAuth2Configuration }
 import com.keepit.common.performance.timing
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import com.keepit.common.time.Clock
@@ -101,6 +101,7 @@ class AuthCommander @Inject() (
     clock: Clock,
     airbrakeNotifier: AirbrakeNotifier,
     oauth2Config: OAuth2Configuration,
+    providerRegistry: ProviderRegistry,
     userRepo: UserRepo,
     userCredRepo: UserCredRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
@@ -269,42 +270,15 @@ class AuthCommander @Inject() (
   def getSocialUserOpt(identityId: IdentityId): Option[Identity] = UserService.find(identityId)
 
   def exchangeLongTermToken(provider: IdentityProvider, oauth2Info: OAuth2Info): Future[OAuth2Info] = {
-    oauth2Config.getProviderConfig(provider.id) match {
-      case Some(providerConfig) if (provider.id.equals("facebook")) => // only fb for now
-        exchangeFBToken(oauth2Info, providerConfig) map { exchangedToken =>
-          log.info(s"[accessTokenSignupAndValidate(${provider.id})] exchangedToken=$exchangedToken isIdentical=${exchangedToken.equals(oauth2Info.accessToken)}")
-          exchangedToken
-        }
-      case _ =>
-        log.error(s"[accessTokenSignupAndValidate(${provider.id})] provider not handled")
+    providerRegistry.get(ProviderIds.toProviderId(provider.id)) match {
+      case None =>
+        log.warn(s"[exchangeLongTermToken(${provider.id})] provider not found")
         Future.successful(oauth2Info)
-    }
-  }
-
-  private def exchangeFBToken(oauth2Info: OAuth2Info, config: OAuth2ProviderConfiguration): Future[OAuth2Info] = {
-    import play.api.Play.current
-    val resF = WS.url(config.exchangeTokenUrl.get.toString).withQueryString(
-      "grant_type" -> "fb_exchange_token",
-      "client_id" -> config.clientId,
-      "client_secret" -> config.clientSecret,
-      "fb_exchange_token" -> oauth2Info.accessToken
-    ).get
-    resF map { res =>
-      log.info(s"[exchangeToken] response=${res.body}")
-      if (res.status == Status.OK) {
-        val params = res.body.split('&').map { token =>
-          val nv = token.split('=')
-          nv(0) -> nv(1)
-        }.toMap
-        oauth2Info.copy(accessToken = params("access_token"), expiresIn = params.get("expires").map(_.toInt))
-      } else {
-        log.warn(s"[exchangeToken] failed to obtain exchange token. status=${res.statusText} resp=${res.body} oauth2Info=$oauth2Info; config=$config")
-        oauth2Info
-      }
-    } recover {
-      case t: Throwable =>
-        airbrakeNotifier.notify(s"[exchangeToken] Caught exception $t during exchange attempt. Cause=${t.getCause}. Fallback to $oauth2Info", t)
-        oauth2Info
+      case Some(oauthProvider) =>
+        oauthProvider.exchangeLongTermToken(oauth2Info).map { tokenInfo =>
+          log.info(s"[exchangeLongTermToken(${provider.id}) orig=${oauth2Info.accessToken.take(5)}... new=${tokenInfo.accessToken} isIdentical=${tokenInfo.accessToken.token.equals(oauth2Info.accessToken)}")
+          OAuth2TokenInfo.toOAuth2Info(tokenInfo)
+        }
     }
   }
 

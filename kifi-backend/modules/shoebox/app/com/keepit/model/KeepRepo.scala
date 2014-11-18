@@ -125,7 +125,11 @@ class KeepRepoImpl @Inject() (
     assert(model.isPrimary && model.state != KeepStates.DUPLICATE || !model.isPrimary && model.state != KeepStates.ACTIVE,
       s"trying to save a keep in an inconsistent state: primary=${model.isPrimary} state=${model.state}")
 
-    val newModel = model.copy(seq = sequence.incrementAndGet())
+    val newModel = if (KeepSource.imports.contains(model.source)) {
+      model.copy(seq = deferredSeqNum())
+    } else {
+      model.copy(seq = sequence.incrementAndGet())
+    }
     super.save(newModel.clean())
   }
 

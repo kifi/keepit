@@ -181,6 +181,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allLibraryMemberships = MutableMap[Id[LibraryMembership], LibraryMembership]()
   val newKeepsInLibrariesExpectation = MutableMap[Id[User], Seq[Keep]]()
 
+  // Track service client calls
+
+  val callsGetToCandidateURIs = mutable.ArrayBuffer[Seq[Id[NormalizedURI]]]()
+
   // Fake data initialization methods
 
   def saveUsers(users: User*): Seq[User] = {
@@ -664,7 +668,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     uriSummaries.toMap.filter { pair => uriSet.contains(pair._1) }
   }
 
-  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = Future.successful(Seq.fill(uris.size)(true))
+  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
+    callsGetToCandidateURIs += uris
+    Future.successful(Seq.fill(uris.size)(true))
+  }
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = synchronized {
     Future.successful(allUserImageUrls.getOrElse(userId, "https://www.kifi.com/assets/img/ghost.200.png"))

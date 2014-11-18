@@ -15,6 +15,7 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[UserConnectionRepoImpl])
 trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[UserConnection] {
   def getConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
+  def getConnectedUsersForUsers(ids: Set[Id[User]])(implicit session: RSession): Map[Id[User], Set[Id[User]]]
   def getUnfriendedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
   def getConnectionOpt(u1: Id[User], u2: Id[User])(implicit session: RSession): Option[UserConnection]
   def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession)
@@ -110,6 +111,21 @@ class UserConnectionRepoImpl @Inject() (
         userConnCache.set(UserConnectionIdKey(id), conns.map(_.id).toArray)
         conns
     }
+  }
+
+  def getConnectedUsersForUsers(ids: Set[Id[User]])(implicit session: RSession): Map[Id[User], Set[Id[User]]] = {
+    val ret = userConnCache.bulkGetOrElse(ids map UserConnectionIdKey) { keys =>
+      val missing = keys.map(_.userId)
+
+      val query =
+        ((for (c <- rows if c.user1.inSet(missing) && c.state === UserConnectionStates.ACTIVE) yield (c.user1, c.user2)) union
+          (for (c <- rows if c.user2.inSet(missing) && c.state === UserConnectionStates.ACTIVE) yield (c.user2, c.user1)))
+
+      query.list().groupBy(_._1).map {
+        case (id, connections) => UserConnectionIdKey(id) -> connections.map(_._2.id).toArray
+      }.toMap
+    }
+    ret.map { case (key, value) => key.userId -> value.map(Id[User]).toSet }.toMap
   }
 
   def getUnfriendedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
