@@ -1,5 +1,7 @@
 package com.keepit.common.cache
 
+import org.joda.time.DateTime
+import com.keepit.common.time._
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -88,6 +90,24 @@ trait ObjectCache[K <: Key[T], T] {
         val valueOptFuture = orElse
         valueOptFuture.onSuccess { case valueOpt => set(key, valueOpt) }
         valueOptFuture
+    }
+  }
+
+  def getOldAndAsyncRefresh(key: K, bePatient: Boolean, freshInterval: Long)(getTimeStamp: T => DateTime)(refresh: => Future[Option[T]]): Future[Option[T]] = {
+    get(key) match {
+      case Some(value) =>
+        if (getTimeStamp(value).plus(freshInterval) < currentDateTime) {
+          refresh.onSuccess { case valueOpt => set(key, valueOpt) }
+        }
+        Future.successful(Some(value))
+      case None =>
+        if (bePatient) {
+          val valueOptF = refresh
+          valueOptF.onSuccess { case valueOpt => set(key, valueOpt) }
+          valueOptF
+        } else {
+          Future.successful(None)
+        }
     }
   }
 

@@ -32,7 +32,6 @@ trait GraphServiceClient extends ServiceClient {
   def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]]
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
-  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit]
   def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]]
   def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]]
   def getSociallyRelatedUsers(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, User]]]
@@ -55,6 +54,7 @@ class GraphServiceClientImpl @Inject() (
     mode: Mode) extends GraphServiceClient {
 
   private val longTimeout = CallTimeouts(responseTimeout = Some(300000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
+  private val ONE_HOUR_MILLIS = 1000 * 60 * 60
 
   private def getSuccessfulResponses(calls: Seq[Future[ClientResponse]]): Future[Seq[ClientResponse]] = {
     val safeCalls = calls.map { call =>
@@ -124,20 +124,11 @@ class GraphServiceClientImpl @Inject() (
     futureUserScores.map(userScores => userScores.map { case ConnectedUserScore(friendId, score) => friendId -> score })
   }
 
-  private val consolidateSociallyRelatedEntities = new RequestConsolidator[Id[User], Unit](10 seconds)
-  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = consolidateSociallyRelatedEntities(userId) { id =>
-    call(Graph.internal.refreshSociallyRelatedEntities(id), callTimeouts = longTimeout).map(_ => ())
-  }
-
   def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]] = {
-    val responseFuture = call(Graph.internal.getSociallyRelatedEntities(userId), callTimeouts = longTimeout)
-    cacheProvider.relatedEntitiesCache.get(SociallyRelatedEntitiesCacheKey(userId)) match {
-      case Some(relatedEntities) => Future.successful(Some(relatedEntities))
-      case None => {
-        if (bePatient) responseFuture.map { r => Some(r.json.as[SociallyRelatedEntities]) }
-        else Future.successful(None)
+    cacheProvider.relatedEntitiesCache.
+      getOldAndAsyncRefresh(SociallyRelatedEntitiesCacheKey(userId), bePatient, ONE_HOUR_MILLIS * 12)(ent => ent.timestamp) {
+        call(Graph.internal.refreshSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r => Some(r.json.as[SociallyRelatedEntities]) }
       }
-    }
   }
 
   def getSociallyRelatedUsers(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, User]]] = {
