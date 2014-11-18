@@ -260,6 +260,37 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "get friends" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val userConnectionRepo = inject[UserConnectionRepo]
+        val (userGW, userAL, userTJ, userJA, userBF) = db.readWrite { implicit session =>
+          val userGW = userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GDubs"), normalizedUsername = "gdubs"))
+          val userAL = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("abe"), normalizedUsername = "abe"))
+          val userTJ = userRepo.save(User(firstName = "Thomas", lastName = "Jefferson", username = Username("TJ"), normalizedUsername = "tj"))
+          val userJA = userRepo.save(User(firstName = "John", lastName = "Adams", username = Username("jayjayadams"), normalizedUsername = "jayjayadams"))
+          val userBF = userRepo.save(User(firstName = "Ben", lastName = "Franklin", username = Username("Benji"), normalizedUsername = "benji"))
+          userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userAL.id.get))
+          userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userTJ.id.get))
+          userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userJA.id.get))
+          (userGW, userAL, userTJ, userJA, userBF)
+        }
+        val userController = inject[UserController]
+
+        inject[FakeUserActionsHelper].setUser(userGW)
+        val request1 = FakeRequest("GET", routes.UserController.friends().url)
+        val result1: Future[Result] = userController.friends(0, 5)(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+
+        val resultBody = contentAsString(result1)
+        resultBody must contain("id\":\"" + userAL.externalId)
+        resultBody must contain("id\":\"" + userTJ.externalId)
+        resultBody must contain("id\":\"" + userJA.externalId)
+        resultBody must not contain ("id\":\"" + userBF.externalId)
+        resultBody must contain("total\":3")
+      }
+    }
+
     "basicUserInfo" should {
       "return user info when found" in {
         withDb(controllerTestModules: _*) { implicit injector =>

@@ -20,6 +20,7 @@ trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[Use
   def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession)
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int
   def getConnectionCount(userId: Id[User])(implicit session: RSession): Int
+  def getConnectionCounts(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit
   def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection]
 }
@@ -73,6 +74,18 @@ class UserConnectionRepoImpl @Inject() (
         c <- rows if (c.user1 === userId || c.user2 === userId) && c.state === UserConnectionStates.ACTIVE
       } yield c).length).first
     }
+  }
+  def getConnectionCounts(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
+    val ret = connCountCache.bulkGetOrElse(userIds map UserConnectionCountKey) { keys =>
+      val missingIds = keys.map(_.userId)
+      val query =
+        ((for (c <- rows if c.user1.inSet(missingIds) && c.state === UserConnectionStates.ACTIVE) yield (c.user1, 1)) union
+          (for (c <- rows if c.user2.inSet(missingIds) && c.state === UserConnectionStates.ACTIVE) yield (c.user2, 1)))
+      query.list().groupBy(_._1).map {
+        case (id, connections) => UserConnectionCountKey(id) -> connections.map(_._2).foldLeft(0)(_ + _)
+      }.toMap
+    }
+    ret.map { case (key, count) => key.userId -> count }.toMap
   }
 
   type RepoImpl = UserConnectionTable
