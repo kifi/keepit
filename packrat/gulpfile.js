@@ -126,11 +126,7 @@ gulp.task('copy', function () {
     .pipe(gulp.dest(outDir + '/chrome/icons'));
 
   var firefoxIcons = gulp.src('icons/kifi.{48,64}.png')
-    .pipe(rename(function (path) {
-      path.dirname = '.';
-      path.basename = ~path.basename.indexOf('64') ? 'icon64' : 'icon';
-    }))
-    .pipe(gulp.dest(outDir + '/firefox'));
+    .pipe(gulp.dest(outDir + '/firefox/data/icons'));
 
   var rwsocket = gulp.src(rwsocketScript)
     .pipe(cache('rwsocket'))
@@ -416,7 +412,7 @@ gulp.task('xpi-firefox', ['build', 'config'], function () {
       //   echo "https://addons.mozilla.org/en-US/developers/builder"
       //   exit 1
       // fi
-      (target === 'dev' ? 'cp icons/dev/kifi.48.png out/firefox/icon.png && cp icons/dev/kifi.64.png out/firefox/icon64.png && ' : '') + '\
+      (target === 'dev' ? 'cp icons/dev/kifi.??.png out/firefox/data/icons/ && ' : '') + '\
       cd ' + outDir + ' && \
       cfx xpi --pkgdir=firefox \
         --update-link=https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.xpi \
