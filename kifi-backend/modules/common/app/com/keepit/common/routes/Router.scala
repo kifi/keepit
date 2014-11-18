@@ -148,7 +148,6 @@ object Shoebox extends Service {
     def isSensitiveURI() = ServiceRoute(POST, "/internal/shoebox/database/isSensitiveURI")
     def updateURIRestriction() = ServiceRoute(POST, "/internal/shoebox/database/updateURIRestriction")
     def allURLPatternRules() = ServiceRoute(GET, "/internal/shoebox/database/urlPatternRules")
-    def updateScreenshots(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/screenshots/update", Param("id", id))
     def getUriImage(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/image/getUriImage", Param("id", id))
     def getUriSummary() = ServiceRoute(POST, "/internal/shoebox/image/getUriSummary")
     def getUriSummaries() = ServiceRoute(POST, "/internal/shoebox/image/getUriSummaries")

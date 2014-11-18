@@ -110,13 +110,7 @@ class ScrapeWorkerImpl @Inject() (
       dbHelper.getBookmarksByUriWithoutTitle(scrapedURI.id.get) flatMap { bookmarks =>
         Future.sequence(bookmarks.map { bookmark => dbHelper.saveBookmark(bookmark.copy(title = scrapedURI.title)) }) flatMap { updatedBookmarks =>
           article.canonicalUrl.fold(Future.successful())(recordScrapedNormalization(latestUri, signature, _, article.alternateUrls)) flatMap { _ =>
-            val f = if (!shouldUpdateScreenshot(scrapedURI)) {
-              Future.successful(())
-            } else {
-              scrapedURI.id.fold(Future.successful(()))(shoeboxScraperClient.updateScreenshots)
-            }
-
-            f flatMap { _ => scrapedURI.id.fold(Future.successful[Option[String]](None))(id => shoeboxScraperClient.getUriImage(id)) }
+            scrapedURI.id.fold(Future.successful[Option[String]](None))(id => shoeboxScraperClient.getUriImage(id))
           }
         }
       }
