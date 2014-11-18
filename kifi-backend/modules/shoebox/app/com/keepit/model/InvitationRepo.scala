@@ -27,6 +27,7 @@ trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] wi
   def countByUser(urlId: Id[User])(implicit session: RSession): Int
   def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Seq[Invitation]
   def getByRecipientEmailAddress(emailAddress: EmailAddress)(implicit session: RSession): Seq[Invitation]
+  def getByRecipientSocialUserIdsAndEmailAddresses(socialUserInfoIds: Set[Id[SocialUserInfo]], emailAddresses: Set[EmailAddress])(implicit session: RSession): Seq[Invitation]
   def getBySenderIdAndRecipientSocialUserId(senderId: Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Option[Invitation]
   def getBySenderIdAndRecipientEmailAddress(senderId: Id[User], emailAddress: EmailAddress)(implicit session: RSession): Option[Invitation]
   def getLastInvitedAtBySenderIdAndRecipientSocialUserIds(senderId: Id[User], socialUserInfoIds: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], DateTime]
@@ -121,6 +122,10 @@ class InvitationRepoImpl @Inject() (
 
   def getByRecipientEmailAddress(emailAddress: EmailAddress)(implicit session: RSession): Seq[Invitation] = {
     (for { row <- rows if row.recipientEmailAddress === emailAddress } yield row).list
+  }
+
+  def getByRecipientSocialUserIdsAndEmailAddresses(socialUserInfoId: Set[Id[SocialUserInfo]], emailAddress: Set[EmailAddress])(implicit session: RSession): Seq[Invitation] = {
+    (for { row <- rows if row.recipientSocialUserId.inSet(socialUserInfoId) || row.recipientEmailAddress.inSet(emailAddress) } yield row).list
   }
 
   def getBySenderIdAndRecipientSocialUserId(senderId: Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Option[Invitation] = {
