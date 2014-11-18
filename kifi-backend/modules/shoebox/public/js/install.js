@@ -34,7 +34,12 @@
         }
       })
     } else if ($doc.hasClass('firefox')) {
-      window.location.href = 'https://www.kifi.com/extensions/firefox/kifi.xpi';
+      InstallTrigger.install({
+        Kifi: {
+          URL: '/extensions/firefox/kifi.xpi',
+          IconURL: '/extensions/firefox/kifi.png'
+        }
+      });
       setTimeout(troubleshootFirefox.bind(null, $a), 8000);
     }
   });
