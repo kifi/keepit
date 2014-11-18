@@ -4,7 +4,7 @@ import scala.util.Failure
 
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
-import com.keepit.commanders.{ AuthCommander, LibraryCommander }
+import com.keepit.commanders.{ AuthCommander, LibraryCommander, LocalUserExperimentCommander }
 import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicIdConfiguration, RatherInsecureDESCrypt }
@@ -15,7 +15,7 @@ import com.keepit.common.net.UserAgent
 import com.keepit.common.social.{ FacebookSocialGraph, LinkedInSocialGraph }
 import com.keepit.heimdal.{ ContextDoubleData, ContextStringData, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
 import com.keepit.model.{ KifiExtVersion, KifiInstallation, KifiInstallationPlatform, KifiInstallationRepo, KifiInstallationStates }
-import com.keepit.model.{ ExperimentType, Library, URLPatternRepo, UserExperiment, UserExperimentRepo, UserStates }
+import com.keepit.model.{ ExperimentType, Library, URLPatternRepo, UserStates }
 import com.keepit.social.BasicUser
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -32,7 +32,7 @@ class ExtAuthController @Inject() (
   libraryCommander: LibraryCommander,
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
-  userExperimentRepo: UserExperimentRepo,
+  experimentCommander: LocalUserExperimentCommander,
   kifiInstallationCookie: KifiInstallationCookie,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
@@ -85,9 +85,7 @@ class ExtAuthController @Inject() (
     if (isUpdate || isInstall) {
       SafeFuture {
         if (version >= KifiExtVersion(3, 3, 18) && !request.experiments.contains(ExperimentType.VISITED)) {
-          db.readWrite { implicit s =>
-            userExperimentRepo.save(UserExperiment(userId = userId, experimentType = ExperimentType.VISITED))
-          }
+          experimentCommander.addExperimentForUser(userId, ExperimentType.VISITED)
         }
 
         val contextBuilder = heimdalContextBuilder()
