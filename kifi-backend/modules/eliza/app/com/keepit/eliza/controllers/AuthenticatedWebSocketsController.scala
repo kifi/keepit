@@ -127,31 +127,34 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       }
     }
 
-  private def authenticate(implicit request: RequestHeader): Option[Future[StreamSession]] = {
+  private def authenticate(implicit request: RequestHeader): Option[Future[Option[StreamSession]]] = {
     for { // Options
       auth <- getAuthenticatorFromRequest()
       identityId <- UserService.find(auth.identityId).map(_.identityId)
     } yield {
       (for { // Futures
         socialUser <- shoebox.getSocialUserInfoByNetworkAndSocialId(SocialId(identityId.userId), SocialNetworkType(identityId.providerId)).map(_.get)
-        experiments <- userExperimentCommander.getExperimentsByUser(socialUser.userId.get)
       } yield {
-        val userId = socialUser.userId.get
-        val userAgent = request.headers.get("User-Agent").getOrElse("NA")
-        if (experiments.contains(ExperimentType.ADMIN)) {
-          impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME)) map { impExtUserId =>
-            for {
-              impUserId <- shoebox.getUserOpt(impExtUserId).map(_.get.id.get)
-              impSocUserInfo <- shoebox.getSocialUserInfosByUserId(impUserId)
-            } yield {
-              StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId), userAgent)
+        socialUser.userId.map { userId =>
+          userExperimentCommander.getExperimentsByUser(socialUser.userId.get).flatMap { experiments =>
+            val userId = socialUser.userId.get
+            val userAgent = request.headers.get("User-Agent").getOrElse("NA")
+            if (experiments.contains(ExperimentType.ADMIN)) {
+              impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME)) map { impExtUserId =>
+                for {
+                  impUserId <- shoebox.getUserOpt(impExtUserId).map(_.get.id.get)
+                  impSocUserInfo <- shoebox.getSocialUserInfosByUserId(impUserId)
+                } yield {
+                  StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId), userAgent)
+                }
+              } getOrElse {
+                Future.successful(StreamSession(userId, socialUser, experiments, Some(userId), userAgent))
+              }
+            } else {
+              Future.successful(StreamSession(userId, socialUser, experiments, None, userAgent))
             }
-          } getOrElse {
-            Future.successful(StreamSession(userId, socialUser, experiments, Some(userId), userAgent))
-          }
-        } else {
-          Future.successful(StreamSession(userId, socialUser, experiments, None, userAgent))
-        }
+          } map { Some(_): Option[StreamSession] }
+        } getOrElse (Future.successful(None)) //from Option[Future] => Future[Option]
       }) flatMap identity
     }
   }
@@ -166,33 +169,39 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       }
     } else {
       authenticate(request) match {
-        case Some(streamSessionFuture) =>
-          val iterateeAndEnumeratorFuture = streamSessionFuture.map { streamSession =>
-            implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
+        case Some(streamSessionOptFuture) =>
+          val iterateeAndEnumeratorFuture = streamSessionOptFuture.map { streamSessionOpt =>
+            //type inference fail
+            val temp: Either[play.api.mvc.Result, (Iteratee[JsArray, _], Enumerator[JsArray])] = streamSessionOpt.map { streamSession =>
+              implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
 
-            val typedVersionOpt: Option[KifiVersion] = try {
-              UserAgent(streamSession.userAgent) match {
-                case ua if ua.isKifiIphoneApp || versionOpt.exists(_.startsWith("m")) => versionOpt.map { v => KifiIPhoneVersion(v.stripPrefix("m")) }
-                case ua if ua.isKifiAndroidApp => versionOpt.map(KifiAndroidVersion.apply)
-                case _ => versionOpt.map(KifiExtVersion.apply)
+              val typedVersionOpt: Option[KifiVersion] = try {
+                UserAgent(streamSession.userAgent) match {
+                  case ua if ua.isKifiIphoneApp || versionOpt.exists(_.startsWith("m")) => versionOpt.map { v => KifiIPhoneVersion(v.stripPrefix("m")) }
+                  case ua if ua.isKifiAndroidApp => versionOpt.map(KifiAndroidVersion.apply)
+                  case _ => versionOpt.map(KifiExtVersion.apply)
+                }
+              } catch {
+                case t: Throwable =>
+                  airbrake.notify(s"Failed getting ws client version for user ${streamSession.userId} on ${streamSession.userAgent}", t)
+                  None
               }
-            } catch {
-              case t: Throwable =>
-                airbrake.notify(s"Failed getting ws client version for user ${streamSession.userId} on ${streamSession.userAgent}", t)
-                None
-            }
 
-            val ipOpt: Option[String] = eipOpt.flatMap { eip =>
-              crypt.decrypt(ipkey, eip).toOption
+              val ipOpt: Option[String] = eipOpt.flatMap { eip =>
+                crypt.decrypt(ipkey, eip).toOption
+              }
+              val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, typedVersionOpt, streamSession.userAgent, ipOpt)
+              reportConnect(streamSession, socketInfo, request, connectTimer)
+              var startMessages = Seq[JsArray](Json.arr("hi"))
+              if (updateNeeded(typedVersionOpt, streamSession.userId)) {
+                startMessages = startMessages :+ Json.arr("version", "new")
+              }
+              onConnect(socketInfo)
+              Right((iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator))
+            } getOrElse {
+              Right((Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof))
             }
-            val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, typedVersionOpt, streamSession.userAgent, ipOpt)
-            reportConnect(streamSession, socketInfo, request, connectTimer)
-            var startMessages = Seq[JsArray](Json.arr("hi"))
-            if (updateNeeded(typedVersionOpt, streamSession.userId)) {
-              startMessages = startMessages :+ Json.arr("version", "new")
-            }
-            onConnect(socketInfo)
-            Right((iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator))
+            temp
           }
           iterateeAndEnumeratorFuture.onFailure {
             case t: Throwable =>
