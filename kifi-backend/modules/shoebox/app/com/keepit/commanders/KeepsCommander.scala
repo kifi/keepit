@@ -248,7 +248,7 @@ class KeepsCommander @Inject() (
 
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
     val (allKeeps, libraryMemberships) = db.readOnlyMaster { implicit session =>
-      val allKeeps = keepRepo.getAllByUserAndUriIds(userId, uriIds)
+      val allKeeps = keepRepo.getByUserAndUriIds(userId, uriIds)
       val libraryMemberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(allKeeps.map(_.libraryId.get).toSet, userId)
       (allKeeps, libraryMemberships)
     }

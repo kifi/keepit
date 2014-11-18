@@ -9,6 +9,7 @@ Do Not Edit! -->\n\
 <Title>Kifi Bookmarks Export</Title>\n\
 <H1>Bookmarks</H1>\n\
 <DL>\n\
+<DT><A HREF="https://www.kifi.com/integrator-aa/test-2" ADD_DATE="1416253967">Test 2 by Integrator AA • Kifi</A>\n\
 <DT><A HREF="https://www.kifi.com/friends/invite" ADD_DATE="1403807124" TAGS="kifi Support">kifi • Find friends your friends on kifi</A>\n\
 <DT><A HREF="http://support.kifi.com/customer/portal/emails/new" ADD_DATE="1403807125" TAGS="kifi Support">kifi • Contact Us</A>\n\
 <DT><A HREF="http://support.kifi.com/customer/portal/articles/1397866-introduction-to-kifi-" ADD_DATE="1403807126" TAGS="kifi Support">kifi • How to Use kifi</A>\n\
