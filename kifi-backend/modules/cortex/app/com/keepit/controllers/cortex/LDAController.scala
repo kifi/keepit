@@ -91,6 +91,9 @@ class LDAController @Inject() (
     val userId = (js \ "userId").as[Id[User]]
     val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
     val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, Some(userId))
+    if (version.version == 3) {
+      log.info(s"userUrisInterests for ${userId}, using version 3")
+    }
     val scores = lda.batchUserURIsInterests(userId, uriIds)(version)
     Ok(Json.toJson(scores))
   }
@@ -139,6 +142,9 @@ class LDAController @Inject() (
     val uriIds = (js \ "uris").as[Seq[Id[NormalizedURI]]]
     val userId = (js \ "user").asOpt[Id[User]]
     val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, userId)
+    if (version.version == 3) {
+      log.info(s"getTopicNames for ${userId}, using version 3")
+    }
     val res = lda.getTopicNames(uriIds)(version)
     Ok(Json.toJson(res))
   }
@@ -148,6 +154,9 @@ class LDAController @Inject() (
     val userId = (js \ "user").as[Id[User]]
     val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
     val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, Some(userId))
+    if (version.version == 3) {
+      log.info(s"explainFeed for ${userId}, using version 3")
+    }
     val explain = lda.explainFeed(userId, uris)(version)
     Ok(Json.toJson(explain))
   }
