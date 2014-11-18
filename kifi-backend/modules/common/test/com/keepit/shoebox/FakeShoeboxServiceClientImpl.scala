@@ -652,9 +652,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
   }
 
-  def isSensitiveURI(uri: String): Future[Boolean] = {
-    Future.successful(uri.contains("isSensitive"))
-  }
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit] = ???
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
