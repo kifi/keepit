@@ -2,11 +2,13 @@ package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
 import com.keepit.commanders.UsernameOps
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ ExternalId, Id, State, SequenceNumber, NotFoundException }
+import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.{ zones, Clock }
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -79,7 +81,7 @@ class UserRepoImpl @Inject() (
   }
 
   override def save(user: User)(implicit session: RWSession): User = {
-    val toSave = user.copy(seq = sequence.incrementAndGet())
+    val toSave = user.copy(seq = deferredSeqNum())
     user.id foreach { id =>
       val currentUser = get(id)
       if (currentUser.username != user.username && currentUser.createdAt.isBefore(clock.now.minusHours(1))) {
@@ -242,3 +244,15 @@ class UserRepoImpl @Inject() (
     sql"select id from user u where state = 'active' and created_at > $since and not exists (select id from user_experiment x where u.id = x.user_id and x.experiment_type='fake')".as[Id[User]].list
   }
 }
+
+trait UserSeqPlugin extends SequencingPlugin
+
+class UserSeqPluginImpl @Inject() (override val actor: ActorInstance[UserSeqActor], override val scheduling: SchedulingProperties)
+  extends UserSeqPlugin
+
+@Singleton
+class UserSeqAssigner @Inject() (db: Database, repo: UserRepo, airbrake: AirbrakeNotifier)
+  extends DbSequenceAssigner[User](db, repo, airbrake)
+
+class UserSeqActor @Inject() (assigner: UserSeqAssigner, airbrake: AirbrakeNotifier)
+  extends SequencingActor(assigner, airbrake)

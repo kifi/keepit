@@ -82,7 +82,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def bookmarkCountCollectionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new KeepCountForCollectionCache(stats, accessLog, (outerRepo, 3 days, 7 days))
+    new KeepCountForCollectionCache(stats, accessLog, (outerRepo, 3 days, 30 days))
 
   @Singleton
   @Provides
