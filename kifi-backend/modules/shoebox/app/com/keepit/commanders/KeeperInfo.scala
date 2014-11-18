@@ -16,7 +16,6 @@ case class KeeperInfo(
   tags: Seq[SendableTag],
   position: Option[JsObject],
   neverOnSite: Boolean,
-  sensitive: Boolean,
   shown: Boolean,
   keepers: Seq[BasicUser],
   keeps: Int)
@@ -29,7 +28,6 @@ object KeeperInfo {
     (__ \ 'tags).writeNullable[Seq[SendableTag]].contramap[Seq[SendableTag]](Some(_).filter(_.nonEmpty)) and
     (__ \ 'position).writeNullable[JsObject] and
     (__ \ 'neverOnSite).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-    (__ \ 'sensitive).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'shown).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'keepers).writeNullable[Seq[BasicUser]].contramap[Seq[BasicUser]](Some(_).filter(_.nonEmpty)) and
     (__ \ 'keeps).writeNullable[Int].contramap[Int](Some(_).filter(_ > 0))
@@ -40,7 +38,6 @@ case class KeeperPageInfo(
   normalized: String,
   position: Option[JsObject],
   neverOnSite: Boolean,
-  sensitive: Boolean,
   shown: Boolean,
   keepers: Seq[BasicUser],
   keeps: Seq[KeepData])
@@ -49,7 +46,6 @@ object KeeperPageInfo {
     (__ \ 'normalized).write[String] and
     (__ \ 'position).writeNullable[JsObject] and
     (__ \ 'neverOnSite).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-    (__ \ 'sensitive).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'shown).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'keepers).writeNullable[Seq[BasicUser]].contramap[Seq[BasicUser]](Some(_).filter(_.nonEmpty)) and
     (__ \ 'keeps).write[Seq[KeepData]]

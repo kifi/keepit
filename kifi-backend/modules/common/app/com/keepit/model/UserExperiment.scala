@@ -50,7 +50,6 @@ object ExperimentType {
   val AUTO_GEN = ExperimentType("autogen")
   val FAKE = ExperimentType("fake")
   val NO_SEARCH_EXPERIMENTS = ExperimentType("no search experiments")
-  val NOT_SENSITIVE = ExperimentType("not sensitive")
   val CAN_MESSAGE_ALL_USERS = ExperimentType("can message all users")
   val DEMO = ExperimentType("demo")
   val EXTENSION_LOGGING = ExperimentType("extension_logging")
@@ -65,7 +64,7 @@ object ExperimentType {
   val NEW_KEEP_NOTIFICATIONS = ExperimentType("new_keep_notifications")
   val CORTEX_NEW_MODEL = ExperimentType("cortex_new_model")
 
-  val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE ::
+  val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
     MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH ::
     GRAPH_BASED_PEOPLE_TO_INVITE :: NEW_KEEP_NOTIFICATIONS :: CORTEX_NEW_MODEL :: Nil

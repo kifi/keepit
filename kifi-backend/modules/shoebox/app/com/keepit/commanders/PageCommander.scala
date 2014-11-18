@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 
-import com.keepit.classify.{ Domain, DomainClassifier, DomainRepo }
+import com.keepit.classify.{ Domain, DomainRepo }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -33,7 +33,6 @@ class PageCommander @Inject() (
     collectionRepo: CollectionRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    domainClassifier: DomainClassifier,
     basicUserRepo: BasicUserRepo,
     historyTracker: SliderHistoryTracker,
     normalizedURIInterner: NormalizedURIInterner,
@@ -54,7 +53,7 @@ class PageCommander @Inject() (
     if (url.isEmpty) throw new Exception(s"empty url for user $userId")
 
     // use the master. Keep, KeepToCollection, and Collection are heavily cached.
-    val (nUriStr, nUri, keepersFutureOpt, domain, keep, tags, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
+    val (nUriStr, nUri, keepersFutureOpt, keep, tags, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
       val (nUriStr, nUri) = normalizedURIInterner.getByUriOrPrenormalize(url) match {
         case Success(Left(nUri)) => (nUri.url, Some(nUri))
         case Success(Right(pUri)) => (pUri, None)
@@ -78,10 +77,8 @@ class PageCommander @Inject() (
         (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
           userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW))
       }.getOrElse((None, false))
-      (nUriStr, nUri, getKeepersFutureOpt, domain, keep, tags, position, neverOnSite, host)
+      (nUriStr, nUri, getKeepersFutureOpt, keep, tags, position, neverOnSite, host)
     }
-    val sensitive: Boolean = !experiments.contains(ExperimentType.NOT_SENSITIVE) &&
-      (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
 
     val shown = nUri map { uri => historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id) } getOrElse false
 
@@ -92,17 +89,11 @@ class PageCommander @Inject() (
       keep.map { k => if (k.isPrivate) "private" else "public" },
       keep.map(_.externalId),
       tags.map { t => SendableTag.from(t.summary) },
-      position, neverOnSite, sensitive, shown, keepers, keeps)
-  }
-
-  def isSensitiveURI(uri: String): Boolean = {
-    val host: Option[String] = URI.parse(uri).get.host.map(_.name)
-    val domain: Option[Domain] = db.readOnlyMaster { implicit s => host.flatMap(domainRepo.get(_)) }
-    domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false
+      position, neverOnSite, shown, keepers, keeps)
   }
 
   def getPageInfo(uri: URI, userId: Id[User], experiments: Set[ExperimentType]): Future[KeeperPageInfo] = {
-    val (nUriOpt, nUriStr, domain, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
+    val (nUriOpt, nUriStr, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
       val host: Option[String] = uri.host.map(_.name)
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
       val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
@@ -114,10 +105,8 @@ class PageCommander @Inject() (
         case Success(Right(pUri)) => (pUri, None)
         case Failure(ex) => (uri.raw.get, None)
       }
-      (nUri, nUriStr, domain, position, neverOnSite, host)
+      (nUri, nUriStr, position, neverOnSite, host)
     }
-    val sensitive: Boolean = !experiments.contains(ExperimentType.NOT_SENSITIVE) &&
-      (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
 
     val shown = nUriOpt.map { normUri => historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id) } getOrElse false
     nUriOpt.map { normUri =>
@@ -135,10 +124,10 @@ class PageCommander @Inject() (
       val keepsData = keepsCommander.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
 
       getKeepersFuture.map { keepers =>
-        KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, keepers, keepsData)
+        KeeperPageInfo(nUriStr, position, neverOnSite, shown, keepers, keepsData)
       }
     }.getOrElse {
-      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, Seq.empty[BasicUser], Seq.empty[KeepData])) // todo: add in otherKeepers?
+      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], Seq.empty[KeepData])) // todo: add in otherKeepers?
     }
   }
 }
