@@ -82,8 +82,8 @@ class UserConnectionRepoImpl @Inject() (
       val query =
         ((for (c <- rows if c.user1.inSet(missingIds) && c.state === UserConnectionStates.ACTIVE) yield (c.user1, 1)) union
           (for (c <- rows if c.user2.inSet(missingIds) && c.state === UserConnectionStates.ACTIVE) yield (c.user2, 1)))
-      query.list().groupBy(_._1).map {
-        case (id, connections) => UserConnectionCountKey(id) -> connections.map(_._2).foldLeft(0)(_ + _)
+      query.groupBy(_._1).map { case (userId, c) => userId -> c.length }.run.map {
+        case (userId, cnt) => UserConnectionCountKey(userId) -> cnt
       }.toMap
     }
     ret.map { case (key, count) => key.userId -> count }.toMap

@@ -273,7 +273,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           val userBF = userRepo.save(User(firstName = "Ben", lastName = "Franklin", username = Username("Benji"), normalizedUsername = "benji"))
           userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userAL.id.get))
           userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userTJ.id.get))
-          userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userJA.id.get))
+          userConnectionRepo.save(UserConnection(user1 = userJA.id.get, user2 = userGW.id.get))
           (userGW, userAL, userTJ, userJA, userBF)
         }
         val userController = inject[UserController]
