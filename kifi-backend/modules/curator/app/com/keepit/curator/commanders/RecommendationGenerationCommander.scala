@@ -266,10 +266,11 @@ class RecommendationGenerationCommander @Inject() (
       }.toMap
 
       // puts the candidate booleans back in the order they were passed in
-      val initial = IndexedSeq.fill(uriIds.size)(false)
-      (fromCache ++ notFromCacheResults).foldLeft(initial) {
-        case (results, (id, bool)) => results.updated(uriIdIndexes(id), bool)
+      val results = Array.fill[Boolean](uriIds.size)(false)
+      (fromCache ++ notFromCacheResults).foreach {
+        case (id, bool) => results.update(uriIdIndexes(id), bool)
       }
+      results.toSeq
     }
   }
 
