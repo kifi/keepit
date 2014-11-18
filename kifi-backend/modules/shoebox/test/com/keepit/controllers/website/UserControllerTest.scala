@@ -1,30 +1,27 @@
 package com.keepit.controllers.website
 
+import com.keepit.common.db.ExternalId
 import com.keepit.common.oauth2.FakeOAuth2ConfigurationModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
 
-import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
-import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
-import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication }
+import com.keepit.test.{ ShoeboxTestInjector }
 
-import play.api.libs.json.{ JsArray, Json, JsNull }
+import play.api.libs.json.{ Json, JsNull }
 import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
-import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
+import com.keepit.shoebox.{ FakeShoeboxServiceModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGraphModule }
+import com.keepit.common.social.{ FakeSocialGraphModule }
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.scraper.{ FakeScrapeSchedulerModule }
 
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -283,13 +280,9 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val result1: Future[Result] = userController.friends(0, 5)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
-
-        val resultBody = contentAsString(result1)
-        resultBody must contain("id\":\"" + userAL.externalId)
-        resultBody must contain("id\":\"" + userTJ.externalId)
-        resultBody must contain("id\":\"" + userJA.externalId)
-        resultBody must not contain ("id\":\"" + userBF.externalId)
-        resultBody must contain("total\":3")
+        val resultJson = contentAsJson(result1)
+        val resultIds = (resultJson \\ "id").map(_.as[ExternalId[User]])
+        resultIds === List(userAL.externalId, userTJ.externalId, userJA.externalId)
       }
     }
 
