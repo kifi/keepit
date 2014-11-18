@@ -636,7 +636,7 @@ class UserCommander @Inject() (
     abookServiceClient.getFriendRecommendations(userId, offset, limit).map {
       _.map { recommendedUsers =>
         val friends = db.readOnlyReplica { implicit session =>
-          (recommendedUsers.toSet + userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
+          userConnectionRepo.getConnectedUsersForUsers(recommendedUsers.toSet + userId)
         }
 
         val mutualFriends = recommendedUsers.map { recommendedUserId =>
