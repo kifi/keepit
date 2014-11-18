@@ -27,6 +27,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getIdAndSeqChanged(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[UriIdAndSeq]
   def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
+  def getByNormalizedUrls(normalizedUrls: Seq[String])(implicit session: RSession): Map[String, NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
@@ -47,8 +48,6 @@ class NormalizedURIRepoImpl @Inject() (
     extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberDbFunction[NormalizedURI] with Logging {
 
   import db.Driver.simple._
-
-  private val sequence = db.getSequence[NormalizedURI]("normalized_uri_sequence")
 
   type RepoImpl = NormalizedURITable
   class NormalizedURITable(tag: Tag) extends RepoTable[NormalizedURI](db, tag, "normalized_uri") with ExternalIdColumn[NormalizedURI] with SeqNumberColumn[NormalizedURI] {
@@ -174,6 +173,19 @@ class NormalizedURIRepoImpl @Inject() (
     }
   }
 
+  def getByNormalizedUrls(normalizedUrls: Seq[String])(implicit session: RSession): Map[String, NormalizedURI] = {
+    val hashes = normalizedUrls.map(NormalizedURI.hashUrl(_)).toSet
+    val result = urlHashCache.bulkGetOrElseOpt(hashes map NormalizedURIUrlHashKey) { keys =>
+      val urlHashes = keys.map(_.urlHash)
+      val fetched = (for (t <- rows if t.urlHash.inSet(urlHashes)) yield t).list.map { u =>
+        u.urlHash -> u
+      }.toMap
+
+      keys.map { k => k -> fetched.get(k.urlHash) }.toMap
+    }
+    result.collect { case (_, Some(uri)) => uri.url -> uri }
+  }
+
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI] =
     (for (t <- rows if t.state =!= NormalizedURIStates.REDIRECTED && t.redirect.isNotNull) yield t).list
 
@@ -203,14 +215,5 @@ class NormalizedURIRepoImpl @Inject() (
     assert(info.size == uriIds.distinct.size, s"looks like some uriIds are missing in normalized_uri_repo")
     val m = info.map { case (id, noRestriction, state) => (id, noRestriction && (state == NormalizedURIStates.SCRAPED)) }.toMap
     uriIds.map { id => m(id) }
-  }
-
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "normalized_uri", limit)
-  }
-
-  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
-    sql"""select min(seq) from normalized_uri where seq < 0""".as[Option[Long]].first
   }
 }

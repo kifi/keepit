@@ -1,10 +1,12 @@
 package com.keepit.commanders
 
+import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.net.WebService
 import com.keepit.common.performance._
 
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, Inject }
 import scala.concurrent.Future
 import java.util.concurrent.TimeoutException
 import com.keepit.model._
@@ -28,6 +30,7 @@ import com.keepit.common.service.RequestConsolidator
 import scala.concurrent.duration._
 import com.keepit.common.core._
 
+@Singleton
 class URISummaryCommander @Inject() (
     normalizedUriRepo: NormalizedURIRepo,
     normalizedURIInterner: NormalizedURIInterner,
@@ -43,7 +46,8 @@ class URISummaryCommander @Inject() (
     imageFetcher: ImageFetcher,
     uriSummaryCache: URISummaryCache,
     airbrake: AirbrakeNotifier,
-    clock: Clock) extends Logging {
+    clock: Clock,
+    val webService: WebService) extends Logging with ProcessedImageHelper {
 
   /**
    * Gets the default URI Summary
@@ -54,7 +58,7 @@ class URISummaryCommander @Inject() (
   }
 
   def getDefaultURISummary(uri: NormalizedURI, waiting: Boolean): Future[URISummary] = {
-    val uriSummaryRequest = URISummaryRequest(uri.url, ImageType.ANY, ImageSize(0, 0), withDescription = true, waiting = waiting, silent = false)
+    val uriSummaryRequest = URISummaryRequest(uri.id.get, ImageType.ANY, ImageSize(0, 0), withDescription = true, waiting = waiting, silent = false)
     getURISummaryForRequest(uriSummaryRequest, uri)
   }
 
@@ -70,9 +74,9 @@ class URISummaryCommander @Inject() (
    * Uses a URISummaryRequest to request an image for the page, for the given size constraints.
    * If no image is available, fetching is triggered (silent=false) but the promise is immediately resolved (waiting=false)
    */
-  def getImageURISummary(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[URISummary] = {
+  private def getImageURISummary(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[URISummary] = {
     val minSize = minSizeOpt getOrElse ImageSize(0, 0)
-    val request = URISummaryRequest(nUri.url, ImageType.ANY, minSize, false, false, false)
+    val request = URISummaryRequest(nUri.id.get, ImageType.ANY, minSize, false, false, false)
     getURISummaryForRequest(request, nUri)
   }
 
@@ -81,16 +85,10 @@ class URISummaryCommander @Inject() (
    * and only the image is found, the image should still be returned
    */
   def getURISummaryForRequest(request: URISummaryRequest): Future[URISummary] = {
-    val nUri = timing(s"calculating normalized uri for request with url ${request.url}") {
-      getNormalizedURIForRequest(request)
+    val nUri = db.readOnlyReplica { implicit session =>
+      normalizedUriRepo.get(request.uriId)
     }
-    nUri match {
-      case Some(uri) =>
-        getURISummaryForRequest(request, uri)
-      case None =>
-        log.warn(s"could not find normalized uri for ${request.url}")
-        Future.successful(URISummary())
-    }
+    getURISummaryForRequest(request, nUri)
   }
 
   //todo(Léo): swap url for uriId in URISummaryRequest and stop propagating the entire NormalizedURI in this code
@@ -112,13 +110,6 @@ class URISummaryCommander @Inject() (
       }
       if (request.waiting) fetchedSummaryFuture.imap(_.getOrElse(existingSummary)) else Future.successful(existingSummary)
     }
-  }
-
-  private def getNormalizedURIForRequest(request: URISummaryRequest): Option[NormalizedURI] = {
-    if (request.silent)
-      db.readOnlyMaster { implicit session => normalizedURIInterner.getByUri(request.url) }
-    else
-      db.readWrite { implicit session => Some(normalizedURIInterner.internByUri(request.url)) }
   }
 
   private def getExistingSummaryForRequest(request: URISummaryRequest, nUri: NormalizedURI): URISummary = {
@@ -177,27 +168,19 @@ class URISummaryCommander @Inject() (
       val stopper = Stopwatch("fetching from scraper embedly info for ${nUri.id} -> ${nUri.url}")
       val future = fetchFromEmbedly(nUri, minSize)
       future.onComplete { res =>
-        stopper.stop()
+        stopper.stop() tap { _ => log.info(stopper.toString) }
+        res.map(_.map(s => resizeImage(nUri, s)))
       }
       future
     } else {
       Future.successful(None)
     }
-    embedlyResultFut flatMap { embedlyResultOpt =>
-      val shouldFetchFromPagePeeker = false // todo(Léo, Andrew): move away from PagePeeker
-      /* (imageType == ImageType.SCREENSHOT || imageType == ImageType.ANY) && // Request accepts screenshots
-          (embedlyResultOpt.isEmpty || embedlyResultOpt.get.imageUrl.isEmpty) // Couldn't find appropriate Embedly image */
-      if (shouldFetchFromPagePeeker) {
-        fetchFromPagePeeker(nUri, minSize) map { imageInfoOpt =>
-          val imageUrlOpt = imageInfoOpt flatMap { getS3URL(_, nUri) }
-          val widthOpt = imageInfoOpt flatMap (_.width)
-          val heightOpt = imageInfoOpt flatMap (_.height)
-          val title = embedlyResultOpt flatMap { _.title }
-          val description = embedlyResultOpt flatMap { _.description }
-          Some(URISummary(imageUrlOpt, title, description, widthOpt, heightOpt))
-        }
-      } else Future.successful(embedlyResultOpt)
-    }
+    embedlyResultFut
+  }
+
+  val resizeLock = new ReactiveLock(2)
+  private def resizeImage(nUri: NormalizedURI, uriSummary: URISummary) = {
+    uriSummary
   }
 
   /**

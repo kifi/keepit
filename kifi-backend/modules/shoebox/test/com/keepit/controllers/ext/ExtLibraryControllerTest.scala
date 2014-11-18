@@ -11,7 +11,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model.{ Collection, FakeSliderHistoryTrackerModule, Hashtag, Keep, KeepSource, KeepToCollection }
-import com.keepit.model.{ Library, LibraryAccess, LibraryMembership, LibraryMembershipStates, LibrarySlug, LibraryStates, LibraryVisibility }
+import com.keepit.model.{ Library, LibraryAccess, LibraryMembership, LibraryMembershipStates, LibrarySlug, LibraryStates, LibraryVisibility, LibraryInvite }
 import com.keepit.model.{ NormalizedURI, URLFactory, UrlHash, User, Username }
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
@@ -21,7 +21,7 @@ import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
-import play.api.libs.json.{ Json, JsObject }
+import play.api.libs.json.{ Json, JsObject, JsNull }
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -141,7 +141,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "visibility" -> "secret",
           "owner" -> BasicUser.fromUser(user1),
           "keeps" -> 0,
-          "followers" -> 0)
+          "followers" -> 0,
+          "following" -> JsNull)
 
         status(getLibrary(user2, lib2PubId)) === OK
 
@@ -179,6 +180,103 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         db.readOnlyMaster { implicit s =>
           libraryRepo.all.map { l => (l.id, l.state) } === Seq((lib.id, LibraryStates.INACTIVE))
         }
+      }
+    }
+
+    "join library" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, lib1, lib2) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test1"), normalizedUsername = "test1"))
+          val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test2"), normalizedUsername = "test2"))
+
+          val lib1 = libraryRepo.save(Library(name = "L1", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l1"), memberCount = 1))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          val lib2 = libraryRepo.save(Library(name = "L2", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("l2"), memberCount = 1))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          libraryMembershipRepo.countWithLibraryId(lib1.id.get) === 1
+          libraryMembershipRepo.countWithLibraryId(lib2.id.get) === 1
+
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).isEmpty === true
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib2.id.get, user2.id.get).isEmpty === true
+
+          (user1, user2, lib1, lib2)
+        }
+        val libPubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val libPubId2 = Library.publicId(lib2.id.get)(inject[PublicIdConfiguration])
+
+        // join a published library
+        status(joinLibrary(user2, libPubId1)) === NO_CONTENT
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).isEmpty === false
+          libraryMembershipRepo.countWithLibraryId(lib1.id.get) === 2
+        }
+
+        // join again for idempotency
+        status(joinLibrary(user2, libPubId1)) === NO_CONTENT
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).isEmpty === false
+          libraryMembershipRepo.countWithLibraryId(lib1.id.get) === 2
+        }
+
+        // join a secret library (with no invite)
+        status(joinLibrary(user2, libPubId2)) === FORBIDDEN
+        db.readWrite { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib2.id.get, user2.id.get).isEmpty === true
+          libraryMembershipRepo.countWithLibraryId(lib2.id.get) === 1
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib2.id.get, inviterId = user1.id.get, userId = Some(user2.id.get), access = LibraryAccess.READ_ONLY))
+        }
+
+        // join a secret library (with invite)
+        status(joinLibrary(user2, libPubId2)) === NO_CONTENT
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib2.id.get, user2.id.get).isEmpty === false
+          libraryMembershipRepo.countWithLibraryId(lib2.id.get) === 2
+        }
+      }
+    }
+
+    "leave library" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, lib1, lib2) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test1"), normalizedUsername = "test1"))
+          val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test2"), normalizedUsername = "test2"))
+
+          val lib1 = libraryRepo.save(Library(name = "L1", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l1"), memberCount = 1))
+          val mem11 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val mem12 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+
+          val lib2 = libraryRepo.save(Library(name = "L2", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l2"), memberCount = 1))
+          val mem21 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get, None).get.state === LibraryMembershipStates.ACTIVE
+          libraryMembershipRepo.countWithLibraryId(lib1.id.get) === 2
+          libraryMembershipRepo.countWithLibraryId(lib2.id.get) === 1
+          (user1, user2, lib1, lib2)
+        }
+        val libPubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val libPubId2 = Library.publicId(lib2.id.get)(inject[PublicIdConfiguration])
+
+        // leave a library
+        status(leaveLibrary(user2, libPubId1)) === NO_CONTENT
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get, None).get.state === LibraryMembershipStates.INACTIVE
+          libraryMembershipRepo.countWithLibraryId(lib1.id.get) === 1
+        }
+
+        // leave a library again
+        status(leaveLibrary(user2, libPubId1)) === NO_CONTENT
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get, None).get.state === LibraryMembershipStates.INACTIVE
+          libraryMembershipRepo.countWithLibraryId(lib1.id.get) === 1
+        }
+
+        // leave a library (no membership)
+        status(leaveLibrary(user2, libPubId2)) === NO_CONTENT
+
+        // leave a library when owner
+        status(leaveLibrary(user1, libPubId1)) === BAD_REQUEST
       }
     }
 
@@ -477,6 +575,16 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
   private def deleteLibrary(user: User, libraryId: PublicId[Library])(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.deleteLibrary(libraryId)(request(routes.ExtLibraryController.deleteLibrary(libraryId)))
+  }
+
+  private def joinLibrary(user: User, libraryId: PublicId[Library])(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.joinLibrary(libraryId)(request(routes.ExtLibraryController.joinLibrary(libraryId)))
+  }
+
+  private def leaveLibrary(user: User, libraryId: PublicId[Library])(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.leaveLibrary(libraryId)(request(routes.ExtLibraryController.leaveLibrary(libraryId)))
   }
 
   private def addKeep(user: User, libraryId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {

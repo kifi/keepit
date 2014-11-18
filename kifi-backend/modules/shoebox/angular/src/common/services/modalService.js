@@ -43,9 +43,16 @@ angular.module('kifi')
       }
     }
 
+    function openGenericErrorModal (opts) {
+      opts = opts || {};
+      opts.template = 'common/modal/genericErrorModal.tpl.html';
+      open(opts);
+    }
+
     return {
       open: open,
-      close: close
+      close: close,
+      openGenericErrorModal: openGenericErrorModal
     };
   }
 ]);

@@ -21,6 +21,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Option[LibraryMembership]
+  def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Library], LibraryMembership]
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership]
   def pageWithLibraryIdAndAccess(libraryId: Id[Library], offset: Int, limit: Int, accessSet: Set[LibraryAccess],
     excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
@@ -31,6 +32,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def getMemberCountSinceForLibrary(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def countByLibraryAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
+  def countsByLibraryAccess(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
 }
 
 @Singleton
@@ -44,7 +46,6 @@ class LibraryMembershipRepoImpl @Inject() (
 
   import DBSession._
   import db.Driver.simple._
-  private val sequence = db.getSequence[LibraryMembership]("library_membership_sequence")
 
   type RepoImpl = LibraryMemberTable
 
@@ -118,6 +119,14 @@ class LibraryMembershipRepoImpl @Inject() (
     }
   }
 
+  def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Library], LibraryMembership] = {
+    if (libraryIds.isEmpty) {
+      Map.empty
+    } else {
+      (for (b <- rows if b.libraryId.inSet(libraryIds) && b.userId === userId && b.state =!= excludeState.orNull) yield (b.libraryId, b)).list.toMap
+    }
+  }
+
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership] = {
     (for (b <- rows if b.libraryId === libraryId && b.userId.inSet(userIds) && b.state =!= excludeState.orNull) yield (b.userId, b)).list.toMap
   }
@@ -182,21 +191,20 @@ class LibraryMembershipRepoImpl @Inject() (
     }
   }
 
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "library_membership", limit)
-  }
-
-  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
-    sql"""select min(seq) from library_membership where seq < 0""".as[Option[Long]].first
-  }
-
   def countByLibraryAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int = {
     libraryMembershipCountCache.getOrElse(LibraryMembershipCountKey(userId, access)) {
-      StaticQuery.queryNA[Int](s"select count(user_id) from library_membership where user_id = $userId and access = '${access.value}' group by user_id").firstOption.getOrElse(0)
+      StaticQuery.queryNA[Int](s"select count(*) from library_membership where user_id = $userId and access = '${access.value}' ").firstOption.getOrElse(0)
     }
   }
 
+  def countsByLibraryAccess(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int] = {
+    libraryMembershipCountCache.bulkGetOrElse(accesses.map(LibraryMembershipCountKey(userId, _))) { keys =>
+      import StaticQuery.interpolation
+      val counts = sql"select access, count(*) from library_membership where user_id = $userId group by access".as[(String, Int)].list().toMap
+
+      keys.toSeq.map(k => k -> counts.getOrElse(k.access.value, 0)).toMap
+    }.map { case (k, v) => k.access -> v }
+  }
 }
 
 trait LibraryMembershipSequencingPlugin extends SequencingPlugin

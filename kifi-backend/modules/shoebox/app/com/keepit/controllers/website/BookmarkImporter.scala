@@ -24,6 +24,8 @@ import com.keepit.common.strings.humanFriendlyToken
 import org.apache.commons.io.FileUtils
 import com.keepit.common.performance._
 
+import org.joda.time.DateTime
+
 class BookmarkImporter @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
@@ -51,7 +53,7 @@ class BookmarkImporter @Inject() (
               log.info(s"[bmFileImport:$id] Parsed in ${clock.getMillis() - startMillis}ms")
               val tagSet = scala.collection.mutable.Set.empty[String]
               parsed.foreach {
-                case (_, _, tagsOpt) =>
+                case (_, _, tagsOpt, _) =>
                   tagsOpt.map { tagName =>
                     tagSet.add(tagName)
                   }
@@ -65,9 +67,9 @@ class BookmarkImporter @Inject() (
                 tagStr.trim -> timing(s"uploadBookmarkFile(${request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(request.userId, tagStr.trim)(context) }
               }.toMap
               val taggedKeeps = parsed.map {
-                case (t, h, tagNames) =>
+                case (t, h, tagNames, createdDate) =>
                   val keepTags = tagNames.map(tags.get).flatten.map(_.id.get) :+ importTag.id.get
-                  (t, h, keepTags)
+                  (t, h, keepTags, createdDate)
               }
               log.info(s"[bmFileImport:$id] Tags extracted in ${clock.getMillis() - startMillis}ms")
 
@@ -106,7 +108,7 @@ class BookmarkImporter @Inject() (
   }
 
   /* Parses Netscape-bookmark formatted file, extracting useful fields */
-  def parseNetscapeBookmarks(bookmarks: File): Try[(Option[KeepSource], List[(String, String, List[String])])] = Try {
+  def parseNetscapeBookmarks(bookmarks: File): Try[(Option[KeepSource], List[(String, String, List[String], Option[DateTime])])] = Try {
     // This is a standard for bookmark exports.
     // http://msdn.microsoft.com/en-us/library/aa753582(v=vs.85).aspx
 
@@ -133,21 +135,22 @@ class BookmarkImporter @Inject() (
         val tags = Option(elem.attr("tags")).getOrElse("")
 
         val tagList = (lists + tags).split(",").map(_.trim).filter(_.nonEmpty).toList
+        val createdDate: Option[DateTime] = Option(elem.attr("add_date")).map(x => Try(new DateTime(x.toLong)).toOption).flatten
 
-        // These may be useful in the future, but we currently are not using them:
-        // val createdDate = Option(elem.attr("add_date"))
+        // This may be useful in the future, but we currently are not using them:
+
         // val lastVisitDate = Option(elem.attr("last_visit"))
 
-        (title, href, tagList)
+        (title, href, tagList, createdDate)
       }
     }.toList.flatten
     (source, extracted)
   }
 
-  def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: List[(String, String, List[Id[Collection]])], public: Boolean, libraryId: Option[Id[Library]]) = {
+  def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: List[(String, String, List[Id[Collection]], Option[DateTime])], public: Boolean, libraryId: Option[Id[Library]]) = {
     val importId = UUID.randomUUID.toString
     val rawKeeps = bookmarks.map {
-      case (title, href, tagIds) =>
+      case (title, href, tagIds, createdDate) =>
         val titleOpt = if (title.nonEmpty) Some(title) else None
         val tags = tagIds.map(_.id.toString).mkString(",") match {
           case s if s.isEmpty => None
@@ -163,7 +166,8 @@ class BookmarkImporter @Inject() (
           originalJson = None,
           installationId = None,
           tagIds = tags,
-          libraryId = libraryId)
+          libraryId = libraryId,
+          createdDate = createdDate)
     }
     (importId, rawKeeps)
   }
@@ -185,7 +189,7 @@ class BookmarkImporter @Inject() (
               log.info(s"[bmFileImport:$id] Parsed in ${clock.getMillis() - startMillis}ms")
               val tagSet = scala.collection.mutable.Set.empty[String]
               parsed.foreach {
-                case (_, _, tagsOpt) =>
+                case (_, _, tagsOpt, _) =>
                   tagsOpt.map { tagName =>
                     tagSet.add(tagName)
                   }
@@ -199,9 +203,9 @@ class BookmarkImporter @Inject() (
                 tagStr.trim -> timing(s"uploadBookmarkFile(${request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(request.userId, tagStr.trim)(context) }
               }.toMap
               val taggedKeeps = parsed.map {
-                case (t, h, tagNames) =>
+                case (t, h, tagNames, createdDate) =>
                   val keepTags = tagNames.map(tags.get).flatten.map(_.id.get) :+ importTag.id.get
-                  (t, h, keepTags)
+                  (t, h, keepTags, createdDate)
               }
               log.info(s"[bmFileImport:$id] Tags extracted in ${clock.getMillis() - startMillis}ms")
 

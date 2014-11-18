@@ -21,6 +21,8 @@ import org.specs2.mutable.{ SpecificationLike }
 
 import scala.concurrent._
 import scala.concurrent.duration.Duration
+import com.keepit.social.BasicUser
+import com.keepit.abook.model.RichContact
 
 class LibraryCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
@@ -193,21 +195,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryRepo.count === 0
         }
 
-        val noInvites = None
-        val inv2 = Some(userIron.externalId :: userAgent.externalId :: userHulk.externalId :: Nil)
-        val inv3 = Some(userHulk.externalId :: Nil)
+        val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers", visibility = LibraryVisibility.SECRET)
 
-        val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers",
-          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
+        val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
 
-        val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica",
-          visibility = LibraryVisibility.PUBLISHED, collaborators = noInvites, followers = inv2)
+        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.DISCOVERABLE)
 
-        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science",
-          visibility = LibraryVisibility.DISCOVERABLE, collaborators = inv3, followers = noInvites)
-
-        val lib5Request = LibraryAddRequest(name = "Invalid Param", slug = "",
-          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
+        val lib5Request = LibraryAddRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
 
         val libraryCommander = inject[LibraryCommander]
         val add1 = libraryCommander.addLibrary(lib1Request, userAgent.id.get)
@@ -230,16 +224,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           allMemberships.length === 3
           allMemberships.map(_.userId) === Seq(userAgent.id.get, userCaptain.id.get, userIron.id.get)
           allMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.OWNER, LibraryAccess.OWNER)
-
-          val allInvites = libraryInviteRepo.all
-          allInvites.length === 4
-          val invitePairs = for (i <- allInvites) yield (i.inviterId, i.userId.get)
-
-          invitePairs === (userCaptain.id.get, userIron.id.get) ::
-            (userCaptain.id.get, userAgent.id.get) ::
-            (userCaptain.id.get, userHulk.id.get) ::
-            (userIron.id.get, userHulk.id.get) ::
-            Nil
         }
 
         // test re-activating inactive library
@@ -277,6 +261,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           visibility = Some(LibraryVisibility.PUBLISHED))
         mod3.isRight === true
         mod3.right.get.visibility === LibraryVisibility.PUBLISHED
+
+        val mod3NoChange = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
+          visibility = Some(LibraryVisibility.PUBLISHED))
+        mod3NoChange.isRight === true
+        mod3NoChange.right.get.visibility === LibraryVisibility.PUBLISHED
 
         val mod4 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userHulk.id.get,
           name = Some("HULK SMASH"))
@@ -535,12 +524,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (Left(userAgent.id.get), LibraryAccess.READ_ONLY, None),
           (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
           (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
-        val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)
+        val res1 = Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds"))
         res1.isRight === true
-        res1.right.get === Seq((Left(userIron.externalId), LibraryAccess.READ_ONLY),
-          (Left(userAgent.externalId), LibraryAccess.READ_ONLY),
-          (Left(userHulk.externalId), LibraryAccess.READ_ONLY),
-          (Right(thorEmail), LibraryAccess.READ_ONLY))
+        res1.right.get === Seq((Left(BasicUser.fromUser(userIron)), LibraryAccess.READ_ONLY),
+          (Left(BasicUser.fromUser(userAgent)), LibraryAccess.READ_ONLY),
+          (Left(BasicUser.fromUser((userHulk))), LibraryAccess.READ_ONLY),
+          (Right(RichContact(thorEmail)), LibraryAccess.READ_ONLY))
 
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 4
@@ -558,10 +547,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val inviteList2_RW = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
         val inviteList2_RO = Seq((Left(userIron.id.get), LibraryAccess.READ_ONLY, None))
         // Scumbag Ironman tries to invite himself for READ_ONLY access (OK for Published Library)
-        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO).isRight === true
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO), Duration(5, "seconds")).isRight === true
 
         // Scumbag Ironman tries to invite himself for READ_WRITE access (NOT OK for Published Library)
-        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW).isRight === true
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW), Duration(5, "seconds")).isRight === true
       }
     }
 
@@ -1063,7 +1052,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val allInvites = db.readOnlyMaster { implicit s =>
           libraryInviteRepo.all
         }
-        Await.result(libraryCommander.inviteBulkUsers(allInvites), Duration(10, "seconds"))
+        Await.result(libraryCommander.processInvites(allInvites), Duration(10, "seconds"))
         eliza.inbox.size === 4
         eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_INVITATION && t._4.endsWith("/0.jpg")) === 4
         eliza.inbox.count(t => t._3 == "https://www.kifi.com/captainamerica/murica") === 3

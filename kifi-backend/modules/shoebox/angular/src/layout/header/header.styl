@@ -71,16 +71,16 @@
 
   .kf-header-toggle-menu
     &.open
-      display: none
-    &.closed
       display: inline-block
+    &.closed
+      display: none
 
-  .kf-sidebar-active
+  .kf-sidebar-inactive
     .kf-header-toggle-menu
       &.open
-        display: inline-block
-      &.closed
         display: none
+      &.closed
+        display: inline-block
 
 
 a.kf-header-callout
@@ -170,11 +170,11 @@ a.kf-header-callout:hover
   white-space: nowrap
   text-overflow: ellipsis
 
+  &.system-created
+    background-color: kifiBlack
+
   &.secret
     background-color: libraryRed
-
-  &.discoverable
-    background-color: #333
 
   &.published
     background-color: libraryGreen
@@ -190,11 +190,11 @@ a.kf-header-callout:hover
   color: #fff
   cursor: pointer
 
+  &.system-created
+    background-color: kifiBlack
+
   &.secret
     background-color: libraryRed
-
-  &.discoverable
-    background-color: #333
 
   &.published
     background-color: libraryGreen

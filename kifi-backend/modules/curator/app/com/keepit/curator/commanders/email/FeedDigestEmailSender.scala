@@ -136,7 +136,7 @@ case class DigestRecommendationItem(uriRecommendation: UriRecommendation, uri: N
 
 case class DigestLibraryItem(libraryId: Id[Library], uri: NormalizedURI, uriSummary: URISummary,
     keepers: DigestItemKeepers, protected val config: FortyTwoConfig, protected val isForQa: Boolean = false) extends DigestItem {
-  val reasonHeader = Some(Html(s"Recommended because it was kept into a library you follow: ${libraryName(libraryId)}"))
+  val reasonHeader = Some(views.html.email.partials.digestLibraryHeader(libraryId))
 }
 
 case class DigestItemKeepers(friends: Seq[Id[User]] = Seq.empty, others: Int = 0, friendsToShow: Seq[Id[User]] = Seq.empty) {

@@ -1,13 +1,18 @@
 package com.keepit.model
 
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.plugin.{ SequencingActor, SequencingPlugin, SchedulingProperties }
 import org.joda.time.DateTime
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ State, Id }
+import com.keepit.common.db.{ DbSequenceAssigner, State, Id }
 import com.keepit.common.time._
 import com.keepit.common.mail.EmailAddress
+
+import scala.concurrent.duration._
 
 @ImplementedBy(classOf[UserEmailAddressRepoImpl])
 trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[UserEmailAddress] with SeqNumberFunction[UserEmailAddress] {
@@ -46,10 +51,8 @@ class UserEmailAddressRepoImpl @Inject() (
   def table(tag: Tag) = new UserEmailAddressTable(tag)
   initTable()
 
-  private val sequence = db.getSequence[UserEmailAddress]("email_address_sequence")
-
   override def save(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
-    val toSave = emailAddress.copy(seq = sequence.incrementAndGet())
+    val toSave = emailAddress.copy(seq = deferredSeqNum())
     userRepo.save(userRepo.get(emailAddress.userId)) // just to bump up user seqNum
     super.save(toSave)
   }
@@ -108,3 +111,19 @@ class UserEmailAddressRepoImpl @Inject() (
   }
 
 }
+
+trait UserEmailAddressSeqPlugin extends SequencingPlugin
+
+class UserEmailAddressSeqPluginImpl @Inject() (
+    override val actor: ActorInstance[UserEmailAddressSeqActor],
+    override val scheduling: SchedulingProperties) extends UserEmailAddressSeqPlugin {
+
+  override val interval: FiniteDuration = 20.seconds
+}
+
+@Singleton
+class UserEmailAddressSeqAssigner @Inject() (db: Database, repo: UserEmailAddressRepo, airbrake: AirbrakeNotifier)
+  extends DbSequenceAssigner[UserEmailAddress](db, repo, airbrake)
+
+class UserEmailAddressSeqActor @Inject() (assigner: UserEmailAddressSeqAssigner, airbrake: AirbrakeNotifier)
+  extends SequencingActor(assigner, airbrake)

@@ -31,8 +31,6 @@ class ImageInfoRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[ImageInfo]("image_info_sequence")
-
   type RepoImpl = ImageInfoTable
   class ImageInfoTable(tag: Tag) extends RepoTable[ImageInfo](db, tag, "image_info") with SeqNumberColumn[ImageInfo] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
@@ -151,14 +149,5 @@ class ImageInfoRepoImpl @Inject() (
     } else {
       None
     }
-  }
-
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "image_info", limit)
-  }
-
-  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
-    sql"""select min(seq) from image_info where seq < 0""".as[Option[Long]].first
   }
 }

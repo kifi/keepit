@@ -44,7 +44,7 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
     Seq(feed1, feed2, feed3, feed4, feed5)
   }
   "RecommendationCleanupCommander" should {
-    "mark low master score recos to inactive" in {
+    "delete old low master score items" in {
       withDb(modules: _*) { implicit injector =>
         val repo = inject[UriRecommendationRepo]
         db.readWrite { implicit s =>
@@ -58,12 +58,11 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
         }
 
         val commander = inject[RecommendationCleanupCommander]
-        val update = commander.cleanupLowMasterScoreRecos(Some(4))
-        update === true
+        commander.cleanupLowMasterScoreRecos(Some(4), Some(currentDateTime))
 
         db.readOnlyMaster { implicit s =>
           val recos = repo.getByTopMasterScore(Id[User](42), 6)
-          recos.size === 6
+          recos.size === 4
           recos(0).masterScore === 0.99f
           recos(1).masterScore === 0.75f
           recos(2).masterScore === 0.65f

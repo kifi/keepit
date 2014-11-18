@@ -254,6 +254,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
   }
 
   function hideSlider2() {
+    if (k.tile.style.display !== 'none') {
+      $(k.tile).css('transform', '');
+    }
     var css = JSON.parse(k.tile.dataset.pos || 0);
     if (css && !k.tile.style.top && !k.tile.style.bottom) {
       var y = css.top >= 0 ? window.innerHeight - css.top - 54 : (css.bottom || 0);
@@ -267,7 +270,10 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         $(this).off('transitionend', end).css('transition-duration', '');
       });
     }
+    $slider.find('.kifi-keep-btn,.kifi-dock-btn').hoverfu('destroy');
     $slider.remove(), $slider = null;
+
+    $(k.tile).find('.kifi-tile-dot').remove().appendTo(k.tile); // invisible dot chrome bug workaround
 
     if (extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
       extMsgIntroEligible = false;
@@ -357,32 +363,29 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       }
       k.keepBox.show($slider, vals[2]);
       k.keepBox.onHide.add(onKeepBoxHide);
-      k.keepBox.onHidden.add(onKeepBoxHidden);
     });
   }
-  function onKeepBoxHide() {
+  function onKeepBoxHide(trigger) {
     endStickyKeepBox();
     if (k.pane) {
       k.pane.unshade();
     }
-  }
-  function onKeepBoxHidden(trigger) {
-    k.keeper.moveBackFromBottom();
-    if ((trigger === 'x' || trigger === 'esc' || trigger === 'action') && $slider && !isClickSticky()) {
-      hideSlider('keepBox');
+    if (trigger === 'x' || trigger === 'esc' || trigger === 'action') {
+      setTimeout(hideDelayed.bind(null, 'keepBox'), 40);
     }
   }
-
-  function onToasterHide() {
+  function onToasterHide(trigger) {
     endStickyToaster();
     if (k.pane) {
       k.pane.unshade();
     }
+    if (trigger === 'x' || trigger === 'esc') {
+      setTimeout(hideDelayed.bind(null, 'toaster'), 40);
+    }
   }
-  function onToasterHidden(trigger) {
-    k.keeper.moveBackFromBottom();
-    if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
-      hideSlider('toaster');
+  function hideDelayed(trigger) {
+    if ($slider && !isClickSticky()) {
+      hideSlider(trigger);
     }
   }
 
@@ -468,7 +471,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
           $btn.removeClass('kifi-unkept kifi-private kifi-public').addClass('kifi-' + (o.kept || 'unkept'));
         }
         if (o.fail && !$btn.hasClass('kifi-shake')) {
-          $btn.one('animationName' in k.tile.style ? 'animationend' : 'webkitAnimationEnd', $.fn.removeClass.bind($btn, 'kifi-shake'))
+          $btn.one('animationend', $.fn.removeClass.bind($btn, 'kifi-shake'))
           .addClass('kifi-shake');
         }
       }
@@ -533,11 +536,6 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         callback();
       }
     },
-    moveBackFromBottom: function () {
-      if (k.tile && k.tile.style.display !== 'none') {
-        $(k.tile).css('transform', '');
-      }
-    },
     engage: function () {
       if (lastCreatedAt) return;
       var $tile = $(k.tile);
@@ -545,9 +543,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
           if (o.keepers.length && !lastCreatedAt) {
             $tile.hoverfu(function (configureHover) {
               // TODO: preload friend pictures
-              k.render('html/keeper/keepers', setKeepersAndCounts(o.keepers, o.otherKeeps, {
-                cssClass: 'kifi-keepers-promo' + ($tile.find('.kifi-count').length ? ' kifi-above-count' : '')
-              }), function (html) {
+              k.render('html/keeper/keepers', setKeepersAndCounts(o.keepers, o.otherKeeps, {cssClass: 'kifi-keepers-promo'}), function (html) {
                 if (lastCreatedAt) return;
                 var $promo = $(html).on('transitionend', function unhoverfu(e) {
                   if (e.target === this && !this.classList.contains('kifi-showing') && e.originalEvent.propertyName === 'opacity') {
@@ -585,7 +581,6 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
             }
             k.toaster.show($slider, opts.to);
             k.toaster.onHide.add(onToasterHide);
-            k.toaster.onHidden.add(onToasterHidden);
           }
         });
       });

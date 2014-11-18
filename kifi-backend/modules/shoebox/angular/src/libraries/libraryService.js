@@ -87,48 +87,18 @@ angular.module('kifi')
     //
     // Internal helper methods.
     //
-    function shortenLibName(fullName) {
-      var maxLength = 25;
-      var firstLine = fullName;
-      var secondLine = '';
-
-      if (fullName.length > maxLength) {
-        var full = false;
-        var line = '';
-        while (!full) {
-          var pos = fullName.indexOf(' ');
-          if (pos >= 0 && line.length + pos <= maxLength) {
-            line = line + fullName.substr(0, pos+1);
-            fullName = fullName.slice(pos+1);
-          } else {
-            full = true;
-          }
-        }
-        firstLine = line;
-        var remainingLen = fullName.length;
-        if (remainingLen > 0) {
-          if (remainingLen < maxLength) {
-            secondLine = fullName.substr(0, remainingLen);
-          } else {
-            secondLine = fullName.substr(0, maxLength-3) + '...';
-          }
-        }
-      }
-      return [firstLine, secondLine];
-    }
 
     function augmentLibrarySummary(library) {
       if (library.owner) {
         library.owner.image = friendService.getPictureUrlForUser(library.owner);
       }
-      var lines = shortenLibName(library.name);
-      library.firstLine = lines[0];
-      library.secondLine = lines[1];
     }
 
-    function duplicateName(name) {
+    function duplicateName(name, oldName) {
       return _.find(librarySummaries, function (librarySummary) {
-        return (librarySummary.name === name) && (librarySummary.access === 'owner');
+        return librarySummary.name === name &&
+               librarySummary.access === 'owner' &&
+               !(oldName && name === oldName);
       });
     }
 
@@ -151,7 +121,7 @@ angular.module('kifi')
         });
       },
 
-      getLibraryNameError: function (name, isExistingLibrary) {
+      getLibraryNameError: function (name, oldName) {
         function hasInvalidCharacters (myString, invalidChars) {
           return _.some(invalidChars, function (invalidChar) {
             return myString.indexOf(invalidChar) !== -1;
@@ -166,7 +136,7 @@ angular.module('kifi')
           return 'Please try a shorter name';
         } else if (hasInvalidCharacters(name, ['/', '\\', '"', '\''])) {
           return 'Please no slashes or quotes in your library name';
-        } else if (!isExistingLibrary && duplicateName(name)) {
+        } else if (duplicateName(name, oldName)) {
           return 'You already have a library with this name';
         }
 

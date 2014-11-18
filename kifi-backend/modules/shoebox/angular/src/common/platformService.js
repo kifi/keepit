@@ -19,9 +19,9 @@ angular.module('kifi')
       var safeUrl;
       if (isSupportedMobilePlatform()) {
         if (isIPhone()) {
-          safeUrl = url.replace(/https?:/, '');
-
-          if (url.indexOf('branch', url.length - 'branch'.length) !== -1) { // url ends with 'branch'
+          safeUrl = 'kifi:' + (url || '//kifi.com').replace(/https?:/, '');
+          var branchIdx = (url || '').indexOf('branch');
+          if (branchIdx !== -1 && branchIdx > url.indexOf('?')) { // url ends with 'branch'
             createBranchLink({
               url: safeUrl
             }).then(function (url) {
@@ -29,13 +29,14 @@ angular.module('kifi')
             });
           } else {
             $timeout(function () {
-              $window.location = 'kifi:' + safeUrl;
+              $window.location = safeUrl;
             }, 200);
             $timeout(function () {
               $window.location = 'itms://itunes.apple.com/us/app/kifi/id740232575';
             }, 225);
           }
         } else if (isAndroid()) {
+          url = url || 'kifi.com';
           safeUrl = url.replace(/https?:\/\/((www.)?kifi.com)?\/?/, '');
           $window.location = 'intent://' + safeUrl + '#Intent;package=com.kifi;scheme=kifi;action=com.kifi.intent.action.APP_EVENT;end;';
         }

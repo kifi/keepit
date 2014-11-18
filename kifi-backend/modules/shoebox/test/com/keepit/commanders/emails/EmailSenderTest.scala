@@ -371,7 +371,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val inviteUser = invite.copy(userId = user2.id)
         val outbox = inject[FakeOutbox]
         val inviteSender = inject[LibraryInviteEmailSender]
-        val email = Await.result(inviteSender.inviteUserToLibrary(inviteUser), Duration(5, "seconds")).get
+        val email = Await.result(inviteSender.sendInvite(inviteUser), Duration(5, "seconds")).get
 
         outbox.size === 1
         outbox(0) === email
@@ -395,7 +395,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val inviteNonUser = invite.copy(emailAddress = Some(EmailAddress("aaronrodgers@gmail.com")))
         val outbox = inject[FakeOutbox]
         val inviteSender = inject[LibraryInviteEmailSender]
-        val email = Await.result(inviteSender.inviteUserToLibrary(inviteNonUser), Duration(5, "seconds")).get
+        val email = Await.result(inviteSender.sendInvite(inviteNonUser), Duration(5, "seconds")).get
 
         outbox.size === 1
         outbox(0) === email
@@ -409,7 +409,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must contain(invite.passPhrase)
 
         db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
-        val emailWithoutPassPhrase = Await.result(inviteSender.inviteUserToLibrary(inviteNonUser), Duration(5, "seconds")).get
+        val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(inviteNonUser), Duration(5, "seconds")).get
         emailWithoutPassPhrase.subject === "Tom Brady invited you to follow Football!"
         emailWithoutPassPhrase.to(0) === EmailAddress("aaronrodgers@gmail.com")
         params.map(emailWithoutPassPhrase.htmlBody.contains(_)) === List(true, true, true, true)

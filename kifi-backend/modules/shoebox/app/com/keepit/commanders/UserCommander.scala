@@ -539,9 +539,12 @@ class UserCommander @Inject() (
           case _ => {
             if (!readOnly) {
               val user = userRepo.get(userId)
-              usernameRepo.alias(user.username, userId) // create an alias for the old username
-              usernameRepo.reclaim(username, Some(userId)).get // reclaim any existing alias for the new username
-              userRepo.save(user.copy(username = username, normalizedUsername = UsernameOps.normalize(username.value)))
+              val normalizedUsername = UsernameOps.normalize(username.value)
+              if (user.normalizedUsername != normalizedUsername) {
+                usernameRepo.alias(user.username, userId) // create an alias for the old username
+                usernameRepo.reclaim(username, Some(userId)).get // reclaim any existing alias for the new username
+              }
+              userRepo.save(user.copy(username = username, normalizedUsername = normalizedUsername))
             } else {
               log.info(s"[dry run] user $userId set with username $username")
             }
@@ -633,7 +636,7 @@ class UserCommander @Inject() (
     abookServiceClient.getFriendRecommendations(userId, offset, limit).map {
       _.map { recommendedUsers =>
         val friends = db.readOnlyReplica { implicit session =>
-          (recommendedUsers.toSet + userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
+          userConnectionRepo.getConnectedUsersForUsers(recommendedUsers.toSet + userId)
         }
 
         val mutualFriends = recommendedUsers.map { recommendedUserId =>

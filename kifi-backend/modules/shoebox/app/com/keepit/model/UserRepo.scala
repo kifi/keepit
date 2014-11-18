@@ -2,11 +2,13 @@ package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
 import com.keepit.commanders.UsernameOps
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ ExternalId, Id, State, SequenceNumber, NotFoundException }
+import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.{ zones, Clock }
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -36,6 +38,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getAllActiveIds()(implicit session: RSession): Seq[Id[User]]
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
+  def getAllUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
   def getByUsername(username: Username)(implicit session: RSession): Option[User]
   def getRecentActiveUsers(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Seq[Id[User]]
 }
@@ -55,8 +58,6 @@ class UserRepoImpl @Inject() (
   import scala.slick.lifted.Query
   import DBSession._
   import db.Driver.simple._
-
-  private val sequence = db.getSequence[User]("user_sequence")
 
   private lazy val expRepo = expRepoProvider.get
 
@@ -80,7 +81,7 @@ class UserRepoImpl @Inject() (
   }
 
   override def save(user: User)(implicit session: RWSession): User = {
-    val toSave = user.copy(seq = sequence.incrementAndGet())
+    val toSave = user.copy(seq = deferredSeqNum())
     user.id foreach { id =>
       val currentUser = get(id)
       if (currentUser.username != user.username && currentUser.createdAt.isBefore(clock.now.minusHours(1))) {
@@ -218,6 +219,17 @@ class UserRepoImpl @Inject() (
       valueMap.map { case (k, v) => (k.id -> v) }
     }
   }
+  def getAllUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User] = {
+    if (ids.isEmpty) Map.empty[Id[User], User]
+    else {
+      val valueMap = idCache.bulkGetOrElse(ids.map(UserIdKey(_)).toSet) { keys =>
+        val missing = keys.map(_.id)
+        val users = (for (f <- rows if f.id.inSet(missing)) yield f).list
+        users.map { u => (UserIdKey(u.id.get) -> u) }.toMap
+      }
+      valueMap.map { case (k, v) => (k.id -> v) }
+    }
+  }
 
   def getByUsername(username: Username)(implicit session: RSession): Option[User] = {
     val normalizedUsername = UsernameOps.normalize(username.value)
@@ -232,3 +244,15 @@ class UserRepoImpl @Inject() (
     sql"select id from user u where state = 'active' and created_at > $since and not exists (select id from user_experiment x where u.id = x.user_id and x.experiment_type='fake')".as[Id[User]].list
   }
 }
+
+trait UserSeqPlugin extends SequencingPlugin
+
+class UserSeqPluginImpl @Inject() (override val actor: ActorInstance[UserSeqActor], override val scheduling: SchedulingProperties)
+  extends UserSeqPlugin
+
+@Singleton
+class UserSeqAssigner @Inject() (db: Database, repo: UserRepo, airbrake: AirbrakeNotifier)
+  extends DbSequenceAssigner[User](db, repo, airbrake)
+
+class UserSeqActor @Inject() (assigner: UserSeqAssigner, airbrake: AirbrakeNotifier)
+  extends SequencingActor(assigner, airbrake)

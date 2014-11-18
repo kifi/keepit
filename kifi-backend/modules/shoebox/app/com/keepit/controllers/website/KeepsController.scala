@@ -100,55 +100,6 @@ class KeepsController @Inject() (
     }.getOrElse(Future.successful(BadRequest(JsString("0"))))
   }
 
-  // todo: add uriId, sizes, colors, etc.
-  private def toJsObject(url: String, uri: NormalizedURI, pageInfoOpt: Option[PageInfo]): Future[JsObject] = {
-    val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
-    uriSummaryCommander.getURIImage(uri) map { imgUrlOpt =>
-      (screenshotUrlOpt, imgUrlOpt) match {
-        case (None, None) =>
-          Json.obj("url" -> url, "uriId" -> uri.id.get)
-        case (None, Some(imgUrl)) =>
-          Json.obj("url" -> url, "imgUrl" -> imgUrl)
-        case (Some(ssUrl), None) =>
-          Json.obj("url" -> url, "screenshotUrl" -> ssUrl)
-        case (Some(ssUrl), Some(imgUrl)) =>
-          Json.obj("url" -> url, "imgUrl" -> imgUrl, "screenshotUrl" -> ssUrl)
-      }
-    }
-  }
-
-  // todo(martin) - looks like this endpoint is not being used, consider removing
-  def getImageUrls() = UserAction.async(parse.tolerantJson) { request => // WIP; test-only
-    val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
-    log.info(s"[getImageUrls] body=${request.body} urls=${urlsOpt}")
-    urlsOpt match {
-      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_arguments")))
-      case Some(urls) => {
-        val tuples = db.readOnlyReplica { implicit ro =>
-          urls.map { s =>
-            s -> normalizedURIInterner.getByUri(s)
-          }
-        }
-        val tuplesF = tuples map {
-          case (url, uriOpt) =>
-            val (uriOpt, pageInfoOpt) = db.readOnlyMaster { implicit ro =>
-              val uriOpt = normalizedURIInterner.getByUri(url)
-              val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
-              (uriOpt, pageInfoOpt)
-            }
-            uriOpt match {
-              case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
-              case Some(uri) =>
-                toJsObject(url, uri, pageInfoOpt) // todo: batch
-            }
-        }
-        Future.sequence(tuplesF) map { res =>
-          Ok(Json.toJson(res))
-        }
-      }
-    }
-  }
-
   def exportKeeps() = UserAction { request =>
     val exports: Seq[KeepExport] = db.readOnlyReplica { implicit ro =>
       keepRepo.getKeepExports(request.userId)
@@ -157,106 +108,6 @@ class KeepsController @Inject() (
     Ok(keepsCommander.assembleKeepExport(exports))
       .withHeaders("Content-Disposition" -> "attachment; filename=keepExports.html")
       .as("text/html")
-  }
-
-  def keepMultiple(separateExisting: Boolean = false) = UserAction(parse.tolerantJson) { request =>
-    try {
-      Json.fromJson[RawBookmarksWithCollection](request.body).asOpt map { fromJson =>
-        val source = KeepSource.site
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-
-        val library = {
-          val (main, secret) = db.readWrite(libraryCommander.getMainAndSecretLibrariesForUser(request.userId)(_))
-          if (fromJson.keeps.headOption.flatMap(_.isPrivate).getOrElse(false)) {
-            secret
-          } else {
-            main
-          }
-        }
-
-        val (keeps, addedToCollection, failures, alreadyKeptOpt) = keepsCommander.keepMultiple(fromJson.keeps, library.id.get, request.userId, source, fromJson.collection, separateExisting)
-        log.info(s"kept ${keeps.size} keeps")
-        Ok(Json.obj(
-          "keeps" -> keeps,
-          "failures" -> failures,
-          "addedToCollection" -> addedToCollection
-        ) ++ (alreadyKeptOpt map (keeps => Json.obj("alreadyKept" -> keeps)) getOrElse Json.obj()))
-      } getOrElse {
-        log.error(s"can't parse object from request ${request.body} for user ${request.user}")
-        BadRequest(Json.obj("error" -> "Could not parse object from request body"))
-      }
-    } catch {
-      case e: Throwable =>
-        log.error(s"error keeping ${request.body}", e)
-        throw e
-    }
-  }
-
-  def unkeepMultiple() = UserAction { request =>
-    request.body.asJson.flatMap(Json.fromJson[Seq[RawBookmarkRepresentation]](_).asOpt) map { keepInfos =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val deactivatedKeepInfos = keepsCommander.unkeepMultiple(keepInfos, request.userId)
-      Ok(Json.obj(
-        "removedKeeps" -> deactivatedKeepInfos
-      ))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON array of keep with url from request body"))
-    }
-  }
-
-  def unkeepBatch() = UserAction(parse.tolerantJson) { request =>
-    implicit val keepFormat = ExternalId.format[Keep]
-    val idsOpt = (request.body \ "ids").asOpt[Seq[ExternalId[Keep]]]
-    idsOpt map { ids =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val (successes, failures) = keepsCommander.unkeepBatch(ids, request.userId)
-      Ok(Json.obj(
-        "removedKeeps" -> successes,
-        "errors" -> failures.map(id => Json.obj("id" -> id, "error" -> "not_found"))
-      ))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "parse_error"))
-    }
-  }
-
-  def unkeepBulk() = UserAction(parse.tolerantJson) { request =>
-    Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val deactivatedKeepInfos = keepsCommander.unkeepBulk(keepSet, request.userId)
-      Ok(Json.obj(
-        "removedKeeps" -> deactivatedKeepInfos
-      ))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON keep selection from request body"))
-    }
-  }
-
-  def rekeepBulk() = UserAction(parse.tolerantJson) { request =>
-    Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val numRekept = keepsCommander.rekeepBulk(keepSet, request.userId)
-      Ok(Json.obj("numRekept" -> numRekept))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON keep selection from request body"))
-    }
-  }
-
-  def makePublicBulk() = UserAction(parse.tolerantJson) { request =>
-    setKeepPrivacyBulk(request, false)
-  }
-
-  def makePrivateBulk() = UserAction(parse.tolerantJson) { request =>
-    setKeepPrivacyBulk(request, true)
-  }
-
-  private def setKeepPrivacyBulk(request: UserRequest[JsValue], isPrivate: Boolean) = {
-    Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val numUpdated = keepsCommander.setKeepPrivacyBulk(keepSet, request.userId, isPrivate)
-      Ok(Json.obj("numUpdated" -> numUpdated))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON keep selection from request body"))
-    }
   }
 
   def tagKeeps(tagName: String) = UserAction(parse.tolerantJson) { implicit request =>
@@ -288,7 +139,7 @@ class KeepsController @Inject() (
     val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
     keepOpt match {
       case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
-      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep)).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep), ProcessedImageSize.Large.idealSize).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
       case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
     }
   }
@@ -309,15 +160,6 @@ class KeepsController @Inject() (
         case None => NotFound(Json.obj("error" -> "Keep not found"))
         case Some(keep) => Ok(Json.obj("keep" -> KeepInfo.fromKeep(keep)))
       }
-    }
-  }
-
-  def unkeep(id: ExternalId[Keep]) = UserAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    keepsCommander.unkeep(id, request.userId) map { ki =>
-      Ok(Json.toJson(ki))
-    } getOrElse {
-      NotFound(Json.obj("error" -> "not_found"))
     }
   }
 

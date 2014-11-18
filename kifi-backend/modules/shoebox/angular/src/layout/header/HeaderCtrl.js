@@ -4,18 +4,19 @@ angular.module('kifi')
 
 .controller('HeaderCtrl', [
   '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService',
-    '$location', 'util', 'keyIndices', 'modalService', 'libraryService', '$timeout', 'searchActionService', '$routeParams',
+    '$location', 'util', 'keyIndices', 'modalService', '$timeout', 'searchActionService', '$routeParams',
   function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService,
-    $location, util, keyIndices, modalService, libraryService, $timeout, searchActionService, $routeParams) {
+    $location, util, keyIndices, modalService, $timeout, searchActionService, $routeParams) {
 
     $scope.toggleMenu = function () {
-      $rootElement.find('html').toggleClass('kf-sidebar-active');
+      $rootElement.find('html').toggleClass('kf-sidebar-inactive');
     };
 
+    // reminder: this triggers left sidebar to show in case the default for small windows is to hide left sidebar
     $window.addEventListener('message', function (event) {
       if (event.data === 'show_left_column') {  // for guide
         $scope.$apply(function () {
-          $rootElement.find('html').addClass('kf-sidebar-active');
+          $rootElement.find('html').removeClass('kf-sidebar-inactive');
         });
       }
     });
@@ -23,7 +24,6 @@ angular.module('kifi')
     $scope.isFocused = false;
     $scope.library = {};
     $scope.search = { text: '', showName: false };
-    $scope.stayInLibraryPath = '';
 
     // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
     var calloutName = 'tag_callout_shown';
@@ -37,18 +37,24 @@ angular.module('kifi')
       profileService.savePrefs(save);
     };
 
+
     //
     // Watchers & Listeners
     //
     var deregisterLibraryChip = $rootScope.$on('libraryUrl', function (e, library) {
       $scope.library = library;
-      $scope.search.text = '';
+
+      if ($scope.library.owner && !$scope.library.owner.picUrl) {
+        $scope.library.owner.picUrl = friendService.getPictureUrlForUser($scope.library.owner);
+      }
+
       if ($scope.library.id) {
         $scope.search.showName = true;
-        $scope.stayInLibraryPath = $scope.library.url;
       } else {
         $scope.clearLibraryName();
       }
+
+      $scope.search.text = $routeParams.q || '';
     });
     $scope.$on('$destroy', deregisterLibraryChip);
 
@@ -59,8 +65,8 @@ angular.module('kifi')
     });
 
 
-    var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function () {
-      $scope.addKeeps();
+    var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function (e, library) {
+      $scope.addKeeps(library);
     });
     $scope.$on('$destroy', deregisterAddKeep);
 
@@ -73,45 +79,44 @@ angular.module('kifi')
 
     $scope.clearLibraryName = function () {
       $scope.search.showName = false;
-      $scope.stayInLibraryPath = '';
       $scope.library = {};
-      if ($location.path() === '/find') {
-        $location.search('l', '');
-      }
+      $scope.changeSearchInput();
     };
 
     $scope.search.text = $routeParams.q || '';
     $scope.changeSearchInput = _.debounce(function () {
-      if ($scope.search.text === '' && $scope.stayInLibraryPath !== '') {
-        $timeout(function() {
-          $location.url($scope.stayInLibraryPath);
-        }, 0);
-        $scope.clearInput();
-      } else {
-        $timeout(function() {
-          var libId = $scope.library.id;
-          if ($location.path() !== '/find') {
-            if (libId) {
-              $location.url('/find?q=' + $scope.search.text + '&f=a' + '&l=' + libId);
-            } else {
-              $location.url('/find?q=' + $scope.search.text);
+      $timeout(function() {
+        // We are not already on the search page.
+        if ($location.path() !== '/find') {
+          if ($scope.library && $scope.library.url) {
+            if ($scope.search.text) {
+              /* jshint ignore:start */
+              if ($routeParams.q) {
+                $location.search('q', $scope.search.text).replace();
+              } else {
+                $location.url($scope.library.url + '/find?q=' + $scope.search.text + '&f=a');
+              }
+              /* jshint ignore:end */
+            } else {  // jshint ignore:line
+              $location.url($scope.library.url);
             }
-          } else {
-            $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
+          } else if ($scope.search.text) {
+            $location.url('/find?q=' + $scope.search.text);
           }
-        });
-      }
+        }
+
+        // We are already on the search page.
+        else {
+          $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
+        }
+      });
     }, 100, {
       'leading': true
     });
 
     $scope.clearInput = function () {
-      if ($scope.stayInLibraryPath !== '') {
-        $timeout(function () {
-          $location.url($scope.stayInLibraryPath);
-        }, 0);
-      }
       $scope.search.text = '';
+      $scope.changeSearchInput();
     };
 
     var KEY_ESC = 27, KEY_DEL = 8;
@@ -140,9 +145,10 @@ angular.module('kifi')
       profileService.logout();
     };
 
-    $scope.addKeeps = function () {
+    $scope.addKeeps = function (library) {
       modalService.open({
-        template: 'keeps/addKeepsModal.tpl.html'
+        template: 'keeps/addKeepsModal.tpl.html',
+        modalData: { currentLib : library }
       });
     };
 

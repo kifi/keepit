@@ -15,6 +15,7 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[UserConnectionRepoImpl])
 trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[UserConnection] {
   def getConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
+  def getConnectedUsersForUsers(ids: Set[Id[User]])(implicit session: RSession): Map[Id[User], Set[Id[User]]]
   def getUnfriendedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
   def getConnectionOpt(u1: Id[User], u2: Id[User])(implicit session: RSession): Option[UserConnection]
   def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession)
@@ -45,8 +46,6 @@ class UserConnectionRepoImpl @Inject() (
     extends DbRepo[UserConnection] with UserConnectionRepo with SeqNumberDbFunction[UserConnection] {
 
   import db.Driver.simple._
-
-  private val sequence = db.getSequence[UserConnection]("user_connection_sequence")
 
   override def save(model: UserConnection)(implicit session: RWSession): UserConnection = {
     // setting a negative sequence number for deferred assignment
@@ -101,6 +100,21 @@ class UserConnectionRepoImpl @Inject() (
     }
   }
 
+  def getConnectedUsersForUsers(ids: Set[Id[User]])(implicit session: RSession): Map[Id[User], Set[Id[User]]] = {
+    val ret = userConnCache.bulkGetOrElse(ids map UserConnectionIdKey) { keys =>
+      val missing = keys.map(_.userId)
+
+      val query =
+        ((for (c <- rows if c.user1.inSet(missing) && c.state === UserConnectionStates.ACTIVE) yield (c.user1, c.user2)) union
+          (for (c <- rows if c.user2.inSet(missing) && c.state === UserConnectionStates.ACTIVE) yield (c.user2, c.user1)))
+
+      query.list().groupBy(_._1).map {
+        case (id, connections) => UserConnectionIdKey(id) -> connections.map(_._2.id).toArray
+      }.toMap
+    }
+    ret.map { case (key, value) => key.userId -> value.map(Id[User]).toSet }.toMap
+  }
+
   def getUnfriendedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
     unfriendedCache.getOrElse(UnfriendedConnectionsKey(id)) {
       ((for (c <- rows if c.user1 === id && c.state === UserConnectionStates.UNFRIENDED) yield c.user2) union
@@ -122,56 +136,53 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int = {
-    val ids = (for {
-      c <- rows if c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)
-    } yield c.id).list
+    if (users.nonEmpty) {
+      val ids = (for {
+        c <- rows if c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)
+      } yield c.id).list
 
-    ids.foreach { id =>
-      (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.UNFRIENDED, deferredSeqNum())
-    }
-
-    (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
-      friendRequestRepo.getByRecipient(userId).filter(users contains _.senderId)) map { friendRequest =>
-        friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
+      ids.foreach { id =>
+        (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.UNFRIENDED, deferredSeqNum())
       }
 
-    (users + userId) foreach invalidateCache
-    ids.size
+      (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
+        friendRequestRepo.getByRecipient(userId).filter(users contains _.senderId)) map { friendRequest =>
+          friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
+        }
+
+      (users + userId) foreach invalidateCache
+      ids.size
+    } else {
+      0
+    }
   }
 
-  def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession) {
-    val ids = (for {
-      c <- rows if (c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)) &&
-        (if (requested) c.state =!= UserConnectionStates.ACTIVE else c.state === UserConnectionStates.INACTIVE)
-    } yield c.id).list
+  def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession): Unit = {
+    if (users.nonEmpty) {
+      val ids = (for {
+        c <- rows if (c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)) &&
+          (if (requested) c.state =!= UserConnectionStates.ACTIVE else c.state === UserConnectionStates.INACTIVE)
+      } yield c.id).list
 
-    ids.foreach { id =>
-      (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.ACTIVE, deferredSeqNum())
-    }
-
-    val toInsert = users -- {
-      (for (c <- rows if c.user1 === userId) yield c.user2) union
-        (for (c <- rows if c.user2 === userId) yield c.user1)
-    }.list.toSet
-
-    (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
-      friendRequestRepo.getByRecipient(userId).filter(users contains _.senderId)) map { friendRequest =>
-        friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.ACCEPTED))
+      ids.foreach { id =>
+        (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.ACTIVE, deferredSeqNum())
       }
 
-    (users + userId) foreach invalidateCache
+      val toInsert = users -- {
+        (for (c <- rows if c.user1 === userId) yield c.user2) union
+          (for (c <- rows if c.user2 === userId) yield c.user1)
+      }.list.toSet
 
-    rows.insertAll(toInsert.map { connId => UserConnection(user1 = userId, user2 = connId, seq = deferredSeqNum()) }.toSeq: _*)
+      (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
+        friendRequestRepo.getByRecipient(userId).filter(users contains _.senderId)) map { friendRequest =>
+          friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.ACCEPTED))
+        }
+
+      (users + userId) foreach invalidateCache
+
+      rows.insertAll(toInsert.map { connId => UserConnection(user1 = userId, user2 = connId, seq = deferredSeqNum()) }.toSeq: _*)
+    }
   }
 
   def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection] = super.getBySequenceNumber(seq, fetchSize)
-
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "user_connection", limit)
-  }
-
-  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
-    sql"""select min(seq) from user_connection where seq < 0""".as[Option[Long]].first
-  }
 }

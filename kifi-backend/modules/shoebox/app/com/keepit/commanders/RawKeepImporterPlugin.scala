@@ -86,7 +86,7 @@ private class RawKeepImporterActor @Inject() (
         val rawBookmarks = rawKeepGroup.map { rk =>
           val canonical = rk.originalJson.flatMap(json => (json \ Normalization.CANONICAL.scheme).asOpt[String])
           val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
-          RawBookmarkRepresentation(title = rk.title, url = rk.url, canonical = canonical, openGraph = openGraph, isPrivate = None)
+          RawBookmarkRepresentation(title = rk.title, url = rk.url, canonical = canonical, openGraph = openGraph, isPrivate = None, keptAt = rk.createdDate)
         }
         val library = db.readWrite { implicit s =>
           if (libraryId.isEmpty)

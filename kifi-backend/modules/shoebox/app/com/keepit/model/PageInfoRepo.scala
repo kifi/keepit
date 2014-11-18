@@ -26,8 +26,6 @@ class PageInfoRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[PageInfo]("page_info_sequence")
-
   type RepoImpl = PageInfoTable
   class PageInfoTable(tag: Tag) extends RepoTable[PageInfo](db, tag, "page_info") with SeqNumberColumn[PageInfo] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
@@ -58,7 +56,7 @@ class PageInfoRepoImpl @Inject() (
   }
 
   override def save(model: PageInfo)(implicit session: RWSession): PageInfo = {
-    val toSave = model.copy(seq = sequence.incrementAndGet(), title = model.title.map(_.take(2000)))
+    val toSave = model.copy(seq = deferredSeqNum(), title = model.title.map(_.take(2000)))
     log.info(s"[PageInfoRepo.save] $toSave")
     super.save(toSave)
   }

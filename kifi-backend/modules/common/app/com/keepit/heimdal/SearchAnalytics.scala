@@ -45,7 +45,9 @@ case class BasicSearchContext(
   kifiShownTime: Option[Int],
   thirdPartyShownTime: Option[Int],
   kifiResultsClicked: Option[Int],
-  thirdPartyResultsClicked: Option[Int])
+  thirdPartyResultsClicked: Option[Int],
+  chunkDelta: Option[Int],
+  chunksSplit: Option[Boolean])
 
 object BasicSearchContext {
   implicit val reads: Reads[BasicSearchContext] = (
@@ -66,7 +68,9 @@ object BasicSearchContext {
     (__ \ 'kifiShownTime).readNullable[Int] and
     (__ \ 'thirdPartyShownTime).readNullable[Int] and
     (__ \ 'kifiResultsClicked).readNullable[Int] and
-    (__ \ 'thirdPartyResultsClicked).readNullable[Int]
+    (__ \ 'thirdPartyResultsClicked).readNullable[Int] and
+    (__ \ 'chunkDelta).readNullable[Int] and
+    (__ \ 'chunksSplit).readNullable[Boolean]
   )(BasicSearchContext.apply _)
 
   private def filterByPeople(who: Option[String]) = who collect {
@@ -258,6 +262,8 @@ class SearchAnalytics @Inject() (
       searchContext.kifiResultsWithLibraries.foreach { count => contextBuilder += ("kifiResultsWithLibrariesShown", count) }
       searchContext.kifiResultsClicked.foreach { count => contextBuilder += ("kifiResultsClicked", count) }
       searchContext.thirdPartyResultsClicked.foreach { count => contextBuilder += ("thirdPartyResultsClicked", count) }
+      searchContext.chunkDelta.foreach { ms => contextBuilder += ("chunkDelta", ms) }
+      searchContext.chunksSplit.foreach { split => contextBuilder += ("chunksSplit", split) }
 
       // Kifi Performance
 

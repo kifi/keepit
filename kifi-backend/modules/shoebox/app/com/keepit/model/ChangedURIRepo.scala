@@ -1,12 +1,16 @@
 package com.keepit.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick._
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ DbSequenceAssigner, Id, SequenceNumber, State }
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time.Clock
-import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db.State
+
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 
 @ImplementedBy(classOf[ChangedURIRepoImpl])
 trait ChangedURIRepo extends Repo[ChangedURI] with SeqNumberFunction[ChangedURI] {
@@ -25,8 +29,6 @@ class ChangedURIRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[ChangedURI]("changed_uri_sequence")
-
   type RepoImpl = ChangedURITable
 
   class ChangedURITable(tag: Tag) extends RepoTable[ChangedURI](db, tag, "changed_uri") with SeqNumberColumn[ChangedURI] {
@@ -42,7 +44,7 @@ class ChangedURIRepoImpl @Inject() (
   override def deleteCache(model: ChangedURI)(implicit session: RSession): Unit = {}
 
   override def save(model: ChangedURI)(implicit session: RWSession) = {
-    val newModel = model.copy(seq = sequence.incrementAndGet())
+    val newModel = model.copy(seq = deferredSeqNum())
     super.save(newModel)
   }
 
@@ -71,3 +73,17 @@ class ChangedURIRepoImpl @Inject() (
   }
 
 }
+
+trait ChangedURISeqPlugin extends SequencingPlugin
+
+class ChangedURISeqPluginImpl @Inject() (override val actor: ActorInstance[ChangedURISeqActor], override val scheduling: SchedulingProperties)
+    extends ChangedURISeqPlugin {
+  override val interval: FiniteDuration = 10 seconds
+}
+
+@Singleton
+class ChangedURISeqAssigner @Inject() (db: Database, repo: ChangedURIRepo, airbrake: AirbrakeNotifier)
+  extends DbSequenceAssigner[ChangedURI](db, repo, airbrake)
+
+class ChangedURISeqActor @Inject() (assigner: ChangedURISeqAssigner, airbrake: AirbrakeNotifier)
+  extends SequencingActor(assigner, airbrake)

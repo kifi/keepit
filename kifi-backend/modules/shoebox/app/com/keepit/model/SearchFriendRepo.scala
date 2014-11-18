@@ -34,8 +34,6 @@ class SearchFriendRepoImpl @Inject() (
   import DBSession._
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[SearchFriend]("search_friend_sequence")
-
   type RepoImpl = SearchFriendTable
   class SearchFriendTable(tag: Tag) extends RepoTable[SearchFriend](db, tag, "search_friend") with SeqNumberColumn[SearchFriend] {
     def userId = column[Id[User]]("user_id", O.NotNull)

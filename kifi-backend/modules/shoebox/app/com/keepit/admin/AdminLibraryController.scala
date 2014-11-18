@@ -79,12 +79,12 @@ class AdminLibraryController @Inject() (
     }
   }
 
-  private def buildLibStatistic(library: Library)(implicit session: RSession): LibraryStatistic = {
-    val owner = userRepo.get(library.ownerId)
+  private def buildLibStatistic(library: Library, owner: User)(implicit session: RSession): LibraryStatistic = {
+    require(library.ownerId == owner.id.get, "Library and Owner do not match.")
     val keepsCount = keepRepo.getCountByLibrary(library.id.get)
-    val memberships = libraryMembershipRepo.getWithLibraryId(library.id.get)
-    val invites = libraryInviteRepo.getWithLibraryId(library.id.get)
-    LibraryStatistic(library, owner, keepsCount, memberships.length, invites.length)
+    val membershipsCount = libraryMembershipRepo.countWithLibraryId(library.id.get)
+    val invitesCount = libraryInviteRepo.getWithLibraryId(library.id.get).length
+    LibraryStatistic(library, owner, keepsCount, membershipsCount, invitesCount)
   }
 
   def index(page: Int = 0) = AdminUserPage { implicit request =>
@@ -92,23 +92,32 @@ class AdminLibraryController @Inject() (
     val topListSize = 15
     val (stats, topDailyFollower, topDailyKeeps, totalPublishedCount) = db.readOnlyReplica { implicit session =>
       val topDailyFollower = if (page == 0) {
-        libraryMembershipRepo.mostMembersSince(topListSize, clock.now().minusHours(24)).map {
-          case (libId, count) =>
-            val stat = buildLibStatistic(libraryRepo.get(libId))
-            (count, stat)
-        }
+        libraryMembershipRepo.mostMembersSince(topListSize, clock.now().minusHours(24))
       } else Seq()
 
       val topDailyKeeps = if (page == 0) {
-        keepRepo.librariesWithMostKeepsSince(topListSize, clock.now().minusHours(24)).map {
-          case (libId, count) =>
-            val stat = buildLibStatistic(libraryRepo.get(libId))
-            (count, stat)
-        }
+        keepRepo.librariesWithMostKeepsSince(topListSize, clock.now().minusHours(24))
       } else Seq()
 
-      val stats = libraryRepo.pagePublished(page, size = pageSize).map(buildLibStatistic)
-      (stats, topDailyFollower, topDailyKeeps, libraryRepo.countPublished)
+      val pagePublished = libraryRepo.pagePublished(page, size = pageSize)
+
+      val statsByLibraryId = {
+        val pagedLibrariesById = pagePublished.map(lib => (lib.id.get -> lib)).toMap
+        val allLibraryIds = pagedLibrariesById.keySet ++ topDailyFollower.map(_._1) ++ topDailyKeeps.map(_._1)
+        val librariesById = {
+          val missingLibraryIds = allLibraryIds -- pagedLibrariesById.keys
+          val missingLibraries = if (missingLibraryIds.nonEmpty) libraryRepo.getLibraries(missingLibraryIds) else Map.empty
+          pagedLibrariesById ++ missingLibraries
+        }
+        val usersById = userRepo.getAllUsers(librariesById.values.map(_.ownerId).toSeq)
+        librariesById.mapValues(lib => buildLibStatistic(lib, usersById(lib.ownerId)))
+      }
+
+      val topDailyFollowerWithStats = topDailyFollower.map { case (libId, count) => (count, statsByLibraryId(libId)) }
+      val topDailyKeepsWithStats = topDailyKeeps.map { case (libId, count) => (count, statsByLibraryId(libId)) }
+      val pagePublishedWithStats = pagePublished.map { lib => statsByLibraryId(lib.id.get) }
+
+      (pagePublishedWithStats, topDailyFollowerWithStats, topDailyKeepsWithStats, libraryRepo.countPublished)
     }
     val info = LibraryPageInfo(libraryStats = stats, topDailyFollower = topDailyFollower, topDailyKeeps = topDailyKeeps, libraryCount = totalPublishedCount, page = page, pageSize = pageSize)
     Ok(html.admin.libraries(info))

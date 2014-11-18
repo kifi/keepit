@@ -5,9 +5,6 @@ import com.keepit.model.User
 import com.keepit.search.query.parser.QueryParser
 import com.keepit.search.query.parser.DefaultSyntax
 import org.apache.lucene.analysis.Analyzer
-import org.apache.lucene.index.Term
-import org.apache.lucene.util.Version
-import java.util.{ List => JList }
 
 object QueryHash {
   def apply(userId: Id[User], queryText: String, analyzer: Analyzer): Long = {

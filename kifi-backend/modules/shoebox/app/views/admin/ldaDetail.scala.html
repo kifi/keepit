@@ -1,7 +1,8 @@
-@(data: com.keepit.cortex.models.lda.LDATopicDetail)(implicit request: com.keepit.common.controller.UserRequest[_])
+@(version: Int, data: com.keepit.cortex.models.lda.LDATopicDetail)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("LDA Topic Detail"){
-  <div>Sampled URIs for topic @data.topicId</div>
+  <h2>Version: @version</h2>
+  <div>Sampled URIs for topic @data.topicId . You can refresh this page to see a different set of samples.</div>
 
   <table class = "table table-bordered">
   <tr>

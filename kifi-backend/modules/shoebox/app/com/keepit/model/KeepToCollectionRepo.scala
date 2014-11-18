@@ -9,10 +9,13 @@ import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
+import scala.slick.jdbc.StaticQuery
+
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]]
   def getCollectionsForKeep(keep: Keep)(implicit session: RSession): Seq[Id[Collection]]
+  def getCollectionsForKeeps(keeps: Seq[Keep])(implicit session: RSession): Seq[Seq[Id[Collection]]]
   def getKeepsForTag(collectionId: Id[Collection],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit seesion: RSession): Seq[Id[Keep]]
   def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[KeepUriAndTime]
@@ -68,7 +71,7 @@ class KeepToCollectionRepoImpl @Inject() (
         k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
       } yield kc
 
-      query.sortBy(_.updatedAt).map(_.collectionId).list // todo(martin): we should add a column for explicit ordering of tags
+      query.sortBy(_.updatedAt).map(_.collectionId).list // todo: we should add a column for explicit ordering of tags
     }
   }
 
@@ -80,11 +83,28 @@ class KeepToCollectionRepoImpl @Inject() (
           c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
         } yield kc
 
-        query.sortBy(_.updatedAt).map(_.collectionId).list // todo(martin): we should add a column for explicit ordering of tags
+        query.sortBy(_.updatedAt).map(_.collectionId).list // todo: we should add a column for explicit ordering of tags
       }
     } else {
       Seq.empty
     }
+  }
+
+  def getCollectionsForKeeps(keeps: Seq[Keep])(implicit session: RSession): Seq[Seq[Id[Collection]]] = {
+    val keepIds = keeps.collect { case k if k.isActive => k.id.get }.toSet
+    val collectionsForKeeps = collectionsForKeepCache.bulkGetOrElse(keepIds map CollectionsForKeepKey) { keys =>
+      val missingKeeps = keys.map(_.keepId).toSet
+      val query = for {
+        kc <- rows if kc.bookmarkId.inSet(missingKeeps) && kc.state === KeepToCollectionStates.ACTIVE
+        c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
+      } yield kc
+
+      query.list.groupBy(_.keepId).map {
+        case (keepId, keepToCollections) =>
+          CollectionsForKeepKey(keepId) -> keepToCollections.sortBy(_.updatedAt).map(_.collectionId) // todo: we should add a column for explicit ordering of tags
+      }
+    }
+    keeps.map { k => collectionsForKeeps.getOrElse(CollectionsForKeepKey(k.id.get), Seq.empty) }
   }
 
   def getKeepsForTag(collectionId: Id[Collection], excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit seesion: RSession): Seq[Id[Keep]] = {
@@ -105,12 +125,10 @@ class KeepToCollectionRepoImpl @Inject() (
     (for (c <- rows if c.collectionId === collId && c.state =!= excludeState.orNull) yield c).list
 
   private[model] def count(collId: Id[Collection])(implicit session: RSession): Int = {
-    import keepRepo.db.Driver.simple._
-    Query((for {
-      kc <- rows if kc.collectionId === collId && kc.state === KeepToCollectionStates.ACTIVE
-      c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
-      k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
-    } yield c).length).firstOption.getOrElse(0)
+    import StaticQuery.interpolation
+    val q = sql"""select count(*) from keep_to_collection kc, collection c, bookmark k
+      where kc.collection_id = ${collId} and kc.state = '#${KeepToCollectionStates.ACTIVE}' and kc.collection_id = c.id and c.state = '#${CollectionStates.ACTIVE}' and kc.bookmark_id = k.id and k.state = '#${KeepStates.ACTIVE}'"""
+    q.as[Int].firstOption.getOrElse(0)
   }
 
   def getOpt(bookmarkId: Id[Keep], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection] = {

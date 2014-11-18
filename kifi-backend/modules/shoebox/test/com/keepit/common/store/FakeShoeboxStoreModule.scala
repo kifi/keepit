@@ -18,8 +18,8 @@ case class FakeShoeboxStoreModule() extends FakeStoreModule {
   def uriImageStore: S3URIImageStore = FakeS3URIImageStore()
 
   @Provides @Singleton
-  def kifiInstallationStore(): KifInstallationStore = {
-    new InMemoryKifInstallationStoreImpl()
+  def kifiInstallationStore(): KifiInstallationStore = {
+    new InMemoryKifiInstallationStoreImpl()
   }
 
   @Provides @Singleton

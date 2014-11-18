@@ -205,6 +205,7 @@ input[type=password] {
   position: absolute;
   z-index: 10;
   padding: 10px 18px;
+  border-radius: 3px;
   background-color: #ef6f6e;
   color: #fff;
   line-height: 16px;

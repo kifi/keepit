@@ -335,6 +335,9 @@ object Scraper extends Service {
 }
 
 object Cortex extends Service {
+
+  type LDAVersionOpt = Option[ModelVersion[DenseLDA]]
+
   object internal {
     def word2vecSimilairty(word1: String, word2: String) = ServiceRoute(GET, "/internal/cortex/word2vec/wordSimilarity", Param("word1", word1), Param("word2", word2))
     def keywordsAndBow() = ServiceRoute(POST, "/internal/cortex/word2vec/keywordsAndBow")
@@ -346,21 +349,21 @@ object Cortex extends Service {
     def word2vecUserUriSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/userUriSimilarity")
     def word2vecFeedUserUris() = ServiceRoute(POST, "/internal/cortex/word2vec/feedUserUris")
 
-    def ldaNumOfTopics = ServiceRoute(GET, "/internal/cortex/lda/numOfTopics")
-    def ldaShowTopics(fromId: Int, toId: Int, topN: Int) = ServiceRoute(GET, "/internal/cortex/lda/showTopics", Param("fromId", fromId), Param("toId", toId), Param("topN", topN))
-    def ldaWordTopic(word: String) = ServiceRoute(GET, "/internal/cortex/lda/wordTopic", Param("word", word))
-    def ldaDocTopic() = ServiceRoute(POST, "/internal/cortex/lda/docTopic")
-    def ldaConfigurations() = ServiceRoute(GET, "/internal/cortex/lda/confs")
-    def saveEdits() = ServiceRoute(POST, "/internal/cortex/lda/saveEdits")
-    def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/cortex/lda/userUriInterest", Param("userId", userId), Param("uriId", uriId))
-    def batchUserURIsInterests() = ServiceRoute(POST, "/internal/cortex/lda/batchUserUrisInterests")
-    def userTopicMean(userId: Id[User]) = ServiceRoute(GET, "/internal/cortex/lda/userTopicMean", Param("userId", userId))
-    def sampleURIsForTopic(topicId: Int) = ServiceRoute(GET, "/internal/cortex/lda/sampleURIs", Param("topicId", topicId))
-    def getSimilarUsers(userId: Id[User], topK: Int) = ServiceRoute(GET, "/internal/cortex/lda/getSimilarUsers", Param("userId", userId), Param("topK", topK))
-    def unamedTopics(limit: Int) = ServiceRoute(GET, "/internal/cortex/lda/unamedTopics", Param("limit", limit))
-    def getTopicNames() = ServiceRoute(POST, "/internal/cortex/lda/getTopicNames")
-    def explainFeed() = ServiceRoute(POST, "/internal/cortex/lda/explainFeed")
-    def libraryTopic(libId: Id[Library]) = ServiceRoute(GET, "/internal/cortex/lda/libraryTopic", Param("libId", libId))
+    def ldaNumOfTopics(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/numOfTopics", Param("version", version))
+    def ldaShowTopics(fromId: Int, toId: Int, topN: Int)(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/showTopics", Param("fromId", fromId), Param("toId", toId), Param("topN", topN), Param("version", version))
+    def ldaWordTopic(word: String)(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/wordTopic", Param("word", word), Param("version", version))
+    def ldaDocTopic(implicit version: LDAVersionOpt) = ServiceRoute(POST, "/internal/cortex/lda/docTopic", Param("version", version))
+    def ldaConfigurations(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/confs", Param("version", version))
+    def saveEdits(implicit version: LDAVersionOpt) = ServiceRoute(POST, "/internal/cortex/lda/saveEdits", Param("version", version))
+    def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/userUriInterest", Param("userId", userId), Param("uriId", uriId), Param("version", version))
+    def batchUserURIsInterests(implicit version: LDAVersionOpt) = ServiceRoute(POST, "/internal/cortex/lda/batchUserUrisInterests", Param("version", version))
+    def userTopicMean(userId: Id[User])(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/userTopicMean", Param("userId", userId), Param("version", version))
+    def sampleURIsForTopic(topicId: Int)(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/sampleURIs", Param("topicId", topicId), Param("version", version))
+    def getSimilarUsers(userId: Id[User], topK: Int)(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/getSimilarUsers", Param("userId", userId), Param("topK", topK), Param("version", version))
+    def unamedTopics(limit: Int)(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/unamedTopics", Param("limit", limit), Param("version", version))
+    def getTopicNames(implicit version: LDAVersionOpt) = ServiceRoute(POST, "/internal/cortex/lda/getTopicNames", Param("version", version))
+    def explainFeed(implicit version: LDAVersionOpt) = ServiceRoute(POST, "/internal/cortex/lda/explainFeed", Param("version", version))
+    def libraryTopic(libId: Id[Library])(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/libraryTopic", Param("libId", libId), Param("version", version))
 
     def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }

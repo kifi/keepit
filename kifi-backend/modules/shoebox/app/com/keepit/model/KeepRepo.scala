@@ -15,7 +15,7 @@ import com.keepit.common.core._
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] //todo: replace option with seq
-  def getAllByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
+  def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep]
   def getPrimaryInDisjointByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
@@ -50,6 +50,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
+  def latestKeepInLibrary(libraryId: Id[Library])(implicit session: RSession): Option[DateTime]
 }
 
 @Singleton
@@ -64,8 +65,6 @@ class KeepRepoImpl @Inject() (
     latestKeepUrlCache: LatestKeepUrlCache) extends DbRepo[Keep] with KeepRepo with ExternalIdColumnDbFunction[Keep] with SeqNumberDbFunction[Keep] with Logging {
 
   import db.Driver.simple._
-
-  private val sequence = db.getSequence[Keep]("bookmark_sequence")
 
   type RepoImpl = KeepTable
   class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with NamedColumns with SeqNumberColumn[Keep] {
@@ -82,9 +81,10 @@ class KeepRepoImpl @Inject() (
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.Nullable)
+    def keptAt = column[DateTime]("kept_at", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, inDisjointLib.?, urlId, url, bookmarkPath.?, isPrivate,
-      userId, state, source, kifiInstallation.?, seq, libraryId, visibility.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
+      userId, state, source, kifiInstallation.?, seq, libraryId, visibility.?, keptAt.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -115,7 +115,8 @@ class KeepRepoImpl @Inject() (
       kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]],
       seq = r.<<[SequenceNumber[Keep]],
       libraryId = r.<<[Option[Id[Library]]],
-      visibility = Some(r.<<[Option[LibraryVisibility]].getOrElse(Keep.isPrivateToVisibility(privateFlag)))
+      visibility = Some(r.<<[Option[LibraryVisibility]].getOrElse(Keep.isPrivateToVisibility(privateFlag))),
+      keptAt = r.<<[Option[DateTime]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
@@ -124,7 +125,11 @@ class KeepRepoImpl @Inject() (
     assert(model.isPrimary && model.state != KeepStates.DUPLICATE || !model.isPrimary && model.state != KeepStates.ACTIVE,
       s"trying to save a keep in an inconsistent state: primary=${model.isPrimary} state=${model.state}")
 
-    val newModel = model.copy(seq = sequence.incrementAndGet())
+    val newModel = if (KeepSource.imports.contains(model.source)) {
+      model.copy(seq = deferredSeqNum())
+    } else {
+      model.copy(seq = sequence.incrementAndGet())
+    }
     super.save(newModel.clean())
   }
 
@@ -171,7 +176,7 @@ class KeepRepoImpl @Inject() (
       keeps.find(_.inDisjointLib).orElse(keeps.headOption) // order: disjoint, custom
     }
 
-  def getAllByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep] = {
+  def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep] = {
     (for (b <- rows if b.userId === userId && b.uriId.inSet(uriIds) && b.state === KeepStates.ACTIVE) yield b).list
   }
 
@@ -435,5 +440,10 @@ class KeepRepoImpl @Inject() (
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
     import StaticQuery.interpolation
     sql"""select b.library_id, count(*) as cnt from bookmark b, library l where l.id = b.library_id and l.state='active' and l.visibility='published' and b.created_at > $since group by b.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
+  }
+
+  def latestKeepInLibrary(libraryId: Id[Library])(implicit session: RSession): Option[DateTime] = {
+    import StaticQuery.interpolation
+    sql"""select max(created_at) as cnt from bookmark where library_id = $libraryId and state='active'""".as[DateTime].firstOption
   }
 }

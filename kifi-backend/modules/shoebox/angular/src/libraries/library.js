@@ -4,21 +4,42 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
-  'modalService', 'profileService', 'util', '$window', '$analytics',
+  'modalService', 'profileService', 'util', '$window', '$analytics', 'librarySearch',
   function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
-            modalService, profileService, util, $window, $analytics) {
+            modalService, profileService, util, $window, $analytics, librarySearch) {
     //
     // Internal data.
     //
     var selectedCount = 0;
     var prePopulated = false;
-    var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
-    //                   ↑↑↑ use this one ↑↑↑
+    var authToken = $location.search().authToken || '';
+
+
+    //
+    // Internal functions
+    //
+    function trackPageView(attributes) {
+      var url = $analytics.settings.pageTracking.basePath + $location.url();
+      var library = $scope.library;
+      var trackLibraryAttributes = _.extend(attributes || {},
+        libraryService.getCommonTrackingAttributes(library));
+
+      if (profileService.me && profileService.me.id) {
+        trackLibraryAttributes.owner = $scope.userIsOwner() ? 'Yes' : 'No';
+      }
+
+      $analytics.pageTrack(url, trackLibraryAttributes);
+    }
+
+    function setTitle(lib) {
+      $window.document.title = lib.name + ' by ' + lib.owner.firstName + ' ' + lib.owner.lastName + ' • Kifi' ;
+    }
 
 
     //
     // Scope data.
     //
+    $scope.librarySearch = librarySearch;
     $scope.username = $routeParams.username;
     $scope.librarySlug = $routeParams.librarySlug;
     $scope.keeps = [];
@@ -33,6 +54,7 @@ angular.module('kifi')
     $scope.userIsOwner = function () {
       return $scope.library && $scope.library.owner.id === profileService.me.id;
     };
+
 
     //
     // Scope methods.
@@ -86,22 +108,24 @@ angular.module('kifi')
       selectedCount = numSelected;
     };
 
+    $scope.libraryKeepClicked = function (keep, event) {
+      var target = event.target;
+      var eventAction = target.getAttribute('click-action');
+      if ($scope.$root.userLoggedIn) {
+        libraryService.trackEvent('user_clicked_page', $scope.library, { action: eventAction });
+      } else {
+        libraryService.trackEvent('visitor_clicked_page', $scope.library, { action: eventAction });
+      }
+    };
+
+
     //
     // Watches and listeners.
     //
-
     $scope.$watch('library.id', function (id) {
       $rootScope.$broadcast('currentLibraryChanged', $scope.library);
       if (id) {
-        var library = $scope.library;
-        var trackLibraryAttributes = libraryService.getCommonTrackingAttributes(library);
-
-        if (profileService.me && profileService.me.id) {
-          trackLibraryAttributes.owner = $scope.userIsOwner() ? 'Yes' : 'No';
-        }
-
-        var url = $analytics.settings.pageTracking.basePath + $location.url();
-        $analytics.pageTrack(url, trackLibraryAttributes);
+        trackPageView();
       }
     });
 
@@ -139,19 +163,23 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregisterCurrentLibrary);
 
-    $scope.libaryKeepClicked = function (keep, event) {
-      var target = event.target;
-      var eventAction = target.getAttribute('click-action');
-      if ($scope.$root.userLoggedIn) {
-        libraryService.trackEvent('user_clicked_page', $scope.library, { action: eventAction });
-      } else {
-        libraryService.trackEvent('visitor_clicked_page', $scope.library, { action: eventAction });
+    var deregisterTrackLibraryEvent = $rootScope.$on('trackLibraryEvent', function (e, eventType, attributes) {
+      if (eventType === 'click') {
+        if (!$rootScope.userLoggedIn) {
+          libraryService.trackEvent('visitor_clicked_page', $scope.library, attributes);
+        } else {
+          libraryService.trackEvent('user_clicked_page', $scope.library, attributes);
+        }
+      } else if (eventType === 'view') {
+        trackPageView(attributes);
       }
-    };
+    });
+    $scope.$on('$destroy', deregisterTrackLibraryEvent);
 
-    var setTitle = function (lib) {
-      $window.document.title = lib.name + ' by ' + lib.owner.firstName + ' ' + lib.owner.lastName + ' • Kifi' ;
-    };
+    var deregisterUpdateLibrarySearch = $rootScope.$on('librarySearchChanged', function (e, librarySearch) {
+      $scope.librarySearch = librarySearch;
+    });
+    $scope.$on('$destroy', deregisterUpdateLibrarySearch);
 
 
     //

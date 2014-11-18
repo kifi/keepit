@@ -48,13 +48,9 @@ angular.module('kifi')
       resendVerificationUrl: route('/user/resend-verification'),
       userPasswordUrl: route('/user/password'),
       formatPicUrl: formatPicUrl,
-      removeSingleKeep: function (id) {
-        return env.xhrBase + '/keeps/' + id + '/delete';
-      },
       getKeep: function (keepId) {
         return route('/keeps/' + keepId);
       },
-      removeKeeps: route('/keeps/remove'),
 
       ////////////////////////////
       // Tags                   //

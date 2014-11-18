@@ -40,14 +40,13 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
   }
 
   override def explain(context: AtomicReaderContext, doc: Int) = {
-    val sc = scorer(context, true, false, context.reader.getLiveDocs)
+    val sc = scorer(context, context.reader.getLiveDocs)
     val exists = (sc != null && sc.advance(doc) == doc)
 
     val result = new ComplexExplanation()
     if (exists) {
       val score = sc.score
 
-      val ret = new ComplexExplanation()
       result.setDescription("multiplicative boost, product of:")
       result.setValue(score)
       result.setMatch(true)
@@ -81,11 +80,11 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
     result
   }
 
-  override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, liveDocs: Bits): Scorer = {
-    val textScorer = textWeight.scorer(context, true, false, liveDocs)
+  override def scorer(context: AtomicReaderContext, liveDocs: Bits): Scorer = {
+    val textScorer = textWeight.scorer(context, liveDocs)
     if (textScorer == null) null
     else {
-      new MultiplicativeBoostScorer(this, textScorer, boosterWeight.scorer(context, true, false, liveDocs), boosterStrength)
+      new MultiplicativeBoostScorer(this, textScorer, boosterWeight.scorer(context, liveDocs), boosterStrength)
     }
   }
 }

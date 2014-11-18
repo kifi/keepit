@@ -200,6 +200,21 @@ class UserAgentTest extends Specification {
       agent.isOldIE === false
       agent.possiblyBot === false
     }
+
+    "parse userAgent from ios devices" in {
+      val str = "Kifi/18164 CFNetwork/672.1.13 Darwin/14.0.0"
+      val agent = UserAgent(str)
+      agent === UserAgent(str, "Kifi", "iOS", "iOS", false, "kifi iphone app", "unknown")
+      agent.isMobile === true
+      agent.canRunExtensionIfUpToDate === false
+      agent.isKifiIphoneApp === true
+      agent.isKifiAndroidApp === false
+      agent.isIphone === true
+      agent.isAndroid === false
+      agent.isOldIE === false
+      agent.possiblyBot === false
+    }
+
     "Twitterbot/1.0" in {
       val str = "Twitterbot/1.0)"
       val agent = UserAgent(str)

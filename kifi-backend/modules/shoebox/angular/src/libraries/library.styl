@@ -142,6 +142,7 @@ invite-header-orange = #ff7c3c
       margin: 0 8px
 
   .kf-keep-lib-owner
+    position: relative
     padding-bottom: 10px
 
   .kf-keep-lib-user-image
@@ -159,6 +160,18 @@ invite-header-orange = #ff7c3c
 
   .kf-keep-lib-owner-name
     color: #939393
+
+  .kf-keep-lib-search
+    position: absolute
+    top: 10px
+    right: 0
+
+  .kf-keep-lib-search-input
+    border: 1px solid #ccc
+    border-radius: 10px
+    font-size: 14px
+    padding: 3px 8px
+    width: 140px
 
   .kf-keep-lib-description-container
     padding-bottom: 5px
@@ -216,9 +229,7 @@ invite-header-orange = #ff7c3c
     color: #fff
     vertical-align: top
     cursor: pointer
-
-    &:hover
-      background-color: #444
+    min-width: 31px
 
   .kf-keep-lib-additional-followers-text
     display: block
@@ -244,6 +255,12 @@ invite-header-orange = #ff7c3c
     border: none
     background: #008aee
     color: white
+    &.stickable
+      z-index: 501
+      -webkit-transform: translateZ(1px)
+      -moz-transform: translateZ(1px)
+      -o-transform: translateZ(1px)
+      transform: translateZ(1px)
 
   .kf-keep-lib-footer-button-unfollow
     border: 1px solid #20a1f1
@@ -267,6 +284,7 @@ invite-header-orange = #ff7c3c
 
   .kf-keep-lib-image
     width: 100%
+    padding-top: 30px
 
 // This should be in common; it's so messy right now.
 .kf-keep-lib-footer-button

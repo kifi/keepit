@@ -32,21 +32,21 @@ class CacheStatistics @Inject() (global: GlobalCacheStatistics) extends Logging 
   def recordHit(cachePlugin: String, logAccess: Boolean, namespace: String, fullKey: String, duration: Long): Unit = future {
     val name = s"$cachePlugin.$namespace"
     incrCount(name, global.hitsMap)
-    statsd.incrementOne(s"$name.hits", ONE_IN_HUNDRED)
-    statsd.timing(s"$name.hits", duration, ONE_IN_THOUSAND)
+    statsd.incrementOne(s"$name.hits", ONE_IN_THOUSAND)
+    statsd.timing(s"$name.hits", duration, ONE_IN_TEN_THOUSAND)
   }(ExecutionContext.singleThread)
 
   def recordMiss(cachePlugin: String, logAccess: Boolean, namespace: String, fullKey: String, duration: Long): Unit = future {
     val name = s"$cachePlugin.$namespace"
     incrCount(s"$name", global.missesMap)
-    statsd.incrementOne(s"$name.misses", ONE_IN_HUNDRED)
+    statsd.incrementOne(s"$name.misses", ONE_IN_THOUSAND)
     cacheLog.warn(s"Cache miss on key $fullKey in $cachePlugin")
   }(ExecutionContext.singleThread)
 
   def recordSet(cachePlugin: String, logAccess: Boolean, namespace: String, fullKey: String, duration: Long): Unit = future {
     val name = s"$cachePlugin.$namespace"
     incrCount(s"$name", global.setsMap)
-    statsd.incrementOne(s"$name.sets", ONE_IN_HUNDRED)
-    statsd.timing(s"$name.sets", duration, ONE_IN_THOUSAND)
+    statsd.incrementOne(s"$name.sets", ONE_IN_THOUSAND)
+    statsd.timing(s"$name.sets", duration, ONE_IN_TEN_THOUSAND)
   }(ExecutionContext.singleThread)
 }

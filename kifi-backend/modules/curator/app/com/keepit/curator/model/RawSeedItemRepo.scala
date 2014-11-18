@@ -38,8 +38,6 @@ class RawSeedItemRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[RawSeedItem]("raw_seed_item_sequence")
-
   type RepoImpl = RawSeedItemTable
   class RawSeedItemTable(tag: Tag) extends RepoTable[RawSeedItem](db, tag, "raw_seed_item") with SeqNumberColumn[RawSeedItem] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
@@ -135,16 +133,6 @@ class RawSeedItemRepoImpl @Inject() (
   def getByTopPriorScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
     (for (row <- rows if row.userId === userId) yield row).sortBy(_.priorScore.desc).take(maxBatchSize).list
   }
-
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "raw_seed_item", limit)
-  }
-
-  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
-    sql"""select min(seq) from raw_seed_item where seq < 0""".as[Option[Long]].first
-  }
-
 }
 
 trait RawSeedItemSequencingPlugin extends SequencingPlugin

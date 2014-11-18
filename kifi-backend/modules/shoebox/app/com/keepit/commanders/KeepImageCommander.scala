@@ -1,38 +1,33 @@
 package com.keepit.commanders
 
 import java.awt.image.BufferedImage
-import java.io._
-import java.net.URLConnection
+import java.io.ByteArrayInputStream
 import java.sql.SQLException
 
-import com.google.inject.{ Singleton, ImplementedBy, Inject }
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db.{ State, Id }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ Id, State }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.WebService
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store._
 import com.keepit.model._
-import org.imgscalr.Scalr
-import play.api.{ Mode, Play }
-import play.api.Play.current
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.iteratee.Iteratee
-import play.api.libs.ws.WS
-import com.keepit.common.core._
 
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success, Try }
-import com.keepit.common.akka.SafeFuture
 
 @ImplementedBy(classOf[KeepImageCommanderImpl])
 trait KeepImageCommander {
 
   def getUrl(keepImage: KeepImage): String
-  def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[KeepImage]
+  def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[Option[KeepImage]]
+  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], idealSize: ImageSize): Map[Id[Keep], Option[KeepImage]]
   def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String]
 
   def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean = true, overwriteExistingChoice: Boolean = false): Future[ImageProcessDone]
@@ -56,19 +51,39 @@ class KeepImageCommanderImpl @Inject() (
     normalizedUriRepo: NormalizedURIRepo,
     keepImageRequestRepo: KeepImageRequestRepo,
     airbrake: AirbrakeNotifier,
-    keepImageRepo: KeepImageRepo) extends KeepImageCommander with KeepImageHelper with Logging {
+    keepImageRepo: KeepImageRepo,
+    val webService: WebService) extends KeepImageCommander with ProcessedImageHelper with Logging {
 
   def getUrl(keepImage: KeepImage): String = {
     s3ImageConfig.cdnBase + "/" + keepImage.imagePath
   }
 
-  def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[KeepImage] = {
-    val allKeepImages = db.readOnlyReplica { implicit session =>
+  def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[Option[KeepImage]] = {
+    val keepImages = db.readOnlyReplica { implicit session =>
       keepImageRepo.getAllForKeepId(keepId)
     }
-    if (allKeepImages.isEmpty) SafeFuture { autoSetKeepImage(keepId, localOnly = false, overwriteExistingChoice = false) }
-    val validKeepImages = allKeepImages.filter(_.state == KeepImageStates.ACTIVE)
-    KeepImageSize.pickBest(idealSize, validKeepImages)
+    if (keepImages.isEmpty) {
+      SafeFuture { autoSetKeepImage(keepId, localOnly = false, overwriteExistingChoice = false) }
+      None
+    } else Some {
+      val validKeepImages = keepImages.filter(_.state == KeepImageStates.ACTIVE)
+      ProcessedImageSize.pickBest(idealSize, validKeepImages)
+    }
+  }
+
+  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], idealSize: ImageSize): Map[Id[Keep], Option[KeepImage]] = {
+    if (keepIds.isEmpty) {
+      Map.empty[Id[Keep], Option[KeepImage]]
+    } else {
+      val allImagesByKeepId = db.readOnlyReplica { implicit session => keepImageRepo.getAllForKeepIds(keepIds) }.groupBy(_.keepId)
+      (keepIds -- allImagesByKeepId.keys).foreach { missingKeepId =>
+        SafeFuture { autoSetKeepImage(missingKeepId, localOnly = false, overwriteExistingChoice = false) }
+      }
+      allImagesByKeepId.mapValues { keepImages =>
+        val validKeepImages = keepImages.filter(_.state == KeepImageStates.ACTIVE)
+        ProcessedImageSize.pickBest(idealSize, validKeepImages)
+      }
+    }
   }
 
   def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String] = {
@@ -126,26 +141,33 @@ class KeepImageCommanderImpl @Inject() (
     }
   }
 
+  private def exceptionToFailureReason(ex: Throwable) = {
+    ex.getMessage + "\n\n" + ex.getStackTrace.collect {
+      case t if t.getClassName.startsWith("com.keepit") =>
+        t.getFileName + ":" + t.getLineNumber
+    }.take(5).mkString("\n")
+  }
+
   private def finalizeImageRequestState(keepId: Id[Keep], requestIdOpt: Option[Id[KeepImageRequest]], doneResult: ImageProcessDone): Unit = {
-    import ImageProcessState._
-    import KeepImageRequestStates._
+    import com.keepit.commanders.ImageProcessState._
+    import com.keepit.model.KeepImageRequestStates._
 
     requestIdOpt.map { requestId =>
       val (state, failureCode, failureReason) = doneResult match {
         case err: UpstreamProviderFailed =>
-          (UPSTREAM_FAILED, Some(err.reason), Some(err.ex.getMessage))
+          (UPSTREAM_FAILED, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
         case UpstreamProviderNoImage =>
           (UPSTREAM_FAILED, Some(UpstreamProviderNoImage.reason), None)
         case err: SourceFetchFailed =>
-          (FETCHING_FAILED, Some(err.reason), Some(err.ex.getMessage))
+          (FETCHING_FAILED, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
         case err: HashFailed =>
-          (FETCHING_FAILED, Some(err.reason), Some(err.ex.getMessage))
+          (FETCHING_FAILED, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
         case err: InvalidImage =>
-          (PROCESSING_FAILED, Some(err.reason), Some(err.ex.getMessage))
+          (PROCESSING_FAILED, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
         case err: DbPersistFailed =>
-          (PERSISTING, Some(err.reason), Some(err.ex.getMessage))
+          (PERSISTING, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
         case err: CDNUploadFailed =>
-          (PERSISTING, Some(err.reason), Some(err.ex.getMessage))
+          (PERSISTING, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
         case success: ImageProcessSuccess =>
           (INACTIVE, None, None)
       }
@@ -346,13 +368,7 @@ class KeepImageCommanderImpl @Inject() (
   private def fetchAndHashLocalImage(file: TemporaryFile): Future[Either[KeepImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
     log.info(s"[kic] Fetching ${file.file.getAbsolutePath}")
 
-    val is = new BufferedInputStream(new FileInputStream(file.file))
-    val formatOpt = Option(URLConnection.guessContentTypeFromStream(is)).flatMap { mimeType =>
-      mimeTypeToImageFormat(mimeType)
-    }.orElse {
-      imageFilenameToFormat(file.file.getName)
-    }
-    is.close()
+    val formatOpt = detectImageType(file)
 
     formatOpt match {
       case Some(format) =>
@@ -387,55 +403,6 @@ class KeepImageCommanderImpl @Inject() (
     }
   }
 
-  private val remoteFetchConsolidater = new RequestConsolidator[String, (ImageFormat, TemporaryFile)](2.minutes)
-
-  private def fetchRemoteImage(imageUrl: String, timeoutMs: Int = 20000): Future[(ImageFormat, TemporaryFile)] = {
-    remoteFetchConsolidater(imageUrl) { imageUrl =>
-      WS.url(imageUrl).withRequestTimeout(20000).getStream().flatMap {
-        case (headers, streamBody) =>
-          val formatOpt = headers.headers.get("Content-Type").flatMap(_.headOption)
-            .flatMap(mimeTypeToImageFormat).orElse {
-              imageFilenameToFormat(imageUrl.substring(imageUrl.lastIndexOf(".") + 1))
-            }
-
-          if (headers.status != 200) {
-            Future.failed(new RuntimeException(s"Image returned non-200 code, ${headers.status}"))
-          } else if (formatOpt.isEmpty) {
-            Future.failed(new RuntimeException(s"Unknown image type, ${headers.headers.get("Content-Type")}"))
-          } else {
-            val tempFile = TemporaryFile(prefix = "remote-file", suffix = "." + formatOpt.get.value)
-            tempFile.file.deleteOnExit()
-            val outputStream = new FileOutputStream(tempFile.file)
-
-            val maxSize = 1024 * 1024 * 16
-
-            var len = 0
-            val iteratee = Iteratee.foreach[Array[Byte]] { bytes =>
-              len += bytes.length
-              if (len > maxSize) { // max original size
-                throw new Exception(s"Original image too large (> $len bytes): $imageUrl")
-              } else {
-                outputStream.write(bytes)
-              }
-            }
-
-            streamBody.run(iteratee).andThen {
-              case result =>
-                outputStream.close()
-                result.get
-            }.map(_ => (formatOpt.get, tempFile))
-          }
-      }
-    }
-
-  }
-
-  private def resizeImage(image: BufferedImage, boundingBox: Int): Try[BufferedImage] = Try {
-    val img = Scalr.resize(image, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, boundingBox)
-    log.info(s"[kic] Bounding box $boundingBox resized to ${img.getHeight} x ${img.getWidth}")
-    img
-  }
-
   private def updateRequestState(state: State[KeepImageRequest])(implicit requestIdOpt: Option[Id[KeepImageRequest]]): Unit = {
     requestIdOpt.map { requestId =>
       db.readWrite { implicit session =>
@@ -444,9 +411,7 @@ class KeepImageCommanderImpl @Inject() (
     }
   }
 
-  private val cdnUrl = {
-    s3ImageConfig.cdnBase.drop(s3ImageConfig.cdnBase.indexOf("//"))
-  }
+  private val cdnUrl = s3ImageConfig.cdnBase.drop(s3ImageConfig.cdnBase.indexOf("//"))
   private val ourOwnImageUrl = s"(https?\\:)?$cdnUrl/keep/([0-9a-f]{32})_\\d+x\\d+.*".r
   private def detectUserPickedImageFromExistingHashAndReplace(imageUrl: String, keepId: Id[Keep]): Option[ImageProcessSuccess] = {
     Try {
@@ -471,5 +436,32 @@ class KeepImageCommanderImpl @Inject() (
     }.toOption.flatten
   }
 
+}
+
+sealed trait ImageProcessState
+sealed trait ImageProcessDone extends ImageProcessState
+sealed trait ImageProcessSuccess extends ImageProcessDone
+sealed trait KeepImageStoreInProgress extends ImageProcessState
+sealed abstract class KeepImageStoreFailure(val reason: String) extends ImageProcessState with ImageProcessDone
+sealed abstract class KeepImageStoreFailureWithException(ex: Throwable, reason: String) extends KeepImageStoreFailure(reason)
+object ImageProcessState {
+  // In-progress
+  case class ImageLoadedAndHashed(file: TemporaryFile, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends KeepImageStoreInProgress
+  case class ImageValid(image: BufferedImage, format: ImageFormat, hash: ImageHash) extends KeepImageStoreInProgress
+  case class ReadyToPersist(key: String, format: ImageFormat, is: ByteArrayInputStream, image: BufferedImage, bytes: Int) extends KeepImageStoreInProgress
+  case class UploadedImage(key: String, format: ImageFormat, image: BufferedImage) extends KeepImageStoreInProgress
+
+  // Failures
+  case class UpstreamProviderFailed(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "upstream_provider_failed")
+  case object UpstreamProviderNoImage extends KeepImageStoreFailure("upstream_provider_no_image")
+  case class SourceFetchFailed(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "source_fetch_failed")
+  case class HashFailed(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "image_hash_failed")
+  case class InvalidImage(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "invalid_image")
+  case class DbPersistFailed(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "db_persist_failed")
+  case class CDNUploadFailed(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "cdn_upload_failed")
+
+  // Success
+  case object StoreSuccess extends ImageProcessState with ImageProcessSuccess
+  case class ExistingStoredImagesFound(images: Seq[KeepImage]) extends ImageProcessState with ImageProcessSuccess
 }
 

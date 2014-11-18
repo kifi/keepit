@@ -176,16 +176,12 @@ class InviteCommander @Inject() (
         }
       }
 
-      val otherSocialInvites = for {
-        su <- userSocialAccounts
-        invite <- invitationRepo.getByRecipientSocialUserId(su.id.get)
-      } yield (invite, su.networkType)
+      val networkTypes = userSocialAccounts.map { su => su.id.get -> su.networkType }.toMap
+      val verifiedEmails = userEmailAccounts.filter(_.verified)
+      val otherInvites = invitationRepo.getByRecipientSocialUserIdsAndEmailAddresses(userSocialAccounts.map(_.id.get).toSet, verifiedEmails.map(_.address).toSet)
 
-      val otherEmailInvites = for {
-        emailAccount <- userEmailAccounts if emailAccount.verified
-        invite <- invitationRepo.getByRecipientEmailAddress(emailAccount.address)
-      } yield (invite, SocialNetworks.EMAIL)
-
+      val otherSocialInvites = otherInvites.filter(_.recipientSocialUserId.isDefined).map(invite => (invite, networkTypes(invite.recipientSocialUserId.get)))
+      val otherEmailInvites = otherInvites.filter(_.recipientEmailAddress.isDefined).map(invite => (invite, SocialNetworks.EMAIL))
       val existingInvites = otherSocialInvites.toSet ++ otherEmailInvites.toSet ++ cookieInvite.toSet
 
       if (existingInvites.isEmpty) {
@@ -323,13 +319,19 @@ class InviteCommander @Inject() (
     InviteStatus.clientHandle(saved)
   }
 
-  def acceptUrl(invitationId: ExternalId[Invitation]) = URLEncoder.encode(s"$baseUrl${routes.InviteController.acceptInvite(invitationId)}", "UTF-8")
+  def acceptUrl(invitationId: ExternalId[Invitation], encode: Boolean = true) = {
+    val url = s"$baseUrl${routes.InviteController.acceptInvite(invitationId)}"
+    if (encode) URLEncoder.encode(url, "UTF-8") else url
+  }
   def fbConfirmUrl(invitationId: ExternalId[Invitation], source: String) = URLEncoder.encode(s"$baseUrl${routes.InviteController.confirmInvite(invitationId, source, None, None)}", "UTF-8")
   def fbInviteUrl(invitationId: ExternalId[Invitation], socialId: SocialId, source: String): String = {
     val link = acceptUrl(invitationId)
     val redirectUri = fbConfirmUrl(invitationId, source)
     s"https://www.facebook.com/dialog/send?app_id=${secureSocialClientIds.facebook}&link=$link&redirect_uri=$redirectUri&to=$socialId"
   }
+
+  def fbTitle(inviterName: Option[String]): String = inviterName.map { name => s"$name has invited you to join Kifi!" } getOrElse "You've been invited to join Kifi!"
+  val fbDescription: String = "Kifi is a remarkable new way to collect, discover, and share knowledge. Powered by people, search, and recommendations."
 
   def confirmFacebookInvite(request: Option[UserRequest[_]], id: ExternalId[Invitation], source: String, errorMsg: Option[String], errorCode: Option[Int]): InviteStatus = {
     val inviteStatus = db.readWrite { implicit session =>

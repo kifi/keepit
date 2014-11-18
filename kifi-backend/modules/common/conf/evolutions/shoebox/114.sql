@@ -9,7 +9,7 @@
 CREATE SEQUENCE user_sequence;
 ---
 
-ALTER TABLE user add seq Int NOT NULL DEFAULT 0;
+ALTER TABLE user add seq bigint(20) NOT NULL DEFAULT 0;
 CREATE INDEX user_i_seq ON user(seq);
 
 INSERT INTO evolutions (name, description) VALUES ('114.sql', 'add sequence number to user');

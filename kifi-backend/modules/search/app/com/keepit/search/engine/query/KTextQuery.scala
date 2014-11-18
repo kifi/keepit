@@ -96,7 +96,7 @@ class KTextWeight(query: KTextQuery, subWeight: Weight) extends Weight with KWei
 
   override def explain(context: AtomicReaderContext, doc: Int): Explanation = {
     val reader = context.reader
-    val sc = scorer(context, true, false, reader.getLiveDocs);
+    val sc = scorer(context, reader.getLiveDocs);
     val exists = (sc != null && sc.advance(doc) == doc);
 
     val result = new ComplexExplanation()
@@ -118,7 +118,7 @@ class KTextWeight(query: KTextQuery, subWeight: Weight) extends Weight with KWei
     out += ((this, 1.0f))
   }
 
-  override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    subWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs)
+  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+    subWeight.scorer(context, acceptDocs)
   }
 }

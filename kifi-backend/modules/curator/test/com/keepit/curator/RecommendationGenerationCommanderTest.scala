@@ -2,17 +2,16 @@ package com.keepit.curator
 
 import com.google.inject.Injector
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.db.Id
+import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.commanders.{ SeedIngestionCommander, RecommendationGenerationCommander }
-import com.keepit.common.healthcheck.FakeHealthcheckModule
-
+import com.keepit.curator.commanders.{ RecommendationGenerationCommander, SeedIngestionCommander }
 import com.keepit.curator.model._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ NormalizedURI, User }
 import com.keepit.search.FakeSearchServiceClientModule
 import org.specs2.mutable.Specification
 
@@ -87,19 +86,43 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
   "pre-compute recommendations" in {
     withDb(modules: _*) { implicit injector =>
       val (user1, user2, shoebox) = setup()
-      val user1Keeps = makeKeeps(user1, 5, shoebox)
-      val user2Keeps = makeKeeps(user2, 5, shoebox)
+      val user1Keeps = makeKeeps(user1, 21, shoebox)
+      val user2Keeps = makeKeeps(user2, 21, shoebox)
       val seedCommander = inject[SeedIngestionCommander]
       val seedItemRepo = inject[RawSeedItemRepo]
       val commander = inject[RecommendationGenerationCommander]
+
+      shoebox.callsGetToCandidateURIs.size === 0
+
       Await.result(seedCommander.ingestAllKeeps(), Duration(10, "seconds"))
       db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
-      commander.precomputeRecommendations()
+
+      Await.ready(commander.precomputeRecommendations(), Duration(10, "seconds"))
+
+      // if precompute is called in parallel for up to 4 users,
+      // user1 and user2 will trigger 2 calls to getCandidateURIs for the same set of URIs
+      // if they are not run in parallel, we'd expect size to === 1
+      shoebox.callsGetToCandidateURIs.size > 0
+      shoebox.callsGetToCandidateURIs.size < 3
+
+      // to trigger more precompute recommendations next call
+      makeKeeps(user2, 21, shoebox, 101)
+      Await.result(seedCommander.ingestAllKeeps(), Duration(10, "seconds"))
+      db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
+
       val futUnit = commander.precomputeRecommendations()
       Await.result(futUnit, Duration(10, "seconds"))
+
       val result = commander.getTopRecommendations(Id[User](42), 1)
       val recs = Await.result(result, Duration(10, "seconds"))
       recs.size === 0
+
+      // test that precompute for keeps 101-120 was called; if it is greater than 4 then
+      // it must has been called again for the first batch of keeps and the cache isn't working
+      shoebox.callsGetToCandidateURIs.size < 5
+      shoebox.callsGetToCandidateURIs.size > 2
+      shoebox.callsGetToCandidateURIs(2)(0) === Id[NormalizedURI](101)
+      shoebox.callsGetToCandidateURIs(2)(19) === Id[NormalizedURI](120)
     }
   }
 }
