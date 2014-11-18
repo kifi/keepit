@@ -63,5 +63,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[UserSeqPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[PhraseSequencingPlugin] != null) // make sure its not lazy loaded
     require(injector.instance[UserEmailAddressSeqPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[KeepSequencingPlugin] != null) //make sure its not lazy loaded
   }
 }
