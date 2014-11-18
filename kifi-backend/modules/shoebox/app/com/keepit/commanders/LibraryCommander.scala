@@ -735,19 +735,27 @@ class LibraryCommander @Inject() (
       }
 
       futureInvitedContactsByEmailAddress.map { invitedContactsByEmailAddress =>
-        val invitesAndInvitees = for (i <- inviteList) yield {
-          val (recipient, inviteAccess, msgOpt) = i
-          // TODO (aaron): if non-owners invite that's not READ_ONLY, we need to change API to present "partial" failures
-          val access = if (targetLib.ownerId != inviterId) LibraryAccess.READ_ONLY else inviteAccess // force READ_ONLY invites for non-owners
-          val (invite, invitee) = recipient match {
-            case Left(id) =>
-              (LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(id), access = access, message = msgOpt), Left(invitedBasicUsersById(id)))
-            case Right(email) =>
-              (LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = access, message = msgOpt), Right(invitedContactsByEmailAddress(email)))
+        val invitesAndInvitees = db.readOnlyMaster { implicit s =>
+          for ((recipient, inviteAccess, msgOpt) <- inviteList) yield {
+            val access = if (targetLib.ownerId != inviterId) LibraryAccess.READ_ONLY else inviteAccess
+            recipient match {
+              case Left(userId) =>
+                libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
+                  case Some(mem) if mem.access == access =>
+                    None
+                  case _ =>
+                    val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(userId), access = access, message = msgOpt)
+                    val inviteeInfo = (Left(invitedBasicUsersById(userId)), access)
+                    Some(newInvite, inviteeInfo)
+                }
+              case Right(email) =>
+                val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = access, message = msgOpt)
+                val inviteeInfo = (Right(invitedContactsByEmailAddress(email)), access)
+                Some(newInvite, inviteeInfo)
+            }
           }
-          (invite, (invitee, access))
         }
-        val (invites, inviteesWithAccess) = invitesAndInvitees.unzip
+        val (invites, inviteesWithAccess) = invitesAndInvitees.flatten.unzip
         processInvites(invites)
 
         libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
