@@ -37,7 +37,6 @@ trait ShoeboxScraperClient extends ServiceClient {
   def getProxyP(url: String): Future[Option[HttpProxy]]
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]]
   def getLatestKeep(url: String): Future[Option[Keep]]
-  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit]
   def saveBookmark(bookmark: Keep): Future[Keep]
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
 }
@@ -56,10 +55,6 @@ class ShoeboxScraperClientImpl @Inject() (
     call(Shoebox.internal.getUriImage(nUriId)).map { r =>
       Json.fromJson[Option[String]](r.json).get
     }
-  }
-
-  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = {
-    call(Shoebox.internal.updateScreenshots(nUriId)).map { r => assert(r.status == 202); () }
   }
 
   def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = {

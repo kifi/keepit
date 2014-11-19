@@ -34,7 +34,7 @@ object Global {
     Resolver.url("sbt-plugin-snapshots",
       new URL("http://repo.42go.com:4242/fortytwo/content/groups/public/"))(Resolver.ivyStylePatterns),
     // new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
-    "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
+    "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/",
     // "kevoree Repository" at "http://maven2.kevoree.org/release/",
     "FortyTwo Public Repository" at "http://repo.42go.com:4242/fortytwo/content/groups/public/",
     "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel",
