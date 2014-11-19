@@ -248,7 +248,7 @@ class KeepsCommander @Inject() (
 
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
     val (allKeeps, libraryMemberships) = db.readOnlyMaster { implicit session =>
-      val allKeeps = keepRepo.getAllByUserAndUriIds(userId, uriIds)
+      val allKeeps = keepRepo.getByUserAndUriIds(userId, uriIds)
       val libraryMemberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(allKeeps.map(_.libraryId.get).toSet, userId)
       (allKeeps, libraryMemberships)
     }
@@ -383,7 +383,7 @@ class KeepsCommander @Inject() (
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
 
-        decorateKeepsIntoKeepInfos(Some(userId), keeps, KeepImageSize.Large.idealSize).map { keepInfos =>
+        decorateKeepsIntoKeepInfos(Some(userId), keeps, ProcessedImageSize.Large.idealSize).map { keepInfos =>
           (keepInfos, clickCounts, rkCounts).zipped.map {
             case (keepInfo, clickCount, rkCount) =>
               keepInfo.copy(clickCount = clickCount, rekeepCount = rkCount)

@@ -173,7 +173,7 @@ class MobileKeepsController @Inject() (
             w <- idealImageWidth
             h <- idealImageHeight
           } yield ImageSize(w, h)
-        } getOrElse KeepImageSize.Large.idealSize
+        } getOrElse ProcessedImageSize.Large.idealSize
         keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep), idealImageSize).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
       }
       case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))

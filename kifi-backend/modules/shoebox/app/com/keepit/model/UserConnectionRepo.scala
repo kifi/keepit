@@ -11,15 +11,18 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.common.json.TraversableFormat
 import scala.slick.jdbc.StaticQuery
+import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[UserConnectionRepoImpl])
 trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[UserConnection] {
   def getConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
+  def getConnectedUsersForUsers(ids: Set[Id[User]])(implicit session: RSession): Map[Id[User], Set[Id[User]]]
   def getUnfriendedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
   def getConnectionOpt(u1: Id[User], u2: Id[User])(implicit session: RSession): Option[UserConnection]
   def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession)
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int
   def getConnectionCount(userId: Id[User])(implicit session: RSession): Int
+  def getConnectionCounts(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit
   def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection]
 }
@@ -45,8 +48,6 @@ class UserConnectionRepoImpl @Inject() (
     extends DbRepo[UserConnection] with UserConnectionRepo with SeqNumberDbFunction[UserConnection] {
 
   import db.Driver.simple._
-
-  private val sequence = db.getSequence[UserConnection]("user_connection_sequence")
 
   override def save(model: UserConnection)(implicit session: RWSession): UserConnection = {
     // setting a negative sequence number for deferred assignment
@@ -76,6 +77,23 @@ class UserConnectionRepoImpl @Inject() (
       } yield c).length).first
     }
   }
+  def getConnectionCounts(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
+    import StaticQuery.interpolation
+    import scala.collection.JavaConversions._
+
+    val ret = connCountCache.bulkGetOrElse(userIds map UserConnectionCountKey) { keys =>
+      val missingIds = keys.map(_.userId)
+      val missingIdsString = missingIds.mkString(",")
+      val query = sql"""select usr, count(*) from (
+        select user_1 usr from user_connection where user_1 in (#${missingIdsString}) and state = 'active'
+        union all
+        select user_2 usr from user_connection where user_2 in (#${missingIdsString}) and state = 'active'
+        ) c group by usr"""
+      val results = query.as[(Id[User], Int)].list
+      results.map { case (userId, cnt) => UserConnectionCountKey(userId) -> cnt }.toMap
+    }
+    ret.map { case (key, count) => key.userId -> count }.toMap
+  }
 
   type RepoImpl = UserConnectionTable
   class UserConnectionTable(tag: Tag) extends RepoTable[UserConnection](db, tag, "user_connection") with SeqNumberColumn[UserConnection] {
@@ -99,6 +117,21 @@ class UserConnectionRepoImpl @Inject() (
         userConnCache.set(UserConnectionIdKey(id), conns.map(_.id).toArray)
         conns
     }
+  }
+
+  def getConnectedUsersForUsers(ids: Set[Id[User]])(implicit session: RSession): Map[Id[User], Set[Id[User]]] = {
+    val ret = userConnCache.bulkGetOrElse(ids map UserConnectionIdKey) { keys =>
+      val missing = keys.map(_.userId)
+
+      val query =
+        ((for (c <- rows if c.user1.inSet(missing) && c.state === UserConnectionStates.ACTIVE) yield (c.user1, c.user2)) union
+          (for (c <- rows if c.user2.inSet(missing) && c.state === UserConnectionStates.ACTIVE) yield (c.user2, c.user1)))
+
+      query.list().groupBy(_._1).map {
+        case (id, connections) => UserConnectionIdKey(id) -> connections.map(_._2.id).toArray
+      }.toMap
+    }
+    ret.map { case (key, value) => key.userId -> value.map(Id[User]).toSet }.toMap
   }
 
   def getUnfriendedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
@@ -171,13 +204,4 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection] = super.getBySequenceNumber(seq, fetchSize)
-
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "user_connection", limit)
-  }
-
-  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
-    sql"""select min(seq) from user_connection where seq < 0""".as[Option[Long]].first
-  }
 }

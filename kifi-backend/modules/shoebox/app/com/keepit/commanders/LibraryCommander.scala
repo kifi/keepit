@@ -84,7 +84,7 @@ class LibraryCommander @Inject() (
         //facebook OG recommends:
         //We suggest that you use an image of at least 1200x630 pixels.
         val imageUrls: Seq[String] = {
-          val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, KeepImageSize.XLarge.idealSize).values.flatten.toSeq
+          val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, ProcessedImageSize.XLarge.idealSize).values.flatten.toSeq
           val sorted: Seq[KeepImage] = images.sortWith {
             case (image1, image2) =>
               (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)
@@ -254,7 +254,7 @@ class LibraryCommander @Inject() (
   }
 
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], library: Library): Future[FullLibraryInfo] = {
-    createFullLibraryInfos(viewerUserIdOpt, 10, 10, KeepImageSize.Large.idealSize, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
+    createFullLibraryInfos(viewerUserIdOpt, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
   }
 
   def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], Map[LibraryAccess, Int]) = {
@@ -735,19 +735,27 @@ class LibraryCommander @Inject() (
       }
 
       futureInvitedContactsByEmailAddress.map { invitedContactsByEmailAddress =>
-        val invitesAndInvitees = for (i <- inviteList) yield {
-          val (recipient, inviteAccess, msgOpt) = i
-          // TODO (aaron): if non-owners invite that's not READ_ONLY, we need to change API to present "partial" failures
-          val access = if (targetLib.ownerId != inviterId) LibraryAccess.READ_ONLY else inviteAccess // force READ_ONLY invites for non-owners
-          val (invite, invitee) = recipient match {
-            case Left(id) =>
-              (LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(id), access = access, message = msgOpt), Left(invitedBasicUsersById(id)))
-            case Right(email) =>
-              (LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = access, message = msgOpt), Right(invitedContactsByEmailAddress(email)))
+        val invitesAndInvitees = db.readOnlyMaster { implicit s =>
+          for ((recipient, inviteAccess, msgOpt) <- inviteList) yield {
+            val access = if (targetLib.ownerId != inviterId) LibraryAccess.READ_ONLY else inviteAccess
+            recipient match {
+              case Left(userId) =>
+                libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
+                  case Some(mem) if mem.access == access =>
+                    None
+                  case _ =>
+                    val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(userId), access = access, message = msgOpt)
+                    val inviteeInfo = (Left(invitedBasicUsersById(userId)), access)
+                    Some(newInvite, inviteeInfo)
+                }
+              case Right(email) =>
+                val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = access, message = msgOpt)
+                val inviteeInfo = (Right(invitedContactsByEmailAddress(email)), access)
+                Some(newInvite, inviteeInfo)
+            }
           }
-          (invite, (invitee, access))
         }
-        val (invites, inviteesWithAccess) = invitesAndInvitees.unzip
+        val (invites, inviteesWithAccess) = invitesAndInvitees.flatten.unzip
         processInvites(invites)
 
         libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
@@ -1102,6 +1110,17 @@ class LibraryCommander @Inject() (
     db.readWrite { implicit s =>
       libraryInviteRepo.getByEmailAddress(emailAddress, Set.empty) foreach { libInv =>
         libraryInviteRepo.save(libInv.copy(userId = Some(userId)))
+      }
+    }
+  }
+
+  def updateLastEmailSent(userId: Id[User], keeps: Seq[Keep]): Unit = {
+    // persist when we last sent an email for each library membership
+    db.readWrite { implicit rw =>
+      keeps.groupBy(_.libraryId).collect { case (Some(libId), _) => libId } foreach { libId =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId) map { libMembership =>
+          libraryMembershipRepo.updateLastEmailSent(libMembership.id.get)
+        }
       }
     }
   }

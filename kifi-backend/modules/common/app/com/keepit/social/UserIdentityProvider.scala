@@ -38,7 +38,7 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
     doAuth()(request) match {
       case Right(socialUser) =>
         val filledSocialUser = fillProfile(socialUser)
-        val saved = UserService.save(UserIdentity(userIdOpt, filledSocialUser, allowSignup = false))
+        val saved = UserService.save(UserIdentity(userIdOpt, filledSocialUser))
         Right(saved)
       case left => left
     }

@@ -145,7 +145,6 @@ object Shoebox extends Service {
     def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]) = ServiceRoute(POST, "/internal/shoebox/database/triggerSocialGraphFetch", Param("id", socialUserInfoId))
     def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getUserConnectionsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getSearchFriendsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
-    def isSensitiveURI() = ServiceRoute(POST, "/internal/shoebox/database/isSensitiveURI")
     def updateURIRestriction() = ServiceRoute(POST, "/internal/shoebox/database/updateURIRestriction")
     def allURLPatternRules() = ServiceRoute(GET, "/internal/shoebox/database/urlPatternRules")
     def updateScreenshots(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/screenshots/update", Param("id", id))
@@ -168,7 +167,7 @@ object Shoebox extends Service {
     def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def canViewLibrary() = ServiceRoute(POST, "/internal/shoebox/libraries/canView")
-    def newKeepsInLibrary(userId: Id[User], max: Int) = ServiceRoute(GET, "/internal/shoebox/database/newKeepsInLibrary", Param("userId", userId), Param("max", max))
+    def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = ServiceRoute(GET, "/internal/shoebox/database/newKeepsInLibraryForEmail", Param("userId", userId), Param("max", max))
     def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getMutualFriends", Param("user1Id", user1Id), Param("user2Id", user2Id))
     def getBasicKeeps(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeeps", Param("userId", userId))
   }

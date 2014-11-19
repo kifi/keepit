@@ -15,7 +15,7 @@ import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.test.ShoeboxTestInjector
+import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.joda.time.DateTime
 import org.specs2.mutable.{ SpecificationLike }
 
@@ -519,12 +519,15 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         val thorEmail = EmailAddress("thorishere@gmail.com")
+
+        // Captain America invites everybody to his Published Library
         val inviteList1 = Seq(
           (Left(userIron.id.get), LibraryAccess.READ_ONLY, None),
           (Left(userAgent.id.get), LibraryAccess.READ_ONLY, None),
           (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
           (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
         val res1 = Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds"))
+
         res1.isRight === true
         res1.right.get === Seq((Left(BasicUser.fromUser(userIron)), LibraryAccess.READ_ONLY),
           (Left(BasicUser.fromUser(userAgent)), LibraryAccess.READ_ONLY),
@@ -540,8 +543,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
               (None, LibraryAccess.READ_ONLY))
         }
 
+        // Agent Nick Fury accepts invite & joins the Library
+        libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get)
+        // Tests that users can have multiple invitations multiple times,
+        // but users with active membership to a library should not get invites with same access level
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.count === 4
+          libraryInviteRepo.count === 7
         }
 
         val inviteList2_RW = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
@@ -1079,6 +1087,22 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         members._2.map(_.userId) === Seq(userAgent.id.get, userIron.id.get)
         // invitees
         members._3.map(t => (t._1)) === Seq(Left(userHulk.id.get), Right(EmailAddress("thor@asgard.com")))
+      }
+    }
+
+    "updates last email sent for a list of keeps" in {
+      withDb(modules: _*) { implicit injector =>
+        val factory = inject[ShoeboxTestFactory]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience, keeps: Seq[Keep]) = factory.setupLibraryKeeps()
+        val libraryCommander = inject[LibraryCommander]
+
+        libraryCommander.updateLastEmailSent(userIron.id.get, keeps)
+
+        db.readWrite { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(libShield.id.get, userIron.id.get).map(_.lastEmailSent) must beSome
+          libraryMembershipRepo.getWithLibraryIdAndUserId(libScience.id.get, userIron.id.get).map(_.lastEmailSent) must beSome
+          libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userCaptain.id.get).get.lastEmailSent must beNone
+        }
       }
     }
   }

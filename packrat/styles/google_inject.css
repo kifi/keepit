@@ -329,8 +329,8 @@ div.kifi-res-menu-item {
   line-height: 28px;
   border-bottom: 1px solid #f2f3f3;
 }
-.kifi-res-title:visited {
-  color: #2518b5;
+.kifi-fixed-color .kifi-res-title:visited {
+  color: #1a0dab;
 }
 
 .kifi-res-score {

@@ -2,13 +2,16 @@ package com.keepit.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ DbSequenceAssigner, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.time._
 import securesocial.core.SocialUser
 import org.joda.time.DateTime
 import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialId }
 import scala.reflect.ClassTag
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
 trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[SocialUserInfo] with SeqNumberFunction[SocialUserInfo] {
@@ -63,10 +66,8 @@ class SocialUserInfoRepoImpl @Inject() (
   private val REFRESHING_STATES = SocialUserInfoStates.FETCHED_USING_SELF :: SocialUserInfoStates.FETCH_FAIL :: Nil
   private val REFRESH_FREQUENCY = 2
 
-  private val sequence = db.getSequence[SocialUserInfo]("social_user_info_sequence")
-
   override def save(socialUserInfo: SocialUserInfo)(implicit session: RWSession): SocialUserInfo = {
-    val toSave = socialUserInfo.copy(seq = sequence.incrementAndGet())
+    val toSave = socialUserInfo.copy(seq = deferredSeqNum())
     super.save(toSave)
   }
 
@@ -169,3 +170,17 @@ class SocialUserInfoRepoImpl @Inject() (
     list.map(SocialUserBasicInfo.fromSocialUser(_))
   }
 }
+
+trait SocialUserInfoSequencingPlugin extends SequencingPlugin
+
+class SocialUserInfoSequencingPluginImpl @Inject() (
+  override val actor: ActorInstance[SocialUserInfoSequencingActor],
+  override val scheduling: SchedulingProperties) extends SocialUserInfoSequencingPlugin
+
+@Singleton
+class SocialUserInfoSequenceNumberAssigner @Inject() (db: Database, repo: SocialUserInfoRepo, airbrake: AirbrakeNotifier)
+  extends DbSequenceAssigner[SocialUserInfo](db, repo, airbrake)
+
+class SocialUserInfoSequencingActor @Inject() (
+  assigner: SocialUserInfoSequenceNumberAssigner,
+  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)

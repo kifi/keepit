@@ -96,7 +96,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]]
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
-  def isSensitiveURI(uri: String): Future[Boolean]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
   def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
@@ -117,7 +116,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]]
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
-  def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]]
+  def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]): Future[Set[Id[User]]]
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
 }
@@ -607,13 +606,6 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def isSensitiveURI(uri: String): Future[Boolean] = {
-    val payload = Json.obj("uri" -> uri)
-    call(Shoebox.internal.isSensitiveURI(), payload).map { r =>
-      Json.fromJson[Boolean](r.json).get
-    }
-  }
-
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]) = {
     val payload = r match {
       case Some(res) => Json.obj("uriId" -> id, "restriction" -> res)
@@ -738,8 +730,8 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.canViewLibrary, body = body).map(_.json.as[Boolean])
   }
 
-  def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]] = {
-    call(Shoebox.internal.newKeepsInLibrary(userId, max)).map(_.json.as[Seq[Keep]])
+  def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]] = {
+    call(Shoebox.internal.newKeepsInLibraryForEmail(userId, max)).map(_.json.as[Seq[Keep]])
   }
 
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) =

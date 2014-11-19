@@ -1,9 +1,12 @@
 package com.keepit.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ SequenceNumber, State }
+import com.keepit.common.db.{ DbSequenceAssigner, SequenceNumber, State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import scala.slick.util.CloseableIterator
 import com.keepit.common.time.Clock
 import com.keepit.search.Lang
@@ -22,8 +25,6 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
 
   import db.Driver.simple._
 
-  private val sequence = db.getSequence[Phrase]("phrase_sequence")
-
   type RepoImpl = PhraseTable
   class PhraseTable(tag: Tag) extends RepoTable[Phrase](db, tag, "phrase") with SeqNumberColumn[Phrase] {
     def phrase = column[String]("phrase", O.NotNull)
@@ -35,7 +36,9 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   def table(tag: Tag) = new PhraseTable(tag)
   initTable()
 
-  override def save(phrase: Phrase)(implicit session: RWSession): Phrase = super.save(phrase.copy(seq = sequence.incrementAndGet()))
+  override def save(phrase: Phrase)(implicit session: RWSession): Phrase = {
+    super.save(phrase.copy(seq = deferredSeqNum()))
+  }
 
   override def deleteCache(model: Phrase)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: Phrase)(implicit session: RSession): Unit = {}
@@ -52,3 +55,16 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
 
   def getPhrasesChanged(seq: SequenceNumber[Phrase], fetchSize: Int)(implicit session: RSession): Seq[Phrase] = super.getBySequenceNumber(seq, fetchSize)
 }
+
+trait PhraseSequencingPlugin extends SequencingPlugin
+class PhraseSequencingPluginImpl @Inject() (
+  override val actor: ActorInstance[PhraseSequencingActor],
+  override val scheduling: SchedulingProperties) extends PhraseSequencingPlugin
+
+@Singleton
+class PhraseSequenceNumberAssigner @Inject() (db: Database, repo: PhraseRepo, airbrake: AirbrakeNotifier)
+  extends DbSequenceAssigner[Phrase](db, repo, airbrake)
+
+class PhraseSequencingActor @Inject() (
+  assigner: PhraseSequenceNumberAssigner,
+  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)

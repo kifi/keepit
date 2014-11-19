@@ -1,36 +1,27 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{
-  UriRecommendationStates,
-  ScoredSeedItemWithAttribution,
-  RecoInfo,
-  UserRecommendationGenerationStateRepo,
-  UserRecommendationGenerationState,
-  Keepers,
-  UriRecommendationRepo,
-  UriRecommendation,
-  UriScores,
-  SeedItem
-}
-import com.keepit.common.db.{ SequenceNumber, Id }
-import com.keepit.eliza.ElizaServiceClient
-import com.keepit.model.{ User, ExperimentType, UriRecommendationScores, SystemValueRepo, NormalizedURI }
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
-import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.commanders.RemoteUserExperimentCommander
-import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.common.service.ServiceStatus
-import com.keepit.common.logging.Logging
+import java.util.concurrent.TimeUnit
 
+import com.google.common.cache.CacheBuilder
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.commanders.RemoteUserExperimentCommander
+import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
+import com.keepit.common.service.ServiceStatus
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.curator.model.{ Keepers, RecoInfo, ScoredSeedItemWithAttribution, SeedItem, UriRecommendation, UriRecommendationRepo, UriRecommendationStates, UriScores, UserRecommendationGenerationState, UserRecommendationGenerationStateRepo }
+import com.keepit.eliza.ElizaServiceClient
+import com.keepit.model.{ ExperimentType, NormalizedURI, SystemValueRepo, UriRecommendationScores, User }
+import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.concurrent.Future
+import scala.collection.JavaConversions._
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.Future
 import scala.util.Random
-
-import com.google.inject.{ Inject, Singleton }
 
 @Singleton
 class RecommendationGenerationCommander @Inject() (
@@ -142,7 +133,7 @@ class RecommendationGenerationCommander @Inject() (
   private def getCandidateSeedsForUser(userId: Id[User], state: UserRecommendationGenerationState): Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = {
     val result = for {
       seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
-      candidateURIs <- candidateURILock.withLockFuture(shoebox.getCandidateURIs(seeds.map(_.uriId)))
+      candidateURIs <- candidateURILock.withLockFuture(getCandidateURIs(seeds.map(_.uriId)))
     } yield {
       val candidateSeeds = (seeds zip candidateURIs) filter (_._2) map (_._1)
       eliza.checkUrisDiscussed(userId, candidateSeeds.map(_.uriId)).map { checkThreads =>
@@ -249,6 +240,37 @@ class RecommendationGenerationCommander @Inject() (
       } else {
         Future.successful()
       }
+    }
+  }
+
+  private val candidateUriCache = CacheBuilder.newBuilder()
+    .initialCapacity(100000).maximumSize(1000000).expireAfterWrite(24L, TimeUnit.HOURS)
+    .build[Id[NormalizedURI], java.lang.Boolean]
+
+  private def getCandidateURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
+    val uriIdIndexes: Map[Id[NormalizedURI], Int] = (for { i <- 0 until uriIds.size } yield uriIds(i) -> i).toMap
+
+    val fromCache: Map[Id[NormalizedURI], Boolean] = candidateUriCache.getAllPresent(uriIds).map {
+      case (id, bool) => (id, bool.booleanValue) // convert from Java Boolean to Scala Boolean
+    }.toMap
+    val notFromCache = uriIds diff fromCache.keys.toSeq
+
+    val candidatesF: Future[Seq[Boolean]] =
+      if (notFromCache.nonEmpty) shoebox.getCandidateURIs(notFromCache) else Future.successful(Seq.empty)
+
+    candidatesF map { candidates =>
+      val notFromCacheResults = (notFromCache zip candidates).map {
+        case (id, bool) =>
+          candidateUriCache.put(id, bool)
+          (id, bool)
+      }.toMap
+
+      // puts the candidate booleans back in the order they were passed in
+      val results = Array.fill[Boolean](uriIds.size)(false)
+      (fromCache ++ notFromCacheResults).foreach {
+        case (id, bool) => results.update(uriIdIndexes(id), bool)
+      }
+      results.toSeq
     }
   }
 

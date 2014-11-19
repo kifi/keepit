@@ -2,13 +2,15 @@ package com.keepit.integrity
 
 import com.google.inject.Module
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ModelWithSeqNumber, Model }
+import com.keepit.common.db.slick._
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
+import com.keepit.common.core._
 
 class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
@@ -19,6 +21,14 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
     FakeKeepImportsModule()
   )
 
+  @inline def assignSeqNums(db: Database)(repos: SeqNumberFunction[_]*): Unit = {
+    db.readWrite { implicit rw =>
+      repos foreach { repo =>
+        repo.assignSequenceNumbers(1000)
+      }
+    }
+  }
+
   "OphanCleaner" should {
 
     "clean up uris by changed uris" in {
@@ -26,7 +36,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val bmRepo = inject[KeepRepo]
+        val keepRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
 
         val (user, lib1) = db.readWrite { implicit session =>
@@ -69,13 +79,13 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         }
 
         val bms = db.readWrite { implicit session =>
-          val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = urls(0).url, urlId = urls(0).id.get,
+          val bm0 = keepRepo.save(Keep(title = Some("google"), userId = user.id.get, url = urls(0).url, urlId = urls(0).id.get,
             uriId = uris(0).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
-          val bm1 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = urls(1).url, urlId = urls(1).id.get,
+          val bm1 = keepRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = urls(1).url, urlId = urls(1).id.get,
             uriId = uris(1).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
-          val bm2 = bmRepo.save(Keep(title = Some("yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id.get,
+          val bm2 = keepRepo.save(Keep(title = Some("yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id.get,
             uriId = uris(2).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
-          val bm3 = bmRepo.save(Keep(title = Some("ask"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id.get,
+          val bm3 = keepRepo.save(Keep(title = Some("ask"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id.get,
             uriId = uris(3).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
           Seq(bm0, bm1, bm2, bm3)
@@ -106,6 +116,8 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit session =>
           uris.drop(1).map { uri => changedURIRepo.save(ChangedURI(oldUriId = uri.id.get, newUriId = uris(0).id.get, state = ChangedURIStates.APPLIED)) }
         }
+        val seqAssigner = inject[ChangedURISeqAssigner]
+        seqAssigner.assignSequenceNumbers()
         cleaner.cleanNormalizedURIsByChangedURIs(readOnly = false)
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
@@ -134,8 +146,12 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val bmRepo = inject[KeepRepo]
+        val keepRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
+
+        @inline def doAssign[T](f: => T): T = {
+          f tap { _ => assignSeqNums(db)(uriRepo, keepRepo) }
+        }
 
         val (user, other, lib1) = db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
@@ -168,13 +184,15 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
           Seq(url0, url1, url2, url3, url4)
         }
 
-        var bms = db.readWrite { implicit session =>
-          val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = urls(0).url, urlId = urls(0).id.get,
-            uriId = uris(0).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
-          val bm1 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = urls(1).url, urlId = urls(1).id.get,
-            uriId = uris(1).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+        var bms = doAssign {
+          db.readWrite { implicit session =>
+            val bm0 = keepRepo.save(Keep(title = Some("google"), userId = user.id.get, url = urls(0).url, urlId = urls(0).id.get,
+              uriId = uris(0).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            val bm1 = keepRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = urls(1).url, urlId = urls(1).id.get,
+              uriId = uris(1).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
-          Seq(bm0, bm1)
+            Seq(bm0, bm1)
+          }
         }
 
         // initial states
@@ -192,7 +210,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
           scrapeInfoRepo.getByUriId(uris(4).id.get) === None
         }
 
-        cleaner.clean(readOnly = false)
+        doAssign { cleaner.clean(readOnly = false) }
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.ACTIVE
@@ -208,16 +226,18 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         }
 
         // test: ACTIVE to SCRAPE_WANTED
-        bms ++= db.readWrite { implicit session =>
-          uriRepo.save(uris(0).withState(NormalizedURIStates.SCRAPED))
-          uriRepo.save(uris(1).withState(NormalizedURIStates.SCRAPE_FAILED))
+        bms ++= doAssign {
+          db.readWrite { implicit session =>
+            uriRepo.save(uris(0).withState(NormalizedURIStates.SCRAPED))
+            uriRepo.save(uris(1).withState(NormalizedURIStates.SCRAPE_FAILED))
 
-          uriRepo.assignSequenceNumbers(1000)
+            uriRepo.assignSequenceNumbers(1000)
 
-          Seq(bmRepo.save(Keep(title = Some("Yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id.get,
-            uriId = uris(2).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint)))
+            Seq(keepRepo.save(Keep(title = Some("Yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id.get,
+              uriId = uris(2).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint)))
+          }
         }
-        cleaner.clean(readOnly = false)
+        doAssign { cleaner.clean(readOnly = false) }
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
@@ -233,14 +253,16 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         }
 
         // test: INACTIVE to SCRAPE_WANTED
-        bms ++= db.readWrite { implicit session =>
-          Seq(bmRepo.save(Keep(title = Some("AltaVista"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id.get,
-            uriId = uris(3).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint)))
+        bms ++= doAssign {
+          db.readWrite { implicit session =>
+            Seq(keepRepo.save(Keep(title = Some("AltaVista"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id.get,
+              uriId = uris(3).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint)))
+          }
         }
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.INACTIVE
         }
-        cleaner.clean(readOnly = false)
+        doAssign { cleaner.clean(readOnly = false) }
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
@@ -256,10 +278,12 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         }
 
         // test: to ACTIVE
-        db.readWrite { implicit session =>
-          bms.foreach { bm => bmRepo.save(bm.copy(state = KeepStates.INACTIVE)) }
+        doAssign {
+          db.readWrite { implicit session =>
+            bms.foreach { bm => keepRepo.save(bm.copy(state = KeepStates.INACTIVE)) }
+          }
         }
-        cleaner.clean(readOnly = false)
+        doAssign { cleaner.clean(readOnly = false) }
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.ACTIVE
@@ -275,20 +299,19 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         }
 
         // test: to ACTIVE (first two uris are kept by other)
-        val obms = db.readWrite { implicit s =>
-          uriRepo.save(uris(0).withState(NormalizedURIStates.SCRAPED))
-          uriRepo.save(uris(1).withState(NormalizedURIStates.SCRAPE_FAILED))
-
-          uriRepo.assignSequenceNumbers(1000)
-
-          Seq(
-            bmRepo.save(Keep(title = Some("google"), userId = other.id.get, url = urls(0).url, urlId = urls(0).id.get,
-              uriId = uris(0).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint)),
-            bmRepo.save(Keep(title = Some("bing"), userId = other.id.get, url = urls(1).url,
-              urlId = urls(1).id.get, uriId = uris(1).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
-          )
+        val obms = doAssign {
+          db.readWrite { implicit s =>
+            uriRepo.save(uris(0).withState(NormalizedURIStates.SCRAPED))
+            uriRepo.save(uris(1).withState(NormalizedURIStates.SCRAPE_FAILED))
+            Seq(
+              keepRepo.save(Keep(title = Some("google"), userId = other.id.get, url = urls(0).url, urlId = urls(0).id.get,
+                uriId = uris(0).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint)),
+              keepRepo.save(Keep(title = Some("bing"), userId = other.id.get, url = urls(1).url,
+                urlId = urls(1).id.get, uriId = uris(1).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            )
+          }
         }
-        cleaner.clean(readOnly = false)
+        doAssign { cleaner.clean(readOnly = false) }
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
@@ -304,12 +327,14 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         }
 
         // test: sequence of changes
-        db.readWrite { implicit session =>
-          bmRepo.save(bms(0).copy(state = KeepStates.ACTIVE))
-          bmRepo.save(bms(1).copy(state = KeepStates.ACTIVE))
-          bmRepo.save(obms(0).copy(state = KeepStates.INACTIVE))
+        doAssign {
+          db.readWrite { implicit session =>
+            keepRepo.save(bms(0).copy(state = KeepStates.ACTIVE))
+            keepRepo.save(bms(1).copy(state = KeepStates.ACTIVE))
+            keepRepo.save(obms(0).copy(state = KeepStates.INACTIVE))
+          }
         }
-        cleaner.clean(readOnly = false)
+        doAssign { cleaner.clean(readOnly = false) }
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
@@ -323,13 +348,15 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
           scrapeInfoRepo.getByUriId(uris(3).id.get).get.state === ScrapeInfoStates.INACTIVE
           scrapeInfoRepo.getByUriId(uris(4).id.get) === None
         }
-        db.readWrite { implicit session =>
-          bmRepo.save(bms(0).copy(state = KeepStates.INACTIVE))
-          bmRepo.save(bms(1).copy(state = KeepStates.INACTIVE))
-          bmRepo.save(obms(0).copy(state = KeepStates.ACTIVE))
-          bmRepo.save(obms(1).copy(state = KeepStates.INACTIVE))
+        doAssign {
+          db.readWrite { implicit session =>
+            keepRepo.save(bms(0).copy(state = KeepStates.INACTIVE))
+            keepRepo.save(bms(1).copy(state = KeepStates.INACTIVE))
+            keepRepo.save(obms(0).copy(state = KeepStates.ACTIVE))
+            keepRepo.save(obms(1).copy(state = KeepStates.INACTIVE))
+          }
         }
-        cleaner.clean(readOnly = false)
+        doAssign { cleaner.clean(readOnly = false) }
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.ACTIVE
@@ -351,7 +378,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val bmRepo = inject[KeepRepo]
+        val keepRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
 
         val (user, lib1) = db.readWrite { implicit session =>
@@ -391,15 +418,14 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         }
 
         val bms = db.readWrite { implicit session =>
-          val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = urls(0).url, urlId = urls(0).id.get,
+          val bm0 = keepRepo.save(Keep(title = Some("google"), userId = user.id.get, url = urls(0).url, urlId = urls(0).id.get,
             uriId = uris(0).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
-          val bm1 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = urls(1).url, urlId = urls(1).id.get,
+          val bm1 = keepRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = urls(1).url, urlId = urls(1).id.get,
             uriId = uris(1).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
-          val bm2 = bmRepo.save(Keep(title = Some("yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id.get,
+          val bm2 = keepRepo.save(Keep(title = Some("yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id.get,
             uriId = uris(2).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
-          val bm3 = bmRepo.save(Keep(title = Some("ask"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id.get,
+          val bm3 = keepRepo.save(Keep(title = Some("ask"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id.get,
             uriId = uris(3).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
-
           Seq(bm0, bm1, bm2, bm3)
         }
 

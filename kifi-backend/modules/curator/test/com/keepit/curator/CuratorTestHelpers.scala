@@ -21,8 +21,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
   }
 
-  def makeKeeps(userId: Id[User], howMany: Int, shoebox: FakeShoeboxServiceClientImpl): Seq[Keep] = {
-    (1 to howMany).flatMap { i =>
+  def makeKeeps(userId: Id[User], howMany: Int, shoebox: FakeShoeboxServiceClientImpl, startId: Int = 1): Seq[Keep] = {
+    (startId to startId + howMany - 1).flatMap { i =>
       shoebox.saveBookmarks(Keep(
         uriId = Id[NormalizedURI](i),
         urlId = Id[URL](i),

@@ -5,6 +5,8 @@ import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
+import com.keepit.common.oauth2.adaptor.SecureSocialAdaptor
+import com.keepit.common.oauth2.{ OAuth2AccessToken, ProviderIds, ProviderRegistry }
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
 import securesocial.core._
@@ -36,9 +38,11 @@ import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.performance._
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.common.core._
+import scala.concurrent.duration._
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
@@ -49,6 +53,7 @@ class AuthHelper @Inject() (
     db: Database,
     clock: Clock,
     airbrakeNotifier: AirbrakeNotifier,
+    providerRegistry: ProviderRegistry,
     authCommander: AuthCommander,
     userRepo: UserRepo,
     userCredRepo: UserCredRepo,
@@ -457,81 +462,95 @@ class AuthHelper @Inject() (
   val signUpUrl = com.keepit.controllers.core.routes.AuthController.signupPage().url
 
   def doAccessTokenSignup(providerName: String, oauth2InfoOrig: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
-    Registry.providers.get(providerName) match {
+    providerRegistry.get(ProviderIds.toProviderId(providerName)) match {
       case None =>
         log.error(s"[accessTokenSignup($providerName)] Failed to retrieve provider; request=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(provider) =>
-        authCommander.fillUserProfile(provider, oauth2InfoOrig) match {
-          case Failure(t) =>
-            log.error(s"[accessTokenSignup($providerName)] Caught Exception($t) during fillProfile; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
-            Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
-          case Success(filledUser) =>
-            authCommander.exchangeLongTermToken(provider, oauth2InfoOrig) map { oauth2InfoNew =>
-              authCommander.getSocialUserOpt(filledUser.identityId) match {
-                case None =>
-                  val saved = UserService.save(UserIdentity(None, filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), allowSignup = false))
-                  val payload = if (filledUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
-                    Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
-                  else
-                    Json.obj("code" -> "continue_signup")
-                  log.info(s"[accessTokenSignup($providerName)] created social user(${saved.identityId}) email=${saved.email}; payload=$payload")
-                  Authenticator.create(saved).fold(
-                    error => throw error,
-                    authenticator =>
-                      Ok(payload ++ Json.obj("sessionId" -> authenticator.id))
-                        .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                        .withCookies(authenticator.toCookie)
-                  )
-                case Some(identity) => // social user exists
-                  db.readOnlyMaster(attempts = 2) { implicit s =>
-                    socialRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
-                  } match {
-                    case None => // kifi user does not exist
-                      val payload = if (filledUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
-                        Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
-                      else
-                        Json.obj("code" -> "continue_signup")
-                      log.info(s"[accessTokenSignup($providerName)] no kifi user associated with ${filledUser.identityId} email=${filledUser.email}; payload=$payload")
-                      Authenticator.create(identity).fold(
-                        error => throw error,
-                        authenticator =>
-                          Ok(payload ++ Json.obj("sessionId" -> authenticator.id))
-                            .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                            .withCookies(authenticator.toCookie)
-                      )
-                    case Some(userId) =>
-                      val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
-                      Authenticator.create(identity).fold(
-                        error => throw error,
-                        authenticator =>
-                          Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
-                            .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                            .withCookies(authenticator.toCookie)
-                      )
-                  }
-
-              }
+        provider.getUserProfileInfo(OAuth2AccessToken(oauth2InfoOrig.accessToken)) flatMap { profileInfo =>
+          val filledUser = SecureSocialAdaptor.toSocialUser(profileInfo, AuthenticationMethod.OAuth2)
+          val longTermTokenInfoF = provider.exchangeLongTermToken(oauth2InfoOrig) recover {
+            case t: Throwable =>
+              airbrakeNotifier.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during token exchange; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+              OAuth2TokenInfo.fromOAuth2Info(oauth2InfoOrig)
+          }
+          longTermTokenInfoF map { oauth2InfoNew =>
+            val updatedUser = filledUser.copy(oAuth2Info = Some(oauth2InfoNew))
+            authCommander.getSocialUserOpt(updatedUser.identityId) match {
+              case None =>
+                db.readWrite { implicit rw =>
+                  // userId must not be set in this case
+                  socialRepo.save(SocialUserInfo(
+                    fullName = updatedUser.fullName,
+                    pictureUrl = updatedUser.avatarUrl,
+                    state = SocialUserInfoStates.FETCHED_USING_SELF,
+                    socialId = SocialId(updatedUser.identityId.userId),
+                    networkType = SocialNetworkType(updatedUser.identityId.providerId),
+                    credentials = Some(updatedUser)
+                  ))
+                } tap { sui => log.info(s"[doAccessTokenSignup] created socialUserInfo(${sui.id}) $updatedUser") }
+                val payload = if (updatedUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
+                  Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
+                else
+                  Json.obj("code" -> "continue_signup")
+                log.info(s"[accessTokenSignup($providerName)] created social user(${updatedUser.identityId}) email=${updatedUser.email}; payload=$payload")
+                Authenticator.create(updatedUser).fold(
+                  error => throw error,
+                  authenticator =>
+                    Ok(payload ++ Json.obj("sessionId" -> authenticator.id))
+                      .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                      .withCookies(authenticator.toCookie)
+                )
+              case Some(identity) => // social user exists
+                db.readOnlyMaster(attempts = 2) { implicit s =>
+                  socialRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
+                } match {
+                  case None => // kifi user does not exist
+                    val payload = if (updatedUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
+                      Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
+                    else
+                      Json.obj("code" -> "continue_signup")
+                    log.info(s"[accessTokenSignup($providerName)] no kifi user associated with ${updatedUser.identityId} email=${updatedUser.email}; payload=$payload")
+                    Authenticator.create(identity).fold(
+                      error => throw error,
+                      authenticator =>
+                        Ok(payload ++ Json.obj("sessionId" -> authenticator.id))
+                          .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                          .withCookies(authenticator.toCookie)
+                    )
+                  case Some(userId) =>
+                    val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
+                    Authenticator.create(identity).fold(
+                      error => throw error,
+                      authenticator =>
+                        Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
+                          .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                          .withCookies(authenticator.toCookie)
+                    )
+                }
             }
+          }
+        } recover {
+          case t: Throwable =>
+            airbrakeNotifier.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+            BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
   }
 
-  def doAccessTokenLogin(providerName: String, oAuth2Info: OAuth2Info)(implicit request: Request[JsValue]): Result = {
-    (for {
-      provider <- Registry.providers.get(providerName)
-    } yield {
-      Try {
-        provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oAuth2Info)))
-      } match {
-        case Success(socialUser) =>
+  def doAccessTokenLogin(providerName: String, oAuth2Info: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
+    providerRegistry.get(ProviderIds.toProviderId(providerName)) match {
+      case None =>
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
+      case Some(provider) =>
+        provider.getUserProfileInfo(OAuth2AccessToken(oAuth2Info.accessToken)) map { info =>
+          val socialUser = SecureSocialAdaptor.toSocialUser(info, AuthenticationMethod.OAuth2)
           authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
-        case Failure(t) =>
-          log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during fillProfile; token=${oAuth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
-          BadRequest(Json.obj("error" -> "invalid_token"))
-      }
-    }) getOrElse {
-      BadRequest(Json.obj("error" -> "invalid_arguments"))
+        } recover {
+          case t: Throwable =>
+            log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oAuth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+            BadRequest(Json.obj("error" -> "invalid_token"))
+        }
     }
   }
 

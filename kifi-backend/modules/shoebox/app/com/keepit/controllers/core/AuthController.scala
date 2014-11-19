@@ -194,10 +194,10 @@ class AuthController @Inject() (
     }
   }
 
-  def accessTokenLogin(providerName: String) = MaybeUserAction(parse.tolerantJson) { implicit request =>
+  def accessTokenLogin(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
     request.body.asOpt[OAuth2TokenInfo] match {
       case None =>
-        BadRequest(Json.obj("error" -> "invalid_token"))
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
       case Some(oauth2Info) =>
         authHelper.doAccessTokenLogin(providerName, oauth2Info)
     }

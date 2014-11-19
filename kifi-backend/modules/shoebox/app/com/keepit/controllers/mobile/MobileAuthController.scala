@@ -129,10 +129,10 @@ class MobileAuthController @Inject() (
     }
   }
 
-  def accessTokenLogin(providerName: String) = MaybeUserAction(parse.tolerantJson) { implicit request =>
+  def accessTokenLogin(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
     request.body.asOpt[OAuth2TokenInfo] match {
       case None =>
-        BadRequest(Json.obj("error" -> "invalid_token"))
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
       case Some(oauth2Info) =>
         authHelper.doAccessTokenLogin(providerName, oauth2Info)
     }
@@ -201,7 +201,7 @@ class MobileAuthController @Inject() (
           } match {
             case Failure(err) => BadRequest(Json.obj("error" -> "invalid token"))
             case Success(filledUser) =>
-              val saved = UserService.save(UserIdentity(Some(request.userId), filledUser)) // todo: check allowSignup
+              val saved = UserService.save(UserIdentity(Some(request.userId), filledUser))
               log.info(s"[accessTokenSignup($providerName)] created social user: $saved")
               Ok(Json.obj("code" -> "link_created"))
           }

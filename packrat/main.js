@@ -102,7 +102,6 @@ PageData.prototype = {
     this.keeps = o.keeps || [];
     this.position = o.position;
     this.neverOnSite = o.neverOnSite;
-    this.sensitive = o.sensitive;
     this.shown = o.shown;
     this.keepers = o.keepers || [];
   },
@@ -529,7 +528,6 @@ function emitSettings(tab) {
     popups: enabled('popups'),
     emails: prefs ? prefs.messagingEmails : true,
     keeper: enabled('keeper'),
-    sensitive: enabled('sensitive'),
     search: enabled('search'),
     maxResults: prefs ? prefs.maxResults : 1
   }, {queue: 1});
@@ -799,11 +797,12 @@ api.port.on({
     ajax('POST', '/ext/pref/keeperHidden', {url: tab.url, suppress: data});
     pageData[tab.nUri].neverOnSite = !!data;
   },
-  get_suppressed: function(_, respond, tab) {
+  get_menu_data: function(_, respond, tab) {
     var d = pageData[tab.nUri];
-    if (d) {
-      respond(d.neverOnSite);
-    }
+    respond({
+      suppressed: d && d.neverOnSite,
+      packaged: api.isPackaged()
+    });
   },
   silence: function (minutes) {
     if (silence) {
@@ -1128,18 +1127,10 @@ api.port.on({
       store('_' + o.name, o.value ? 'y' : 'n');
       onSettingCommitted();
       if (o.name === 'keeper') {
-        var sensitive = enabled('sensitive');
         api.tabs.each(function (tab) {
           var d = tab.nUri && pageData[tab.nUri];
-          if (d && !d.neverOnSite && !(d.sensitive && sensitive)) {
+          if (d && !d.neverOnSite) {
             api.tabs.emit(tab, 'show_keeper', o.value);
-          }
-        });
-      } else if (o.name === 'sensitive') {
-        api.tabs.each(function (tab) {
-          var d = tab.nUri && pageData[tab.nUri];
-          if (d && !d.neverOnSite && d.sensitive) {
-            api.tabs.emit(tab, 'show_keeper', !o.value);
           }
         });
       }
@@ -1147,7 +1138,7 @@ api.port.on({
     tracker.track('user_changed_setting', {
       category:
         ~['sounds','popups','emails'].indexOf(o.name) ? 'notification' :
-        ~['keeper','sensitive'].indexOf(o.name) ? 'keeper' :
+        'keeper' === o.name ? 'keeper' :
         'search' === o.name ? 'search' : 'unknown',
       type: 'search' === o.name ? 'inGoogle' : o.name,
       value: o.value ? 'on' : 'off'
@@ -1924,7 +1915,7 @@ function kififyWithPageData(tab, d) {
   setIcon(d.howKept(), tab);
   if (silence) return;
 
-  var hide = d.neverOnSite || !enabled('keeper') || d.sensitive && enabled('sensitive');
+  var hide = d.neverOnSite || !enabled('keeper');
   api.tabs.emit(tab, 'init', {  // harmless if sent to same page more than once
     kept: d.howKept(),
     position: d.position,

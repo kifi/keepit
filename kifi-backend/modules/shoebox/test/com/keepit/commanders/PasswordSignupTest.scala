@@ -10,6 +10,7 @@ import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule }
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.oauth2.FakeOAuth2ConfigurationModule
 import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.controllers.core.AuthController
@@ -58,7 +59,8 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     KeepImportsModule(),
-    FakeCuratorServiceClientModule()
+    FakeCuratorServiceClientModule(),
+    FakeOAuth2ConfigurationModule()
   )
 
   "AuthController" should {

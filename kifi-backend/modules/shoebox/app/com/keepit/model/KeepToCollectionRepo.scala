@@ -9,6 +9,8 @@ import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
+import scala.slick.jdbc.StaticQuery
+
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]]
@@ -123,12 +125,10 @@ class KeepToCollectionRepoImpl @Inject() (
     (for (c <- rows if c.collectionId === collId && c.state =!= excludeState.orNull) yield c).list
 
   private[model] def count(collId: Id[Collection])(implicit session: RSession): Int = {
-    import keepRepo.db.Driver.simple._
-    Query((for {
-      kc <- rows if kc.collectionId === collId && kc.state === KeepToCollectionStates.ACTIVE
-      c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
-      k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
-    } yield c).length).firstOption.getOrElse(0)
+    import StaticQuery.interpolation
+    val q = sql"""select count(*) from keep_to_collection kc, collection c, bookmark k
+      where kc.collection_id = ${collId} and kc.state = '#${KeepToCollectionStates.ACTIVE}' and kc.collection_id = c.id and c.state = '#${CollectionStates.ACTIVE}' and kc.bookmark_id = k.id and k.state = '#${KeepStates.ACTIVE}'"""
+    q.as[Int].firstOption.getOrElse(0)
   }
 
   def getOpt(bookmarkId: Id[Keep], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection] = {

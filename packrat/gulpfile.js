@@ -26,7 +26,7 @@ var outDir = 'out';
 var chromeAdapterFiles = ['adapters/chrome/**', '!adapters/chrome/manifest.json'];
 var firefoxAdapterFiles = ['adapters/firefox/**', '!adapters/firefox/package.json'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
-var resourceFiles = ['icons/*.png', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
+var resourceFiles = ['icons/url_*.png', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
 var rwsocketScript = 'scripts/lib/rwsocket.js';
 var backgroundScripts = [
   'main.js',
@@ -122,6 +122,12 @@ gulp.task('copy', function () {
     .pipe(chromeInjectionFooter())
     .pipe(gulp.dest(outDir + '/chrome'));
 
+  var chromeIcons = gulp.src('icons/kifi.{48,128,256}.png')
+    .pipe(gulp.dest(outDir + '/chrome/icons'));
+
+  var firefoxIcons = gulp.src('icons/kifi.{48,64}.png')
+    .pipe(gulp.dest(outDir + '/firefox/data/icons'));
+
   var rwsocket = gulp.src(rwsocketScript)
     .pipe(cache('rwsocket'))
     .pipe(gulp.dest(outDir + '/chrome'))
@@ -135,7 +141,11 @@ gulp.task('copy', function () {
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
-  return es.merge(chromeAdapters, firefoxAdapters, sharedAdapters, firefoxResources, chromeResources, rwsocket, background);
+  return es.merge(
+    chromeAdapters, firefoxAdapters, sharedAdapters,
+    chromeResources, firefoxResources,
+    chromeIcons, firefoxIcons,
+    rwsocket, background);
 });
 
 gulp.task('html2js', function () {
@@ -376,7 +386,7 @@ gulp.task('zip-chrome', ['build', 'config-package-chrome'], function () {
 });
 
 gulp.task('crx-chrome-dev', ['build', 'config-package-chrome'], shell.task([[
-  'cp icons/dev/* out/chrome/icons/',
+  'cp icons/dev/kifi.{48,128,256}.png out/chrome/icons/',
   '/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome' +
   ' --pack-extension=out/chrome --pack-extension-key=kifi-dev-chrome.pem > /dev/null',
   'mv out/chrome.crx out/kifi-dev.crx',

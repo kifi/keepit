@@ -27,20 +27,12 @@ angular.module('kifi')
     }).when('/profile', {
       templateUrl: 'profile/profile.tpl.html',
       controller: 'ProfileCtrl'
-    }).when('/kifeeeed', {
-      templateUrl: 'recos/adhoc.tpl.html'
     }).when('/recommendations', {
       redirectTo: '/'
-    }).when('/keeps', {
-      templateUrl: 'home/home.tpl.html',
-      controller: 'HomeCtrl'
     }).when('/find', {
       templateUrl: 'search/search.tpl.html',
       controller: 'SearchCtrl',
       reloadOnSearch: false
-    }).when('/tag/:tagId', {
-      templateUrl: 'tagKeeps/tagKeeps.tpl.html',
-      controller: 'TagKeepsCtrl'
     }).when('/keep/:keepId', {
       templateUrl: 'keep/keepView.tpl.html',
       controller: 'KeepViewCtrl'

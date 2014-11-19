@@ -176,17 +176,14 @@ class InviteCommander @Inject() (
         }
       }
 
-      val otherSocialInvites = for {
-        su <- userSocialAccounts
-        invite <- invitationRepo.getByRecipientSocialUserId(su.id.get)
-      } yield (invite, su.networkType)
+      val networkTypes = userSocialAccounts.map { su => su.id.get -> su.networkType }.toMap
+      val verifiedEmails = userEmailAccounts.filter(_.verified)
+      val otherInvites = invitationRepo.getByRecipientSocialUserIdsAndEmailAddresses(userSocialAccounts.map(_.id.get).toSet, verifiedEmails.map(_.address).toSet)
 
-      val otherEmailInvites = for {
-        emailAccount <- userEmailAccounts if emailAccount.verified
-        invite <- invitationRepo.getByRecipientEmailAddress(emailAccount.address)
-      } yield (invite, SocialNetworks.EMAIL)
-
-      val existingInvites = otherSocialInvites.toSet ++ otherEmailInvites.toSet ++ cookieInvite.toSet
+      val (invitesWithSocialUserId, invitesWithoutSocialUserId) = otherInvites.partition(_.recipientSocialUserId.isDefined)
+      val otherSocialInvites = invitesWithSocialUserId.map(invite => (invite, networkTypes(invite.recipientSocialUserId.get)))
+      val otherEmailInvites = invitesWithoutSocialUserId.collect { case invite if invite.recipientEmailAddress.isDefined => (invite, SocialNetworks.EMAIL) }
+      val existingInvites = otherSocialInvites.toSet ++ otherEmailInvites ++ cookieInvite
 
       if (existingInvites.isEmpty) {
         val fakeFortyTwoInvite = invitationRepo.save(Invitation(
