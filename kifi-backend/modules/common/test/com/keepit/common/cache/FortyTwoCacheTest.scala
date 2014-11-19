@@ -151,7 +151,7 @@ class FortyTwoCacheTest extends Specification with CommonTestInjector {
     }
   }
 
-  "getOldAndAsyncRefresh" should {
+  "getOrElseFutureOpt predicate" should {
     withInjector(cacheTestModules: _*) { implicit injector =>
 
       val cache = new IntWithTimeCache()(inject[CacheStatistics],
@@ -169,44 +169,44 @@ class FortyTwoCacheTest extends Specification with CommonTestInjector {
       }
       val client = new SquareClient()
       val t0 = currentDateTime
-      val x = IntWithTime(4, t0.minusMillis(100))
+      val x = IntWithTime(4, t0.minusMillis(1000))
       val key = IntWithTimeCacheKey(2)
 
+      def dataIsFresh(freshInterval: Long)(x: Option[IntWithTime]): Boolean = {
+        x.isEmpty || x.get.timestamp.plus(freshInterval).getMillis > currentDateTime.getMillis
+      }
+
       cache.set(key, x)
-      "get value without calling client if data is considered fresh" in {
-        val res = cache.getOldAndAsyncRefresh(key, bePatient = true, 10000)(obj => obj.timestamp) {
+      "get value without calling client if predicate returns true" in {
+        val res = cache.getOrElseFutureOpt(key, dataIsFresh(10000)) {
           client.getSquare(key.key)
         }
 
         Await.result(res, Duration(100, "millis")).get.value === 4
-        client.getCounter == 0
+        client.getCounter === 0
       }
 
-      "get old value and call client if data is old" in {
-        val res2 = cache.getOldAndAsyncRefresh(key, bePatient = true, 1)(obj => obj.timestamp) {
+      "call client if predicate fails, and refresh data" in {
+        val res2 = cache.getOrElseFutureOpt(key, dataIsFresh(200)) {
           client.getSquare(key.key)
         }
 
         Await.result(res2, Duration(100, "millis")).get.value === 4
-        client.getCounter == 1
+        client.getCounter === 1
+
       }
 
-      "when not patient, just return None if key is missing" in {
-        val res3 = cache.getOldAndAsyncRefresh(IntWithTimeCacheKey(3), bePatient = false, 1)(obj => obj.timestamp) {
+      "when key not found, call client" in {
+        cache.get(IntWithTimeCacheKey(3)) === None
+
+        val res3 = cache.getOrElseFutureOpt(IntWithTimeCacheKey(3), dataIsFresh(10000)) {
           client.getSquare(3)
         }
 
-        Await.result(res3, Duration(100, "millis")) === None
-        client.getCounter == 1
-      }
+        Await.result(res3, Duration(100, "millis")).get.value === 9
+        client.getCounter === 2
 
-      "when patient, call client" in {
-        val res4 = cache.getOldAndAsyncRefresh(IntWithTimeCacheKey(3), bePatient = true, 10000)(obj => obj.timestamp) {
-          client.getSquare(3)
-        }
-
-        Await.result(res4, Duration(100, "millis")).get.value === 9
-        client.getCounter == 2
+        cache.get(IntWithTimeCacheKey(3)).get.value === 9
       }
     }
   }

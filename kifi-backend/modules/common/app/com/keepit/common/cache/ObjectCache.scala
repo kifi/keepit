@@ -73,9 +73,13 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 
-  def getOrElseFuture(key: K)(orElse: => Future[T]): Future[T] = {
+  def getOrElseFuture(key: K, predicate: T => Boolean = Function.const(true))(orElse: => Future[T]): Future[T] = {
     get(key) match {
-      case Some(value) => Promise.successful(value).future
+      case Some(value) =>
+        if (!predicate(value)) {
+          orElse.onSuccess { case value => set(key, value) }
+        }
+        Promise.successful(value).future
       case None =>
         val valueFuture = orElse
         valueFuture.onSuccess { case value => set(key, value) }
@@ -83,9 +87,13 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 
-  def getOrElseFutureOpt(key: K)(orElse: => Future[Option[T]]): Future[Option[T]] = {
+  def getOrElseFutureOpt(key: K, predicate: Option[T] => Boolean = Function.const(true))(orElse: => Future[Option[T]]): Future[Option[T]] = {
     internalGet(key) match {
-      case Found(valueOpt) => Promise.successful(valueOpt).future
+      case Found(valueOpt) =>
+        if (!predicate(valueOpt)) {
+          orElse.onSuccess { case valOpt => set(key, valOpt) }
+        }
+        Future.successful(valueOpt)
       case _ =>
         val valueOptFuture = orElse
         valueOptFuture.onSuccess { case valueOpt => set(key, valueOpt) }

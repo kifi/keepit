@@ -9,6 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.graph.model._
 import com.keepit.model.{ SocialUserInfo, NormalizedURI, User }
 import scala.concurrent.Future
+import com.keepit.common.time._
 import com.keepit.common.routes.Graph
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.amazon.AmazonInstanceId
@@ -125,8 +126,13 @@ class GraphServiceClientImpl @Inject() (
   }
 
   def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]] = {
+
+    def dataIsFresh(x: Option[SociallyRelatedEntities]): Boolean = {
+      x.isDefined && (x.get.timestamp.plus(ONE_HOUR_MILLIS).getMillis > currentDateTime.getMillis)
+    }
+
     cacheProvider.relatedEntitiesCache.
-      getOldAndAsyncRefresh(SociallyRelatedEntitiesCacheKey(userId), bePatient, ONE_HOUR_MILLIS * 12)(ent => ent.timestamp) {
+      getOrElseFutureOpt(SociallyRelatedEntitiesCacheKey(userId), dataIsFresh) {
         call(Graph.internal.refreshSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r => Some(r.json.as[SociallyRelatedEntities]) }
       }
   }
