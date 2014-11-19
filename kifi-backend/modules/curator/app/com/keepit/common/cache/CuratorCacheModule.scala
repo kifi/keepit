@@ -164,7 +164,7 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides @Singleton
   def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedEntitiesCache(stats, accessLog, (outerRepo, 1 day))
+    new SociallyRelatedEntitiesCache(stats, accessLog, (outerRepo, 7 day))
 
   @Singleton
   @Provides
