@@ -96,6 +96,11 @@ class TokenAuthTest extends Specification with ShoeboxApplicationInjector {
         (json \ "code").as[String] === "continue_signup" // success!
         val sessionId = (json \ "sessionId").as[String] // sessionId should be set
         ExternalId.UUIDPattern.pattern.matcher(sessionId).matches() === true
+
+        val profile = inject[FakeFacebookOAuthProvider].profileInfo
+        val suiOpt = db.readOnlyMaster { implicit ro => socialUserInfoRepo.getOpt(SocialId(profile.userId.id), SocialNetworks.FACEBOOK) }
+        suiOpt.isDefined === true
+        suiOpt.exists { sui => sui.userId.isEmpty } === true // userId must not be set in this case
       }
     }
     "(signup) report invalid token when fb reports error" in {
@@ -119,6 +124,10 @@ class TokenAuthTest extends Specification with ShoeboxApplicationInjector {
         val json = contentAsJson(result)
         (json \ "error").as[String] === "invalid_token" // success!
         (json \ "sessionId").asOpt[String].isDefined === false // sessionId shouldn't be set
+
+        val profile = inject[FakeFacebookOAuthProvider].profileInfo
+        val suiOpt = db.readOnlyMaster { implicit ro => socialUserInfoRepo.getOpt(SocialId(profile.userId.id), SocialNetworks.FACEBOOK) }
+        suiOpt.isDefined === false
       }
     }
     "(signup) present connect option when user tries to sign-up with social when email already registered" in {
@@ -148,7 +157,7 @@ class TokenAuthTest extends Specification with ShoeboxApplicationInjector {
         val suiOpt = db.readOnlyMaster { implicit ro =>
           socialUserInfoRepo.getOpt(SocialId(lnkdInfo.userId.id), SocialNetworks.LINKEDIN)
         }
-        suiOpt.isDefined == true
+        suiOpt.isDefined === true
         suiOpt.exists { sui => sui.userId.isEmpty } === true // userId must not be set in this case
       }
     }
@@ -175,6 +184,16 @@ class TokenAuthTest extends Specification with ShoeboxApplicationInjector {
         (json \ "code").as[String] === "user_logged_in" // success!
         val sessionId = (json \ "sessionId").as[String] // sessionId should be set
         ExternalId.UUIDPattern.pattern.matcher(sessionId).matches() === true
+
+        val suiOpt = db.readOnlyMaster { implicit ro => socialUserInfoRepo.getOpt(SocialId(socialUser.identityId.userId), SocialNetworks.FACEBOOK) }
+        suiOpt.isDefined === true
+        val userIdOpt = for {
+          sui <- suiOpt
+          userId <- sui.userId
+        } yield {
+          userId
+        }
+        userIdOpt.exists(_ == sess.getUserId.get) === true
       }
     }
     "(login) report user not found when not registered" in {
