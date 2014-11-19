@@ -1,43 +1,16 @@
 describe('kifi angular logged-out library test suite', function () {
   'use strict';
 
-  //
-  // Helper functions.
-  //
-  function logoutUserWithCookies() {
-    browser.manage().deleteCookie('KIFI_SECURESOCIAL');
-    browser.manage().deleteCookie('KIFI_SESSION');
-  }
+  var util = require('./util/util');
 
-  function checkJSErrors() {
-    // Check for JavaScript errors that are in the Kifi minified JS file.
-    browser.manage().logs().get('browser').then(function (browserLog) {
-      var kifiJsErrors = [];
-      browserLog.forEach(function (log) {
-        if (log.message.match(/dist\/lib\.min\.\d+\.js/)) {
-          kifiJsErrors.push(log);
-        }
-      });
-
-      expect(kifiJsErrors.length).toEqual(0);
-      if (kifiJsErrors.length > 0) {
-        console.log('log: ' + require('util').inspect(kifiJsErrors));
-      }
-    });
-  }
-
-
-  //
-  // Test cases.
-  //
   describe('Kifi library page for logged-out users', function () {
     beforeEach(function () {
       browser.get('/lydialaurenson/halloween');
-      logoutUserWithCookies();
+      util.logoutUserWithCookies();
     });
 
     afterEach(function () {
-      checkJSErrors();
+      util.checkJSErrors();
     });
 
     it('should have the correct title', function () {
