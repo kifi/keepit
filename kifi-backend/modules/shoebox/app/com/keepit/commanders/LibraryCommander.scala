@@ -1114,6 +1114,17 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def updateLastEmailSent(userId: Id[User], keeps: Seq[Keep]): Unit = {
+    // persist when we last sent an email for each library membership
+    db.readWrite { implicit rw =>
+      keeps.groupBy(_.libraryId).collect { case (Some(libId), _) => libId } foreach { libId =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId) map { libMembership =>
+          libraryMembershipRepo.updateLastEmailSent(libMembership.id.get)
+        }
+      }
+    }
+  }
+
 }
 
 sealed abstract class LibraryError(val message: String)

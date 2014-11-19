@@ -33,28 +33,6 @@ class HomeControllerTest extends Specification with ShoeboxTestInjector {
   )
 
   "HomeController" should {
-    val mobileHomeHtml = views.html.mobile.MobileRedirect("/")
-
-    "home action" should {
-      def testUserAgent(userAgent: String) = {
-        withInjector(modules: _*) { implicit injector =>
-          val controller = inject[HomeController]
-          val call = controller.home()
-          val result = call(FakeRequest("GET", "/").withHeaders("User-Agent" -> userAgent))
-          val body = contentAsString(result)
-          body === mobileHomeHtml.body
-        }
-      }
-
-      "redirect to mobile redirect page for iPhone" in {
-        testUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 7_0 like Mac OS X; en-us) AppleWebKit/537.51.1 (KHTML, like Gecko) Version/7.0 Mobile/11A465 Safari/9537.53")
-      }
-
-      "redirect to mobile redirect page for Android" in {
-        testUserAgent("Mozilla/5.0 (Linux; Android 4.2.1; en-us; Nexus 4 Build/JOP40D) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.166 Mobile Safari/535.19")
-      }
-    }
-
     "iPhoneAppStoreRedirectWithTracking" should {
       "render HTML that redirects the user to the iOS app" in {
         withDb(modules: _*) { implicit injector =>

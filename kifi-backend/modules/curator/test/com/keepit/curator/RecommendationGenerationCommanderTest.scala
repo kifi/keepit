@@ -110,6 +110,8 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
       Await.result(seedCommander.ingestAllKeeps(), Duration(10, "seconds"))
       db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
 
+      val nextIdxToCheck = shoebox.callsGetToCandidateURIs.size
+
       val futUnit = commander.precomputeRecommendations()
       Await.result(futUnit, Duration(10, "seconds"))
 
@@ -120,9 +122,9 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
       // test that precompute for keeps 101-120 was called; if it is greater than 4 then
       // it must has been called again for the first batch of keeps and the cache isn't working
       shoebox.callsGetToCandidateURIs.size < 5
-      shoebox.callsGetToCandidateURIs.size > 2
-      shoebox.callsGetToCandidateURIs(2)(0) === Id[NormalizedURI](101)
-      shoebox.callsGetToCandidateURIs(2)(19) === Id[NormalizedURI](120)
+      shoebox.callsGetToCandidateURIs.size > 1
+      shoebox.callsGetToCandidateURIs(nextIdxToCheck)(0) === Id[NormalizedURI](101)
+      shoebox.callsGetToCandidateURIs(nextIdxToCheck)(19) === Id[NormalizedURI](120)
     }
   }
 }
