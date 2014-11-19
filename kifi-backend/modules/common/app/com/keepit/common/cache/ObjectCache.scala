@@ -101,24 +101,6 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 
-  def getOldAndAsyncRefresh(key: K, bePatient: Boolean, freshInterval: Long)(getTimeStamp: T => DateTime)(refresh: => Future[Option[T]]): Future[Option[T]] = {
-    get(key) match {
-      case Some(value) =>
-        if (getTimeStamp(value).plus(freshInterval) < currentDateTime) {
-          refresh.onSuccess { case valueOpt => set(key, valueOpt) }
-        }
-        Future.successful(Some(value))
-      case None =>
-        if (bePatient) {
-          val valueOptF = refresh
-          valueOptF.onSuccess { case valueOpt => set(key, valueOpt) }
-          valueOptF
-        } else {
-          Future.successful(None)
-        }
-    }
-  }
-
   //
   // bulk get API
   //
