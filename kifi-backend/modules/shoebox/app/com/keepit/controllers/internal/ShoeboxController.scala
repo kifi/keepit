@@ -480,7 +480,7 @@ class ShoeboxController @Inject() (
     Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, authToken, passPhrase)))
   }
 
-  def newKeepsForEmailInLibrary(userId: Id[User], max: Int) = Action { request =>
+  def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = Action { request =>
     val keeps = newKeepsInLibraryCommander.getLastEmailViewedKeeps(userId, max)
     libraryCommander.updateLastEmailSent(userId, keeps)
     Ok(Json.toJson(keeps))
