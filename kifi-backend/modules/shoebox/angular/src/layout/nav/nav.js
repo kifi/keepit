@@ -18,6 +18,7 @@ angular.module('kifi')
         var allUserLibs = [];
         var w = angular.element($window);
         var scrollableLibList = element.find('.kf-scrollable-libs');
+        var antiscrollLibList = scrollableLibList.find('.antiscroll-inner');
 
         //
         // Scope data.
@@ -34,9 +35,12 @@ angular.module('kifi')
           friendsNotifCount: friendService.requests.length
         };
 
+        scope.currentStickTitle = 'mine';
+
         //
         // Internal methods.
         //
+
         function setLibListHeight() {
           if (scrollableLibList.offset()) {
             scrollableLibList.height(w.height() - (scrollableLibList.offset().top - w[0].pageYOffset));
@@ -59,6 +63,10 @@ angular.module('kifi')
           scope.$broadcast('refreshScroll');
         }
 
+        //
+        // Scope methods.
+        //
+
         // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
         var calloutName = 'library_callout_shown';
         scope.showCallout = function () {
@@ -71,10 +79,6 @@ angular.module('kifi')
           profileService.savePrefs(save);
         };
 
-
-        //
-        // Scope methods.
-        //
         scope.addLibrary = function () {
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html'
@@ -84,6 +88,14 @@ angular.module('kifi')
         scope.isActive = function (path) {
           var loc = $location.path();
           return loc === path || util.startsWith(loc, path + '/');
+        };
+
+        scope.padList = function () {
+          if (scope.sortingMenu.myLibsFirst) {
+            return scope.myLibsToShow.length > 0;
+          } else {
+            return scope.userLibsToShow.length > 0;
+          }
         };
 
         //
@@ -141,6 +153,7 @@ angular.module('kifi')
           return scope.sortingMenu.myLibsFirst;
         }, function () {
           scope.changeList();
+          setCurrentStickTitle();
         });
 
         // on resizing window -> trigger new turn -> reset library list height
@@ -171,6 +184,38 @@ angular.module('kifi')
             lastHeight = scrollableLibList.height(); // probably a better way to do this - sometimes scrollbar is buggy but this secures the height
           }
         }, 100);
+
+        antiscrollLibList.bind('scroll', _.debounce(function() {
+          var lastStickTitle = scope.currentStickTitle;
+          setCurrentStickTitle();
+          if (lastStickTitle !== scope.currentStickTitle) {
+            scope.$apply();
+          }
+        }, 10));
+
+        function setCurrentStickTitle() {
+          var offset = antiscrollLibList.scrollTop();
+          var maxUserLibsOffset, maxMyLibsOffset;
+
+          if (scope.sortingMenu.myLibsFirst) { // mine, you follow, invited
+            maxMyLibsOffset = scope.myLibsToShow.length * 53 + 35;
+            maxUserLibsOffset = maxMyLibsOffset + scope.userLibsToShow.length * 53 + 40;
+            if (offset < maxMyLibsOffset) {
+              scope.currentStickTitle = 'mine';
+            } else if (offset < maxUserLibsOffset) {
+              scope.currentStickTitle = 'follow';
+            } else {
+              scope.currentStickTitle = 'invites';
+            }
+          } else { // all, invited
+            maxUserLibsOffset = scope.userLibsToShow.length * 53 + 35;
+            if (offset < maxUserLibsOffset) {
+              scope.currentStickTitle = 'all';
+            } else {
+              scope.currentStickTitle = 'invites';
+            }
+          }
+        }
 
 
         //

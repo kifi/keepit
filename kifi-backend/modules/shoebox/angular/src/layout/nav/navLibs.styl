@@ -18,15 +18,22 @@
   padding: 8px 0 0 0
 
 .kf-nav-lib-separator
+  position: relative
   margin-bottom: 10px
   line-height: 30px
   width: 216px
   border-radius: 4px
   background-color: #e8e8e8
+  z-index: 2
+
+  &.sticky
+    position: fixed
+    top: 335px
 
 .kf-nav-lib-separator-title
   padding-left: 45px
   font-size: 11px
+  text-transform: uppercase
   color: #5d5d5d
 
 ////////////////////////////
@@ -87,8 +94,8 @@
 //////////////////////////////////////
 
 .kf-scrollable-libs
-  width: calc(100% + 40px)
   position: relative
+  width: calc(100% + 40px)
 
   // This is a hack to hide the scrollbar
   // (cf. comments in scrollbar.js)
@@ -97,13 +104,15 @@
     .kf-nav-lib-users
       width: calc(100%)
 
-
+      &.pad-lib
+        padding-top: 35px
 
 ////////////////////////////////////
 ////// Library Filtering Box ///////
 ////////////////////////////////////
 
 .kf-lib-search
+  display: inline-block
   width: calc(100% + 40px)
 
 .kf-lib-input-box
@@ -184,7 +193,7 @@
   top: 30px
   left: 65px
   width: 185px
-  z-index: 1
+  z-index: 5
   background-color: #fff
   border-radius: 8px
   border: 1px solid separatorColor
