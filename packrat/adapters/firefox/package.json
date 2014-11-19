@@ -7,6 +7,8 @@
   "homepage": "https://www.kifi.com/",
   "version": "see build.properties",
   "id": "kifi@42go.com",
+  "icon": "data/icons/kifi.48.png",
+  "icon64": "data/icons/kifi.64.png",
   "permissions": {
     "cross-domain-content": ["https://www.kifi.com"]
   }
