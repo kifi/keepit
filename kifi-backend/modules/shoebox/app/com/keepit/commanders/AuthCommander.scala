@@ -134,11 +134,24 @@ class AuthCommander @Inject() (
         avatarUrl = GravatarHelper.avatarFor(email.address),
         authMethod = AuthenticationMethod.UserPassword,
         passwordInfo = Some(passwordInfo)
-      ),
-      isComplete = isComplete
+      )
     )
 
-    UserService.save(newIdentity) // Kifi User is created here if it doesn't exist
+    val savedIdentity = UserService.save(newIdentity) // Kifi User is created here if it doesn't exist
+    if (!isComplete) { // fix-up: with UserIdentity.isComplete gone, UserService.save creates user in ACTIVE state by default
+      db.readWrite { implicit rw =>
+        val maybeId = userIdOpt orElse socialUserInfoRepo.getOpt(SocialId(email.address), SocialNetworks.FORTYTWO).flatMap(_.userId)
+        maybeId match {
+          case None =>
+            airbrakeNotifier.notify(s"[saveUserPasswordIdentity] Kifi User for ${email} has not been created. savedIdentity=$savedIdentity")
+          case Some(userId) =>
+            val user = userRepo.get(userId)
+            if (user.state != UserStates.INCOMPLETE_SIGNUP) {
+              userRepo.save(user.copy(state = UserStates.INCOMPLETE_SIGNUP))
+            }
+        }
+      }
+    }
 
     val userIdFromEmailIdentity = for {
       identity <- identityOpt
