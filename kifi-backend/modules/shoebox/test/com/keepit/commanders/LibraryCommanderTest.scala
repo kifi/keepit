@@ -15,7 +15,7 @@ import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.test.ShoeboxTestInjector
+import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.joda.time.DateTime
 import org.specs2.mutable.{ SpecificationLike }
 
@@ -1079,6 +1079,22 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         members._2.map(_.userId) === Seq(userAgent.id.get, userIron.id.get)
         // invitees
         members._3.map(t => (t._1)) === Seq(Left(userHulk.id.get), Right(EmailAddress("thor@asgard.com")))
+      }
+    }
+
+    "updates last email sent for a list of keeps" in {
+      withDb(modules: _*) { implicit injector =>
+        val factory = inject[ShoeboxTestFactory]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience, keeps: Seq[Keep]) = factory.setupLibraryKeeps()
+        val libraryCommander = inject[LibraryCommander]
+
+        libraryCommander.updateLastEmailSent(userIron.id.get, keeps)
+
+        db.readWrite { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(libShield.id.get, userIron.id.get).map(_.lastEmailSent) must beSome
+          libraryMembershipRepo.getWithLibraryIdAndUserId(libScience.id.get, userIron.id.get).map(_.lastEmailSent) must beSome
+          libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userCaptain.id.get).get.lastEmailSent must beNone
+        }
       }
     }
   }

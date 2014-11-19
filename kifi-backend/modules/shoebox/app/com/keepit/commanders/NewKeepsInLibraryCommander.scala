@@ -63,10 +63,12 @@ class NewKeepsInLibraryCommander @Inject() (
     oldKeepsPerLib.sortBy(_.createdAt).take(max)
   }
 
-  def getLastViewdKeeps(userId: Id[User], max: Int): Seq[Keep] = {
+  def getLastEmailViewedKeeps(userId: Id[User], max: Int): Seq[Keep] = {
     //picking sample size that could be up to max * max * 2 from the set we're actually sorting
     //it a bit inefficient but in practice it will be a small number.
     val libraryKeeps = getOldestLeastViewdKeeps(userId, max * 2)
-    pickOldestKeepFromEachLibrary(libraryKeeps, max)
+
+    val keepsFromLibraries = pickOldestKeepFromEachLibrary(libraryKeeps, max)
+    keepsFromLibraries
   }
 }

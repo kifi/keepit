@@ -731,7 +731,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]] = {
-    call(Shoebox.internal.newKeepsInLibrary(userId, max)).map(_.json.as[Seq[Keep]])
+    call(Shoebox.internal.newKeepsInLibraryForEmail(userId, max)).map(_.json.as[Seq[Keep]])
   }
 
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) =
