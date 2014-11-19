@@ -70,7 +70,7 @@
                 ng-click="hideTooltip()"
                 itemprop="photo"
                 alt="{{follower.firstName}} {{follower.lastName}}"
-              ><span itemprop="name" style="display:none">{{follower.firstName}} {{follower.lastName}}</span>
+              ><meta itemprop="name" content="{{follower.firstName}} {{follower.lastName}}" />
             </span>
           </div>
           <div ng-if="numAdditionalFollowers" class="kf-keep-lib-additional-followers" ng-click="showFollowers()">
