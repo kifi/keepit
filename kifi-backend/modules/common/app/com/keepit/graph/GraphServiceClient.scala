@@ -127,12 +127,12 @@ class GraphServiceClientImpl @Inject() (
 
   def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]] = {
 
-    def dataIsFresh(x: Option[SociallyRelatedEntities]): Boolean = {
-      x.isDefined && (x.get.timestamp.plus(ONE_HOUR_MILLIS).getMillis > currentDateTime.getMillis)
+    def needRefresh(x: Option[SociallyRelatedEntities]): Boolean = {
+      x.isEmpty || (x.get.timestamp.plus(ONE_HOUR_MILLIS * 12).getMillis < currentDateTime.getMillis)
     }
 
     cacheProvider.relatedEntitiesCache.
-      getOrElseFutureOpt(SociallyRelatedEntitiesCacheKey(userId), dataIsFresh) {
+      getOrElseFutureOpt(SociallyRelatedEntitiesCacheKey(userId), needRefresh) {
         call(Graph.internal.refreshSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r => Some(r.json.as[SociallyRelatedEntities]) }
       }
   }

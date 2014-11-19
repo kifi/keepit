@@ -172,13 +172,13 @@ class FortyTwoCacheTest extends Specification with CommonTestInjector {
       val x = IntWithTime(4, t0.minusMillis(1000))
       val key = IntWithTimeCacheKey(2)
 
-      def dataIsFresh(freshInterval: Long)(x: Option[IntWithTime]): Boolean = {
-        x.isEmpty || x.get.timestamp.plus(freshInterval).getMillis > currentDateTime.getMillis
+      def needRefresh(freshInterval: Long)(x: Option[IntWithTime]): Boolean = {
+        x.isDefined && (x.get.timestamp.plus(freshInterval).getMillis < currentDateTime.getMillis)
       }
 
       cache.set(key, x)
       "get value without calling client if predicate returns true" in {
-        val res = cache.getOrElseFutureOpt(key, dataIsFresh(10000)) {
+        val res = cache.getOrElseFutureOpt(key, needRefresh(10000)) {
           client.getSquare(key.key)
         }
 
@@ -187,7 +187,7 @@ class FortyTwoCacheTest extends Specification with CommonTestInjector {
       }
 
       "call client if predicate fails, and refresh data" in {
-        val res2 = cache.getOrElseFutureOpt(key, dataIsFresh(200)) {
+        val res2 = cache.getOrElseFutureOpt(key, needRefresh(200)) {
           client.getSquare(key.key)
         }
 
@@ -199,7 +199,7 @@ class FortyTwoCacheTest extends Specification with CommonTestInjector {
       "when key not found, call client" in {
         cache.get(IntWithTimeCacheKey(3)) === None
 
-        val res3 = cache.getOrElseFutureOpt(IntWithTimeCacheKey(3), dataIsFresh(10000)) {
+        val res3 = cache.getOrElseFutureOpt(IntWithTimeCacheKey(3), needRefresh(10000)) {
           client.getSquare(3)
         }
 

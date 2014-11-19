@@ -1,5 +1,6 @@
 package com.keepit.common.cache
 
+import com.keepit.common.akka.SafeFuture
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import scala.concurrent._
@@ -35,9 +36,10 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 
-  def getOrElse(key: K)(orElse: => T): T = {
+  def getOrElse(key: K, needRefresh: T => Boolean = Function.const(false))(orElse: => T): T = {
     get(key) match {
       case Some(value) =>
+        if (needRefresh(value)) SafeFuture { set(key, orElse) }
         value
       case None =>
         val value = orElse
@@ -63,9 +65,11 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 
-  def getOrElseOpt(key: K)(orElse: => Option[T]): Option[T] = {
+  def getOrElseOpt(key: K, needRefresh: Option[T] => Boolean = Function.const(false))(orElse: => Option[T]): Option[T] = {
     internalGet(key) match {
-      case Found(valueOpt) => valueOpt
+      case Found(valueOpt) =>
+        if (needRefresh(valueOpt)) SafeFuture { set(key, orElse) }
+        valueOpt
       case _ =>
         val valueOpt = orElse
         set(key, valueOpt)
@@ -73,12 +77,10 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 
-  def getOrElseFuture(key: K, predicate: T => Boolean = Function.const(true))(orElse: => Future[T]): Future[T] = {
+  def getOrElseFuture(key: K, needRefresh: T => Boolean = Function.const(false))(orElse: => Future[T]): Future[T] = {
     get(key) match {
       case Some(value) =>
-        if (!predicate(value)) {
-          orElse.onSuccess { case value => set(key, value) }
-        }
+        if (needRefresh(value)) orElse.onSuccess { case value => set(key, value) }
         Promise.successful(value).future
       case None =>
         val valueFuture = orElse
@@ -87,12 +89,10 @@ trait ObjectCache[K <: Key[T], T] {
     }
   }
 
-  def getOrElseFutureOpt(key: K, predicate: Option[T] => Boolean = Function.const(true))(orElse: => Future[Option[T]]): Future[Option[T]] = {
+  def getOrElseFutureOpt(key: K, needRefresh: Option[T] => Boolean = Function.const(false))(orElse: => Future[Option[T]]): Future[Option[T]] = {
     internalGet(key) match {
       case Found(valueOpt) =>
-        if (!predicate(valueOpt)) {
-          orElse.onSuccess { case valOpt => set(key, valOpt) }
-        }
+        if (needRefresh(valueOpt)) orElse.onSuccess { case valOpt => set(key, valOpt) }
         Future.successful(valueOpt)
       case _ =>
         val valueOptFuture = orElse
