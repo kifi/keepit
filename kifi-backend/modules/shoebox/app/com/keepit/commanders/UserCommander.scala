@@ -640,7 +640,7 @@ class UserCommander @Inject() (
         }
 
         val mutualFriends = recommendedUsers.map { recommendedUserId =>
-          recommendedUserId -> (friends(userId) intersect friends(recommendedUserId))
+          recommendedUserId -> (friends.get(userId).getOrElse(Set.empty) intersect friends.get(recommendedUserId).getOrElse(Set.empty))
         }.toMap
 
         val (basicUsers, mutualFriendConnectionCounts) = db.readOnlyReplica { implicit session =>
