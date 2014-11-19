@@ -376,7 +376,7 @@ class FeedDigestEmailSender @Inject() (
     userExperimentCommander.getExperimentsByUser(userId) flatMap { experiments =>
       if (experiments.contains(ExperimentType.LIBRARIES)) {
         for {
-          keeps <- shoebox.newKeepsInLibrary(userId, LIBRARY_KEEPS_TO_FETCH)
+          keeps <- shoebox.newKeepsInLibraryForEmail(userId, LIBRARY_KEEPS_TO_FETCH)
           dedupedKeeps = keeps.filterNot(c => exclude.contains(c.uriId))
           candidates <- getLibraryKeepAttributions(userId, dedupedKeeps)
           digestLibraryItems <- FutureHelpers.findMatching(candidates, max, isEmailWorthy, transformLibraryCandidate).map(_.flatten)
