@@ -464,9 +464,6 @@ GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmar
 GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
 DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)
 
-GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
-GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
-
 GET     /admin/images                @com.keepit.controllers.admin.AdminScreenshotController.images
 GET     /admin/imageInfos            @com.keepit.controllers.admin.AdminScreenshotController.imageInfos
 GET     /admin/imagesForUri          @com.keepit.controllers.admin.AdminScreenshotController.imagesForUri(uriId: Id[NormalizedURI])
@@ -762,7 +759,7 @@ GET     /internal/shoebox/database/getLibrariesAndMembershipsChanged       @com.
 GET     /internal/shoebox/database/getKeepsAndTagsChanged                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 GET     /internal/shoebox/database/getLibrariesChanged                     @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 GET     /internal/shoebox/database/getLibraryMembershipsChanged            @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int)
-GET     /internal/shoebox/database/newKeepsInLibrary                       @com.keepit.controllers.internal.ShoeboxController.newKeepsInLibrary(userId: Id[User], max: Int)
+GET     /internal/shoebox/database/newKeepsInLibraryForEmail               @com.keepit.controllers.internal.ShoeboxController.newKeepsInLibraryForEmail(userId: Id[User], max: Int)
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.internal.ShoeboxDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.internal.ShoeboxDeepLinkController.getDeepUrl()
@@ -812,7 +809,6 @@ GET      /internal/shoebox/database/getAllFakeUsers         @com.keepit.controll
 GET      /internal/shoebox/database/getInvitations          @com.keepit.controllers.internal.ShoeboxController.getInvitations(senderId: Id[User])
 GET      /internal/shoebox/database/getSocialConnections    @com.keepit.controllers.internal.ShoeboxController.getSocialConnections(userId: Id[User])
 
-GET      /internal/shoebox/screenshots/update        @com.keepit.controllers.internal.URISummaryController.updateUriScreenshotsForUriId(id: Id[NormalizedURI])
 GET      /internal/shoebox/image/getUriImage         @com.keepit.controllers.internal.URISummaryController.getUriImageForUriId(id: Id[NormalizedURI])
 POST     /internal/shoebox/image/getUriSummary       @com.keepit.controllers.internal.URISummaryController.getUriSummary()
 POST     /internal/shoebox/image/getUriSummaries     @com.keepit.controllers.internal.URISummaryController.getUriSummaries()

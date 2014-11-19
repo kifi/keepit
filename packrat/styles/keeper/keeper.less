@@ -218,12 +218,11 @@
 }
 
 .kifi-keepers-box {
-  position: fixed;
+  position: absolute;
   z-index: 999999999991;
   @right-space: 6px;
   right: @right-space + @keeper-side-border-width;
-  @bottom: 84px;
-  bottom: @bottom;
+  bottom: 80px;
   height: 122px;
   margin: 0;
   @padding-right: 196px;
@@ -240,8 +239,24 @@
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAcCAYAAAAnbDzKAAACGklEQVR4AdXTO2hTURzH8V+sBhuwIr5iwWcDDhIHLRTldhMs1NVBEXSQDg6CUEFwUkRQEIx27KqI4iTFQhGVqKAtCBmigw9EISA1KsVXbfv3O4bDvYcQb9Kb4fPbLofv4R6NPy1NwxzzCKAW24ETGMUYnmAtFEWMRRiEWmAJjqAEC5FfrIAU0pDHRhRhHjshCMuxF7lmBnTgHGYwh7tYBzly+AiDTwChH59gMNxGRszfmAPOwhxFqEYnXsMi/MYECliFFajAHJfEfIs54BUsxGYIwnlYhBGsgWoMwEKUYw/w3OxWCF34CgtxAQoRwEJMNiPgDMzxEIJwFBbiHZZ53tVzmON4MwI6cBW/sIAJdEMQbsJCXIQ8NuAOfuA9hiBfwH7oP6SRgRwvYSGGsa3GLmQhH19AAEFIoYApjz5kcQqdEISlOIkeCB9gdXoEIcAx5xfLYqTegGGYxw0Im2CYwWM8wGcY8g0EFCEMwvAFz1DCHKyegD2YhUV4gy4nwBFbgMsfgNXwHfgHvVASA/oxBvM4DSU14B7M4z5SMQYUcNDR23iAXwXroRgDDkOuZgTMYx/UrgGXoXYOuNXeAcBQAwF9SQr4iTzk6IZFCFodcA3mUUYGqrEySQEBrsM8RpMekMYLmMehJAcIW1CFRfiOnuQGAAewAIswifRiBUzBHLPIQTWuoOoxgAwqqDqmsR3CuOd7RdiNtyHK/wBxDTYwcBDc4gAAAABJRU5ErkJggg==);
   }
   &.kifi-keepers-hover {
-    bottom: @bottom - 10;
     right: @right-space;
+    -webkit-transform-origin: 84% bottom;
+    transform-origin: 84% bottom;
+    &:not(.kifi-showing) {
+      -webkit-transform: translate(0,10px) scale(.8);
+      transform: translate(0,10px) scale(.8);
+    }
+  }
+  &.kifi-keepers-promo {
+    -webkit-transform-origin: 98% bottom;
+    transform-origin: 98% bottom;
+    transition-duration: .4s;
+    transition-timing-function: ease;
+    &:not(.kifi-showing) {
+      transition-duration: .9s;
+      -webkit-transform: translate(0,16px) scale(.6);
+      transform: translate(0,16px) scale(.6);
+    }
   }
   &.kifi-with-others {
     padding-right: @padding-right + 60;
@@ -261,13 +276,6 @@
     border: none;
     margin: 0;
   }
-}
-.kifi-keepers-promo {
-  -webkit-transform: translate(0,20px);
-  transform: translate(0,20px);
-}
-.kifi-tip.kifi-keepers-promo {
-  transition-duration: .5s;
 }
 .kifi-keepers-pics {
   margin: 17px 0 17px 17px;

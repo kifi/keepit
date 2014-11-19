@@ -43,8 +43,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???
 
-  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = Future.successful(())
-
   def saveImageInfo(imageInfo: ImageInfo): Future[Unit] = ???
 
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
@@ -745,7 +743,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(true)
   }
 
-  def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]] =
+  def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]] =
     Future.successful(newKeepsInLibrariesExpectation(userId).take(max))
 
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = Future.successful(Set.empty)

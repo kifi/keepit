@@ -83,15 +83,13 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   def save(identity: Identity): SocialUser = reportExceptions {
-    val (userId, socialUser, allowSignup, isComplete) = getUserIdAndSocialUser(identity)
+    val (userId, socialUser) = getUserIdAndSocialUser(identity)
     log.info(s"[save] persisting (social|42) user $socialUser")
     val socialUserInfo = internUser(
       SocialId(socialUser.identityId.userId),
       SocialNetworkType(socialUser.identityId.providerId),
       socialUser,
-      userId,
-      allowSignup,
-      isComplete)
+      userId)
     require(socialUserInfo.credentials.isDefined, s"social user info's credentials is not defined: $socialUserInfo")
     if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
       socialGraphPlugin.asyncFetch(socialUserInfo)
@@ -115,31 +113,26 @@ class SecureSocialUserPluginImpl @Inject() (
     experiments.foreach(setExp)
   }
 
-  private def getUserIdAndSocialUser(identity: Identity): (Option[Id[User]], SocialUser, Boolean, Boolean) = {
+  private def getUserIdAndSocialUser(identity: Identity): (Option[Id[User]], SocialUser) = {
     identity match {
-      case UserIdentity(userId, socialUser, allowSignup, isComplete) => (userId, socialUser, allowSignup, isComplete)
-      case ident => (None, SocialUser(ident), false, true)
+      case UserIdentity(userId, socialUser) => (userId, socialUser)
+      case ident => (None, SocialUser(ident))
     }
   }
 
-  private def newUserState: State[User] = UserStates.ACTIVE // This is the default user state for new accounts
-
-  private def createUser(identity: Identity, isComplete: Boolean): User = timing(s"create user ${identity.identityId}") {
+  private def createUser(identity: Identity): User = timing(s"create user ${identity.identityId}") {
     val u = userCommander.createUser(
       identity.firstName,
       identity.lastName,
       identity.email.map(EmailAddress.apply),
-      state = if (isComplete) newUserState else UserStates.INCOMPLETE_SIGNUP
+      state = UserStates.ACTIVE
     )
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
     u
   }
 
-  private def getOrCreateUser(existingUserOpt: Option[User], allowSignup: Boolean, isComplete: Boolean, socialUser: SocialUser): Option[User] = existingUserOpt orElse {
-    if (allowSignup) {
-      val userOpt: Option[User] = Some(createUser(socialUser, isComplete))
-      userOpt
-    } else None
+  private def getOrCreateUser(existingUserOpt: Option[User], socialUser: SocialUser): Option[User] = {
+    existingUserOpt orElse Some(createUser(socialUser))
   }
 
   private def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Unit = timing(s"saveVerifiedEmail $userId") {
@@ -160,9 +153,9 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def internUser(
     socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
-    userId: Option[Id[User]], allowSignup: Boolean, isComplete: Boolean): SocialUserInfo = timing(s"intern user $socialId") {
+    userId: Option[Id[User]]): SocialUserInfo = timing(s"intern user $socialId") {
 
-    log.debug(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId isComplete=$isComplete")
+    log.debug(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId")
 
     val (suiOpt, existingUserOpt) = db.readOnlyMaster { implicit session =>
       (
@@ -193,8 +186,8 @@ class SecureSocialUserPluginImpl @Inject() (
           // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
           val sui = if (suiOpt == Some(socialUserInfo)) socialUserInfo else {
             val user = userRepo.get(socialUserInfo.userId.get)
-            if (user.state == UserStates.INCOMPLETE_SIGNUP && isComplete) {
-              userRepo.save(user.withName(socialUser.firstName, socialUser.lastName).withState(newUserState))
+            if (user.state == UserStates.INCOMPLETE_SIGNUP) {
+              userRepo.save(user.withName(socialUser.firstName, socialUser.lastName).withState(UserStates.ACTIVE))
             }
             socialUserInfoRepo.save(socialUserInfo)
           }
@@ -211,7 +204,7 @@ class SecureSocialUserPluginImpl @Inject() (
         sui
 
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
-        val userOpt = getOrCreateUser(existingUserOpt, allowSignup, isComplete, socialUser)
+        val userOpt = getOrCreateUser(existingUserOpt, socialUser)
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
@@ -245,7 +238,7 @@ class SecureSocialUserPluginImpl @Inject() (
         sui
 
       case None =>
-        val userOpt = getOrCreateUser(existingUserOpt, allowSignup, isComplete, socialUser)
+        val userOpt = getOrCreateUser(existingUserOpt, socialUser)
         log.info("creating new SocialUserInfo for %s".format(userOpt))
 
         val userInfo = SocialUserInfo(userId = userOpt.flatMap(_.id), //verify saved

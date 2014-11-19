@@ -148,7 +148,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
               mustHoverFor: 100,
               canLeaveFor: 800,
               click: 'hide',
-              parent: btn
+              parent: $slider
             });
           });
         } else {
@@ -551,7 +551,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                     $tile.hoverfu('destroy');
                   }
                 });
-                configureHover($promo, {insertBefore: $tile, mustHoverFor: 0, canLeaveFor: 1e9});
+                configureHover($promo, {parent: $tile, mustHoverFor: 0, canLeaveFor: 1e9});
               });
             }).hoverfu('show');
             setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000);
