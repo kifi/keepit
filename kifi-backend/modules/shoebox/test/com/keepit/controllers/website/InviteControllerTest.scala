@@ -94,7 +94,11 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
         val result = inviteController.acceptInvite(invite1.externalId)(request)
         val code = status(result)
         code !== FORBIDDEN
+
+        // if you get a 404 here make sure you have pulled the marketing submodule modules/shoebox/marketing
+        // run from repository root: git submodule update --init
         code === 200
+
         // landing page at this point -- we'll make sure cookie is set
         val invCookie = cookies(result).get("inv")
         invCookie.isDefined === true
