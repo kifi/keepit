@@ -15,6 +15,8 @@ import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 
 class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends CortexServiceClient {
+  val batchUserURIsInterestsExpectations = collection.mutable.Map[Id[User], Seq[LDAUserURIInterestScores]]()
+
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
@@ -36,7 +38,9 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
   override def saveEdits(configs: Map[String, LDATopicConfiguration])(implicit version: LDAVersionOpt = None): Unit = ???
   override def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt = None): Future[LDAUserURIInterestScores] = Future.successful(LDAUserURIInterestScores(None, None, None))
   override def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[LDAUserURIInterestScores]] = {
-    Future.successful((0 until uriIds.length).map(_ => LDAUserURIInterestScores(None, None, None)))
+    val result = batchUserURIsInterestsExpectations.getOrElse(userId,
+      (0 until uriIds.length).map(_ => LDAUserURIInterestScores(None, None, None)))
+    Future.successful(result)
   }
   override def userTopicMean(userId: Id[User])(implicit version: LDAVersionOpt = None): Future[(Option[Array[Float]], Option[Array[Float]])] = ???
   override def sampleURIsForTopic(topic: Int)(implicit version: LDAVersionOpt): Future[(Seq[Id[NormalizedURI]], Seq[Float])] = ???

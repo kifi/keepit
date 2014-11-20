@@ -1,7 +1,7 @@
 package com.keepit.curator
 
 import com.google.inject.{ Module, Injector }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
@@ -179,5 +179,13 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
     val savedUriReco = uriRecoRepo.save(uriReco)
     shoebox.saveURISummary(savedUri.id.get, uriSumm)
     (savedUri, savedUriReco, uriSumm)
+  }
+
+  def makeSeedItems(userId: Id[User]): Seq[SeedItem] = {
+    val seedItem1 = SeedItem(userId = userId, uriId = Id[NormalizedURI](1), url = "url1", seq = SequenceNumber[SeedItem](1), priorScore = None, timesKept = 1000, lastSeen = currentDateTime, keepers = Keepers.TooMany, discoverable = true)
+    val seedItem2 = SeedItem(userId = userId, uriId = Id[NormalizedURI](2), url = "url2", seq = SequenceNumber[SeedItem](2), priorScore = None, timesKept = 10, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](3))), discoverable = true)
+    val seedItem3 = SeedItem(userId = userId, uriId = Id[NormalizedURI](3), url = "url3", seq = SequenceNumber[SeedItem](3), priorScore = None, timesKept = 93, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](2))), discoverable = true)
+    val seedItem4 = SeedItem(userId = userId, uriId = Id[NormalizedURI](4), url = "url4", seq = SequenceNumber[SeedItem](4), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
+    seedItem1 :: seedItem2 :: seedItem3 :: seedItem4 :: Nil
   }
 }
