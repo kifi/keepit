@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('KeepViewCtrl', [
-  '$scope', '$routeParams', 'keepActionService', 'keepDecoratorService',
-  function ($scope, $routeParams, keepActionService, keepDecoratorService) {
+  '$scope', '$routeParams', '$rootScope', 'keepActionService', 'keepDecoratorService',
+  function ($scope, $routeParams, $rootScope, keepActionService, keepDecoratorService) {
     //
     // Internal data.
     //
@@ -41,5 +41,7 @@ angular.module('kifi')
       $scope.keeps = [keep];
       $scope.loading = false;
     });
+
+    $rootScope.$emit('libraryUrl', {});
   }
 ]);
