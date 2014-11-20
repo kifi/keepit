@@ -2,6 +2,7 @@ package com.keepit.graph
 
 import com.google.inject.Inject
 import com.keepit.common.db.Id
+import com.keepit.common.logging.Logging
 import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient }
@@ -9,6 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.graph.model._
 import com.keepit.model.{ SocialUserInfo, NormalizedURI, User }
 import scala.concurrent.Future
+import com.keepit.common.time._
 import com.keepit.common.routes.Graph
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.amazon.AmazonInstanceId
@@ -32,7 +34,6 @@ trait GraphServiceClient extends ServiceClient {
   def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]]
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
-  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit]
   def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]]
   def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]]
   def getSociallyRelatedUsers(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, User]]]
@@ -52,9 +53,10 @@ class GraphServiceClientImpl @Inject() (
     override val httpClient: HttpClient,
     val airbrakeNotifier: AirbrakeNotifier,
     cacheProvider: GraphCacheProvider,
-    mode: Mode) extends GraphServiceClient {
+    mode: Mode) extends GraphServiceClient with Logging {
 
   private val longTimeout = CallTimeouts(responseTimeout = Some(300000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
+  private val ONE_HOUR_MILLIS = 1000 * 60 * 60
 
   private def getSuccessfulResponses(calls: Seq[Future[ClientResponse]]): Future[Seq[ClientResponse]] = {
     val safeCalls = calls.map { call =>
@@ -124,20 +126,19 @@ class GraphServiceClientImpl @Inject() (
     futureUserScores.map(userScores => userScores.map { case ConnectedUserScore(friendId, score) => friendId -> score })
   }
 
-  private val consolidateSociallyRelatedEntities = new RequestConsolidator[Id[User], Unit](10 seconds)
-  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = consolidateSociallyRelatedEntities(userId) { id =>
-    call(Graph.internal.refreshSociallyRelatedEntities(id), callTimeouts = longTimeout).map(_ => ())
-  }
-
   def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]] = {
-    val responseFuture = call(Graph.internal.getSociallyRelatedEntities(userId), callTimeouts = longTimeout)
-    cacheProvider.relatedEntitiesCache.get(SociallyRelatedEntitiesCacheKey(userId)) match {
-      case Some(relatedEntities) => Future.successful(Some(relatedEntities))
-      case None => {
-        if (bePatient) responseFuture.map { r => Some(r.json.as[SociallyRelatedEntities]) }
-        else Future.successful(None)
-      }
+
+    def needRefresh(x: Option[SociallyRelatedEntities]): Boolean = {
+      x.isEmpty || (x.get.timestamp.plus(ONE_HOUR_MILLIS * 12).getMillis < currentDateTime.getMillis)
     }
+
+    cacheProvider.relatedEntitiesCache.
+      getOrElseFutureOpt(SociallyRelatedEntitiesCacheKey(userId), needRefresh) {
+        call(Graph.internal.getSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r =>
+          log.info(Json.stringify(r.json))
+          Some(r.json.as[SociallyRelatedEntities])
+        }
+      }
   }
 
   def getSociallyRelatedUsers(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, User]]] = {

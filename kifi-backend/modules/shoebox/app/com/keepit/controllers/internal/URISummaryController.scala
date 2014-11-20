@@ -18,12 +18,6 @@ class URISummaryController @Inject() (
     normalizedUriRepo: NormalizedURIRepo,
     db: Database) extends ShoeboxServiceController {
 
-  def updateUriScreenshotsForUriId(id: Id[NormalizedURI]) = Action { request =>
-    val nUri = db.readOnlyMaster { implicit session => normalizedUriRepo.get(id) }
-    uriSummaryCommander.updateScreenshots(nUri)
-    Status(202)("0")
-  }
-
   def getUriImageForUriId(id: Id[NormalizedURI]) = Action.async { request =>
     val nUri = db.readOnlyMaster { implicit session => normalizedUriRepo.get(id) }
     val urlFut = uriSummaryCommander.getURIImage(nUri)

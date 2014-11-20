@@ -15,7 +15,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.slick.Database
 import com.keepit.common.pagepeeker.PagePeekerClient
 import java.awt.image.BufferedImage
-import com.keepit.common.images.ImageFetcher
 import scala.util.{ Success, Failure }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
@@ -39,11 +38,9 @@ class URISummaryCommander @Inject() (
     db: Database,
     scraper: ScraperServiceClient,
     cortex: CortexServiceClient,
-    pagePeekerClient: PagePeekerClient,
     uriImageStore: S3URIImageStore,
     embedlyStore: EmbedlyStore,
     articleStore: ArticleStore,
-    imageFetcher: ImageFetcher,
     uriSummaryCache: URISummaryCache,
     airbrake: AirbrakeNotifier,
     clock: Clock,
@@ -67,17 +64,9 @@ class URISummaryCommander @Inject() (
    * If no image is available, fetching is triggered (silent=false) but the promise is immediately resolved (waiting=false)
    */
   def getURIImage(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[Option[String]] = {
-    getImageURISummary(nUri, minSizeOpt) map { _.imageUrl }
-  }
-
-  /**
-   * Uses a URISummaryRequest to request an image for the page, for the given size constraints.
-   * If no image is available, fetching is triggered (silent=false) but the promise is immediately resolved (waiting=false)
-   */
-  private def getImageURISummary(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[URISummary] = {
     val minSize = minSizeOpt getOrElse ImageSize(0, 0)
     val request = URISummaryRequest(nUri.id.get, ImageType.ANY, minSize, false, false, false)
-    getURISummaryForRequest(request, nUri)
+    getURISummaryForRequest(request, nUri) map { _.imageUrl }
   }
 
   /**
@@ -184,21 +173,6 @@ class URISummaryCommander @Inject() (
   }
 
   /**
-   * Triggers screenshot update and returns resulting image info
-   */
-  def updateScreenshots(nUri: NormalizedURI): Future[Option[ImageInfo]] = fetchFromPagePeeker(nUri, ImageSize(0, 0))
-
-  /**
-   * The default size screenshot URL is returned (when the screenshot exists).
-   */
-  def getScreenshotURL(nUri: NormalizedURI, silent: Boolean = false): Option[String] = {
-    if (nUri.screenshotUpdatedAt.isEmpty) {
-      if (!silent) updateScreenshots(nUri)
-      None
-    } else uriImageStore.getDefaultScreenshotURL(nUri)
-  }
-
-  /**
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
    */
   private def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize = ImageSize(0, 0), descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
@@ -215,58 +189,9 @@ class URISummaryCommander @Inject() (
   }
 
   /**
-   * Fetches screenshot from PagePeeker. All generated screenshots are persisted to the database
-   */
-  private def fetchFromPagePeeker(nUri: NormalizedURI, minSize: ImageSize): Future[Option[ImageInfo]] = {
-    nUri.id map { nUriId =>
-      pagePeekerClient.getScreenshotData(nUri) map { imagesOpt =>
-        imagesOpt flatMap { images =>
-          val candidates = images map { image =>
-            val imageInfo = image.toImageInfo(nUriId)
-            internImage(imageInfo, image.rawImage, nUri)
-          }
-          val successfulCandidates = candidates collect { case Some(candidate) => candidate }
-          if (successfulCandidates.length == candidates.length) {
-            db.readWrite { implicit session => normalizedUriRepo.updateScreenshotUpdatedAt(nUriId, clock.now) }
-          } else {
-            log.error(s"Failed to update screenshots for normalized URI $nUriId}")
-          }
-          successfulCandidates find { meetsSizeConstraint(_, minSize) }
-        }
-      }
-    } getOrElse Future.successful(None)
-  }
-
-  /**
-   * Stores image to S3
-   */
-  private def internImage(info: ImageInfo, image: BufferedImage, nUri: NormalizedURI): Option[ImageInfo] = {
-    uriImageStore.storeImage(info, image, nUri) match {
-      case Success(result) =>
-        val (url, size) = result
-        val imageInfoWithUrl = if (info.url.isEmpty) info.copy(url = Some(url), size = Some(size)) else info
-        db.readWrite { implicit session => imageInfoRepo.save(imageInfoWithUrl) }
-        Some(imageInfoWithUrl)
-      case Failure(ex) =>
-        airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage}")
-        None
-    }
-  }
-
-  /**
    * Get S3 url for image info
    */
   private def getS3URL(info: ImageInfo, nUri: NormalizedURI): Option[String] = uriImageStore.getImageURL(info, nUri)
-
-  private def meetsSizeConstraint(info: ImageInfo, size: ImageSize): Boolean = {
-    for {
-      width <- info.width
-      height <- info.height
-    } yield {
-      return (width > size.width && height > size.height)
-    }
-    false
-  }
 
   def getStoredEmbedlyKeywords(id: Id[NormalizedURI]): Seq[EmbedlyKeyword] = {
     embedlyStore.get(id) match {
@@ -295,6 +220,7 @@ class URISummaryCommander @Inject() (
     cortex.word2vecBatchURIKeywords(ids)
   }
 
+  // FYI this is very slow. Be careful calling it.
   def getKeywordsSummary(uri: Id[NormalizedURI]): Future[KeywordsSummary] = {
     val word2vecKeywordsFut = getWord2VecKeywords(uri)
     val embedlyKeywords = getStoredEmbedlyKeywords(uri)

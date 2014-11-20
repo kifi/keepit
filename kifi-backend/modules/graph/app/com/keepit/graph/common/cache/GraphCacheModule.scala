@@ -170,5 +170,5 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Provides @Singleton
   def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedEntitiesCache(stats, accessLog, (outerRepo, 1 day))
+    new SociallyRelatedEntitiesCache(stats, accessLog, (outerRepo, 7 day))
 }

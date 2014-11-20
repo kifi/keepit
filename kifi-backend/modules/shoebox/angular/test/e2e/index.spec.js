@@ -1,16 +1,16 @@
 describe('kifi angular sanity suite', function () {
   'use strict';
 
-  describe('kifi homepage for logged in users', function () {
-    // Set up before each test.
-    beforeEach(function () {
-      // Navigate to home page.
-      browser.get('/');
+  var util = require('./util/util');
 
-      // Set cookies to authenticate user.
-      // See: https://github.com/kifi/keepit/blob/master/integration/auth_headers.js
-      browser.manage().addCookie('KIFI_SECURESOCIAL', '567b766f-cae2-4bb9-b8f2-02e3ecb5cedd', '/', '.kifi.com');
-      browser.manage().addCookie('KIFI_SESSION', 'bd4cee3dd5d4170c702ff599302e223a900a8c4d-fortytwo_user_id=8397', '/', '.kifi.com');
+  describe('Kifi homepage for logged in users', function () {
+    beforeEach(function () {
+      browser.get('/');
+      util.loginUserWithCookies();
+    });
+
+    afterEach(function () {
+      util.checkJSErrors();
     });
 
     it('should have the correct title', function () {

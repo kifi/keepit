@@ -391,7 +391,7 @@ gulp.task('karma', ['templates'], function (done) {
 });
 
 function runProtractor() {
-  return gulp.src(['test/e2e/**/*.js'])
+  return gulp.src(['test/e2e/**/*.spec.js'])
     .pipe(protractor({
       configFile: "test/protractor.conf.js"
     }))

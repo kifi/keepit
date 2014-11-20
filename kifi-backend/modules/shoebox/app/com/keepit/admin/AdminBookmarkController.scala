@@ -53,8 +53,7 @@ class AdminBookmarksController @Inject() (
         keywords <- keywordsFut
         imageUrlOpt <- imageUrlOptFut
       } yield {
-        val screenshotUrl = uriSummaryCommander.getScreenshotURL(uri).getOrElse("")
-        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), screenshotUrl, keywords, libraryOpt))
+        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), "", keywords, libraryOpt))
       }
     }
   }

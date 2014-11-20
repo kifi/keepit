@@ -30,8 +30,7 @@
 
 @networkLogoLink(sui: SocialUserInfo) = {
   <a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(sui.id.get)">
-    <img src="/assets/securesocial/images/providers/@{sui.networkType}.png"
-      alt="@sui.networkType" width="16" height="16"></a>
+    @sui.networkType.name.take(2)
 }
 
 @newUsersInfo(newUsers: Option[Int]) = {
