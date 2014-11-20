@@ -85,9 +85,7 @@
       <ul class="kf-nav-lib-users" ng-class="{'pad-lib': padList()}">
 
         <li class="kf-nav-lib-separator" ng-show="sortingMenu.myLibsFirst && myLibsToShow.length > 0" ng-class="{sticky : currentStickTitle=='mine'}" >
-          <div class="kf-nav-lib-separator-title">
-            YOUR LIBRARIES
-          </div>
+          <div class="kf-nav-lib-separator-title">YOUR LIBRARIES</div>
         </li>
 
         <li ng-show="sortingMenu.myLibsFirst" ng-repeat="library in myLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
