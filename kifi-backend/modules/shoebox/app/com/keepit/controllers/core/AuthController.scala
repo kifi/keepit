@@ -1,7 +1,6 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
-import com.keepit.common.auth.LegacyUserService
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest, MaybeUserRequest, NonUserRequest, SecureSocialHelper }
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
@@ -113,7 +112,6 @@ class AuthController @Inject() (
     authCommander: AuthCommander,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
-    val legacyUserService: LegacyUserService,
     val userActionsHelper: UserActionsHelper,
     userRepo: UserRepo,
     postOffice: LocalPostOffice,

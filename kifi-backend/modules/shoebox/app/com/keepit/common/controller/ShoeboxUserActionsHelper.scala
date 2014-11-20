@@ -2,7 +2,6 @@ package com.keepit.common.controller
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.LocalUserExperimentCommander
-import com.keepit.common.auth.LegacyUserService
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
@@ -19,7 +18,6 @@ import scala.concurrent.Future
 class ShoeboxUserActionsHelper @Inject() (
     db: Database,
     val airbrake: AirbrakeNotifier,
-    val legacyUserService: LegacyUserService,
     userRepo: UserRepo,
     suiRepo: SocialUserInfoRepo,
     userExperimentCommander: LocalUserExperimentCommander,

@@ -52,7 +52,7 @@ class SecureSocialUserPluginImpl @Inject() (
       throw ex
   }
 
-  def find(id: IdentityId): Option[Identity] = reportExceptions {
+  def find(id: IdentityId): Option[UserIdentity] = reportExceptions {
     db.readOnlyMaster { implicit s =>
       socialUserInfoRepo.getOpt(SocialId(id.userId), SocialNetworkType(id.providerId))
     } match {

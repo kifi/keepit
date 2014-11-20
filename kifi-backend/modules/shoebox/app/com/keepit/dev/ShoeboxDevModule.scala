@@ -1,7 +1,6 @@
 package com.keepit.dev
 
 import com.keepit.abook.ProdABookServiceClientModule
-import com.keepit.common.auth.ProdShoeboxLegacyUserServiceModule
 import com.keepit.common.controller.ProdShoeboxUserActionsModule
 import com.keepit.common.mail._
 import com.keepit.common.seo.DevSiteMapGeneratorModule
@@ -46,9 +45,6 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule()),
   externalServiceModule = DevExternalServiceModule()
 ) with CommonDevModule {
-
-  override val legacyUserServiceModule = ProdShoeboxLegacyUserServiceModule()
-
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

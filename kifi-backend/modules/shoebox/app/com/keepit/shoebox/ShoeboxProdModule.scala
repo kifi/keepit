@@ -1,7 +1,6 @@
 package com.keepit.shoebox
 
 import com.keepit.abook.ProdABookServiceClientModule
-import com.keepit.common.auth.ProdShoeboxLegacyUserServiceModule
 import com.keepit.common.cache.{ EhCacheCacheModule, MemcachedCacheModule, ShoeboxCacheModule }
 import com.keepit.common.controller.ProdShoeboxUserActionsModule
 import com.keepit.common.seo.{ ProdSiteMapGeneratorModule, DevSiteMapGeneratorModule }
@@ -44,9 +43,6 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   externalServiceModule = ProdExternalServiceModule()
 ) with CommonProdModule {
-
-  override val legacyUserServiceModule = ProdShoeboxLegacyUserServiceModule()
-
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

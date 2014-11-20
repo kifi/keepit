@@ -119,7 +119,7 @@ class AuthCommander @Inject() (
 
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
     email: EmailAddress, passwordInfo: PasswordInfo,
-    firstName: String = "", lastName: String = "", isComplete: Boolean): (Identity, Id[User]) = {
+    firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = {
     log.info(s"[saveUserPassIdentity] userId=$userIdOpt identityOpt=$identityOpt email=$email pInfo=$passwordInfo isComplete=$isComplete")
     val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email.address)
     val lName = User.sanitizeName(lastName)
@@ -186,7 +186,7 @@ class AuthCommander @Inject() (
     } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
   }
 
-  def finalizeSocialAccount(sfi: SocialFinalizeInfo, socialIdentity: Identity, inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit existingContext: HeimdalContext): (User, Identity) =
+  def finalizeSocialAccount(sfi: SocialFinalizeInfo, socialIdentity: Identity, inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit existingContext: HeimdalContext) =
     timing(s"[finalizeSocialAccount(${socialIdentity.identityId.providerId + "#" + socialIdentity.identityId.userId})]") {
       log.info(s"[finalizeSocialAccount] sfi=$sfi identity=$socialIdentity extId=$inviteExtIdOpt")
       require(AuthHelper.validatePwd(sfi.password), "invalid password")

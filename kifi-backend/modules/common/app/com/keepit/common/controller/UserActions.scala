@@ -1,7 +1,5 @@
 package com.keepit.common.controller
 
-import com.keepit.commanders.UserExperimentCommander
-import com.keepit.common.auth.LegacyUserService
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
@@ -103,13 +101,12 @@ trait UserActionsRequirements {
 }
 
 trait SecureSocialHelper extends Logging {
-  def legacyUserService: LegacyUserService
   def getSecureSocialUserFromRequest(implicit request: Request[_]): Option[Identity] = {
     try {
       val maybeAuthenticator = SecureSocial.authenticatorFromRequest
       log.info(s"[getSecureSocialUserFromRequest] identityId=${maybeAuthenticator.map(_.identityId)} maybeAuthenticator=$maybeAuthenticator")
       maybeAuthenticator flatMap { authenticator =>
-        legacyUserService.find(authenticator.identityId) tap { u => log.info(s"[getSecureSocialUserFromRequest] authenticator=${authenticator.id} identityId=${authenticator.identityId} user=${u.map(_.email)}") }
+        UserService.find(authenticator.identityId) tap { u => log.info(s"[getSecureSocialUserFromRequest] authenticator=${authenticator.id} identityId=${authenticator.identityId} user=${u.map(_.email)}") }
       }
     } catch {
       case t: Throwable =>
@@ -121,7 +118,7 @@ trait SecureSocialHelper extends Logging {
 
 import KifiSession._
 
-trait UserActionsHelper extends UserActionsRequirements with SecureSocialHelper with Logging {
+trait UserActionsHelper extends UserActionsRequirements with Logging {
 
   def getUserIdFromSession(implicit request: Request[_]): Try[Option[Id[User]]] =
     Try {

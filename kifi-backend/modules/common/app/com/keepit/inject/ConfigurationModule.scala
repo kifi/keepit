@@ -1,7 +1,6 @@
 package com.keepit.inject
 
 import _root_.net.codingwell.scalaguice.ScalaModule
-import com.keepit.common.auth.{ LegacyUserServiceModule, ProdRemoteLegacyUserServiceModule }
 import com.keepit.common.concurrent.ExecutionContextModule
 import com.keepit.common.logging.Logging
 import com.keepit.common.crypto.ShoeboxCryptoModule
@@ -46,7 +45,6 @@ trait CommonServiceModule {
   val actorSystemModule: ActorSystemModule
   val serviceTypeModule: ServiceTypeModule
   val discoveryModule: DiscoveryModule
-  val legacyUserServiceModule: LegacyUserServiceModule
 
   val executionContextModule = ExecutionContextModule()
   val cryptoModule = ShoeboxCryptoModule()
@@ -67,7 +65,6 @@ trait CommonProdModule extends CommonServiceModule {
   val memoryUsageModule = ProdMemoryUsageModule()
 
   val oauth2ConfigModule = ProdOAuth2ConfigurationModule()
-  val legacyUserServiceModule: LegacyUserServiceModule = ProdRemoteLegacyUserServiceModule()
 }
 
 trait CommonDevModule extends CommonServiceModule {
@@ -80,5 +77,4 @@ trait CommonDevModule extends CommonServiceModule {
   val memoryUsageModule = DevMemoryUsageModule()
 
   val oauth2ConfigModule = DevOAuth2ConfigurationModule()
-  val legacyUserServiceModule: LegacyUserServiceModule = ProdRemoteLegacyUserServiceModule()
 }

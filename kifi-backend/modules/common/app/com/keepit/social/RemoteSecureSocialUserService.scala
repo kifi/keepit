@@ -1,6 +1,5 @@
 package com.keepit.social
 
-import com.keepit.common.auth.LegacyUserService
 import com.keepit.inject.AppScoped
 import com.google.inject.{ Provides, Singleton, Inject }
 import com.keepit.model.view.UserSessionView
@@ -78,7 +77,7 @@ class RemoteSecureSocialUserPlugin @Inject() (
     maybeSocialGraphPlugin = Some(sgp)
   }
 
-  def find(id: IdentityId): Option[SocialUser] = reportExceptions {
+  def find(id: IdentityId): Option[UserIdentity] = reportExceptions {
     val resFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(id.userId), SocialNetworkType(id.providerId))
     monitoredAwait.result(resFuture, 3 seconds, s"get user for social user ${id.userId} on $id.providerId") match {
       case None =>

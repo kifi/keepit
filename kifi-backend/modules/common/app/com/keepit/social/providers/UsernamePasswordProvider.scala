@@ -26,7 +26,7 @@ class UsernamePasswordProvider(app: Application)
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal] // fail hard
   lazy val passwordAuth = global.injector.instance[PasswordAuthentication]
 
-  override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
+  override def doAuth[A]()(implicit request: Request[A]): Either[Result, UserIdentity] = {
     UPP.loginForm.bindFromRequest().fold(
       errors => Left(error("bad_form")),
       credentials => {
@@ -36,22 +36,18 @@ class UsernamePasswordProvider(app: Application)
             log.error(s"bad email format $emailString used for login - $e")
             Left(BadRequest("bad_email_format"))
           case Success(email) =>
-            UserService.find(IdentityId(email.address, id)) match {
+            val identityId = IdentityId(email.address, id)
+            UserService.find(identityId) match {
               case Some(identity) =>
                 identity match {
-                  case socialUser: SocialUser =>
-                    passwordAuth.authenticate(email, password) match {
-                      case Left(t) =>
-                        Left(error(t.getMessage))
-                      case Right(userId) =>
-                        Right(socialUser)
-                    }
+                  case userIdentity: UserIdentity =>
+                    log.info(s"[doAuth] userIdentity=$userIdentity")
+                    if (passwordAuth.authenticate(userIdentity.userId.get, password)) Right(userIdentity) else Left(error("wrong_password"))
                   case _ =>
-                    log.error(s"[doAuth] identity passed in is not of type <SocialUser>; class=${identity.getClass}; obj=$identity")
+                    log.error(s"[doAuth] identity passed in is not of type <UserIdentity>; class=${identity.getClass}; obj=$identity")
                     Left(error("wrong_password")) // wrong_password for compatibility; auth_failure/internal_error more accurate
                 }
-
-              case _ =>
+              case None =>
                 Left(error("no_such_user"))
             }
         }
@@ -71,5 +67,5 @@ class UsernamePasswordProvider(app: Application)
 }
 
 trait PasswordAuthentication {
-  def authenticate(email: EmailAddress, creds: String): Either[Throwable, Id[User]]
+  def authenticate(userId: Id[User], providedCreds: String): Boolean
 }
