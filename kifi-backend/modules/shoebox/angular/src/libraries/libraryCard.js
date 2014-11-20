@@ -376,18 +376,35 @@ angular.module('kifi')
 
         scope.onSearchInputFocus = function () {
           scope.librarySearchInProgress = true;
-          angular.element('.kf-header-right').css({
-            'transition': 'margin-right 0.4s ease',
+
+          var headerLinksElement = angular.element('.kf-header-right');
+
+          angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
+            'transition': 'top 0.4s ease, left 0.4s ease',
+            'top': '15px',
+            'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 - 150 + 30 + 'px'
+          });
+
+          headerLinksElement.css({
+            'transition': 'margin-right 0.3s ease 0.1s',
             'margin-right': '150px'
           });
+
+          angular.element('.kf-keep-lib-footer-button-follow').removeAttr('kf-sticky');
         };
 
         scope.onSearchExit = function () {
           scope.librarySearchInProgress = false;
           $rootScope.$emit('librarySearchChanged', false);
-          angular.element('.kf-header-right').css({
-            'margin-right': '0'
+
+          angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
+            'top': '-35px'
           });
+
+          angular.element('.kf-header-right').css({
+            'margin-right': '30px'
+          });
+          angular.element('.kf-keep-lib-footer-button-follow').attr('kf-stikcy');
 
           $timeout(function () {
             scope.search.text = '';
