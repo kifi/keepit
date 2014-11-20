@@ -134,7 +134,7 @@ class GraphServiceClientImpl @Inject() (
 
     cacheProvider.relatedEntitiesCache.
       getOrElseFutureOpt(SociallyRelatedEntitiesCacheKey(userId), needRefresh) {
-        call(Graph.internal.refreshSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r =>
+        call(Graph.internal.getSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r =>
           log.info(Json.stringify(r.json))
           Some(r.json.as[SociallyRelatedEntities])
         }
