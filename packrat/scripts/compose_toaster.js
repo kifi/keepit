@@ -80,7 +80,7 @@ k.toaster = k.toaster || (function () {
     })
     .appendTo($parent);
 
-    var compose = initCompose($toast, {onSubmit: send.bind(null, $toast)});
+    var compose = k.compose($toast, {onSubmit: send.bind(null, $toast)});
     $toast.data('compose', compose);
     $(document).data('esc').add(hide);
 
@@ -100,7 +100,10 @@ k.toaster = k.toaster || (function () {
       if (recipient) {
         compose.prefill(recipient);
       }
-      compose.snapSelection() || compose.focus();
+      var sel = window.getSelection();
+      if (sel.rangeCount === 0 || sel.getRangeAt(0).collapsed) {  // don't destroy user selection
+        compose.focus();
+      }
     }
   }
 
