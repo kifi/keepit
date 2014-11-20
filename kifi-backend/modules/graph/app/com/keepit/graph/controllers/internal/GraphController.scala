@@ -71,12 +71,6 @@ class GraphController @Inject() (
     }
   }
 
-  def refreshSociallyRelatedEntities(userId: Id[User]) = Action.async { request =>
-    socialWanderingCommander.refresh(userId).map(_ => Ok).recover {
-      case VertexNotFoundException(vertexId) if vertexId == VertexId(userId) => Accepted("This user has not been ingested yet.")
-    }
-  }
-
   def getSociallyRelatedEntities(userId: Id[User]) = Action.async { request =>
     socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople)) }
   }
