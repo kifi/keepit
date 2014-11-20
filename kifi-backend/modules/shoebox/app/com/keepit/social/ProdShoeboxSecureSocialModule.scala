@@ -1,6 +1,7 @@
 package com.keepit.social
 
 import com.google.inject.{ Singleton, Provides }
+import com.keepit.common.auth.LegacyUserService
 import com.keepit.social.providers.PasswordAuthentication
 import securesocial.controllers.TemplatesPlugin
 import com.keepit.common.social.{ ShoeboxTemplatesPlugin }

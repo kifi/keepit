@@ -21,12 +21,12 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, _ }
 import com.keepit.model.{ UserEmailAddress, _ }
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
+import com.keepit.social._
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsObject, JsString, JsSuccess, _ }
-import securesocial.core.{ Identity, Registry, UserService }
+import securesocial.core._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
@@ -690,6 +690,38 @@ class UserCommander @Inject() (
     db.readOnlyMaster { implicit session =>
       userRepo.getByUsername(username).map((_, false)) orElse
         usernameRepo.getByUsername(username).map(alias => (userRepo.get(alias.userId), true))
+    }
+  }
+
+  // methods adapted from SecureSocialUserServiceImpl
+
+  def find(id: IdentityId): Option[Identity] = {
+    db.readOnlyMaster { implicit s =>
+      socialUserInfoRepo.getOpt(SocialId(id.userId), SocialNetworkType(id.providerId))
+    } match {
+      case None if id.providerId == SocialNetworks.FORTYTWO.authProvider =>
+        // Email social accounts are only tied to one email address
+        // Since we support multiple email addresses, if we do not
+        // find a SUI with the correct email address, we go searching.
+        val email = EmailAddress(id.userId)
+        db.readOnlyMaster { implicit session =>
+          emailRepo.getByAddressOpt(email).flatMap { emailAddr =>
+            // todo(andrew): Don't let unverified people log in. For now, we are, but come up with something better.
+            socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
+              sui.credentials map { creds =>
+                UserIdentity(Some(emailAddr.userId), creds)
+              }
+            }
+          }
+        } tap { res =>
+          log.info(s"No immediate SocialUserInfo found for $id, found $res")
+        }
+      case None =>
+        log.info(s"No SocialUserInfo found for $id")
+        None
+      case Some(user) =>
+        log.info(s"User found: $user for $id")
+        user.credentials
     }
   }
 

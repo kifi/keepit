@@ -1,6 +1,7 @@
 package com.keepit.common.controller
 
 import com.google.inject.{ Provides, Inject, Singleton }
+import com.keepit.common.auth.{ FakeLegacyUserServiceModule, LegacyUserService }
 import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie, ImpersonateCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -13,17 +14,20 @@ import scala.concurrent.Future
 
 case class FakeUserActionsModule() extends UserActionsModule {
   def configure(): Unit = {
+    install(FakeLegacyUserServiceModule())
     bind[UserActionsHelper].to[FakeUserActionsHelper]
   }
 
   @Singleton
   @Provides
-  def userActionsHelper(airbrake: AirbrakeNotifier, impCookie: ImpersonateCookie, installCookie: KifiInstallationCookie) = new FakeUserActionsHelper(airbrake, impCookie, installCookie)
+  def userActionsHelper(airbrake: AirbrakeNotifier, legacyUserService: LegacyUserService, impCookie: ImpersonateCookie, installCookie: KifiInstallationCookie) =
+    new FakeUserActionsHelper(airbrake, legacyUserService, impCookie, installCookie)
 
 }
 
 class FakeUserActionsHelper(
     val airbrake: AirbrakeNotifier,
+    val legacyUserService: LegacyUserService,
     val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper with SecureSocialHelper with Logging {
 

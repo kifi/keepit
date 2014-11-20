@@ -2,6 +2,7 @@ package com.keepit.common.controller
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.RemoteUserExperimentCommander
+import com.keepit.common.auth.LegacyUserService
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -19,6 +20,7 @@ class RemoteUserActionsHelper @Inject() (
     val airbrake: AirbrakeNotifier,
     shoebox: ShoeboxServiceClient,
     userExperimentCommander: RemoteUserExperimentCommander,
+    val legacyUserService: LegacyUserService,
     val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper with SecureSocialHelper {
 

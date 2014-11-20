@@ -52,7 +52,7 @@ class SecureSocialUserPluginImpl @Inject() (
       throw ex
   }
 
-  def find(id: IdentityId): Option[UserIdentity] = reportExceptions {
+  def find(id: IdentityId): Option[Identity] = reportExceptions {
     db.readOnlyMaster { implicit s =>
       socialUserInfoRepo.getOpt(SocialId(id.userId), SocialNetworkType(id.providerId))
     } match {
@@ -82,7 +82,7 @@ class SecureSocialUserPluginImpl @Inject() (
     }
   }
 
-  def save(identity: Identity): SocialUser = reportExceptions {
+  def save(identity: Identity): Identity = reportExceptions {
     val (userId, socialUser) = getUserIdAndSocialUser(identity)
     log.info(s"[save] persisting (social|42) user $socialUser")
     val socialUserInfo = internUser(

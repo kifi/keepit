@@ -1,5 +1,6 @@
 package com.keepit.social
 
+import com.keepit.common.auth.LegacyUserService
 import net.codingwell.scalaguice.InjectorExtensions._
 
 import com.keepit.FortyTwoGlobal
@@ -55,10 +56,10 @@ class SecureSocialUserService(implicit val application: Application) extends Use
     // we can fail with None.get which will let us know immediately that there is a problem.
     if (global.initialized) Some(global.injector.instance[SecureSocialUserPlugin]) else None
   }
-  def find(id: IdentityId): Option[SocialUser] = proxy.get.find(id)
-  def save(user: Identity): SocialUser = proxy.get.save(user)
+  def find(id: IdentityId): Option[Identity] = proxy.get.find(id)
+  def save(user: Identity): Identity = proxy.get.save(user)
 
-  def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] =
+  def findByEmailAndProvider(email: String, providerId: String): Option[Identity] =
     proxy.get.findByEmailAndProvider(email, providerId)
   def save(token: Token) = proxy.get.save(token)
   def findToken(token: String) = proxy.get.findToken(token)
@@ -85,11 +86,11 @@ class SecureSocialUserService(implicit val application: Application) extends Use
 
 case class SecureSocialClientIds(linkedin: String, facebook: String)
 
-trait SecureSocialUserPlugin {
-  def find(id: IdentityId): Option[SocialUser]
-  def save(identity: Identity): SocialUser
+trait SecureSocialUserPlugin extends LegacyUserService {
 
-  def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser]
+  def save(identity: Identity): Identity
+
+  def findByEmailAndProvider(email: String, providerId: String): Option[Identity]
   def save(token: Token)
   def findToken(token: String): Option[Token]
   def deleteToken(uuid: String)

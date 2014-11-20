@@ -1,6 +1,7 @@
 package com.keepit.common.controller
 
 import com.google.inject.{ Provides, Singleton }
+import com.keepit.common.auth.LegacyUserService
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.common.controller.KifiSession._
 import com.keepit.common.db.slick.Database
@@ -21,13 +22,14 @@ case class MaybeAppFakeUserActionsModule() extends UserActionsModule {
 
   @Singleton
   @Provides
-  def userActionsHelper(airbrake: AirbrakeNotifier, impCookie: ImpersonateCookie, installCookie: KifiInstallationCookie) =
-    new MaybeAppFakeUserActionsHelper(airbrake, impCookie, installCookie)
+  def userActionsHelper(airbrake: AirbrakeNotifier, legacyUserService: LegacyUserService, impCookie: ImpersonateCookie, installCookie: KifiInstallationCookie) =
+    new MaybeAppFakeUserActionsHelper(airbrake, legacyUserService, impCookie, installCookie)
 
 }
 
 class MaybeAppFakeUserActionsHelper(
     val airbrake: AirbrakeNotifier,
+    val legacyUserService: LegacyUserService,
     val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper with SecureSocialHelper with Logging {
 
