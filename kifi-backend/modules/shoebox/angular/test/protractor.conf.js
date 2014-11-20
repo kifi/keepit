@@ -1,9 +1,7 @@
 module.exports.config = {
   // Use phantomjs for headless testing.
   capabilities: {
-    browserName: 'chrome',
-    shardTestFiles: true,
-    maxInstances: 3
+    browserName: 'chrome'
   },
 
   // Locally, set protractor.kifi.com to point to where the local server
