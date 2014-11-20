@@ -2,6 +2,7 @@ package com.keepit.graph
 
 import com.google.inject.Inject
 import com.keepit.common.db.Id
+import com.keepit.common.logging.Logging
 import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient }
@@ -52,7 +53,7 @@ class GraphServiceClientImpl @Inject() (
     override val httpClient: HttpClient,
     val airbrakeNotifier: AirbrakeNotifier,
     cacheProvider: GraphCacheProvider,
-    mode: Mode) extends GraphServiceClient {
+    mode: Mode) extends GraphServiceClient with Logging {
 
   private val longTimeout = CallTimeouts(responseTimeout = Some(300000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
   private val ONE_HOUR_MILLIS = 1000 * 60 * 60
@@ -133,7 +134,10 @@ class GraphServiceClientImpl @Inject() (
 
     cacheProvider.relatedEntitiesCache.
       getOrElseFutureOpt(SociallyRelatedEntitiesCacheKey(userId), needRefresh) {
-        call(Graph.internal.refreshSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r => Some(r.json.as[SociallyRelatedEntities]) }
+        call(Graph.internal.refreshSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r =>
+          log.info(Json.stringify(r.json))
+          Some(r.json.as[SociallyRelatedEntities])
+        }
       }
   }
 
