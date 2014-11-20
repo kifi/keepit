@@ -32,3 +32,22 @@ var checkJSErrors = function () {
   });
 };
 exports.checkJSErrors = checkJSErrors;
+
+
+var checkForCorrectTitle = function (title) {
+  expect(browser.getTitle()).toEqual(title);
+};
+exports.checkForCorrectTitle = checkForCorrectTitle;
+
+
+var checkForLibraryCardHeader = function () {
+  expect(element(by.css('.library-card')).isPresent()).toBe(true);
+};
+exports.checkForLibraryCardHeader = checkForLibraryCardHeader;
+
+
+var checkForCorrectLibraryName = function (name) {
+  var libraryCardName = element.all(by.css('.library-card .kf-keep-lib-name')).first();
+  expect(libraryCardName.getText()).toEqual(name);
+};
+exports.checkForCorrectLibraryName = checkForCorrectLibraryName;
