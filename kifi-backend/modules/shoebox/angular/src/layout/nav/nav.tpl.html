@@ -84,7 +84,7 @@
     <div class="kf-scrollable-libs" antiscroll="{ autoHide: false }">
       <ul class="kf-nav-lib-users" ng-class="{'pad-lib': padList()}">
 
-        <li class="kf-nav-lib-separator" ng-if="sortingMenu.myLibsFirst && myLibsToShow.length > 0" ng-class="{sticky : currentStickTitle=='mine'}" >
+        <li class="kf-nav-lib-separator" ng-show="sortingMenu.myLibsFirst && myLibsToShow.length > 0" ng-class="{sticky : currentStickTitle=='mine'}" >
           <div class="kf-nav-lib-separator-title">
             YOUR LIBRARIES
           </div>
@@ -123,10 +123,10 @@
         </li>
 
 
-        <li class="kf-nav-lib-separator" ng-if="!sortingMenu.myLibsFirst && userLibsToShow.length > 0" ng-class="{sticky : currentStickTitle=='all'}">
+        <li class="kf-nav-lib-separator" ng-show="!sortingMenu.myLibsFirst && userLibsToShow.length > 0" ng-class="{sticky : currentStickTitle=='all'}">
           <div class="kf-nav-lib-separator-title">ALL LIBRARIES</div>
         </li>
-        <li class="kf-nav-lib-separator" ng-if="sortingMenu.myLibsFirst && userLibsToShow.length > 0" ng-class="{sticky : currentStickTitle=='follow'}">
+        <li class="kf-nav-lib-separator" ng-show="sortingMenu.myLibsFirst && userLibsToShow.length > 0" ng-class="{sticky : currentStickTitle=='follow'}">
           <div class="kf-nav-lib-separator-title">LIBRARIES YOU FOLLOW</div>
         </li>
         <li ng-repeat="library in userLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
