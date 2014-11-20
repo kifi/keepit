@@ -316,6 +316,10 @@ angular.module('kifi')
         };
 
         scope.followStick = function (isStuck) {
+          if (scope.librarySearchInProgress) {
+            return;
+          }
+
           if (isStuck) {
             angular.element('html.kf-mobile .kf-header-right').css({'display': 'none'});
             angular.element('.kf-header-right').css({'margin-right': '150px'});
@@ -380,7 +384,7 @@ angular.module('kifi')
           var headerLinksElement = angular.element('.kf-header-right');
 
           angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
-            'transition': 'top 0.4s ease, left 0.4s ease',
+            'transition': 'top 0.3s ease 0.3s',
             'top': '15px',
             'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 - 150 + 30 + 'px'
           });
@@ -389,8 +393,6 @@ angular.module('kifi')
             'transition': 'margin-right 0.3s ease 0.1s',
             'margin-right': '150px'
           });
-
-          angular.element('.kf-keep-lib-footer-button-follow').removeAttr('kf-sticky');
         };
 
         scope.onSearchExit = function () {
@@ -398,13 +400,13 @@ angular.module('kifi')
           $rootScope.$emit('librarySearchChanged', false);
 
           angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
+            'transition': 'top 0.2s ease',
             'top': '-35px'
           });
 
           angular.element('.kf-header-right').css({
             'margin-right': '30px'
           });
-          angular.element('.kf-keep-lib-footer-button-follow').attr('kf-stikcy');
 
           $timeout(function () {
             scope.search.text = '';
