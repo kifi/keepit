@@ -384,24 +384,26 @@ k.panes.notices = k.panes.notices || function () {
     var data = $notice.data();
     api.port.emit(
       $notice.hasClass('kifi-notice-visited') ? 'set_message_unread' : 'set_message_read',
-      {threadId: data.thread, messageId: data.id, time: data.createdAt});
+      {threadId: data.thread, messageId: data.id, time: data.createdAt, category: data.category, from: 'toggle'});
   }
 
   function onClickNotice(e) {
     if (e.which !== 1) return;
     var uri = this.dataset.uri;
+    var category = this.dataset.category;
+    var threadId = this.dataset.thread;
     var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
-    switch (this.dataset.category) {
+    switch (category) {
     case 'message':
-      api.port.emit('open_deep_link', {nUri: uri, locator: '/messages/' + this.dataset.thread, inThisTab: inThisTab});
+      api.port.emit('open_deep_link', {nUri: uri, locator: '/messages/' + threadId, inThisTab: inThisTab, from: 'notice'});
       if (inThisTab && uri !== document.URL) {
         window.location = uri;
       }
       break;
     case 'triggered':
     case 'global':
-      markOneRead(this.dataset.createdAt, this.dataset.thread, this.dataset.id);
-      api.port.emit('set_message_read', {threadId: this.dataset.thread, messageId: this.dataset.id, time: this.dataset.createdAt});
+      markOneRead(this.dataset.createdAt, threadId, this.dataset.id);
+      api.port.emit('set_message_read', {threadId: threadId, messageId: this.dataset.id, time: this.dataset.createdAt, category: category, from: 'notice'});
       if (uri && uri !== document.URL) {
         if (inThisTab) {
           window.location = uri;

@@ -864,6 +864,9 @@ api.port.on({
       category: category
     });
   },
+  track_pane_view: function (data) {
+    tracker.track('user_viewed_pane', data);
+  },
   log_search_event: function(data) {
     ajax('search', 'POST', '/ext/search/events/' + data[0], data[1]);
   },
@@ -960,13 +963,19 @@ api.port.on({
       socket.send(['set_message_read', o.messageId]);
     });
   },
-  set_message_read: function (o) {
+  set_message_read: function (o, _, tab) {
     markRead(o.threadId, o.messageId, o.time);
     socket.send(['set_message_read', o.messageId]);
+    if (o.from === 'toggle') {
+      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markRead', category: o.category});
+    } else if (o.from === 'notice') {
+      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'view', category: o.category});
+    }
   },
-  set_message_unread: function (o) {
+  set_message_unread: function (o, _, tab) {
     markUnread(o.threadId, o.messageId);
     socket.send(['set_message_unread', o.messageId]);
+    tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markUnread', category: o.category});
   },
   get_page_thread_count: function(_, __, tab) {
     sendPageThreadCount(tab, null, true);
@@ -1085,7 +1094,7 @@ api.port.on({
         arr.push(tab);
       }
       tabsByLocator[loc] = arr || [tab];
-      tracker.track('user_viewed_pane', {type: loc.lastIndexOf('/messages/', 0) === 0 ? 'chat' : loc.substr(1)});
+      tracker.track('user_viewed_pane', {type: trackingLocator(loc)});
       if (loc === '/messages:unread') {
         store('unread', true);
       } else if (loc === '/messages:all') {
@@ -1229,6 +1238,9 @@ api.port.on({
           awaitDeepLink(link, tabId);
         });
       }
+    }
+    if (link.from === 'notice') {
+      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'view', category: 'message'});
     }
   },
   open_support_chat: function (_, __, tab) {
@@ -2019,13 +2031,21 @@ function isUnread(th) {
   return th.unread;
 }
 
-function paneIsOpen(tabId) {
+function paneLocatorFor(tabId) {
   var hasThisTabId = idIs(tabId);
   for (var loc in tabsByLocator) {
     if (tabsByLocator[loc].some(hasThisTabId)) {
-      return true;
+      return loc;
     }
   }
+}
+
+function trackingLocatorFor(tabId) {
+  return trackingLocator(paneLocatorFor(tabId));
+}
+
+function trackingLocator(loc) {
+  return loc && (loc.lastIndexOf('/messages/', 0) === 0 ? 'chat' : loc === '/messages' ? 'messages:page' : loc.substr(1));
 }
 
 function updateTabsWithKeptState() {
@@ -2717,6 +2737,9 @@ function clearSession() {
 
 function deauthenticate() {
   log('[deauthenticate]');
+  tracker.track('user_clicked_pane', {type: 'settings', action: 'logout'});
+  tracker.catchUp();
+  tracker.sendBatch();
   clearSession();
   store('logout', Date.now());
   ajax('DELETE', '/ext/auth');

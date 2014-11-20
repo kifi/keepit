@@ -67,6 +67,7 @@ var iframeDialog = function () {
 
       $dialog.find('iframe').one('load', function () {
         api.pwnIframe(this, config.styles, config.scripts);
+        api.port.emit('track_pane_view', {type: 'login'})
       });
 
       $dialog.appendTo('body').each(function () {this.clientHeight}).addClass('kifi-show')

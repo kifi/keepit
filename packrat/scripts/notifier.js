@@ -134,7 +134,7 @@ var notifier = function () {
   }
 
   function onClickGlobal(threadId, messageId, url, e) {
-    api.port.emit('set_message_read', {threadId: threadId, messageId: messageId});
+    api.port.emit('set_message_read', {threadId: threadId, messageId: messageId, from: 'notifier'});
     var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
     if (url && url !== document.URL) {
       if (inThisTab) {
