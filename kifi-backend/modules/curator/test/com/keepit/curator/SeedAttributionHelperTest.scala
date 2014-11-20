@@ -3,6 +3,7 @@ package com.keepit.curator
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.FakeCortexServiceClientImpl
+import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.curator.commanders.SeedAttributionHelper
 import com.keepit.curator.model._
 import com.keepit.graph.FakeGraphServiceClientImpl
@@ -63,11 +64,13 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
     multiplier = Some(1.0f),
     libraryInducedScore = Some(0f))
 
-  val scoredItem1 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](1), emptyScore.copy(socialScore = 0.01f))
-  val scoredItem2 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](2), emptyScore.copy(socialScore = 0.9f))
-  val scoredItem3 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](20), emptyScore.copy(socialScore = 0.9f))
-  val scoredItem4 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](3), emptyScore.copy(socialScore = 0.9f))
-  val scoredItem5 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](4), emptyScore.copy(socialScore = 0.02f))
+  val topic1 = Some(LDATopic(1))
+  val topic2 = Some(LDATopic(2))
+  val scoredItem1 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](1), emptyScore.copy(socialScore = 0.01f), topic1, topic2)
+  val scoredItem2 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](2), emptyScore.copy(socialScore = 0.9f), topic1, topic2)
+  val scoredItem3 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](20), emptyScore.copy(socialScore = 0.9f), topic1, topic2)
+  val scoredItem4 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](3), emptyScore.copy(socialScore = 0.9f), None, topic2)
+  val scoredItem5 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](4), emptyScore.copy(socialScore = 0.02f), topic1, None)
   val scoredItems = Seq(scoredItem1, scoredItem2, scoredItem3, scoredItem4, scoredItem5)
 
   val defaultKeep = CuratorKeepInfo(uriId = Id[NormalizedURI](1), userId = Id[User](1), keepId = Id[Keep](1),
@@ -91,6 +94,8 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
         itemsWithAttr(0).attribution.topic.get.topicName === "topic_1"
         itemsWithAttr(0).attribution.user === None
         itemsWithAttr(0).attribution.keep === None
+        itemsWithAttr(0).topic1 === topic1
+        itemsWithAttr(0).topic2 === topic2
 
         itemsWithAttr(1).attribution.user.get.friends.map { _.id } === List(1, 2)
         itemsWithAttr(1).attribution.user.get.friendsLib.get.map { case (userId, libId) => (userId.id, libId.id) }.toMap === Map(1 -> 1)
@@ -101,10 +106,14 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
         itemsWithAttr(3).attribution.user.get.friends.map { _.id } === List(1, 2, 3)
         itemsWithAttr(3).attribution.user.get.friendsLib.get.map { case (userId, libId) => (userId.id, libId.id) }.toMap === Map(1 -> 1, 3 -> 3)
         itemsWithAttr(3).attribution.user.get.others === 6
+        itemsWithAttr(3).topic1 must beNone
+        itemsWithAttr(3).topic2 === topic2
 
         itemsWithAttr(4).attribution.user === None
         itemsWithAttr(4).attribution.topic.get.topicName === "topic_4"
         itemsWithAttr(4).attribution.keep.get.keeps.map { _.id }.toList === List(4)
+        itemsWithAttr(4).topic1 === topic1
+        itemsWithAttr(4).topic2 must beNone
       }
     }
   }

@@ -77,4 +77,9 @@ case class LDATopicDetail(
   topicScores: Seq[Float])
 
 @json case class LDAUserURIInterestScore(score: Float, confidence: Float) // confidence: [0,1]. higher better
-@json case class LDAUserURIInterestScores(global: Option[LDAUserURIInterestScore], recency: Option[LDAUserURIInterestScore], libraryInduced: Option[LDAUserURIInterestScore])
+@json case class LDAUserURIInterestScores(
+  global: Option[LDAUserURIInterestScore],
+  recency: Option[LDAUserURIInterestScore],
+  libraryInduced: Option[LDAUserURIInterestScore],
+  topic1: Option[LDATopic] = None,
+  topic2: Option[LDATopic] = None)

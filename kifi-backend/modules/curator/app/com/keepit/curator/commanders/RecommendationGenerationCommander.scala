@@ -153,7 +153,9 @@ class RecommendationGenerationCommander @Inject() (
             state = UriRecommendationStates.ACTIVE,
             masterScore = computeMasterScore(item.uriScores),
             allScores = item.uriScores,
-            attribution = item.attribution))
+            attribution = item.attribution,
+            topic1 = item.topic1,
+            topic2 = item.topic2))
         } getOrElse {
           uriRecRepo.save(UriRecommendation(
             uriId = item.uriId,
@@ -164,7 +166,9 @@ class RecommendationGenerationCommander @Inject() (
             clicked = 0,
             kept = false,
             trashed = false,
-            attribution = item.attribution))
+            attribution = item.attribution,
+            topic1 = item.topic1,
+            topic2 = item.topic2))
         }
       }
 

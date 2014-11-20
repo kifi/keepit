@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.{ DBSession, DataBaseComponent, DbRepo }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.time.Clock
+import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.model.{ UriRecommendationFeedback, User, NormalizedURI }
 import org.joda.time.DateTime
 import play.api.libs.json.Json
@@ -79,8 +80,10 @@ class UriRecommendationRepoImpl @Inject() (
     def trashed = column[Boolean]("trashed", O.NotNull)
     def lastPushedAt = column[DateTime]("last_pushed_at", O.Nullable)
     def attribution = column[SeedAttribution]("attribution", O.NotNull)
+    def topic1 = column[LDATopic]("topic1", O.Nullable)
+    def topic2 = column[LDATopic]("topic2", O.Nullable)
     def * = (id.?, createdAt, updatedAt, state, vote.?, uriId, userId, masterScore, allScores, delivered, clicked,
-      kept, trashed, lastPushedAt.?, attribution) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
+      kept, trashed, lastPushedAt.?, attribution, topic1.?, topic2.?) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
   }
 
   def table(tag: Tag) = new UriRecommendationTable(tag)

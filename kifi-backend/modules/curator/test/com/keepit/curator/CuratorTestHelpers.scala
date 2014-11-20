@@ -86,7 +86,9 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
       state = UriRecommendationStates.ACTIVE,
       allScores = allScores,
       delivered = 0, clicked = 0, kept = false,
-      attribution = makeSeedAttribution(userId))
+      attribution = makeSeedAttribution(userId),
+      topic1 = None,
+      topic2 = None)
   }
 
   def makeUriRecommendationWithUpdateTimestamp(uriId: Int, userIdInt: Int, masterScore: Float, updatedAt: DateTime) = {
@@ -110,7 +112,9 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         discoveryScore = 1.0f,
         libraryInducedScore = Some(0f)),
       delivered = 0, clicked = 0, kept = false,
-      attribution = makeSeedAttribution(userId))
+      attribution = makeSeedAttribution(userId),
+      topic1 = None,
+      topic2 = None)
   }
 
   def makePublicFeed(uriId: Int, publicMasterScore: Float) = {
