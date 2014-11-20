@@ -37,7 +37,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         val searchConfig = noBoostConfig.overrideWith("myBookmarkBoost" -> "2", "sharingBoostInNetwork" -> "0.5", "sharingBoostOutOfNetwork" -> "0.1")
 
         val languageCommander = new LanguageCommanderImpl(inject[DistributedSearchServiceClient], searchFactory, shardedKeepIndexer)
-        val augmentationCommander = new AugmentationCommanderImpl(activeShards, shardedKeepIndexer, searchFactory, inject[DistributedSearchServiceClient])
+        val augmentationCommander = new AugmentationCommanderImpl(activeShards, shardedKeepIndexer, libraryIndexer, searchFactory, inject[DistributedSearchServiceClient])
         val compatibilitySupport = new SearchBackwardCompatibilitySupport(libraryIndexer, augmentationCommander, shardedCollectionIndexer, inject[MonitoredAwait])
 
         val searchCommander = new SearchCommanderImpl(
