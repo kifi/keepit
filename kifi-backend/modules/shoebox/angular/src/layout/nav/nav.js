@@ -40,7 +40,6 @@ angular.module('kifi')
         //
         // Internal methods.
         //
-
         function setLibListHeight() {
           if (scrollableLibList.offset()) {
             scrollableLibList.height(w.height() - (scrollableLibList.offset().top - w[0].pageYOffset));
@@ -66,7 +65,6 @@ angular.module('kifi')
         //
         // Scope methods.
         //
-
         // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
         var calloutName = 'library_callout_shown';
         scope.showCallout = function () {
