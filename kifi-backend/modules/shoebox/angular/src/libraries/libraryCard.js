@@ -25,7 +25,7 @@ angular.module('kifi')
         //
         // Internal data.
         //
-        var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|a(?:c|d|e|g|i|l|m|o|q|r|s|t|u|z)|b(?:a|b|e|f|g|h|i|m|n|r|t|y|z)|c(?:a|c|d|f|g|h|i|k|l|m|n|o|r|u|x|y|z)|d(?:e|j|k|o)|e(?:c|e|g|s|t)|f(?:i|j|k|m|o|r)|g(?:b|e|f|g|h|i|l|m|n|p|q|r|s|t|u)|h(?:k|m|n|r|u)|i(?:d|e|l|m|n|o|r|s|t)|j(?:e|o|p)|k(?:e|g|h|r|w|y|z)|l(?:b|c|i|k|t|u|v|y)|m(?:c|d|g|h|k|m|n|o|q|r|s|t|u|w|x|y|z)|n(?:a|c|f|i|l|o|u|z)|om|p(?:a|e|g|h|k|l|m|n|r|t|y)|qa|r(?:e|o|u|w)|s(?:a|b|c|d|e|g|h|i|k|m|n|o|t|u|v|z)|t(?:c|d|f|h|j|m|n|o|p|r|t|v|w|z)|u(?:a|g|k|m|s|y|z)|v(?:e|g|i|n|u)|wf|y(?:t|u)|z(?:a|m|r|w)\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
+        var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|a[cdegilmoqrstuz]|b[abefghimnrtyz]|c[acdfghiklmnoruxyz]|d[ejko]|e[cegst]|f[ijkmor]|g[befghilmnpqrstu]|h[kmnru]|i[delmnorst]|j[eop]|k[eghrwyz]|l[bciktuvy]|m[cdghkmnoqrstuwxyz]|n[acfilouz]|om|p[aeghklmnrty]|qa|r[eouw]|s[abcdeghikmnotuvz]|t[cdfhjmnoprtvwz]|u[agkmsyz]|v[eginu]|wf|y[t|u]|z[amrw]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
         var authToken = $location.search().authToken || '';
         var prevQuery = '';
 
