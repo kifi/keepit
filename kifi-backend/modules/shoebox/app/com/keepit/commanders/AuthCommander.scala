@@ -134,7 +134,8 @@ class AuthCommander @Inject() (
         avatarUrl = GravatarHelper.avatarFor(email.address),
         authMethod = AuthenticationMethod.UserPassword,
         passwordInfo = Some(passwordInfo)
-      )
+      ),
+      allowSignup = true
     )
 
     val savedIdentity = UserService.save(newIdentity) // Kifi User is created here if it doesn't exist
