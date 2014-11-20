@@ -195,11 +195,20 @@ angular.module('kifi')
 
         function setCurrentStickTitle() {
           var offset = antiscrollLibList.scrollTop();
-          var maxUserLibsOffset, maxMyLibsOffset;
+          var maxUserLibsOffset, maxMyLibsOffset, libItemHeight = 0, separatorHeight = 0;
+
+          var libItems = antiscrollLibList.find('.kf-nav-lib-item');
+          if (libItems.length > 0) {
+            libItemHeight = libItems.eq(0).outerHeight(true);
+          }
+          var separators = antiscrollLibList.find('.kf-nav-lib-separator');
+          if (separators.length > 0) {
+            separatorHeight = separators.eq(0).outerHeight(true);
+          }
 
           if (scope.sortingMenu.myLibsFirst) { // mine, you follow, invited
-            maxMyLibsOffset = scope.myLibsToShow.length * 53 + 35;
-            maxUserLibsOffset = maxMyLibsOffset + scope.userLibsToShow.length * 53 + 40;
+            maxMyLibsOffset = scope.myLibsToShow.length * libItemHeight + separatorHeight;
+            maxUserLibsOffset = maxMyLibsOffset + scope.userLibsToShow.length * libItemHeight + separatorHeight;
             if (offset < maxMyLibsOffset) {
               scope.currentStickTitle = 'mine';
             } else if (offset < maxUserLibsOffset) {
@@ -208,7 +217,7 @@ angular.module('kifi')
               scope.currentStickTitle = 'invites';
             }
           } else { // all, invited
-            maxUserLibsOffset = scope.userLibsToShow.length * 53 + 35;
+            maxUserLibsOffset = scope.userLibsToShow.length * libItemHeight + separatorHeight;
             if (offset < maxUserLibsOffset) {
               scope.currentStickTitle = 'all';
             } else {
