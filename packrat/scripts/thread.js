@@ -13,7 +13,6 @@
 // @require scripts/look.js
 // @require scripts/render.js
 // @require scripts/compose.js
-// @require scripts/snapshot.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/prevent_ancestor_scroll.js
 // @require scripts/maintain_height.js
@@ -82,7 +81,7 @@ k.panes.thread = k.panes.thread || function () {
     }))
     .prependTo($tall);
 
-    var compose = initCompose($tall, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
+    var compose = k.compose($tall, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
     var $holder = $tall.find('.kifi-scroll-inner')
       .preventAncestorScroll()
       .handleLookClicks()

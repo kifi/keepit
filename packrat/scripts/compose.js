@@ -7,7 +7,7 @@
 // @require scripts/prevent_ancestor_scroll.js
 // @require scripts/snap.js
 
-var initCompose = (function() {
+k.compose = k.compose || (function() {
   'use strict';
 
   var KEY_PREFIX = MOD_KEYS.c + '-';
@@ -216,7 +216,7 @@ var initCompose = (function() {
     }
   }
 
-  return function initCompose($container, opts) {
+  return function compose($container, opts) {
     var $form = $container.find('.kifi-compose').data('empty', true);
     $forms = $forms.add($form);
 
@@ -301,9 +301,9 @@ var initCompose = (function() {
         var enabled = !this.classList.toggle('kifi-disabled');
         api.port.emit('set_look_here_mode', enabled);
         if (enabled) {
-          snap.enable(editor.$el, true);
+          k.snap.enable(editor.$el);
         } else {
-          snap.disable();
+          k.snap.disable();
         }
       } else {
         $('<div class="kifi-compose-highlight-unavailable">“Look here” mode is<br/>not available on this page<br/>in this browser.</div>')
@@ -380,9 +380,9 @@ var initCompose = (function() {
         var lookHereMode = editor.supportsLinks && prefs.lookHereMode;
         $form.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !lookHereMode);
         if (lookHereMode) {
-          snap.enable(editor.$el);
+          k.snap.enable(editor.$el);
         } else {
-          snap.disable();
+          k.snap.disable();
         }
       },
       prefill: function (to) {
@@ -391,9 +391,6 @@ var initCompose = (function() {
         $to.tokenInput('clear').tokenInput('add', to);
         editor.clear();
         editor.disableDefaultText();
-      },
-      snapSelection: function () {
-        return snap.enabled() && snap.attempt();
       },
       focus: function () {
         log('[compose.focus]');
@@ -413,7 +410,7 @@ var initCompose = (function() {
           $to.tokenInput('destroy');
         }
         if (!$forms.length) {
-          snap.disable();
+          k.snap.disable();
         }
       }
     };
