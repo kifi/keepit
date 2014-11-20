@@ -187,7 +187,7 @@ k.panes.notices = k.panes.notices || function () {
     var locatorOld = formatLocator($aOld.data('kind'));
     var locatorNew = formatLocator($aNew.data('kind'));
     k.pane.pushState(locatorNew);
-    api.port.emit('pane', {old: locatorOld, new: locatorNew});
+    api.port.emit('pane', {old: locatorOld, new: locatorNew, how: 'menu'});
   }
 
   function renderOne(notice) {

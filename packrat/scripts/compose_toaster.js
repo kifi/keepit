@@ -141,7 +141,7 @@ k.toaster = k.toaster || (function () {
         log('[sendMessage] resp:', resp);
         api.require('scripts/pane.js', function () {
           $t.data('sending', false);
-          k.pane.show({locator: '/messages/' + resp.threadId});
+          k.pane.show({locator: '/messages/' + resp.threadId, trigger: 'send'});
           if ($toast === $t) {
             hide();
           }
@@ -152,7 +152,7 @@ k.toaster = k.toaster || (function () {
 
   function showOlder(threadId) {
     api.require('scripts/pane.js', function () {
-      k.pane.show({locator: threadId ? '/messages/' + threadId : '/messages'});
+      k.pane.show({locator: threadId ? '/messages/' + threadId : '/messages', trigger: 'older'});
     });
   }
 

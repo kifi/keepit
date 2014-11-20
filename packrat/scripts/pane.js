@@ -53,10 +53,11 @@ k.pane = k.pane || function () {  // idempotent for Chrome
     return paneIdxs.indexOf(name);
   }
 
-  function showPane(locator, back, redirected) {
+  function showPane(locator, trigger, redirected) {
+    var back = trigger === 'back';
     var paneState = $pane && $pane.data('state');
     if (paneState && paneState !== 'open') {
-      log('[showPane] aborting', locator, back ? 'back' : '', paneState);
+      log('[showPane] aborting', locator, trigger, paneState);
       return;
     }
     if (k.toaster && k.toaster.showing()) {
@@ -75,7 +76,7 @@ k.pane = k.pane || function () {  // idempotent for Chrome
       k.panes[name].switchTo(locator);
       return;
     }
-    log('[showPane]', locator, name, back ? 'back' : '', redirected ? 'redirected' : '');
+    log('[showPane]', locator, name, trigger, redirected ? 'redirected' : '');
     if (!paneHistory) {
       paneHistory = [locator];
     } else if (back) {
@@ -103,7 +104,7 @@ k.pane = k.pane || function () {  // idempotent for Chrome
           .off("transitionend", end);
         $cubby.css("overflow", "");
       });
-      api.port.emit('pane', {old: $pane[0].dataset.locator, new: locator});
+      api.port.emit('pane', {old: $pane[0].dataset.locator, new: locator, how: trigger});
       $pane[0].dataset.locator = locator;
       populatePane($new, name, locator);
     } else {
@@ -111,7 +112,7 @@ k.pane = k.pane || function () {  // idempotent for Chrome
       $pane = $(k.render('html/keeper/pane', {user: k.me, redirected: redirected}, {pane: 'pane_' + name}))
         .data('state', 'opening');
       $pane[0].dataset.locator = locator;
-      api.port.emit('pane', {new: locator});
+      api.port.emit('pane', {new: locator, how: trigger});
 
       var bringSlider = !k.keeper.showing();
       if (bringSlider) {
@@ -238,7 +239,7 @@ k.pane = k.pane || function () {  // idempotent for Chrome
         if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         $(this).closest('.kifi-pane-top-menu').triggerHandler('kifi:hide');
-        api.require('styles/keeper/settings.css', showPane.bind(null, '/settings'));
+        api.require('styles/keeper/settings.css', showPane.bind(null, '/settings', 'menu'));
       })
       .on("mouseup", ".kifi-sign-out", function (e) {
         if (e.originalEvent.isTrusted === false) return;
@@ -404,7 +405,7 @@ k.pane = k.pane || function () {  // idempotent for Chrome
         k.pane.compose(o.trigger, o.locator, o.to);
       } else {
         log('[pane.show]', o.locator, o.trigger || '', o.redirected || '');
-        showPane(o.locator, false, o.redirected);
+        showPane(o.locator, o.trigger, o.redirected);
       }
     },
     hide: hidePane,
@@ -417,10 +418,10 @@ k.pane = k.pane || function () {  // idempotent for Chrome
         } else if (locator === paneHistory[0] && !(k.toaster && k.showing())) {
           hidePane(trigger === 'keeper');
         } else {
-          showPane(locator);
+          showPane(locator, trigger);
         }
       } else {
-        showPane(locator);
+        showPane(locator, trigger);
       }
     },
     shade: function () {
@@ -439,7 +440,7 @@ k.pane = k.pane || function () {  // idempotent for Chrome
       }
     },
     back: function (fallbackLocator) {
-      showPane(paneHistory[1] || fallbackLocator || '/messages:all', true);
+      showPane(paneHistory[1] || fallbackLocator || '/messages:all', 'back');
     },
     onHide: new Listeners
   };

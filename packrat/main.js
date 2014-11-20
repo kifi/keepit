@@ -1094,7 +1094,7 @@ api.port.on({
         arr.push(tab);
       }
       tabsByLocator[loc] = arr || [tab];
-      tracker.track('user_viewed_pane', {type: trackingLocator(loc)});
+      tracker.track('user_viewed_pane', {type: trackingLocator(loc), subsource: o.how});
       if (loc === '/messages:unread') {
         store('unread', true);
       } else if (loc === '/messages:all') {

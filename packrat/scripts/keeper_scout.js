@@ -37,7 +37,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     me_change: onMeChange,
     guide: loadAndDo.bind(null, 'guide', 'show'),
     show_pane: loadAndDo.bind(null, 'pane', 'show'),
-    button_click: loadAndDo.bind(null, 'pane', 'toggle', 'button'),
+    button_click: loadAndDo.bind(null, 'pane', 'toggle', 'icon'),
     compose: loadAndDo.bind(null, 'keeper', 'compose'),
     auto_engage: loadAndDo.bind(null, 'keeper', 'engage'),
     init: function(o) {
