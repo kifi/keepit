@@ -23,7 +23,7 @@ class UserIdentity(
     )
 
 object UserIdentity {
-  def apply(userId: Option[Id[User]], socialUser: SocialUser) = new UserIdentity(userId, socialUser, false)
+  def apply(userId: Option[Id[User]], socialUser: SocialUser, allowSignup: Boolean = false) = new UserIdentity(userId, socialUser, allowSignup)
 
   def unapply(u: UserIdentity) = Some(u.userId, u.socialUser, u.allowSignup)
 }
