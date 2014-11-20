@@ -967,15 +967,15 @@ api.port.on({
     markRead(o.threadId, o.messageId, o.time);
     socket.send(['set_message_read', o.messageId]);
     if (o.from === 'toggle') {
-      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markRead', category: o.category});
+      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markRead', category: trackingCategory(o.category)});
     } else if (o.from === 'notice') {
-      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'view', category: o.category});
+      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'view', category: trackingCategory(o.category)});
     }
   },
   set_message_unread: function (o, _, tab) {
     markUnread(o.threadId, o.messageId);
     socket.send(['set_message_unread', o.messageId]);
-    tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markUnread', category: o.category});
+    tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markUnread', category: trackingCategory(o.category)});
   },
   get_page_thread_count: function(_, __, tab) {
     sendPageThreadCount(tab, null, true);
@@ -2046,6 +2046,10 @@ function trackingLocatorFor(tabId) {
 
 function trackingLocator(loc) {
   return loc && (loc.lastIndexOf('/messages/', 0) === 0 ? 'chat' : loc === '/messages' ? 'messages:page' : loc.substr(1));
+}
+
+function trackingCategory(cat) {
+  return cat === 'global' ? 'announcement' : cat;
 }
 
 function updateTabsWithKeptState() {
