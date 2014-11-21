@@ -379,21 +379,30 @@ angular.module('kifi')
         };
 
         var normalHeaderRightMarginRight;
+        var headerRightShifted = false;
         scope.onSearchInputFocus = function () {
           scope.librarySearchInProgress = true;
 
           var headerLinksElement = angular.element('.kf-header-right');
 
-          normalHeaderRightMarginRight = parseInt(headerLinksElement.css('margin-right'), 10);
-          angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
-            'transition': 'top 0.5s ease 0.3s',
-            'top': '15px',
+          if (!headerRightShifted) {
+            normalHeaderRightMarginRight = parseInt(headerLinksElement.css('margin-right'), 10);
+
+            headerLinksElement.css({
+              'transition': 'margin-right 0.3s ease 0.1s',
+              'margin-right': normalHeaderRightMarginRight + 90 + 'px'
+            });
+
+            angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
             'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 - 150 + normalHeaderRightMarginRight + 'px'
           });
 
-          headerLinksElement.css({
-            'transition': 'margin-right 0.3s ease 0.1s',
-            'margin-right': normalHeaderRightMarginRight + 90 + 'px'
+            headerRightShifted = true;
+          }
+
+          angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
+            'transition': 'top 0.5s ease 0.3s',
+            'top': '15px'
           });
 
           angular.element('.kf-library-body').css({
@@ -413,9 +422,13 @@ angular.module('kifi')
             'top': '-35px'
           });
 
-          angular.element('.kf-header-right').css({
-            'margin-right': normalHeaderRightMarginRight + 'px'
-          });
+          if (headerRightShifted) {
+            angular.element('.kf-header-right').css({
+              'margin-right': normalHeaderRightMarginRight + 'px'
+            });
+
+            headerRightShifted = false;
+          }
 
           angular.element('.kf-library-body').css({
             'transition': 'margin-top 0.1s ease',
@@ -431,7 +444,6 @@ angular.module('kifi')
           $timeout(function () {
             if (query) {
               if (prevQuery) {
-                console.log('prevQuery ' + prevQuery);
                 locationNoReload.skipReload().search('q', query).replace();
 
                 // When we search using the input inside the library card header, we don't
