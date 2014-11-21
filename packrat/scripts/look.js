@@ -19,7 +19,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
 
     var selector = this.href.substr(11);
     if (selector.lastIndexOf('r|', 0) === 0) {
-      var r = snapshot.findRange(selector), rects;
+      var r = k.snapshot.findRange(selector), rects;
       if (r && (rects = ranges.getClientRects(r)).length) {
         var sel = window.getSelection();
         sel.removeAllRanges();
@@ -42,9 +42,9 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
         showBroken(this, selector);
       }
     } else if (selector.lastIndexOf('i|', 0) === 0) {
-      var img = snapshot.findImage(selector);
+      var img = k.snapshot.findImage(selector);
       if (img) {
-        var rect = snapshot.getImgContentRect(img);
+        var rect = k.snapshot.getImgContentRect(img);
         var anim = scrollTo(rect, computeScrollToDuration);
         var $el = $('<kifi class="kifi-snapshot-highlight-v2">').css({width: rect.width, height: rect.height});
         animateFromTo($el, this, rect, anim, function () {
@@ -68,7 +68,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
         }
       }
     } else {
-      var el = snapshot.fuzzyFind(selector);
+      var el = k.snapshot.fuzzyFind(selector);
       if (el) {
         // make absolute positioning relative to document instead of viewport
         document.documentElement.style.position = 'relative';

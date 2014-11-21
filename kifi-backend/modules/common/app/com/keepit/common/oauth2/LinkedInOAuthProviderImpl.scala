@@ -18,7 +18,7 @@ trait LinkedInOAuthProvider extends OAuthProvider {
 }
 
 object LinkedInOAuthProvider {
-  val Api = "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,email-address,formatted-name,picture-urls::(original);secure=true)?format=json&oauth2_access_token="
+  def api(accessToken: OAuth2AccessToken) = s"https://api.linkedin.com/v1/people/~:(id,first-name,last-name,email-address,formatted-name,picture-urls::(original);secure=true)?format=json&oauth2_access_token=${accessToken.token}"
   val LinkedIn = "linkedin"
   val ErrorCode = "errorCode"
   val Message = "message"
@@ -37,7 +37,7 @@ class LinkedInOAuthProviderImpl @Inject() (airbrake: AirbrakeNotifier) extends L
 
   import LinkedInOAuthProvider._
   def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {
-    WS.url(Api + accessToken).withRequestTimeout(120000).get() map { response =>
+    WS.url(api(accessToken)).withRequestTimeout(120000).get() map { response =>
       val me = response.json
       (me \ ErrorCode).asOpt[Int] match {
         case Some(code) => {
