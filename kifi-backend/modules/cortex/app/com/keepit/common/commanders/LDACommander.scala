@@ -326,4 +326,15 @@ class LDACommander @Inject() (
     }
   }
 
+  def getSimilarURIs(uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): Seq[Id[NormalizedURI]] = {
+    db.readOnlyReplica { implicit s =>
+      uriTopicRepo.getActiveByURI(uriId, version) match {
+        case Some(uriFeat) =>
+          val (first, second, third) = (uriFeat.firstTopic.get, uriFeat.secondTopic.get, uriFeat.thirdTopic.get)
+          uriTopicRepo.getURIsByTopics(first, second, third, version, limit = 50)
+        case None => Seq()
+      }
+    }
+  }
+
 }

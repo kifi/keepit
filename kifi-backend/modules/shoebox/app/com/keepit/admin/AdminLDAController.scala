@@ -220,4 +220,14 @@ class AdminLDAController @Inject() (
       }
     }
   }
+
+  def similarURIs(uriId: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
+    val ver = ModelVersion[DenseLDA](3)
+    cortex.similarURIs(uriId)(Some(ver)).map { uriIds =>
+      val uris = db.readOnlyReplica { implicit s =>
+        uriIds.map { id => uriRepo.get(id) }
+      }
+      Ok(html.admin.ldaSimilarURIs(ver.version, uris))
+    }
+  }
 }
