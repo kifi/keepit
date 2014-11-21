@@ -138,17 +138,24 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       var btn = this;
       api.port.emit('get_keepers', function (o) {
         if (o.keepers.length) {
-          k.render('html/keeper/keepers', setKeepersAndCounts(o.keepers, o.otherKeeps, {
+          var params = setKeepersAndCounts(o.keepers, o.otherKeeps, {
             cssClass: 'kifi-keepers-hover',
             linkKeepers: true,
             kept: o.kept
-          }), function (html) {
+          });
+          k.render('html/keeper/keepers', params, function (html) {
             configureHover(hoverfuFriends($(html), o.keepers), {
               suppressed: isSticky,
               mustHoverFor: 100,
               canLeaveFor: 800,
               click: 'hide',
               parent: $slider
+            });
+            api.port.emit('track_notified', {
+              category: 'socialToolTip',
+              subsource: 'keepButton',
+              friendsShown: params.keepers.length,
+              friendsElided: params.numMore || undefined
             });
           });
         } else {
@@ -543,7 +550,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
           if (o.keepers.length && !lastCreatedAt) {
             $tile.hoverfu(function (configureHover) {
               // TODO: preload friend pictures
-              k.render('html/keeper/keepers', setKeepersAndCounts(o.keepers, o.otherKeeps, {cssClass: 'kifi-keepers-promo'}), function (html) {
+              var params = setKeepersAndCounts(o.keepers, o.otherKeeps, {cssClass: 'kifi-keepers-promo'});
+              k.render('html/keeper/keepers', params, function (html) {
                 if (lastCreatedAt) return;
                 var $promo = $(html).on('transitionend', function unhoverfu(e) {
                   if (e.target === this && !this.classList.contains('kifi-showing') && e.originalEvent.propertyName === 'opacity') {
@@ -552,6 +560,12 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                   }
                 });
                 configureHover($promo, {parent: $tile, mustHoverFor: 0, canLeaveFor: 1e9});
+                api.port.emit('track_notified', {
+                  category: 'socialToolTip',
+                  subsource: 'tile',
+                  friendsShown: params.keepers.length,
+                  friendsElided: params.numMore || undefined
+                });
               });
             }).hoverfu('show');
             setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000);

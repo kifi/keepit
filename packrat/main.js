@@ -866,6 +866,9 @@ api.port.on({
   track_pane_click: function (data) {
     tracker.track('user_clicked_pane', data);
   },
+  track_notified: function (data) {
+    tracker.track('user_was_notified', data);
+  },
   keeper_shown: function (data, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;
     logEvent('slider', 'sliderShown', data.urls);
