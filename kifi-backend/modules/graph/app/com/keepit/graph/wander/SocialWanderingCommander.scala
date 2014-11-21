@@ -22,20 +22,19 @@ class SocialWanderingCommander @Inject() (
     abook: ABookServiceClient,
     clock: Clock) extends Logging {
 
-  private val consolidate = new RequestConsolidator[Id[User], SociallyRelatedEntities](1 minute)
+  private val consolidate = new RequestConsolidator[Id[User], Option[SociallyRelatedEntities]](1 minute)
   private val lock = new ReactiveLock(5)
 
-  def refresh(id: Id[User]): Future[SociallyRelatedEntities] = consolidate(id) { userId =>
+  def getSocialRelatedEntities(id: Id[User]): Future[Option[SociallyRelatedEntities]] = consolidate(id) { userId =>
     lock.withLockFuture {
       if (graphHasUserVertex(userId)) {
         getIrrelevantVertices(userId).map { irrelevantVertices =>
           val journal = wander(userId, irrelevantVertices)
-          val sociallyRelatedPeople = getSociallyRelatedPeople(userId, journal, SocialWanderlust.cachedByNetwork)
-          invalidateCache(sociallyRelatedPeople)
-          sociallyRelatedPeople
+          val sociallyRelatedPeople = buildSociallyRelatedPeople(userId, journal, SocialWanderlust.cachedByNetwork)
+          Some(sociallyRelatedPeople)
         }
       } else {
-        Future.successful(SociallyRelatedEntities.empty(userId)) // not cached
+        Future.successful(None)
       }
     }
   }
@@ -45,7 +44,7 @@ class SocialWanderingCommander @Inject() (
     graph.readOnly { reader => reader.getNewVertexReader().hasVertex(vid) }
   }
 
-  private def getSociallyRelatedPeople(userId: Id[User], journal: TeleportationJournal, limit: Int) = {
+  private def buildSociallyRelatedPeople(userId: Id[User], journal: TeleportationJournal, limit: Int) = {
     val relatedUsers = ListBuffer[(Id[User], Double)]()
     val relatedFacebookAccounts = ListBuffer[(Id[SocialUserInfo], Double)]()
     val relatedLinkedInAccounts = ListBuffer[(Id[SocialUserInfo], Double)]()

@@ -34,12 +34,7 @@ trait GraphServiceClient extends ServiceClient {
   def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]]
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
-  def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]]
   def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]]
-  def getSociallyRelatedUsers(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, User]]]
-  def getSociallyRelatedFacebookAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]]
-  def getSociallyRelatedLinkedInAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]]
-  def getSociallyRelatedEmailAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, EmailAccountInfo]]]
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]]
 }
 
@@ -56,7 +51,6 @@ class GraphServiceClientImpl @Inject() (
     mode: Mode) extends GraphServiceClient with Logging {
 
   private val longTimeout = CallTimeouts(responseTimeout = Some(300000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
-  private val ONE_HOUR_MILLIS = 1000 * 60 * 60
 
   private def getSuccessfulResponses(calls: Seq[Future[ClientResponse]]): Future[Seq[ClientResponse]] = {
     val safeCalls = calls.map { call =>
@@ -114,47 +108,18 @@ class GraphServiceClientImpl @Inject() (
     }
   }
 
-  def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]] = {
-    val futureUserScores = cacheProvider.userScoreCache.get(ConnectedUserScoreCacheKey(userId, false)) match {
-      case Some(userScores) => Future.successful(userScores)
-      case None =>
-        val futureActualUserScores = call(Graph.internal.getUserAndScores(userId, false), callTimeouts = longTimeout).map { response =>
-          response.json.as[Seq[ConnectedUserScore]]
-        }
-        if (bePatient) futureActualUserScores else Future.successful(Seq.empty)
-    }
-    futureUserScores.map(userScores => userScores.map { case ConnectedUserScore(friendId, score) => friendId -> score })
-  }
-
   def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]] = {
 
-    def needRefresh(x: Option[SociallyRelatedEntities]): Boolean = {
-      x.isEmpty || (x.get.timestamp.plus(ONE_HOUR_MILLIS * 12).getMillis < currentDateTime.getMillis)
+    def needRefresh(cachedEntities: Option[SociallyRelatedEntities]): Boolean = {
+      !cachedEntities.exists(_.createdAt.isAfter(currentDateTime.minusHours(12)))
     }
 
     cacheProvider.relatedEntitiesCache.
       getOrElseFutureOpt(SociallyRelatedEntitiesCacheKey(userId), needRefresh) {
         call(Graph.internal.getSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r =>
-          log.info(Json.stringify(r.json))
-          Some(r.json.as[SociallyRelatedEntities])
+          r.json.asOpt[SociallyRelatedEntities]
         }
       }
-  }
-
-  def getSociallyRelatedUsers(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, User]]] = {
-    getSociallyRelatedEntities(userId, bePatient).map(_.map(_.users))
-  }
-
-  def getSociallyRelatedFacebookAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]] = {
-    getSociallyRelatedEntities(userId, bePatient).map(_.map(_.facebookAccounts))
-  }
-
-  def getSociallyRelatedLinkedInAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]] = {
-    getSociallyRelatedEntities(userId, bePatient).map(_.map(_.linkedInAccounts))
-  }
-
-  def getSociallyRelatedEmailAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, EmailAccountInfo]]] = {
-    getSociallyRelatedEntities(userId, bePatient).map(_.map(_.emailAccounts))
   }
 
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = {

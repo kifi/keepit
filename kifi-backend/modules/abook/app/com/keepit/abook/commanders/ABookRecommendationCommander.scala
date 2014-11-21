@@ -17,6 +17,9 @@ import scala.inline
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.logging.Logging
 import java.text.Normalizer
+import com.keepit.graph.model.SociallyRelatedEntities
+import com.keepit.common.service.RequestConsolidator
+import scala.concurrent.duration._
 
 @Singleton
 class ABookRecommendationCommander @Inject() (
@@ -180,8 +183,8 @@ class ABookRecommendationCommander @Inject() (
   }
 
   private def generateFutureFacebookInviteRecommendations(userId: Id[User], futureExistingSocialInvites: Future[Map[Id[SocialUserInfo], Invitation]], futureRelevantSocialFriends: Future[Map[Id[SocialUserInfo], SocialUserBasicInfo]]): Future[Stream[InviteRecommendation]] = {
-    graph.getSociallyRelatedFacebookAccounts(userId, bePatient = false).flatMap { relatedFacebookAccountsOption =>
-      val relatedFacebookAccounts = relatedFacebookAccountsOption.map(_.related) getOrElse Seq.empty
+    getSociallyRelatedEntities(userId).flatMap { relatedEntities =>
+      val relatedFacebookAccounts = relatedEntities.map(_.facebookAccounts.related) getOrElse Seq.empty
       if (relatedFacebookAccounts.isEmpty) Future.successful(Stream.empty)
       else {
         val rejectedFacebookInviteRecommendations = db.readOnlyReplica { implicit session => facebookInviteRecommendationRepo.getIrrelevantRecommendations(userId) }
@@ -196,8 +199,8 @@ class ABookRecommendationCommander @Inject() (
   }
 
   private def generateFutureLinkedInInviteRecommendations(userId: Id[User], futureExistingSocialInvites: Future[Map[Id[SocialUserInfo], Invitation]], futureRelevantSocialFriends: Future[Map[Id[SocialUserInfo], SocialUserBasicInfo]]): Future[Stream[InviteRecommendation]] = {
-    graph.getSociallyRelatedLinkedInAccounts(userId, bePatient = false).flatMap { relatedLinkedInAccountsOption =>
-      val relatedLinkedInAccounts = relatedLinkedInAccountsOption.map(_.related) getOrElse Seq.empty
+    getSociallyRelatedEntities(userId).flatMap { relatedEntities =>
+      val relatedLinkedInAccounts = relatedEntities.map(_.linkedInAccounts.related) getOrElse Seq.empty
       if (relatedLinkedInAccounts.isEmpty) Future.successful(Stream.empty)
       else {
         val rejectedLinkedInInviteRecommendations = db.readOnlyReplica { implicit session => linkedInInviteRecommendationRepo.getIrrelevantRecommendations(userId) }
@@ -212,8 +215,8 @@ class ABookRecommendationCommander @Inject() (
   }
 
   private def generateFutureEmailInvitesRecommendations(userId: Id[User], futureExistingInvites: Future[Seq[Invitation]], futureNormalizedUserNames: Future[Set[String]]): Future[Stream[InviteRecommendation]] = {
-    graph.getSociallyRelatedEmailAccounts(userId, bePatient = false).flatMap { relatedEmailAccountsOption =>
-      val relatedEmailAccounts = relatedEmailAccountsOption.map(_.related) getOrElse Seq.empty
+    getSociallyRelatedEntities(userId).flatMap { relatedEntities =>
+      val relatedEmailAccounts = relatedEntities.map(_.emailAccounts.related) getOrElse Seq.empty
       if (relatedEmailAccounts.isEmpty) Future.successful(Stream.empty)
       else {
         val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => emailInviteRecommendationRepo.getIrrelevantRecommendations(userId) }
@@ -315,4 +318,9 @@ class ABookRecommendationCommander @Inject() (
 
   private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
   @inline private def normalize(fullName: String): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(fullName.trim, Normalizer.Form.NFD), "").toLowerCase
+
+  private val consolidateRelatedEntities = new RequestConsolidator[Id[User], Option[SociallyRelatedEntities]](1 second)
+  private def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities]] = {
+    consolidateRelatedEntities(userId)(graph.getSociallyRelatedEntities(_, true))
+  }
 }

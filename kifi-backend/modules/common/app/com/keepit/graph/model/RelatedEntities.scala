@@ -30,7 +30,7 @@ case class SociallyRelatedEntities(
   facebookAccounts: RelatedEntities[User, SocialUserInfo],
   linkedInAccounts: RelatedEntities[User, SocialUserInfo],
   emailAccounts: RelatedEntities[User, EmailAccountInfo],
-  timestamp: DateTime = currentDateTime)
+  createdAt: DateTime = currentDateTime)
 
 object SociallyRelatedEntities {
   implicit val format = (
@@ -38,14 +38,14 @@ object SociallyRelatedEntities {
     (__ \ 'facebookAccounts).format[RelatedEntities[User, SocialUserInfo]] and
     (__ \ 'linkedInAccounts).format[RelatedEntities[User, SocialUserInfo]] and
     (__ \ 'emailAccounts).format[RelatedEntities[User, EmailAccountInfo]] and
-    (__ \ 'timestamp).format[DateTime]
+    OFormat((__ \ 'createdAt).read[DateTime] orElse (__ \ 'timestamp).read[DateTime], (__ \ 'createdAt).write[DateTime])
   )(SociallyRelatedEntities.apply _, unlift(SociallyRelatedEntities.unapply))
 
   def empty(userId: Id[User]): SociallyRelatedEntities = SociallyRelatedEntities(RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
 }
 
 case class SociallyRelatedEntitiesCacheKey(id: Id[User]) extends Key[SociallyRelatedEntities] {
-  override val version = 2
+  override val version = 3
   val namespace = "socially_related_entities"
   def toKey(): String = id.id.toString
 }

@@ -72,7 +72,7 @@ class GraphController @Inject() (
   }
 
   def getSociallyRelatedEntities(userId: Id[User]) = Action.async { request =>
-    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople)) }
+    socialWanderingCommander.getSocialRelatedEntities(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople)) }
   }
 
   // todo(Léo): Remove this code once CollisionCommander is operational
