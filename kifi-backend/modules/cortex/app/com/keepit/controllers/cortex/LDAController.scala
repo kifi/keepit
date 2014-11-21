@@ -110,6 +110,12 @@ class LDAController @Inject() (
     Ok(Json.toJson(vecOpt))
   }
 
+  def userLibraryScore(userId: Id[User], libId: Id[Library], version: Option[Int]) = Action { request =>
+    implicit val ver = toVersion(version)
+    val s = lda.userLibraryScore(userId, libId)
+    Ok(Json.toJson(s))
+  }
+
   def sampleURIs(topicId: Int, version: Option[Int]) = Action { request =>
     implicit val ver = toVersion(version)
     val (uris, scores) = lda.sampleURIs(topicId).unzip

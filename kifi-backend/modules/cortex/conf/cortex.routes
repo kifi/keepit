@@ -35,6 +35,7 @@ GET     /internal/cortex/lda/uriKLDivergence                                    
 GET     /internal/cortex/lda/recomputeUserLDAStat                                   @com.keepit.controllers.cortex.LDAController.recomputeUserLDAStat(version: Option[Int] ?= None)
 GET     /internal/cortex/lda/libraryTopic                                           @com.keepit.controllers.cortex.LDAController.libraryTopic(libId: Id[Library], version: Option[Int] ?= None)
 GET     /internal/cortex/lda/libraryInducedUserUriInterest                          @com.keepit.controllers.cortex.LDAController.libraryInducedUserUriInterest(userId: Id[User], uriId: Id[NormalizedURI], version: Option[Int] ?= None)
+GET     /internal/cortex/lda/userLibraryScore                                       @com.keepit.controllers.cortex.LDAController.userLibraryScore(userId: Id[User], libId: Id[Library], version: Option[Int] ?= None)
 GET     /internal/cortex/lda/dumpFeature                                            @com.keepit.controllers.cortex.LDAController.dumpFeature(dataType: String, id: Long, version: Option[Int] ?= None)
 
 GET     /internal/cortex/data/sparseLDAFeaturesChanged        @com.keepit.controllers.cortex.CortexDataPipeController.getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)

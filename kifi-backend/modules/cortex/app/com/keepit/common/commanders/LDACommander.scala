@@ -45,6 +45,18 @@ class LDACommander @Inject() (
   }
 
   // for admin
+  def userLibraryScore(userId: Id[User], libId: Id[Library])(implicit version: ModelVersion[DenseLDA]): Option[Float] = {
+    val libFeatOpt = db.readOnlyReplica { implicit s => libTopicRepo.getActiveByLibraryId(libId, version) }
+    val userFeatOpt = db.readOnlyReplica { implicit s => userTopicRepo.getByUser(userId, version) }
+    val libVec = libFeatOpt.flatMap(_.topic).map { _.value }
+    val userVec = userFeatOpt.flatMap(_.userTopicMean).map { _.mean }
+    (libVec, userVec) match {
+      case (Some(u), Some(v)) => Some(cosineDistance(u, v))
+      case _ => None
+    }
+  }
+
+  // for admin
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): LDAUserURIInterestScores = {
     db.readOnlyReplica { implicit s =>
       val uriTopicOpt = uriTopicRepo.getActiveByURI(uriId, version)
