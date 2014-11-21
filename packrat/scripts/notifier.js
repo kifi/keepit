@@ -41,32 +41,18 @@ var notifier = function () {
           threadId: o.thread
         });
         break;
+      case 'global':
       case 'triggered':
         this.hide(o.thread);
         add(o.id, o.category, {
           title: o.title,
           subtitle: o.subtitle,
           contentHtml: o.bodyHtml,
-          triggered: true,
           link: o.linkText,
           imageHtml: imgTag(o.image),
           sticky: o.isSticky,
           showForMs: o.showForMs || 60000,
-          onClick: $.proxy(onClickGlobal, null, o.thread, o.id, o.url), // handled the same as globals
-          threadId: o.thread
-        });
-        break;
-      case 'global':
-        this.hide(o.thread);
-        add(o.id, o.category, {
-          title: o.title,
-          subtitle: o.subtitle,
-          contentHtml: o.bodyHtml,
-          link: o.linkText,
-          imageHtml: imgTag(o.image),
-          sticky: o.isSticky,
-          showForMs: o.showForMs || 60000,
-          onClick: $.proxy(onClickGlobal, null, o.thread, o.id, o.url),
+          onClick: $.proxy(onClickNotMessage, null, o.thread, o.id, o.url),
           threadId: o.thread
         });
         break;
@@ -84,10 +70,8 @@ var notifier = function () {
       title: params.title,
       subtitle: params.subtitle,
       contentHtml: params.contentHtml,
-      triggered: params.triggered,
       image: params.imageHtml,
-      popupClass: '',
-      innerClass: params.imageHtml ? 'kifi-notify-with-image' : 'kifi-notify-without-image',
+      popupClass: 'kifi-notify-' + category,
       link: params.link,
       threadId: params.threadId
     }))
@@ -127,7 +111,7 @@ var notifier = function () {
     }
   }
 
-  function onClickGlobal(threadId, messageId, url, e) {
+  function onClickNotMessage(threadId, messageId, url, e) {
     api.port.emit('set_message_read', {threadId: threadId, messageId: messageId, from: 'notifier'});
     var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
     if (url && url !== document.URL) {
