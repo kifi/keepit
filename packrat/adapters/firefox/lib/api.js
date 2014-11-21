@@ -71,7 +71,7 @@ exports.icon = {
   set: function(page, path) {
     if (page === pages[page.id]) {
       page.icon = path;
-      log("[api.icon.set]", page.id, path);
+      log('[api.icon.set]', page.id, path);
       var tab = tabsById[page.id], win = tab.window;
       if (tab === win.tabs.activeTab) {
         icon.show(win, self.data.url(path));
@@ -91,7 +91,7 @@ exports.isPackaged = function () {
   return !addon || !!addon.sourceURI;
 };
 
-exports.loadReason = {upgrade: "update", downgrade: "update"}[self.loadReason] || self.loadReason;
+exports.loadReason = {upgrade: 'update', downgrade: 'update'}[self.loadReason] || self.loadReason;
 
 const prefs = require('sdk/simple-prefs');
 exports.mode = {
@@ -110,14 +110,14 @@ exports.mode = {
 
 const hexRe = /^#[0-9a-f]{3}$/i;
 var log = exports.log = function log() {
-  var d = new Date, ds = d.toString(), t = "[" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "]";
+  var d = new Date, ds = d.toString(), t = '[' + ds.substr(0,2) + ds.substr(15,9) + '.' + String(+d).substr(10) + ']';
   for (var args = Array.slice(arguments), i = 0; i < args.length; i++) {
     var arg = args[i];
-    if (typeof arg == "object") {
+    if (typeof arg == 'object') {
       try {
         args[i] = JSON.stringify(arg);
       } catch (e) {
-        args[i] = String(arg) + "{" + Object.keys(arg).join(",") + "}";
+        args[i] = String(arg) + '{' + Object.keys(arg).join(',') + '}';
       }
     }
   }
@@ -139,8 +139,8 @@ exports.on = {
 
 var nsISound, nsIIO;
 exports.play = function(path) {
-  nsISound = nsISound || Cc["@mozilla.org/sound;1"].createInstance(Ci.nsISound);
-  nsIIO = nsIIO || Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
+  nsISound = nsISound || Cc['@mozilla.org/sound;1'].createInstance(Ci.nsISound);
+  nsIIO = nsIIO || Cc['@mozilla.org/network/io-service;1'].getService(Ci.nsIIOService);
   nsISound.play(nsIIO.newURI(self.data.url(path), null, null));
 };
 
@@ -445,18 +445,18 @@ exports.xhr = require('sdk/net/xhr').XMLHttpRequest;
 
 tabs
 .on('open', errors.wrap(function onTabOpen(tab) {
-  log("[tabs.open]", tab.id, tab.url);
+  log('[tabs.open]', tab.id, tab.url);
   tabsById[tab.id] = tab;
 }))
 .on('close', errors.wrap(function onTabClose(tab) {
-  log("[tabs.close]", tab.id, tab.url);
+  log('[tabs.close]', tab.id, tab.url);
   onPageHide(tab.id);
   delete tabsById[tab.id];
 }))
 .on('activate', errors.wrap(function onTabActivate(tab) {
   var page = pages[tab.id];
   if (!page || !page.active) {
-    log("[tabs.activate]", tab.id, tab.url);
+    log('[tabs.activate]', tab.id, tab.url);
     if (!/^about:/.test(tab.url)) {
       if (page) {
         if (page.icon) {
@@ -474,7 +474,7 @@ tabs
   }
 }))
 .on('deactivate', errors.wrap(function onTabDeactivate(tab) {  // note: can fire after "close"
-  log("[tabs.deactivate]", tab.id, tab.url);
+  log('[tabs.deactivate]', tab.id, tab.url);
   if (tab.window === windows.activeWindow) {
     var page = pages[tab.id];
     if (page && httpRe.test(page.url)) {
@@ -483,7 +483,7 @@ tabs
   }
 }))
 .on('ready', errors.wrap(function onTabReady(tab) {
-  log("[tabs.ready]", tab.id, tab.url);
+  log('[tabs.ready]', tab.id, tab.url);
 }));
 
 var activeWinHasFocus = true;

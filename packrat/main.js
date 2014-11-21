@@ -230,12 +230,15 @@ var onXhrProgress = api.errors.wrap(function onXhrProgress(progress) {
 // ===== Event logging
 
 var tracker = {
-  enabled: true,
+  sendTimer: 0,
   queue: [],
   batch: [],
+  consolidating: {},
   sendBatch: function () {
     if (this.batch.length > 0) {
-      ajax('POST', '/ext/events', this.batch);
+      if (!this.disabled) {  // used in console during tracking development
+        ajax('POST', '/ext/events', this.batch);
+      }
       this.batch.length = 0;
     }
   },
@@ -249,22 +252,42 @@ var tracker = {
     }
   },
   track: function (eventName, properties) {
-    if (this.enabled) {
-      if (!this.sendTimer) {
-        this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
-      }
-      log('#aaa', '[tracker.track] %s %o', eventName, properties);
-      properties.time = Date.now();
-      var data = {
-        'event': eventName,
-        'properties': properties
-      };
-      if (me) {
-        this.augmentAndBatch(data);
-      } else {
-        this.queue.push(data);
-      }
+    if (!this.sendTimer) {
+      this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
     }
+    log('#aaa', '[tracker.track] %s %o', eventName, properties);
+    properties.time = Date.now();
+    var data = {
+      'event': eventName,
+      'properties': properties
+    };
+    if (me) {
+      this.augmentAndBatch(data);
+    } else {
+      this.queue.push(data);
+    }
+  },
+  trackConsolidated: function (eventName, properties, prop, id, ms) {
+    var t = api.timers.setTimeout(this._trackConsolidated.bind(this, id), ms);
+    var o = this.consolidating[id];
+    if (!o) {
+      properties[prop] = 1;
+      this.consolidating[id] = {
+        timeout: t,
+        eventName: eventName,
+        properties: properties,
+        prop: prop
+      };
+    } else {
+      o.properties[o.prop]++;
+      api.timers.clearTimeout(o.timeout);
+      o.timeout = t;
+    }
+  },
+  _trackConsolidated: function (id) {
+    var o = this.consolidating[id];
+    delete this.consolidating[id];
+    this.track(o.eventName, o.properties);
   },
   catchUp: function () {
     var that = this;
@@ -857,7 +880,7 @@ api.port.on({
     if (!category) return;
     tracker.track('user_was_notified', {
       category: category,
-      action: 'showed'
+      action: 'shown'
     });
   },
   track_pane_view: function (data) {
@@ -868,6 +891,9 @@ api.port.on({
   },
   track_notified: function (data) {
     tracker.track('user_was_notified', data);
+  },
+  track_notification: function (data) {
+    tracker.trackConsolidated('user_was_notified', extend({action: 'shown'}, data.properties), 'windows', data.id, 1200);
   },
   keeper_shown: function (data, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;

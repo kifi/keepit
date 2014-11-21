@@ -3,6 +3,7 @@
 // @require styles/keeper/participant_colors.css
 // @require scripts/api.js
 // @require scripts/lib/jquery.js
+// @require scripts/lib/mustache.js
 // @require scripts/formatting.js
 // @require scripts/title_from_url.js
 // @require scripts/render.js
@@ -24,20 +25,16 @@ var notifier = function () {
       case 'message':
         this.hide(o.thread);
         o.author = o.author || o.participants[0];
-        var title = o.firstName !== "" ? o.author.firstName + ' ' + o.author.lastName : o.id;
         formatParticipant(o.author);
-        if (o.author.kind === "email") {
-          var iconElement = '<div class="kifi-notify-email-icon kifi-participant-background-' + o.author.color + '">' + o.author.initial + '</div>'
-        } else {
-          var image = k.cdnBase + '/users/' + o.author.id + '/pics/100/' + o.author.pictureName;
-        }
-        add({
-          title: title,
+        var email = o.author.kind === 'email';
+        add(o.id, o.category, {
+          title: email ? o.author.id : (o.author.firstName + ' ' + o.author.lastName).trim(),
           subtitle: 'Sent you a new Kifi Message',
           contentHtml: o.text,
           link: o.title || formatTitleFromUrl(o.url),
-          image: image,
-          iconElement: iconElement,
+          imageHtml: email ?
+            '<div class="kifi-notify-email-icon kifi-participant-background-' + o.author.color + '">' + o.author.initial + '</div>' :
+             imgTag(k.cdnBase + '/users/' + o.author.id + '/pics/100/' + o.author.pictureName),
           sticky: false,
           showForMs: 60000,
           onClick: $.proxy(onClickMessage, null, o.url, o.locator),
@@ -46,13 +43,13 @@ var notifier = function () {
         break;
       case 'triggered':
         this.hide(o.thread);
-        add({
+        add(o.id, o.category, {
           title: o.title,
           subtitle: o.subtitle,
           contentHtml: o.bodyHtml,
           triggered: true,
           link: o.linkText,
-          image: o.image,
+          imageHtml: imgTag(o.image),
           sticky: o.isSticky,
           showForMs: o.showForMs || 60000,
           onClick: $.proxy(onClickGlobal, null, o.thread, o.id, o.url), // handled the same as globals
@@ -61,12 +58,12 @@ var notifier = function () {
         break;
       case 'global':
         this.hide(o.thread);
-        add({
+        add(o.id, o.category, {
           title: o.title,
           subtitle: o.subtitle,
           contentHtml: o.bodyHtml,
           link: o.linkText,
-          image: o.image,
+          imageHtml: imgTag(o.image),
           sticky: o.isSticky,
           showForMs: o.showForMs || 60000,
           onClick: $.proxy(onClickGlobal, null, o.thread, o.id, o.url),
@@ -77,18 +74,10 @@ var notifier = function () {
     }
   };
 
-  function add(params) {
+  function add(id, category, params) {
     var $wrap = $('#kifi-notify-notice-wrapper');
     if (!$wrap.length) {
       $wrap = $('<kifi id="kifi-notify-notice-wrapper" class="kifi-root">').appendTo($('body')[0] || 'html');
-    }
-    var imageHtml;
-    if (params.image) {
-      imageHtml = '<img src="' + params.image + '" class="kifi-notify-image"/>';
-    } else if (params.iconElement) {
-      imageHtml = params.iconElement;
-    } else {
-      imageHtml = '';
     }
     var $item = $(k.render('html/notify_box', {
       formatSnippet: formatMessage.snippet,
@@ -96,9 +85,9 @@ var notifier = function () {
       subtitle: params.subtitle,
       contentHtml: params.contentHtml,
       triggered: params.triggered,
-      image: imageHtml,
+      image: params.imageHtml,
       popupClass: '',
-      innerClass: imageHtml ? 'kifi-notify-with-image' : 'kifi-notify-without-image',
+      innerClass: params.imageHtml ? 'kifi-notify-with-image' : 'kifi-notify-without-image',
       link: params.link,
       threadId: params.threadId
     }))
@@ -123,6 +112,11 @@ var notifier = function () {
         $item.data('fadeTimer', setTimeout(fadeItem.bind(null, $item, params), params.showForMs));
       }).triggerHandler('mouseleave');
     }
+
+    api.port.emit('track_notification', {id: id, properties: {
+      category: category,
+      sticky: params.sticky || undefined
+    }});
   }
 
   function onClickMessage(url, locator, e) {
@@ -152,5 +146,9 @@ var notifier = function () {
   function removeItem($item) {
     $item.remove();
     $('#kifi-notify-notice-wrapper:empty').remove();
+  }
+
+  function imgTag(url) {
+    return url && '<img src="' + Mustache.escape(url) + '" class="kifi-notify-image"/>';
   }
 }();
