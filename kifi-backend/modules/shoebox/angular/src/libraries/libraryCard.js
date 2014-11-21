@@ -380,6 +380,17 @@ angular.module('kifi')
 
         var normalHeaderRightMarginRight;
         var headerRightShifted = false;
+
+        function positionSearchFollow() {
+          $timeout(function () {
+            var headerLinksElement = angular.element('.kf-header-right');
+
+            angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
+              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
+            });
+          }, 200);
+        }
+
         scope.onSearchInputFocus = function () {
           scope.librarySearchInProgress = true;
 
@@ -394,8 +405,8 @@ angular.module('kifi')
             });
 
             angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
-            'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 - 150 + normalHeaderRightMarginRight + 'px'
-          });
+              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 - 90 + 'px'
+            });
 
             headerRightShifted = true;
           }
@@ -526,6 +537,13 @@ angular.module('kifi')
         $window.addEventListener('resize', adjustFollowerPicsSizeOnResize);
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', adjustFollowerPicsSizeOnResize);
+        });
+
+        // Update follower button in search when the window is resized.
+        var positionSearchFollowOnResize = _.debounce(positionSearchFollow, 100);
+        $window.addEventListener('resize', positionSearchFollowOnResize);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener('resize', positionSearchFollowOnResize);
         });
       }
     };
