@@ -84,7 +84,7 @@ k.panes.thread = k.panes.thread || function () {
     var compose = k.compose($tall, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
     var $holder = $tall.find('.kifi-scroll-inner')
       .preventAncestorScroll()
-      .handleLookClicks()
+      .handleLookClicks('chat')
       .hoverfu('.kifi-message-email-learn', function (configureHover) {
         var link = this;
         k.render('html/keeper/message_email_tooltip', function (html) {

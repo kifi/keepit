@@ -122,7 +122,7 @@ k.compose = k.compose || (function() {
       }
     })
     .preventAncestorScroll()
-    .handleLookClicks();
+    .handleLookClicks('compose');
 
     return { // editor API
       supportsLinks: true,

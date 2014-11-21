@@ -5,15 +5,15 @@
 
 $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
   'use strict';
-  return function () {
+  return function (containerName) {
     return this
-      .on('mousedown', 'a[href^="x-kifi-sel:"]', lookMouseDown)
+      .on('mousedown', 'a[href^="x-kifi-sel:"]', $.proxy(lookMouseDown, null, containerName))
       .on('click', 'a[href^="x-kifi-sel:"]', function (e) {
         e.preventDefault();
       });
   };
 
-  function lookMouseDown(e) {
+  function lookMouseDown(containerName, e) {
     if (e.which != 1) return;
     e.preventDefault();
 
@@ -38,8 +38,10 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
           sel.removeAllRanges();
           sel.addRange(r);
         });
+        track('selection', true);
       } else {
         showBroken(this, selector);
+        track('selection', false);
       }
     } else if (selector.lastIndexOf('i|', 0) === 0) {
       var img = k.snapshot.findImage(selector);
@@ -58,6 +60,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
             });
           });
         });
+        track('image', true);
       } else {
         img = new Image();
         $(img).on('load error', showBroken.bind(img, this));
@@ -66,6 +69,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
         } catch (e) {
           showBroken.call(img, this, {type: 'error'});
         }
+        track('image', false);
       }
     } else {
       var el = k.snapshot.fuzzyFind(selector);
@@ -88,9 +92,15 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
           width: elRect.width + 6,
           height: elRect.height + 4
         }, anim.ms).delay(2000).fadeOut(1000, removeThis);
+        track('element', true);
       } else {
         showBroken(this);
+        track('element', false);
       }
+    }
+
+    function track(kind, found) {
+      api.port.emit('track_pane_click', {type: containerName, action: 'visitLookHere', subaction: kind, found: found});
     }
   }
 

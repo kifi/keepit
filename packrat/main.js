@@ -867,6 +867,9 @@ api.port.on({
   track_pane_view: function (data) {
     tracker.track('user_viewed_pane', data);
   },
+  track_pane_click: function (data) {
+    tracker.track('user_clicked_pane', data);
+  },
   log_search_event: function(data) {
     ajax('search', 'POST', '/ext/search/events/' + data[0], data[1]);
   },
