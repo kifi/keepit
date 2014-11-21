@@ -126,6 +126,7 @@ class AugmentationCommanderImpl @Inject() (
     librarySearcher.getDecodedDocValue[LibraryRecord](LibraryFields.recordField, libraryId).exists { record =>
       !record.name.toLowerCase.split("\\s+").exists(Profanity.all.contains)
     }
+    false // todo(Léo): remove when mobile front-end is fixed
   }
 
   private def getAugmentationInfo(keepSearcher: Searcher, librarySearcher: Searcher, userIdFilter: LongArraySet, libraryIdFilter: LongArraySet)(item: AugmentableItem): FullAugmentationInfo = {
