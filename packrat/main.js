@@ -825,7 +825,7 @@ api.port.on({
   set_look_here_mode: function (o) {
     ajax('POST', '/ext/pref/lookHereMode?on=' + o.on);
     if (prefs) prefs.lookHereMode = o.on;
-    tracker.track('user_clicked_pane', {type: o.from, action: o.on ? 'toggleLookHereOn' : 'toggleLookHereOff'});
+    tracker.track('user_clicked_pane', {type: o.from, action: o.on ? 'toggledLookHereOn' : 'toggledLookHereOff'});
   },
   set_enter_to_send: function(data) {
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
@@ -975,15 +975,15 @@ api.port.on({
     markRead(o.threadId, o.messageId, o.time);
     socket.send(['set_message_read', o.messageId]);
     if (o.from === 'toggle') {
-      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markRead', category: trackingCategory(o.category)});
+      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markedRead', category: trackingCategory(o.category)});
     } else if (o.from === 'notice') {
-      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'view', category: trackingCategory(o.category)});
+      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'visited', category: trackingCategory(o.category)});
     }
   },
   set_message_unread: function (o, _, tab) {
     markUnread(o.threadId, o.messageId);
     socket.send(['set_message_unread', o.messageId]);
-    tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markUnread', category: trackingCategory(o.category)});
+    tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markedUnread', category: trackingCategory(o.category)});
   },
   get_page_thread_count: function(_, __, tab) {
     sendPageThreadCount(tab, null, true);
@@ -2749,7 +2749,7 @@ function clearSession() {
 
 function deauthenticate() {
   log('[deauthenticate]');
-  tracker.track('user_clicked_pane', {type: 'settings', action: 'logout'});
+  tracker.track('user_clicked_pane', {type: 'settings', action: 'loggedOut'});
   tracker.catchUp();
   tracker.sendBatch();
   clearSession();

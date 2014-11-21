@@ -495,7 +495,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       } else {
         log('[keeper.show]');
         $(k.tile).hoverfu('destroy');
-        showSlider('hover');
+        showSlider('hovered');
       }
     },
     hide: function () {

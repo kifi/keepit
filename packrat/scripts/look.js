@@ -100,7 +100,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
     }
 
     function track(kind, found) {
-      api.port.emit('track_pane_click', {type: containerName, action: 'visitLookHere', subaction: kind, found: found});
+      api.port.emit('track_pane_click', {type: containerName, action: 'visitedLookHere', subaction: kind, found: found});
     }
   }
 
