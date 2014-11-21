@@ -299,7 +299,7 @@ k.compose = k.compose || (function() {
     .on('click', '.kifi-compose-highlight', function () {
       if (editor.supportsLinks) {
         var enabled = !this.classList.toggle('kifi-disabled');
-        api.port.emit('set_look_here_mode', enabled);
+        api.port.emit('set_look_here_mode', {on: enabled, from: $to.length ? 'compose' : 'chat'});
         if (enabled) {
           k.snap.enable(editor.$el);
         } else {

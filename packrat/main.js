@@ -825,9 +825,10 @@ api.port.on({
     }
     ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
-  set_look_here_mode: function (on) {
-    ajax('POST', '/ext/pref/lookHereMode?on=' + on);
-    if (prefs) prefs.lookHereMode = on;
+  set_look_here_mode: function (o) {
+    ajax('POST', '/ext/pref/lookHereMode?on=' + o.on);
+    if (prefs) prefs.lookHereMode = o.on;
+    tracker.track('user_clicked_pane', {type: o.from, action: o.on ? 'toggleLookHereOn' : 'toggleLookHereOff'});
   },
   set_enter_to_send: function(data) {
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
