@@ -61,11 +61,12 @@ angular.module('kifi')
           scope.$broadcast('refreshScroll');
         }
 
-        function setCurrentStick(fromScroll) {
+        function setStickySeparator(refetchSeparators) {
           var offset = antiscrollLibList.scrollTop();
-          var libItemHeight = 0, separatorHeight = 0;
+          var libItemHeight = 0;
+          var separatorHeight = 0;
 
-          if (!fromScroll) {
+          if (refetchSeparators) {
             separators = antiscrollLibList.find('.kf-nav-lib-separator');
           }
           if (separators.length === 0) {
@@ -166,12 +167,9 @@ angular.module('kifi')
           return loc === path || util.startsWith(loc, path + '/');
         };
 
-        scope.toggleMyLibsFirstOn = function() {
-          scope.sortingMenu.myLibsFirst = true;
-        };
-        scope.toggleMyLibsFirstOff = function() {
-          scope.sortingMenu.myLibsFirst = false;
-        };
+        scope.toggleMyLibsFirst = function() {
+          scope.sortingMenu.myLibsFirst = !scope.sortingMenu.myLibsFirst;
+        }
 
         //
         // Watches and listeners.
@@ -259,9 +257,7 @@ angular.module('kifi')
           }
         }, 100);
 
-        antiscrollLibList.bind('scroll', _.debounce(function() {
-          setCurrentStick(true);
-        }, 10));
+        antiscrollLibList.bind('scroll', _.debounce(setStickySeparator, 10));
 
 
         //
@@ -315,7 +311,7 @@ angular.module('kifi')
           scope.$broadcast('refreshScroll');
           $timeout(function() {
             antiscrollLibList.scrollTop(0);
-            setCurrentStick();
+            setStickySeparator(true);
           });
           return scope.userLibsToShow.concat(scope.invitedLibsToShow).concat(scope.myLibsToShow);
         };
