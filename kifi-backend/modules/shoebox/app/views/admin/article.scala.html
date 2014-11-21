@@ -1,6 +1,9 @@
 @(article: Option[com.keepit.search.Article], uri: com.keepit.model.NormalizedURI, info: Option[com.keepit.model.ScrapeInfo])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin(article.map("Article: " + _.title).getOrElse("No article available")) {
+
+  <h2><a href = "@{com.keepit.controllers.admin.routes.AdminLDAController.similarURIs(uri.id.get)}">similar uris</a></h2>
+
   <table class="table table-bordered">
       <tr>
         <th>Created at</th><td>@adminHelper.dateTimeDisplay(uri.createdAt)</td>

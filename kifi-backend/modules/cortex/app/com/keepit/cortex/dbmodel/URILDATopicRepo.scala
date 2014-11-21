@@ -37,6 +37,7 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getTopicCounts(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Int, Int)] // (topic_id, counts)
   def getFirstTopicAndScore(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(LDATopic, Float)]
   def getLibraryURIFeatures(libId: Id[Library], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Seq[LDATopicFeature]
+  def getURIsByTopics(firstTopic: LDATopic, secondTopic: LDATopic, thirdTopic: LDATopic, version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[Id[NormalizedURI]]
 }
 
 @Singleton
@@ -233,5 +234,13 @@ class URILDATopicRepoImpl @Inject() (
            where ck.library_id = ${libId.id} and ck.state = 'active' and tp.version = ${version.version}
            and tp.state = 'active' and tp.num_words > ${min_num_words}"""
     q.as[LDATopicFeature].list
+  }
+
+  def getURIsByTopics(firstTopic: LDATopic, secondTopic: LDATopic, thirdTopic: LDATopic, version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[Id[NormalizedURI]] = {
+    (for {
+      r <- rows
+      if r.firstTopic === firstTopic && r.secondTopic === secondTopic && r.thirdTopic === thirdTopic && r.version === version && r.state === URILDATopicStates.ACTIVE
+    } yield r.uriId
+    ).list.take(limit)
   }
 }

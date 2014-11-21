@@ -363,6 +363,7 @@ object Cortex extends Service {
     def explainFeed(implicit version: LDAVersionOpt) = ServiceRoute(POST, "/internal/cortex/lda/explainFeed", Param("version", version))
     def libraryTopic(libId: Id[Library])(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/libraryTopic", Param("libId", libId), Param("version", version))
     def userLibraryScore(userId: Id[User], libId: Id[Library])(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/userLibraryScore", Param("userId", userId), Param("libId", libId), Param("version", version))
+    def similarURIs(uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/similarURIs", Param("uriId", uriId), Param("version", version))
 
     def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }

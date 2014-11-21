@@ -1,0 +1,22 @@
+@(version: Int, uris: Seq[com.keepit.model.NormalizedURI])(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin("Similar URIs"){
+  <h2>Version: @version</h2>
+  <div>Some sampled URIs that share the same bucket</div>
+
+  <table class = "table table-bordered">
+  <tr>
+    <th>uriId</th>
+    <th>title</th>
+  </tr>
+
+  @uris.map{ uri =>
+    <tr>
+      <td>@uri.id.get</td>
+      <td><a href = "@{com.keepit.controllers.admin.routes.ScraperAdminController.getScraped(uri.id.get)}">@uri.title.getOrElse("No Title")</a></td>
+    </tr>
+  }
+
+  </table>
+
+}

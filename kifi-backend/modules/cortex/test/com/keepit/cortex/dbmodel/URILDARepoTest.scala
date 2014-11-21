@@ -306,4 +306,32 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
       }
     }
   }
+
+  "query by topic tuple" in {
+    withDb() { implicit injector =>
+      val uriTopicRepo = inject[URILDATopicRepo]
+      db.readWrite { implicit s =>
+        (1 to 5).foreach { i =>
+          uriTopicRepo.save(URILDATopic(
+            uriId = Id[NormalizedURI](i),
+            numOfWords = 100,
+            firstTopic = Some(LDATopic(i)),
+            secondTopic = Some(LDATopic(i + 1)),
+            thirdTopic = Some(LDATopic(i + 2)),
+            firstTopicScore = Some(0.5f),
+            sparseFeature = Some(SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f))),
+            feature = Some(LDATopicFeature(Array(0.3f, 0.5f, 0.1f, 0.1f))),
+            version = ModelVersion[DenseLDA](1),
+            uriSeq = SequenceNumber[NormalizedURI](i),
+            state = URILDATopicStates.ACTIVE))
+        }
+      }
+
+      db.readOnlyMaster { implicit s =>
+        val uriIds = uriTopicRepo.getURIsByTopics(LDATopic(1), LDATopic(2), LDATopic(3), ModelVersion[DenseLDA](1), limit = 10)
+        uriIds.toList.map { _.id } === List(1)
+      }
+
+    }
+  }
 }
