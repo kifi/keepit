@@ -378,20 +378,22 @@ angular.module('kifi')
           }
         };
 
+        var normalHeaderRightMarginRight;
         scope.onSearchInputFocus = function () {
           scope.librarySearchInProgress = true;
 
           var headerLinksElement = angular.element('.kf-header-right');
 
+          normalHeaderRightMarginRight = parseInt(headerLinksElement.css('margin-right'), 10);
           angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
-            'transition': 'top 0.3s ease 0.3s',
+            'transition': 'top 0.5s ease 0.3s',
             'top': '15px',
-            'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 - 150 + 30 + 'px'
+            'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 - 150 + normalHeaderRightMarginRight + 'px'
           });
 
           headerLinksElement.css({
             'transition': 'margin-right 0.3s ease 0.1s',
-            'margin-right': '150px'
+            'margin-right': normalHeaderRightMarginRight + 90 + 'px'
           });
 
           angular.element('.kf-library-body').css({
@@ -401,8 +403,10 @@ angular.module('kifi')
         };
 
         scope.onSearchExit = function () {
+          locationNoReload.skipReload().url(scope.library.url);
           scope.librarySearchInProgress = false;
           $rootScope.$emit('librarySearchChanged', false);
+          prevQuery = '';
 
           angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
             'transition': 'top 0.2s ease',
@@ -410,7 +414,7 @@ angular.module('kifi')
           });
 
           angular.element('.kf-header-right').css({
-            'margin-right': '30px'
+            'margin-right': normalHeaderRightMarginRight + 'px'
           });
 
           angular.element('.kf-library-body').css({
@@ -427,6 +431,7 @@ angular.module('kifi')
           $timeout(function () {
             if (query) {
               if (prevQuery) {
+                console.log('prevQuery ' + prevQuery);
                 locationNoReload.skipReload().search('q', query).replace();
 
                 // When we search using the input inside the library card header, we don't
@@ -449,6 +454,8 @@ angular.module('kifi')
               $timeout(function () {
                 $rootScope.$emit('librarySearchChanged', true);
               });
+
+              prevQuery = query;
             } else {
               locationNoReload.skipReload().url(scope.library.url);
 
@@ -456,8 +463,6 @@ angular.module('kifi')
                 $rootScope.$emit('librarySearchChanged', false);
               });
             }
-
-            prevQuery = query;
           });
         }, 100, {
           'leading': true
@@ -472,6 +477,12 @@ angular.module('kifi')
           if (!newVal) {
             augmentData();
             adjustFollowerPicsSize();
+
+            if (scope.librarySearch) {
+              $timeout(function () {
+                angular.element('.kf-keep-lib-search-input').focus();
+              });
+            }
           }
         });
 
