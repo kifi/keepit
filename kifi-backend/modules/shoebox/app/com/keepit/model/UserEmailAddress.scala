@@ -33,17 +33,19 @@ case class UserEmailAddress(
 }
 
 object UserEmailAddress {
-  lazy val random = new SecureRandom()
-  val kifiDomains = Set("kifi.com", "42go.com")
-  val testDomains = kifiDomains ++ Set("tfbnw.net", "mailinator.com") // tfbnw.net ???
-  val tagRe = """(?<=\+)[^@+]*(?=(?:\+|$))""".r
+  private lazy val random = new SecureRandom()
+  private val kifiDomains = Set("kifi.com", "42go.com")
+  private val testDomains = Set("tfbnw.net", "mailinator.com") // tfbnw.net is for fake facebook accounts
+  private val tagRe = """(?<=\+)[^@+]*(?=(?:\+|$))""".r
 
   def getExperiments(email: UserEmailAddress): Set[ExperimentType] = {
     val Array(local, host) = email.address.address.split('@')
     val tags = tagRe.findAllIn(local).toSet
     if (kifiDomains.contains(host) && tags.exists(_.startsWith("autogen"))) {
       Set(FAKE, AUTO_GEN)
-    } else if (testDomains.contains(host) && tags.exists { t => t.startsWith("test") || t.startsWith("utest") }) {
+    } else if (kifiDomains.contains(host) && tags.exists { t => t.startsWith("test") || t.startsWith("utest") }) {
+      Set(FAKE)
+    } else if (testDomains.contains(host)) {
       Set(FAKE)
     } else {
       Set.empty
