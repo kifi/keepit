@@ -844,22 +844,20 @@ api.port.on({
       api.tabs.emit(tab, {e: 'hide_ext_msg_intro', l: 'hide_library_intro'}[data.type]);
     });
     (prefs || {})[prefName] = false;
-    tracker.track('user_was_notified', {
-      action: 'click',
-      subaction: data.action,
-      channel: 'kifi',
-      subchannel: 'tooltip',
-      category: {e: 'extMsgFTUE', l: 'libFTUE'}[data.type]
-    });
+    if (data.action) {
+      tracker.track('user_clicked_notification', {
+        category: {e: 'extMsgFTUE', l: 'libFTUE'}[data.type],
+        action: data.action,
+        subaction: data.subaction
+      });
+    }
   },
   track_ftue: function (type) {
     var category = {e: 'extMsgFTUE', l: 'libFTUE'}[type];
     if (!category) return;
     tracker.track('user_was_notified', {
-      action: 'open',
-      channel: 'kifi',
-      subchannel: 'tooltip',
-      category: category
+      category: category,
+      action: 'showed'
     });
   },
   track_pane_view: function (data) {
@@ -878,13 +876,15 @@ api.port.on({
   log_search_event: function(data) {
     ajax('search', 'POST', '/ext/search/events/' + data[0], data[1]);
   },
-  import_contacts: function (source) {
+  import_contacts: function (data) {
     api.tabs.selectOrOpen(webBaseUri() + '/contacts/import');
-    tracker.track('user_clicked_pane', {
-      type: source,
-      action: 'importGmail',
-      subsource: 'composeTypeahead'
-    });
+    if (data) {
+      tracker.track('user_clicked_pane', {
+        type: data.type,
+        action: 'importedGmailContacts',
+        subsource: data.subsource
+      });
+    }
   },
   screen_capture: function (data, respond) {
     api.screenshot(function (drawableEl, canvas) {

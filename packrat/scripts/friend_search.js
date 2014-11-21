@@ -170,7 +170,7 @@ var initFriendSearch = (function () {
       res.id = res.email = res.q;
     } else if (!res.pictureName && !res.email) {
       if (res === 'tip') {
-        api.port.emit('import_contacts', source);
+        api.port.emit('import_contacts', {type: source, subsource: 'composeTypeahead'});
       }
       return false;
     }
