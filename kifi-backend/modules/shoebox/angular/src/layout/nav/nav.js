@@ -169,7 +169,7 @@ angular.module('kifi')
 
         scope.toggleMyLibsFirst = function() {
           scope.sortingMenu.myLibsFirst = !scope.sortingMenu.myLibsFirst;
-        }
+        };
 
         //
         // Watches and listeners.
