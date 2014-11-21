@@ -19,6 +19,7 @@ angular.module('kifi')
         var w = angular.element($window);
         var scrollableLibList = element.find('.kf-scrollable-libs');
         var antiscrollLibList = scrollableLibList.find('.antiscroll-inner');
+        var separators = antiscrollLibList.find('.kf-nav-lib-separator');
 
         //
         // Scope data.
@@ -34,8 +35,6 @@ angular.module('kifi')
           friendsCount: friendService.totalFriends(),
           friendsNotifCount: friendService.requests.length
         };
-
-        scope.currentStickTitle = 'mine';
 
         //
         // Internal methods.
@@ -60,6 +59,85 @@ angular.module('kifi')
           invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
 
           scope.$broadcast('refreshScroll');
+        }
+
+        function setCurrentStick(fromScroll) {
+          var offset = antiscrollLibList.scrollTop();
+          var libItemHeight = 0, separatorHeight = 0;
+
+          if (!fromScroll) {
+            separators = antiscrollLibList.find('.kf-nav-lib-separator');
+          }
+          if (separators.length === 0) {
+            return;
+          }
+          separatorHeight = separators.eq(0).outerHeight(true);
+
+          var libItems = antiscrollLibList.find('.kf-nav-lib-item');
+          libItemHeight = libItems.eq(0).outerHeight(true);
+
+          antiscrollLibList.find('.kf-nav-lib-users').css('padding-top', '25px');
+
+          // set limits based on number of items in myLibs, userLibs or invitedLibs
+          var firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay;
+          if (scope.myLibsToShow.length > 0) {
+            firstLimit = scope.myLibsToShow.length * libItemHeight;
+            firstLimitOverlay = firstLimit + separatorHeight;
+            if (scope.userLibsToShow.length > 0) {
+              secondLimit = firstLimitOverlay + scope.userLibsToShow.length * libItemHeight;
+            } else if (scope.invitedLibsToShow.length > 0) {
+              secondLimit = firstLimitOverlay + scope.invitedLibsToShow.length * libItemHeight;
+            }
+            secondLimitOverlay = secondLimit + separatorHeight;
+          } else if (scope.userLibsToShow.length > 0) {
+            firstLimit = scope.userLibsToShow.length * libItemHeight;
+            firstLimitOverlay = firstLimit + separatorHeight;
+            secondLimit = firstLimit + scope.invitedLibsToShow.length * libItemHeight;
+            secondLimitOverlay = secondLimit + separatorHeight;
+          } else {
+            firstLimit = scope.invitedLibsToShow.length * libItemHeight;
+            firstLimitOverlay = firstLimit + separatorHeight;
+            // no more limits needed
+          }
+          fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight);
+        }
+
+        function fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight) {
+          var stickToMaxTop = 320;
+          // all 3 separators properties need to be set because this function is debounced and a user might scroll too fast
+          if (offset <= firstLimit) {
+            setPositioning(separators[0], 'fixed', stickToMaxTop);
+            setPositioning(separators[1], 'relative', 0);
+            setPositioning(separators[2], 'relative', 0);
+
+          } else if (offset > firstLimit && offset <= firstLimitOverlay) {
+            setPositioning(separators[0], 'fixed', stickToMaxTop - (offset - (firstLimitOverlay - separatorHeight)));
+            setPositioning(separators[1], 'relative', 0);
+            setPositioning(separators[2], 'relative', 0);
+
+          } else if ( offset > firstLimitOverlay && offset <= secondLimit) {
+            setPositioning(separators[0], 'relative', 0);
+            setPositioning(separators[1], 'fixed', stickToMaxTop);
+            setPositioning(separators[2], 'relative', 0);
+
+          } else if (offset > secondLimit && offset <= secondLimitOverlay) {
+            setPositioning(separators[0], 'relative', 0);
+            setPositioning(separators[1], 'fixed', stickToMaxTop - (offset - (secondLimitOverlay - separatorHeight)));
+            setPositioning(separators[2], 'relative', 0);
+
+          } else {
+            setPositioning(separators[0], 'relative', 0);
+            setPositioning(separators[1], 'relative', 0);
+            setPositioning(separators[2], 'fixed', stickToMaxTop);
+
+          }
+        }
+
+        function setPositioning(dom, position, top) {
+          if (dom) {
+            dom.style.position = position;
+            dom.style.top = top + 'px';
+          }
         }
 
         //
@@ -88,12 +166,11 @@ angular.module('kifi')
           return loc === path || util.startsWith(loc, path + '/');
         };
 
-        scope.padList = function () {
-          if (scope.sortingMenu.myLibsFirst) {
-            return scope.myLibsToShow.length > 0;
-          } else {
-            return scope.userLibsToShow.length > 0;
-          }
+        scope.toggleMyLibsFirstOn = function() {
+          scope.sortingMenu.myLibsFirst = true;
+        };
+        scope.toggleMyLibsFirstOff = function() {
+          scope.sortingMenu.myLibsFirst = false;
         };
 
         //
@@ -151,7 +228,6 @@ angular.module('kifi')
           return scope.sortingMenu.myLibsFirst;
         }, function () {
           scope.changeList();
-          setCurrentStickTitle();
         });
 
         // on resizing window -> trigger new turn -> reset library list height
@@ -184,45 +260,8 @@ angular.module('kifi')
         }, 100);
 
         antiscrollLibList.bind('scroll', _.debounce(function() {
-          var lastStickTitle = scope.currentStickTitle;
-          setCurrentStickTitle();
-          if (lastStickTitle !== scope.currentStickTitle) {
-            scope.$apply();
-          }
+          setCurrentStick(true);
         }, 10));
-
-        function setCurrentStickTitle() {
-          var offset = antiscrollLibList.scrollTop();
-          var maxUserLibsOffset, maxMyLibsOffset, libItemHeight = 0, separatorHeight = 0;
-
-          var libItems = antiscrollLibList.find('.kf-nav-lib-item');
-          if (libItems.length > 0) {
-            libItemHeight = libItems.eq(0).outerHeight(true);
-          }
-          var separators = antiscrollLibList.find('.kf-nav-lib-separator');
-          if (separators.length > 0) {
-            separatorHeight = separators.eq(0).outerHeight(true);
-          }
-
-          if (scope.sortingMenu.myLibsFirst) { // mine, you follow, invited
-            maxMyLibsOffset = scope.myLibsToShow.length * libItemHeight + separatorHeight;
-            maxUserLibsOffset = maxMyLibsOffset + scope.userLibsToShow.length * libItemHeight + separatorHeight;
-            if (offset < maxMyLibsOffset) {
-              scope.currentStickTitle = 'mine';
-            } else if (offset < maxUserLibsOffset) {
-              scope.currentStickTitle = 'follow';
-            } else {
-              scope.currentStickTitle = 'invites';
-            }
-          } else { // all, invited
-            maxUserLibsOffset = scope.userLibsToShow.length * libItemHeight + separatorHeight;
-            if (offset < maxUserLibsOffset) {
-              scope.currentStickTitle = 'all';
-            } else {
-              scope.currentStickTitle = 'invites';
-            }
-          }
-        }
 
 
         //
@@ -274,6 +313,10 @@ angular.module('kifi')
           scope.myLibsToShow = newLists[2]; // should be [] if myLibsFirst false
 
           scope.$broadcast('refreshScroll');
+          $timeout(function() {
+            antiscrollLibList.scrollTop(0);
+            setCurrentStick();
+          });
           return scope.userLibsToShow.concat(scope.invitedLibsToShow).concat(scope.myLibsToShow);
         };
 
