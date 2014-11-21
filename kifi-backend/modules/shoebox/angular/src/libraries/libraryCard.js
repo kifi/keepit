@@ -393,6 +393,11 @@ angular.module('kifi')
             'transition': 'margin-right 0.3s ease 0.1s',
             'margin-right': '150px'
           });
+
+          angular.element('.kf-library-body').css({
+            'transition': 'margin-top 0.1s ease',
+            'margin-top': '90px'
+          });
         };
 
         scope.onSearchExit = function () {
@@ -406,6 +411,11 @@ angular.module('kifi')
 
           angular.element('.kf-header-right').css({
             'margin-right': '30px'
+          });
+
+          angular.element('.kf-library-body').css({
+            'transition': 'margin-top 0.1s ease',
+            'margin-top': '0px'
           });
 
           $timeout(function () {

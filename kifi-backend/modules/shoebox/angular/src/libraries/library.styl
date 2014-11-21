@@ -8,10 +8,8 @@ invite-header-orange = #ff7c3c
   padding: 0 25px 0 30px
 
 .kf-logged-out .kf-library-card-header
+  margin-bottom: 0
   background-color: #fff
-
-  .kf-logged-out &
-    margin-bottom: -30px
 
 .delighted-visible ~ div .kf-library-card-header
   margin-top: 10px
@@ -20,10 +18,12 @@ invite-header-orange = #ff7c3c
 // is no logged in user.
 .library-card.loggedOutUser
   border: none
-  box-shadow: none
+  margin: 0 auto
   padding-bottom: 20px
+  width: 745px
   max-height: 1200px
   transition: max-height 0.2s ease
+  box-shadow: none
 
   &::before
     position: absolute
@@ -107,6 +107,9 @@ invite-header-orange = #ff7c3c
 .library-search .library-card
 .library-card.library-search-in-progress
   max-height: 90px
+  position: fixed
+  top: 62px
+  z-index: 500
 
   .kf-keep-body
     max-height: 90px
@@ -138,6 +141,10 @@ invite-header-orange = #ff7c3c
     display: block
     top: 0px
     right: -110px
+
+.library-search
+  .kf-library-body
+    margin-top: 90px
 
 .library-card.library-search-in-progress
   .kf-keep-lib-search-input
