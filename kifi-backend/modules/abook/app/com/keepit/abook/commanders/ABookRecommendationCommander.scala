@@ -111,7 +111,7 @@ class ABookRecommendationCommander @Inject() (
   }
 
   private def generateFutureFriendRecommendations(userId: Id[User], bePatient: Boolean = false): Future[Option[Stream[(Id[User], Double)]]] = {
-    val futureRelatedUsers = graph.getSociallyRelatedEntities(userId, bePatient).map(_.map(_.users))
+    val futureRelatedUsers = getSociallyRelatedEntities(userId).map(_.map(_.users))
     val futureFriends = shoebox.getFriends(userId)
     val futureFriendRequests = shoebox.getFriendRequestsRecipientIdBySender(userId)
     val futureFakeUsers = shoebox.getAllFakeUsers()
@@ -321,6 +321,6 @@ class ABookRecommendationCommander @Inject() (
 
   private val consolidateRelatedEntities = new RequestConsolidator[Id[User], Option[SociallyRelatedEntities]](1 second)
   private def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities]] = {
-    consolidateRelatedEntities(userId)(graph.getSociallyRelatedEntities(_, true))
+    consolidateRelatedEntities(userId)(graph.getSociallyRelatedEntities)
   }
 }

@@ -41,6 +41,6 @@ class FakeGraphServiceClientImpl(
     userAndScorePairs = connectedUserScore1 :: connectedUserScore2 :: connectedUserScore3 :: Nil
   }
 
-  def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]] = Future.successful(None)
+  def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities]] = Future.successful(None)
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = Future.successful(Seq.fill(uriIds.size)(GraphFeedExplanation(Map(), Map())))
 }

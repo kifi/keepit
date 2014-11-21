@@ -34,7 +34,7 @@ trait GraphServiceClient extends ServiceClient {
   def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]]
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
-  def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]]
+  def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities]]
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]]
 }
 
@@ -108,7 +108,7 @@ class GraphServiceClientImpl @Inject() (
     }
   }
 
-  def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]] = {
+  def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities]] = {
 
     def needRefresh(cachedEntities: Option[SociallyRelatedEntities]): Boolean = {
       !cachedEntities.exists(_.createdAt.isAfter(currentDateTime.minusHours(12)))
