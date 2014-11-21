@@ -206,4 +206,18 @@ class AdminLDAController @Inject() (
     }
 
   }
+
+  def userLibraryScore() = AdminUserPage.async { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val userId = Id[User](body.get("userId").get.trim.toLong)
+    val libId = Id[Library](body.get("libId").get.trim.toLong)
+    val version = body.get("version").get.trim.toInt
+
+    cortex.userLibraryScore(userId, libId)(version).map { scoreOpt =>
+      scoreOpt match {
+        case Some(s) => Ok(s.toString)
+        case None => Ok("na")
+      }
+    }
+  }
 }
