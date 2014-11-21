@@ -121,7 +121,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
           } else if (k.keepBox && k.keepBox.showing()) {
             k.keepBox.keep(e.altKey);
           } else {
-            api.port.emit('keep', withTitles(withUrls({secret: e.altKey})));
+            api.port.emit('keep', withTitles(withUrls({secret: e.altKey, how: 'key'})));
           }
           e.preventDefault();
         }

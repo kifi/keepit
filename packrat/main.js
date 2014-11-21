@@ -587,7 +587,8 @@ api.port.on({
         canonical: !tab.usedHistoryApi && data.canonical || undefined,
         og: !tab.usedHistoryApi && data.og || undefined,
         title: !tab.usedHistoryApi && data.ogTitle || data.title,
-        guided: data.guided
+        guided: data.guided,
+        how: data.how
       }, function done(keep) {
         log('[keep:done]', keep);
         // main and secret are mutually exclusive
