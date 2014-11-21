@@ -38,7 +38,7 @@ object SociallyRelatedEntities {
     (__ \ 'facebookAccounts).format[RelatedEntities[User, SocialUserInfo]] and
     (__ \ 'linkedInAccounts).format[RelatedEntities[User, SocialUserInfo]] and
     (__ \ 'emailAccounts).format[RelatedEntities[User, EmailAccountInfo]] and
-    OFormat((__ \ 'createdAt).read[DateTime] orElse (__ \ 'timestamp).read[DateTime], (__ \ 'createdAt).write[DateTime])
+    (__ \ 'createdAt).format[DateTime]
   )(SociallyRelatedEntities.apply _, unlift(SociallyRelatedEntities.unapply))
 
   def empty(userId: Id[User]): SociallyRelatedEntities = SociallyRelatedEntities(RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
