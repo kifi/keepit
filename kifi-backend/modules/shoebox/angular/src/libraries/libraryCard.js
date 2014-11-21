@@ -481,6 +481,7 @@ angular.module('kifi')
               prevQuery = query;
             } else {
               locationNoReload.skipReload().url(scope.library.url);
+              prevQuery = '';
 
               $timeout(function () {
                 $rootScope.$emit('librarySearchChanged', false);
