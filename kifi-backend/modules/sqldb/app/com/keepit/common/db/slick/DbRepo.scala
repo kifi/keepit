@@ -175,7 +175,7 @@ trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self: DbRepo[M
       case None =>
         throw new IllegalArgumentException(s"[delete] attempt to delete record without id. model=$model")
       case Some(id) =>
-        val target = for (t <- rows if t.id === model.id.get) yield t
+        val target = for (t <- rows if t.id === id) yield t
         val count = target.delete
         deleteCache(model)
         if (changeListener.isDefined) session.onTransactionSuccess {
