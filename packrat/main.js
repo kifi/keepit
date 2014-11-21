@@ -789,10 +789,6 @@ api.port.on({
     }
     storeRecentTagRemoved(data.tag);
   },
-  keeper_shown: function(data, _, tab) {
-    (pageData[tab.nUri] || {}).shown = true;
-    logEvent('slider', 'sliderShown', data);
-  },
   suppress_on_site: function(data, _, tab) {
     ajax('POST', '/ext/pref/keeperHidden', {url: tab.url, suppress: data});
     pageData[tab.nUri].neverOnSite = !!data;
@@ -870,6 +866,13 @@ api.port.on({
   },
   track_pane_click: function (data) {
     tracker.track('user_clicked_pane', data);
+  },
+  keeper_shown: function (data, _, tab) {
+    (pageData[tab.nUri] || {}).shown = true;
+    logEvent('slider', 'sliderShown', data.urls);
+    if (data.action) {
+      tracker.track('user_expanded_keeper', {action: data.action});
+    }
   },
   log_search_event: function(data) {
     ajax('search', 'POST', '/ext/search/events/' + data[0], data[1]);

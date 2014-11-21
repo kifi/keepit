@@ -217,8 +217,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     }
   }
 
-  function showSlider() {
-    log('[showSlider]');
+  function showSlider(trigger) {
+    log('[showSlider]', trigger || '');
 
     createSlider();
     $slider.addClass('kifi-hidden kifi-transit')
@@ -232,7 +232,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       .removeClass('kifi-hidden');
     $(k.tile).on('mousedown click keydown keypress keyup', insulatePageFromEvent);
 
-    api.port.emit('keeper_shown', withUrls({}));
+    api.port.emit('keeper_shown', {urls: withUrls({}), action: trigger});
   }
 
   function hideSlider(trigger) {
@@ -495,7 +495,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       } else {
         log('[keeper.show]');
         $(k.tile).hoverfu('destroy');
-        showSlider();
+        showSlider('hover');
       }
     },
     hide: function () {
