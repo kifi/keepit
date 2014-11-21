@@ -368,5 +368,6 @@ angular.module('kifi')
       }
     });
 
+    libraryService.fetchLibrarySummaries(true);
   }
 ]);

@@ -144,6 +144,9 @@ angular.module('kifi')
       },
 
       fetchLibrarySummaries: function (invalidateCache) {
+        if (!$rootScope.userLoggedIn) {
+          return;
+        }
         if (invalidateCache) {
           userLibrarySummariesService.expire();
         }
