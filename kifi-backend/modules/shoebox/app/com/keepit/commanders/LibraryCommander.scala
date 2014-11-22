@@ -160,7 +160,7 @@ class LibraryCommander @Inject() (
     db.readOnlyReplica { implicit session =>
       val librariesById = libraryRepo.getLibraries(libraryIds.toSet)
       val ownersById = basicUserRepo.loadAll(librariesById.values.map(_.ownerId).toSet)
-      val keepCountsByLibraryId = keepRepo.getCountsByLibrary(libraryIds.toSet)
+      val keepCountsByLibraryId = keepRepo.getCountsByLibrary(libraryIds.toSet).withDefaultValue(0)
       libraryIds.map { libId =>
         val library = librariesById(libId)
         val owner = ownersById(library.ownerId)
@@ -173,7 +173,7 @@ class LibraryCommander @Inject() (
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibraryStatistics] = {
     db.readOnlyReplica { implicit session =>
       val memberCountByLibraryId = libraryRepo.getLibraries(libraryIds).mapValues(_.memberCount)
-      val keepCountsByLibraryId = keepRepo.getCountsByLibrary(libraryIds)
+      val keepCountsByLibraryId = keepRepo.getCountsByLibrary(libraryIds).withDefaultValue(0)
       libraryIds.map { libId => libId -> BasicLibraryStatistics(memberCountByLibraryId(libId), keepCountsByLibraryId(libId)) }.toMap
     }
   }

@@ -408,7 +408,7 @@ class KeepRepoImpl @Inject() (
   }
 
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int = {
-    getCountsByLibrary(Set(libraryId)).apply(libraryId)
+    getCountsByLibrary(Set(libraryId)).getOrElse(libraryId, 0)
   }
 
   def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int] = {
