@@ -72,7 +72,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
         tile.dataset.kept = o.kept;
         if ('duplicate' in o) {
           if (o.duplicate) {
-            loadAndDo('keeper', 'showKeepBox');
+            loadAndDo('keeper', 'showKeepBox', 'key');
           } else {
             tileCard.textContent = '';
             tileCard.clientHeight; // forces layout

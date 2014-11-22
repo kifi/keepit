@@ -130,7 +130,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         if (k.keepBox && k.keepBox.showing()) {
           k.keepBox.hide();
         } else {
-          showKeepBox();
+          showKeepBox('keeper', e.originalEvent.guided);
         }
       }
     }, 400, true))
@@ -203,7 +203,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         if (k.toaster && k.toaster.showing()) {
           k.toaster.hideIfBlank($slider);
         } else {
-          k.keeper.compose('keeper');
+          k.keeper.compose({trigger: 'keeper', guided: e.originalEvent.guided});
         }
       } else {
         beginStickyPane();
@@ -345,7 +345,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     });
   }
 
-  function showKeepBox() {
+  function showKeepBox(trigger, guided) {
     if (k.keepBox && k.keepBox.showing()) return;
     if (k.toaster && k.toaster.showing()) {
       k.toaster.hide();
@@ -368,7 +368,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       if (k.pane) {
         k.pane.shade();
       }
-      k.keepBox.show($slider, vals[2]);
+      k.keepBox.show($slider, trigger, vals[2], guided);
       k.keepBox.onHide.add(onKeepBoxHide);
     });
   }
@@ -572,12 +572,12 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
           }
         });
     },
-    showKeepBox: function () {
+    showKeepBox: function (trigger) {
       log('[keeper:showKeepBox]');
       if (!$slider) {
         showSlider();
       }
-      showKeepBox();
+      showKeepBox(trigger);
     },
     compose: function (opts) {
       var trigger = opts.trigger || opts;
@@ -594,7 +594,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
             if (k.pane) {
               k.pane.shade();
             }
-            k.toaster.show($slider, trigger, opts.to);
+            k.toaster.show($slider, trigger, opts.guided, opts.to);
             k.toaster.onHide.add(onToasterHide);
           }
         });

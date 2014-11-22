@@ -35,8 +35,7 @@ k.keepBox = k.keepBox || (function () {
   var IMAGE_WIDTH = 300, IMAGE_HEIGHT = 240;  // size of kifi-keep-box-keep-image-picker
 
   return {
-    show: function ($parent, data) {
-      log('[keepBox.show]');
+    show: function ($parent, trigger, data, guided) {
       if ($box) {
         hide();
       }
@@ -47,7 +46,7 @@ k.keepBox = k.keepBox || (function () {
         }
         setShortcut(lib);
       });
-      show($parent, data.libraries, data.showLibraryIntro);
+      show($parent, trigger, guided, data.libraries, data.showLibraryIntro);
     },
     hide: function () {
       if ($box) {
@@ -70,8 +69,8 @@ k.keepBox = k.keepBox || (function () {
     }
   };
 
-  function show($parent, libraries, showIntro) {
-    log('[keepBox:show]');
+  function show($parent, trigger, guided, libraries, showIntro) {
+    log('[keepBox:show]', trigger, guided ? 'guided' : '');
     $box = $(k.render('html/keeper/keep_box', partitionLibs(libraries), {
       view: 'keep_box_libs',
       keep_box_lib: 'keep_box_lib',
@@ -99,6 +98,8 @@ k.keepBox = k.keepBox || (function () {
     addLibrariesBindings($box.find('.kifi-keep-box-view-libs'));
 
     $(document).data('esc').add(hide);
+
+    api.port.emit('track_pane_view', {type: 'libraryChooser', subsource: trigger, guided: guided || undefined});
 
     $box.layout()
     .on('transitionend', $.proxy(onShown, null, showIntro))
