@@ -41,6 +41,7 @@ angular.module('kifi')
         scope.editKeepsText = 'Edit Keeps';
         scope.librarySearchInProgress = scope.librarySearch;
         scope.search = { 'text': $routeParams.q || '' };
+        scope.pageScrolled = false;
 
         var magicImages = {
           'l7SZ3gr3kUQJ': '//djty7jcqog9qu.cloudfront.net/special-libs/l7SZ3gr3kUQJ.png',
@@ -203,6 +204,15 @@ angular.module('kifi')
           }
         }
         scope.$evalAsync(preloadSocial);
+
+        function onScroll() {
+          var body = $window.document.documentElement || $window.document.body;
+          var scrollY = $window.pageYOffset || body.scrollTop;
+
+          scope.$apply(function () {
+            scope.pageScrolled = scrollY > 0;
+          });
+        }
 
 
         //
@@ -545,6 +555,11 @@ angular.module('kifi')
         $window.addEventListener('resize', positionSearchFollowOnResize);
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', positionSearchFollowOnResize);
+        });
+
+        $window.addEventListener('scroll', onScroll);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener('scroll', onScroll);
         });
       }
     };

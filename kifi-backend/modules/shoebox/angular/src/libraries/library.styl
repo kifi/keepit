@@ -30,6 +30,7 @@ invite-header-orange = #ff7c3c
     top: 0
     left: -5000px
     display: block
+    box-shadow: none
     width: 9999px
     height: 100%
     background-color: #fff
@@ -111,6 +112,9 @@ invite-header-orange = #ff7c3c
   top: 62px
   z-index: 500
 
+  &.pageScrolled::before
+    box-shadow: 0px 5px 5px #ddd
+
   .kf-keep-body
     max-height: 90px
 
@@ -139,8 +143,8 @@ invite-header-orange = #ff7c3c
 
   .dialog-x
     display: block
-    top: 0px
-    right: -110px
+    top: -12px
+    right: -10px
 
 .library-search
   .kf-library-body

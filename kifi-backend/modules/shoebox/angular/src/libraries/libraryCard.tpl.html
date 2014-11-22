@@ -1,4 +1,4 @@
-<div class="kf-keep library-card" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress }">
+<div class="kf-keep library-card" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress, 'pageScrolled': pageScrolled }">
   <div ng-show="library.invite && !library.invite.actedOn" class="library-card-invite-header">
     <button class="library-card-invite-header-button library-card-invite-header-accept" ng-click="acceptInvitation(library)">Accept</button>
     <button class="library-card-invite-header-button library-card-invite-header-ignore" ng-click="ignoreInvitation(library)">Ignore</button>
@@ -36,9 +36,8 @@
 
         <div ng-if="!recommendation && isUserLoggedOut" class="kf-keep-lib-search">
           <input class="kf-keep-lib-search-input" type="text" placeholder="Search this library" ng-model="search.text" ng-focus="onSearchInputFocus()" ng-change="onSearchInputChange(search.text)">
+          <a class="dialog-x" href="javascript:" ng-click="onSearchExit()"></a>
         </div>
-
-        <a class="dialog-x" href="javascript:" ng-click="onSearchExit()"></a>
       </div>
 
       <div ng-switch="clippedDescription" class="kf-keep-lib-description-container">
