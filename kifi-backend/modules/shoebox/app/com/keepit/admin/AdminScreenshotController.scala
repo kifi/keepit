@@ -30,33 +30,6 @@ class AdminScreenshotController @Inject() (
   uriRepo: NormalizedURIRepo)
     extends AdminUserActions {
 
-  def updateUri(uriId: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
-    val normUri = db.readOnlyMaster { implicit session =>
-      uriRepo.get(uriId)
-    }
-    uriSummaryCommander.updateScreenshots(normUri).map { imageInfoOpt =>
-      val screenshotUrl = imageInfoOpt map (_.url) getOrElse ""
-      val success = imageInfoOpt.nonEmpty
-      Ok("Done: " + success + s"\n<br><br>\n<a href='$screenshotUrl'>link</a>")
-    }
-  }
-
-  def updateUser(userId: Id[User], drop: Int = 0, take: Int = 999999) = AdminUserPage { implicit request =>
-    val uris = db.readOnlyMaster { implicit session =>
-      keepRepo.getByUser(userId).map(_.uriId)
-    }
-    uris.drop(drop).take(take).grouped(100).foreach { uriGroup =>
-      db.readOnlyMaster { implicit session =>
-        uriGroup.map { uriId =>
-          val normUri = uriRepo.get(uriId)
-          uriSummaryCommander.updateScreenshots(normUri)
-        }
-      }
-    }
-
-    Ok("Goin!")
-  }
-
   def images() = AdminUserPage { implicit request =>
     Ok(html.admin.images())
   }
@@ -77,7 +50,7 @@ class AdminScreenshotController @Inject() (
     } match {
       case Success(uri) =>
         scraper.getEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
-          Ok(html.admin.imagesForUri(uri, uriSummaryCommander.getScreenshotURL(uri), infos))
+          Ok(html.admin.imagesForUri(uri, None, infos))
         }
       case Failure(t) =>
         Future.successful(BadRequest(s"uriId($uriId) not found"))
@@ -94,9 +67,8 @@ class AdminScreenshotController @Inject() (
           val pageInfoOpt = pageInfoRepo.getByUri(uriId)
           (uri, pageInfoOpt)
         }
-        val screenshotUrl = uriSummaryCommander.getScreenshotURL(uri)
         uriSummaryCommander.getURIImage(uri) map { imageUrlOpt =>
-          (uri, screenshotUrl, imageUrlOpt)
+          (uri, None, imageUrlOpt)
         }
       }
       Future.sequence(tuplesF) map { tuples =>

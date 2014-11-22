@@ -171,14 +171,18 @@ trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self: DbRepo[M
   import db.Driver.simple._
 
   def delete(model: M)(implicit session: RWSession) = {
-    val startTime = System.currentTimeMillis()
-    val target = for (t <- rows if t.id === model.id.get) yield t
-    val count = target.delete
-    deleteCache(model)
-    if (changeListener.isDefined) session.onTransactionSuccess {
-      changeListener.get(RepoEntryRemoved(model))
+    model.id match {
+      case None =>
+        throw new IllegalArgumentException(s"[delete] attempt to delete record without id. model=$model")
+      case Some(id) =>
+        val target = for (t <- rows if t.id === id) yield t
+        val count = target.delete
+        deleteCache(model)
+        if (changeListener.isDefined) session.onTransactionSuccess {
+          changeListener.get(RepoEntryRemoved(model))
+        }
+        count
     }
-    count
   }
 }
 

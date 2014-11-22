@@ -5,28 +5,35 @@
 
 .kf-nav-lib-system
   border-bottom: 1px solid separatorColor
-  padding-top: 16px
+  padding-top: 3px
 
 .kf-nav-lib-item
   height: 45px
   width: 230px
-  padding-bottom: 8px
+  padding-top: 10px
   user-select: none
   font-size: 12px
 
 .kf-create-new-library
   padding: 8px 0 0 0
 
+  .kf-nav-name
+    padding-top: 3px
+
 .kf-nav-lib-separator
-  margin-bottom: 10px
+  position: relative
+  top: 0px
+  margin-top: 5px
   line-height: 30px
   width: 216px
   border-radius: 4px
   background-color: #e8e8e8
+  z-index: 3
 
 .kf-nav-lib-separator-title
   padding-left: 45px
   font-size: 11px
+  text-transform: uppercase
   color: #5d5d5d
 
 ////////////////////////////
@@ -81,14 +88,13 @@
   border-radius: 100%
 
 
-
 //////////////////////////////////////
 ////// Scrollable Library Pane ///////
 //////////////////////////////////////
 
 .kf-scrollable-libs
-  width: calc(100% + 40px)
   position: relative
+  width: calc(100% + 40px)
 
   // This is a hack to hide the scrollbar
   // (cf. comments in scrollbar.js)
@@ -97,14 +103,17 @@
     .kf-nav-lib-users
       width: calc(100%)
 
-
-
 ////////////////////////////////////
 ////// Library Filtering Box ///////
 ////////////////////////////////////
 
 .kf-lib-search
+  position: relative
+  display: inline-block
   width: calc(100% + 40px)
+  height: 33px
+  background-color: appBackgroundColor
+  z-index: 5
 
 .kf-lib-input-box
   height: 25px
@@ -163,17 +172,17 @@
   position: relative
 
 .kf-sort-libs-button
-  user-select: none
+  position: relative
+  float: right
   width: 24px
   height: 25px
-  float: right
   margin-right: 14px
   box-sizing: border-box
-  border-radius: 0 4px 4px 0
-  cursor: pointer
-  position: relative
-  background-color: #eeeeee
   border: 1px solid #e6e6e6
+  border-radius: 0 4px 4px 0
+  background-color: #eeeeee
+  cursor: pointer
+  user-select: none
 
   &.on
     background-color: #ffffff
@@ -184,7 +193,7 @@
   top: 30px
   left: 65px
   width: 185px
-  z-index: 1
+  z-index: 6
   background-color: #fff
   border-radius: 8px
   border: 1px solid separatorColor

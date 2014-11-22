@@ -13,6 +13,8 @@ class UserEmailAddressTest extends Specification {
       exp("eishay@42go.com") === Set.empty
       exp("eishaytest@42go.com") === Set.empty
       exp("eishay+test@42go.com") === Set(FAKE)
+      exp("pqccmsg_yangescu_1416509875@tfbnw.net") === Set(FAKE)
+      exp("foo@mailinator.com") === Set(FAKE)
       exp("test@42go.com") === Set.empty
       exp("eishay+test1@42go.com") === Set(FAKE)
       exp("eishay+testandmore@42go.com") === Set(FAKE)

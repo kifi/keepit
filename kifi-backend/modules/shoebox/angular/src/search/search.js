@@ -58,6 +58,7 @@ angular.module('kifi')
         });
       } else {
         libraryIdPromise = $q.when('');
+        $rootScope.$emit('libraryUrl', {});
       }
 
       libraryIdPromise.then(function (libraryId) {

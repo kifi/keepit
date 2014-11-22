@@ -11,7 +11,7 @@ import com.keepit.common.controller.CortexServiceController
 import com.keepit.common.commanders.{ LDARepresenterCommander, LDAInfoCommander, LDACommander }
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.utils.TextUtils
-import com.keepit.cortex.models.lda.{ DenseLDA, LDAUserURIInterestScores, LDATopicConfiguration, LDATopicInfo }
+import com.keepit.cortex.models.lda._
 import com.keepit.model.{ Library, User, NormalizedURI }
 import com.keepit.common.db.Id
 
@@ -110,6 +110,12 @@ class LDAController @Inject() (
     Ok(Json.toJson(vecOpt))
   }
 
+  def userLibraryScore(userId: Id[User], libId: Id[Library], version: Option[Int]) = Action { request =>
+    implicit val ver = toVersion(version)
+    val s = lda.userLibraryScore(userId, libId)
+    Ok(Json.toJson(s))
+  }
+
   def sampleURIs(topicId: Int, version: Option[Int]) = Action { request =>
     implicit val ver = toVersion(version)
     val (uris, scores) = lda.sampleURIs(topicId).unzip
@@ -171,6 +177,12 @@ class LDAController @Inject() (
   def dumpFeature(dataType: String, id: Long, version: Option[Int]) = Action { request =>
     implicit val ver = toVersion(version)
     Ok(lda.dumpFeature(dataType, id))
+  }
+
+  def getSimilarURIs(uriId: Id[NormalizedURI], version: Option[Int]) = Action { request =>
+    implicit val ver = toVersion(version)
+    val uris = lda.getSimilarURIs(uriId)
+    Ok(Json.toJson(uris))
   }
 
 }

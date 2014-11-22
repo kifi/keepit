@@ -71,33 +71,17 @@ class KeepsController @Inject() (
     ))
   }
 
-  // todo(martin) - looks like this endpoint is not being used, consider removing
-  def getScreenshotUrl() = UserAction.async(parse.tolerantJson) { request =>
+  // todo: Talk to JP and delete this if possible
+  def getScreenshotUrl() = UserAction(parse.tolerantJson) { request =>
     val urlOpt = (request.body \ "url").asOpt[String]
     val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
     urlOpt.map { url =>
-      db.readOnlyMasterAsync { implicit session =>
-        normalizedURIInterner.getByUri(url)
-      } map { uriOpt =>
-        uriOpt flatMap { uriSummaryCommander.getScreenshotURL(_) } match {
-          case Some(url) => Ok(Json.obj("url" -> url))
-          case None => NotFound(JsString("0"))
-        }
-      }
+      NotFound(JsString("0"))
     }.orElse {
       urlsOpt.map { urls =>
-        db.readOnlyReplicaAsync { implicit session =>
-          urls.map(url => url -> normalizedURIInterner.getByUri(url))
-        } map {
-          case uris =>
-            val results = uris.map {
-              case (uri, ssOpt) =>
-                uri -> (ssOpt.flatMap { uriSummaryCommander.getScreenshotURL(_) }.map(JsString).getOrElse(JsNull): JsValue)
-            }
-            Ok(Json.obj("urls" -> JsObject(results)))
-        }
+        Ok(Json.obj("urls" -> JsObject(Seq.empty)))
       }
-    }.getOrElse(Future.successful(BadRequest(JsString("0"))))
+    }.getOrElse(BadRequest(JsString("0")))
   }
 
   def exportKeeps() = UserAction { request =>

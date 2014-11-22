@@ -80,7 +80,7 @@ private[integration] class AutogenReaper @Inject() (
             userSessionRepo.invalidateByUser(exp.userId)
           }
           db.readWrite { implicit s =>
-            userExperimentRepo.getAllUserExperiments(exp.userId) foreach { exp =>
+            userExperimentRepo.getAllUserExperiments(exp.userId) filter (_.id.isDefined) foreach { exp =>
               exp.experimentType match {
                 case ExperimentType.AUTO_GEN => userExperimentRepo.save(exp.withState(UserExperimentStates.INACTIVE))
                 case _ => userExperimentRepo.delete(exp)
@@ -138,7 +138,7 @@ private[integration] class AutogenReaper @Inject() (
         }
         db.readWrite { implicit s =>
           dues foreach { exp =>
-            userExperimentRepo.getAllUserExperiments(exp.userId) foreach { exp =>
+            userExperimentRepo.getAllUserExperiments(exp.userId) filter(_.id.isDefined) foreach { exp =>
               userExperimentRepo.delete(exp)
             }
           }

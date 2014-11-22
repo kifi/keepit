@@ -1,4 +1,4 @@
-var snapshot = function () {
+k.snapshot = k.snapshot || (function () {
   'use strict';
 
   // Characters that must not be considered part of names/tokens when parsing a generated selector.
@@ -307,7 +307,7 @@ var snapshot = function () {
 
     findRange: function (selector) {
       var parts = selector.split('|');
-      var ane = snapshot.fuzzyFind(parts[1]);
+      var ane = k.snapshot.fuzzyFind(parts[1]);
       if (ane) {
         var sce = parts[2] ? ane.querySelector(scopeChild + decodeURIComponent(parts[2])) : ane;
         var ece = parts[4] ? ane.querySelector(scopeChild + decodeURIComponent(parts[4])) : ane;
@@ -340,7 +340,7 @@ var snapshot = function () {
 
     findImage: function (selector) {
       var parts = selector.split('|');
-      var el = snapshot.fuzzyFind(parts[1]);
+      var el = k.snapshot.fuzzyFind(parts[1]);
       if (el && el.tagName.toUpperCase() === 'IMG') {
         return el;
       }
@@ -366,4 +366,4 @@ var snapshot = function () {
       };
     }
   }
-}();
+}());

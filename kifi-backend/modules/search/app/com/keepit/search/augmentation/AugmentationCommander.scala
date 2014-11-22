@@ -22,6 +22,8 @@ import com.keepit.search.engine.SearchFactory
 import com.keepit.common.core._
 import com.keepit.search.{ Searcher, LibraryContext, DistributedSearchServiceClient }
 import com.keepit.search.augmentation.AugmentationCommander.DistributionPlan
+import com.keepit.search.graph.library.{ LibraryRecord, LibraryFields, LibraryIndexable, LibraryIndexer }
+import com.keepit.common.strings.Profanity
 
 object AugmentationCommander {
   type DistributionPlan = (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])])
@@ -38,6 +40,7 @@ trait AugmentationCommander {
 class AugmentationCommanderImpl @Inject() (
     activeShards: ActiveShards,
     shardedKeepIndexer: ShardedKeepIndexer,
+    libraryIndexer: LibraryIndexer,
     searchFactory: SearchFactory,
     val searchClient: DistributedSearchServiceClient) extends AugmentationCommander with Sharding with Logging {
 
@@ -111,13 +114,22 @@ class AugmentationCommanderImpl @Inject() (
       case (Some(shard), itemsInShard) =>
         SafeFuture {
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
-          itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, userIdFilter, libraryIdFilter)(item) }.toMap
+          val librarySearcher = libraryIndexer.getSearcher
+          itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, librarySearcher, userIdFilter, libraryIdFilter)(item) }.toMap
         }
     }.toSeq
     Future.sequence(futureAugmentationInfosByShard).map(_.foldLeft(Map.empty[AugmentableItem, FullAugmentationInfo])(_ ++ _))
   }
 
-  private def getAugmentationInfo(keepSearcher: Searcher, userIdFilter: LongArraySet, libraryIdFilter: LongArraySet)(item: AugmentableItem): FullAugmentationInfo = {
+  // todo(Léo): this is currently very much unrestricted in order to push for library discovery
+  private def showPublishedLibrary(librarySearcher: Searcher, libraryId: Long): Boolean = {
+    librarySearcher.getDecodedDocValue[LibraryRecord](LibraryFields.recordField, libraryId).exists { record =>
+      !record.name.toLowerCase.split("\\s+").exists(Profanity.all.contains)
+    }
+    false // todo(Léo): remove when mobile front-end is fixed
+  }
+
+  private def getAugmentationInfo(keepSearcher: Searcher, librarySearcher: Searcher, userIdFilter: LongArraySet, libraryIdFilter: LongArraySet)(item: AugmentableItem): FullAugmentationInfo = {
     val uriTerm = new Term(KeepFields.uriField, item.uri.id.toString)
     val keeps = new ListBuffer[RestrictedKeepInfo]()
     var otherPublishedKeeps = 0
@@ -163,8 +175,12 @@ class AugmentationCommanderImpl @Inject() (
           else visibility match { // kept by others
             case PUBLISHED =>
               uniqueKeepers += userId
-              otherPublishedKeeps += 1
-            //todo(Léo): define which published libraries are relevant (should we count irrelevant library keeps in otherDiscoverableKeeps?)
+              if (showPublishedLibrary(librarySearcher, libraryId)) {
+                val record = getKeepRecord(docId)
+                keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), record.tags)
+              } else {
+                otherPublishedKeeps += 1
+              }
             case DISCOVERABLE =>
               uniqueKeepers += userId
               otherDiscoverableKeeps += 1

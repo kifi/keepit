@@ -94,10 +94,10 @@ object ProviderController extends Controller with Logging {
     }
   }
 
-  def completeAuthentication(user: Identity, session: Session)(implicit request: RequestHeader): Result = {
-    log.info(s"[securesocial] user logged in : [${user.email}] class=${user.getClass}")
-    val sess = Events.fire(new LoginEvent(user)).getOrElse(session)
-    Authenticator.create(user) match {
+  def completeAuthentication(userIdentity: Identity, session: Session)(implicit request: RequestHeader): Result = {
+    log.info(s"[securesocial] user logged in : [${userIdentity.email}] class=${userIdentity.getClass}")
+    val sess = Events.fire(new LoginEvent(userIdentity)).getOrElse(session)
+    Authenticator.create(userIdentity) match {
       case Right(authenticator) => {
         Redirect(toUrl(sess)).withSession(sess -
           SecureSocial.OriginalUrlKey -

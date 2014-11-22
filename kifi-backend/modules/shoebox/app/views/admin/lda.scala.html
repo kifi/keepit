@@ -76,6 +76,15 @@
   <p id = "library_topic_result">
 
 
+  <br><br>
+  <div>User Library Score</div>
+  <form id = "user_lib_score">
+    <input id = "userId_for_user_lib_score" type = "text" placeholder = "userId">
+    <input id = "libId_for_user_lib_score" type = "text" placeholder = "library Id">
+    <button type = "submit">submit</button>
+  </form>
+  <p id = "user_lib_result">
+
 
 
   <script type="text/javascript">
@@ -228,6 +237,17 @@
         ).done(done).fail(fail);
 
         function done(data) { $("#library_topic_result").empty().prepend(data)}
+        function fail() { alert("bad things happened") }
+
+      })
+
+      $('#user_lib_score').submit(function(event){
+        event.preventDefault();
+        $.post('@com.keepit.controllers.admin.routes.AdminLDAController.userLibraryScore',
+        {userId: $('#userId_for_user_lib_score').val(), libId: $('#libId_for_user_lib_score').val(), version: @version}
+        ).done(done).fail(fail);
+
+        function done(data) { $("#user_lib_result").empty().prepend(data)}
         function fail() { alert("bad things happened") }
 
       })

@@ -1,11 +1,17 @@
 package com.keepit.common.cache
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.keepit.serializer._
+import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.test._
+import com.keepit.common.time._
 import com.keepit.common.logging.AccessLog
 import org.specs2.mutable.Specification
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.Duration
+
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 case class TestJsonCacheData(name: String, age: Int)
@@ -18,6 +24,16 @@ case class TestJsonCacheKey(id: String) extends Key[TestJsonCacheData] {
 
 class TestJsonCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[TestJsonCacheKey, TestJsonCacheData](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(Json.format[TestJsonCacheData])
+
+case class IntWithTime(value: Int, timestamp: DateTime)
+
+case class IntWithTimeCacheKey(key: Int) extends Key[IntWithTime] {
+  val namespace = "int_with_time"
+  def toKey = key.toString
+}
+
+class IntWithTimeCache()(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[IntWithTimeCacheKey, IntWithTime](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(Json.format[IntWithTime])
 
 case class TestBinaryCacheKey(id: String) extends Key[Array[Byte]] {
   override val version = 1
@@ -134,4 +150,65 @@ class FortyTwoCacheTest extends Specification with CommonTestInjector {
       }
     }
   }
+
+  "getOrElseFutureOpt predicate" should {
+    withInjector(cacheTestModules: _*) { implicit injector =>
+
+      val cache = new IntWithTimeCache()(inject[CacheStatistics],
+        inject[AccessLog], (inject[FortyTwoCachePlugin], Duration(7, "days")))
+
+      class SquareClient {
+        private val cnt = new AtomicInteger(0)
+
+        def getCounter: Int = cnt.intValue()
+
+        def getSquare(x: Int): Future[Option[IntWithTime]] = {
+          cnt.incrementAndGet()
+          Future.successful(Some(IntWithTime(x * x, currentDateTime)))
+        }
+      }
+      val client = new SquareClient()
+      val t0 = currentDateTime
+      val x = IntWithTime(4, t0.minusMillis(1000))
+      val key = IntWithTimeCacheKey(2)
+
+      def needRefresh(freshInterval: Long)(x: Option[IntWithTime]): Boolean = {
+        x.isDefined && (x.get.timestamp.plus(freshInterval).getMillis < currentDateTime.getMillis)
+      }
+
+      cache.set(key, x)
+      "get value without calling client if predicate returns true" in {
+        val res = cache.getOrElseFutureOpt(key, needRefresh(10000)) {
+          client.getSquare(key.key)
+        }
+
+        Await.result(res, Duration(100, "millis")).get.value === 4
+        client.getCounter === 0
+      }
+
+      "call client if predicate fails, and refresh data" in {
+        val res2 = cache.getOrElseFutureOpt(key, needRefresh(200)) {
+          client.getSquare(key.key)
+        }
+
+        Await.result(res2, Duration(100, "millis")).get.value === 4
+        client.getCounter === 1
+
+      }
+
+      "when key not found, call client" in {
+        cache.get(IntWithTimeCacheKey(3)) === None
+
+        val res3 = cache.getOrElseFutureOpt(IntWithTimeCacheKey(3), needRefresh(10000)) {
+          client.getSquare(3)
+        }
+
+        Await.result(res3, Duration(100, "millis")).get.value === 9
+        client.getCounter === 2
+
+        cache.get(IntWithTimeCacheKey(3)).get.value === 9
+      }
+    }
+  }
+
 }

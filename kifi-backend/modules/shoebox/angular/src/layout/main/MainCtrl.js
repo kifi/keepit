@@ -367,7 +367,5 @@ angular.module('kifi')
         header.css('padding-right', '');
       }
     });
-
-    libraryService.fetchLibrarySummaries(true);
   }
 ]);

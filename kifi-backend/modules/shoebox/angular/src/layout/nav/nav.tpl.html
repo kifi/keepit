@@ -74,8 +74,8 @@
           </ul>
           <div class="dropdown-menu-switch">
             <span>Your Libraries first:&nbsp;</span>
-            <span class="dropdown-switch-option" ng-class="{'set':sortingMenu.myLibsFirst==true}" ng-click="sortingMenu.myLibsFirst=true">ON</span>
-            <span class="dropdown-switch-option" ng-class="{'set':sortingMenu.myLibsFirst==false}" ng-click="sortingMenu.myLibsFirst=false">OFF</span>
+            <span class="dropdown-switch-option" ng-class="{ 'set':sortingMenu.myLibsFirst }" ng-click="toggleMyLibsFirst()">ON</span>
+            <span class="dropdown-switch-option" ng-class="{ 'set':!sortingMenu.myLibsFirst }" ng-click="toggleMyLibsFirst()">OFF</span>
           </div>
         </div>
       </div>
@@ -83,9 +83,11 @@
 
     <div class="kf-scrollable-libs" antiscroll="{ autoHide: false }">
       <ul class="kf-nav-lib-users">
-        <li class="kf-nav-lib-separator" ng-show="sortingMenu.myLibsFirst && myLibsToShow.length > 0">
+
+        <li class="kf-nav-lib-separator" ng-if="sortingMenu.myLibsFirst && myLibsToShow.length > 0">
           <div class="kf-nav-lib-separator-title">YOUR LIBRARIES</div>
         </li>
+
         <li ng-show="sortingMenu.myLibsFirst" ng-repeat="library in myLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
           <div class="kf-nav-link-box">
             <a class="kf-nav-link" ng-href="{{library.url}}">
@@ -119,10 +121,10 @@
         </li>
 
 
-        <li class="kf-nav-lib-separator" ng-show="!sortingMenu.myLibsFirst && userLibsToShow.length > 0">
+        <li class="kf-nav-lib-separator" ng-if="!sortingMenu.myLibsFirst && userLibsToShow.length > 0">
           <div class="kf-nav-lib-separator-title">ALL LIBRARIES</div>
         </li>
-        <li class="kf-nav-lib-separator" ng-show="sortingMenu.myLibsFirst && userLibsToShow.length > 0">
+        <li class="kf-nav-lib-separator" ng-if="sortingMenu.myLibsFirst && userLibsToShow.length > 0">
           <div class="kf-nav-lib-separator-title">LIBRARIES YOU FOLLOW</div>
         </li>
         <li ng-repeat="library in userLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
@@ -156,7 +158,7 @@
             </div>
           </div>
         </li>
-        <li class="kf-nav-lib-separator" ng-show="invitedLibsToShow.length > 0">
+        <li class="kf-nav-lib-separator" ng-if="invitedLibsToShow.length > 0">
           <div class="kf-nav-lib-separator-title">INVITATIONS</div>
         </li>
         <li ng-repeat="library in invitedLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
