@@ -895,6 +895,9 @@ api.port.on({
   track_notification: function (data) {
     tracker.trackConsolidated('user_was_notified', extend({action: 'shown'}, data.properties), 'windows', data.id, 1200);
   },
+  track_notification_click: function (data) {
+    tracker.track('user_clicked_notification', data);
+  },
   keeper_shown: function (data, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;
     logEvent('slider', 'sliderShown', data.urls);

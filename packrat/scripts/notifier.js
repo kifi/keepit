@@ -77,23 +77,14 @@ var notifier = function () {
     }))
     .appendTo($wrap)
     .fadeIn(params.fadeInMs || 500)
-    .click(function(e) {
-      if (e.which !== 1) return;
-      api.port.emit('remove_notification', $item.data('threadId'));
-      $item.off('mouseenter mouseleave');
-      fadeItem($item, params);
-      if (!$(e.target).hasClass('kifi-notify-close')) {
-        params.onClick.call(this, e);
-      }
-      return false;
-    });
+    .click($.proxy(onClick, null, category, params.onClick));
 
     if (!params.sticky) {
       $item.mouseenter(function() {
         clearTimeout($item.data('fadeTimer'));
         $item.stop().css({opacity: '', height: ''});
       }).mouseleave(function() {
-        $item.data('fadeTimer', setTimeout(fadeItem.bind(null, $item, params), params.showForMs));
+        $item.data('fadeTimer', setTimeout(fadeItem.bind(null, $item), params.showForMs));
       }).triggerHandler('mouseleave');
     }
 
@@ -101,6 +92,25 @@ var notifier = function () {
       category: category,
       sticky: params.sticky || undefined
     }});
+  }
+
+  function onClick(category, visit, e) {
+    if (e.which !== 1) return;
+    var $item = $(this);
+    api.port.emit('remove_notification', $item.data('threadId'));
+    $item.off('mouseenter mouseleave');
+    clearTimeout($item.data('fadeTimer'));
+    fadeItem($item);
+    var xClicked = e.target.classList.contains('kifi-notify-close');
+    if (!xClicked) {
+      visit.call(this, e);
+    }
+    api.port.emit('track_notification_click', {
+      subsource: 'popup',
+      category: category,
+      action: xClicked ? 'closed' : 'clicked'
+    });
+    return false;
   }
 
   function onClickMessage(url, locator, e) {
@@ -123,8 +133,8 @@ var notifier = function () {
     }
   }
 
-  function fadeItem($item, params) {
-    $item.animate({opacity: 0}, params.fadeOutMs || 300).animate({height: 0}, 300, removeItem.bind(null, $item));
+  function fadeItem($item) {
+    $item.animate({opacity: 0}, 300).animate({height: 0}, 300, removeItem.bind(null, $item));
   }
 
   function removeItem($item) {
