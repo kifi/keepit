@@ -3,10 +3,10 @@ package com.keepit.curator
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.db.Id
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.cortex.models.lda.{LDATopic, LDAUserURIInterestScores}
-import com.keepit.cortex.{CortexServiceClient, FakeCortexServiceClientImpl, FakeCortexServiceClientModule}
-import com.keepit.curator.commanders.{UriScoringHelper, UriWeightingHelper}
-import com.keepit.graph.{FakeGraphServiceClientImpl, FakeGraphServiceModule, GraphServiceClient}
+import com.keepit.cortex.models.lda.{ LDATopic, LDAUserURIInterestScores }
+import com.keepit.cortex.{ CortexServiceClient, FakeCortexServiceClientImpl, FakeCortexServiceClientModule }
+import com.keepit.curator.commanders.{ UriScoringHelper, UriWeightingHelper }
+import com.keepit.graph.{ FakeGraphServiceClientImpl, FakeGraphServiceModule, GraphServiceClient }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.User
 import org.specs2.mutable.Specification

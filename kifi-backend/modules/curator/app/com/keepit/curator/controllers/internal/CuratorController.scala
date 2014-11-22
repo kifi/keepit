@@ -2,6 +2,7 @@ package com.keepit.curator.controllers.internal
 
 import akka.actor.Scheduler
 import com.google.inject.Inject
+import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.CuratorServiceController
@@ -10,7 +11,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.curator.commanders.email.FeedDigestMessage.Queue
 import com.keepit.curator.commanders.email.{ RecentInterestRankStrategy, EngagementEmailActor, FeedDigestEmailSender }
-import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationFeedbackCommander, RecommendationGenerationCommander, RecommendationRetrievalCommander, SeedIngestionCommander }
+import com.keepit.curator.commanders._
 import com.keepit.curator.model.RecommendationClientType
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -32,7 +33,11 @@ class CuratorController @Inject() (
     feedDigestActor: ActorInstance[EngagementEmailActor],
     scheduler: Scheduler,
     feedEmailSender: FeedDigestEmailSender,
+    userExperimentCommander: RemoteUserExperimentCommander,
     protected val airbrake: AirbrakeNotifier) extends CuratorServiceController {
+
+  val topScoreRecoStrategy = new TopScoreRecoSortStrategy()
+  val diverseRecoStrategy = new DiverseRecoSortStrategy()
 
   def adHocRecos(userId: Id[User], n: Int) = Action.async { request =>
     recoGenCommander.getAdHocRecommendations(userId, n, request.body.asJson match {
@@ -41,11 +46,18 @@ class CuratorController @Inject() (
     }).map(recos => Ok(Json.toJson(recos)))
   }
 
-  def topRecos(userId: Id[User]) = Action(parse.tolerantJson) { request =>
+  def topRecos(userId: Id[User]) = Action.async(parse.tolerantJson) { request =>
     val clientType = (request.body \ "clientType").as[RecommendationClientType]
     val more = (request.body \ "more").as[Boolean]
     val recencyWeight = (request.body \ "recencyWeight").as[Float]
-    Ok(Json.toJson(recoRetrievalCommander.topRecos(userId, more, recencyWeight, clientType)))
+
+    userExperimentCommander.getExperimentsByUser(userId) map { experiments =>
+      val sortStrategy =
+        if (experiments.contains(ExperimentType.CURATOR_DIVERSE_TOPIC_RECOS)) diverseRecoStrategy
+        else topScoreRecoStrategy
+
+      Ok(Json.toJson(recoRetrievalCommander.topRecos(userId, more, recencyWeight, clientType, sortStrategy)))
+    }
   }
 
   def topPublicRecos() = Action { request =>
