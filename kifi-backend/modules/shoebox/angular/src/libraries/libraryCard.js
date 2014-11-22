@@ -170,7 +170,7 @@ angular.module('kifi')
             '&kcid=na-vf_twitter-library_invite-lid_' + scope.library.id);
           scope.library.shareText = 'Discover this amazing @Kifi library about ' + scope.library.name + '!';
 
-          if (scope.isUserLoggedOut) {
+          if (scope.$root.userLoggedIn === false) {
             scope.$evalAsync(function () {
               angular.element('.white-background').height(element.height() + 20);
             });
