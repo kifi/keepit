@@ -118,9 +118,9 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  '$scope', 'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log',
+  '$scope', 'profileService', '$window', '$rootScope', 'friendService', 'libraryService','$timeout', '$log',
   'platformService', '$rootElement', '$analytics', '$location',
-  function ($scope, profileService, $window, $rootScope, friendService, $timeout, $log,
+  function ($scope, profileService, $window, $rootScope, friendService, libraryService, $timeout, $log,
       platformService, $rootElement, $analytics, $location) {
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
 
@@ -133,6 +133,7 @@ angular.module('kifi', [
           if ($rootScope.userLoggedIn) {
             profileService.fetchPrefs();
             friendService.getRequests();
+            libraryService.fetchLibrarySummaries(true);
           }
         });
       });
