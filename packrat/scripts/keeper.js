@@ -580,7 +580,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       showKeepBox();
     },
     compose: function (opts) {
-      log('[keeper:compose]', opts.trigger || '');
+      var trigger = opts.trigger || opts;
+      log('[keeper:compose]', trigger);
       if (!$slider) {
         showSlider();
       } else if (k.keepBox && k.keepBox.showing()) {
@@ -589,11 +590,11 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       beginStickyToaster();
       k.keeper.moveToBottom(function () {
         api.require('scripts/compose_toaster.js', function () {
-          if (opts.trigger !== 'deepLink' || !k.toaster.showing()) {  // don't clobber form
+          if (trigger !== 'deepLink' || !k.toaster.showing()) {  // don't clobber form
             if (k.pane) {
               k.pane.shade();
             }
-            k.toaster.show($slider, opts.to);
+            k.toaster.show($slider, trigger, opts.to);
             k.toaster.onHide.add(onToasterHide);
           }
         });

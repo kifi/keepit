@@ -26,12 +26,11 @@ k.toaster = k.toaster || (function () {
   };
 
   return {
-    show: function ($parent, recipient) {
-      log('[toaster.show]', recipient || '');
+    show: function ($parent, trigger, recipient) {
       if ($toast) {
         hide();
       }
-      show($parent, recipient);
+      show($parent, trigger, recipient);
     },
     hideIfBlank: function () {
       if ($toast && $toast.data('compose').isBlank()) {
@@ -53,8 +52,8 @@ k.toaster = k.toaster || (function () {
     }
   };
 
-  function show($parent, recipient) {
-    log('[toaster:show]');
+  function show($parent, trigger, recipient) {
+    log('[toaster:show]', trigger, recipient || '');
     api.port.emit('prefs', function (prefs) {
       compose.reflectPrefs(prefs || {});
     });
@@ -86,6 +85,7 @@ k.toaster = k.toaster || (function () {
 
     api.port.on(handlers);
     api.port.emit('get_page_thread_count');
+    api.port.emit('track_pane_view', {type: 'composeMessage', subsource: trigger});
 
     $toast.layout()
     .on('transitionend', $.proxy(onShown, null, recipient))
