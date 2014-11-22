@@ -206,12 +206,14 @@ angular.module('kifi')
         scope.$evalAsync(preloadSocial);
 
         function onScroll() {
-          var body = $window.document.documentElement || $window.document.body;
-          var scrollY = $window.pageYOffset || body.scrollTop;
-
           scope.$apply(function () {
-            scope.pageScrolled = scrollY > 0;
+            scope.pageScrolled = $window.document.body.scrollTop > 0;
           });
+        }
+
+        function scrollToTop() {
+          $window.document.body.scrollTop = 0;
+          scope.pageScrolled = false;
         }
 
 
@@ -402,6 +404,8 @@ angular.module('kifi')
         }
 
         scope.onSearchInputFocus = function () {
+          scrollToTop();
+
           scope.librarySearchInProgress = true;
 
           var headerLinksElement = angular.element('.kf-header-right');
@@ -433,6 +437,8 @@ angular.module('kifi')
         };
 
         scope.onSearchExit = function () {
+          scrollToTop();
+
           locationNoReload.skipReload().url(scope.library.url);
           scope.librarySearchInProgress = false;
           $rootScope.$emit('librarySearchChanged', false);
