@@ -27,16 +27,9 @@ object ResultUtil {
     ) ++ uriSummary))
   }
 
-  def toKifiSearchHits(hits: Seq[DetailedSearchHit]): Seq[KifiSearchHit] = {
-    hits.map { h =>
-      jsonToKifiSearchHit(h.json)
-    }
-  }
-
-  def toSanitizedKifiSearchHits(hits: Seq[DetailedSearchHit]): Seq[KifiSearchHit] = {
-    hits.map { h =>
-      jsonToKifiSearchHit(h.sanitized.json)
-    }
+  def toKifiSearchHits(hits: Seq[DetailedSearchHit], sanitize: Boolean): Seq[KifiSearchHit] = {
+    if (sanitize) hits.map { h => jsonToKifiSearchHit(h.sanitized.json) }
+    else hits.map { h => jsonToKifiSearchHit(h.json) }
   }
 
   def toArticleSearchResult(

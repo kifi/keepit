@@ -814,6 +814,7 @@ POST     /internal/shoebox/image/getUriSummary       @com.keepit.controllers.int
 POST     /internal/shoebox/image/getUriSummaries     @com.keepit.controllers.internal.URISummaryController.getUriSummaries()
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
 POST     /internal/shoebox/database/getBasicKeeps   @com.keepit.controllers.internal.ShoeboxController.getBasicKeeps(userId: Id[User])
+POST     /internal/shoebox/database/getBasicLibraryStatistics   @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryStatistics()
 POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.internal.NormalizedURIController.getCandidateURIs()
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
