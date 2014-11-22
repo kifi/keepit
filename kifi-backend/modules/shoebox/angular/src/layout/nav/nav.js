@@ -50,15 +50,10 @@ angular.module('kifi')
           scope.mainLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_main' });
           scope.secretLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_secret' });
           allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
-
-          var newLists = sortLibraries(allUserLibs, libraryService.invitedSummaries);
-          scope.userLibsToShow = newLists[0];
-          scope.invitedLibsToShow  = newLists[1];
-          scope.myLibsToShow = newLists[2];  // should be [] if myLibsFirst false
           librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
           invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
 
-          scope.$broadcast('refreshScroll');
+          scope.changeList();
         }
 
         function setStickySeparator(refetchSeparators) {
