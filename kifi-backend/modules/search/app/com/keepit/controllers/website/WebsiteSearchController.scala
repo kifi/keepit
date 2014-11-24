@@ -20,7 +20,6 @@ import com.keepit.common.db.{ Id }
 import com.keepit.common.core._
 import com.keepit.controllers.website.WebsiteSearchController._
 import com.keepit.search.augmentation.{ AugmentationCommander }
-import com.keepit.common.json
 import com.keepit.social.BasicUser
 
 class WebsiteSearchController @Inject() (

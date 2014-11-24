@@ -22,6 +22,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 import scala.concurrent.Future
+import com.keepit.common.crypto.FakeCryptoModule
 
 class MobileSearchControllerTest extends SpecificationLike with SearchTestInjector {
 
@@ -30,7 +31,8 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
     FakeUserActionsModule(),
     FixedResultIndexModule(),
     FakeHttpClientModule(),
-    PlayAppConfigurationModule()
+    PlayAppConfigurationModule(),
+    FakeCryptoModule()
   )
 
   "MobileSearchController" should {

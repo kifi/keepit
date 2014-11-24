@@ -119,6 +119,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]): Future[Set[Id[User]]]
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
+  def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -742,6 +743,15 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getBasicKeeps(userId), Json.toJson(uriIds)).map { r =>
         implicit val readsFormat = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[BasicKeep]]
         r.json.as[Seq[(Id[NormalizedURI], Set[BasicKeep])]].toMap
+      }
+    }
+  }
+
+  def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]] = {
+    if (libraryIds.isEmpty) Future.successful(Map.empty[Id[Library], BasicLibraryStatistics]) else {
+      call(Shoebox.internal.getBasicLibraryStatistics, Json.toJson(libraryIds)).map { r =>
+        implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], BasicLibraryStatistics]
+        r.json.as[Seq[(Id[Library], BasicLibraryStatistics)]].toMap
       }
     }
   }

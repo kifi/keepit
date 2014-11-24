@@ -46,7 +46,8 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
-  def getCountByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Int
+  def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int
+  def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int]
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
@@ -406,19 +407,17 @@ class KeepRepoImpl @Inject() (
     (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt desc).drop(offset).take(limit).list
   }
 
-  private val getCountByLibraryCompiled = Compiled { (libraryId: Column[Id[Library]]) =>
-    (for (b <- rows if b.libraryId === libraryId) yield b).length
+  def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int = {
+    getCountsByLibrary(Set(libraryId)).getOrElse(libraryId, 0)
   }
-  private val getCountByLibraryWithExcludeCompiled = Compiled { (libraryId: Column[Id[Library]], excludeState: Column[State[Keep]]) =>
-    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState) yield b).length
-  }
-  def getCountByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Int = {
-    countByLibraryCache.getOrElse(CountByLibraryKey(libraryId)) {
-      excludeState match {
-        case None => getCountByLibraryCompiled(libraryId).run
-        case Some(exclude) => getCountByLibraryWithExcludeCompiled(libraryId, exclude).run
-      }
-    }
+
+  def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int] = {
+    countByLibraryCache.bulkGetOrElse(libraryIds.map(CountByLibraryKey(_))) { missingKeys =>
+      val missingLibraryIds = missingKeys.map(_.id)
+      val keepsQuery = (for (b <- rows if b.libraryId.inSet(missingLibraryIds) && b.state =!= KeepStates.INACTIVE) yield b)
+      val countQuery = keepsQuery.groupBy(_.libraryId).map { case (libraryId, keeps) => (libraryId, keeps.length) }
+      countQuery.run.map { case (libraryIdOpt, keepCount) => (CountByLibraryKey(libraryIdOpt.get), keepCount) }.toMap
+    }.map { case (CountByLibraryKey(libraryId), keepCount) => (libraryId, keepCount) }
   }
 
   private val getByExtIdandLibraryIdCompiled = Compiled { (extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]]) =>
