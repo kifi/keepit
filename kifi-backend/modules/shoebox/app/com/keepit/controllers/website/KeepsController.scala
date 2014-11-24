@@ -128,25 +128,6 @@ class KeepsController @Inject() (
     }
   }
 
-  def updateKeepInfo(id: ExternalId[Keep]) = UserAction { request =>
-    val toBeUpdated = request.body.asJson map { json =>
-      val isPrivate = (json \ "isPrivate").asOpt[Boolean]
-      val title = (json \ "title").asOpt[String]
-      (isPrivate, title)
-    }
-
-    toBeUpdated match {
-      case None | Some((None, None)) => BadRequest(Json.obj("error" -> "Could not parse JSON keep info from body"))
-      case Some((isPrivate, title)) => db.readOnlyMaster { implicit s => keepRepo.getOpt(id) } map { bookmark =>
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        keepsCommander.updateKeep(bookmark, isPrivate, title) getOrElse bookmark
-      } match {
-        case None => NotFound(Json.obj("error" -> "Keep not found"))
-        case Some(keep) => Ok(Json.obj("keep" -> KeepInfo.fromKeep(keep)))
-      }
-    }
-  }
-
   def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
     keepsCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, request.userId) map { res =>
       val basicCollection = collectionOpt.flatMap { collStrExtId =>
