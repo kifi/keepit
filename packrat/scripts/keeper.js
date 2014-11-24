@@ -53,7 +53,11 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
   document.addEventListener('click', onClick, true);
   function onClick(e) {
     if ($slider && (e.closeKeeper || !isClickSticky() && !$(e.target).is('.kifi-root,.kifi-root *')) && e.isTrusted !== false) {
-      hideSlider('clickout');
+      if (k.keepBox && k.keepBox.showing()) {
+        k.keepBox.hide('clickout');
+      } else {
+        hideSlider('clickout');
+      }
     }
   }
 
@@ -377,7 +381,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     if (k.pane) {
       k.pane.unshade();
     }
-    if (trigger === 'x' || trigger === 'esc' || trigger === 'action') {
+    if (~['x','esc','action','clickout'].indexOf(trigger)) {
       setTimeout(hideDelayed.bind(null, 'keepBox'), 40);
     }
   }
@@ -419,12 +423,12 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       }
     }
   }
-  var beginStickyKeepBox = beginSticky.bind(null, 2);
-  var endStickyKeepBox = endSticky.bind(null, 2);
-  var beginStickyToaster = beginSticky.bind(null, 4);
-  var endStickyToaster = endSticky.bind(null, 4);
-  var beginStickyPane = beginSticky.bind(null, 8);
-  var endStickyPane = endSticky.bind(null, 8);
+  var beginStickyKeepBox = beginSticky.bind(null, 1);
+  var endStickyKeepBox = endSticky.bind(null, 1);
+  var beginStickyToaster = beginSticky.bind(null, 2);
+  var endStickyToaster = endSticky.bind(null, 2);
+  var beginStickyPane = beginSticky.bind(null, 4);
+  var endStickyPane = endSticky.bind(null, 4);
 
   function onMouseMove(e) {
     window.removeEventListener('mousemove', onMouseMove, true);

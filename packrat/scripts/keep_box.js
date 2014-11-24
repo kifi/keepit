@@ -48,11 +48,11 @@ k.keepBox = k.keepBox || (function () {
       });
       show($parent, trigger, guided, data.libraries, data.showLibraryIntro);
     },
-    hide: function () {
+    hide: function (trigger) {
       if ($box) {
-        hide();
+        hide(null, trigger);
       } else {
-        log('[keepBox:hide] no-op');
+        log('[keepBox:hide] no-op', trigger || '');
       }
     },
     onHide: new Listeners(),
