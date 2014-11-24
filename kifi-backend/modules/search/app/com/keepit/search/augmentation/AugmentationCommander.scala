@@ -125,7 +125,7 @@ class AugmentationCommanderImpl @Inject() (
     librarySearcher.getDecodedDocValue[LibraryRecord](LibraryFields.recordField, libraryId).exists { record =>
       !record.name.toLowerCase.split("\\s+").exists(Profanity.all.contains)
     }
-    val authorizedUsers = Set(9, 134, 8465, 8947)
+    val authorizedUsers: Set[Long] = Set(9, 134, 8465, 8947)
     authorizedUsers.contains(requestingUserId.id) // todo(Léo): remove when mobile front-end is fixed
   }
 
