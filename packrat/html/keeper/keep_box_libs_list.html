@@ -13,13 +13,13 @@
         {{#inLibs}}{{>keep_box_lib}}{{/inLibs}}
       {{/inLibs.length}}
       {{#recentLibs.length}}
-        <div class="kifi-keep-box-lib-head">Recent Libraries</div>
+        <div class="kifi-keep-box-lib-head kifi-recent">Recent Libraries</div>
         {{#recentLibs}}{{>keep_box_lib}}{{/recentLibs}}
-        <div class="kifi-keep-box-lib-head">Other Libraries</div>
+        <div class="kifi-keep-box-lib-head kifi-other">Other Libraries</div>
       {{/recentLibs.length}}
       {{^recentLibs.length}}
         {{#showMyLibrariesHeading}}
-          <div class="kifi-keep-box-lib-head">My Libraries</div>
+          <div class="kifi-keep-box-lib-head kifi-my">My Libraries</div>
         {{/showMyLibrariesHeading}}
       {{/recentLibs.length}}
       {{#otherLibs}}{{>keep_box_lib}}{{/otherLibs}}

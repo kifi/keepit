@@ -119,7 +119,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
           } else if (!k.me) {
             toggleLoginDialog();
           } else if (k.keepBox && k.keepBox.showing()) {
-            k.keepBox.keep(e.altKey);
+            k.keepBox.keep(e.altKey, e.guided);
           } else {
             api.port.emit('keep', withTitles(withUrls({secret: e.altKey, how: 'key'})));
           }
