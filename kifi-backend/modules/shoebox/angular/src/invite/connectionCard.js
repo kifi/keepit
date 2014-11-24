@@ -32,6 +32,7 @@ angular.module('kifi')
 
       scope.facebook = network === 'facebook';
       scope.linkedin = network === 'linkedin';
+      scope.twitter  = network === 'twitter';
       scope.email    = network === 'email';
 
       scope.reconnectLinkedIn = function () {

@@ -7,7 +7,8 @@
 9998:com.keepit.social.SecureSocialUserService
 9999:securesocial.core.providers.utils.BCryptPasswordHasher
 10001:com.keepit.social.providers.FacebookProvider
-10002:com.keepit.social.providers.LinkedInProvider
-10003:com.keepit.social.providers.UsernamePasswordProvider
-10004:com.keepit.common.cache.PlayCachePlugin
-10005:com.keepit.ShutdownPlugin
+10002:com.keepit.social.providers.TwitterProvider
+10003:com.keepit.social.providers.LinkedInProvider
+10004:com.keepit.social.providers.UsernamePasswordProvider
+10005:com.keepit.common.cache.PlayCachePlugin
+10006:com.keepit.ShutdownPlugin
