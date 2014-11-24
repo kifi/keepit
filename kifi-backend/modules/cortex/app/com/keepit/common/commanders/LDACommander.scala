@@ -89,7 +89,8 @@ class LDACommander @Inject() (
           val s1 = computeCosineInterestScore(uriTopicOpt, userInterestOpt)
           val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
           val s3 = libraryInducedUserURIInterestScore(libFeats, uriTopicOpt)
-          LDAUserURIInterestScores(s2.global, s1.recency, s3)
+          LDAUserURIInterestScores(s2.global, s1.recency, s3,
+            uriTopicOpt.flatMap(_.firstTopic), uriTopicOpt.flatMap(_.secondTopic))
         } else {
           LDAUserURIInterestScores(None, None, None)
         }

@@ -192,3 +192,8 @@ object BasicLibrary {
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility)
   }
 }
+
+case class BasicLibraryStatistics(memberCount: Int, keepCount: Int)
+object BasicLibraryStatistics {
+  implicit val format = Json.format[BasicLibraryStatistics]
+}

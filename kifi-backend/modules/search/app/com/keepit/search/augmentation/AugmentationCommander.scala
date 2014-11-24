@@ -17,12 +17,11 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.Logging
-import org.apache.lucene.util.BytesRef
 import com.keepit.search.engine.SearchFactory
 import com.keepit.common.core._
 import com.keepit.search.{ Searcher, LibraryContext, DistributedSearchServiceClient }
 import com.keepit.search.augmentation.AugmentationCommander.DistributionPlan
-import com.keepit.search.graph.library.{ LibraryRecord, LibraryFields, LibraryIndexable, LibraryIndexer }
+import com.keepit.search.graph.library.{ LibraryRecord, LibraryFields, LibraryIndexer }
 import com.keepit.common.strings.Profanity
 
 object AugmentationCommander {
@@ -97,7 +96,7 @@ class AugmentationCommanderImpl @Inject() (
       for {
         libraryFilter <- futureLibraryFilter
         userFilter <- futureUserFilter
-        allAugmentationInfos <- getAugmentationInfos(shards, libraryFilter, userFilter, items ++ context.corpus.keySet)
+        allAugmentationInfos <- getAugmentationInfos(shards, context.userId, libraryFilter, userFilter, items ++ context.corpus.keySet)
       } yield {
         val contextualAugmentationInfos = context.corpus.collect { case (item, weight) if allAugmentationInfos.contains(item) => (allAugmentationInfos(item) -> weight) }
         val contextualScores = computeAugmentationScores(contextualAugmentationInfos)
@@ -107,7 +106,7 @@ class AugmentationCommanderImpl @Inject() (
     }
   }
 
-  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[AugmentableItem]): Future[Map[AugmentableItem, FullAugmentationInfo]] = {
+  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], requestingUserId: Id[User], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[AugmentableItem]): Future[Map[AugmentableItem, FullAugmentationInfo]] = {
     val userIdFilter = LongArraySet.fromSet(userFilter.map(_.id))
     val libraryIdFilter = LongArraySet.fromSet(libraryFilter.map(_.id))
     val futureAugmentationInfosByShard: Seq[Future[Map[AugmentableItem, FullAugmentationInfo]]] = items.groupBy(item => shards.find(_.contains(item.uri))).collect {
@@ -115,21 +114,22 @@ class AugmentationCommanderImpl @Inject() (
         SafeFuture {
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
           val librarySearcher = libraryIndexer.getSearcher
-          itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, librarySearcher, userIdFilter, libraryIdFilter)(item) }.toMap
+          itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, librarySearcher, requestingUserId, userIdFilter, libraryIdFilter)(item) }.toMap
         }
     }.toSeq
     Future.sequence(futureAugmentationInfosByShard).map(_.foldLeft(Map.empty[AugmentableItem, FullAugmentationInfo])(_ ++ _))
   }
 
   // todo(Léo): this is currently very much unrestricted in order to push for library discovery
-  private def showPublishedLibrary(librarySearcher: Searcher, libraryId: Long): Boolean = {
+  private def showPublishedLibrary(requestingUserId: Id[User], librarySearcher: Searcher, libraryId: Long): Boolean = {
     librarySearcher.getDecodedDocValue[LibraryRecord](LibraryFields.recordField, libraryId).exists { record =>
       !record.name.toLowerCase.split("\\s+").exists(Profanity.all.contains)
     }
-    false // todo(Léo): remove when mobile front-end is fixed
+    val authorizedUsers: Set[Long] = Set(9, 134, 8465, 8947)
+    authorizedUsers.contains(requestingUserId.id) // todo(Léo): remove when mobile front-end is fixed
   }
 
-  private def getAugmentationInfo(keepSearcher: Searcher, librarySearcher: Searcher, userIdFilter: LongArraySet, libraryIdFilter: LongArraySet)(item: AugmentableItem): FullAugmentationInfo = {
+  private def getAugmentationInfo(keepSearcher: Searcher, librarySearcher: Searcher, requestingUserId: Id[User], userIdFilter: LongArraySet, libraryIdFilter: LongArraySet)(item: AugmentableItem): FullAugmentationInfo = {
     val uriTerm = new Term(KeepFields.uriField, item.uri.id.toString)
     val keeps = new ListBuffer[RestrictedKeepInfo]()
     var otherPublishedKeeps = 0
@@ -175,7 +175,7 @@ class AugmentationCommanderImpl @Inject() (
           else visibility match { // kept by others
             case PUBLISHED =>
               uniqueKeepers += userId
-              if (showPublishedLibrary(librarySearcher, libraryId)) {
+              if (showPublishedLibrary(requestingUserId, librarySearcher, libraryId)) {
                 val record = getKeepRecord(docId)
                 keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), record.tags)
               } else {

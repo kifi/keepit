@@ -31,7 +31,8 @@ class SeedAttributionHelper @Inject() (
     } yield {
       (0 until seeds.size).map { i =>
         val attr = SeedAttribution(userAttr(i), keepAttr(i), topicAttr(i), libraryAttr(i))
-        ScoredSeedItemWithAttribution(seeds(i).userId, seeds(i).uriId, seeds(i).uriScores, attr)
+        ScoredSeedItemWithAttribution(seeds(i).userId, seeds(i).uriId, seeds(i).uriScores, attr,
+          seeds(i).topic1, seeds(i).topic2)
       }
     }
   }
@@ -64,7 +65,7 @@ class SeedAttributionHelper @Inject() (
           Future.successful(ret)
         } else {
           val uriIds = uriId2Idx.keys.toSeq
-          search.augment(Some(userId), maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, uriIds.map(AugmentableItem(_))).map { infos =>
+          search.augment(Some(userId), maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, items = uriIds.map(AugmentableItem(_))).map { infos =>
             (uriIds zip infos).foreach {
               case (uriId, info) =>
                 val idx = uriId2Idx(uriId)

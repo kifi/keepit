@@ -1,6 +1,7 @@
 package com.keepit.curator.model
 
 import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.model.{ NormalizedURI, User }
 import com.kifi.macros.json
 
@@ -88,6 +89,8 @@ case class PublicSeedItemWithMultiplier(
 
 case class PublicScoredSeedItem(uriId: Id[NormalizedURI], publicUriScores: PublicUriScores)
 
-case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores)
+case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores,
+  topic1: Option[LDATopic], topic2: Option[LDATopic])
 
-case class ScoredSeedItemWithAttribution(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores, attribution: SeedAttribution)
+case class ScoredSeedItemWithAttribution(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores,
+  attribution: SeedAttribution, topic1: Option[LDATopic], topic2: Option[LDATopic])

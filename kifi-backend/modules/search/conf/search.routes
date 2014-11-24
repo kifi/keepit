@@ -32,6 +32,7 @@ GET         /m/1/search/users/search        @com.keepit.controllers.mobile.Mobil
 POST        /m/1/search/events/clickedSearchResult        @com.keepit.controllers.mobile.MobileSearchEventController.clickedSearchResult()
 POST        /m/1/search/events/searched        @com.keepit.controllers.mobile.MobileSearchEventController.searched()
 GET         /m/1/search/message        @com.keepit.controllers.mobile.MobileMessageSearchController.search(q: String, page: Int ?= 0)
+GET         /m/1/search/library        @com.keepit.controllers.mobile.MobileSearchController.librarySearch(q: String, f: Option[String], maxHits: Int, context: Option[String], debug: Option[String])
 
 
 ##########################################

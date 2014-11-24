@@ -498,4 +498,12 @@ class ShoeboxController @Inject() (
     val result = Json.toJson(keepDataByUriId.toSeq)
     Ok(result)
   }
+
+  def getBasicLibraryStatistics() = Action(parse.tolerantJson) { request =>
+    val libraryIds = request.body.as[Set[Id[Library]]]
+    val basicStatisticsByLibraryId = libraryCommander.getBasicLibraryStatistics(libraryIds)
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryStatistics]
+    val result = Json.toJson(basicStatisticsByLibraryId.toSeq)
+    Ok(result)
+  }
 }

@@ -1,36 +1,26 @@
 package com.keepit.curator
 
 import com.keepit.common.cache.FakeCacheModule
-import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.db.Id
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.time._
-import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.commanders.{ UriWeightingHelper, UriScoringHelper }
-import com.keepit.curator.model.{ ScoredSeedItem, Keepers, SeedItem }
-import com.keepit.graph.{ FakeGraphServiceClientImpl, GraphServiceClient, FakeGraphServiceModule }
-import com.keepit.model.{ User, NormalizedURI }
-import org.specs2.mutable.Specification
-import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.cortex.models.lda.{ LDATopic, LDAUserURIInterestScores }
+import com.keepit.cortex.{ CortexServiceClient, FakeCortexServiceClientImpl, FakeCortexServiceClientModule }
+import com.keepit.curator.commanders.{ UriScoringHelper, UriWeightingHelper }
+import com.keepit.graph.{ FakeGraphServiceClientImpl, FakeGraphServiceModule, GraphServiceClient }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
+import com.keepit.model.User
+import org.specs2.mutable.Specification
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-class UriScoringHelperTest extends Specification with CuratorTestInjector {
+class UriScoringHelperTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
   val modules = Seq(
     FakeGraphServiceModule(),
     FakeHttpClientModule(),
     FakeCortexServiceClientModule(),
     FakeCacheModule(),
     FakeHeimdalServiceClientModule())
-
-  private def makeSeedItems(): Seq[SeedItem] = {
-    val seedItem1 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](1), url = "url1", seq = SequenceNumber[SeedItem](1), priorScore = None, timesKept = 1000, lastSeen = currentDateTime, keepers = Keepers.TooMany, discoverable = true)
-    val seedItem2 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](2), url = "url2", seq = SequenceNumber[SeedItem](2), priorScore = None, timesKept = 10, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](3))), discoverable = true)
-    val seedItem3 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](3), url = "url3", seq = SequenceNumber[SeedItem](3), priorScore = None, timesKept = 93, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](2))), discoverable = true)
-    val seedItem4 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](4), url = "url4", seq = SequenceNumber[SeedItem](4), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
-    seedItem1 :: seedItem2 :: seedItem3 :: seedItem4 :: Nil
-  }
 
   "UriScoringHelper" should {
 
@@ -39,9 +29,16 @@ class UriScoringHelperTest extends Specification with CuratorTestInjector {
         val graph = inject[GraphServiceClient].asInstanceOf[FakeGraphServiceClientImpl]
         graph.setUserAndScorePairs()
 
+        // set expectation for cortex client request to test that the topics get passed through
+        val userId = Id[User](42)
+        val cortex = inject[CortexServiceClient].asInstanceOf[FakeCortexServiceClientImpl]
+        cortex.batchUserURIsInterestsExpectations(userId) = (0 until 4).map { i =>
+          LDAUserURIInterestScores(None, None, None, topic1 = Some(LDATopic(i + 1)), topic2 = Some(LDATopic(i + 2)))
+        }
+
         val uriScoringHelper = inject[UriScoringHelper]
         val uriBoostingHelper = inject[UriWeightingHelper]
-        val res = uriScoringHelper(uriBoostingHelper(makeSeedItems), Set.empty)
+        val res = uriScoringHelper(uriBoostingHelper(makeSeedItems(userId)), Set.empty)
 
         val scores = Await.result(res, Duration(10, "seconds"))
 
@@ -50,6 +47,12 @@ class UriScoringHelperTest extends Specification with CuratorTestInjector {
         scores(2).uriScores.socialScore should be > 0.0f
         scores(3).uriScores.socialScore should be > 0.0f
 
+        scores(0).topic1 === Some(LDATopic(1))
+        scores(0).topic2 === Some(LDATopic(2))
+        scores(1).topic1 === Some(LDATopic(2))
+        scores(1).topic2 === Some(LDATopic(3))
+        scores(2).topic1 === Some(LDATopic(3))
+        scores(2).topic2 === Some(LDATopic(4))
       }
     }
   }

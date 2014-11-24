@@ -2,6 +2,7 @@ package com.keepit.curator.commanders
 
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
+import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.curator.model.{ SeedItemWithMultiplier, CuratorKeepInfoRepo, Keepers, ScoredSeedItem, UriScores }
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
@@ -15,6 +16,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 
+case class RawInterestScores(overallInterestScore: Float, recentInterestScore: Float, libraryInducedScore: Float,
+  topic1: Option[LDATopic], topic2: Option[LDATopic])
+
 @Singleton
 class UriScoringHelper @Inject() (
     graph: GraphServiceClient,
@@ -27,15 +31,17 @@ class UriScoringHelper @Inject() (
     item.priorScore.getOrElse(0.0f)
   }
 
-  private def getRawInterestScores(items: Seq[SeedItemWithMultiplier]): Future[(Seq[Float], Seq[Float], Seq[Float])] = {
+  private def getRawInterestScores(items: Seq[SeedItemWithMultiplier]): Future[Seq[RawInterestScores]] = {
     val interestScores = cortex.batchUserURIsInterests(items.head.userId, items.map(_.uriId))
     interestScores.map { scores =>
       scores.map { score =>
-        val (overallOpt, recentOpt, libOpt) = (score.global, score.recency, score.libraryInduced)
-        (overallOpt.map(uis => if (uis.confidence > 0.3 && uis.score > 0) uis.score else 0f).getOrElse(0f),
-          recentOpt.map(uis => if (uis.confidence > 0.2 && uis.score > 0) uis.score else 0f).getOrElse(0f),
-          libOpt.map { uis => if (uis.confidence > 0.2 && uis.score > 0) uis.score else 0f }.getOrElse(0f))
-      }.unzip3
+        RawInterestScores(
+          overallInterestScore = score.global.map(uis => if (uis.confidence > 0.3 && uis.score > 0) uis.score else 0f).getOrElse(0f),
+          recentInterestScore = score.recency.map(uis => if (uis.confidence > 0.2 && uis.score > 0) uis.score else 0f).getOrElse(0f),
+          libraryInducedScore = score.libraryInduced.map { uis => if (uis.confidence > 0.2 && uis.score > 0) uis.score else 0f }.getOrElse(0f),
+          topic1 = score.topic1,
+          topic2 = score.topic2)
+      }
     }
   }
 
@@ -74,24 +80,25 @@ class UriScoringHelper @Inject() (
       val interestScoresFuture = getRawInterestScores(items)
       for {
         socialScores <- socialScoresFuture
-        (overallInterestScores, recentInterestScores, libScores) <- interestScoresFuture
+        rawInterestScores <- interestScoresFuture
         publicScores <- publicScoresFut
       } yield {
         for (i <- 0 until items.length) yield {
+          val rawInterestScore = rawInterestScores(i)
           val scores = UriScores(
             socialScore = socialScores(i),
             popularityScore = publicScores(i).publicUriScores.popularityScore,
-            overallInterestScore = overallInterestScores(i),
-            recentInterestScore = recentInterestScores(i),
+            overallInterestScore = rawInterestScore.overallInterestScore,
+            recentInterestScore = rawInterestScore.recentInterestScore,
             recencyScore = publicScores(i).publicUriScores.recencyScore,
             priorScore = priorScores(i),
             rekeepScore = publicScores(i).publicUriScores.rekeepScore,
             discoveryScore = publicScores(i).publicUriScores.discoveryScore,
             curationScore = publicScores(i).publicUriScores.curationScore,
             multiplier = Some(items(i).multiplier),
-            libraryInducedScore = Some(libScores(i))
+            libraryInducedScore = Some(rawInterestScore.libraryInducedScore)
           )
-          ScoredSeedItem(items(i).userId, items(i).uriId, scores)
+          ScoredSeedItem(items(i).userId, items(i).uriId, scores, rawInterestScore.topic1, rawInterestScore.topic2)
         }
       }
     }
