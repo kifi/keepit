@@ -68,7 +68,7 @@ trait SearchServiceClient extends ServiceClient {
 
   def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse]
 
-  def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]]
+  def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem], showPublishedLibraries: Boolean = false): Future[Seq[LimitedAugmentationInfo]]
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
@@ -263,11 +263,11 @@ class SearchServiceClientImpl(
     call(Search.internal.augmentation(), Json.toJson(request)).map(_.json.as[ItemAugmentationResponse])
   }
 
-  def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
+  def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem], showPublishedLibraries: Boolean = false): Future[Seq[LimitedAugmentationInfo]] = {
     if (items.isEmpty) Future.successful(Seq.empty[LimitedAugmentationInfo])
     else {
       // This should stay in sync with SearchController.augment
-      val payload = Json.obj("userId" -> userId, "maxKeepersShown" -> maxKeepersShown, "maxLibrariesShown" -> maxLibrariesShown, "maxTagsShown" -> maxTagsShown, "items" -> items)
+      val payload = Json.obj("userId" -> userId, "maxKeepersShown" -> maxKeepersShown, "maxLibrariesShown" -> maxLibrariesShown, "maxTagsShown" -> maxTagsShown, "items" -> items, "showPublishedLibraries" -> showPublishedLibraries)
       call(Search.internal.augment(), payload).map(_.json.as[Seq[LimitedAugmentationInfo]])
     }
   }

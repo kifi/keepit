@@ -64,7 +64,7 @@ class SeedAttributionHelper @Inject() (
           Future.successful(ret)
         } else {
           val uriIds = uriId2Idx.keys.toSeq
-          search.augment(Some(userId), maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, uriIds.map(AugmentableItem(_))).map { infos =>
+          search.augment(Some(userId), maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, items = uriIds.map(AugmentableItem(_))).map { infos =>
             (uriIds zip infos).foreach {
               case (uriId, info) =>
                 val idx = uriId2Idx(uriId)
