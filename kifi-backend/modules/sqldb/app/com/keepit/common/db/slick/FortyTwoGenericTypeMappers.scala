@@ -2,6 +2,7 @@ package com.keepit.common.db.slick
 
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.heimdal.DelightedAnswerSource
 import com.keepit.model._
 import java.sql.{ Clob, Date, Timestamp }
@@ -76,6 +77,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val libraryKindTypeMapper = MappedColumnType.base[LibraryKind, String](_.value, LibraryKind.apply)
   implicit val userValueNameTypeMapper = MappedColumnType.base[UserValueName, String](_.name, UserValueName.apply)
   implicit val hashtagTypeMapper = MappedColumnType.base[Hashtag, String](_.tag, Hashtag.apply)
+  implicit def ldaTopicMapper = MappedColumnType.base[LDATopic, Int](_.index, LDATopic(_))
 
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
     obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),

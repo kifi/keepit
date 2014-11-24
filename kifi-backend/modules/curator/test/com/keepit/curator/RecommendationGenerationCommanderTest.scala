@@ -2,16 +2,18 @@ package com.keepit.curator
 
 import com.google.inject.Injector
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.db.Id
-import com.keepit.common.healthcheck.FakeHealthcheckModule
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.commanders.{ RecommendationGenerationCommander, SeedIngestionCommander }
+import com.keepit.cortex.models.lda.LDATopic
+import com.keepit.curator.commanders.{ SeedIngestionCommander, RecommendationGenerationCommander }
+import com.keepit.common.healthcheck.FakeHealthcheckModule
+
 import com.keepit.curator.model._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.search.FakeSearchServiceClientModule
 import org.specs2.mutable.Specification
 
@@ -50,12 +52,13 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         curationScore = None,
         multiplier = Some(0.01f),
         libraryInducedScore = Some(0f)),
-      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY)
+      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY,
+      topic1 = None, topic2 = None)
 
     val rec2 = UriRecommendation(uriId = Id[NormalizedURI](2), userId = Id[User](42), masterScore = 0.99f,
       allScores = UriScores(socialScore = 1.0f,
         popularityScore = 1.0f,
-        overallInterestScore = 1.0f,
+        overallInterestScore = 8.0f,
         recentInterestScore = 1.0f,
         recencyScore = 1.0f,
         priorScore = 1.0f,
@@ -64,7 +67,8 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         curationScore = None,
         multiplier = Some(1.5f),
         libraryInducedScore = Some(0f)),
-      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY)
+      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY,
+      topic1 = Some(LDATopic(1)), topic2 = Some(LDATopic(2)))
 
     val rec3 = UriRecommendation(uriId = Id[NormalizedURI](3), userId = Id[User](42), masterScore = 0.5f,
       allScores = UriScores(socialScore = 0.0f,
@@ -78,7 +82,8 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         curationScore = None,
         multiplier = Some(1.0f),
         libraryInducedScore = Some(0f)),
-      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution(topic = Some(TopicAttribution("fun"))))
+      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution(topic = Some(TopicAttribution("fun"))),
+      topic1 = None, topic2 = None)
 
     Seq(rec1, rec2, rec3)
   }

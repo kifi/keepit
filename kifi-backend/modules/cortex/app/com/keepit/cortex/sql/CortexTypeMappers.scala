@@ -19,8 +19,6 @@ trait CortexTypeMappers { self: { val db: DataBaseComponent } =>
 
   implicit def statModelName = MappedColumnType.base[StatModelName, String](_.name, StatModelName(_))
 
-  implicit def ldaTopicMapper = MappedColumnType.base[LDATopic, Int](_.index, LDATopic(_))
-
   implicit def ldaTopicFeatureMapper = MappedColumnType.base[LDATopicFeature, Blob](
     { feat => new SerialBlob(FloatArrayFormmater.toBinary(feat.value)) },
     { blob => val len = blob.length().toInt; val arr = FloatArrayFormmater.fromBinary(blob.getBytes(1, len)); LDATopicFeature(arr) }

@@ -1,7 +1,7 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ RecommendationClientType, RecoInfo, UriRecommendationRepo, UriScores, PublicFeedRepo }
 import com.keepit.common.db.Id
+import com.keepit.curator.model.{ RecoInfo, RecommendationClientType, UriScores, PublicFeedRepo, UriRecommendationRepo, UriRecommendation }
 import com.keepit.model.User
 import com.keepit.common.db.slick.Database
 import com.keepit.common.akka.SafeFuture
@@ -11,6 +11,36 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Random
 
 import com.google.inject.{ Inject, Singleton }
+
+case class UriRecoScore(score: Float, reco: UriRecommendation)
+
+trait RecoSortStrategy {
+  def sort(recosByTopScore: Seq[UriRecoScore]): Seq[UriRecoScore]
+}
+
+class TopScoreRecoSortStrategy(val minScore: Float = 5f, val limit: Int = 10) extends RecoSortStrategy {
+  def sort(recosByTopScore: Seq[UriRecoScore]) =
+    recosByTopScore filter (_.score > minScore) sortBy (-_.score) take limit
+}
+
+class DiverseRecoSortStrategy(val limit: Int = 10) extends RecoSortStrategy {
+
+  def sort(recosByTopScore: Seq[UriRecoScore]) = recosByTopScore.groupBy(_.reco.topic1).map {
+    // sorts the recos by score (desc) and rescores them using the exponential decay
+    case (_, recos) => rescoreRecosWithDecay(recos sortBy (-_.score) take limit)
+  }.toSeq.flatten sortBy (-_.score) take limit
+
+  private def rescoreRecosWithDecay(recoScores: Seq[UriRecoScore]) = {
+    val decayRate = 1 / 15f
+
+    @inline def scoreDecay(i: Int): Float = Math.exp(-i * decayRate).toFloat
+
+    Seq.tabulate(recoScores.size) { i =>
+      val recoScore = recoScores(i)
+      recoScore.copy(score = recoScore.score * scoreDecay(i))
+    }
+  }
+}
 
 @Singleton
 class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: UriRecommendationRepo, analytics: CuratorAnalytics, publicFeedRepo: PublicFeedRepo) {
@@ -23,26 +53,28 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
     (adjustedScore * finalPenaltyFactor).toFloat
   }
 
-  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, clientType: RecommendationClientType): Seq[RecoInfo] = {
+  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, clientType: RecommendationClientType, recoSortStrategy: RecoSortStrategy): Seq[RecoInfo] = {
     require(recencyWeight <= 1.0f && recencyWeight >= 0.0f, "recencyWeight must be between 0 and 1")
 
+    def scoreReco(reco: UriRecommendation) =
+      UriRecoScore(scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
+
     val recos = db.readOnlyReplica { implicit session =>
-      uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000)
-    } map { reco =>
-      (scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
-    } filter (_._1 > 5.0f) sortBy (-1 * _._1) take 10
+      val recosByTopScore = uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
+      recoSortStrategy.sort(recosByTopScore)
+    }
 
     SafeFuture {
-      analytics.trackDeliveredItems(recos.map(_._2), Some(clientType))
+      analytics.trackDeliveredItems(recos.map(_.reco), Some(clientType))
       db.readWrite { implicit session =>
-        recos.map(_._2).map { reco =>
-          uriRecoRepo.incrementDeliveredCount(reco.id.get)
+        recos.map { recoScore =>
+          uriRecoRepo.incrementDeliveredCount(recoScore.reco.id.get)
         }
       }
     }
 
     recos.map {
-      case (score, reco) =>
+      case UriRecoScore(score, reco) =>
         RecoInfo(
           userId = Some(reco.userId),
           uriId = reco.uriId,

@@ -31,7 +31,8 @@ class SeedAttributionHelper @Inject() (
     } yield {
       (0 until seeds.size).map { i =>
         val attr = SeedAttribution(userAttr(i), keepAttr(i), topicAttr(i), libraryAttr(i))
-        ScoredSeedItemWithAttribution(seeds(i).userId, seeds(i).uriId, seeds(i).uriScores, attr)
+        ScoredSeedItemWithAttribution(seeds(i).userId, seeds(i).uriId, seeds(i).uriScores, attr,
+          seeds(i).topic1, seeds(i).topic2)
       }
     }
   }
