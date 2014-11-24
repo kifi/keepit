@@ -196,9 +196,8 @@ class SearchController @Inject() (
     val maxLibrariesShown = (request.body \ "maxLibrariesShown").as[Int]
     val maxTagsShown = (request.body \ "maxTagsShown").as[Int]
     val items = (request.body \ "items").as[Seq[AugmentableItem]]
-    val showPublishedLibraries = (request.body \ "showPublishedLibraries").asOpt[Boolean]
 
-    val itemAugmentationRequest = ItemAugmentationRequest.uniform(userId getOrElse SearchControllerUtil.nonUser, items: _*).copy(showPublishedLibraries = showPublishedLibraries)
+    val itemAugmentationRequest = ItemAugmentationRequest.uniform(userId getOrElse SearchControllerUtil.nonUser, items: _*)
     augmentationCommander.getAugmentedItems(itemAugmentationRequest).map { augmentedItems =>
       val infos = items.map(augmentedItems(_).toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
       val result = Json.toJson(infos)

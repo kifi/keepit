@@ -95,12 +95,12 @@ class LibraryController @Inject() (
     Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean = false) = MaybeUserAction.async { request =>
+  def getLibraryByPath(userStr: String, slugStr: String) = MaybeUserAction.async { request =>
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), followRedirect = false) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, library, showPublishedLibraries).map { libInfo =>
+          libraryCommander.createFullLibraryInfo(request.userIdOpt, library).map { libInfo =>
             val accessStr = request.userIdOpt.map { userId =>
               libraryCommander.getAccessStr(userId, library.id.get)
             }.flatten.getOrElse {
