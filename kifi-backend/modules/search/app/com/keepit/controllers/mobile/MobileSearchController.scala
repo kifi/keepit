@@ -13,13 +13,13 @@ import play.api.libs.json.JsString
 import com.keepit.search.graph.library.{ LibraryIndexer, LibraryIndexable }
 import com.keepit.controllers.util.SearchControllerUtil
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.shoebox.ShoeboxServiceClientImpl
+import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class MobileSearchController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration,
-    val shoeboxClient: ShoeboxServiceClientImpl,
+    val shoeboxClient: ShoeboxServiceClient,
     searchCommander: SearchCommander,
     librarySearchCommander: LibrarySearchCommander,
     libraryIndexer: LibraryIndexer) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
