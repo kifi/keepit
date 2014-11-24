@@ -334,7 +334,7 @@ class KeepImageCommanderImpl @Inject() (
       case Success(image) =>
         val resizedImages = calcSizesForImage(image).map { boundingBox =>
           log.info(s"[kic] Using bounding box $boundingBox px")
-          photoshop.resizeImage(image, boundingBox).map { resizedImage =>
+          photoshop.resizeImage(image, sourceImage.format, boundingBox).map { resizedImage =>
             bufferedImageToInputStream(resizedImage, outFormat).map {
               case (is, bytes) =>
                 val key = keygen(resizedImage.getWidth, resizedImage.getHeight)
