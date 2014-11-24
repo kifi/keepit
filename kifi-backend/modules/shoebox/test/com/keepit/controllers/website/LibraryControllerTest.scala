@@ -1125,5 +1125,42 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "update keep in library" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val libraryController = inject[LibraryController]
+
+        val site1 = "http://www.spiders.com/"
+        val (user1, lib1, keep1) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "Peter", lastName = "Parker", username = Username("spiderman"), normalizedUsername = "spiderman"))
+          val lib1 = libraryRepo.save(Library(ownerId = user1.id.get, name = "spidey stuff", visibility = LibraryVisibility.PUBLISHED,
+            slug = LibrarySlug("spidey"), memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = lib1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("spiders")))
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = lib1.visibility, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+
+          keepRepo.getByLibrary(lib1.id.get, 0, 5).map(_.title) === Seq(Some("k1"))
+          (user1, lib1, keep1)
+        }
+
+        inject[FakeUserActionsHelper].setUser(user1)
+
+        val pubId1 = Library.publicId(lib1.id.get)
+        val testPath1 = com.keepit.controllers.website.routes.LibraryController.updateKeep(pubId1, keep1.externalId).url
+        val inputJson1 = Json.obj("title" -> "thwip!")
+        val request1 = FakeRequest("POST", testPath1).withBody(inputJson1)
+        val result1 = libraryController.updateKeep(pubId1, keep1.externalId)(request1)
+        status(result1) must equalTo(NO_CONTENT)
+
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(lib1.id.get, 0, 5).map(_.title) === Seq(Some("thwip!"))
+        }
+      }
+    }
   }
 }

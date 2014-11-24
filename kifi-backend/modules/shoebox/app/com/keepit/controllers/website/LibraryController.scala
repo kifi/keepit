@@ -447,6 +447,18 @@ class LibraryController @Inject() (
     }
   }
 
+  def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
+    val libraryId = Library.decodePublicId(libraryPubId).get
+    val body = request.body
+    val title = (body \ "title").asOpt[String]
+
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    keepsCommander.updateKeepInLibrary(keepExtId, libraryId, request.userId, title) match {
+      case Left((status, code)) => Status(status)(Json.obj("error" -> code))
+      case Right(keep) => NoContent
+    }
+  }
+
   def tagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = (UserAction andThen LibraryWriteAction(libraryPubId)) { request =>
     val libraryId = Library.decodePublicId(libraryPubId).get;
 
