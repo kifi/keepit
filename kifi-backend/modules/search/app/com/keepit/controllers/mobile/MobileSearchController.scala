@@ -80,6 +80,7 @@ class MobileSearchController @Inject() (
               "score" -> hit.score,
               "name" -> library.name,
               "description" -> description,
+              "owner" -> usersById(library.ownerId),
               "memberCount" -> statistics.memberCount,
               "keepCount" -> statistics.keepCount,
               "mostRelevantKeep" -> hit.keep.map { case (_, keepRecord) => Json.obj("id" -> keepRecord.externalId, "title" -> JsString(keepRecord.title.getOrElse("")), "url" -> keepRecord.url) }
