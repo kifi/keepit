@@ -404,8 +404,13 @@ angular.module('kifi')
         }
 
         scope.onSearchInputFocus = function () {
-          scrollToTop();
+          // Track click/focus on search bar.
+          $rootScope.$emit('trackLibraryEvent', 'click', {
+            type: 'libraryLanding',
+            action: 'clickedSearchBar'
+          });
 
+          scrollToTop();
           scope.librarySearchInProgress = true;
 
           var headerLinksElement = angular.element('.kf-header-right');
