@@ -275,12 +275,12 @@ class KeepsCommander @Inject() (
     }.toMap
   }
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep], idealImageSize: ImageSize, showPublishedLibraries: Boolean = false): Future[Seq[KeepInfo]] = {
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep], idealImageSize: ImageSize): Future[Seq[KeepInfo]] = {
     if (keeps.isEmpty) Future.successful(Seq.empty[KeepInfo])
     else {
       val augmentationFuture = {
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
-        searchClient.augment(perspectiveUserIdOpt, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items, showPublishedLibraries)
+        searchClient.augment(perspectiveUserIdOpt, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items)
       }
       val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
         val idToLibrary = {

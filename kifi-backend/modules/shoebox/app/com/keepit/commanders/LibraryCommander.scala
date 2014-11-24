@@ -150,7 +150,7 @@ class LibraryCommander @Inject() (
 
   def getLibraryById(userIdOpt: Option[Id[User]], id: Id[Library]): Future[(FullLibraryInfo, String)] = {
     val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-    createFullLibraryInfo(userIdOpt, lib, false).map { libInfo =>
+    createFullLibraryInfo(userIdOpt, lib).map { libInfo =>
       val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
       (libInfo, accessStr)
     }
@@ -200,10 +200,10 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], showPublishedLibraries: Boolean): Future[Seq[FullLibraryInfo]] = {
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library]): Future[Seq[FullLibraryInfo]] = {
     val futureKeepInfosByLibraryId = libraries.map { library =>
       val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
-      library.id.get -> keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, keeps, idealKeepImageSize, showPublishedLibraries)
+      library.id.get -> keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, keeps, idealKeepImageSize)
     }.toMap
 
     val followerInfosByLibraryId = libraries.map { library =>
@@ -261,8 +261,8 @@ class LibraryCommander @Inject() (
     Future.sequence(futureFullLibraryInfos)
   }
 
-  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], library: Library, showPublishedLibraries: Boolean = false): Future[FullLibraryInfo] = {
-    createFullLibraryInfos(viewerUserIdOpt, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library), showPublishedLibraries).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
+  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], library: Library): Future[FullLibraryInfo] = {
+    createFullLibraryInfos(viewerUserIdOpt, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
   }
 
   def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], Map[LibraryAccess, Int]) = {
