@@ -90,7 +90,7 @@ k.keepBox = k.keepBox || (function () {
     })
     .on('click', '.kifi-keep-box-back', function (e) {
       if (e.which === 1 && $box) {
-        navBack();
+        navBack('mouse', e.originalEvent.guided);
       }
     })
     .appendTo($parent)
@@ -99,7 +99,7 @@ k.keepBox = k.keepBox || (function () {
 
     $(document).data('esc').add(hide);
 
-    api.port.emit('track_pane_view', {type: 'libraryChooser', subsource: trigger, guided: guided || undefined});
+    api.port.emit('track_pane_view', {type: 'libraryChooser', subsource: trigger, guided: guided});
 
     $box.layout()
     .on('transitionend', $.proxy(onShown, null, showIntro))
@@ -124,7 +124,8 @@ k.keepBox = k.keepBox || (function () {
     trigger = trigger || (e && e.keyCode === 27 ? 'esc' : undefined);
     log('[keepBox:hide]', trigger);
     $(document).data('esc').remove(hide);
-    $box.find('.kifi-keep-box-view').triggerHandler('kifi-hide');
+    var $view = $box.find('.kifi-keep-box-view');
+    $view.triggerHandler('kifi-hide');
     $box
       .css('overflow', '')
       .on('transitionend', onHidden)
@@ -132,6 +133,13 @@ k.keepBox = k.keepBox || (function () {
     $box = null;
     if (e) e.preventDefault();
     k.keepBox.onHide.dispatch(trigger);
+
+    api.port.emit('track_pane_click', {
+      type: $view.hasClass('kifi-keep-box-view-libs') ? 'libraryChooser' :
+            $view.hasClass('kifi-keep-box-view-keep') ? 'keepDetails' : 'createLibrary',
+      action: 'closed',
+      subaction: trigger === 'clickout' ? 'outside' : (trigger || undefined)
+    });
   }
 
   function onHidden(e) {
@@ -178,14 +186,14 @@ k.keepBox = k.keepBox || (function () {
     $vp.css('height', vpHeightOld + heightDelta);
   }
 
-  function navBack() {
-    var $view;
+  function navBack(trigger, guided) {
+    var $view, $oldView = $box.find('.kifi-keep-box-view');
     var data = $box.data(), lib = data.libraryCreated;
     if (lib) {
       data.libraries = data.libraries.filter(idIsNot(lib.id));
       delete data.libraryCreated;
       api.port.emit('delete_library', lib.id);
-      var $view = $(k.render('html/keeper/keep_box_new_lib', {name: lib.name, secret: lib.visibility === 'secret'}));
+      $view = $(k.render('html/keeper/keep_box_new_lib', {name: lib.name, secret: lib.visibility === 'secret'}));
       addCreateLibraryBindings($view);
     } else {
       $view = $(k.render('html/keeper/keep_box_libs', partitionLibs(data.libraries), {
@@ -195,6 +203,13 @@ k.keepBox = k.keepBox || (function () {
       addLibrariesBindings($view);
     }
     swipeTo($view, true);
+
+    api.port.emit('track_pane_click', {
+      type: $oldView.hasClass('kifi-keep-box-view-keep') ? 'keepDetails' : 'createLibrary',
+      action: 'wentBack',
+      subaction: trigger === 'key' ? 'key' : undefined,
+      guided: guided
+    });
   }
 
   function partitionLibs(libs) {
@@ -241,6 +256,10 @@ k.keepBox = k.keepBox || (function () {
               })));
             }
           });
+          if (!data.filtered) {
+            data.filtered = true;
+            api.port.emit('track_pane_click', {type: 'libraryChooser', action: 'filteredLibraries', guided: e.originalEvent.guided});
+          }
         } else {
           showLibs($(k.render('html/keeper/keep_box_libs_list', partitionLibs($box.data('libraries')), {
             keep_box_lib: 'keep_box_lib'
@@ -305,22 +324,24 @@ k.keepBox = k.keepBox || (function () {
     })
     .on('click', '.kifi-keep-box-image-prev,.kifi-keep-box-image-next', function (e) {
       if (e.which === 1) {
-        var i = swipeImage($view, this.classList.contains('kifi-keep-box-image-prev'));
+        var prev = this.classList.contains('kifi-keep-box-image-prev');
+        var i = swipeImage($view, prev);
         $view.data('imageIdx', i);
         debouncedSaveKeepImageIfChanged($view);
+        api.port.emit('track_pane_click', {type: 'keepDetails', action: 'slidImage', subaction: prev ? 'left' : 'right'});
       }
     })
     .on('click', '.kifi-keep-box-done', function (e) {
       if (e.which === 1) {
-        hide(e, 'action');
+        hide(e, 'button');
       }
     })
     .on('keydown', function (e) {
       if ((e.keyCode === 13 || e.keyCode === 108) && !e.isDefaultPrevented()) { // enter, numpad enter
-        hide(e, 'action');
+        hide(e, 'enter');
         e.preventDefault();
       } else if (e.keyCode === 8 && !e.isDefaultPrevented() && (e.target.type !== 'text' || !e.target.selectionStart && !e.target.selectionEnd)) {
-        navBack();
+        navBack('key', e.originalEvent.guided);
         e.preventDefault();
       }
     })
@@ -333,7 +354,7 @@ k.keepBox = k.keepBox || (function () {
           hideInterval = setInterval(function () {
             $text.text(--nSec);
             if (nSec === 0) {
-              hide(null, 'action');
+              hide(null, 'timer');
             }
           }, 1000);
         }
@@ -357,7 +378,7 @@ k.keepBox = k.keepBox || (function () {
         createLibrary($view, $submit, 'enter', e.originalEvent.guided);
         e.preventDefault();
       } else if (e.keyCode === 8 && !e.isDefaultPrevented() && (e.target.type !== 'text' || !e.target.selectionStart && !e.target.selectionEnd)) {
-        navBack();
+        navBack('key', e.originalEvent.guided);
         e.preventDefault();
       }
     });
@@ -365,17 +386,10 @@ k.keepBox = k.keepBox || (function () {
     .on('blur', '.kifi-keep-box-new-lib-name', function (e) {
       this.value = this.value.trim();
     })
-    .on('mousedown', '.kifi-keep-box-new-lib-secret', function (e) {
-      $(this).on('transitionend', function end() {
-        $(this).off('transitionend', end).removeClass('kifi-transition');
-      }).addClass('kifi-transition');
-      this.parentNode.classList.toggle('kifi-secret');
-      e.preventDefault();
-    })
+    .on('mousedown', '.kifi-keep-box-new-lib-secret', toggleVisibility)
     .on('keydown', '.kifi-keep-box-new-lib-secret', function (e) {
       if (e.keyCode === 32 && !e.isDefaultPrevented() && e.originalEvent.isTrusted !== false) {
-        $(this).mousedown();
-        e.preventDefault();
+        toggleVisibility.call(this, e);
       }
     });
     var $submit = $view.find('.kifi-keep-box-new-lib-create')
@@ -383,6 +397,20 @@ k.keepBox = k.keepBox || (function () {
       if (e.which === 1 && this.href) {
         createLibrary($view, $submit, 'mouse', e.originalEvent.guided);
       }
+    });
+  }
+
+  function toggleVisibility(e) {
+    e.preventDefault();
+    $(this).on('transitionend', function end() {
+      $(this).off('transitionend', end).removeClass('kifi-transition');
+    }).addClass('kifi-transition');
+    var secret = this.parentNode.classList.toggle('kifi-secret');
+    api.port.emit('track_pane_click', {
+      type: 'createLibrary',
+      action: 'changedVisibility',
+      subaction: secret ? 'private' : 'public',
+      guided: e.originalEvent.guided
     });
   }
 
@@ -430,7 +458,7 @@ k.keepBox = k.keepBox || (function () {
         });
       } else {
         el.style.position = 'relative';
-        progress(el, keepTo(library)).done(function (keep) {
+        progress(el, keepTo(library, guided)).done(function (keep) {
           showKeep(library, subsource, trigger, guided, true);
         });
       }
@@ -439,11 +467,13 @@ k.keepBox = k.keepBox || (function () {
       var $view = $(k.render('html/keeper/keep_box_new_lib', {name: name}));
       addCreateLibraryBindings($view);
       swipeTo($view);
+      api.port.emit('track_pane_click', {type: 'libraryChooser', action: 'choseCreateLibrary', guided: guided});
+      api.port.emit('track_pane_view', {type: 'createLibrary', subsource: trigger === 'enter' ? 'key' : undefined, guided: guided});
     }
   }
 
-  function keepTo(library) {
-    var data = {libraryId: library.id};
+  function keepTo(library, guided) {
+    var data = {libraryId: library.id, guided: guided};
     log('[keep]', data);
     var deferred = Q.defer();
     api.port.emit('keep', withTitles(withUrls(data)), function (keep) {
@@ -572,7 +602,7 @@ k.keepBox = k.keepBox || (function () {
       type: 'keepDetails',
       subsource: subsource,
       key: {key: 'shortcut', enter: 'enter'}[trigger],
-      guided: guided || undefined
+      guided: guided
     });
 
     swipeTo($view);
@@ -916,7 +946,7 @@ k.keepBox = k.keepBox || (function () {
         if (library) {
           $box.data('libraryCreated', library);
           $box.data('libraries').push(library);
-          keepTo(library).done(function () {
+          keepTo(library, guided).done(function () {
             deferred.resolve(library);
           }, function () {
             // TODO: undo create library?
@@ -932,6 +962,12 @@ k.keepBox = k.keepBox || (function () {
         $name.prop('disabled', false).focus().select();
         $btn.prop('href', 'javascript:');
         showError('Hrm, maybe try a different name?');
+      });
+      api.port.emit('track_pane_click', {
+        type: 'createLibrary',
+        action: 'createdLibrary',
+        subaction: trigger === 'enter' ? 'key' : undefined,
+        guided: guided
       });
     }
 

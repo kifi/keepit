@@ -39,9 +39,9 @@ k.toaster = k.toaster || (function () {
         log('[toaster:hideIfBlank] no-op');
       }
     },
-    hide: function () {
+    hide: function (trigger) {
       if ($toast) {
-        hide();
+        hide(null, trigger);
       } else {
         log('[toaster:hide] no-op');
       }

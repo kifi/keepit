@@ -132,7 +132,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         if (k.keepBox && k.keepBox.showing()) {
-          k.keepBox.hide();
+          k.keepBox.hide('clickout');
         } else {
           showKeepBox('keeper', e.originalEvent.guided);
         }
@@ -381,7 +381,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     if (k.pane) {
       k.pane.unshade();
     }
-    if (~['x','esc','action','clickout'].indexOf(trigger)) {
+    if (/^(?:x|esc|clickout|timer|enter|button|silence|history)$/.test(trigger)) {
       setTimeout(hideDelayed.bind(null, 'keepBox'), 40);
     }
   }
@@ -390,7 +390,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     if (k.pane) {
       k.pane.unshade();
     }
-    if (trigger === 'x' || trigger === 'esc') {
+    if (/^(?:x|esc|silence|history)$/.test(trigger)) {
       setTimeout(hideDelayed.bind(null, 'toaster'), 40);
     }
   }
@@ -509,14 +509,14 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         showSlider('hovered');
       }
     },
-    hide: function () {
+    hide: function (trigger) {
       if (k.toaster) {
         k.toaster.hide();
       }
       if (k.keepBox) {
-        k.keepBox.hide();
+        k.keepBox.hide(trigger);
       }
-      hideSlider();
+      hideSlider(trigger);
     },
     create: function(locator) {
       createSlider(locator);

@@ -99,8 +99,8 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     count: function(n) {
       tile && updateCount(n);
     },
-    reset: cleanUpDom.bind(null, true),
-    silence: cleanUpDom.bind(null, true),
+    reset: cleanUpDom.bind(null, 'history'),
+    silence: cleanUpDom.bind(null, 'silence'),
     unsilenced: api.require.bind(api, 'scripts/unsilenced.js', function () {
       showUnsilenced();
     })
@@ -252,15 +252,15 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     tile.style["transform" in tile.style ? "transform" : "webkitTransform"] = "translate(0," + px + "px)";
   }
 
-  function cleanUpDom(leaveTileInDoc) {
+  function cleanUpDom(trigger) {
     if (onResize.bound) {  // crbug.com/405705
       window.removeEventListener('resize', onResize);
       onResize.bound = false;
     }
     if (tile) {
-      if (leaveTileInDoc) {
+      if (trigger) {
         if (k.keeper) {
-          k.keeper.hide('action');
+          k.keeper.hide(trigger);
         }
         tile.removeAttribute('data-kept');
       } else {

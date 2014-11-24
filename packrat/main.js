@@ -643,6 +643,9 @@ api.port.on({
       }
       storeRecentLib(libraryId);
     }
+    if (data.libraryId) {
+      tracker.track('user_clicked_pane', {type: 'libraryChooser', action: 'kept', guided: data.guided});
+    }
   },
   unkeep: function (data, respond, tab) {
     log('[unkeep]', data);
@@ -665,6 +668,7 @@ api.port.on({
     if (d && d.keeps.length === 1) {
       api.tabs.emit(tab, 'kept', {kept: null});
     }
+    tracker.track('user_clicked_pane', {type: 'libraryChooser', action: 'unkept'});
   },
   keeps_and_libraries: function (_, respond, tab) {
     var d = pageData[tab.nUri];
@@ -798,6 +802,7 @@ api.port.on({
         storeRecentTag(resp.tag);
       }, respond.bind(null, false));
     }
+    tracker.track('user_clicked_pane', {type: 'keepDetails', action: 'addedTag'});
   },
   untag: function (data, respond, tab) {
     var d = pageData[tab.nUri];
@@ -812,6 +817,7 @@ api.port.on({
       }, respond.bind(null, false));
     }
     storeRecentTagRemoved(data.tag);
+    tracker.track('user_clicked_pane', {type: 'keepDetails', action: 'removedTag'});
   },
   suppress_on_site: function(data, _, tab) {
     ajax('POST', '/ext/pref/keeperHidden', {url: tab.url, suppress: data});
