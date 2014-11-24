@@ -45,7 +45,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       image.getWidth === 66
       image.getHeight === 38
       val im = new Image4javaWrapper()
-      val resized = im.resizeImage(image, 20, ImageFormat.PNG).get
+      val resized = im.resizeImage(image, ImageFormat.PNG, 20).get
       resized.getWidth === 20
       resized.getHeight === 12 // == 38 * 20 / 66
       imageByteSize(resized, "png") === 265
@@ -58,7 +58,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       image.getWidth === 316
       image.getHeight === 310
       val im = new Image4javaWrapper()
-      val resized = im.resizeImage(image, 100, ImageFormat.JPG).get
+      val resized = im.resizeImage(image, ImageFormat.JPG, 100).get
       resized.getWidth === 100
       resized.getHeight === 98
       imageByteSize(resized, "jpg") === 2324
@@ -71,7 +71,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       image.getWidth === 1200
       image.getHeight === 720
       val im = new Image4javaWrapper()
-      val resized = im.resizeImage(image, 1200, ImageFormat.JPG).get //not really resizing
+      val resized = im.resizeImage(image, ImageFormat.JPG, 1200).get //not really resizing
       resized.getWidth === 1200
       resized.getHeight === 720
       imageByteSize(resized, "jpg") === 65439
@@ -84,7 +84,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       image.getWidth === 500
       image.getHeight === 333
       val im = new Image4javaWrapper()
-      val resized = im.resizeImage(image, 500, ImageFormat.PNG).get //not really resizing
+      val resized = im.resizeImage(image, ImageFormat.PNG, 500).get //not really resizing
       resized.getWidth === 500
       resized.getHeight === 333
       imageByteSize(resized, "png") === 205864

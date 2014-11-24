@@ -27,7 +27,7 @@ class Image4javaWrapper extends Photoshop {
     val output = new ArrayListOutputConsumer()
     convert.setOutputConsumer(output)
     catchExceptions(convert.run(operation))
-    println("Graphicsmagick version:")
+    println("Image Magic Version:")
     output.getOutput foreach { line =>
       println(line)
     }
@@ -42,12 +42,15 @@ class Image4javaWrapper extends Photoshop {
     case _ => throw new UnsupportedOperationException(s"Can't resize format $format")
   }
 
-  def resizeImage(image: BufferedImage, boundingBox: Int, format: ImageFormat): Try[BufferedImage] = Try {
+  def resizeImage(image: BufferedImage, format: ImageFormat, boundingBox: Int): Try[BufferedImage] =
+    resizeImage(image: BufferedImage, format: ImageFormat, boundingBox, boundingBox)
+
+  def resizeImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): Try[BufferedImage] = Try {
     if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't resize format $format")
     val operation = new IMOperation
 
     operation.addImage()
-    operation.resize(boundingBox, boundingBox)
+    operation.resize(width, height)
 
     addOptions(format, operation)
 
@@ -59,8 +62,7 @@ class Image4javaWrapper extends Photoshop {
 
     catchExceptions(convert.run(operation, image))
 
-    val resized = s2b.getImage
-    resized
+    s2b.getImage
   }
 
   private def catchExceptions(block: => Unit): Unit = {

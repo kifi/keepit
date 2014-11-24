@@ -10,5 +10,6 @@ import scala.util.Try
 @ImplementedBy(classOf[Image4javaWrapper])
 trait Photoshop {
   def checkToolsAvailable(): Unit
-  def resizeImage(image: BufferedImage, boundingBox: Int, format: ImageFormat): Try[BufferedImage]
+  def resizeImage(image: BufferedImage, format: ImageFormat, boundingBox: Int): Try[BufferedImage]
+  def resizeImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): Try[BufferedImage]
 }
