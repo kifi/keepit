@@ -236,7 +236,7 @@ var tracker = {
   consolidating: {},
   sendBatch: function () {
     if (this.batch.length > 0) {
-      if (!this.disabled) {  // used in console during tracking development
+      if (api.isPackaged() || api.mode.isDev()) {
         ajax('POST', '/ext/events', this.batch);
       }
       this.batch.length = 0;
