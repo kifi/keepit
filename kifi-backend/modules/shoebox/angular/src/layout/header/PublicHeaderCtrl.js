@@ -2,9 +2,20 @@
 
 angular.module('kifi')
 
-.controller('PublicHeaderCtrl', ['$scope', 'env', 'signupService', 'platformService',
-  function ($scope, env, signupService, platformService) {
+.controller('PublicHeaderCtrl', ['$scope', 'env', 'signupService', 'platformService', 'libraryService',
+  function ($scope, env, signupService, platformService, libraryService) {
     $scope.navBase = env.navBase;
+
+    $scope.clickLogo = function () {
+      $scope.$emit('getCurrentLibrary', { callback: function (lib) {
+        if (lib && lib.id) {
+          libraryService.trackEvent('visitor_clicked_page', lib, {
+            type: 'libraryLanding',
+            action: 'clickedLogo'
+          });
+        }
+      }});
+    };
 
     $scope.join = function ($event) {
       $event.preventDefault();
@@ -14,9 +25,16 @@ angular.module('kifi')
       } else {
         $scope.$emit('getCurrentLibrary', { callback: function (lib) {
           var userData;
+
           if (lib && lib.id) {
             userData = { libraryId: lib.id };
+
+            libraryService.trackEvent('visitor_clicked_page', lib, {
+              type: 'libraryLanding',
+              action: 'clickedSignupHeader'
+            });
           }
+
           signupService.register(userData);
         }});
       }
@@ -26,6 +44,15 @@ angular.module('kifi')
       if (platformService.isSupportedMobilePlatform()) {
         $event.preventDefault();
         platformService.goToAppOrStore();
+      } else {
+        $scope.$emit('getCurrentLibrary', { callback: function (lib) {
+          if (lib && lib.id) {
+            libraryService.trackEvent('visitor_clicked_page', lib, {
+              type: 'libraryLanding',
+              action: 'clickedLoginHeader'
+            });
+          }
+        }});
       }
     };
   }

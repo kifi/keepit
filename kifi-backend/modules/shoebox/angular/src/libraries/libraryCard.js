@@ -102,9 +102,12 @@ angular.module('kifi')
 
         function trackShareEvent(medium) {
           $timeout(function () {
-            var attrs = { action: 'shareLibrary', subAction: medium };
             var eventName = (scope.isUserLoggedOut ? 'visitor' : 'user') + '_clicked_page';
-            libraryService.trackEvent(eventName, scope.library, attrs);
+            libraryService.trackEvent(eventName, scope.library, {
+              type: 'libraryLanding',
+              action: 'shareLibrary',
+              subAction: medium
+            });
           });
         }
 
@@ -290,7 +293,10 @@ angular.module('kifi')
             platformService.goToAppOrStore(url);
             return;
           } else if ($rootScope.userLoggedIn === false) {
-            libraryService.trackEvent('visitor_clicked_page', library, { action: 'followButton' });
+            libraryService.trackEvent('visitor_clicked_page', library, {
+              type: 'libraryLanding',
+              action: 'followButton'
+            });
             return signupService.register({libraryId: scope.library.id});
           }
 
