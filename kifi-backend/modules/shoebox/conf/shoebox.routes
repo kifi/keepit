@@ -215,6 +215,7 @@ POST    /m/1/user/:id/include                   @com.keepit.controllers.mobile.M
 POST    /m/1/user/:id/exclude                   @com.keepit.controllers.mobile.MobileUserController.excludeFriend(id: ExternalId[User])
 
 
+POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.MobileUserController.setAppsflyerAttribution()
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
