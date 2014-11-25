@@ -767,26 +767,7 @@ api.port.on({
     }
   },
   suggest_tags: function (data, respond) {
-    var recentTags = loadRecentTags().filter(notIn(data.tags));
-    if (recentTags.length >= data.n && !data.q) {
-      recentTags.length = data.n;
-      respond(recentTags.map(makeTagObj));
-    } else {
-      var respondWith = function (tags) {
-        var nMore = data.n - tags.length;
-        if (nMore > 0) {
-          var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
-          var matchingRecentTags = sf.filter(data.q, recentTags.filter(notIn(tags.map(getTag))));
-          tags.push.apply(tags, matchingRecentTags.slice(0, nMore).map(makeTagObj, {sf: sf, q: data.q}));
-        }
-        respond(tags);
-      };
-      ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, function (tags) {
-        respondWith(tags.filter(tagNotIn(data.tags)));
-      }, function () {
-        respondWith([]);
-      });
-    }
+    ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, respond, respond.bind(null, []));
   },
   tag: function (data, respond, tab) {
     var d = pageData[tab.nUri];

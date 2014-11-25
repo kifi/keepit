@@ -887,12 +887,16 @@ k.keepBox = k.keepBox || (function () {
   }
 
   function suggestTags(libraryId, keepId, tags, query, withResults) {
-    api.port.emit('suggest_tags', {q: query, n: 4, libraryId: libraryId, keepId: keepId, tags: tags}, function (items) {
-      if (query && !items.some(tagIs(query))) {
-        items.push({tag: query, matches: [[0, query.length]]});
-      }
-      withResults(items);
-    });
+    if (query) {
+      api.port.emit('suggest_tags', {q: query, n: 4, libraryId: libraryId, keepId: keepId, tags: tags}, function (items) {
+        if (!items.some(tagIs(query))) {
+          items.push({tag: query, matches: [[0, query.length]]});
+        }
+        withResults(items);
+      });
+    } else {
+      withResults([]);
+    }
   }
 
   function showTagSuggestions($view, $dropdown, els, done) {
@@ -911,7 +915,6 @@ k.keepBox = k.keepBox || (function () {
           $tags.tokenInput('replace', tag, {tag: name});
         }
         deferred.resolve();
-        $view.find('.kifi-keep-box-tags-token-for-input>input').triggerHandler('focus');
       } else {
         deferred.reject();
       }
@@ -1006,8 +1009,6 @@ k.keepBox = k.keepBox || (function () {
     var html = ['<li class="kifi-keep-box-tags-dropdown-item-token">'];
     if (item.matches) {
       pushWithBoldedMatches(html, item.tag, item.matches);
-    } else if (item.parts) {
-      pushPartsWithOddsBolded(html, item.parts);
     } else {
       html.push(Mustache.escape(item.tag));
     }
@@ -1027,16 +1028,6 @@ k.keepBox = k.keepBox || (function () {
       }
     }
     html.push(Mustache.escape(text.substr(i)));
-  }
-
-  function pushPartsWithOddsBolded(html, parts) {
-    for (var i = 0; i < parts.length; i++) {
-      if (i % 2) {
-        html.push('<b>', Mustache.escape(parts[i]), '</b>');
-      } else {
-        html.push(Mustache.escape(parts[i]));
-      }
-    }
   }
 
   function idIs(id) {
