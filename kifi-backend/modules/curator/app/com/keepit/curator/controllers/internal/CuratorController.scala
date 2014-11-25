@@ -36,8 +36,8 @@ class CuratorController @Inject() (
     userExperimentCommander: RemoteUserExperimentCommander,
     protected val airbrake: AirbrakeNotifier) extends CuratorServiceController {
 
-  val topScoreRecoStrategy = new TopScoreRecoSortStrategy()
-  val diverseRecoStrategy = new DiverseRecoSortStrategy()
+  val topScoreRecoStrategy = new TopScoreRecoSelectionStrategy()
+  val diverseRecoStrategy = new DiverseRecoSelectionStrategy()
 
   def adHocRecos(userId: Id[User], n: Int) = Action.async { request =>
     recoGenCommander.getAdHocRecommendations(userId, n, request.body.asJson match {
