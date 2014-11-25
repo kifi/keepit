@@ -337,7 +337,9 @@ class FeedDigestEmailSender @Inject() (
         val uri = reco.uri
         summary.imageWidth.isDefined && summary.imageUrl.isDefined && summary.imageWidth.get >= MIN_IMAGE_WIDTH_PX &&
           summary.imageHeight.isDefined && summary.imageHeight.get <= MAX_IMAGE_HEIGHT_PX &&
-          (summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0))
+          (summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0)) &&
+          summary.description.exists(_.size > 20) &&
+          !uri.url.endsWith(".pdf")
       case None => false
     }
   }
