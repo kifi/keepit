@@ -26,6 +26,14 @@ object UrlPatterns {
     UrlPattern("""^https?://[-A-Za-z0-9.]*usps\.(gov|com)[./?\#]?""".r, 0.0f, "Anything about usps.gov"),
     UrlPattern("""^https?://(mail.)?(google|gmail)\.com[./?\#]?""".r, 0.0f, "Anything about Gmail"),
 
+    UrlPattern("""^https?://[-A-Za-z0-9.]*techcrunch\.com[./?\#]?""".r, 0.3f, "Anything techcrunch.com"),
+    UrlPattern("""^https?://[-A-Za-z0-9.]*recode\.net[./?\#]?""".r, 0.3f, "Anything recode.net"),
+    UrlPattern("""^https?://[-A-Za-z0-9.]*macworld\.com[./?\#]?""".r, 0.3f, "Anything macworld.com"),
+    UrlPattern("""^https?://[-A-Za-z0-9.]*macrumors\.com[./?\#]?""".r, 0.3f, "Anything macrumors.com"),
+    UrlPattern("""^https?://[-A-Za-z0-9.]*pando\.com[./?\#]?""".r, 0.3f, "Anything pando.com"),
+    UrlPattern("""^https?://[-A-Za-z0-9.]*valleywag\.gawker\.com[./?\#]?""".r, 0.3f, "Anything Valleywag"),
+    UrlPattern("""^https?://[-A-Za-z0-9.]*theverge\.com[./?\#]?""".r, 0.3f, "Anything theverge.com"),
+
     UrlPattern("""^https?://[-A-Za-z0-9.]*groupon\.com[./?\#]?""".r, 0.5f, "Anything about groupon.com"),
     UrlPattern("""^https?://[-A-Za-z0-9.]*linkedin\.com/profile[./?\#]?""".r, 0.5f, "Linkedin profile pages"),
     UrlPattern("""^https?://(www.|)twitter\.com[./?\#]""".r, 0.5f, "Twitter feeds"),
