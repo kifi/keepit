@@ -156,7 +156,7 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
-  private[this] val consolidateGetSignatureReq = new RequestConsolidator[String, Option[Signature]](30 seconds)
+  private[this] val consolidateGetSignatureReq = new RequestConsolidator[String, Option[Signature]](5 minutes)
 
   def getSignature(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = consolidateGetSignatureReq(url) { url =>
     call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map { r =>
