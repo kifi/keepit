@@ -47,13 +47,6 @@
     searching: 'searching'
   };
 
-  // Input box position "enum"
-  var POSITION = {
-    BEFORE: 0,
-    AFTER: 1,
-    END: 2
-  };
-
   // Keyboard key "enum"
   var KEY = {
     BACKSPACE: 8,
@@ -84,6 +77,7 @@
   function htmlEscapeReplace(ch) {
     return HTML_ESCAPES[ch];
   }
+
   function formatItem(item) {
     return '<li>' + htmlEscape(item.name) + '</li>';
   }
@@ -91,6 +85,16 @@
     $dropdown.empty().append(els);
     done();
   }
+
+  var LOCALE_COMPARE_OPTIONS = {usage: 'search', sensitivity: 'base'};
+  var COLLATOR = typeof Intl === 'undefined' ? null : new Intl.Collator(navigator.language, LOCALE_COMPARE_OPTIONS);
+  var localeStartsWith = COLLATOR ?
+    function (s1, s2) {
+      return COLLATOR.compare(s1.substr(0, s2.length), s2) === 0;
+    } :
+    function (s1, s2) {
+      return s1.substr(0, s2.length).localeCompare(s2, void 0, LOCALE_COMPARE_OPTIONS) === 0;
+    };
 
   // Additional public (exposed) methods
   var methods = {
@@ -188,8 +192,19 @@
       .on('input', function (event) {
         search();
         resizeInput();
-        if (selectedDropdownItem && settings.allowFreeTagging) {
-          selectDropdownItem(null);
+        if (settings.allowFreeTagging && selectedDropdownItem) {
+          var query = this.value;
+          var data = $.data(selectedDropdownItem, 'tokenInput');
+          if (data.freeTag) {
+            var contains = ':contains("' + data[settings.tokenValue].replace(/"/g, '\\"') + '")';
+            var textEl = $(selectedDropdownItem).find(contains).last()[0] || $(selectedDropdownItem).filter(contains)[0];
+            if (textEl && textEl.firstChild === textEl.lastChild) {
+              textEl.textContent = query;
+              data[settings.tokenValue] = query;
+            }
+          } else if (!localeStartsWith(selectedDropdownItem.textContent, query)) {
+            selectDropdownItem(null);
+          }
         }
         if (selectedToken) {
           deselectToken();
@@ -705,7 +720,15 @@
       if (data.issuedQuery !== query) {
         data.issuedQuery = query;
         $dropdown.add($tokenList).addClass(classes.searching);
-        findItems(tokens.map(valueOfToken), query, renderDropdown.bind(null, query, Date.now()));
+        var queryTime = Date.now();
+        findItems(tokens.map(valueOfToken), query, function (items) {
+          if (query && settings.allowFreeTagging && !items.some(tokenValueIs(query))) {
+            var item = {freeTag: true};
+            item[settings.tokenValue] = query;
+            items.push(item);
+          }
+          renderDropdown(query, queryTime, items);
+        });
       }
     }
 
@@ -732,6 +755,10 @@
 
     function valueOfToken(tok) {
       return tok[settings.tokenValue];
+    }
+
+    function tokenValueIs(val) {
+      return function (tok) {return tok[settings.tokenValue] === val};
     }
 
     function focusAsync() {
