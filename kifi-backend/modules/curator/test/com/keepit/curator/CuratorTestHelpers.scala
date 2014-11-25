@@ -188,4 +188,11 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
     val seedItem4 = SeedItem(userId = userId, uriId = Id[NormalizedURI](4), url = "url4", seq = SequenceNumber[SeedItem](4), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
     seedItem1 :: seedItem2 :: seedItem3 :: seedItem4 :: Nil
   }
+
+  def saveLibraryInfo(libraryId: Int, ownerId: Int)(implicit rw: RWSession, injector: Injector): CuratorLibraryInfo = {
+    val libInfo = CuratorLibraryInfo(libraryId = Id[Library](libraryId), ownerId = Id[User](ownerId), state = CuratorLibraryInfoStates.ACTIVE,
+      keepCount = 1, memberCount = 1, visibility = LibraryVisibility.PUBLISHED, lastKept = None, lastFollowed = None,
+      kind = LibraryKind.USER_CREATED, libraryLastUpdated = currentDateTime)
+    inject[CuratorLibraryInfoRepo].save(libInfo)
+  }
 }

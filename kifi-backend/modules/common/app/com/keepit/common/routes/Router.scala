@@ -164,6 +164,7 @@ object Shoebox extends Service {
     def getSocialConnections(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getSocialConnections", Param("userId", userId))
     def addInteractions(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/user/addInteractions", Param("userId", userId))
     def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getDetailedLibrariesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def canViewLibrary() = ServiceRoute(POST, "/internal/shoebox/libraries/canView")
     def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = ServiceRoute(GET, "/internal/shoebox/database/newKeepsInLibraryForEmail", Param("userId", userId), Param("max", max))
