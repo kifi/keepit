@@ -1,8 +1,11 @@
 package com.keepit.common.images
 
+import play.api.Mode
+import play.api.Mode._
+
 import java.awt.image.BufferedImage
 
-import com.google.inject.Singleton
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.model.ImageFormat
 import org.im4java.core.{ IMOps, ConvertCmd, IMOperation, Stream2BufferedImage }
 import org.im4java.process.ArrayListOutputConsumer
@@ -15,8 +18,11 @@ import scala.util.Try
  * Image Cropping to a square
  */
 @Singleton
-class Image4javaWrapper extends Photoshop {
-  checkToolsAvailable() //call on constructor
+class Image4javaWrapper @Inject() (
+    playMode: Mode) extends Photoshop {
+  if (playMode == Mode.Prod) {
+    checkToolsAvailable() //call on constructor in production to get a fast fail
+  }
 
   private def command() = new ConvertCmd(false)
 
