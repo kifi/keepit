@@ -888,12 +888,7 @@ k.keepBox = k.keepBox || (function () {
 
   function suggestTags(libraryId, keepId, tags, query, withResults) {
     if (query) {
-      api.port.emit('suggest_tags', {q: query, n: 4, libraryId: libraryId, keepId: keepId, tags: tags}, function (items) {
-        if (!items.some(tagIs(query))) {
-          items.push({tag: query, matches: [[0, query.length]]});
-        }
-        withResults(items);
-      });
+      api.port.emit('suggest_tags', {q: query, n: 4, libraryId: libraryId, keepId: keepId, tags: tags}, withResults);
     } else {
       withResults([]);
     }
@@ -1007,8 +1002,8 @@ k.keepBox = k.keepBox || (function () {
 
   function formatTagResult(item) {
     var html = ['<li class="kifi-keep-box-tags-dropdown-item-token">'];
-    if (item.matches) {
-      pushWithBoldedMatches(html, item.tag, item.matches);
+    if (item.matches || item.freeTag) {
+      pushWithBoldedMatches(html, item.tag, item.matches || [[0, item.tag.length]]);
     } else {
       html.push(Mustache.escape(item.tag));
     }
@@ -1040,10 +1035,6 @@ k.keepBox = k.keepBox || (function () {
 
   function libraryIdIs(id) {
     return function (o) {return o.libraryId === id};
-  }
-
-  function tagIs(tag) {
-    return function (o) {return o.tag === tag};
   }
 
   function tagNameToTokenItem(name) {
