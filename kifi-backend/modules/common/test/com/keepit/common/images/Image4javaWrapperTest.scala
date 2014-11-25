@@ -13,7 +13,7 @@ import play.api.Mode
 import play.api.Mode._
 
 class Image4javaWrapperTest extends Specification with CommonTestInjector {
-  skipAllIf(true)
+//  skipAllIf(true)
 
   def getPngImage(name: String = "image1"): BufferedImage = ImageIO.read(new File(s"test/data/$name.png"))
   def getJpgImage(name: String = "image1"): BufferedImage = ImageIO.read(new File(s"test/data/$name.jpg"))
