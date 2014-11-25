@@ -14,30 +14,37 @@ import com.google.inject.{ Inject, Singleton }
 
 case class UriRecoScore(score: Float, reco: UriRecommendation)
 
-trait RecoSortStrategy {
+trait RecoSelectionStrategy {
   def sort(recosByTopScore: Seq[UriRecoScore]): Seq[UriRecoScore]
 }
 
-class TopScoreRecoSortStrategy(val minScore: Float = 5f, val limit: Int = 10) extends RecoSortStrategy {
+class TopScoreRecoSelectionStrategy(val minScore: Float = 5f) extends RecoSelectionStrategy {
   def sort(recosByTopScore: Seq[UriRecoScore]) =
-    recosByTopScore filter (_.score > minScore) sortBy (-_.score) take limit
+    recosByTopScore filter (_.score > minScore) sortBy (-_.score)
 }
 
-class DiverseRecoSortStrategy(val limit: Int = 10) extends RecoSortStrategy {
+class DiverseRecoSelectionStrategy(val minScore: Float = 5f) extends RecoSelectionStrategy {
 
   def sort(recosByTopScore: Seq[UriRecoScore]) = recosByTopScore.groupBy(_.reco.topic1).map {
     // sorts the recos by score (desc) and rescores them using the exponential decay
-    case (_, recos) => rescoreRecosWithDecay(recos sortBy (-_.score) take limit)
-  }.toSeq.flatten sortBy (-_.score) take limit
+    case (topic1, recos) => rescoreRecosWithDecay(recos sortBy (-_.score) takeWhile (_.score > minScore)) map {
+      case (recoScore, decay) =>
+        // update the UriRecommendation.allScores to include topic and decay information
+        val updatedAllScores = recoScore.reco.allScores.copy(topic1 = recoScore.reco.topic1.map(_.index), topic1Multiplier = Some(decay))
+        val updatedReco = recoScore.reco.copy(allScores = updatedAllScores)
+        recoScore.copy(reco = updatedReco)
+    }
+  }.toSeq.flatten sortBy (-_.score)
 
-  private def rescoreRecosWithDecay(recoScores: Seq[UriRecoScore]) = {
+  private def rescoreRecosWithDecay(recoScores: Seq[UriRecoScore]): Seq[(UriRecoScore, Float)] = {
     val decayRate = 1 / 15f
 
     @inline def scoreDecay(i: Int): Float = Math.exp(-i * decayRate).toFloat
 
     Seq.tabulate(recoScores.size) { i =>
       val recoScore = recoScores(i)
-      recoScore.copy(score = recoScore.score * scoreDecay(i))
+      val decay = scoreDecay(i)
+      (recoScore.copy(score = recoScore.score * decay), decay)
     }
   }
 }
@@ -53,7 +60,7 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
     (adjustedScore * finalPenaltyFactor).toFloat
   }
 
-  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, clientType: RecommendationClientType, recoSortStrategy: RecoSortStrategy): Seq[RecoInfo] = {
+  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, clientType: RecommendationClientType, recoSortStrategy: RecoSelectionStrategy): Seq[RecoInfo] = {
     require(recencyWeight <= 1.0f && recencyWeight >= 0.0f, "recencyWeight must be between 0 and 1")
 
     def scoreReco(reco: UriRecommendation) =
@@ -61,7 +68,7 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
 
     val recos = db.readOnlyReplica { implicit session =>
       val recosByTopScore = uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
-      recoSortStrategy.sort(recosByTopScore)
+      recoSortStrategy.sort(recosByTopScore) take 10
     }
 
     SafeFuture {

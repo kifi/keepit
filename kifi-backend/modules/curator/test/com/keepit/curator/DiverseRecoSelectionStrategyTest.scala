@@ -3,10 +3,10 @@ package com.keepit.curator
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.keepit.cortex.models.lda.LDATopic
-import com.keepit.curator.commanders.{ UriRecoScore, DiverseRecoSortStrategy }
+import com.keepit.curator.commanders.{ UriRecoScore, DiverseRecoSelectionStrategy }
 import org.specs2.mutable.Specification
 
-class DiverseRecoSortStrategyTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
+class DiverseRecoSelectionStrategyTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
 
   "DiverseRecoSortStrategy" should {
     "sorts recommendations to include multiple topics" in {
@@ -26,7 +26,7 @@ class DiverseRecoSortStrategyTest extends Specification with CuratorTestInjector
 
         val sortedRecos = recos.sortBy(-_.masterScore) map { reco => UriRecoScore(reco.masterScore, reco) }
 
-        val strategy = new DiverseRecoSortStrategy()
+        val strategy = new DiverseRecoSelectionStrategy()
         val diverseSortedRecos = strategy.sort(sortedRecos)
 
         // sort order sanity check
