@@ -123,7 +123,7 @@ class KeepsController @Inject() (
     val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
     keepOpt match {
       case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
-      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep), ProcessedImageSize.Large.idealSize).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), ProcessedImageSize.Large.idealSize).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
       case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
     }
   }

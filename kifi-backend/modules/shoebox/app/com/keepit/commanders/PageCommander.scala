@@ -112,7 +112,7 @@ class PageCommander @Inject() (
     nUriOpt.map { normUri =>
 
       // get all keepers from search (read_only data)
-      val getKeepersFuture = searchClient.augment(Some(userId), Int.MaxValue, 0, 0, Seq(AugmentableItem(normUri.id.get))).map {
+      val getKeepersFuture = searchClient.augment(Some(userId), false, Int.MaxValue, 0, 0, Seq(AugmentableItem(normUri.id.get))).map {
         case Seq(info) =>
           db.readOnlyMaster { implicit session =>
             val userIdSet = info.keepers.toSet
