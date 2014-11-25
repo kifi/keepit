@@ -12,7 +12,9 @@ angular.module('kifi')
         'getSelectedKeeps': '&',
         'addingTag': '=',
         'isShown': '&',
-        'readOnlyMode': '&'
+        'readOnlyMode': '&',
+        'library': '=',
+        'userLoggedIn': '='
       },
       replace: true,
       restrict: 'A',
@@ -33,7 +35,20 @@ angular.module('kifi')
           } else {
             tagPath = n;
           }
-          return '/find?q=tag:' + encodeURIComponent(tagPath);
+
+          // Perform global tag search for logged-in users.
+          if (scope.userLoggedIn) {
+            return '/find?q=tag:' + encodeURIComponent(tagPath);
+          } else {
+            // Perform library tag search for logged-out users if they are on a library page.
+            if (scope.library && scope.library.url) {
+              return scope.library.url + '/find?q=tag:' + encodeURIComponent(tagPath);
+            }
+            // Otherwise, we really can't search for tags so we stay put.
+            else {
+              return $location.url();
+            }
+          }
         };
 
         scope.$watch('getSelectedKeeps', function () {
