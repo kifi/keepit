@@ -22,7 +22,10 @@ object Global {
     Tests.Argument("threadsNb", "16"),
     Tests.Argument("showtimes", "true"),
     Tests.Argument("stopOnFail", "true"),
-    Tests.Argument("failtrace", "true")
+    Tests.Argument("failtrace", "true"),
+    Tests.Argument("logBuffered", "false"),
+    Tests.Argument("traceLevel", "5"),
+    Tests.Argument("-oDF")
   )
 
   val macroParadiseSettings = Seq(
