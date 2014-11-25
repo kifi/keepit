@@ -445,6 +445,11 @@ angular.module('kifi')
             'transition': 'margin-top 0.1s ease',
             'margin-top': '90px'
           });
+
+          // Focus for mobile devices.
+          // $timeout(function () {
+          //   angular.element('.kf-keep-lib-search-input').focus();
+          // });
         };
 
         scope.onSearchExit = function () {
