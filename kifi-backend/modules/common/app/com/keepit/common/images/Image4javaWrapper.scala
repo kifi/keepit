@@ -1,5 +1,7 @@
 package com.keepit.common.images
 
+import java.io.{ PrintWriter, ByteArrayOutputStream }
+import com.keepit.common.strings.UTF8
 import play.api.Mode
 import play.api.Mode._
 
@@ -7,8 +9,8 @@ import java.awt.image.BufferedImage
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.model.ImageFormat
-import org.im4java.core.{ IMOps, ConvertCmd, IMOperation, Stream2BufferedImage }
-import org.im4java.process.ArrayListOutputConsumer
+import org.im4java.core._
+import org.im4java.process.{ ErrorConsumer, ArrayListOutputConsumer }
 import scala.collection.JavaConversions._
 
 import scala.util.Try
@@ -32,7 +34,7 @@ class Image4javaWrapper @Inject() (
     val convert = command()
     val output = new ArrayListOutputConsumer()
     convert.setOutputConsumer(output)
-    catchExceptions(convert.run(operation))
+    catchExceptions(convert, operation)
     println("Image Magic Version:")
     output.getOutput foreach { line =>
       println(line)
@@ -55,6 +57,7 @@ class Image4javaWrapper @Inject() (
     if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't resize format $format")
     val operation = new IMOperation
 
+    operation.verbose()
     operation.addImage()
     operation.resize(width, height)
 
@@ -66,14 +69,17 @@ class Image4javaWrapper @Inject() (
     val s2b = new Stream2BufferedImage()
     convert.setOutputConsumer(s2b)
 
-    catchExceptions(convert.run(operation, image))
+    catchExceptions(convert, operation, Some(image))
 
     s2b.getImage
   }
 
-  private def catchExceptions(block: => Unit): Unit = {
+  private def catchExceptions(convert: ConvertCmd, operation: IMOperation, image: Option[BufferedImage] = None): Unit = {
     try {
-      block
+      image match {
+        case None => convert.run(operation)
+        case Some(img) => convert.run(operation, img)
+      }
     } catch {
       case e: Throwable =>
         if (e.getMessage.contains("Cannot run program")) {
@@ -88,7 +94,16 @@ class Image4javaWrapper @Inject() (
               |  $ sudo apt-get install imagemagick
             """.stripMargin, e)
         }
-        throw new Exception("Error executing underlying tool", e)
+        val baos = new ByteArrayOutputStream()
+        val writer = new PrintWriter(baos)
+        try {
+          convert.createScript(writer, operation, new java.util.Properties(System.getProperties))
+        } finally {
+          writer.close()
+          baos.close()
+        }
+        val script = new String(baos.toByteArray, UTF8)
+        throw new Exception(s"Error executing underlying tool: ${convert.getErrorText.mkString("\n")}. Generated script is:\n$script", e)
     }
   }
 
