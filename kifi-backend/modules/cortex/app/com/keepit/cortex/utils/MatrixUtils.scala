@@ -146,4 +146,11 @@ object MatrixUtils {
     }
     dot(qs, log_q_over_p)
   }
+
+  // eps: prevents singularity
+  def entropy(v: Array[Double], eps: Double = 1e-10): Double = {
+    require(v.forall(_ > -eps / 2))
+    require(abs(v.sum - 1.0) < 1e-2)
+    v.map { x => val y = x + eps; -y * log2(y) }.sum
+  }
 }
