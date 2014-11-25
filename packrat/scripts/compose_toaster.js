@@ -26,12 +26,11 @@ k.toaster = k.toaster || (function () {
   };
 
   return {
-    show: function ($parent, recipient) {
-      log('[toaster.show]', recipient || '');
+    show: function ($parent, trigger, guided, recipient) {
       if ($toast) {
         hide();
       }
-      show($parent, recipient);
+      show($parent, trigger, guided, recipient);
     },
     hideIfBlank: function () {
       if ($toast && $toast.data('compose').isBlank()) {
@@ -40,9 +39,9 @@ k.toaster = k.toaster || (function () {
         log('[toaster:hideIfBlank] no-op');
       }
     },
-    hide: function () {
+    hide: function (trigger) {
       if ($toast) {
-        hide();
+        hide(null, trigger);
       } else {
         log('[toaster:hide] no-op');
       }
@@ -53,8 +52,8 @@ k.toaster = k.toaster || (function () {
     }
   };
 
-  function show($parent, recipient) {
-    log('[toaster:show]');
+  function show($parent, trigger, guided, recipient) {
+    log('[toaster:show]', trigger, guided ? 'guided' : '', recipient || '');
     api.port.emit('prefs', function (prefs) {
       compose.reflectPrefs(prefs || {});
     });
@@ -86,6 +85,7 @@ k.toaster = k.toaster || (function () {
 
     api.port.on(handlers);
     api.port.emit('get_page_thread_count');
+    api.port.emit('track_pane_view', {type: 'composeMessage', subsource: trigger, guided: guided || undefined});
 
     $toast.layout()
     .on('transitionend', $.proxy(onShown, null, recipient))
@@ -141,7 +141,7 @@ k.toaster = k.toaster || (function () {
         log('[sendMessage] resp:', resp);
         api.require('scripts/pane.js', function () {
           $t.data('sending', false);
-          k.pane.show({locator: '/messages/' + resp.threadId});
+          k.pane.show({locator: '/messages/' + resp.threadId, trigger: 'send'});
           if ($toast === $t) {
             hide();
           }
@@ -152,7 +152,7 @@ k.toaster = k.toaster || (function () {
 
   function showOlder(threadId) {
     api.require('scripts/pane.js', function () {
-      k.pane.show({locator: threadId ? '/messages/' + threadId : '/messages'});
+      k.pane.show({locator: threadId ? '/messages/' + threadId : '/messages', trigger: 'older'});
     });
   }
 

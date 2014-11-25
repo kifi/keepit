@@ -131,6 +131,9 @@ class ExtLibraryController @Inject() (
           if ((body \ "guided").asOpt[Boolean].getOrElse(false)) {
             hcb += ("guided", true)
           }
+          (body \ "how").asOpt[String] foreach { how =>
+            hcb += ("subsource", how)
+          }
           implicit val context = hcb.build
 
           val (keep, isNewKeep) = keepsCommander.keepOne(body.as[RawBookmarkRepresentation], request.userId, libraryId, request.kifiInstallationId, source)

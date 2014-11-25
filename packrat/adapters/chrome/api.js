@@ -510,18 +510,18 @@ var api = (function createApi() {
   var hostRe = /^https?:\/\/[^\/]*/;
   return {
     bookmarks: {
-      create: function(parentId, name, url, callback) {
+      create: function (parentId, name, url, callback) {
         chrome.bookmarks.create({parentId: parentId, title: name, url: url}, errors.wrap(callback));
       },
-      createFolder: function(parentId, name, callback) {
+      createFolder: function (parentId, name, callback) {
         chrome.bookmarks.create({parentId: parentId, title: name}, errors.wrap(callback));
       },
-      get: function(id, callback) {
+      get: function (id, callback) {
         chrome.bookmarks.get(id, errors.wrap(function (bm) {
           callback(bm && bm[0]);
         }));
       },
-      getAll: function(callback) {
+      getAll: function (callback) {
         chrome.bookmarks.getTree(errors.wrap(function (bm) {
           var arr = [];
           !function traverse(b) {
@@ -534,13 +534,13 @@ var api = (function createApi() {
           callback(arr);
         }));
       },
-      getBarFolder: function(callback) {
+      getBarFolder: function (callback) {
         chrome.bookmarks.getChildren("0", function(bm) {
           callback(bm.filter(function(bm) { return bm.title == "Bookmarks Bar" })[0] || bm[0]);
         });
       },
       getChildren: chrome.bookmarks.getChildren.bind(chrome.bookmarks),
-      move: function(id, newParentId) {
+      move: function (id, newParentId) {
         chrome.bookmarks.move(id, {parentId: newParentId});
       },
       remove: chrome.bookmarks.remove.bind(chrome.bookmarks),
@@ -634,7 +634,7 @@ var api = (function createApi() {
       });
     },
     socket: {
-      open: function(url, handlers, onConnect, onDisconnect) {
+      open: function (url, handlers, onConnect, onDisconnect) {
         log('[api.socket.open]', url);
         var sc, rws = new ReconnectingWebSocket(url, {
           onConnect: errors.wrap(function () {
@@ -652,7 +652,7 @@ var api = (function createApi() {
     },
     storage: localStorage,
     tabs: {
-      anyAt: function(url) {
+      anyAt: function (url) {
         for (var id in pages) {
           var page = pages[id];
           if (page.url == url) {
@@ -660,19 +660,19 @@ var api = (function createApi() {
           }
         }
       },
-      select: function(tabId) {
+      select: function (tabId) {
         chrome.tabs.update(tabId, {active: true}, errors.wrap(function (tab) {
           if (tab) {
             chrome.windows.update(tab.windowId, {focused: true});
           }
         }));
       },
-      open: function(url, callback) {
+      open: function (url, callback) {
         chrome.tabs.create({url: url}, errors.wrap(function (tab) {
           callback && callback(tab.id);
         }));
       },
-      selectOrOpen: function(url) {
+      selectOrOpen: function (url) {
         var tab = api.tabs.anyAt(url);
         if (tab) {
           api.tabs.select(tab.id);
@@ -680,22 +680,22 @@ var api = (function createApi() {
           api.tabs.open(url);
         }
       },
-      close: function(tabId) {
+      close: function (tabId) {
         chrome.tabs.remove(tabId);
       },
-      each: function(callback) {
+      each: function (callback) {
         for (var id in pages) {
           var page = pages[id];
           if (httpRe.test(page.url)) callback(page);
         }
       },
-      eachSelected: function(callback) {
+      eachSelected: function (callback) {
         for (var winId in selectedTabIds) {
           var page = pages[selectedTabIds[winId]];
           if (page && httpRe.test(page.url)) callback(page);
         }
       },
-      emit: function(tab, type, data, opts) {
+      emit: function (tab, type, data, opts) {
         var page = pages[tab.id];
         if (page && (page === tab || page.url.match(hostRe)[0] === tab.url.match(hostRe)[0])) {
           if ((page._handling || {})[type]) {
@@ -722,17 +722,17 @@ var api = (function createApi() {
           log("#a00", "[api.tabs.emit] suppressed %i %s navigated: %s -> %s", tab.id, type, tab.url, page && page.url);
         }
       },
-      get: function(tabId) {
+      get: function (tabId) {
         return pages[tabId];
       },
       getFocused: function () {
         var id = selectedTabIds[focusedWinId];
         return id ? pages[id] : null;
       },
-      isFocused: function(tab) {
+      isFocused: function (tab) {
         return selectedTabIds[focusedWinId] === tab.id;
       },
-      navigate: function(tabId, url) {
+      navigate: function (tabId, url) {
         chrome.tabs.update(tabId, {url: url, active: true}, errors.wrap(function (tab) {
           if (tab) chrome.windows.update(tab.windowId, {focused: true});
         }));

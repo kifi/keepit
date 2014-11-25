@@ -364,7 +364,7 @@ class FeedDigestEmailSender @Inject() (
    * this method assumes that all keeps are in library
    */
   private def getLibraryKeepAttributions(userId: Id[User], keeps: Seq[Keep]): Future[Seq[DigestLibraryItemCandidate]] = {
-    search.augment(Some(userId), maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, items = keeps.map(keep => AugmentableItem(keep.uriId, keep.libraryId))) map { infos =>
+    search.augment(Some(userId), false, maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, items = keeps.map(keep => AugmentableItem(keep.uriId, keep.libraryId))) map { infos =>
       (keeps zip infos).map {
         case (keep, info) =>
           DigestLibraryItemCandidate(keep, Some(seedAttributionHelper.toUserAttribution(info)))

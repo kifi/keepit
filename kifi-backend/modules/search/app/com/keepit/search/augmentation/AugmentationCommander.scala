@@ -58,6 +58,7 @@ class AugmentationCommanderImpl @Inject() (
   }
 
   def augmentation(itemAugmentationRequest: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
+    log.info(s"Processing $itemAugmentationRequest")
     val uris = (itemAugmentationRequest.context.corpus.keySet ++ itemAugmentationRequest.items).map(_.uri)
     val restrictedPlan = getRestrictedDistributionPlan(itemAugmentationRequest.context.userId, uris)
     plannedAugmentation(restrictedPlan, itemAugmentationRequest)
@@ -85,7 +86,7 @@ class AugmentationCommanderImpl @Inject() (
   def distAugmentation(shards: Set[Shard[NormalizedURI]], itemAugmentationRequest: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
     if (shards.isEmpty) Future.successful(ItemAugmentationResponse.empty)
     else {
-      val ItemAugmentationRequest(items, context) = itemAugmentationRequest
+      val ItemAugmentationRequest(items, context, showPublishedLibraries) = itemAugmentationRequest
 
       val futureLibraryFilter = searchFactory.getLibraryIdsFuture(context.userId, LibraryContext.None).imap {
         case (_, followedLibraries, _, _) => followedLibraries.map(Id[Library](_))
@@ -96,7 +97,7 @@ class AugmentationCommanderImpl @Inject() (
       for {
         libraryFilter <- futureLibraryFilter
         userFilter <- futureUserFilter
-        allAugmentationInfos <- getAugmentationInfos(shards, context.userId, libraryFilter, userFilter, items ++ context.corpus.keySet)
+        allAugmentationInfos <- getAugmentationInfos(shards, libraryFilter, userFilter, items ++ context.corpus.keySet, showPublishedLibraries.exists(identity))
       } yield {
         val contextualAugmentationInfos = context.corpus.collect { case (item, weight) if allAugmentationInfos.contains(item) => (allAugmentationInfos(item) -> weight) }
         val contextualScores = computeAugmentationScores(contextualAugmentationInfos)
@@ -106,7 +107,7 @@ class AugmentationCommanderImpl @Inject() (
     }
   }
 
-  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], requestingUserId: Id[User], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[AugmentableItem]): Future[Map[AugmentableItem, FullAugmentationInfo]] = {
+  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[AugmentableItem], showPublishedLibraries: Boolean): Future[Map[AugmentableItem, FullAugmentationInfo]] = {
     val userIdFilter = LongArraySet.fromSet(userFilter.map(_.id))
     val libraryIdFilter = LongArraySet.fromSet(libraryFilter.map(_.id))
     val futureAugmentationInfosByShard: Seq[Future[Map[AugmentableItem, FullAugmentationInfo]]] = items.groupBy(item => shards.find(_.contains(item.uri))).collect {
@@ -114,22 +115,20 @@ class AugmentationCommanderImpl @Inject() (
         SafeFuture {
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
           val librarySearcher = libraryIndexer.getSearcher
-          itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, librarySearcher, requestingUserId, userIdFilter, libraryIdFilter)(item) }.toMap
+          itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, librarySearcher, userIdFilter, libraryIdFilter, showPublishedLibraries)(item) }.toMap
         }
     }.toSeq
     Future.sequence(futureAugmentationInfosByShard).map(_.foldLeft(Map.empty[AugmentableItem, FullAugmentationInfo])(_ ++ _))
   }
 
   // todo(Léo): this is currently very much unrestricted in order to push for library discovery
-  private def showPublishedLibrary(requestingUserId: Id[User], librarySearcher: Searcher, libraryId: Long): Boolean = {
+  private def showPublishedLibrary(librarySearcher: Searcher, libraryId: Long): Boolean = {
     librarySearcher.getDecodedDocValue[LibraryRecord](LibraryFields.recordField, libraryId).exists { record =>
       !record.name.toLowerCase.split("\\s+").exists(Profanity.all.contains)
     }
-    val authorizedUsers: Set[Long] = Set(9, 134, 8465, 8947)
-    authorizedUsers.contains(requestingUserId.id) // todo(Léo): remove when mobile front-end is fixed
   }
 
-  private def getAugmentationInfo(keepSearcher: Searcher, librarySearcher: Searcher, requestingUserId: Id[User], userIdFilter: LongArraySet, libraryIdFilter: LongArraySet)(item: AugmentableItem): FullAugmentationInfo = {
+  private def getAugmentationInfo(keepSearcher: Searcher, librarySearcher: Searcher, userIdFilter: LongArraySet, libraryIdFilter: LongArraySet, showPublishedLibraries: Boolean)(item: AugmentableItem): FullAugmentationInfo = {
     val uriTerm = new Term(KeepFields.uriField, item.uri.id.toString)
     val keeps = new ListBuffer[RestrictedKeepInfo]()
     var otherPublishedKeeps = 0
@@ -175,7 +174,7 @@ class AugmentationCommanderImpl @Inject() (
           else visibility match { // kept by others
             case PUBLISHED =>
               uniqueKeepers += userId
-              if (showPublishedLibrary(requestingUserId, librarySearcher, libraryId)) {
+              if (showPublishedLibraries) { // todo(Léo): replace with showPublishedLibrary(librarySearcher, libraryId)) when mobile front-end is fixed
                 val record = getKeepRecord(docId)
                 keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), record.tags)
               } else {

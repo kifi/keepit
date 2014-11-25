@@ -11,12 +11,12 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
   right: 342px;
 }
 
-#kifi-notify-notice-wrapper .kifi-notify-item-wrapper {
+.kifi-notify-item-wrapper {
   position: relative;
   margin: 0 0 10px;
 }
 
-#kifi-notify-notice-wrapper .kifi-notify-item {
+.kifi-notify-item {
   display: block;
   background-color: #1f272f;
   opacity: .9;
@@ -27,12 +27,16 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
   border: 1px solid #ddd;
   cursor: pointer;
 }
-
-#kifi-notify-notice-wrapper .kifi-notify-item:hover {
+.kifi-notify-item:hover {
   opacity: 1;
 }
+.kifi-notify-item::after {
+  content: '';
+  display: block;
+  clear: both;
+}
 
-#kifi-notify-notice-wrapper .kifi-notify-close {
+.kifi-notify-close {
   position: absolute;
   top: 6px;
   right: 6px;
@@ -43,13 +47,13 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
   text-align: center;
   line-height: 15px;
 }
-#kifi-notify-notice-wrapper .kifi-notify-close:hover {
+.kifi-notify-close:hover {
   color: #333;
   background-color: #ddd;
   border-radius: 10px !important;
 }
 
-#kifi-notify-notice-wrapper .kifi-notify-title {
+.kifi-notify-title {
   font-weight: bold;
   font-size: 16px;
   line-height: 16px;
@@ -60,11 +64,11 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
   overflow: hidden;
 }
 
-#kifi-notify-notice-wrapper .kifi-notify-subtitle {
+.kifi-notify-subtitle {
   font-size: 13px;
 }
 
-#kifi-notify-notice-wrapper .kifi-notify-link {
+.kifi-notify-link {
   margin: 0 0 4px;
   display: block;
   font-size: 13px;
@@ -75,29 +79,27 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
   overflow: hidden;
 }
 
-#kifi-notify-notice-wrapper .kifi-notify-text {
+.kifi-notify-text {
   margin-top: 8px;
   display: block;
   font-size: 13px;
-  font-style: italic;
   color: #fff;
   padding-right: 8px;
   overflow: hidden;
   word-wrap: break-word;
 }
-
-#kifi-notify-notice-wrapper .kifi-notify-triggered {
-  margin-top: 8px;
-  display: block;
-  font-size: 13px;
-  font-style: normal;
-  color: #fff;
-  padding-right: 8px;
-  overflow: hidden;
+.kifi-notify-message .kifi-notify-text {
+  font-style: italic;
+}
+.kifi-notify-message .kifi-notify-text::before {
+  content: '“';
+}
+.kifi-notify-message .kifi-notify-text::after {
+  content: '”';
 }
 
-#kifi-notify-notice-wrapper .kifi-notify-image,
-#kifi-notify-notice-wrapper .kifi-notify-email-icon {
+.kifi-notify-image,
+.kifi-notify-email-icon {
   float: left;
   width: 42px;
   height: 42px;
@@ -107,7 +109,7 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
   padding: 0;
 }
 
-#kifi-notify-notice-wrapper .kifi-notify-email-icon {
+.kifi-notify-email-icon {
   text-align: center;
   line-height: 42px;
   font-size: 30px;
@@ -116,12 +118,12 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
   user-select: none;
 }
 
-#kifi-notify-notice-wrapper .kifi-on-page {
+.kifi-on-page {
   font-size: 13px;
   margin-top: 8px;
 }
 
-#kifi-notify-notice-wrapper .kifi-notify-footer {
+.kifi-notify-footer {
   float: right;
   margin: -7px 0 -5px;
   position: relative;
@@ -129,11 +131,7 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
   color: #999;
 }
 
-#kifi-notify-notice-wrapper .kifi-notify-with-image,
-#kifi-notify-notice-wrapper .kifi-notify-without-image {
-  padding: 0;
-}
-#kifi-notify-notice-wrapper .kifi-notify-with-image {
+.kifi-notify-with-image {
   float: right;
   width: 230px;
 }

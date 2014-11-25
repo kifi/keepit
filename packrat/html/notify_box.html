@@ -2,22 +2,16 @@
   <div class="kifi-notify-item">
     <div class="kifi-notify-close">×</div>
     {{{image}}}
-    <div class="{{innerClass}}">
+    <div class="{{#image}}kifi-notify-with-image{{/image}}{{^image}}kifi-notify-without-image{{/image}}">
       <div class="kifi-notify-title">{{title}}</div>
       {{#subtitle}}
       <div class="kifi-notify-subtitle">{{subtitle}}</div>
       <div class="kifi-on-page">On this page:</div>
       {{/subtitle}}
       {{#link}}<div class="kifi-notify-link">{{link}}</div>{{/link}}
-      {{#triggered}}
-      <div class="kifi-notify-triggered">{{#formatSnippet}}{{{contentHtml}}}{{/formatSnippet}}</div>
-      {{/triggered}}
-      {{^triggered}}
-      <div class="kifi-notify-text">“{{#formatSnippet}}{{{contentHtml}}}{{/formatSnippet}}”</div>
-      {{/triggered}}
+      <div class="kifi-notify-text">{{#formatSnippet}}{{{contentHtml}}}{{/formatSnippet}}</div>
       <div class="kifi-notify-footer">Kifi</div>
     </div>
-    <div style="clear:both"></div>
   </div>
 </div>
 

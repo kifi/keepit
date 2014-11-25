@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.images.Photoshop
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
 import com.keepit.common.service.RequestConsolidator
@@ -52,6 +53,7 @@ class KeepImageCommanderImpl @Inject() (
     keepImageRequestRepo: KeepImageRequestRepo,
     airbrake: AirbrakeNotifier,
     keepImageRepo: KeepImageRepo,
+    //    photoshop: Photoshop,
     val webService: WebService) extends KeepImageCommander with ProcessedImageHelper with Logging {
 
   def getUrl(keepImage: KeepImage): String = {
@@ -332,6 +334,7 @@ class KeepImageCommanderImpl @Inject() (
       case Success(image) =>
         val resizedImages = calcSizesForImage(image).map { boundingBox =>
           log.info(s"[kic] Using bounding box $boundingBox px")
+          //          photoshop.resizeImage(image, sourceImage.format, boundingBox).map { resizedImage =>
           resizeImage(image, boundingBox).map { resizedImage =>
             bufferedImageToInputStream(resizedImage, outFormat).map {
               case (is, bytes) =>

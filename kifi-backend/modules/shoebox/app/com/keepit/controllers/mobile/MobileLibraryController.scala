@@ -35,7 +35,7 @@ class MobileLibraryController @Inject() (
 
   def getLibraryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val id = Library.decodePublicId(pubId).get
-    libraryCommander.getLibraryById(request.userIdOpt, id) map {
+    libraryCommander.getLibraryById(request.userIdOpt, false, id) map {
       case (libInfo, accessStr) => Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
     }
   }
@@ -45,7 +45,7 @@ class MobileLibraryController @Inject() (
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, library).map { libInfo =>
+          libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library).map { libInfo =>
             val accessStr = request.userIdOpt.map { userId =>
               libraryCommander.getAccessStr(userId, library.id.get)
             }.flatten.getOrElse {
@@ -180,7 +180,7 @@ class MobileLibraryController @Inject() (
         } getOrElse ProcessedImageSize.Large.idealSize
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
-          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps, idealImageSize)
+          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, false, keeps, idealImageSize)
         } yield {
           Ok(Json.obj("keeps" -> keepInfos))
         }

@@ -230,12 +230,15 @@ var onXhrProgress = api.errors.wrap(function onXhrProgress(progress) {
 // ===== Event logging
 
 var tracker = {
-  enabled: true,
+  sendTimer: 0,
   queue: [],
   batch: [],
+  consolidating: {},
   sendBatch: function () {
     if (this.batch.length > 0) {
-      ajax('POST', '/ext/events', this.batch);
+      if (api.isPackaged() || api.mode.isDev()) {
+        ajax('POST', '/ext/events', this.batch);
+      }
       this.batch.length = 0;
     }
   },
@@ -249,22 +252,42 @@ var tracker = {
     }
   },
   track: function (eventName, properties) {
-    if (this.enabled) {
-      if (!this.sendTimer) {
-        this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
-      }
-      log('#aaa', '[tracker.track] %s %o', eventName, properties);
-      properties.time = Date.now();
-      var data = {
-        'event': eventName,
-        'properties': properties
-      };
-      if (me) {
-        this.augmentAndBatch(data);
-      } else {
-        this.queue.push(data);
-      }
+    if (!this.sendTimer) {
+      this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
     }
+    log('#aaa', '[tracker.track] %s %o', eventName, properties);
+    properties.time = Date.now();
+    var data = {
+      'event': eventName,
+      'properties': properties
+    };
+    if (me) {
+      this.augmentAndBatch(data);
+    } else {
+      this.queue.push(data);
+    }
+  },
+  trackConsolidated: function (eventName, properties, prop, id, ms) {
+    var t = api.timers.setTimeout(this._trackConsolidated.bind(this, id), ms);
+    var o = this.consolidating[id];
+    if (!o) {
+      properties[prop] = 1;
+      this.consolidating[id] = {
+        timeout: t,
+        eventName: eventName,
+        properties: properties,
+        prop: prop
+      };
+    } else {
+      o.properties[o.prop]++;
+      api.timers.clearTimeout(o.timeout);
+      o.timeout = t;
+    }
+  },
+  _trackConsolidated: function (id) {
+    var o = this.consolidating[id];
+    delete this.consolidating[id];
+    this.track(o.eventName, o.properties);
   },
   catchUp: function () {
     var that = this;
@@ -587,7 +610,8 @@ api.port.on({
         canonical: !tab.usedHistoryApi && data.canonical || undefined,
         og: !tab.usedHistoryApi && data.og || undefined,
         title: !tab.usedHistoryApi && data.ogTitle || data.title,
-        guided: data.guided
+        guided: data.guided,
+        how: data.how
       }, function done(keep) {
         log('[keep:done]', keep);
         // main and secret are mutually exclusive
@@ -619,6 +643,9 @@ api.port.on({
       }
       storeRecentLib(libraryId);
     }
+    if (data.libraryId) {
+      tracker.track('user_clicked_pane', {type: 'libraryChooser', action: 'kept', guided: data.guided});
+    }
   },
   unkeep: function (data, respond, tab) {
     log('[unkeep]', data);
@@ -641,6 +668,7 @@ api.port.on({
     if (d && d.keeps.length === 1) {
       api.tabs.emit(tab, 'kept', {kept: null});
     }
+    tracker.track('user_clicked_pane', {type: 'libraryChooser', action: 'unkept'});
   },
   keeps_and_libraries: function (_, respond, tab) {
     var d = pageData[tab.nUri];
@@ -739,26 +767,7 @@ api.port.on({
     }
   },
   suggest_tags: function (data, respond) {
-    var recentTags = loadRecentTags().filter(notIn(data.tags));
-    if (recentTags.length >= data.n && !data.q) {
-      recentTags.length = data.n;
-      respond(recentTags.map(makeTagObj));
-    } else {
-      var respondWith = function (tags) {
-        var nMore = data.n - tags.length;
-        if (nMore > 0) {
-          var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
-          var matchingRecentTags = sf.filter(data.q, recentTags.filter(notIn(tags.map(getTag))));
-          tags.push.apply(tags, matchingRecentTags.slice(0, nMore).map(makeTagObj, {sf: sf, q: data.q}));
-        }
-        respond(tags);
-      };
-      ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, function (tags) {
-        respondWith(tags.filter(tagNotIn(data.tags)));
-      }, function () {
-        respondWith([]);
-      });
-    }
+    ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, respond, respond.bind(null, []));
   },
   tag: function (data, respond, tab) {
     var d = pageData[tab.nUri];
@@ -774,6 +783,7 @@ api.port.on({
         storeRecentTag(resp.tag);
       }, respond.bind(null, false));
     }
+    tracker.track('user_clicked_pane', {type: 'keepDetails', action: 'addedTag'});
   },
   untag: function (data, respond, tab) {
     var d = pageData[tab.nUri];
@@ -788,10 +798,7 @@ api.port.on({
       }, respond.bind(null, false));
     }
     storeRecentTagRemoved(data.tag);
-  },
-  keeper_shown: function(data, _, tab) {
-    (pageData[tab.nUri] || {}).shown = true;
-    logEvent('slider', 'sliderShown', data);
+    tracker.track('user_clicked_pane', {type: 'keepDetails', action: 'removedTag'});
   },
   suppress_on_site: function(data, _, tab) {
     ajax('POST', '/ext/pref/keeperHidden', {url: tab.url, suppress: data});
@@ -825,9 +832,10 @@ api.port.on({
     }
     ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
-  set_look_here_mode: function (on) {
-    ajax('POST', '/ext/pref/lookHereMode?on=' + on);
-    if (prefs) prefs.lookHereMode = on;
+  set_look_here_mode: function (o) {
+    ajax('POST', '/ext/pref/lookHereMode?on=' + o.on);
+    if (prefs) prefs.lookHereMode = o.on;
+    tracker.track('user_clicked_pane', {type: o.from, action: o.on ? 'toggledLookHereOn' : 'toggledLookHereOff'});
   },
   set_enter_to_send: function(data) {
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
@@ -846,34 +854,56 @@ api.port.on({
       api.tabs.emit(tab, {e: 'hide_ext_msg_intro', l: 'hide_library_intro'}[data.type]);
     });
     (prefs || {})[prefName] = false;
-    tracker.track('user_was_notified', {
-      action: 'click',
-      subaction: data.action,
-      channel: 'kifi',
-      subchannel: 'tooltip',
-      category: {e: 'extMsgFTUE', l: 'libFTUE'}[data.type]
-    });
+    if (data.action) {
+      tracker.track('user_clicked_notification', {
+        category: {e: 'extMsgFTUE', l: 'libFTUE'}[data.type],
+        action: data.action,
+        subaction: data.subaction
+      });
+    }
   },
   track_ftue: function (type) {
     var category = {e: 'extMsgFTUE', l: 'libFTUE'}[type];
     if (!category) return;
     tracker.track('user_was_notified', {
-      action: 'open',
-      channel: 'kifi',
-      subchannel: 'tooltip',
-      category: category
+      category: category,
+      action: 'shown'
     });
+  },
+  track_pane_view: function (data) {
+    tracker.track('user_viewed_pane', data);
+  },
+  track_pane_click: function (data) {
+    tracker.track('user_clicked_pane', data);
+  },
+  track_notified: function (data) {
+    tracker.track('user_was_notified', data);
+  },
+  track_notification: function (data) {
+    tracker.trackConsolidated('user_was_notified', extend({action: 'shown'}, data.properties), 'windows', data.id, 1200);
+  },
+  track_notification_click: function (data) {
+    tracker.track('user_clicked_notification', data);
+  },
+  keeper_shown: function (data, _, tab) {
+    (pageData[tab.nUri] || {}).shown = true;
+    logEvent('slider', 'sliderShown', data.urls);
+    if (data.action) {
+      tracker.track('user_expanded_keeper', {action: data.action});
+    }
   },
   log_search_event: function(data) {
     ajax('search', 'POST', '/ext/search/events/' + data[0], data[1]);
   },
-  import_contacts: function (source) {
+  import_contacts: function (data) {
     api.tabs.selectOrOpen(webBaseUri() + '/contacts/import');
-    tracker.track('user_clicked_pane', {
-      type: source,
-      action: 'importGmail',
-      subsource: 'composeTypeahead'
-    });
+    if (data) {
+      tracker.track('user_clicked_pane', {
+        type: data.type,
+        action: 'importedGmailContacts',
+        subsource: data.subsource
+      });
+    }
   },
   screen_capture: function (data, respond) {
     api.screenshot(function (drawableEl, canvas) {
@@ -916,6 +946,14 @@ api.port.on({
     } else {
       discardDraft(data.to ? [tab.nUri, tab.url] : [currentThreadId(tab)]);
     }
+  },
+  track_draft: function (data, _, tab) {
+    var d = pageData[tab.nUri];
+    var how = d && d.howKept();
+    tracker.track('user_messaged', extend({
+      type: data.threadId ? 'draftedReply' : 'draftedConversationStarter',
+      isKeep: how === 'private' || how === 'public'
+    }, data));
   },
   send_message: function (data, respond, tab) {
     discardDraft([tab.nUri, tab.url]);
@@ -960,13 +998,19 @@ api.port.on({
       socket.send(['set_message_read', o.messageId]);
     });
   },
-  set_message_read: function (o) {
+  set_message_read: function (o, _, tab) {
     markRead(o.threadId, o.messageId, o.time);
     socket.send(['set_message_read', o.messageId]);
+    if (o.from === 'toggle') {
+      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markedRead', category: trackingCategory(o.category)});
+    } else if (o.from === 'notice') {
+      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'visited', category: trackingCategory(o.category)});
+    }
   },
-  set_message_unread: function (o) {
+  set_message_unread: function (o, _, tab) {
     markUnread(o.threadId, o.messageId);
     socket.send(['set_message_unread', o.messageId]);
+    tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markedUnread', category: trackingCategory(o.category)});
   },
   get_page_thread_count: function(_, __, tab) {
     sendPageThreadCount(tab, null, true);
@@ -1085,7 +1129,7 @@ api.port.on({
         arr.push(tab);
       }
       tabsByLocator[loc] = arr || [tab];
-      tracker.track('user_viewed_pane', {type: loc.lastIndexOf('/messages/', 0) === 0 ? 'chat' : loc.substr(1)});
+      tracker.track('user_viewed_pane', {type: trackingLocator(loc), subsource: o.how});
       if (loc === '/messages:unread') {
         store('unread', true);
       } else if (loc === '/messages:all') {
@@ -1229,6 +1273,9 @@ api.port.on({
           awaitDeepLink(link, tabId);
         });
       }
+    }
+    if (link.from === 'notice') {
+      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'view', category: 'message'});
     }
   },
   open_support_chat: function (_, __, tab) {
@@ -2019,13 +2066,25 @@ function isUnread(th) {
   return th.unread;
 }
 
-function paneIsOpen(tabId) {
+function paneLocatorFor(tabId) {
   var hasThisTabId = idIs(tabId);
   for (var loc in tabsByLocator) {
     if (tabsByLocator[loc].some(hasThisTabId)) {
-      return true;
+      return loc;
     }
   }
+}
+
+function trackingLocatorFor(tabId) {
+  return trackingLocator(paneLocatorFor(tabId));
+}
+
+function trackingLocator(loc) {
+  return loc && (loc.lastIndexOf('/messages/', 0) === 0 ? 'chat' : loc === '/messages' ? 'messages:page' : loc.substr(1));
+}
+
+function trackingCategory(cat) {
+  return cat === 'global' ? 'announcement' : cat;
 }
 
 function updateTabsWithKeptState() {
@@ -2717,6 +2776,9 @@ function clearSession() {
 
 function deauthenticate() {
   log('[deauthenticate]');
+  tracker.track('user_clicked_pane', {type: 'settings', action: 'loggedOut'});
+  tracker.catchUp();
+  tracker.sendBatch();
   clearSession();
   store('logout', Date.now());
   ajax('DELETE', '/ext/auth');

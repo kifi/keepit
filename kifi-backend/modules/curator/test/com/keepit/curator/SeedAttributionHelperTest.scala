@@ -36,7 +36,7 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
       LimitedAugmentationInfo(keepers, 0, keepersTotal, libraries, 0, librariesTotal, Seq.empty, 0)
     }
 
-    override def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
+    override def augment(userId: Option[Id[User]], showPublishedLibraries: Boolean, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
       Future.successful(items.map(item => genAugmentationInfo(item.uri)))
     }
   }
