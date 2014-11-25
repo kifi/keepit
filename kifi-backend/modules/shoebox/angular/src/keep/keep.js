@@ -82,7 +82,7 @@ angular.module('kifi')
         var useBigLayout = false;
         var strippedSchemeRe = /^https?:\/\//;
         var domainTrailingSlashRe = /^([^\/]*)\/$/;
-        var youtubeLinkRe = /.*(?:youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=)([^#\&\?]*).*/;
+        var youtubeLinkRe = /^.*(youtu.be\/|v\/|e\/|u\/\w+\/|embed\/|v=)([^#\&\?]*).*/;
 
         var tagDragMask = element.find('.kf-tag-drag-mask');
         var mouseX, mouseY;
@@ -124,8 +124,8 @@ angular.module('kifi')
         function isYoutubeCard(url) {
           var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
           var match = url.substr(strippedSchemeLen).match(youtubeLinkRe);
-          if (match && match[1]) {
-            scope.youtubeId = match[1];
+          if (match && match[2] && match[2].length === 11) { // youtube Ids are always 11 characters
+            scope.youtubeId = match[2];
           }
           return scope.youtubeId;
         }
