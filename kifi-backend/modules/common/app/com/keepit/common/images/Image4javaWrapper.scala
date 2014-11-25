@@ -34,7 +34,7 @@ class Image4javaWrapper @Inject() (
     val convert = command()
     val output = new ArrayListOutputConsumer()
     convert.setOutputConsumer(output)
-    catchExceptions(convert, operation)
+    handleExceptions(convert, operation)
     println("Image Magic Version:")
     output.getOutput foreach { line =>
       println(line)
@@ -63,13 +63,13 @@ class Image4javaWrapper @Inject() (
 
     addOptions(format, operation)
 
-    operation.addImage("-")
+    operation.addImage(s"${format.value}:-")
 
     val convert = command()
     val s2b = new Stream2BufferedImage()
     convert.setOutputConsumer(s2b)
 
-    catchExceptions(convert, operation, Some(image))
+    handleExceptions(convert, operation, Some(image))
 
     s2b.getImage
   }
@@ -86,7 +86,7 @@ class Image4javaWrapper @Inject() (
     new String(baos.toByteArray, UTF8)
   }
 
-  private def catchExceptions(convert: ConvertCmd, operation: IMOperation, image: Option[BufferedImage] = None): Unit = {
+  private def handleExceptions(convert: ConvertCmd, operation: IMOperation, image: Option[BufferedImage] = None): Unit = {
     if (playMode == Mode.Test) {
       println(getScript(convert, operation))
     }
