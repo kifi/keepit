@@ -9,7 +9,7 @@
 
 k.guide.step = k.guide.step || function () {
   var spotlight, $stage, $steps, $loading, timeout, arrow, steps, opts, stepIdx, animTick;
-  var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel keydown keypress keyup'.split(' ');
+  var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel keydown keypress keyup input'.split(' ');
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
   return show;
 
@@ -392,7 +392,7 @@ k.guide.step = k.guide.step || function () {
 
   function screenEvent(e) {
     var step = stepIdx != null && steps[stepIdx];
-    if (step && step.allow && (proceed = allowEvent(e, step.allow)) != null) {
+    if (step && step.allow && (proceed = allowEvent(e, step.allow)) != null || e.type === 'input') {
       // do not interfere
       e.guided = true;
       if (proceed) {

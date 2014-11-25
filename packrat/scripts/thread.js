@@ -84,7 +84,7 @@ k.panes.thread = k.panes.thread || function () {
     var compose = k.compose($tall, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
     var $holder = $tall.find('.kifi-scroll-inner')
       .preventAncestorScroll()
-      .handleLookClicks()
+      .handleLookClicks('chat')
       .hoverfu('.kifi-message-email-learn', function (configureHover) {
         var link = this;
         k.render('html/keeper/message_email_tooltip', function (html) {
@@ -106,7 +106,7 @@ k.panes.thread = k.panes.thread || function () {
 
     $paneBox
     .on('kifi:removing', onRemoving.bind(null, compose))
-    .on('kifi:remove', onRemoved.bind(null, $who.find('.kifi-message-header'), compose, heighter));
+    .on('kifi:remove', onRemoved.bind(null, threadId, $who.find('.kifi-message-header'), compose, heighter));
     if ($paneBox.data('shown')) {
       compose.focus();
     } else {
@@ -122,9 +122,9 @@ k.panes.thread = k.panes.thread || function () {
     $(window).off('resize.thread');
   }
 
-  function onRemoved($header, compose, heighter) {
+  function onRemoved(threadId, $header, compose, heighter) {
     k.messageHeader.destroy($header);
-    compose.destroy();
+    compose.destroy({threadId: threadId});
     heighter.destroy();
   }
 

@@ -37,7 +37,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     me_change: onMeChange,
     guide: loadAndDo.bind(null, 'guide', 'show'),
     show_pane: loadAndDo.bind(null, 'pane', 'show'),
-    button_click: loadAndDo.bind(null, 'pane', 'toggle', 'button'),
+    button_click: loadAndDo.bind(null, 'pane', 'toggle', 'icon'),
     compose: loadAndDo.bind(null, 'keeper', 'compose'),
     auto_engage: loadAndDo.bind(null, 'keeper', 'engage'),
     init: function(o) {
@@ -72,7 +72,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
         tile.dataset.kept = o.kept;
         if ('duplicate' in o) {
           if (o.duplicate) {
-            loadAndDo('keeper', 'showKeepBox');
+            loadAndDo('keeper', 'showKeepBox', 'key');
           } else {
             tileCard.textContent = '';
             tileCard.clientHeight; // forces layout
@@ -99,8 +99,8 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     count: function(n) {
       tile && updateCount(n);
     },
-    reset: cleanUpDom.bind(null, true),
-    silence: cleanUpDom.bind(null, true),
+    reset: cleanUpDom.bind(null, 'history'),
+    silence: cleanUpDom.bind(null, 'silence'),
     unsilenced: api.require.bind(api, 'scripts/unsilenced.js', function () {
       showUnsilenced();
     })
@@ -119,9 +119,9 @@ k.tile = k.tile || function () {  // idempotent for Chrome
           } else if (!k.me) {
             toggleLoginDialog();
           } else if (k.keepBox && k.keepBox.showing()) {
-            k.keepBox.keep(e.altKey);
+            k.keepBox.keep(e.altKey, e.guided);
           } else {
-            api.port.emit('keep', withTitles(withUrls({secret: e.altKey})));
+            api.port.emit('keep', withTitles(withUrls({secret: e.altKey, how: 'key'})));
           }
           e.preventDefault();
         }
@@ -252,15 +252,15 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     tile.style["transform" in tile.style ? "transform" : "webkitTransform"] = "translate(0," + px + "px)";
   }
 
-  function cleanUpDom(leaveTileInDoc) {
+  function cleanUpDom(trigger) {
     if (onResize.bound) {  // crbug.com/405705
       window.removeEventListener('resize', onResize);
       onResize.bound = false;
     }
     if (tile) {
-      if (leaveTileInDoc) {
+      if (trigger) {
         if (k.keeper) {
-          k.keeper.hide('action');
+          k.keeper.hide(trigger);
         }
         tile.removeAttribute('data-kept');
       } else {

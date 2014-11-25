@@ -30,17 +30,17 @@ api.port.emit('prefs', function (prefs) {
   }
 
   function onClickX(e) {
-    hide(e, 'close');
+    hide(e, 'clickedX');
   }
 
   function onClickImport(e) {
-    api.port.emit('import_contacts', 'external_messaging_intro_tooltip');
-    hide(e, 'importGmail');
+    api.port.emit('import_contacts');
+    hide(e, 'importedGmailContacts');
   }
 
   function onKeyDown(e) {
     if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-      hide(e, 'close');
+      hide(e, 'hitEsc');
     }
   }
 
@@ -54,8 +54,13 @@ api.port.emit('prefs', function (prefs) {
       $intro = null;
       if (e) {
         e.preventDefault();
+        var subaction;
+        if (action && action !== 'importedGmailContacts') {
+          subaction = action;
+          action = 'closed';
+        }
+        api.port.emit('terminate_ftue', {type: 'e', action: action, subaction: subaction});
       }
-      api.port.emit('terminate_ftue', {type: 'e', action: action});
     }
   }
 });
