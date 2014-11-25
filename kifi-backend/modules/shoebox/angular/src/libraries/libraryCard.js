@@ -560,6 +560,12 @@ angular.module('kifi')
         });
         scope.$on('$destroy', deregisterLibraryUpdated);
 
+        var deregisterLoggedOutLibrarySearch = $rootScope.$on('loggedOutLibrarySearch', function () {
+          scope.onSearchInputFocus();  // Actually should not call an event handler, but a DOM thingie.
+        });
+        scope.$on('$destroy', deregisterLoggedOutLibrarySearch);
+
+
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);
         $window.addEventListener('resize', adjustFollowerPicsSizeOnResize);

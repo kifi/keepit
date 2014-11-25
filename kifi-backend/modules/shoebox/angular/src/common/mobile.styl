@@ -15,7 +15,7 @@
       top: -2px
 
     .kf-header-left
-      width: 450px
+      width: 410px
       margin-top: 23px
 
       .public-header-tagline
@@ -41,6 +41,20 @@
 
       .public-header-dot
         font-size: 20px
+
+    .public-header-search-icon
+      position: absolute
+      top: 43px
+      right: 230px
+      width: 31px
+      height: 42px
+      display: block
+      background-image: url('/img/sprites.png')
+      background-position: -159px -205px
+      background-size: 310px auto
+
+      &:hover
+        cursor: pointer
 
   .kf-col-island
     margin-top: 40px
@@ -111,6 +125,9 @@
             margin: 0 auto
             display block
             margin: 0 0 30px
+
+        .kf-keep-lib-search-input
+          display: none
 
         .kf-keep-footer
           padding-top: 34px
@@ -201,3 +218,9 @@
         font-size: 42px
         line-height: 100px
         margin-bottom: 30px
+
+  .library-search .library-card
+  .library-card.library-search-in-progress
+    .kf-keep-lib-owner
+      position: relative  // placeholder for now.
+

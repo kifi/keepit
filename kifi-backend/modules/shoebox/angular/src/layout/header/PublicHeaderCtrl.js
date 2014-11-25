@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.controller('PublicHeaderCtrl', ['$scope', 'env', 'signupService', 'platformService', 'libraryService',
-  function ($scope, env, signupService, platformService, libraryService) {
+.controller('PublicHeaderCtrl', ['$scope', '$rootScope', 'env', 'signupService', 'platformService', 'libraryService',
+  function ($scope, $rootScope, env, signupService, platformService, libraryService) {
     $scope.navBase = env.navBase;
 
     $scope.clickLogo = function () {
@@ -15,6 +15,10 @@ angular.module('kifi')
           });
         }
       }});
+    };
+
+    $scope.onSearchIconClick = function () {
+      $rootScope.$emit('loggedOutLibrarySearch');
     };
 
     $scope.join = function ($event) {
