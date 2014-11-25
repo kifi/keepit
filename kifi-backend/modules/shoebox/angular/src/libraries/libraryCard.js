@@ -455,13 +455,12 @@ angular.module('kifi')
               'left': headerInnerElement.width() - 275 - 10 + 'px'
             });
 
-
+            // Focus for mobile devices.
+            $timeout(function () {
+              debugger;
+              angular.element('.kf-keep-lib-search-input').focus();
+            }, 1000);
           }
-
-          // Focus for mobile devices.
-          // $timeout(function () {
-          //   angular.element('.kf-keep-lib-search-input').focus();
-          // });
         };
 
         scope.onSearchExit = function () {
