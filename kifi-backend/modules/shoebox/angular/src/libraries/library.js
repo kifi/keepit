@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
-  'modalService', 'profileService', 'util', '$window', '$analytics', 'librarySearch',
+  'modalService', 'profileService', 'util', '$window', '$analytics', 'librarySearch', 'platformService',
   function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
-            modalService, profileService, util, $window, $analytics, librarySearch) {
+            modalService, profileService, util, $window, $analytics, librarySearch, platformService) {
     //
     // Internal data.
     //
@@ -76,6 +76,11 @@ angular.module('kifi')
 
         $scope.hasMore = $scope.keeps.length < $scope.library.numKeeps;
         $scope.loading = false;
+
+        // Preload for non-mobile public pages
+        if (!$scope.$root.userLoggedIn && $scope.hasMore && $scope.keeps.length < 30 && !platformService.isSupportedMobilePlatform()) {
+          $scope.$evalAsync($scope.getNextKeeps.bind(null, $scope.keeps.length));
+        }
 
         return $scope.keeps;
       });
@@ -233,6 +238,9 @@ angular.module('kifi')
         $rootScope.$emit('libraryUrl', $scope.library);
         if ($scope.library.kind === 'user_created' && $scope.library.access !== 'none') {
           $rootScope.$emit('lastViewedLib', $scope.library);
+        }
+        if ($scope.hasMore) {
+          $scope.$evalAsync($scope.getNextKeeps.bind(null, library.keeps.length)); // fetch the next page
         }
       }, function onError(resp) {
         if (resp.data && resp.data.error) {
