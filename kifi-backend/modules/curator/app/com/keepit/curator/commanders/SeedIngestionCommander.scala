@@ -20,6 +20,7 @@ import scala.concurrent.Future
 @Singleton
 class SeedIngestionCommander @Inject() (
     allKeepIngestor: AllKeepSeedIngestionHelper,
+    allLibraryIngestor: AllLibrarySeedIngestionHelper,
     topUrisIngestor: TopUriSeedIngestionHelper,
     libraryMembershipIngestor: LibraryMembershipIngestionHelper,
     airbrake: AirbrakeNotifier,
@@ -44,22 +45,37 @@ class SeedIngestionCommander @Inject() (
     log.info("YZ: starting ingestAll outside lock")
     ingestionLock.withLockFuture {
       log.info("XYZ: starting ingestAll inside lock")
-      val fut = ingestAllKeeps().flatMap { _ =>
-        log.info("XYZ: ingest all keeps future completed")
-        ingestLibraryMemberships.flatMap { _ =>
-          log.info("XYZ: ingest library memberships future completed")
-          val userIds = usersToIngestGraphDataFor()
-          FutureHelpers.sequentialExec(userIds)(ingestTopUris)
-        }
+
+      val ingestLibMembershipsF = ingestLibraryMemberships()
+      ingestLibMembershipsF.onComplete {
+        case Failure(ex) =>
+          log.error("Failure occurred during library membership ingestion.")
+          airbrake.notify("Failure occurred during library membership ingestion.", ex)
+        case _ => log.info("XYZ: ingest library membership future completed")
       }
-      fut.onComplete {
-        case Failure(ex) => {
-          log.error("Failure occured during ingestion.")
-          airbrake.notify("Failure occured during ingestion.", ex)
-        }
+
+      val ingestLibrariesF = ingestAllLibraries()
+      ingestLibrariesF.onComplete {
+        case Failure(ex) =>
+          log.error("Failure occurred during library ingestion.")
+          airbrake.notify("Failure occurred during library ingestion.", ex)
+        case _ => log.info("XYZ: ingest library future completed")
+      }
+
+      val ingestKeepsF = ingestAllKeeps().flatMap { _ =>
+        log.info("XYZ: ingest all keeps future completed")
+        val userIds = usersToIngestGraphDataFor()
+        FutureHelpers.sequentialExec(userIds)(ingestTopUris)
+      }
+
+      ingestKeepsF.onComplete {
+        case Failure(ex) =>
+          log.error("Failure occurred during keeps ingestion.")
+          airbrake.notify("Failure occurred during keeps ingestion.", ex)
         case _ =>
       }
-      fut.map(_ => true)
+
+      Future.sequence(ingestLibMembershipsF :: ingestKeepsF :: ingestLibrariesF :: Nil) map (_ => true)
     }
   }
 
@@ -67,8 +83,12 @@ class SeedIngestionCommander @Inject() (
     log.info("XYZ: Ingested one batch of keeps.")
   }
 
-  def ingestLibraryMemberships(): Future[Unit] = FutureHelpers.whilef(libraryMembershipIngestor(INGESTION_BATCH_SIZE)) {
+  def ingestAllLibraries(): Future[Unit] = FutureHelpers.whilef(allLibraryIngestor(INGESTION_BATCH_SIZE)) {
     log.info("XYZ: Ingested one batch of libraries.")
+  }
+
+  def ingestLibraryMemberships(): Future[Unit] = FutureHelpers.whilef(libraryMembershipIngestor(INGESTION_BATCH_SIZE)) {
+    log.info("XYZ: Ingested one batch of library memberships.")
   }
 
   def ingestTopUris(userId: Id[User]): Future[Unit] = {

@@ -7,6 +7,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.db.slick._
 import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
 import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.curator.model._
 import com.keepit.curator.commanders.SeedIngestionCommander
@@ -378,6 +379,47 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         Await.result(commander.ingestLibraryMemberships(), Duration(10, "seconds"))
         val libMems2 = db.readOnlyMaster { implicit session => libMemRepo.all() }
         libMems2.length === 3
+
+      }
+    }
+
+    "ingest libraries correctly by sequence numbers" in {
+      withDb(modules: _*) { implicit injector =>
+        val shoebox = shoeboxClientInstance()
+        val libInfoRepo = inject[CuratorLibraryInfoRepo]
+        val commander = inject[SeedIngestionCommander]
+
+        val now = currentDateTime
+        val library = Library(name = "foo", ownerId = Id[User](1), visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("foo"),
+          memberCount = 1, kind = LibraryKind.SYSTEM_MAIN, lastKept = Some(now.minus(50)))
+        shoebox.saveLibraries(
+          library,
+          library.copy(visibility = LibraryVisibility.SECRET, kind = LibraryKind.SYSTEM_SECRET)
+        )
+
+        Await.ready(commander.ingestAllLibraries(), Duration(10, "seconds"))
+        db.readOnlyMaster { implicit session => libInfoRepo.count } === 2
+
+        shoebox.saveLibraries(library.copy(visibility = LibraryVisibility.PUBLISHED, kind = LibraryKind.USER_CREATED))
+        Await.ready(commander.ingestAllLibraries(), Duration(10, "seconds"))
+
+        val libInfos = db.readOnlyMaster { implicit session => libInfoRepo.all() }
+        libInfos.size === 3
+        libInfos(0).visibility === LibraryVisibility.DISCOVERABLE
+        libInfos(0).kind === LibraryKind.SYSTEM_MAIN
+        libInfos(1).visibility === LibraryVisibility.SECRET
+        libInfos(1).kind === LibraryKind.SYSTEM_SECRET
+        libInfos(2).visibility === LibraryVisibility.PUBLISHED
+        libInfos(2).kind === LibraryKind.USER_CREATED
+
+        val lib1 = shoebox.saveLibraries(shoebox.allLibraries(
+          libInfos(0).libraryId).copy(lastKept = Some(now.minus(10))))(0)
+
+        Await.ready(commander.ingestAllLibraries(), Duration(10, "seconds"))
+        val updatedLib = db.readOnlyMaster { implicit session => libInfoRepo.getByLibraryId(lib1.id.get) }
+        libInfos(0).lastKept.get === now.minus(50)
+        updatedLib.get.lastKept.get === now.minus(10)
+        updatedLib.get.libraryLastUpdated === lib1.updatedAt
 
       }
     }

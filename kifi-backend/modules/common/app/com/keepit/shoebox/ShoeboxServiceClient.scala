@@ -114,6 +114,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def addInteractions(userId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]): Unit
   def processAndSendMail(email: EmailToSend): Future[Boolean]
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]]
+  def getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[DetailedLibraryView]]
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
@@ -716,6 +717,10 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]] = {
     call(Shoebox.internal.getLibrariesChanged(seqNum, fetchSize)).map { r => (r.json).as[Seq[LibraryView]] }
+  }
+
+  def getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[DetailedLibraryView]] = {
+    call(Shoebox.internal.getDetailedLibrariesChanged(seqNum, fetchSize)).map { r => (r.json).as[Seq[DetailedLibraryView]] }
   }
 
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]] = {
