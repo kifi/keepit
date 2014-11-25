@@ -124,7 +124,7 @@ angular.module('kifi')
         function isYoutubeCard(url) {
           var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
           var match = url.substr(strippedSchemeLen).match(youtubeLinkRe);
-          if (match && match[1]) {
+          if (match && match[1] && match[1].length === 11) { // youtube Ids are always 11 characters
             scope.youtubeId = match[1];
           }
           return scope.youtubeId;
