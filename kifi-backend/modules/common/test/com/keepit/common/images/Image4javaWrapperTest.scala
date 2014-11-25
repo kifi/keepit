@@ -44,7 +44,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       1 === 1
     }
 
-    def range(actual: Int, expected: Int, window: Double = 0.03): Result = {
+    def range(actual: Int, expected: Int, window: Double = 0.04): Result = {
       val delta = Math.abs((actual - expected).toDouble / actual.toDouble)
       val msg = s"actual: $actual, expected: $expected, window: $window, delta = $delta"
       if (delta > window) {
