@@ -42,10 +42,10 @@ class SeedIngestionCommander @Inject() (
   val keepIngestionLock = new ReactiveLock()
   val libraryIngestionLock = new ReactiveLock()
 
-  def ingestAll(): Future[Unit] = {
+  def ingestAll(): Unit = {
     log.info("XYZ: starting ingestAll outside lock")
 
-    val keepIngestLockF = keepIngestionLock.withLockFuture {
+    keepIngestionLock.withLockFuture {
       log.info("XYZ: starting ingestAll inside keepIngestLock")
 
       val ingestKeepsF = ingestAllKeeps().flatMap { _ =>
@@ -64,7 +64,7 @@ class SeedIngestionCommander @Inject() (
       ingestKeepsF map (_ => true)
     }
 
-    val libraryIngestLockF = libraryIngestionLock.withLockFuture {
+    libraryIngestionLock.withLockFuture {
       log.info("XYZ: starting ingestAll inside libraryIngestLock")
 
       val ingestLibMembershipsF = ingestLibraryMemberships()
@@ -85,8 +85,6 @@ class SeedIngestionCommander @Inject() (
 
       Future.sequence(ingestLibMembershipsF :: ingestLibrariesF :: Nil) map (_ => ())
     }
-
-    Future.sequence(keepIngestLockF :: libraryIngestLockF :: Nil) map (_ => ())
   }
 
   def ingestAllKeeps(): Future[Unit] = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {

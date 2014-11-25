@@ -18,7 +18,7 @@ CREATE TABLE curator_library_info (
     library_last_updated DATETIME NOT NULL,
 
     PRIMARY KEY (id),
-    UNIQUE INDEX curator_library_info_u_keep_id (library_id),
+    UNIQUE INDEX curator_library_info_u_library_id (library_id),
     INDEX curator_library_info_i_library_id_state (library_id, state)
 );
 
