@@ -74,7 +74,22 @@ class Image4javaWrapper @Inject() (
     s2b.getImage
   }
 
+  private def getScript(convert: ConvertCmd, operation: IMOperation): String = {
+    val baos = new ByteArrayOutputStream()
+    val writer = new PrintWriter(baos)
+    try {
+      convert.createScript(writer, operation, new java.util.Properties(System.getProperties))
+    } finally {
+      writer.close()
+      baos.close()
+    }
+    new String(baos.toByteArray, UTF8)
+  }
+
   private def catchExceptions(convert: ConvertCmd, operation: IMOperation, image: Option[BufferedImage] = None): Unit = {
+    if (playMode == Mode.Test) {
+      println(getScript(convert, operation))
+    }
     try {
       image match {
         case None => convert.run(operation)
@@ -94,16 +109,8 @@ class Image4javaWrapper @Inject() (
               |  $ sudo apt-get install imagemagick
             """.stripMargin, e)
         }
-        val baos = new ByteArrayOutputStream()
-        val writer = new PrintWriter(baos)
-        try {
-          convert.createScript(writer, operation, new java.util.Properties(System.getProperties))
-        } finally {
-          writer.close()
-          baos.close()
-        }
-        val script = new String(baos.toByteArray, UTF8)
-        throw new Exception(s"Error executing underlying tool: ${convert.getErrorText.mkString("\n")}. Generated script is:\n$script", e)
+        val script = getScript(convert, operation)
+        throw new Exception(s"Error executing underlying tool: ${convert.getErrorText.mkString("\n")}\n Generated script is:\n$script", e)
     }
   }
 
