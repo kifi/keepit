@@ -63,7 +63,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       resized.getWidth === 20
       resized.getHeight === 12 // == 38 * 20 / 66
       range(imageByteSize(resized, "png"), 270)
-      persistImage(resized, "png") === 265
+//      persistImage(resized, "png") === 265
     }
 
     "box resize jpg" in {
