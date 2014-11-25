@@ -48,4 +48,9 @@ class MatrixUtilsTest extends Specification {
     kl = MatrixUtils.KL_divergence(qs, ps)
     abs(kl - 0.27807) should be < 1e-4
   }
+
+  "entropy works" in {
+    val v = Array(0.1, 0.2, 0.7)
+    abs(MatrixUtils.entropy(v) - 1.16) should be < 1e-2
+  }
 }

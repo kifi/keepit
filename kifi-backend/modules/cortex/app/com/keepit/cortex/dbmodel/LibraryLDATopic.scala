@@ -2,7 +2,7 @@ package com.keepit.cortex.dbmodel
 
 import com.keepit.common.db.{ States, ModelWithState, State, Id }
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.DenseLDA
+import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA }
 import com.keepit.model.Library
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -17,7 +17,12 @@ case class LibraryLDATopic(
     version: ModelVersion[DenseLDA],
     numOfEvidence: Int,
     topic: Option[LibraryTopicMean],
-    state: State[LibraryLDATopic]) extends ModelWithState[LibraryLDATopic] {
+    state: State[LibraryLDATopic],
+    firstTopic: Option[LDATopic] = None,
+    secondTopic: Option[LDATopic] = None,
+    thirdTopic: Option[LDATopic] = None,
+    firstTopicScore: Option[Float] = None,
+    entropy: Option[Float] = None) extends ModelWithState[LibraryLDATopic] {
   def withId(id: Id[LibraryLDATopic]): LibraryLDATopic = copy(id = Some(id))
   def withUpdateTime(time: DateTime): LibraryLDATopic = copy(updatedAt = time)
 }

@@ -31,6 +31,8 @@ class LDALibraryUpdaterImpl @Inject() (
   private val min_num_words = 50
   protected val min_num_evidence = 1
 
+  type Auxiliary = (Option[LDATopic], Option[LDATopic], Option[LDATopic], Option[Float], Option[Float]) // (1st topic, 2nd topic, 3rd topic, 1st topic score, entropy)
+
   def update(): Unit = {
     representer.versions.foreach { implicit version =>
       val tasks = fetchTasks
@@ -67,10 +69,23 @@ class LDALibraryUpdaterImpl @Inject() (
     if (shouldComputeFeature(libId, model)) {
       val feats = db.readOnlyReplica { implicit s => uriTopicRepo.getLibraryURIFeatures(libId, version, min_num_words) }
       val mean = getLibraryTopicMean(feats)
+      val (firstOpt, secondOpt, thirdOpt, firstScoreOpt, entropyOpt) = getAuxiliary(mean)
       val state = if (mean.isDefined) LibraryLDATopicStates.ACTIVE else LibraryLDATopicStates.NOT_APPLICABLE
       val toSave = model match {
-        case Some(m) => m.copy(numOfEvidence = feats.size, topic = mean, state = state)
-        case None => LibraryLDATopic(libraryId = libId, version = version, numOfEvidence = feats.size, topic = mean, state = state)
+        case Some(m) =>
+          m.copy(numOfEvidence = feats.size, topic = mean, state = state, firstTopic = firstOpt, secondTopic = secondOpt, thirdTopic = thirdOpt, firstTopicScore = firstScoreOpt, entropy = entropyOpt)
+        case None =>
+          LibraryLDATopic(
+            libraryId = libId,
+            version = version,
+            numOfEvidence = feats.size,
+            topic = mean,
+            state = state,
+            firstTopic = firstOpt,
+            secondTopic = secondOpt,
+            thirdTopic = thirdOpt,
+            firstTopicScore = firstScoreOpt,
+            entropy = entropyOpt)
       }
       db.readWrite { implicit s => libraryLDARepo.save(toSave) }
     }
@@ -89,6 +104,18 @@ class LDALibraryUpdaterImpl @Inject() (
       val vecs = feats.map { x => toDoubleArray(x.value) }
       val mean = average(vecs)
       Some(LibraryTopicMean(mean))
+    }
+  }
+
+  private def getAuxiliary(libTopic: Option[LibraryTopicMean]): Auxiliary = {
+    libTopic match {
+      case Some(mean) =>
+        val sorted = mean.value.zipWithIndex.sortBy(-_._1).take(3)
+        val Array(first, second, third) = sorted.map { _._2 }
+        val firstTopicScore = sorted(0)._1
+        val entro = entropy(mean.value).toFloat
+        (Some(LDATopic(first)), Some(LDATopic(second)), Some(LDATopic(third)), Some(firstTopicScore), Some(entro))
+      case None => (None, None, None, None, None)
     }
   }
 }
