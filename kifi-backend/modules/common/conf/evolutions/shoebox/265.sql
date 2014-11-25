@@ -22,6 +22,6 @@ CREATE TABLE curator_library_info (
     INDEX curator_library_info_i_library_id_state (library_id, state)
 );
 
-insert into evolutions (name, description) values('264.sql', 'create curator_library_info table');
+insert into evolutions (name, description) values('265.sql', 'create curator_library_info table');
 
 # --- !Downs
