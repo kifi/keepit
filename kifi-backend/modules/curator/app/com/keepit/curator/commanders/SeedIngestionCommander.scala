@@ -39,12 +39,33 @@ class SeedIngestionCommander @Inject() (
 
   def usersToIngestGraphDataFor(): Seq[Id[User]] = getUsersWithSufficientData().toSeq
 
-  val ingestionLock = new ReactiveLock()
+  val keepIngestionLock = new ReactiveLock()
+  val libraryIngestionLock = new ReactiveLock()
 
-  def ingestAll(): Future[Boolean] = {
-    log.info("YZ: starting ingestAll outside lock")
-    ingestionLock.withLockFuture {
-      log.info("XYZ: starting ingestAll inside lock")
+  def ingestAll(): Future[Unit] = {
+    log.info("XYZ: starting ingestAll outside lock")
+
+    val keepIngestLockF = keepIngestionLock.withLockFuture {
+      log.info("XYZ: starting ingestAll inside keepIngestLock")
+
+      val ingestKeepsF = ingestAllKeeps().flatMap { _ =>
+        log.info("XYZ: ingest all keeps future completed")
+        val userIds = usersToIngestGraphDataFor()
+        FutureHelpers.sequentialExec(userIds)(ingestTopUris)
+      }
+
+      ingestKeepsF.onComplete {
+        case Failure(ex) =>
+          log.error("Failure occurred during keeps ingestion.")
+          airbrake.notify("Failure occurred during keeps ingestion.", ex)
+        case _ =>
+      }
+
+      ingestKeepsF map (_ => true)
+    }
+
+    val libraryIngestLockF = libraryIngestionLock.withLockFuture {
+      log.info("XYZ: starting ingestAll inside libraryIngestLock")
 
       val ingestLibMembershipsF = ingestLibraryMemberships()
       ingestLibMembershipsF.onComplete {
@@ -62,21 +83,10 @@ class SeedIngestionCommander @Inject() (
         case _ => log.info("XYZ: ingest library future completed")
       }
 
-      val ingestKeepsF = ingestAllKeeps().flatMap { _ =>
-        log.info("XYZ: ingest all keeps future completed")
-        val userIds = usersToIngestGraphDataFor()
-        FutureHelpers.sequentialExec(userIds)(ingestTopUris)
-      }
-
-      ingestKeepsF.onComplete {
-        case Failure(ex) =>
-          log.error("Failure occurred during keeps ingestion.")
-          airbrake.notify("Failure occurred during keeps ingestion.", ex)
-        case _ =>
-      }
-
-      Future.sequence(ingestLibMembershipsF :: ingestKeepsF :: ingestLibrariesF :: Nil) map (_ => true)
+      Future.sequence(ingestLibMembershipsF :: ingestLibrariesF :: Nil) map (_ => ())
     }
+
+    Future.sequence(keepIngestLockF :: libraryIngestLockF :: Nil) map (_ => ())
   }
 
   def ingestAllKeeps(): Future[Unit] = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
