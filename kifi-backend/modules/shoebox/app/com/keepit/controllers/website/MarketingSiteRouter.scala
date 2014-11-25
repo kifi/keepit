@@ -16,7 +16,7 @@ import scala.util.matching.Regex
 object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
 
   private def fileLoad(path: String): Option[String] = {
-    Play.resourceAsStream(s"/k/$path.html").map { stream =>
+    Play.resourceAsStream(s"/marketing/$path.html").map { stream =>
       val writer = new StringWriter()
       val fileStr = try {
         IOUtils.copy(stream, writer, "UTF-8")

@@ -105,14 +105,15 @@ object ApplicationBuild extends Build {
   ).settings(
     libraryDependencies ++= shoeboxDependencies,
     Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
+    Marketing.marketingDirectory <<= (baseDirectory in Compile) { _ / "marketing" },
     unmanagedResourceDirectories in Assets += baseDirectory.value / "angular/play-refs",
-    unmanagedResourceDirectories in Assets += baseDirectory.value / "marketing/assets",
-    unmanagedResourceDirectories in Compile += baseDirectory.value / "marketing/html",
+    unmanagedResourceDirectories in Assets += baseDirectory.value / "marketing/assets", // todo(josh) remove when all assets are confirmed to exist in the CDN
+    unmanagedResourceDirectories in Compile += baseDirectory.value / "marketing/cdn",
     javaOptions in Test += "-Dconfig.resource=application-shoebox.conf",
     // Only necessary for admin:
     includeFilter in (Assets, LessKeys.less) := "*.less"
   ).settings(
-    Frontend.gulpCommands: _*
+    Frontend.gulpCommands ++ Marketing.gulpCommands: _*
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val search = Project("search", file("modules/search")).enablePlugins(play.PlayScala).settings(
@@ -179,10 +180,11 @@ object ApplicationBuild extends Build {
     version := "0.42",
     aggregate in update := false,
     Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular" },
+    Marketing.marketingDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/marketing" },
     // Only necessary for admin:
     includeFilter in (Assets, LessKeys.less) := "*.less"
   ).settings(
-    Frontend.gulpCommands: _*
+    Frontend.gulpCommands ++ Marketing.gulpCommands: _*
   ).dependsOn(
     common % "test->test;compile->compile",
     shoebox % "test->test;compile->compile",
