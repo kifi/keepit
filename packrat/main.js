@@ -966,6 +966,14 @@ api.port.on({
       discardDraft(data.to ? [tab.nUri, tab.url] : [currentThreadId(tab)]);
     }
   },
+  track_draft: function (data, _, tab) {
+    var d = pageData[tab.nUri];
+    var how = d && d.howKept();
+    tracker.track('user_messaged', extend({
+      type: data.threadId ? 'draftedReply' : 'draftedConversationStarter',
+      isKeep: how === 'private' || how === 'public'
+    }, data));
+  },
   send_message: function (data, respond, tab) {
     discardDraft([tab.nUri, tab.url]);
     ajax('eliza', 'POST', '/eliza/messages', {

@@ -52,6 +52,10 @@ k.compose = k.compose || (function() {
     return sel.rangeCount ? sel.getRangeAt(0) : null;
   }
 
+  function endsWith(ch) {
+    return function (s) { return s.slice(-1) === ch; };
+  }
+
   function richEditorBorked() { // bugzil.la/1037055
     return 'imageRequest' in document || 'PDFView' in window;
   }
@@ -404,13 +408,24 @@ k.compose = k.compose || (function() {
         return $form.hasClass('kifi-empty') && !($to.length && $to.tokenInput('get').length);
       },
       save: saveDraft.bind(null, $form, $to, editor),
-      destroy: function() {
+      destroy: function (draftTrackData) {
+        var blank = this.isBlank();
         $forms = $forms.not($form);
         if ($to.length) {
           $to.tokenInput('destroy');
         }
         if (!$forms.length) {
           k.snap.disable();
+        }
+        if (!blank) {
+          var matches = editor.getRaw().match(/<a href=["']x-kifi-sel:./g) || [];
+          var nR = matches.filter(endsWith('r')).length;
+          var nI = matches.filter(endsWith('i')).length;
+          api.port.emit('track_draft', $.extend({
+            numLookHeres: nR + nI,
+            numSelectionLookHeres: nR,
+            numImageLookHeres: nI
+          }, draftTrackData));
         }
       }
     };
