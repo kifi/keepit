@@ -421,6 +421,7 @@ angular.module('kifi')
 
           var headerLinksElement = angular.element('.kf-header-right');
 
+          headerLinksElement.addClass('logged-out-library-search');
           if (!headerRightShifted) {
             normalHeaderRightMarginRight = parseInt(headerLinksElement.css('margin-right'), 10);
 
@@ -446,6 +447,17 @@ angular.module('kifi')
             'margin-top': '90px'
           });
 
+          if (platformService.isSupportedMobilePlatform()) {
+            var headerInnerElement = angular.element('.kf-header-inner');
+
+            angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
+              'top': headerInnerElement.offset().top + 30 + 'px',
+              'left': headerInnerElement.width() - 275 - 10 + 'px'
+            });
+
+
+          }
+
           // Focus for mobile devices.
           // $timeout(function () {
           //   angular.element('.kf-keep-lib-search-input').focus();
@@ -465,13 +477,15 @@ angular.module('kifi')
             'top': '-35px'
           });
 
+          var headerLinksElement = angular.element('.kf-header-right');
           if (headerRightShifted) {
-            angular.element('.kf-header-right').css({
+            headerLinksElement.css({
               'margin-right': normalHeaderRightMarginRight + 'px'
             });
 
             headerRightShifted = false;
           }
+          headerLinksElement.removeClass('logged-out-library-search');
 
           angular.element('.kf-library-body').css({
             'transition': 'margin-top 0.1s ease',
