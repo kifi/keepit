@@ -426,7 +426,6 @@ angular.module('kifi')
           scrollToTop();
           var headerLinksElement = angular.element('.kf-header-right');
 
-          headerLinksElement.addClass('logged-out-library-search');
           if (!headerRightShifted) {
             normalHeaderRightMarginRight = parseInt(headerLinksElement.css('margin-right'), 10);
 
@@ -474,7 +473,6 @@ angular.module('kifi')
 
             headerRightShifted = false;
           }
-          headerLinksElement.removeClass('logged-out-library-search');
 
           angular.element('.kf-library-body').css({
             'transition': 'margin-top 0.1s ease',
