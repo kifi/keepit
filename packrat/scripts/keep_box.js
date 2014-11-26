@@ -115,6 +115,9 @@ k.keepBox = k.keepBox || (function () {
       if (showIntro && !k.guide) {
         api.require('scripts/libraries_intro.js', api.noop);
       }
+      var deferred = Q.defer();
+      $box.data({imagePromise: deferred.promise, imagePromisedAt: Date.now()});
+      setTimeout(findPageImages.bind(null, $box.data(), deferred), 10);
     }
   }
 
@@ -358,11 +361,14 @@ k.keepBox = k.keepBox || (function () {
             }
           }, 1000);
         }
-        $view.on('mouseover keydown', function abortAutoClose() {
-          $view.off('mouseover keydown', abortAutoClose);
+        var abort = function () {
+          $box.off('mouseover keydown', abort);
+          $view.off('kifi-hide', abort);
           clearInterval(hideInterval), hideInterval = null;
           $timer.remove();
-        });
+        };
+        $box.on('mouseover keydown', abort);
+        $view.on('kifi-hide', abort);
       }
     })
     .on('kifi-hide', function () {
@@ -529,27 +535,35 @@ k.keepBox = k.keepBox || (function () {
   }
 
   function showKeep(library, subsource, trigger, guided, justKept) {
-    var images = [];
-    determineInitialImage(images, library, justKept, findImages(images))
-      .done(showKeep2.bind(null, library, subsource, trigger, guided, justKept && !$box.data('tip'), images));
-  }
-
-  function determineInitialImage(images, library, justKept, pageImagePromise) {
-    var keepImageUrl = library.keep.image;
-    if (keepImageUrl) {
+    var images = [];  // for this keep
+    var showFirstImage = false;
+    if (!justKept && library.keep.image) {
       var img = new Image;
-      img.src = keepImageUrl;
-      images.unshift(img);
-      return Q(true);
-    } else if (justKept) {
-      return pageImagePromise.then(function (img) {
-        api.port.emit('save_keep_image', {libraryId: library.id, image: img.src});
-        return true;
-      }, function () {
-        return false;
-      });
+      img.src = library.keep.image;
+      images.push(img);
+      showFirstImage = true;
     }
-    return Q(false);
+    var data = $box.data();
+    data.imagePromise.done(withImg, withImg);
+    function withImg(img) {
+      images.push.apply(images, data.images);
+
+      if (justKept && img) {
+        api.port.emit('save_keep_image', {libraryId: library.id, image: img.src});
+        showFirstImage = true;
+      }
+
+      showKeep2(library, subsource, trigger, guided, justKept && !data.tip, images, showFirstImage);
+    }
+
+    if (data.imagePromise.isPending()) {
+      var promiseAgeMs = Date.now() - data.imagePromisedAt;
+      if (promiseAgeMs < 1000 && images.length === 0) {   // let image search run for at least 1s
+        setTimeout(function () { data.imagesNeeded = true; }, 1000 - promiseAgeMs);
+      } else {
+        data.imagesNeeded = true;
+      }
+    }
   }
 
   function showKeep2(library, subsource, trigger, guided, autoClose, images, showImage) {
@@ -608,70 +622,105 @@ k.keepBox = k.keepBox || (function () {
     swipeTo($view);
   }
 
-  // Returns a promise that resolves with the first suitable image identified (an IMG element).
-  // Additional images may be appended later.
-  function findImages(images) {
-    var srcs = {};
-    function useImageIfSuitable(img) {
-      var src;
-      if (isSuitableImage(img) && !srcs[(src = img.src)]) {
-        srcs[src] = true;
-        images.push(img);
-        return true;
+  // Finds the best images (IMG elements) possible before a deadline. To signal the deadline,
+  // set $box.data('imagesNeeded'). $box.data('imagePromise') will be fulfilled with the best image
+  // found or fail if no suitable images are found. Additional images might be appended to the array
+  // after the promise is fulfilled.
+  function findPageImages(data, deferred) {
+    var numLoading = 0, numOgImages = 0;
+    var candidatesByUrl = {};  // url => {img, score}
+
+    // 1. og:image <meta> elements
+    Array.prototype.forEach.call(document.head.querySelectorAll('meta[property="og:image"]'), function (el, i) {
+      var url = el.content;
+      if (imageUrlQualifies(url) && !candidatesByUrl[url]) {
+        var img = new Image;
+        listenToImg(url, img, null, numOgImages++);
+        img.src = url;
       }
-    }
+    });
 
-    var deferred = Q.defer();
-    var imgs = document.getElementsByTagName('img');
-    for (var i = 0, n = imgs.length; i < n; i++) {
-      var img = imgs[i];
-      if (useImageIfSuitable(img)) {
-        deferred.resolve(img);
-        break;
-      }
-    }
-    imgs = Array.prototype.slice.call(imgs, i + 1);
-
-    function finishFindingImages() {
-      imgs.forEach(useImageIfSuitable);
-
-      var bgUrls = Array.prototype.reduce.call(document.styleSheets, appendBgImagesInStylesheet, []);
-      var loading = {}, nLoading = 0;
-      bgUrls.forEach(function (url) {
-        if (nLoading < 120 && !loading[url]) {
-          nLoading++, loading[url] = true;
-          var img = new Image;
-          img.onload = onImageLoadEnd;
-          img.onerror = onImageLoadEnd;
-          img.src = url;
-        }
-      });
-
-      function onImageLoadEnd() {
-        var url = this.src;
-        if (loading[url]) {
-          nLoading--, loading[url] = false;
-          if (useImageIfSuitable(this)) {
-            deferred.resolve(this);
-          } else if (nLoading === 0) {
-            deferred.reject();
+    // 2. <img> elements
+    Array.prototype.forEach.call(document.getElementsByTagName('img'), function (img) {
+      var url = getSrc(img);
+      if (imageUrlQualifies(url) && !candidatesByUrl[url]) {
+        if (img.complete) {
+          var score = scoreImage(img, img);
+          if (score > 0) {
+            candidatesByUrl[url] = {img: img, score: score};
           }
+        } else {
+          listenToImg(url, img, img);
         }
       }
+    });
 
-      if (nLoading === 0) {
+    // 3. background images
+    var bgImgUrls = Array.prototype.reduce.call(
+      document.querySelectorAll('[style*="url("]'),
+      appendBgImagesInline.bind(null, resolveUriRelativeToThis.bind(document.baseURI)), []);
+    Array.prototype.reduce.call(document.styleSheets, appendBgImagesInStylesheet, bgImgUrls);
+    bgImgUrls.forEach(function (urlAndEl) {
+      var url = urlAndEl[0];
+      if (numLoading < 100 && imageUrlQualifies(url) && !candidatesByUrl[url]) {
+        var img = new Image;
+        listenToImg(url, img, urlAndEl[1]);
+        img.src = url;
+      }
+    });
+
+    if (numLoading === 0 || data.imagesNeeded) {
+      rankAndResolve();
+    }
+
+    function listenToImg(url, img, elemInDoc, ogIdx) {
+      $(img).on('load error', $.proxy(onLoadEnd, img, url, elemInDoc, ogIdx));
+      candidatesByUrl[url] = {img: img};
+      numLoading++;
+    }
+
+    function onLoadEnd(url, elemInDoc, ogIdx, e) {
+      $(this).off('load error', onLoadEnd);
+      var score = scoreImage(this, elemInDoc, ogIdx);
+      if (score > 0) {
+        if (deferred.promise.isPending()) {
+          candidatesByUrl[url].score = score;
+        } else if (deferred.promise.isFulfilled()) {
+          data.images.push(this);
+        }
+      } else if (candidatesByUrl) {
+        delete candidatesByUrl[url];  // free image memory
+      }
+      if ((--numLoading === 0 || data.imagesNeeded) && deferred.promise.isPending()) {
+        rankAndResolve();
+      }
+    }
+
+    function rankAndResolve() {
+      var candidates = [];
+      for (var url in candidatesByUrl) {
+        var cand = candidatesByUrl[url];
+        if (cand.score > 0) {
+          candidates.push(cand);
+        }
+      }
+      if (candidates.length) {
+        candidates.sort(function byScore(a, b) { return b.score - a.score; });
+        data.images = candidates.map(function (cand) { return cand.img; });
+        deferred.fulfill(data.images[0]);
+      } else {
         deferred.reject();
       }
+      candidatesByUrl = null;  // free image memory
     }
+  }
 
-    if (deferred.promise.isPending()) {
-      finishFindingImages();
-      setTimeout(deferred.reject.bind(deferred), 1200);
-    } else {
-      setTimeout(finishFindingImages);
+  function appendBgImagesInline(resolveUri, arr, el) {
+    var uris = parseCssUris(el.style.backgroundImage).filter(bgUriLooksInteresting);
+    if (uris.length && !el[matches]('.kifi-root *')) {
+      arr.push.apply(arr, uris.map(resolveUri).map(pairWith(el)));
     }
-
-    return deferred.promise;
+    return arr;
   }
 
   function appendBgImagesInStylesheet(arr, ss) {
@@ -693,12 +742,16 @@ k.keepBox = k.keepBox || (function () {
   function appendBgImagesInRule(resolveUri, arr, rule) {
     var s = rule.style, bi = s && s.backgroundImage;
     if (bi) {
-      var uris = bi.match(/url\(\s*(?:[^"'].*?|".*?"|'.*?')\s*\)/g);
-      if (uris) {
-        uris = uris.map(parseUriFromCssUrl).filter(bgUriLooksInteresting);
+      var sel = rule.selectorText;
+      if (sel && sel.indexOf('kifi') < 0) {
+        var uris = parseCssUris(bi).filter(bgUriLooksInteresting);
         if (uris.length) {
-          if (rule.selectorText.indexOf('kifi') < 0) {
-            arr.push.apply(arr, uris.map(resolveUri));
+          try {
+            var el = document.querySelector(sel);
+            if (el) {
+              arr.push.apply(arr, uris.map(resolveUri).map(pairWith(el)));
+            }
+          } catch (e) {
           }
         }
       }
@@ -706,29 +759,45 @@ k.keepBox = k.keepBox || (function () {
     return arr;
   }
 
+  function parseCssUris(val) {  // e.g. 'background: #ccc url( "foo.png" )' -> ['foo.png']
+    return (val.match(/url\(\s*([^"'].*?|".*?"|'.*?')\s*\)/g) || []).map(parseUriFromCssUrl);
+  }
+
   function parseUriFromCssUrl(cssUrl) {  // e.g. 'url( "foo.png" )' -> 'foo.png'
-    return cssUrl.substring(4, cssUrl.length - 1).trim().replace(/(?:^['"]*|['"]*$)/g, '');
+    var arg = cssUrl.slice(4, -1).trim();
+    var c0 = arg[0];
+    return ~'"\''.indexOf(c0) && c0 === arg.slice(-1) ? arg.slice(1, -1) : arg;
   }
 
   function bgUriLooksInteresting(uri) {
-    return !/(?:^data:|sprite|icon)/i.test(uri);
+    return !/^data:|sprite|icon|\.svg($|\?)/i.test(uri);
   }
 
   function resolveUriRelativeToThis(uri) {
     return new URL(uri, this).href;
   }
 
-  function isSuitableImage(img) {
-    var nH, nW, src;
-    // log(img.naturalHeight, img.naturalWidth, img.naturalHeight * img.naturalWidth, img.complete, img.src);
-    return (
-      (nH = img.naturalHeight) >= 64 &&
-      (nW = img.naturalWidth) >= 64 &&
-      nW * nH >= 12000 &&
-      img.complete &&
-      (src = getSrc(img)).lastIndexOf('http', 0) === 0 &&
-      src.indexOf('.svg', src.length - 4) === -1 &&  // TODO: exempt SVG from min size when supported
-      !img[matches]('.kifi-root *'));
+  function pairWith(y) {
+    return function (x) { return [x, y]; };
+  }
+
+  function scoreImage(img, elemInDoc, ogIdx) {
+    var nW = img.naturalWidth || 0;
+    var nH = img.naturalHeight || 0;
+    if (nW < 64 || nH < 64 || nW * nH < 12000) {  // TODO: exempt SVG images when supported
+      return 0;
+    }
+    var r = elemInDoc ? elemInDoc.getBoundingClientRect() : {top: ogIdx * 10, left: 0, width: nW, height: nH};
+    var w = r.width, h = r.height;
+    if (w < 64 || h < 64 || w * h < 12000) {
+      return 0;
+    }
+    var dims = w > h ? [w, h] : [h, w];
+    return dims[0] * Math.sqrt(dims[1]) * Math.pow(Math.max(r.top, r.left) + 1, -.75);
+  }
+
+  function imageUrlQualifies(url) {
+    return /^https?:\/\//.test(url) && !/\.svg($|\?)/.test(url);
   }
 
   function newKeepCanvas(img) {
