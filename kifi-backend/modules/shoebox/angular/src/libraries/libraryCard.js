@@ -456,7 +456,7 @@ angular.module('kifi')
         scope.onSearchExit = function () {
           scrollToTop();
 
-          $location.url(scope.library.url);
+          locationNoReload.skipReload().url(scope.library.url);
           scope.librarySearchInProgress = false;
           $rootScope.$emit('librarySearchChanged', false);
           prevQuery = '';
@@ -510,7 +510,9 @@ angular.module('kifi')
               $routeParams.f = 'a';
 
               $timeout(function () {
-                scope.librarySearchInProgress = true;  // For mobile.
+                if (platformService.isSupportedMobilePlatform()) {
+                  scope.librarySearchInProgress = true;  // For mobile.
+                }
                 $rootScope.$emit('librarySearchChanged', true);
               });
 
@@ -520,7 +522,9 @@ angular.module('kifi')
               prevQuery = '';
 
               $timeout(function () {
-                scope.librarySearchInProgress = false;  // For mobile.
+                if (platformService.isSupportedMobilePlatform()) {
+                  scope.librarySearchInProgress = false;  // For mobile.
+                }
                 $rootScope.$emit('librarySearchChanged', false);
               });
             }
