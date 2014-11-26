@@ -29,7 +29,8 @@ trait ImageFetcher {
 @Singleton
 class ImageFetcherImpl @Inject() (
     airbrake: AirbrakeNotifier,
-    accessLog: AccessLog) extends ImageFetcher with Logging {
+    accessLog: AccessLog,
+    imageUtils: ImageUtils) extends ImageFetcher with Logging {
 
   private def withInputStream[T, I <: java.io.InputStream](is: I)(f: I => T): T = {
     try {
@@ -39,7 +40,7 @@ class ImageFetcherImpl @Inject() (
     }
   }
 
-  private def getBufferedImage(is: InputStream) = Try { ImageUtils.forceRGB(ImageIO.read(is)) }
+  private def getBufferedImage(is: InputStream) = Try { imageUtils.forceRGB(ImageIO.read(is)) }
 
   override def fetchRawImage(url: URI): Future[Option[BufferedImage]] = {
     val trace = new StackTrace()

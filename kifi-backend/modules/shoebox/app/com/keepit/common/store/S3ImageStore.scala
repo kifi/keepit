@@ -77,6 +77,7 @@ class S3ImageStoreImpl @Inject() (
     clock: Clock,
     userPictureRepo: UserPictureRepo,
     eliza: ElizaServiceClient,
+    imageUtils: ImageUtils,
     val config: S3ImageConfig) extends S3ImageStore with S3Helper with Logging {
 
   private val ExpirationTime = Weeks.ONE
@@ -228,10 +229,10 @@ class S3ImageStoreImpl @Inject() (
   }
 
   def readImage(file: File): BufferedImage = {
-    ImageUtils.forceRGB(ImageIO.read(file))
+    imageUtils.forceRGB(ImageIO.read(file))
   }
   def readImage(is: InputStream): BufferedImage = {
-    ImageUtils.forceRGB(ImageIO.read(is))
+    imageUtils.forceRGB(ImageIO.read(is))
   }
 
   def uploadTemporaryPicture(file: File): Try[(String, String)] = Try {
@@ -261,7 +262,7 @@ class S3ImageStoreImpl @Inject() (
   }
 
   private def uploadAllUserImages(userId: Id[User], userExtId: ExternalId[User], newFilename: String, bufferedImage: BufferedImage, cropAttributes: Option[ImageCropAttributes]) = {
-    val (origContentLength, origInputStream) = ImageUtils.bufferedImageToInputStream(bufferedImage)
+    val (origContentLength, origInputStream) = imageUtils.bufferedImageToInputStream(bufferedImage)
     uploadUserImage(userExtId, newFilename, "original", origInputStream, origContentLength) match {
       case Success(res) =>
         val resizedImageResults = cropResizeAndUpload(userExtId, newFilename, bufferedImage, cropAttributes)
@@ -287,7 +288,7 @@ class S3ImageStoreImpl @Inject() (
   }
   private def cropImageOrFallback(newFilename: String, bufferedImage: BufferedImage, cropAttributes: Option[ImageCropAttributes]) = {
     cropAttributes.map { attr =>
-      Try { ImageUtils.cropSquareImage(bufferedImage, attr.x, attr.y, attr.s) } match {
+      Try { imageUtils.cropSquareImage(bufferedImage, attr.x, attr.y, attr.s) } match {
         case Success(cropped) => Some(cropped)
         case Failure(ex) =>
           airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to crop picture $newFilename")))
@@ -298,7 +299,7 @@ class S3ImageStoreImpl @Inject() (
   private def cropResizeAndUpload(userExtId: ExternalId[User], newFilename: String, bufferedImage: BufferedImage, cropAttributes: Option[ImageCropAttributes]) = {
     val image = cropImageOrFallback(newFilename, bufferedImage, cropAttributes)
     S3UserPictureConfig.sizes.map { size =>
-      Try(ImageUtils.resizeImageMakeSquare(image, size)).map {
+      Try(imageUtils.resizeImageMakeSquare(image, size)).map {
         case (contentLength, is) =>
           uploadUserImage(userExtId, newFilename, size.width.toString, is, contentLength)
       }.flatten match {

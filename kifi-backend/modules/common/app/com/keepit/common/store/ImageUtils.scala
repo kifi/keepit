@@ -1,6 +1,8 @@
 package com.keepit.common.store
 
 import java.awt.image.BufferedImage
+import com.google.inject.Inject
+
 import scala.util.Try
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 import javax.imageio.ImageIO
@@ -42,7 +44,7 @@ object ImageCropAttributes {
   implicit val format = Json.format[ImageCropAttributes]
 }
 
-object ImageUtils {
+class ImageUtils @Inject() () {
   def resizeImageKeepProportions(rawImage: BufferedImage, size: ImageSize) = {
     val resized = Try { Scalr.resize(rawImage, Math.max(size.height, size.width)) }
     val os = new ByteArrayOutputStream()
