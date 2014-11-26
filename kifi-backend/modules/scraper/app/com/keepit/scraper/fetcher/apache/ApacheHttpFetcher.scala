@@ -11,6 +11,7 @@ import javax.net.ssl.{ SSLException, SSLHandshakeException }
 
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.service.RequestConsolidator
 import play.api.Play.current
 
 import com.keepit.common.time._
@@ -46,6 +47,7 @@ import views.html.helper.input
 import scala.concurrent.Future
 import scala.ref.WeakReference
 import scala.util.{ Failure, Success, Try }
+import scala.concurrent.duration._
 
 // based on Apache HTTP Client (this one is blocking but feature-rich & flexible; see http://hc.apache.org/httpcomponents-client-ga/index.html)
 class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends HttpFetcher with Logging with ScraperUtils {
@@ -340,11 +342,15 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  def get(url: URI, ifModifiedSince: Option[DateTime], proxy: Option[HttpProxy])(f: (HttpInputStream) => Unit): Future[HttpFetchStatus] = SafeFuture {
-    try {
-      fetch(url, ifModifiedSince, proxy)(f)
-    } catch {
-      case e: Exception => throw new Exception(s"on fetching url $url if modified since $ifModifiedSince using proxy $proxy", e)
-    }
-  }(ExecutionContext.fj)
+  private lazy val consolidateFetch = new RequestConsolidator[URI, HttpFetchStatus](5 minutes)
+
+  def get(url: URI, ifModifiedSince: Option[DateTime], proxy: Option[HttpProxy])(f: (HttpInputStream) => Unit): Future[HttpFetchStatus] = consolidateFetch(url) { url =>
+    SafeFuture {
+      try {
+        fetch(url, ifModifiedSince, proxy)(f)
+      } catch {
+        case e: Exception => throw new Exception(s"on fetching url $url if modified since $ifModifiedSince using proxy $proxy", e)
+      }
+    }(ExecutionContext.fj)
+  }
 }
