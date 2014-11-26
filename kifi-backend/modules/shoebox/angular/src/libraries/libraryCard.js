@@ -410,6 +410,11 @@ angular.module('kifi')
         }
 
         scope.onSearchInputFocus = function () {
+          if (scope.librarySearchInProgress) {
+            return;
+          }
+          scope.librarySearchInProgress = true;
+
           // Track click/focus on search bar.
           $rootScope.$emit('trackLibraryEvent', 'click', {
             type: 'libraryLanding',
@@ -417,8 +422,6 @@ angular.module('kifi')
           });
 
           scrollToTop();
-          scope.librarySearchInProgress = true;
-
           var headerLinksElement = angular.element('.kf-header-right');
 
           headerLinksElement.addClass('logged-out-library-search');
@@ -457,7 +460,6 @@ angular.module('kifi')
 
             // Focus for mobile devices.
             $timeout(function () {
-              debugger;
               angular.element('.kf-keep-lib-search-input').focus();
             }, 1000);
           }
@@ -473,7 +475,7 @@ angular.module('kifi')
 
           angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
             'transition': 'top 0.2s ease',
-            'top': '-35px'
+            'top': '-100px'
           });
 
           var headerLinksElement = angular.element('.kf-header-right');
