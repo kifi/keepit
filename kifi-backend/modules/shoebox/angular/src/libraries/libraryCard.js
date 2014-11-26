@@ -242,7 +242,7 @@ angular.module('kifi')
         };
 
         scope.isMyLibrary = function (library) {
-          return library.owner && library.owner.id === profileService.me.id;
+          return libraryService.isMyLibrary(library);
         };
 
         scope.canBeShared = function (library) {
@@ -276,8 +276,7 @@ angular.module('kifi')
         };
 
         scope.alreadyFollowingLibrary = function (library) {
-          return (library.access && (library.access === 'read_only')) ||
-            (_.some(libraryService.librarySummaries, { id: library.id }) && !scope.isMyLibrary(library));
+          return libraryService.isFollowingLibrary(library);
         };
 
         scope.followLibrary = function (library) {
