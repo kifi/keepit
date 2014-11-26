@@ -100,13 +100,11 @@ angular.module('kifi')
           });
         }
 
-        function trackShareEvent(medium) {
+        function trackShareEvent(action) {
           $timeout(function () {
-            var eventName = (scope.isUserLoggedOut ? 'visitor' : 'user') + '_clicked_page';
-            libraryService.trackEvent(eventName, scope.library, {
+            $rootScope.$emit('trackLibraryEvent', 'click', {
               type: 'libraryLanding',
-              action: 'shareLibrary',
-              subAction: medium
+              action: action
             });
           });
         }
@@ -261,7 +259,7 @@ angular.module('kifi')
         };
 
         scope.shareFB = function () {
-          trackShareEvent('facebook');
+          trackShareEvent('clickedShareFacebook');
           $FB.ui({
             method: 'share',
             href: scope.library.shareFbUrl
@@ -269,7 +267,7 @@ angular.module('kifi')
         };
 
         scope.shareTwitter = function () {
-          trackShareEvent('twitter');
+          trackShareEvent('clickedShareTwitter');
         };
 
         // TODO: determine this on the server side in the library response. For now, doing it client side.
@@ -283,6 +281,11 @@ angular.module('kifi')
         };
 
         scope.followLibrary = function (library) {
+          $rootScope.$emit('trackLibraryEvent', 'click', {
+            type: 'libraryLanding',
+            action: 'clickedFollowButton'
+          });
+
           if (platformService.isSupportedMobilePlatform()) {
             var url = $location.absUrl();
             if (url.indexOf('?') !== -1) {
@@ -293,14 +296,8 @@ angular.module('kifi')
             platformService.goToAppOrStore(url);
             return;
           } else if ($rootScope.userLoggedIn === false) {
-            libraryService.trackEvent('visitor_clicked_page', library, {
-              type: 'libraryLanding',
-              action: 'followButton'
-            });
             return signupService.register({libraryId: scope.library.id});
           }
-
-          libraryService.trackEvent('user_clicked_page', library, { action: 'followed' });
 
           libraryService.joinLibrary(library.id).then(function (result) {
             if (library.invite) {
@@ -378,6 +375,11 @@ angular.module('kifi')
         };
 
         scope.showFollowers = function () {
+          $rootScope.$emit('trackLibraryEvent', 'click', {
+            type: 'libraryLanding',
+            action: 'clickedViewFollowers'
+          });
+
           if (scope.library.owner.id === profileService.me.id) {
             modalService.open({
               template: 'libraries/manageLibraryModal.tpl.html',

@@ -58,14 +58,22 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepWhoLib', [
-  function () {
+.directive('kfKeepWhoLib', ['$rootScope',
+  function ($rootScope) {
     return {
       restrict: 'A',
       replace: true,
       templateUrl: 'common/directives/keepWho/keepWhoLib.tpl.html',
       scope: {
         library: '='
+      },
+      link: function (scope) {
+        scope.onLibraryAttributionClicked = function () {
+          $rootScope.$emit('trackLibraryEvent', 'click', {
+            type: 'libraryLanding',
+            action: 'clickedLibraryAttribution'
+          });
+        };
       }
     };
   }

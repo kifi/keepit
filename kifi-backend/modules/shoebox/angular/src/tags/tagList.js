@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfTagList', [
-  '$document', '$sce', '$log', 'keyIndices', 'hashtagService', '$location', '$routeParams', '$analytics',
-  function ($document, $sce, $log, keyIndices, hashtagService, $location, $routeParams, $analytics) {
+  '$document', '$sce', '$log', 'keyIndices', 'hashtagService', '$location', '$routeParams', '$analytics', '$rootScope',
+  function ($document, $sce, $log, keyIndices, hashtagService, $location, $routeParams, $analytics, $rootScope) {
     var dropdownSuggestionCount = 5;
 
     return {
@@ -19,7 +19,7 @@ angular.module('kifi')
       replace: true,
       restrict: 'A',
       templateUrl: 'tags/tagList.tpl.html',
-      link: function (scope, element/*, attrs*/ ) {
+      link: function (scope, element/*, attrs*/) {
         scope.data = {};
         scope.data.isClickingInList = false;
         scope.newTagLabel = 'NEW';
@@ -343,6 +343,13 @@ angular.module('kifi')
           } else {
             return 'Add a tag to these keeps';
           }
+        };
+
+        scope.onTagClick = function () {
+          $rootScope.$emit('trackLibraryEvent', 'click', {
+            type: 'libraryLanding',
+            action: 'clickedTag'
+          });
         };
 
         scope.highlightTag(null);
