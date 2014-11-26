@@ -40,18 +40,18 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
   private val MaxTrials = 3
 
   protected def post(json: JsObject, device: Device, notification: PushNotification, trial: Int = 1): Future[ClientResponse] = {
-    println(s"sending json $json to device $device on tril $trial with notification $notification")
+    println(s"sending json $json to device $device on tril $trial with notification ${notification.id}")
     val res = httpClient.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), json,
       { req =>
         {
           case t: Throwable =>
-            log.error(s"Error posting to urbanairship json $json on device $device notification $notification, trial #$trial - ${t.getMessage}", t)
+            log.error(s"Error posting to urbanairship json $json on device $device notification ${notification.id}, trial #$trial - ${t.getMessage}", t)
             if (trial >= MaxTrials) {
               httpClient.defaultFailureHandler(req)
               val validationId = ExternalId()
               airbrake.notify(s"failed sending notification ${notification.id} to $device, checking validation with id $validationId", t)
               validate(json, device, notification, validationId)
-              throw new Exception(s"[stop trying] error posting to urbanairship json $json on device $device notification $notification on trial $trial, not attempting more retries", t)
+              throw new Exception(s"[stop trying] error posting to urbanairship json $json on device $device notification ${notification.id} on trial $trial, not attempting more retries", t)
             }
             post(json, device, notification, trial + 1)
         }
@@ -62,9 +62,9 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
         println(s"sent! $clientRes")
         if (clientRes.status != 200) {
           if (trial < MaxTrials) {
-            log.info(s"failure to send notification $notification to device $device on trial $trial: ${clientRes.body}, trying more")
+            log.info(s"failure to send notification ${notification.id} to device $device on trial $trial: ${clientRes.body}, trying more")
           } else {
-            airbrake.notify(s"(on thread success) failure to send notification $notification to device $device: ${clientRes.body} trial $trial")
+            airbrake.notify(s"(on thread success) failure to send notification ${notification.id} to device $device: ${clientRes.body} trial $trial")
           }
         } else {
           log.info(s"successfully sent notification ${notification.id} to $device: ${clientRes.body}")

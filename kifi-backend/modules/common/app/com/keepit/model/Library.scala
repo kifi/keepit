@@ -94,6 +94,10 @@ object Library extends ModelWithPublicIdCompanion[Library] {
   }
 
   def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
+
+  def toDetailedLibraryView(lib: Library, keepCount: Int = 0): DetailedLibraryView = DetailedLibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state,
+    seq = lib.seq, kind = lib.kind, memberCount = lib.memberCount, keepCount = keepCount, lastKept = lib.lastKept, lastFollowed = None, visibility = lib.visibility,
+    updatedAt = lib.updatedAt)
 }
 
 case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
@@ -181,6 +185,14 @@ object LibraryView {
   implicit val format = Json.format[LibraryView]
 }
 
+case class DetailedLibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[Library], seq: SequenceNumber[Library],
+  kind: LibraryKind, memberCount: Int, keepCount: Int, lastKept: Option[DateTime] = None, lastFollowed: Option[DateTime] = None,
+  visibility: LibraryVisibility, updatedAt: DateTime)
+
+object DetailedLibraryView {
+  implicit val format = Json.format[DetailedLibraryView]
+}
+
 case class BasicLibrary(id: PublicId[Library], name: String, path: String, visibility: LibraryVisibility) {
   def isSecret = (visibility == LibraryVisibility.SECRET)
 }
@@ -191,4 +203,9 @@ object BasicLibrary {
     val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility)
   }
+}
+
+case class BasicLibraryStatistics(memberCount: Int, keepCount: Int)
+object BasicLibraryStatistics {
+  implicit val format = Json.format[BasicLibraryStatistics]
 }

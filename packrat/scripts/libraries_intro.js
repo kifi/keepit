@@ -42,7 +42,7 @@
   function hide(e) {
     log('[libraries_intro:hide]')
     if ($2) {
-      api.port.emit('terminate_ftue', {type: 'l', action: 'close'});
+      api.port.emit('terminate_ftue', {type: 'l', action: e & e.type === 'click' ? 'closed' : undefined});
     }
     $().add($1).add($2).on('transitionend', removeThis).removeClass('kifi-showing');
     $1 = $2 = null;

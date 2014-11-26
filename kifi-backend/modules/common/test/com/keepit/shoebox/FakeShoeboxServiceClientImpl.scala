@@ -10,6 +10,7 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
 import com.keepit.common.net.URI
 import com.keepit.common.service.ServiceType
+import com.keepit.common.time._
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.eliza.model.ThreadItem
@@ -360,7 +361,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def saveLibraries(libs: Library*): Seq[Library] = {
     libs.map { lib =>
       val id = lib.id.getOrElse(nextLibraryId)
-      val toBeInserted = lib.withId(id).copy(seq = nextLibrarySeq())
+      val toBeInserted = lib.withId(id).copy(seq = nextLibrarySeq()).withUpdateTime(currentDateTime)
       allLibraries(id) = toBeInserted
       toBeInserted
     }
@@ -730,7 +731,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]] = {
-    val changed = allLibraries.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize).map { Library.toLibraryView(_) }
+    val changed = allLibraries.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize).map(Library.toLibraryView)
+    Future.successful(changed)
+  }
+
+  def getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[DetailedLibraryView]] = {
+    val changed = allLibraries.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize).map(lib => Library.toDetailedLibraryView(lib))
     Future.successful(changed)
   }
 
@@ -749,4 +755,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = Future.successful(Set.empty)
 
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]] = ???
+
+  def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]] = ???
+
 }

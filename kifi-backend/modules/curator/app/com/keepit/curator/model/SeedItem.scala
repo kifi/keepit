@@ -1,6 +1,7 @@
 package com.keepit.curator.model
 
 import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.model.{ NormalizedURI, User }
 import com.kifi.macros.json
 
@@ -51,21 +52,25 @@ case class PublicSeedItem(
     discoveryScore: Float,
     curationScore: Option[Float],
     multiplier: Option[Float],
-    libraryInducedScore: Option[Float]) {
+    libraryInducedScore: Option[Float],
+    topic1Multiplier: Option[Float] = None,
+    topic1: Option[Int] = None) {
 
   override def toString = f"""
-    s:$socialScore%1.2f-
-    p:$popularityScore%1.2f-
-    oI:$overallInterestScore%1.2f-
-    rI:$recentInterestScore%1.2f-
-    r:$recencyScore%1.2f-
-    g:$priorScore%1.2f-
-    rk:$rekeepScore%1.2f-
-    d:$discoveryScore%1.2f-
-    c:${curationScore.getOrElse(0.0f)}%1.2f-
-    m:${multiplier.getOrElse(1.0f)}%1.2f-
-    lb: ${libraryInducedScore.getOrElse(0.0f)}%1.2f
-  """.replace("\n", "").trim
+    |s:$socialScore%1.2f-
+    |p:$popularityScore%1.2f-
+    |oI:$overallInterestScore%1.2f-
+    |rI:$recentInterestScore%1.2f-
+    |r:$recencyScore%1.2f-
+    |g:$priorScore%1.2f-
+    |rk:$rekeepScore%1.2f-
+    |d:$discoveryScore%1.2f-
+    |c:${curationScore.getOrElse(0.0f)}%1.2f-
+    |m:${multiplier.getOrElse(1.0f)}%1.2f-
+    |lb:${libraryInducedScore.getOrElse(0.0f)}%1.2f-
+    |t1m:${topic1Multiplier.getOrElse(0.0f)}%1.2f-
+    |t1:${topic1.getOrElse("")}
+  """.stripMargin('|').replace("\n", "").trim()
 }
 
 case class SeedItemWithMultiplier(
@@ -88,6 +93,8 @@ case class PublicSeedItemWithMultiplier(
 
 case class PublicScoredSeedItem(uriId: Id[NormalizedURI], publicUriScores: PublicUriScores)
 
-case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores)
+case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores,
+  topic1: Option[LDATopic], topic2: Option[LDATopic])
 
-case class ScoredSeedItemWithAttribution(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores, attribution: SeedAttribution)
+case class ScoredSeedItemWithAttribution(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores,
+  attribution: SeedAttribution, topic1: Option[LDATopic], topic2: Option[LDATopic])

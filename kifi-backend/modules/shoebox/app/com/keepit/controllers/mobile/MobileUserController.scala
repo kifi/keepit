@@ -241,5 +241,10 @@ class MobileUserController @Inject() (
     userCommander.setLastUserActive(request.userId)
     userCommander.getPrefs(MobilePrefNames, request.userId, request.experiments) map (Ok(_))
   }
+
+  //this takes appsflyer attribution data and converts it into a kcid for the user
+  def setAppsflyerAttribution() = UserAction(parse.json(maxLength = 1024 * 50000)) { request =>
+    Ok(request.body) //dummy method for mobile testing for now. Will be filled in with actual processing logic shortly
+  }
 }
 

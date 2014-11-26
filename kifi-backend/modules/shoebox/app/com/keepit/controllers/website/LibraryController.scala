@@ -50,7 +50,7 @@ class LibraryController @Inject() (
       case Left(fail) =>
         Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
       case Right(newLibrary) =>
-        libraryCommander.createFullLibraryInfo(Some(request.userId), newLibrary).map { lib =>
+        libraryCommander.createFullLibraryInfo(Some(request.userId), false, newLibrary).map { lib =>
           Ok(Json.toJson(lib))
         }
     }
@@ -82,9 +82,9 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibraryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getLibraryById(pubId: PublicId[Library], showPublishedLibraries: Boolean) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val id = Library.decodePublicId(pubId).get
-    libraryCommander.getLibraryById(request.userIdOpt, id) map {
+    libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, id) map {
       case (libInfo, accessStr) => Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
     }
   }
@@ -95,12 +95,12 @@ class LibraryController @Inject() (
     Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String) = MaybeUserAction.async { request =>
+  def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean) = MaybeUserAction.async { request =>
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), followRedirect = false) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, library).map { libInfo =>
+          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library).map { libInfo =>
             val accessStr = request.userIdOpt.map { userId =>
               libraryCommander.getAccessStr(userId, library.id.get)
             }.flatten.getOrElse {
@@ -223,7 +223,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int, showPublishedLibraries: Boolean) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
@@ -231,7 +231,7 @@ class LibraryController @Inject() (
         val numKeepsF = libraryCommander.getKeepsCount(libraryId)
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
-          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps, ProcessedImageSize.Large.idealSize)
+          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, showPublishedLibraries, keeps, ProcessedImageSize.Large.idealSize)
           numKeeps <- numKeepsF
         } yield {
           Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "numKeeps" -> numKeeps))
@@ -444,6 +444,18 @@ class LibraryController @Inject() (
     keepsCommander.unkeepManyFromLibrary(keepExtIds, libraryId, request.userId) match {
       case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
       case Right((infos, failures)) => Ok(Json.obj("failures" -> failures, "unkept" -> infos))
+    }
+  }
+
+  def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
+    val libraryId = Library.decodePublicId(libraryPubId).get
+    val body = request.body
+    val title = (body \ "title").asOpt[String]
+
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    keepsCommander.updateKeepInLibrary(keepExtId, libraryId, request.userId, title) match {
+      case Left((status, code)) => Status(status)(Json.obj("error" -> code))
+      case Right(keep) => NoContent
     }
   }
 

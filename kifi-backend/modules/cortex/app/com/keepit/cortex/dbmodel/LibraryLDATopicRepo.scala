@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time.Clock
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.{ DenseLDA }
+import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA }
 import com.keepit.cortex.sql.CortexTypeMappers
 import com.keepit.model.{ User, Library }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
@@ -35,7 +35,12 @@ class LibraryLDATopicRepoImpl @Inject() (
     def version = column[ModelVersion[DenseLDA]]("version")
     def numOfEvidence = column[Int]("num_of_evidence")
     def topic = column[LibraryTopicMean]("topic", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, libraryId, version, numOfEvidence, topic.?, state) <> ((LibraryLDATopic.apply _).tupled, LibraryLDATopic.unapply _)
+    def firstTopic = column[LDATopic]("first_topic", O.Nullable)
+    def secondTopic = column[LDATopic]("second_topic", O.Nullable)
+    def thirdTopic = column[LDATopic]("third_topic", O.Nullable)
+    def firstTopicScore = column[Float]("first_topic_score", O.Nullable)
+    def entropy = column[Float]("entropy", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, libraryId, version, numOfEvidence, topic.?, state, firstTopic.?, secondTopic.?, thirdTopic.?, firstTopicScore.?, entropy.?) <> ((LibraryLDATopic.apply _).tupled, LibraryLDATopic.unapply _)
   }
 
   def table(tag: Tag) = new LibraryLDATopicTable(tag)

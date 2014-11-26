@@ -66,11 +66,11 @@ trait SearchControllerUtil {
       IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter)).json
   }
 
-  def toKifiSearchResultV1(decoratedResult: DecoratedResult): JsObject = {
+  def toKifiSearchResultV1(decoratedResult: DecoratedResult, sanitize: Boolean = false): JsObject = {
     KifiSearchResult.v1(
       decoratedResult.uuid,
       decoratedResult.query,
-      ResultUtil.toKifiSearchHits(decoratedResult.hits),
+      ResultUtil.toKifiSearchHits(decoratedResult.hits, sanitize),
       decoratedResult.myTotal,
       decoratedResult.friendsTotal,
       decoratedResult.othersTotal,

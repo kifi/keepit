@@ -9,7 +9,7 @@ import com.keepit.common.db.Id
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.engine.{ LibrarySearch, SearchFactory }
 import com.keepit.common.akka.SafeFuture
-import com.keepit.search.engine.result.LibraryShardResult
+import com.keepit.search.engine.result.{ LibraryShardHit, LibraryShardResult }
 import com.keepit.search.sharding.Shard
 import com.keepit.search.sharding.ActiveShards
 import play.api.libs.json.Json
@@ -29,6 +29,8 @@ object LibrarySearchRequest {
   implicit val format = Json.format[LibrarySearchRequest]
 }
 
+case class LibrarySearchResult(hits: Seq[LibraryShardHit], show: Boolean, idFilter: Set[Long], searchExperimentId: Option[Id[SearchConfigExperiment]])
+
 @ImplementedBy(classOf[LibrarySearchCommanderImpl])
 trait LibrarySearchCommander {
   def librarySearch(
@@ -40,7 +42,7 @@ trait LibrarySearchCommander {
     context: Option[String],
     maxHits: Int,
     predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String] = None): Future[LibraryShardResult]
+    debug: Option[String] = None): Future[LibrarySearchResult]
   def distLibrarySearch(shards: Set[Shard[NormalizedURI]], request: LibrarySearchRequest): Future[Seq[LibraryShardResult]]
 }
 
@@ -59,7 +61,7 @@ class LibrarySearchCommanderImpl @Inject() (
     context: Option[String],
     maxHits: Int,
     predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String] = None): Future[LibraryShardResult] = {
+    debug: Option[String] = None): Future[LibrarySearchResult] = {
     val (localShards, remotePlan) = distributionPlan(userId, activeShards)
     languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, LibraryContext.None).flatMap {
       case (lang1, lang2) =>
@@ -71,15 +73,17 @@ class LibrarySearchCommanderImpl @Inject() (
         val searchFilter = SearchFilter(filter, LibraryContext.None, context)
         for {
           results <- futureResults
-          (config, _) <- configFuture
-        } yield mergeResults(results.flatten, maxHits, searchFilter, config)
+          (config, searchExperimentId) <- configFuture
+        } yield toLibrarySearchResult(results.flatten, maxHits, searchFilter, config, searchExperimentId)
     }
   }
 
-  private def mergeResults(libraryShardResults: Seq[LibraryShardResult], maxHits: Int, filter: SearchFilter, config: SearchConfig): LibraryShardResult = {
+  private def toLibrarySearchResult(libraryShardResults: Seq[LibraryShardResult], maxHits: Int, filter: SearchFilter, config: SearchConfig, searchExperimentId: Option[Id[SearchConfigExperiment]]): LibrarySearchResult = {
     val uniqueHits = libraryShardResults.flatMap(_.hits).groupBy(_.id).mapValues(_.maxBy(_.score)).values.toSeq
     val (myHits, friendsHits, othersHits, keepRecords) = LibrarySearch.partition(uniqueHits, maxHits)
-    LibrarySearch.merge(myHits, friendsHits, othersHits, maxHits, filter, config)(keepRecords(_))
+    val LibraryShardResult(hits, show) = LibrarySearch.merge(myHits, friendsHits, othersHits, maxHits, filter, config)(keepRecords(_))
+    val idFilter = filter.idFilter.toSet ++ hits.map(_.id.id)
+    LibrarySearchResult(hits, show, idFilter, searchExperimentId)
   }
 
   def distLibrarySearch(shards: Set[Shard[NormalizedURI]], request: LibrarySearchRequest): Future[Seq[LibraryShardResult]] = {

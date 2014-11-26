@@ -337,7 +337,9 @@ class FeedDigestEmailSender @Inject() (
         val uri = reco.uri
         summary.imageWidth.isDefined && summary.imageUrl.isDefined && summary.imageWidth.get >= MIN_IMAGE_WIDTH_PX &&
           summary.imageHeight.isDefined && summary.imageHeight.get <= MAX_IMAGE_HEIGHT_PX &&
-          (summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0))
+          (summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0)) &&
+          summary.description.exists(_.size > 20) &&
+          !uri.url.endsWith(".pdf")
       case None => false
     }
   }
@@ -364,7 +366,7 @@ class FeedDigestEmailSender @Inject() (
    * this method assumes that all keeps are in library
    */
   private def getLibraryKeepAttributions(userId: Id[User], keeps: Seq[Keep]): Future[Seq[DigestLibraryItemCandidate]] = {
-    search.augment(Some(userId), maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, keeps.map(keep => AugmentableItem(keep.uriId, keep.libraryId))) map { infos =>
+    search.augment(Some(userId), false, maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, items = keeps.map(keep => AugmentableItem(keep.uriId, keep.libraryId))) map { infos =>
       (keeps zip infos).map {
         case (keep, info) =>
           DigestLibraryItemCandidate(keep, Some(seedAttributionHelper.toUserAttribution(info)))

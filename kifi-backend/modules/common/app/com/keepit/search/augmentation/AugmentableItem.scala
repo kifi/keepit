@@ -64,7 +64,7 @@ object AugmentationScores {
   val empty = AugmentationScores(Map.empty, Map.empty, Map.empty)
 }
 
-case class ItemAugmentationRequest(items: Set[AugmentableItem], context: AugmentationContext)
+case class ItemAugmentationRequest(items: Set[AugmentableItem], context: AugmentationContext, showPublishedLibraries: Option[Boolean] = None)
 
 object ItemAugmentationRequest {
   implicit val writes = Json.format[ItemAugmentationRequest]

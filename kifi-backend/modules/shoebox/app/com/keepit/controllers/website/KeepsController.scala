@@ -123,27 +123,8 @@ class KeepsController @Inject() (
     val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
     keepOpt match {
       case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
-      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep), ProcessedImageSize.Large.idealSize).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), ProcessedImageSize.Large.idealSize).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
       case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
-    }
-  }
-
-  def updateKeepInfo(id: ExternalId[Keep]) = UserAction { request =>
-    val toBeUpdated = request.body.asJson map { json =>
-      val isPrivate = (json \ "isPrivate").asOpt[Boolean]
-      val title = (json \ "title").asOpt[String]
-      (isPrivate, title)
-    }
-
-    toBeUpdated match {
-      case None | Some((None, None)) => BadRequest(Json.obj("error" -> "Could not parse JSON keep info from body"))
-      case Some((isPrivate, title)) => db.readOnlyMaster { implicit s => keepRepo.getOpt(id) } map { bookmark =>
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        keepsCommander.updateKeep(bookmark, isPrivate, title) getOrElse bookmark
-      } match {
-        case None => NotFound(Json.obj("error" -> "Keep not found"))
-        case Some(keep) => Ok(Json.obj("keep" -> KeepInfo.fromKeep(keep)))
-      }
     }
   }
 

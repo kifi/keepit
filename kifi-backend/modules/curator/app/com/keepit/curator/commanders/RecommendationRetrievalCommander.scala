@@ -1,7 +1,7 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ RecommendationClientType, RecoInfo, UriRecommendationRepo, UriScores, PublicFeedRepo }
 import com.keepit.common.db.Id
+import com.keepit.curator.model.{ RecoInfo, RecommendationClientType, UriScores, PublicFeedRepo, UriRecommendationRepo, UriRecommendation }
 import com.keepit.model.User
 import com.keepit.common.db.slick.Database
 import com.keepit.common.akka.SafeFuture
@@ -11,6 +11,43 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Random
 
 import com.google.inject.{ Inject, Singleton }
+
+case class UriRecoScore(score: Float, reco: UriRecommendation)
+
+trait RecoSelectionStrategy {
+  def sort(recosByTopScore: Seq[UriRecoScore]): Seq[UriRecoScore]
+}
+
+class TopScoreRecoSelectionStrategy(val minScore: Float = 5f) extends RecoSelectionStrategy {
+  def sort(recosByTopScore: Seq[UriRecoScore]) =
+    recosByTopScore filter (_.score > minScore) sortBy (-_.score)
+}
+
+class DiverseRecoSelectionStrategy(val minScore: Float = 5f) extends RecoSelectionStrategy {
+
+  def sort(recosByTopScore: Seq[UriRecoScore]) = recosByTopScore.groupBy(_.reco.topic1).map {
+    // sorts the recos by score (desc) and rescores them using the exponential decay
+    case (topic1, recos) => rescoreRecosWithDecay(recos sortBy (-_.score) takeWhile (_.score > minScore)) map {
+      case (recoScore, decay) =>
+        // update the UriRecommendation.allScores to include topic and decay information
+        val updatedAllScores = recoScore.reco.allScores.copy(topic1 = recoScore.reco.topic1.map(_.index), topic1Multiplier = Some(decay))
+        val updatedReco = recoScore.reco.copy(allScores = updatedAllScores)
+        recoScore.copy(reco = updatedReco)
+    }
+  }.toSeq.flatten sortBy (-_.score)
+
+  private def rescoreRecosWithDecay(recoScores: Seq[UriRecoScore]): Seq[(UriRecoScore, Float)] = {
+    val decayRate = 1 / 15f
+
+    @inline def scoreDecay(i: Int): Float = Math.exp(-i * decayRate).toFloat
+
+    Seq.tabulate(recoScores.size) { i =>
+      val recoScore = recoScores(i)
+      val decay = scoreDecay(i)
+      (recoScore.copy(score = recoScore.score * decay), decay)
+    }
+  }
+}
 
 @Singleton
 class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: UriRecommendationRepo, analytics: CuratorAnalytics, publicFeedRepo: PublicFeedRepo) {
@@ -23,26 +60,28 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
     (adjustedScore * finalPenaltyFactor).toFloat
   }
 
-  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, clientType: RecommendationClientType): Seq[RecoInfo] = {
+  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, clientType: RecommendationClientType, recoSortStrategy: RecoSelectionStrategy): Seq[RecoInfo] = {
     require(recencyWeight <= 1.0f && recencyWeight >= 0.0f, "recencyWeight must be between 0 and 1")
 
+    def scoreReco(reco: UriRecommendation) =
+      UriRecoScore(scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
+
     val recos = db.readOnlyReplica { implicit session =>
-      uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000)
-    } map { reco =>
-      (scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
-    } filter (_._1 > 5.0f) sortBy (-1 * _._1) take 10
+      val recosByTopScore = uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
+      recoSortStrategy.sort(recosByTopScore) take 10
+    }
 
     SafeFuture {
-      analytics.trackDeliveredItems(recos.map(_._2), Some(clientType))
+      analytics.trackDeliveredItems(recos.map(_.reco), Some(clientType))
       db.readWrite { implicit session =>
-        recos.map(_._2).map { reco =>
-          uriRecoRepo.incrementDeliveredCount(reco.id.get)
+        recos.map { recoScore =>
+          uriRecoRepo.incrementDeliveredCount(recoScore.reco.id.get)
         }
       }
     }
 
     recos.map {
-      case (score, reco) =>
+      case UriRecoScore(score, reco) =>
         RecoInfo(
           userId = Some(reco.userId),
           uriId = reco.uriId,

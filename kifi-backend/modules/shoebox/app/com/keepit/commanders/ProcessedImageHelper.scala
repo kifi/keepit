@@ -115,6 +115,7 @@ trait ProcessedImageHelper {
     }
   }
 
+  //todo(eishay): remove after photoshop is in use
   protected def resizeImage(image: BufferedImage, boundingBox: Int): Try[BufferedImage] = Try {
     val img = Scalr.resize(image, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, boundingBox)
     log.info(s"[kic] Bounding box $boundingBox resized to ${img.getHeight} x ${img.getWidth}")

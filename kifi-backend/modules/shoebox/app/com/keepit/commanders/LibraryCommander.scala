@@ -148,9 +148,9 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibraryById(userIdOpt: Option[Id[User]], id: Id[Library]): Future[(FullLibraryInfo, String)] = {
+  def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library]): Future[(FullLibraryInfo, String)] = {
     val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-    createFullLibraryInfo(userIdOpt, lib).map { libInfo =>
+    createFullLibraryInfo(userIdOpt, showPublishedLibraries, lib).map { libInfo =>
       val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
       (libInfo, accessStr)
     }
@@ -160,13 +160,21 @@ class LibraryCommander @Inject() (
     db.readOnlyReplica { implicit session =>
       val librariesById = libraryRepo.getLibraries(libraryIds.toSet)
       val ownersById = basicUserRepo.loadAll(librariesById.values.map(_.ownerId).toSet)
-      val keepCountsByLibraryId = libraryIds.map { libId => libId -> keepRepo.getCountByLibrary(libId) }.toMap
+      val keepCountsByLibraryId = keepRepo.getCountsByLibrary(libraryIds.toSet).withDefaultValue(0)
       libraryIds.map { libId =>
         val library = librariesById(libId)
         val owner = ownersById(library.ownerId)
         val keepCount = keepCountsByLibraryId(libId)
         LibraryInfo.fromLibraryAndOwner(library, owner, keepCount, None)
       }
+    }
+  }
+
+  def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibraryStatistics] = {
+    db.readOnlyReplica { implicit session =>
+      val memberCountByLibraryId = libraryRepo.getLibraries(libraryIds).mapValues(_.memberCount)
+      val keepCountsByLibraryId = keepRepo.getCountsByLibrary(libraryIds).withDefaultValue(0)
+      libraryIds.map { libId => libId -> BasicLibraryStatistics(memberCountByLibraryId(libId), keepCountsByLibraryId(libId)) }.toMap
     }
   }
 
@@ -192,10 +200,10 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library]): Future[Seq[FullLibraryInfo]] = {
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library]): Future[Seq[FullLibraryInfo]] = {
     val futureKeepInfosByLibraryId = libraries.map { library =>
       val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
-      library.id.get -> keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, keeps, idealKeepImageSize)
+      library.id.get -> keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize)
     }.toMap
 
     val followerInfosByLibraryId = libraries.map { library =>
@@ -253,8 +261,8 @@ class LibraryCommander @Inject() (
     Future.sequence(futureFullLibraryInfos)
   }
 
-  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], library: Library): Future[FullLibraryInfo] = {
-    createFullLibraryInfos(viewerUserIdOpt, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
+  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library): Future[FullLibraryInfo] = {
+    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
   }
 
   def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], Map[LibraryAccess, Int]) = {
