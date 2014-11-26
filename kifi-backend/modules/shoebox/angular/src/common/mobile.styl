@@ -79,6 +79,11 @@
             text-align center
 
             .kf-keep-lib-user-image
+            .kf-keep-lib-owner-text
+              transition: opacity 3s ease
+              opacity: 1
+
+            .kf-keep-lib-user-image
               display: block
               text-align center
               margin: 0 auto
@@ -226,18 +231,24 @@
         top: 120px
         overflow: visible
 
+        .kf-keep-lib-search-input
+        .dialog-x
+          animation: none
+
         .kf-keep-lib-owner
           position: relative  // placeholder for now.
           left: 0
 
           .kf-keep-lib-user-image
           .kf-keep-lib-owner-text
-            display: none
+            transition: opacity 0.2s ease
+            opacity: 0
 
           .kf-keep-lib-search
             position: relative
             top: -4px
             right: 0
+            top: -264px
 
           .kf-keep-lib-search-input
             display: block
