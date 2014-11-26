@@ -1,6 +1,8 @@
 package com.keepit.common.images
 
 import java.io.{ PrintWriter, ByteArrayOutputStream }
+import javax.imageio.ImageIO
+import com.keepit.common.logging.Logging
 import com.keepit.common.strings.UTF8
 import play.api.Mode
 import play.api.Mode._
@@ -21,7 +23,7 @@ import scala.util.Try
  */
 @Singleton
 class Image4javaWrapper @Inject() (
-    playMode: Mode) extends Photoshop {
+    playMode: Mode) extends Photoshop with Logging {
   if (playMode == Mode.Prod) {
     checkToolsAvailable() //call on constructor in production to get a fast fail
   }
@@ -50,6 +52,13 @@ class Image4javaWrapper @Inject() (
     case _ => throw new UnsupportedOperationException(s"Can't resize format $format")
   }
 
+  private def imageByteSize(img: BufferedImage, format: ImageFormat): Int = Try {
+    val tmp = new ByteArrayOutputStream()
+    ImageIO.write(img, format.value, tmp)
+    tmp.close()
+    tmp.size()
+  } getOrElse (-1) //this is only for logging, I don't want it to break production
+
   def resizeImage(image: BufferedImage, format: ImageFormat, boundingBox: Int): Try[BufferedImage] =
     resizeImage(image: BufferedImage, format: ImageFormat, boundingBox, boundingBox)
 
@@ -71,7 +80,9 @@ class Image4javaWrapper @Inject() (
 
     handleExceptions(convert, operation, Some(image))
 
-    s2b.getImage
+    val resized = s2b.getImage
+    log.info(s"resize image from ${imageByteSize(image, format)} bytes (${image.getWidth}w/${image.getWidth}h) to ${imageByteSize(resized, format)} bytes (${resized.getWidth}w/${resized.getWidth}h)")
+    resized
   }
 
   private def getScript(convert: ConvertCmd, operation: IMOperation): String = {
