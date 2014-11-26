@@ -32,7 +32,11 @@ trait PagePeekerClient {
 }
 
 @Singleton
-class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient, clock: Clock, airbrake: AirbrakeNotifier) extends PagePeekerClient with Logging {
+class PagePeekerClientImpl @Inject() (
+    shoeboxServiceClient: ShoeboxServiceClient,
+    clock: Clock,
+    imageUtils: ImageUtils,
+    airbrake: AirbrakeNotifier) extends PagePeekerClient with Logging {
 
   // The image below matches the blank image sometimes returned by PagePeeker
   // val blankImage: Array[Byte] = Array(71, 73, 70, 56, 57, 97, 1, 0, 1, 0, -128, -1, 0, -1, -1, -1, 0, 0, 0, 44, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 68, 1, 0, 59).map(_.asInstanceOf[Byte])
@@ -63,7 +67,7 @@ class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient
           val resizedImages: Seq[Try[(ByteArrayInputStream, ImageSize)]] = screenshotConfig.targetSizes.map { size =>
             for {
               rawImage <- rawImageTry
-              resized <- Try { ImageUtils.resizeImageKeepProportions(rawImage, size) }
+              resized <- Try { imageUtils.resizeImageKeepProportions(rawImage, size) }
             } yield (resized._2, size)
           }
 
