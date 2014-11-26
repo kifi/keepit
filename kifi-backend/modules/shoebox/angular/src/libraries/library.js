@@ -118,9 +118,14 @@ angular.module('kifi')
       var target = event.target;
       var eventAction = target.getAttribute('click-action');
       if ($scope.$root.userLoggedIn) {
-        libraryService.trackEvent('user_clicked_page', $scope.library, { action: eventAction });
+        libraryService.trackEvent('user_clicked_page', $scope.library, {
+          type: 'libraryLanding',
+          action: eventAction
+        });
       } else {
-        libraryService.trackEvent('visitor_clicked_page', $scope.library, { action: eventAction });
+        libraryService.trackEvent('visitor_clicked_page', $scope.library, {
+          type:'libraryLanding',
+          action: eventAction });
       }
     };
 
