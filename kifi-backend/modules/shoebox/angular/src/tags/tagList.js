@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfTagList', [
-  '$document', '$sce', '$log', 'keyIndices', 'hashtagService', '$location', '$analytics',
-  function ($document, $sce, $log, keyIndices, hashtagService, $location, $analytics) {
+  '$document', '$sce', '$log', 'keyIndices', 'hashtagService', '$location', '$routeParams', '$analytics',
+  function ($document, $sce, $log, keyIndices, hashtagService, $location, $routeParams, $analytics) {
     var dropdownSuggestionCount = 5;
 
     return {
@@ -44,9 +44,15 @@ angular.module('kifi')
             if (scope.library && scope.library.url) {
               return scope.library.url + '/find?q=tag:' + encodeURIComponent(tagPath);
             }
-            // Otherwise, we really can't search for tags so we stay put.
             else {
-              return $location.url();
+              // If they are in library search, replace query with tag.
+              if ($routeParams.username && $routeParams.librarySlug) {
+                return '/' + $routeParams.username + '/' + $routeParams.librarySlug + '/find?q=tag:' + encodeURIComponent(tagPath);
+              }
+              // Nothing we can do; just stay put.
+              else {
+                return $location.url();
+              }
             }
           }
         };

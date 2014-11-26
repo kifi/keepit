@@ -409,8 +409,10 @@ angular.module('kifi')
           }, 200);
         }
 
+        var mobileFocus = false;
+
         scope.onSearchInputFocus = function () {
-          if (scope.librarySearchInProgress) {
+          if (mobileFocus) {
             return;
           }
           scope.librarySearchInProgress = true;
@@ -460,6 +462,7 @@ angular.module('kifi')
 
             // Focus for mobile devices.
             $timeout(function () {
+              mobileFocus = true;
               angular.element('.kf-keep-lib-search-input').focus();
             }, 1000);
           }
@@ -496,6 +499,8 @@ angular.module('kifi')
           $timeout(function () {
             scope.search.text = '';
           });
+
+          mobileFocus = false;
         };
 
         scope.onSearchInputChange = _.debounce(function (query) {
