@@ -471,7 +471,7 @@ angular.module('kifi')
         scope.onSearchExit = function () {
           scrollToTop();
 
-          locationNoReload.skipReload().url(scope.library.url);
+          $location.url(scope.library.url);
           scope.librarySearchInProgress = false;
           $rootScope.$emit('librarySearchChanged', false);
           prevQuery = '';
