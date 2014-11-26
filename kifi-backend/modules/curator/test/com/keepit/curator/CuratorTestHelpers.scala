@@ -195,4 +195,13 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
       kind = LibraryKind.USER_CREATED, libraryLastUpdated = currentDateTime)
     inject[CuratorLibraryInfoRepo].save(libInfo)
   }
+
+  def makeLibraryRecommendation(libraryId: Int, userId: Int, masterScore: Float) = {
+    LibraryRecommendation(
+      libraryId = Id[Library](libraryId),
+      userId = Id[User](userId),
+      masterScore = masterScore,
+      allScores = LibraryScores()
+    )
+  }
 }
