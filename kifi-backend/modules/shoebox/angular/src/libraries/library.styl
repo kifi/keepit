@@ -105,59 +105,60 @@ invite-header-orange = #ff7c3c
   100%
     opacity: 1
 
-.library-search .library-card
-.library-card.library-search-in-progress
-  max-height: 90px
-  position: fixed
-  top: 62px
-  z-index: 500
-
-  &.pageScrolled::before
-    box-shadow: 0px 5px 5px #ddd
-
-  .kf-keep-body
+.kf-desktop
+  .library-search .library-card
+  .library-card.library-search-in-progress
     max-height: 90px
+    position: fixed
+    top: 62px
+    z-index: 500
 
-  .kf-keep-lib-header
-    max-height: 0
+    &.pageScrolled::before
+      box-shadow: 0px 5px 5px #ddd
 
-  .kf-keep-lib-name-container
-  .kf-keep-lib-description-container
-  .kf-keep-lib-stats-and-followers
-  .kf-keep-footer
-    opacity: 0
-    max-height: 0
-    visibility: hidden
+    .kf-keep-body
+      max-height: 90px
 
-  .kf-keep-lib-info
-    margin-top: 0
+    .kf-keep-lib-header
+      max-height: 0
 
-  .kf-keep-lib-owner
-    left: -55px
+    .kf-keep-lib-name-container
+    .kf-keep-lib-description-container
+    .kf-keep-lib-stats-and-followers
+    .kf-keep-footer
+      opacity: 0
+      max-height: 0
+      visibility: hidden
 
-  .kf-keep-lib-search
-    right: -100px
+    .kf-keep-lib-info
+      margin-top: 0
 
-  .kf-keep-lib-search-input
-    width: 495px
+    .kf-keep-lib-owner
+      left: -55px
 
-  .dialog-x
-    display: block
-    top: -12px
-    right: -10px
+    .kf-keep-lib-search
+      right: -100px
 
-.library-card.library-search-in-progress
-  .kf-keep-lib-search-input
-    animation: 0.8s fade-out-fade-in
+    .kf-keep-lib-search-input
+      width: 495px
 
-  .dialog-x
-    animation: 0.8s fade-in-slow
+    .dialog-x
+      display: block
+      top: -12px
+      right: -10px
 
-.library-search .library-card
-.library-search-falling-edge .library-card
-  .kf-keep-lib-search-input
-  .dialog-x
-    animation: none
+  .library-card.library-search-in-progress
+    .kf-keep-lib-search-input
+      animation: 0.8s fade-out-fade-in
+
+    .dialog-x
+      animation: 0.8s fade-in-slow
+
+  .library-search .library-card
+  .library-search-falling-edge .library-card
+    .kf-keep-lib-search-input
+    .dialog-x
+      animation: none
 
 .public-library-empty-explain
   font-size: 18px
@@ -178,6 +179,9 @@ invite-header-orange = #ff7c3c
 
     .library-share-menu
       left: -44px
+
+  .kf-keep-lib-mobile-search
+    display: none
 
   .library-card-invite-header
     padding: 10px 32px

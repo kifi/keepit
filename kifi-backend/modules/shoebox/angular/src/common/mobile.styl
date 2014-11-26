@@ -42,22 +42,8 @@
       .public-header-dot
         font-size: 20px
 
-    .public-header-search-icon
-      position: absolute
-      top: 43px
-      right: 230px
-      width: 31px
-      height: 42px
-      display: block
-      background-image: url('/img/sprites.png')
-      background-position: -159px -205px
-      background-size: 310px auto
-
-      &:hover
-        cursor: pointer
-
   .kf-col-island
-    margin-top: 40px
+    margin-top: 180px
 
   .kf-main-library-keeps
 
@@ -66,6 +52,33 @@
 
       .library-card
         overflow: hidden
+
+        .kf-keep-lib-mobile-search
+          position: fixed
+          top: 120px
+          left: 0
+          display: block
+          width: 100%
+          height: 80px
+          z-index: 501
+
+          .kf-keep-lib-mobile-search-icon
+            position: absolute
+            top: 20px
+            left: 64px
+            width: 31px
+            height: 42px
+            display: block
+            background-image: url('/img/sprites.png')
+            background-position: -159px -205px
+            background-size: 310px auto
+
+          .kf-keep-lib-search-input
+            border: none
+            border-bottom: 1px solid #ccc
+            padding: 24px 80px 24px 108px
+            width: 100%
+            font-size: 28px
 
         .kf-keep-lib-name-container
           padding-top: 70px
@@ -131,7 +144,7 @@
             display block
             margin: 0 0 30px
 
-        .kf-keep-lib-search-input
+        .kf-keep-lib-search
           display: none
 
         .kf-keep-footer
@@ -228,46 +241,11 @@
     .kf-library-card-header
       .library-search .library-card
       .library-card.library-search-in-progress
-        top: 120px
-        overflow: visible
+        .kf-keep-body
+        .kf-keep-lib-image
+        .kf-keep-footer
+          display: none
 
-        .kf-keep-lib-search-input
-        .dialog-x
-          animation: none
-
-        .kf-keep-lib-owner
-          position: relative  // placeholder for now.
-          left: 0
-
-          .kf-keep-lib-user-image
-          .kf-keep-lib-owner-text
-            transition: opacity 0.2s ease
-            opacity: 0
-
-          .kf-keep-lib-search
-            position: relative
-            top: -4px
-            right: 0
-            top: -264px
-
-          .kf-keep-lib-search-input
-            display: block
-            width: 100%
-            font-size: 28px
-
-          .dialog-x
-            top: -15px
-            right: -30px
-            width: 30px
-            height: 30px
-
-        .kf-keep-lib-footer-button-follow-in-search
-          top: 25px
-          left: 480px
-          height: 34px
-          font-size: 28px
-          padding: 18px 50px
-
-
-  .kf-header-right.logged-out-library-search
-    display: none
+  .kf-main-search
+    .kf-subtitle
+      display: none

@@ -411,10 +411,8 @@ angular.module('kifi')
           }, 200);
         }
 
-        var mobileFocus = false;
-
         scope.onSearchInputFocus = function () {
-          if (mobileFocus) {
+          if (platformService.isSupportedMobilePlatform()) {
             return;
           }
           scope.librarySearchInProgress = true;
@@ -453,21 +451,6 @@ angular.module('kifi')
             'transition': 'margin-top 0.1s ease',
             'margin-top': '90px'
           });
-
-          if (platformService.isSupportedMobilePlatform()) {
-            var headerInnerElement = angular.element('.kf-header-inner');
-
-            angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
-              'top': headerInnerElement.offset().top + 30 + 'px',
-              'left': headerInnerElement.width() - 275 - 10 + 'px'
-            });
-
-            // Focus for mobile devices.
-            $timeout(function () {
-              mobileFocus = true;
-              angular.element('.kf-keep-lib-search-input').focus();
-            }, 1000);
-          }
         };
 
         scope.onSearchExit = function () {
@@ -501,8 +484,6 @@ angular.module('kifi')
           $timeout(function () {
             scope.search.text = '';
           });
-
-          mobileFocus = false;
         };
 
         scope.onSearchInputChange = _.debounce(function (query) {
@@ -529,6 +510,7 @@ angular.module('kifi')
               $routeParams.f = 'a';
 
               $timeout(function () {
+                scope.librarySearchInProgress = true;  // For mobile.
                 $rootScope.$emit('librarySearchChanged', true);
               });
 
@@ -538,6 +520,7 @@ angular.module('kifi')
               prevQuery = '';
 
               $timeout(function () {
+                scope.librarySearchInProgress = false;  // For mobile.
                 $rootScope.$emit('librarySearchChanged', false);
               });
             }
