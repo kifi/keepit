@@ -2,7 +2,7 @@ package com.keepit.common.images
 
 import org.specs2.execute.Result
 import java.awt.image.BufferedImage
-import java.io.{ FileOutputStream, ByteArrayOutputStream, File }
+import java.io._
 import javax.imageio.ImageIO
 
 import com.keepit.model.ImageFormat
@@ -17,6 +17,9 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
 
   def getPngImage(name: String = "image1"): BufferedImage = ImageIO.read(new File(s"test/data/$name.png"))
   def getJpgImage(name: String = "image1"): BufferedImage = ImageIO.read(new File(s"test/data/$name.jpg"))
+
+  def getPngImageStream(name: String = "image1"): InputStream = new FileInputStream(s"test/data/$name.png")
+  def getJpgImageStream(name: String = "image1"): InputStream = new FileInputStream(s"test/data/$name.jpg")
 
   def range(actual: Int, expected: Int, window: Double = 0.04): Result = {
     val delta = Math.abs((actual - expected).toDouble / actual.toDouble)
@@ -51,6 +54,24 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       val im = new Image4javaWrapper(Mode.Test)
       im.checkToolsAvailable() //should not throw an exception
       1 === 1
+    }
+
+    "jpg info checker" in {
+      val image = getJpgImageStream()
+      val im = new Image4javaWrapper(Mode.Test)
+      val info = im.imageInfo(image)
+      info.format === ImageFormat.JPG
+      info.height === 310
+      info.width === 316
+    }
+
+    "png info checker" in {
+      val image = getPngImageStream()
+      val im = new Image4javaWrapper(Mode.Test)
+      val info = im.imageInfo(image)
+      info.format === ImageFormat.PNG
+      info.height === 38
+      info.width === 66
     }
 
     "box resize png" in {
