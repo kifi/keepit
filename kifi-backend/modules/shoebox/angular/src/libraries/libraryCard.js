@@ -451,7 +451,7 @@ angular.module('kifi')
           // Track click/focus on search bar.
           $rootScope.$emit('trackLibraryEvent', 'click', {
             type: 'libraryLanding',
-            action: 'clickedSearchBar'
+            action: platformService.isSupportedMobilePlatform() ? 'clickedSearchPinned' : 'clickedSearchBody'
           });
 
           showLibrarySearchBar();
