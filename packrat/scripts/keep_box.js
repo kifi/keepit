@@ -536,24 +536,17 @@ k.keepBox = k.keepBox || (function () {
 
   function showKeep(library, subsource, trigger, guided, justKept) {
     var images = [];  // for this keep
-    var showFirstImage = false;
     if (!justKept && library.keep.image) {
       var img = new Image;
       img.src = library.keep.image;
       images.push(img);
-      showFirstImage = true;
     }
+
     var data = $box.data();
-    data.imagePromise.done(withImg, withImg);
-    function withImg(img) {
+    data.imagePromise.done(proceed, proceed);
+    function proceed() {
       images.push.apply(images, data.images);
-
-      if (justKept && img) {
-        api.port.emit('save_keep_image', {libraryId: library.id, image: img.src});
-        showFirstImage = true;
-      }
-
-      showKeep2(library, subsource, trigger, guided, justKept && !data.tip, images, showFirstImage);
+      showKeep2(library, subsource, trigger, guided, justKept, justKept && !data.tip, images);
     }
 
     if (data.imagePromise.isPending()) {
@@ -566,9 +559,10 @@ k.keepBox = k.keepBox || (function () {
     }
   }
 
-  function showKeep2(library, subsource, trigger, guided, autoClose, images, showImage) {
+  function showKeep2(library, subsource, trigger, guided, justKept, autoClose, images) {
     var keep = library.keep;
     var title = keep.title || formatTitleFromUrl(document.URL);
+    var showImage = justKept ? images.length : keep.image;
     var canvases = showImage ? [newKeepCanvas(images[0])] : [];   // TODO: show spinner while this image is loading
     var $view = $(k.render('html/keeper/keep_box_keep', {
       library: library,
@@ -610,6 +604,10 @@ k.keepBox = k.keepBox || (function () {
       },
       saving: {}
     });
+    if (justKept && showImage) {
+      saveKeepImageIfChanged($view);
+    }
+
     addKeepBindings($view, autoClose);
 
     api.port.emit('track_pane_view', {
