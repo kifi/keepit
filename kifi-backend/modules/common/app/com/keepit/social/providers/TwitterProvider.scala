@@ -2,24 +2,23 @@ package com.keepit.social.providers
 
 import java.util.UUID
 
-import com.keepit.common.controller.KifiSession
+import com.keepit.common.controller.KifiSession._
 import com.keepit.common.logging.Logging
-import com.keepit.social.{ UserIdentity, UserIdentityProvider }
+import com.keepit.social.UserIdentity
+import play.api.Application
+import play.api.Play.current
 import play.api.cache.Cache
+import play.api.libs.oauth.{ OAuthCalculator, RequestToken }
+import play.api.libs.ws.WS
 import play.api.mvc.Results._
-import play.api.mvc.{ Result, Request }
-import play.api.{ Application }
-import play.api.libs.oauth.{ RequestToken, OAuthCalculator }
-import play.api.libs.ws.{ WS, WSResponse }
+import play.api.mvc.{ Request, Result }
 import securesocial.core._
 import securesocial.core.providers.utils.RoutesHelper
-import play.api.Play.current
-import KifiSession._
 
-class TwitterProvider(app: Application) extends securesocial.core.providers.TwitterProvider(app) /* with UserIdentityProvider */ with Logging {
+class TwitterProvider(app: Application) extends securesocial.core.providers.TwitterProvider(app) with Logging {
 
   import securesocial.core.providers.TwitterProvider
-  import securesocial.core.providers.TwitterProvider._
+  import TwitterProvider._
   override def fillProfile(user: SocialUser): SocialUser = {
     val oauthInfo = user.oAuth1Info.get
     val call = WS.url(TwitterProvider.VerifyCredentials).sign(
