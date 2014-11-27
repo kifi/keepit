@@ -643,7 +643,7 @@ k.keepBox = k.keepBox || (function () {
     // 2. <img> elements
     Array.prototype.forEach.call(document.getElementsByTagName('img'), function (img) {
       var url = getSrc(img);
-      if (imageUrlQualifies(url) && !candidatesByUrl[url]) {
+      if (imageUrlQualifies(url) && !candidatesByUrl[url] && !isKifiEl(img)) {
         if (img.complete) {
           var score = scoreImage(img, img);
           if (score > 0) {
@@ -662,9 +662,10 @@ k.keepBox = k.keepBox || (function () {
     Array.prototype.reduce.call(document.styleSheets, appendBgImagesInStylesheet, bgImgUrls);
     bgImgUrls.forEach(function (urlAndEl) {
       var url = urlAndEl[0];
-      if (numLoading < 100 && imageUrlQualifies(url) && !candidatesByUrl[url]) {
+      var el = urlAndEl[1];
+      if (numLoading < 100 && imageUrlQualifies(url) && !candidatesByUrl[url] && !isKifiEl(el)) {
         var img = new Image;
-        listenToImg(url, img, urlAndEl[1]);
+        listenToImg(url, img, el);
         img.src = url;
       }
     });
@@ -717,7 +718,7 @@ k.keepBox = k.keepBox || (function () {
 
   function appendBgImagesInline(resolveUri, arr, el) {
     var uris = parseCssUris(el.style.backgroundImage).filter(bgUriLooksInteresting);
-    if (uris.length && !el[matches]('.kifi-root *')) {
+    if (uris.length) {
       arr.push.apply(arr, uris.map(resolveUri).map(pairWith(el)));
     }
     return arr;
@@ -769,6 +770,14 @@ k.keepBox = k.keepBox || (function () {
     return ~'"\''.indexOf(c0) && c0 === arg.slice(-1) ? arg.slice(1, -1) : arg;
   }
 
+  function isKifiEl(el) {
+    return el[matches]('.kifi-root,.kifi-root *');
+  }
+
+  function imageUrlQualifies(url) {
+    return /^https?:\/\//.test(url) && !/\.svg($|\?)/.test(url);
+  }
+
   function bgUriLooksInteresting(uri) {
     return !/^data:|sprite|icon|\.svg($|\?)/i.test(uri);
   }
@@ -788,16 +797,13 @@ k.keepBox = k.keepBox || (function () {
       return 0;
     }
     var r = elemInDoc ? elemInDoc.getBoundingClientRect() : {top: ogIdx * 10, left: 0, width: nW, height: nH};
-    var w = r.width, h = r.height;
-    if (w < 64 || h < 64 || w * h < 12000) {
+    var w = Math.min(r.width, 600);
+    var h = Math.min(r.height, 600);
+    var A = w * h;
+    if (w < 64 || h < 64 || A < 12000) {
       return 0;
     }
-    var dims = w > h ? [w, h] : [h, w];
-    return dims[0] * Math.sqrt(dims[1]) * Math.pow(Math.max(r.top, r.left) + 1, -.75);
-  }
-
-  function imageUrlQualifies(url) {
-    return /^https?:\/\//.test(url) && !/\.svg($|\?)/.test(url);
+    return A * Math.pow(Math.max(r.top, r.left) + 1, -1.5);
   }
 
   function newKeepCanvas(img) {
