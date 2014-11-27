@@ -17,17 +17,11 @@ angular.module('kifi')
       }});
     };
 
-    $scope.onSearchIconClick = function () {
-      $rootScope.$emit('loggedOutLibrarySearch');
-    };
-
     $scope.join = function ($event) {
       $event.preventDefault();
 
-      if (platformService.isSupportedMobilePlatform()) {
-        platformService.goToAppOrStore();
-      } else {
-        $scope.$emit('getCurrentLibrary', { callback: function (lib) {
+      $scope.$emit('getCurrentLibrary', {
+        callback: function (lib) {
           var userData;
 
           if (lib && lib.id) {
@@ -39,25 +33,34 @@ angular.module('kifi')
             });
           }
 
-          signupService.register(userData);
-        }});
-      }
+          if (platformService.isSupportedMobilePlatform()) {
+            platformService.goToAppOrStore();
+          } else {
+            signupService.register(userData);
+          }
+        }
+      });
     };
 
     $scope.login = function ($event) {
       if (platformService.isSupportedMobilePlatform()) {
         $event.preventDefault();
-        platformService.goToAppOrStore();
-      } else {
-        $scope.$emit('getCurrentLibrary', { callback: function (lib) {
+      }
+
+      $scope.$emit('getCurrentLibrary', {
+        callback: function (lib) {
           if (lib && lib.id) {
             libraryService.trackEvent('visitor_clicked_page', lib, {
               type: 'libraryLanding',
               action: 'clickedLoginHeader'
             });
           }
-        }});
-      }
+
+          if (platformService.isSupportedMobilePlatform()) {
+            platformService.goToAppOrStore();
+          }
+        }
+      });
     };
   }
 ]);

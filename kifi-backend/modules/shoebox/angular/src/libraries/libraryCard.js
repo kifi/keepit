@@ -410,19 +410,15 @@ angular.module('kifi')
           }, 200);
         }
 
-        scope.onSearchInputFocus = function () {
+        function showLibrarySearchBar() {
           if (platformService.isSupportedMobilePlatform()) {
             return;
           }
+
           scope.librarySearchInProgress = true;
 
-          // Track click/focus on search bar.
-          $rootScope.$emit('trackLibraryEvent', 'click', {
-            type: 'libraryLanding',
-            action: 'clickedSearchBar'
-          });
-
           scrollToTop();
+
           var headerLinksElement = angular.element('.kf-header-right');
 
           if (!headerRightShifted) {
@@ -449,6 +445,16 @@ angular.module('kifi')
             'transition': 'margin-top 0.1s ease',
             'margin-top': '90px'
           });
+        }
+
+        scope.onSearchInputFocus = function () {
+          // Track click/focus on search bar.
+          $rootScope.$emit('trackLibraryEvent', 'click', {
+            type: 'libraryLanding',
+            action: 'clickedSearchBar'
+          });
+
+          showLibrarySearchBar();
         };
 
         scope.onSearchExit = function () {
@@ -542,7 +548,7 @@ angular.module('kifi')
 
             if (scope.librarySearch) {
               $timeout(function () {
-                angular.element('.kf-keep-lib-search-input').focus();
+                showLibrarySearchBar();
               });
             }
           }
@@ -570,12 +576,6 @@ angular.module('kifi')
           }
         });
         scope.$on('$destroy', deregisterLibraryUpdated);
-
-        var deregisterLoggedOutLibrarySearch = $rootScope.$on('loggedOutLibrarySearch', function () {
-          scope.onSearchInputFocus();  // Actually should not call an event handler, but a DOM thingie.
-        });
-        scope.$on('$destroy', deregisterLoggedOutLibrarySearch);
-
 
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);
