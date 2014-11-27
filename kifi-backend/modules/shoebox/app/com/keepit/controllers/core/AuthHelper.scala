@@ -227,8 +227,8 @@ class AuthHelper @Inject() (
       "email" -> EmailAddress.formMapping.verifying("known_email_address", email => db.readOnlyMaster { implicit s =>
         userCredRepo.findByEmailOpt(email.address).isEmpty
       }),
-      "firstName" -> text, // nonEmptyText,
-      "lastName" -> text, // nonEmptyText,
+      "firstName" -> text, // todo(ray/andrew): revisit non-empty requirement for twitter
+      "lastName" -> text,
       "password" -> text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray)),
       "picToken" -> optional(text),
       "picHeight" -> optional(number),
