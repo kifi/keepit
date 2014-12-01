@@ -82,7 +82,7 @@ class MobileSearchController @Inject() (
               "description" -> description,
               "owner" -> usersById(library.ownerId),
               "memberCount" -> statistics.memberCount,
-              "keepCount" -> statistics.keepCount,
+              "keepCount" -> statistics.keepCount
             )
           }
         })
