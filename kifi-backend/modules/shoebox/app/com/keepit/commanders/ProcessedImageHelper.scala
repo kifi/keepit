@@ -165,7 +165,6 @@ trait ProcessedImageHelper {
               formatOpt.orElse(detectImageType(tempFile)) map { format =>
                 Future.successful((format, tempFile))
               } getOrElse {
-                tempFile.file.delete
                 Future.failed(new Exception(s"Unknown image type, ${headers.headers.get("Content-Type")}, $imageUrl"))
               }
             }
