@@ -145,7 +145,7 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
           // detect image format from file extension in URL
           {
             respondWith(None, tinyPng)
-            val respF = fetchRemoteImage("http://www.example.com/foo.png")
+            val respF = fetchRemoteImage("http://www.example.com/foo.png?crop=1xw:0.932295719844358xh;*,*&resize=2300:*&output-format=jpeg&output-quality=90")
             val (format, tmpFile) = Await.result(respF, Duration("1s"))
             format === ImageFormat.PNG
             tmpFile.file.getName must endWith(".png")
