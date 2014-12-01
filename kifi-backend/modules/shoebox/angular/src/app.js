@@ -127,8 +127,6 @@ angular.module('kifi', [
     function start() {
       if (platformService.isSupportedMobilePlatform()) {
         $rootElement.find('html').addClass('kf-mobile');
-      } else {
-        $rootElement.find('html').addClass('kf-desktop');
       }
       $timeout(function () {
         profileService.fetchMe().then(function () {

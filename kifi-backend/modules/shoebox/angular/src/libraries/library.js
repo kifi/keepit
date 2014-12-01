@@ -125,7 +125,8 @@ angular.module('kifi')
       } else {
         libraryService.trackEvent('visitor_clicked_page', $scope.library, {
           type:'libraryLanding',
-          action: eventAction });
+          action: eventAction
+        });
       }
     };
 
