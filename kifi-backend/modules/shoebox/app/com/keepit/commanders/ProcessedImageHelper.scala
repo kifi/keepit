@@ -8,7 +8,7 @@ import java.security.MessageDigest
 import javax.imageio.ImageIO
 
 import com.keepit.common.core.File
-import com.keepit.common.net.WebService
+import com.keepit.common.net.{ URI, WebService }
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store.ImageSize
 import com.keepit.model.{ ImageFormat, ImageHash, KeepImage }
@@ -134,7 +134,8 @@ trait ProcessedImageHelper {
         case (headers, streamBody) =>
           val formatOpt = headers.headers.get("Content-Type").flatMap(_.headOption)
             .flatMap(mimeTypeToImageFormat).orElse {
-              imageFilenameToFormat(imageUrl.substring(imageUrl.lastIndexOf(".") + 1))
+              val path = URI.parse(imageUrl).toOption.flatMap(_.path).getOrElse(imageUrl)
+              imageFilenameToFormat(path.substring(path.lastIndexOf('.') + 1))
             }
 
           if (headers.status != 200) {
