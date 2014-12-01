@@ -346,10 +346,7 @@ angular.module('kifi')
         };
 
         scope.onTagClick = function () {
-          $rootScope.$emit('trackLibraryEvent', 'click', {
-            type: 'libraryLanding',
-            action: 'clickedTag'
-          });
+          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedTag' });
         };
 
         scope.highlightTag(null);

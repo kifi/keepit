@@ -102,10 +102,7 @@ angular.module('kifi')
 
         function trackShareEvent(action) {
           $timeout(function () {
-            $rootScope.$emit('trackLibraryEvent', 'click', {
-              type: 'libraryLanding',
-              action: action
-            });
+            $rootScope.$emit('trackLibraryEvent', 'click', { action: action });
           });
         }
 
@@ -289,10 +286,7 @@ angular.module('kifi')
         };
 
         scope.followLibrary = function (library) {
-          $rootScope.$emit('trackLibraryEvent', 'click', {
-            type: 'libraryLanding',
-            action: 'clickedFollowButton'
-          });
+          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedFollowButton' });
 
           if (platformService.isSupportedMobilePlatform()) {
             var url = $location.absUrl();
@@ -334,7 +328,10 @@ angular.module('kifi')
         };
 
         scope.unfollowLibrary = function (library) {
+          // TODO(yrl): ask Jen about whether we can remove this.
           libraryService.trackEvent('user_clicked_page', library, { action: 'unfollow' });
+
+          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedUnfollowButton' });
           libraryService.leaveLibrary(library.id)['catch'](modalService.openGenericErrorModal);
         };
 
@@ -383,10 +380,7 @@ angular.module('kifi')
         };
 
         scope.showFollowers = function () {
-          $rootScope.$emit('trackLibraryEvent', 'click', {
-            type: 'libraryLanding',
-            action: 'clickedViewFollowers'
-          });
+          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedViewFollowers' });
 
           if (scope.library.owner.id === profileService.me.id) {
             modalService.open({
@@ -459,7 +453,6 @@ angular.module('kifi')
         scope.onSearchInputFocus = function () {
           // Track click/focus on search bar.
           $rootScope.$emit('trackLibraryEvent', 'click', {
-            type: 'libraryLanding',
             action: platformService.isSupportedMobilePlatform() ? 'clickedSearchPinned' : 'clickedSearchBody'
           });
 

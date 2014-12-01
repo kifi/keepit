@@ -69,10 +69,7 @@ angular.module('kifi')
       },
       link: function (scope) {
         scope.onLibraryAttributionClicked = function () {
-          $rootScope.$emit('trackLibraryEvent', 'click', {
-            type: 'libraryLanding',
-            action: 'clickedLibraryAttribution'
-          });
+          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedLibraryAttribution' });
         };
       }
     };

@@ -115,19 +115,8 @@ angular.module('kifi')
     };
 
     $scope.libraryKeepClicked = function (keep, event) {
-      var target = event.target;
-      var eventAction = target.getAttribute('click-action');
-      if ($scope.$root.userLoggedIn) {
-        libraryService.trackEvent('user_clicked_page', $scope.library, {
-          type: 'libraryLanding',
-          action: eventAction
-        });
-      } else {
-        libraryService.trackEvent('visitor_clicked_page', $scope.library, {
-          type:'libraryLanding',
-          action: eventAction
-        });
-      }
+      var eventAction = event.target.getAttribute('click-action');
+      $rootScope.$emit('trackLibraryEvent', 'click', { action: eventAction });
     };
 
 
@@ -178,8 +167,10 @@ angular.module('kifi')
     var deregisterTrackLibraryEvent = $rootScope.$on('trackLibraryEvent', function (e, eventType, attributes) {
       if (eventType === 'click') {
         if (!$rootScope.userLoggedIn) {
+          attributes.type = attributes.type || 'libraryLanding';
           libraryService.trackEvent('visitor_clicked_page', $scope.library, attributes);
         } else {
+          attributes.type = attributes.type || 'library';
           libraryService.trackEvent('user_clicked_page', $scope.library, attributes);
         }
       } else if (eventType === 'view') {

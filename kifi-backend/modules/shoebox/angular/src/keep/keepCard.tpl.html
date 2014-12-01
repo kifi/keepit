@@ -40,7 +40,7 @@
       <a ng-href="{{keep.url}}" target="_blank" rel="nofollow"><img class="kf-keep-big-image" ng-if="showBigImage(keep)" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="clickedArticleImage"></a>
 
       <div ng-if="cardType=='youtube'" class="kf-keep-youtube-content">
-        <div kf-youtube video-id=youtubeId></div>
+        <div ng-click="clickCallback({ 'keep': keep, event: $event })"><div kf-youtube video-id=youtubeId></div></div>
         <div kf-ellipsis full-text="keep.summary.description" max-num-lines=3 class="kf-keep-description"></div>
       </div>
 
