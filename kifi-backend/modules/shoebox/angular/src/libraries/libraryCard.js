@@ -109,7 +109,6 @@ angular.module('kifi')
           });
         }
 
-
         function processUrls(text) {
           var parts = (text || '').split(uriRe);
 
@@ -131,6 +130,33 @@ angular.module('kifi')
         // TODO(yiping): make new libraryDecoratorService to do this. Then, DRY up the code that is
         // currently in nav.js too.
         function augmentData() {
+
+          // Figure out whether this library is a library that the user has been invited to.
+          function getInvitePromise() {
+            var promise = null;
+
+            if (libraryService.invitedSummaries.length) {
+              promise = $q.when(libraryService.invitedSummaries);
+            } else {
+              promise = libraryService.fetchLibrarySummaries(true).then(function () {
+                return libraryService.invitedSummaries;
+              });
+            }
+
+            return promise.then(function (invitedSummaries) {
+              var maybeLib = _.find(invitedSummaries, { 'id' : scope.library.id });
+
+              if (maybeLib) {
+                return {
+                  inviterName: maybeLib.inviter.firstName + ' ' + maybeLib.inviter.lastName,
+                  actedOn: false
+                };
+              } else {
+                return null;
+              }
+            });
+          }
+
           // Libraries created with the extension do not have the description field.
           if (!scope.library.description) {
             scope.library.description = '';
@@ -174,25 +200,8 @@ angular.module('kifi')
             '&kcid=na-vf_twitter-library_invite-lid_' + scope.library.id);
           scope.library.shareText = 'Discover this amazing @Kifi library about ' + scope.library.name + '!';
 
-          // Figure out whether this library is a library that the user has been invited to.
-          // If so, display an invite header.
-          var promise = null;
-          if (libraryService.invitedSummaries.length) {
-            promise = $q.when(libraryService.invitedSummaries);
-          } else {
-            promise = libraryService.fetchLibrarySummaries(true).then(function () {
-              return libraryService.invitedSummaries;
-            });
-          }
-
-          promise.then(function (invitedSummaries) {
-            var maybeLib = _.find(invitedSummaries, { 'id' : scope.library.id });
-            if (maybeLib) {
-              scope.library.invite = {
-                inviterName: maybeLib.inviter.firstName + ' ' + maybeLib.inviter.lastName,
-                actedOn: false
-              };
-            }
+          getInvitePromise().then(function (invite) {
+            scope.library.invite = invite;
           });
         }
 
@@ -400,11 +409,13 @@ angular.module('kifi')
         var normalHeaderRightMarginRight;
         var headerRightShifted = false;
 
+        var headerLinksElement = angular.element('.kf-header-right');
+        var searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
+        var libraryBodyElement = angular.element('.kf-library-body');
+
         function positionSearchFollow() {
           $timeout(function () {
-            var headerLinksElement = angular.element('.kf-header-right');
-
-            angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
+            searchFollowElement.css({
               'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
             });
           }, 200);
@@ -419,8 +430,6 @@ angular.module('kifi')
 
           scrollToTop();
 
-          var headerLinksElement = angular.element('.kf-header-right');
-
           if (!headerRightShifted) {
             normalHeaderRightMarginRight = parseInt(headerLinksElement.css('margin-right'), 10);
 
@@ -429,19 +438,19 @@ angular.module('kifi')
               'margin-right': normalHeaderRightMarginRight + 90 + 'px'
             });
 
-            angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
+            searchFollowElement.css({
               'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 - 90 + 'px'
             });
 
             headerRightShifted = true;
           }
 
-          angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
+          searchFollowElement.css({
             'transition': 'top 0.5s ease 0.3s',
             'top': '15px'
           });
 
-          angular.element('.kf-library-body').css({
+          libraryBodyElement.css({
             'transition': 'margin-top 0.1s ease',
             'margin-top': '90px'
           });
@@ -465,12 +474,11 @@ angular.module('kifi')
           $rootScope.$emit('librarySearchChanged', false);
           prevQuery = '';
 
-          angular.element('.kf-keep-lib-footer-button-follow-in-search').css({
+          searchFollowElement.css({
             'transition': 'top 0.2s ease',
             'top': '-100px'
           });
 
-          var headerLinksElement = angular.element('.kf-header-right');
           if (headerRightShifted) {
             headerLinksElement.css({
               'margin-right': normalHeaderRightMarginRight + 'px'
@@ -479,7 +487,7 @@ angular.module('kifi')
             headerRightShifted = false;
           }
 
-          angular.element('.kf-library-body').css({
+          libraryBodyElement.css({
             'transition': 'margin-top 0.1s ease',
             'margin-top': '0px'
           });
@@ -551,20 +559,6 @@ angular.module('kifi')
                 showLibrarySearchBar();
               });
             }
-          }
-        });
-
-        // Figure out whether this library is a library that the user has been invited to.
-        // If so, display an invite header.
-        scope.$watch(function() {
-          return libraryService.invitedSummaries.length;
-        }, function () {
-          var maybeLib = _.find(libraryService.invitedSummaries, { 'id' : scope.library.id });
-          if (maybeLib) {
-            scope.library.invite = {
-              inviterName: maybeLib.inviter.firstName + ' ' + maybeLib.inviter.lastName,
-              actedOn: false
-            };
           }
         });
 
