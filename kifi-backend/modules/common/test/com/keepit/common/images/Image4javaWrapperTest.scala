@@ -93,7 +93,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
     //      //      persistImage(resized, "png") === 606
     //    }
 
-    "non box resize jpg" in {
+    /*"non box resize jpg" in {
       val image = getJpgImage()
       //      imageByteSize(image, "jpg") === 11101
       image.getWidth === 316
@@ -104,7 +104,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       resized.getHeight === 150
       range(imageByteSize(resized, "jpg"), 3670)
       //      persistImage(resized, "jpg") === 3663
-    }
+    }*/
 
     "optimize jpg" in {
       val image = getJpgImage("unoptimized1")

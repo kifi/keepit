@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import java.awt.image.BufferedImage
-import java.io.File
+import java.io.{ File, FileInputStream }
 
 import com.google.inject.Injector
 import com.keepit.common.db.Id
@@ -9,7 +9,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.store.{ S3ImageConfig, FakeKeepImageStore, ImageSize, KeepImageStore }
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
-import org.apache.commons.io.FileUtils
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.io.{ IOUtils, FileUtils }
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
 
@@ -18,31 +19,27 @@ import scala.concurrent.duration.Duration
 
 class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector with Logging {
 
-  val logger = log
+  private val logger = log
 
   def modules = Seq()
 
-  def dummyImage(width: Int, height: Int) = {
+  private def dummyImage(width: Int, height: Int) = {
     new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY)
   }
 
-  def fakeFile1 = {
-    val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
-    tf.file.deleteOnExit()
-    FileUtils.copyFile(new File("test/data/image1.png"), tf.file)
-    tf
-  }
-  def fakeFile2 = {
-    val tf = TemporaryFile(new File("test/data/image2-" + Math.random() + ".png"))
-    tf.file.deleteOnExit()
-    FileUtils.copyFile(new File("test/data/image2.png"), tf.file)
-    tf
-  }
+  private lazy val base64 = new Base64()
+  private lazy val tinyGif = base64.decode("R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=")
+  private lazy val tinyPng = base64.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVQYV2P4DwABAQEAWk1v8QAAAABJRU5ErkJggg==")
+  private lazy val tinyJpg = base64.decode("/9j/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wgALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAAAAD/9oACAEBAAAAAT//2Q==")
+
+  private def testFile(name: String): File = new File("test/data/" + name)
+
+  private def readFile(file: File): Array[Byte] = IOUtils.toByteArray(new FileInputStream(file))
 
   "ProcessedImageHelper" should {
     "calculate resize sizes for an image" in {
       withInjector(modules: _*) { implicit injector =>
-        val helper = new FakeProcessedImageHelper {
+        new FakeProcessedImageHelper {
           calcSizesForImage(dummyImage(100, 100)).toSeq.sorted === Seq()
           calcSizesForImage(dummyImage(300, 100)).toSeq.sorted === Seq(150)
           calcSizesForImage(dummyImage(100, 700)).toSeq.sorted === Seq(150, 400)
@@ -51,13 +48,13 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
           calcSizesForImage(dummyImage(2000, 1500)).toSeq.sorted === Seq(150, 400, 1000, 1500)
           calcSizesForImage(dummyImage(1500, 1400)).toSeq.sorted === Seq(150, 400, 1000)
         }
-        helper === helper
+        1 === 1
       }
     }
 
     "convert format types in several ways" in {
       withInjector(modules: _*) { implicit injector =>
-        val helper = new FakeProcessedImageHelper {
+        new FakeProcessedImageHelper {
           ImageFormat.JPG !== ImageFormat.PNG
 
           inputFormatToOutputFormat(ImageFormat.JPG) === ImageFormat.JPG
@@ -76,16 +73,14 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
 
           imageFilenameToFormat("jpeg") === imageFilenameToFormat("jpg")
           imageFilenameToFormat("png") === Some(ImageFormat.PNG)
-
         }
-        helper === helper
+        1 === 1
       }
     }
 
     "convert image to input stream" in {
       withInjector(modules: _*) { implicit injector =>
-        val helper = new FakeProcessedImageHelper {
-
+        new FakeProcessedImageHelper {
           {
             val image = dummyImage(200, 300)
             val res = bufferedImageToInputStream(image, ImageFormat.PNG)
@@ -107,38 +102,73 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
             val res = bufferedImageToInputStream(null, ImageFormat.JPG)
             res.isSuccess === false
           }
-
         }
-        helper === helper
+        1 === 1
       }
     }
 
     "hash files with MD5" in {
       withInjector(modules: _*) { implicit injector =>
-        val helper = new FakeProcessedImageHelper {
-
-          val hashed1 = hashImageFile(fakeFile1.file)
+        new FakeProcessedImageHelper {
+          val hashed1 = hashImageFile(testFile("image1.png"))
           hashed1.isSuccess === true
           hashed1.get.hash === "26dbdc56d54dbc94830f7cfc85031481"
 
-          val hashed2 = hashImageFile(fakeFile2.file)
+          val hashed2 = hashImageFile(testFile("image2.png"))
           hashed2.isSuccess === true
           hashed2.get.hash === "1b3d95541538044c2a26598fbe1d06ae"
-
         }
-        helper === helper
+        1 === 1
       }
     }
 
     "fetch images by URL" in {
       withInjector(modules: _*) { implicit injector =>
-        val helper = new FakeProcessedImageHelper {
-          val respF = fetchRemoteImage("http://www.doesntmatter.com/")
-          val resp = Await.result(respF, Duration("10 seconds"))
-          resp._1 === ImageFormat.PNG
-          resp._2.file.getName.endsWith(".png") === true
+        new FakeProcessedImageHelper {
+
+          // detect image format from Content-Type header
+          {
+            respondWith(Some("image/png"), tinyPng)
+            val respF = fetchRemoteImage("http://www.example.com/foo?bar=baz")
+            val (format, tmpFile) = Await.result(respF, Duration("1s"))
+            format === ImageFormat.PNG
+            tmpFile.file.getName must endWith(".png")
+          }
+          {
+            respondWith(Some("image/jpeg"), tinyJpg)
+            val respF = fetchRemoteImage("http://www.example.com/")
+            val (format, tmpFile) = Await.result(respF, Duration("1s"))
+            format === ImageFormat.JPG
+            tmpFile.file.getName must endWith(".jpg")
+          }
+
+          // detect image format from file extension in URL
+          {
+            respondWith(None, tinyPng)
+            val respF = fetchRemoteImage("http://www.example.com/foo.png?crop=1xw:0.932295719844358xh;*,*&resize=2300:*&output-format=jpeg&output-quality=90")
+            val (format, tmpFile) = Await.result(respF, Duration("1s"))
+            format === ImageFormat.PNG
+            tmpFile.file.getName must endWith(".png")
+          }
+          {
+            respondWith(None, tinyJpg)
+            val respF = fetchRemoteImage("http://www.example.com/foo.jpg")
+            val (format, tmpFile) = Await.result(respF, Duration("1s"))
+            format === ImageFormat.JPG
+            tmpFile.file.getName must endWith(".jpg")
+          }
+
+          // detect image format from file content (TODO)
+          {
+            respondWith(None, tinyPng)
+            val respF = fetchRemoteImage("http://www.example.com/foo")
+            Await.result(respF, Duration("1s"))
+          } must throwA[RuntimeException].like {
+            case e =>
+              e.getMessage must startWith("Unknown image type, None")
+          }
         }
-        helper === helper
+        1 === 1
       }
     }
 
@@ -166,7 +196,6 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
 
       ProcessedImageSize.pickBest(ImageSize(201, 399), keepImages).get.imageSize === ImageSize(189, 396)
       ProcessedImageSize.pickBest(ImageSize(800, 840), keepImages).get.imageSize === ImageSize(783, 855)
-
     }
   }
 
