@@ -158,7 +158,7 @@ angular.module('kifi')
             scope.library.shortDescription = processUrls(scope.library.description.substr(0, clipLastIndex));
             scope.clippedDescription = true;
           }
-          scope.library.formattedDescription = '<p>' + processUrls(scope.library.description).replace(/\n+/, '<p>');
+          scope.library.formattedDescription = '<p>' + processUrls(scope.library.description).replace(/\n+/g, '<p>');
 
           scope.library.shareUrl = env.origin + scope.library.url;
           scope.library.shareFbUrl = scope.library.shareUrl +
