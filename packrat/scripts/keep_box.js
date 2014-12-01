@@ -629,7 +629,8 @@ k.keepBox = k.keepBox || (function () {
     var candidatesByUrl = {};  // url => {img, score}
 
     // 1. og:image <meta> elements
-    Array.prototype.forEach.call(document.head.querySelectorAll('meta[property="og:image"]'), function (el, i) {
+    var head = document.head;
+    Array.prototype.forEach.call(head ? head.querySelectorAll('meta[property="og:image"]') : [], function (el, i) {
       var url = el.content;
       if (imageUrlQualifies(url) && !candidatesByUrl[url]) {
         var img = new Image;
