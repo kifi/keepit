@@ -31,29 +31,6 @@ class WebsiteSearchController @Inject() (
     librarySearchCommander: LibrarySearchCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
-  def search(
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None,
-    debug: Option[String] = None,
-    withUriSummary: Boolean = false) = UserAction { request =>
-
-    val userId = request.userId
-    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
-
-    val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
-
-    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt, withUriSummary)
-
-    Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
-  }
-
   def search2(
     query: String,
     filter: Option[String],
