@@ -9,10 +9,11 @@ import com.keepit.common.db.{ ExternalId, Id }
 import scala.concurrent.duration._
 import akka.actor.ActorSystem
 import com.keepit.akka.FutureTestScope
+import com.keepit.common.crypto.PublicIdConfiguration
 
 class UserEventAugmentorsTest extends Specification with FutureTestScope {
   val airbrake = new FakeAirbrakeNotifier()
-  val shoeboxClient = new FakeShoeboxServiceClientImpl(airbrake)
+  val shoeboxClient = new FakeShoeboxServiceClientImpl(airbrake, PublicIdConfiguration("whatever"))
 
   val userIdAugmentor = UserIdAugmentor
   val userValuesAugmentor = new UserValuesAugmentor(shoeboxClient)
