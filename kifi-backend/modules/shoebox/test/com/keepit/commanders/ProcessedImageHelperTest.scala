@@ -130,40 +130,44 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
           {
             respondWith(Some("image/png"), tinyPng)
             val respF = fetchRemoteImage("http://www.example.com/foo?bar=baz")
-            val (format, tmpFile) = Await.result(respF, Duration("1s"))
+            val (format, _) = Await.result(respF, Duration("1s"))
             format === ImageFormat.PNG
-            tmpFile.file.getName must endWith(".png")
           }
           {
             respondWith(Some("image/jpeg"), tinyJpg)
             val respF = fetchRemoteImage("http://www.example.com/")
-            val (format, tmpFile) = Await.result(respF, Duration("1s"))
+            val (format, _) = Await.result(respF, Duration("1s"))
             format === ImageFormat.JPG
-            tmpFile.file.getName must endWith(".jpg")
           }
 
           // detect image format from file extension in URL
           {
             respondWith(None, tinyPng)
             val respF = fetchRemoteImage("http://www.example.com/foo.png?crop=1xw:0.932295719844358xh;*,*&resize=2300:*&output-format=jpeg&output-quality=90")
-            val (format, tmpFile) = Await.result(respF, Duration("1s"))
+            val (format, _) = Await.result(respF, Duration("1s"))
             format === ImageFormat.PNG
-            tmpFile.file.getName must endWith(".png")
           }
           {
             respondWith(None, tinyJpg)
             val respF = fetchRemoteImage("http://www.example.com/foo.jpg")
-            val (format, tmpFile) = Await.result(respF, Duration("1s"))
+            val (format, _) = Await.result(respF, Duration("1s"))
             format === ImageFormat.JPG
-            tmpFile.file.getName must endWith(".jpg")
           }
 
-          // detect image format from file content (TODO)
+          // detect image format from file content
           {
             respondWith(None, tinyPng)
+            val respF = fetchRemoteImage("http://www.example.com/foo?bar=baz")
+            val (format, _) = Await.result(respF, Duration("1s"))
+            format === ImageFormat.PNG
+          }
+
+          // handle invalid images
+          {
+            respondWith(None, new Array[Byte](0))
             val respF = fetchRemoteImage("http://www.example.com/foo")
             Await.result(respF, Duration("1s"))
-          } must throwA[RuntimeException].like {
+          } must throwA[Exception].like {
             case e =>
               e.getMessage must startWith("Unknown image type, None")
           }

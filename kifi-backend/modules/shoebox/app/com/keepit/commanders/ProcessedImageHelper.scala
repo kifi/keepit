@@ -140,10 +140,8 @@ trait ProcessedImageHelper {
 
           if (headers.status != 200) {
             Future.failed(new RuntimeException(s"Image returned non-200 code, ${headers.status}, $imageUrl"))
-          } else if (formatOpt.isEmpty) {
-            Future.failed(new RuntimeException(s"Unknown image type, ${headers.headers.get("Content-Type")}, $imageUrl"))
           } else {
-            val tempFile = TemporaryFile(prefix = "remote-file", suffix = "." + formatOpt.get.value)
+            val tempFile = TemporaryFile(prefix = "remote-file")
             tempFile.file.deleteOnExit()
             val outputStream = new FileOutputStream(tempFile.file)
 
@@ -160,11 +158,16 @@ trait ProcessedImageHelper {
               }
             }
 
-            streamBody.run(iteratee).andThen {
-              case result =>
+            streamBody.run(iteratee) andThen {
+              case _ =>
                 outputStream.close()
-                result.get
-            }.map(_ => (formatOpt.get, tempFile))
+            } flatMap { _ =>
+              formatOpt.orElse(detectImageType(tempFile)) map { format =>
+                Future.successful((format, tempFile))
+              } getOrElse {
+                Future.failed(new Exception(s"Unknown image type, ${headers.headers.get("Content-Type")}, $imageUrl"))
+              }
+            }
           }
       }
     }
