@@ -137,8 +137,7 @@ angular.module('kifi')
             f: filter || 'm',
             l: library || void 0,
             maxHits: 10,
-            context: context || void 0,
-            withUriSummary: true
+            context: context || void 0
           }
         };
 

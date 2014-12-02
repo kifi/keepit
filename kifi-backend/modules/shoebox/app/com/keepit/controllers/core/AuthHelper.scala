@@ -175,12 +175,12 @@ class AuthHelper @Inject() (
 
   private val url = fortytwoConfig.applicationBaseUrl
 
-  private def saveKifiCampaignId(userId: Id[User], kcid: String): Unit = {
-    db.readWrite { implicit session =>
-      if (userValueRepo.getValueStringOpt(userId, UserValueName.KIFI_CAMPAIGN_ID).isEmpty) {
-        userValueRepo.setValue(userId, UserValueName.KIFI_CAMPAIGN_ID, kcid)
-      }
+  private def saveKifiCampaignId(userId: Id[User], kcid: String): Unit = try {
+    db.readWrite(attempts = 2) { implicit session =>
+      userValueRepo.save(UserValue(userId = userId, name = UserValueName.KIFI_CAMPAIGN_ID, value = kcid))
     }
+  } catch {
+    case t: Throwable => airbrakeNotifier.notify(s"fail to save Kifi Campaign Id for user $userId where kcid = $kcid", t)
   }
 
   def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean, libraryPublicId: Option[PublicId[Library]])(implicit request: MaybeUserRequest[JsValue]): Result = {

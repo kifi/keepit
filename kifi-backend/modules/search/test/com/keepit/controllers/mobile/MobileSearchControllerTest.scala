@@ -4,25 +4,18 @@ import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.explain.Explanation
-import com.keepit.search.engine.result.KifiShardResult
-import com.keepit.search.index._
 import com.keepit.search.result.{ DecoratedResult, _ }
-import com.keepit.search.sharding.Shard
 import com.keepit.social.BasicUser
 import com.keepit.test.SearchTestInjector
-import com.keepit.common.util.Configuration
 import com.keepit.common.util.PlayAppConfigurationModule
 import org.specs2.mutable._
 import play.api.libs.json._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-
-import scala.concurrent.Future
 import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.controllers.{ FixedResultSearchCommander, FixedResultIndexModule }
 
 class MobileSearchControllerTest extends SpecificationLike with SearchTestInjector {
 
@@ -42,6 +35,7 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
         val path = com.keepit.controllers.mobile.routes.MobileSearchController.searchV1("test", None, 7, None, None, None, None, None, None, None).toString
         path === "/m/1/search?q=test&maxHits=7"
 
+        inject[SearchCommander].asInstanceOf[FixedResultSearchCommander].setDecoratedResults(MobileSearchControllerTest.decoratedTestResults)
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
@@ -104,26 +98,8 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
   }
 }
 
-case class FixedResultIndexModule() extends IndexModule {
-  var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
-
-  protected def removeOldIndexDirs(conf: Configuration, configName: String, shard: Shard[_], versionsToClean: Seq[IndexerVersion]): Unit = {}
-
-  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration, versionsToClean: Seq[IndexerVersion]): IndexDirectory = {
-    volatileDirMap.getOrElse((configName, shard), {
-      val newdir = new VolatileIndexDirectory()
-      volatileDirMap += (configName, shard) -> newdir
-      newdir
-    })
-  }
-  override def configure() {
-    super.configure()
-    bind[SearchCommander].to[FixedResultSearchCommander].in[AppScoped]
-  }
-}
-
-class FixedResultSearchCommander extends SearchCommander {
-  private val results: Map[String, DecoratedResult] = Map(
+object MobileSearchControllerTest {
+  val decoratedTestResults: Map[String, DecoratedResult] = Map(
     "test" -> DecoratedResult(
       ExternalId[ArticleSearchResult]("21eb7aa7-97ba-466f-a357-c3511e4c8b29"), // uuid
       Seq[DetailedSearchHit]( // hits
@@ -167,63 +143,4 @@ class FixedResultSearchCommander extends SearchCommander {
       Some(Id[SearchConfigExperiment](10)) //searchExperimentId
     )
   )
-
-  def search(
-    userId: Id[User],
-    acceptLangs: Seq[String],
-    experiments: Set[ExperimentType],
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String] = None,
-    withUriSummary: Boolean = false): DecoratedResult = {
-    results(query)
-  }
-
-  def distSearch(
-    shards: Set[Shard[NormalizedURI]],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    experiments: Set[ExperimentType],
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    context: Option[String],
-    predefinedConfig: Option[SearchConfig],
-    debug: Option[String]): PartialSearchResult = ???
-
-  def search2(
-    userId: Id[User],
-    acceptLangs: Seq[String],
-    experiments: Set[ExperimentType],
-    query: String,
-    filter: Option[String],
-    libraryContextFuture: Future[LibraryContext],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String] = None) = ???
-
-  def distSearch2(
-    shards: Set[Shard[NormalizedURI]],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    experiments: Set[ExperimentType],
-    query: String,
-    filter: Option[String],
-    library: LibraryContext,
-    maxHits: Int,
-    context: Option[String],
-    predefinedConfig: Option[SearchConfig],
-    debug: Option[String]): Future[KifiShardResult] = ???
-
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[Explanation]] = ???
-  def warmUp(userId: Id[User]): Unit = {}
-  def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = ???
 }

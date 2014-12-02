@@ -97,6 +97,16 @@ class Image4javaWrapper @Inject() (
     new String(baos.toByteArray, UTF8)
   }
 
+  private val installationInstructions = """Graphicsmagick not installed?
+                                           |To install on mac run:
+                                           |  $ brew update
+                                           |  $ brew install imagemagick
+                                           |  See http://brewformulas.org/Imagemagick
+                                           |On Ubuntu:
+                                           |  $ sudo apt-get update
+                                           |  $ sudo apt-get install imagemagick
+                                         """.stripMargin
+
   private def handleExceptions(convert: ConvertCmd, operation: IMOperation, image: Option[BufferedImage] = None): Unit = {
     if (playMode == Mode.Test) {
       println(getScript(convert, operation))
@@ -107,22 +117,25 @@ class Image4javaWrapper @Inject() (
         case Some(img) => convert.run(operation, img)
       }
     } catch {
-      case e: Throwable =>
-        if (e.getMessage.contains("Cannot run program")) {
-          throw new Exception(
-            """Graphicsmagick not installed?
-              |To install on mac run:
-              |  $ brew update
-              |  $ brew install imagemagick
-              |  See http://brewformulas.org/Imagemagick
-              |On Ubuntu:
-              |  $ sudo apt-get update
-              |  $ sudo apt-get install imagemagick
-            """.stripMargin, e)
-        }
-        val script = getScript(convert, operation)
-        throw new Exception(s"Error executing underlying tool: ${convert.getErrorText.mkString("\n")}\n Generated script is:\n$script", e)
+      case topLevelException: Throwable => rootException(topLevelException) match {
+        case e: CommandException =>
+          if (e.getMessage.contains("Cannot run program")) {
+            throw new Exception(installationInstructions, e)
+          }
+          val script = getScript(convert, operation)
+          throw new Exception(s"Error executing underlying tool (return code ${e.getReturnCode}): ${e.getErrorText}\n Generated script is:\n$script", e)
+        case t: Throwable =>
+          if (t.getMessage.contains("Cannot run program")) {
+            throw new Exception(installationInstructions, t)
+          }
+          val script = getScript(convert, operation)
+          throw new Exception(s"Error executing underlying tool: ${convert.getErrorText.mkString("\n")}\n Generated script is:\n$script", t)
+      }
     }
   }
 
+  private def rootException(e: Throwable): Throwable = {
+    val cause = e.getCause
+    if (cause == null || cause == e) e else rootException(cause)
+  }
 }
