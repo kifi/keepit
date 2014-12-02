@@ -18,7 +18,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsNumber, JsValue, Json }
 import play.api.libs.oauth.RequestToken
 import play.api.mvc.{ Cookie, Result, Session }
-import securesocial.core._
+import securesocial.core.{ IdentityId, OAuth2Info, Registry, SecureSocial, SocialUser, UserService }
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
