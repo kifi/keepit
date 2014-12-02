@@ -70,6 +70,8 @@
   }
 
   function trackEvent(action, props) {
+    console.log(action + ': ' + JSON.stringify(props));
+
     var mixpanel = $window.mixpanel;
     if (mixpanel) { // TODO: fake implementation for tests
       if ('path' in props && !props.type) {
