@@ -118,18 +118,18 @@ class Image4javaWrapper @Inject() (
       }
     } catch {
       case topLevelException: Throwable => rootException(topLevelException) match {
-        case e: Throwable =>
-          if (e.getMessage.contains("Cannot run program")) {
-            throw new Exception(installationInstructions, e)
-          }
-          val script = getScript(convert, operation)
-          throw new Exception(s"Error executing underlying tool: ${convert.getErrorText.mkString("\n")}\n Generated script is:\n$script", e)
         case e: CommandException =>
           if (e.getMessage.contains("Cannot run program")) {
             throw new Exception(installationInstructions, e)
           }
           val script = getScript(convert, operation)
           throw new Exception(s"Error executing underlying tool (return code ${e.getReturnCode}): ${e.getErrorText}\n Generated script is:\n$script", e)
+        case t: Throwable =>
+          if (t.getMessage.contains("Cannot run program")) {
+            throw new Exception(installationInstructions, t)
+          }
+          val script = getScript(convert, operation)
+          throw new Exception(s"Error executing underlying tool: ${convert.getErrorText.mkString("\n")}\n Generated script is:\n$script", t)
       }
     }
   }
