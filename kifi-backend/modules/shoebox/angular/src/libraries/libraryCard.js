@@ -29,8 +29,8 @@ angular.module('kifi')
         var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|a[cdegilmoqrstuz]|b[abefghimnrtyz]|c[acdfghiklmnoruxyz]|d[ejko]|e[cegst]|f[ijkmor]|g[befghilmnpqrstu]|h[kmnru]|i[delmnorst]|j[eop]|k[eghrwyz]|l[bciktuvy]|m[cdghkmnoqrstuwxyz]|n[acfilouz]|om|p[aeghklmnrty]|qa|r[eouw]|s[abcdeghikmnotuvz]|t[cdfhjmnoprtvwz]|u[agkmsyz]|v[eginu]|wf|y[t|u]|z[amrw]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
         var authToken = $location.search().authToken || '';
         var prevQuery = '';
-        var normalHeaderRightMarginRight;
-        var headerRightShifted = false;
+        var headerLinksShifted = false;
+        var headerLinksWidth = '60px';
 
         var headerLinksElement = angular.element('.kf-header-right');
         var searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
@@ -427,30 +427,34 @@ angular.module('kifi')
             searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
           }
 
-          if (!headerRightShifted) {
-            normalHeaderRightMarginRight = parseInt(headerLinksElement.css('margin-right'), 10);
+          // Reset any previous shifts of the right header.
+          headerLinksElement.css({ 'margin-right': headerLinksWidth });
 
-            headerLinksElement.css({
-              'transition': 'margin-right 0.3s ease 0.1s',
-              'margin-right': normalHeaderRightMarginRight + 90 + 'px'
-            });
+          // Shift header to the left and drop down follow button.
+          $timeout(function () {
+            if (!headerLinksShifted) {
+              headerLinksElement.css({
+                'transition': 'margin-right 0.3s ease 0.1s',
+                'margin-right': '150px'
+              });
+
+              headerLinksShifted = true;
+            }
 
             searchFollowElement.css({
               'left': headerLinksElement.offset().left + headerLinksElement.width() - 75 + 'px'
             });
 
-            headerRightShifted = true;
-          }
+            searchFollowElement.css({
+              'transition': 'top 0.5s ease 0.3s',
+              'top': '15px'
+            });
 
-          searchFollowElement.css({
-            'transition': 'top 0.5s ease 0.3s',
-            'top': '15px'
-          });
-
-          libraryBodyElement.css({
-            'transition': 'margin-top 0.1s ease',
-            'margin-top': '90px'
-          });
+            libraryBodyElement.css({
+              'transition': 'margin-top 0.1s ease',
+              'margin-top': '90px'
+            });
+          }, 0);
         }
 
         scope.onSearchInputFocus = function () {
@@ -466,6 +470,8 @@ angular.module('kifi')
           scrollToTop();
 
           locationNoReload.skipReload().url(scope.library.url);
+          locationNoReload.reloadNextRouteChange();
+
           scope.librarySearchInProgress = false;
           $rootScope.$emit('librarySearchChanged', false);
           prevQuery = '';
@@ -479,12 +485,12 @@ angular.module('kifi')
             'top': '-100px'
           });
 
-          if (headerRightShifted) {
+          if (headerLinksShifted) {
             headerLinksElement.css({
-              'margin-right': normalHeaderRightMarginRight + 'px'
+              'margin-right': headerLinksWidth
             });
 
-            headerRightShifted = false;
+            headerLinksShifted = false;
           }
 
           libraryBodyElement.css({
@@ -500,6 +506,8 @@ angular.module('kifi')
         scope.onSearchInputChange = _.debounce(function (query) {
           $timeout(function () {
             if (query) {
+              locationNoReload.cancelReloadNextRouteChange();
+
               if (prevQuery) {
                 locationNoReload.skipReload().search('q', query).replace();
 
@@ -530,6 +538,7 @@ angular.module('kifi')
               prevQuery = query;
             } else {
               locationNoReload.skipReload().url(scope.library.url);
+              locationNoReload.reloadNextRouteChange();
               prevQuery = '';
 
               $timeout(function () {
