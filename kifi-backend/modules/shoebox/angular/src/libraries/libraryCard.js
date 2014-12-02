@@ -29,6 +29,12 @@ angular.module('kifi')
         var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|a[cdegilmoqrstuz]|b[abefghimnrtyz]|c[acdfghiklmnoruxyz]|d[ejko]|e[cegst]|f[ijkmor]|g[befghilmnpqrstu]|h[kmnru]|i[delmnorst]|j[eop]|k[eghrwyz]|l[bciktuvy]|m[cdghkmnoqrstuwxyz]|n[acfilouz]|om|p[aeghklmnrty]|qa|r[eouw]|s[abcdeghikmnotuvz]|t[cdfhjmnoprtvwz]|u[agkmsyz]|v[eginu]|wf|y[t|u]|z[amrw]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
         var authToken = $location.search().authToken || '';
         var prevQuery = '';
+        var normalHeaderRightMarginRight;
+        var headerRightShifted = false;
+
+        var headerLinksElement = angular.element('.kf-header-right');
+        var searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
+        var libraryBodyElement = angular.element('.kf-library-body');
 
 
         //
@@ -400,13 +406,6 @@ angular.module('kifi')
           }
         };
 
-        var normalHeaderRightMarginRight;
-        var headerRightShifted = false;
-
-        var headerLinksElement = angular.element('.kf-header-right');
-        var searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
-        var libraryBodyElement = angular.element('.kf-library-body');
-
         function positionSearchFollow() {
           $timeout(function () {
             searchFollowElement.css({
@@ -424,6 +423,10 @@ angular.module('kifi')
 
           scrollToTop();
 
+          if (!searchFollowElement.length) {
+            searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
+          }
+
           if (!headerRightShifted) {
             normalHeaderRightMarginRight = parseInt(headerLinksElement.css('margin-right'), 10);
 
@@ -433,7 +436,7 @@ angular.module('kifi')
             });
 
             searchFollowElement.css({
-              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 - 90 + 'px'
+              'left': headerLinksElement.offset().left + headerLinksElement.width() - 75 + 'px'
             });
 
             headerRightShifted = true;
@@ -466,6 +469,10 @@ angular.module('kifi')
           scope.librarySearchInProgress = false;
           $rootScope.$emit('librarySearchChanged', false);
           prevQuery = '';
+
+          if (!searchFollowElement.length) {
+            searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
+          }
 
           searchFollowElement.css({
             'transition': 'top 0.2s ease',
