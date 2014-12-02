@@ -117,19 +117,25 @@ class Image4javaWrapper @Inject() (
         case Some(img) => convert.run(operation, img)
       }
     } catch {
-      case e: Throwable =>
-        if (e.getMessage.contains("Cannot run program")) {
-          throw new Exception(installationInstructions, e)
-        }
-        val script = getScript(convert, operation)
-        throw new Exception(s"Error executing underlying tool: ${convert.getErrorText.mkString("\n")}\n Generated script is:\n$script", e)
-      case e: CommandException =>
-        if (e.getMessage.contains("Cannot run program")) {
-          throw new Exception(installationInstructions, e)
-        }
-        val script = getScript(convert, operation)
-        throw new Exception(s"Error executing underlying tool (return code ${e.getReturnCode}): ${e.getErrorText}\n Generated script is:\n$script", e)
+      case topLevelException: Throwable => rootException(topLevelException) match {
+        case e: Throwable =>
+          if (e.getMessage.contains("Cannot run program")) {
+            throw new Exception(installationInstructions, e)
+          }
+          val script = getScript(convert, operation)
+          throw new Exception(s"Error executing underlying tool: ${convert.getErrorText.mkString("\n")}\n Generated script is:\n$script", e)
+        case e: CommandException =>
+          if (e.getMessage.contains("Cannot run program")) {
+            throw new Exception(installationInstructions, e)
+          }
+          val script = getScript(convert, operation)
+          throw new Exception(s"Error executing underlying tool (return code ${e.getReturnCode}): ${e.getErrorText}\n Generated script is:\n$script", e)
+      }
     }
   }
 
+  private def rootException(e: Throwable): Throwable = {
+    val cause = e.getCause
+    if (cause == null || cause == e) e else rootException(cause)
+  }
 }
