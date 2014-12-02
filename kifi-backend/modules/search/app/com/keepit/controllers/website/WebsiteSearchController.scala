@@ -39,8 +39,7 @@ class WebsiteSearchController @Inject() (
     lastUUIDStr: Option[String],
     context: Option[String],
     auth: Option[String],
-    debug: Option[String] = None,
-    withUriSummary: Boolean = false) = MaybeUserAction.async { request =>
+    debug: Option[String] = None) = MaybeUserAction.async { request =>
 
     val libraryContextFuture = getLibraryContextFuture(library, auth, request)
     val acceptLangs = getAcceptLangs(request)
@@ -74,14 +73,15 @@ class WebsiteSearchController @Inject() (
           } yield {
             kifiPlainResult.hits.zipWithIndex.map {
               case (hit, index) => {
+                val uriId = Id[NormalizedURI](hit.id)
+                val keeps = basicKeeps.getOrElse(uriId, Set.empty)
                 val secret = augmentedItems(index).isSecret(librarySearcher)
                 val primaryFields = Json.obj(
                   "title" -> hit.title,
                   "url" -> hit.url,
                   "score" -> hit.finalScore,
-                  "summary" -> summaries(Id(hit.id)),
-                  "secret" -> secret, // todo(Léo): remove secret field
-                  "keeps" -> basicKeeps(Id(hit.id))
+                  "summary" -> summaries(uriId),
+                  "keeps" -> keeps
                 )
                 val secondaryFields = allSecondaryFields(index)
                 primaryFields ++ secondaryFields

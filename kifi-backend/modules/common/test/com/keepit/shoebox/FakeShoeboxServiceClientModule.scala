@@ -7,6 +7,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model.UrlPatternRuleAllCache
 
 import scala.concurrent.ExecutionContext
+import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 
 case class FakeShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
 
@@ -40,6 +41,7 @@ case class FakeShoeboxScraperClientModule() extends ShoeboxScraperClientModule {
 case class FakeShoeboxServiceModule() extends ShoeboxServiceClientModule {
   override def configure(): Unit = {
     install(FakeAirbrakeModule())
+    install(FakeCryptoModule())
   }
 
   @Singleton
@@ -49,11 +51,10 @@ case class FakeShoeboxServiceModule() extends ShoeboxServiceClientModule {
 
   @Singleton
   @Provides
-  def shoeboxServiceClient(airbrakeNotifier: AirbrakeNotifier): ShoeboxServiceClient =
-    fakeShoeboxServiceClient(airbrakeNotifier)
+  def shoeboxServiceClient(fakeClient: FakeShoeboxServiceClientImpl): ShoeboxServiceClient = fakeClient
 
   @Singleton
   @Provides
-  def fakeShoeboxServiceClient(airbrakeNotifier: AirbrakeNotifier): FakeShoeboxServiceClientImpl =
-    new FakeShoeboxServiceClientImpl(airbrakeNotifier)
+  def fakeShoeboxServiceClient(airbrakeNotifier: AirbrakeNotifier, publicIdCondig: PublicIdConfiguration): FakeShoeboxServiceClientImpl =
+    new FakeShoeboxServiceClientImpl(airbrakeNotifier, publicIdCondig)
 }
