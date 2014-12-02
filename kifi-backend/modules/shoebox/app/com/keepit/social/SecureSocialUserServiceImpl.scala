@@ -94,23 +94,27 @@ class SecureSocialUserPluginImpl @Inject() (
     if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
       socialGraphPlugin.asyncFetch(socialUserInfo)
     log.info(s"[save] persisting $socialUser into $socialUserInfo")
-    SafeFuture { socialUserInfo.userId.foreach(updateExperimentIfTestUser) }
+    socialUserInfo.userId.foreach(updateExperimentIfTestUser)
     socialUser
   }
 
-  private def updateExperimentIfTestUser(userId: Id[User]): Unit = timing(s"updateExperimentIfTestUser $userId") {
-    @inline def setExp(exp: ExperimentType) {
-      val marked = userExperimentCommander.userHasExperiment(userId, exp)
-      if (marked)
-        log.debug(s"test user $userId is already marked as $exp")
-      else {
-        log.debug(s"setting test user $userId as $exp")
-        userExperimentCommander.addExperimentForUser(userId, exp)
+  private def updateExperimentIfTestUser(userId: Id[User]): Unit = try {
+    timing(s"updateExperimentIfTestUser $userId") {
+      @inline def setExp(exp: ExperimentType) {
+        val marked = userExperimentCommander.userHasExperiment(userId, exp)
+        if (marked)
+          log.debug(s"test user $userId is already marked as $exp")
+        else {
+          log.debug(s"setting test user $userId as $exp")
+          userExperimentCommander.addExperimentForUser(userId, exp)
+        }
       }
+      val emailAddresses = db.readOnlyMaster(attempts = 3) { implicit rw => emailRepo.getAllByUser(userId) }
+      val experiments = emailAddresses.flatMap(UserEmailAddress.getExperiments)
+      experiments.foreach(setExp)
     }
-    val emailAddresses = db.readWrite(attempts = 3) { implicit rw => emailRepo.getAllByUser(userId) }
-    val experiments = emailAddresses.flatMap(UserEmailAddress.getExperiments)
-    experiments.foreach(setExp)
+  } catch {
+    case e: Exception => airbrake.notify(s"error updating experiment if test user for user $userId")
   }
 
   private def getUserIdAndSocialUser(identity: Identity): (Option[Id[User]], SocialUser, Boolean) = {
