@@ -46,6 +46,7 @@ angular.module('kifi')
         scope.numAdditionalFollowers = 0;
         scope.editKeepsText = 'Edit Keeps';
         scope.librarySearchInProgress = scope.librarySearch;
+        scope.librarySearchBarShown = false;
         scope.search = { 'text': $routeParams.q || '' };
         scope.pageScrolled = false;
 
@@ -415,11 +416,12 @@ angular.module('kifi')
         }
 
         function showLibrarySearchBar() {
-          if (platformService.isSupportedMobilePlatform()) {
+          if (platformService.isSupportedMobilePlatform() || scope.librarySearchBarShown) {
             return;
           }
 
           scope.librarySearchInProgress = true;
+          scope.librarySearchBarShown = true;
 
           scrollToTop();
 
@@ -434,7 +436,6 @@ angular.module('kifi')
           $timeout(function () {
             if (!headerLinksShifted) {
               headerLinksElement.css({
-                'transition': 'margin-right 0.3s ease 0.1s',
                 'margin-right': '150px'
               });
 
@@ -442,7 +443,7 @@ angular.module('kifi')
             }
 
             searchFollowElement.css({
-              'left': headerLinksElement.offset().left + headerLinksElement.width() - 75 + 'px'
+              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
             });
 
             searchFollowElement.css({
@@ -473,6 +474,7 @@ angular.module('kifi')
           locationNoReload.reloadNextRouteChange();
 
           scope.librarySearchInProgress = false;
+          scope.librarySearchBarShown = false;
           $rootScope.$emit('librarySearchChanged', false);
           prevQuery = '';
 
@@ -579,6 +581,11 @@ angular.module('kifi')
           }
         });
         scope.$on('$destroy', deregisterLibraryUpdated);
+
+        var deregisterNewSearchQuery = $rootScope.$on('newSearchQuery', function (e, query) {
+          scope.search.text = query;
+        });
+        scope.$on('$destroy', deregisterNewSearchQuery);
 
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);
