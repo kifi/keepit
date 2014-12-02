@@ -143,7 +143,7 @@ trait SearchControllerUtil {
     (augmentationFields, futureBasicUsersAndLibraries)
   }
 
-  private def getLibraryRecordsAndVisibility(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, LibraryVisibility)] = {
+  def getLibraryRecordsAndVisibility(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, LibraryVisibility)] = {
     for {
       libId <- libraryIds
       record <- LibraryIndexable.getRecord(librarySearcher, libId)
