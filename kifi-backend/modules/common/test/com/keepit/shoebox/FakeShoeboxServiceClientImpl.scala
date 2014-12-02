@@ -13,7 +13,6 @@ import com.keepit.common.service.ServiceType
 import com.keepit.common.time._
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.eliza.model.ThreadItem
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.scraper.{ HttpRedirect, ScrapeRequest, Signature }
@@ -26,6 +25,7 @@ import play.api.libs.json.JsObject
 import scala.collection.mutable
 import scala.collection.mutable.{ Map => MutableMap }
 import scala.concurrent.Future
+import com.keepit.common.crypto.PublicIdConfiguration
 
 class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxScraperClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
@@ -88,7 +88,7 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]] = ???
 }
 // code below should be sync with code in ShoeboxController
-class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
+class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, implicit val publicIdConfig: PublicIdConfiguration) extends ShoeboxServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
@@ -754,7 +754,17 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = Future.successful(Set.empty)
 
-  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]] = ???
+  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]] = Future.successful {
+    (allUserBookmarks(userId).map(allBookmarks(_)).groupBy(_.uriId) -- uriIds).mapValues(_.map { keep =>
+      BasicKeep(
+        keep.externalId,
+        keep.userId == userId,
+        true,
+        keep.visibility,
+        Library.publicId(keep.libraryId.get)
+      )
+    })
+  }
 
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]] = ???
 
