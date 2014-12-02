@@ -212,6 +212,24 @@ class AuthController @Inject() (
     }
   }
 
+  def oauth1TokenSignup(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
+    request.body.asOpt[OAuth1TokenInfo] match {
+      case None =>
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
+      case Some(oauth1Info) =>
+        authHelper.doOAuth1TokenSignup(providerName, oauth1Info)
+    }
+  }
+
+  def oauth1TokenLogin(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
+    request.body.asOpt[OAuth1TokenInfo] match {
+      case None =>
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
+      case Some(oauth1Info) =>
+        authHelper.doOAuth1TokenLogin(providerName, oauth1Info)
+    }
+  }
+
   // one-step sign-up
   def emailSignup() = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
     request.body.asOpt[UserPassFinalizeInfo] match {
@@ -400,7 +418,7 @@ class AuthController @Inject() (
         case request: NonUserRequest[_] =>
           if (request.identityOpt.isDefined) {
             val identity = request.identityOpt.get
-            if (identity.email.exists(e => authHelper.emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
+            if (identity.email.exists(e => authCommander.emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
               // No user exists, but social network identity’s email address matches a Kifi user
               Ok(views.html.auth.connectToAuthenticate(
                 emailAddress = identity.email.get,

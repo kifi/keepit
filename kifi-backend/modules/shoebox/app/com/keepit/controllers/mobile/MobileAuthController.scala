@@ -16,6 +16,7 @@ import com.keepit.social.providers.ProviderController
 import com.keepit.social.{ SocialNetworkType, UserIdentity }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsNumber, JsValue, Json }
+import play.api.libs.oauth.RequestToken
 import play.api.mvc.{ Cookie, Result, Session }
 import securesocial.core.{ IdentityId, OAuth2Info, Registry, SecureSocial, SocialUser, UserService }
 
@@ -135,6 +136,24 @@ class MobileAuthController @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
       case Some(oauth2Info) =>
         authHelper.doAccessTokenLogin(providerName, oauth2Info)
+    }
+  }
+
+  def oauth1TokenSignup(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
+    request.body.asOpt[OAuth1TokenInfo] match {
+      case None =>
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
+      case Some(oauth1Info) =>
+        authHelper.doOAuth1TokenSignup(providerName, oauth1Info)
+    }
+  }
+
+  def oauth1TokenLogin(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
+    request.body.asOpt[OAuth1TokenInfo] match {
+      case None =>
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
+      case Some(oauth1Info) =>
+        authHelper.doOAuth1TokenLogin(providerName, oauth1Info)
     }
   }
 

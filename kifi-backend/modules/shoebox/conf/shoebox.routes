@@ -22,6 +22,8 @@ POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.
 POST    /auth/social-finalize       @com.keepit.controllers.core.AuthController.socialFinalizeAccountAction()
 POST    /auth/token-login/:provider  @com.keepit.controllers.core.AuthController.accessTokenLogin(provider: String)
 POST    /auth/token-signup/:provider @com.keepit.controllers.core.AuthController.accessTokenSignup(provider: String)
+POST    /auth/oauth1-login/:provider  @com.keepit.controllers.core.AuthController.oauth1TokenLogin(provider: String)
+POST    /auth/oauth1-signup/:provider @com.keepit.controllers.core.AuthController.oauth1TokenSignup(provider: String)
 POST    /auth/token-finalize         @com.keepit.controllers.core.AuthController.tokenFinalizeAccountAction()
 POST    /auth/email-signup           @com.keepit.controllers.core.AuthController.emailSignup()
 POST    /auth/upload-binary-image   @com.keepit.controllers.core.AuthController.uploadBinaryPicture()
@@ -46,6 +48,7 @@ GET     /link/:provider             @com.keepit.controllers.core.AuthController.
 
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
 
+# do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
 
 GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
@@ -179,13 +182,15 @@ GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.Mobil
 POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileKeepsController.addTag(id: ExternalId[Collection])
 POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileKeepsController.removeTag(id: ExternalId[Collection])
 
+POST    /m/1/auth/accessTokenSignup/:provider   @com.keepit.controllers.mobile.MobileAuthController.accessTokenSignup(provider)
 POST    /m/1/auth/accessTokenLogin/:provider    @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
+POST    /m/1/auth/oauth1TokenSignup/:provider   @com.keepit.controllers.mobile.MobileAuthController.oauth1TokenSignup(provider)
+POST    /m/1/auth/oauth1TokenLogin/:provider    @com.keepit.controllers.mobile.MobileAuthController.oauth1TokenLogin(provider)
 POST    /m/1/auth/log-in                        @com.keepit.controllers.mobile.MobileAuthController.loginWithUserPass(link: String ?= "")
 POST    /m/1/auth/upload-binary-image           @com.keepit.controllers.mobile.MobileAuthController.uploadBinaryPicture()
 POST    /m/1/auth/upload-multipart-image        @com.keepit.controllers.mobile.MobileAuthController.uploadFormEncodedPicture()
 POST    /m/1/auth/sign-up                       @com.keepit.controllers.mobile.MobileAuthController.userPasswordSignup()
 POST    /m/1/auth/email-finalize                @com.keepit.controllers.mobile.MobileAuthController.userPassFinalizeAccountAction()
-POST    /m/1/auth/accessTokenSignup/:provider   @com.keepit.controllers.mobile.MobileAuthController.accessTokenSignup(provider)
 POST    /m/1/auth/social-finalize               @com.keepit.controllers.mobile.MobileAuthController.socialFinalizeAccountAction()
 
 POST    /m/1/social-link/:provider              @com.keepit.controllers.mobile.MobileAuthController.linkSocialNetwork(provider)
