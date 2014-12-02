@@ -119,18 +119,18 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       //      persistImage(resized, "jpg") === 65439
     }
 
-    "optimize png" in {
-      val image = getPngImage("unoptimized3")
-      imageByteSize(image, "png") === 465305
-      image.getWidth === 500
-      image.getHeight === 333
-      val im = new Image4javaWrapper(Mode.Test)
-      val resized = im.resizeImage(image, ImageFormat.PNG, 500).get //not really resizing
-      resized.getWidth === 500
-      resized.getHeight === 333
-      range(imageByteSize(resized, "png"), 225392, 0.1)
-      //      persistImage(resized, "png") === 205864
-    }
+//    "optimize png" in {
+//      val image = getPngImage("unoptimized3")
+//      imageByteSize(image, "png") === 465305
+//      image.getWidth === 500
+//      image.getHeight === 333
+//      val im = new Image4javaWrapper(Mode.Test)
+//      val resized = im.resizeImage(image, ImageFormat.PNG, 500).get //not really resizing
+//      resized.getWidth === 500
+//      resized.getHeight === 333
+//      range(imageByteSize(resized, "png"), 225392, 0.1)
+//      //      persistImage(resized, "png") === 205864
+//    }
 
   }
 
