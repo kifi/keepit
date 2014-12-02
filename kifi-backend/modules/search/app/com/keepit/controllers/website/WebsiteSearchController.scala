@@ -39,8 +39,7 @@ class WebsiteSearchController @Inject() (
     lastUUIDStr: Option[String],
     context: Option[String],
     auth: Option[String],
-    debug: Option[String] = None,
-    withUriSummary: Boolean = false) = MaybeUserAction.async { request =>
+    debug: Option[String] = None) = MaybeUserAction.async { request =>
 
     val libraryContextFuture = getLibraryContextFuture(library, auth, request)
     val acceptLangs = getAcceptLangs(request)
