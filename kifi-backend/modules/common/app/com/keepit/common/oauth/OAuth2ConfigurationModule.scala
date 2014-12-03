@@ -5,9 +5,9 @@ import java.net.URL
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.util.Configuration
 import net.codingwell.scalaguice.ScalaModule
+import play.api.libs.oauth.ConsumerKey
 
-trait OAuth2ConfigurationModule extends ScalaModule {
-}
+trait OAuth2ConfigurationModule extends ScalaModule
 
 object OAuth2Providers {
   // fb only for now; more work required
@@ -35,14 +35,14 @@ import OAuth2Providers._
 
 case class DevOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
   def configure(): Unit = {
-    bind[ProviderRegistry].to[ProviderRegistryImpl]
+    bind[OAuth2ProviderRegistry].to[OAuth2ProviderRegistryImpl]
     bind[FacebookOAuthProvider].to[FacebookOAuthProviderImpl]
     bind[LinkedInOAuthProvider].to[LinkedInOAuthProviderImpl]
   }
 
   @Provides
   @Singleton
-  def getOAuth2Configuration(config: Configuration): OAuth2Configuration = {
+  def getOAuth2Configuration(): OAuth2Configuration = {
     val providerMap = Map(
       FB -> fbConfigBuilder("530357056981814", "cdb2939941a1147a4b88b6c8f3902745"),
       GOOG -> googConfigBuilder("991651710157.apps.googleusercontent.com", "vt9BrxsxM6iIG4EQNkm18L-m")
@@ -54,14 +54,15 @@ case class DevOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
 
 case class ProdOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
   def configure(): Unit = {
-    bind[ProviderRegistry].to[ProviderRegistryImpl]
+    bind[OAuth2ProviderRegistry].to[OAuth2ProviderRegistryImpl]
     bind[FacebookOAuthProvider].to[FacebookOAuthProviderImpl]
     bind[LinkedInOAuthProvider].to[LinkedInOAuthProviderImpl]
+    bind[TwitterOAuthProvider].to[TwitterOAuthProviderImpl]
   }
 
   @Provides
   @Singleton
-  def getOAuth2Configuration(config: Configuration): OAuth2Configuration = {
+  def getOAuth2Configuration(): OAuth2Configuration = {
     val providerMap = Map(
       FB -> fbConfigBuilder("104629159695560", "352415703e40e9bb1b0329273fdb76a9"),
       GOOG -> googConfigBuilder("572465886361.apps.googleusercontent.com", "heYhp5R2Q0lH26VkrJ1NAMZr")
