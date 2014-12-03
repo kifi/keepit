@@ -88,7 +88,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       val resized = im.resizeImage(image, ImageFormat.GIF, 500).get
       resized.getWidth === 500
       resized.getHeight === 282
-      range(imageByteSize(resized, "png"), 175173)
+      range(imageByteSize(resized, "png"), 191103, 0.1)
       //      persistImage(resized, "png") === 175173
     }
 
