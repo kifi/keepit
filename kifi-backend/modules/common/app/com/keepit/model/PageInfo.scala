@@ -129,6 +129,7 @@ case class ImageFormat(value: String)
 object ImageFormat {
   val JPG = ImageFormat("jpg")
   val PNG = ImageFormat("png")
+  val GIF = ImageFormat("gif")
   val UNKNOWN = ImageFormat("unknown")
   implicit val imageFormatFormat = new Format[ImageFormat] {
     def reads(json: JsValue): JsResult[ImageFormat] = {

@@ -17,6 +17,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
 
   def getPngImage(name: String = "image1"): BufferedImage = ImageIO.read(new File(s"test/data/$name.png"))
   def getJpgImage(name: String = "image1"): BufferedImage = ImageIO.read(new File(s"test/data/$name.jpg"))
+  def getGifImage(name: String = "image1"): BufferedImage = ImageIO.read(new File(s"test/data/$name.gif"))
 
   def range(actual: Int, expected: Int, window: Double = 0.04): Result = {
     val delta = Math.abs((actual - expected).toDouble / actual.toDouble)
@@ -36,7 +37,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
   }
 
   def persistImage(img: BufferedImage, format: String): Int = {
-    val file = TemporaryFile(new File("image-" + Math.random() + "." + format)).file
+    val file = new File("image-" + Math.random() + "." + format)
     val stream = new FileOutputStream(file)
     ImageIO.write(img, format, stream)
     stream.close()
@@ -68,8 +69,6 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
 
     "box resize jpg" in {
       val image = getJpgImage()
-      // this is a sanity check, but it was failing for me locally (java 8, latest imagemagick) - josh
-      //      imageByteSize(image, "jpg") === 11101
       image.getWidth === 316
       image.getHeight === 310
       val im = new Image4javaWrapper(Mode.Test)
@@ -78,6 +77,19 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       resized.getHeight === 98
       range(imageByteSize(resized, "jpg"), 2330)
       //      persistImage(resized, "jpg") === 2324
+    }
+
+    "box resize gif to png" in {
+      val image = getGifImage()
+      imageByteSize(image, "gif") === 113130
+      image.getWidth === 852
+      image.getHeight === 480
+      val im = new Image4javaWrapper(Mode.Test)
+      val resized = im.resizeImage(image, ImageFormat.GIF, 500).get
+      resized.getWidth === 500
+      resized.getHeight === 282
+      range(imageByteSize(resized, "png"), 175173)
+      //      persistImage(resized, "png") === 175173
     }
 
     "non box resize png" in {
