@@ -69,22 +69,49 @@ class Image4javaWrapper @Inject() (
    */
   def resizeImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): Try[BufferedImage] = Try {
     if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't resize format $format")
+    if (format == ImageFormat.GIF) {
+      safeResizeImage(gifToPng(image), ImageFormat.PNG, width, height)
+    } else {
+      safeResizeImage(image, format, width, height)
+    }
+  }
+
+  def gifToPng(image: BufferedImage): BufferedImage = {
+    val inputFile = TemporaryFile(prefix = "ImageMagicGifToPngImageIn", suffix = ".gif").file
+    inputFile.deleteOnExit()
+    ImageIO.write(image, "gif", inputFile)
+
+    val outputFile = TemporaryFile(prefix = "ImageMagicGifToPngImageOut", suffix = ".png").file
+    outputFile.deleteOnExit()
+
+    val operation = new IMOperation
+    operation.addImage(inputFile.getAbsolutePath)
+
+    operation.addImage(outputFile.getAbsolutePath)
+
+    val convert = command()
+
+    handleExceptions(convert, operation)
+
+    ImageIO.read(outputFile)
+  }
+
+  private def safeResizeImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): BufferedImage = {
     val operation = new IMOperation
 
     val outputFile = TemporaryFile(prefix = "ImageMagicResizeImage", suffix = s".${format.value}").file
     val filePath = outputFile.getAbsolutePath
     outputFile.deleteOnExit()
 
-    operation.verbose()
     operation.addImage()
     operation.resize(width, height)
 
     addOptions(format, operation)
-    operation.addImage()
+    operation.addImage(filePath)
 
     val convert = command()
 
-    handleExceptions(convert, operation, Some(image), Some(filePath))
+    handleExceptions(convert, operation, Some(image))
 
     val resized = ImageIO.read(outputFile)
     log.info(s"resize image from ${imageByteSize(image, format)} bytes (${image.getWidth}w/${image.getWidth}h) to ${imageByteSize(resized, format)} bytes (${resized.getWidth}w/${resized.getWidth}h) using file $filePath")
@@ -113,14 +140,14 @@ class Image4javaWrapper @Inject() (
                                            |  $ sudo apt-get install imagemagick
                                          """.stripMargin
 
-  private def handleExceptions(convert: ConvertCmd, operation: IMOperation, image: Option[BufferedImage] = None, filePath: Option[String] = None): Unit = {
+  private def handleExceptions(convert: ConvertCmd, operation: IMOperation, image: Option[BufferedImage] = None): Unit = {
     if (playMode == Mode.Test) {
       println(getScript(convert, operation))
     }
     try {
       image match {
         case None => convert.run(operation)
-        case Some(img) => convert.run(operation, img, filePath.get)
+        case Some(img) => convert.run(operation, img)
       }
     } catch {
       case topLevelException: Throwable => rootException(topLevelException) match {
