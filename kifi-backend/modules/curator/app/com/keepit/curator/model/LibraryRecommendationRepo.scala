@@ -4,7 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.core._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.{ DBSession, DataBaseComponent, DbRepo }
-import com.keepit.common.db.{ Id, State }
+import com.keepit.common.db.{ SequenceNumber, Id, State }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.model.{ Library, User }
@@ -74,7 +74,11 @@ class LibraryRecommendationRepoImpl @Inject() (
   }
 
   def getByLibraryAndUserId(libraryId: Id[Library], userId: Id[User], excludeLibraryRecommendationState: Option[State[LibraryRecommendation]])(implicit session: RSession): Option[LibraryRecommendation] = {
-    (for (row <- byUser(userId)(rows) |> byLibrary(libraryId) if row.state =!= excludeLibraryRecommendationState.orNull) yield row).firstOption
+    val q = for {
+      row <- byUser(userId)(rows) |> byLibrary(libraryId)
+      if row.state =!= excludeLibraryRecommendationState.orNull
+    } yield row
+    q.firstOption
   }
 
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, LibraryRecommendationState: Option[State[LibraryRecommendation]] = Some(LibraryRecommendationStates.ACTIVE))(implicit session: RSession): Seq[LibraryRecommendation] = {

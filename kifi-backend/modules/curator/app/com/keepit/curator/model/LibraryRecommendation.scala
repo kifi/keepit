@@ -24,7 +24,19 @@ case class LibraryRecommendation(
 
 object LibraryRecommendationStates extends States[LibraryRecommendation]
 
-/* TODO(josh) */
-@json case class LibraryScores(todo: String = "".intern) {
-  override def toString() = todo
+@json case class LibraryScores(
+    socialScore: Float,
+    interestScore: Float,
+    recencyScore: Float,
+    popularityScore: Float,
+    sizeScore: Float) {
+
+  override def toString() =
+    f"""
+       |s:$socialScore%1.2f-
+       |i:$interestScore%1.2f-
+       |r:$recencyScore%1.2f-
+       |p:$popularityScore%1.2f-
+       |sz:$sizeScore%1.2f
+     """.stripMargin.replace("\n", "").trim()
 }

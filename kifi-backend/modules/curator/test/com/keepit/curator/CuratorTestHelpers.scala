@@ -201,7 +201,13 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
       libraryId = Id[Library](libraryId),
       userId = Id[User](userId),
       masterScore = masterScore,
-      allScores = LibraryScores()
+      allScores = LibraryScores(
+        socialScore = 1,
+        interestScore = 1,
+        recencyScore = 1,
+        popularityScore = 1,
+        sizeScore = 1
+      )
     )
   }
 }
