@@ -551,9 +551,8 @@ angular.module('kifi')
               });
             }
           });
-        }, 100, {
-          'leading': true
-        });
+        }, 20);
+
 
         //
         // Watches and listeners.
