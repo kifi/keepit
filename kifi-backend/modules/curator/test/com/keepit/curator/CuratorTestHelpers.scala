@@ -210,4 +210,13 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
       )
     )
   }
+
+  def saveLibraryMembership(userId: Id[User], libId: Id[Library], owner: Boolean = false)(implicit rw: RWSession, injector: Injector): CuratorLibraryMembershipInfo = {
+    inject[CuratorLibraryMembershipInfoRepo].save(CuratorLibraryMembershipInfo(
+      userId = userId,
+      libraryId = libId,
+      access = if (owner) LibraryAccess.OWNER else LibraryAccess.READ_ONLY,
+      state = CuratorLibraryMembershipInfoStates.ACTIVE
+    ))
+  }
 }

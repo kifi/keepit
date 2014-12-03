@@ -220,9 +220,12 @@ class CortexServiceClientImpl(
     call(Cortex.internal.libraryTopic(libId)).map { r => (r.json).as[Option[Array[Float]]] }
   }
 
+  // TODO(yingie / josh) change response object to extendable case class
   def userLibraryScore(userId: Id[User], libId: Id[Library])(implicit version: LDAVersionOpt): Future[Option[Float]] = {
     call(Cortex.internal.userLibraryScore(userId, libId)).map { r => (r.json).as[Option[Float]] }
   }
+
+  // TODO(yingie / josh) batch endpoint userLibrariesScores
 
   def similarURIs(uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt): Future[Seq[Id[NormalizedURI]]] = {
     call(Cortex.internal.similarURIs(uriId)).map { r => (r.json).as[Seq[Id[NormalizedURI]]] }

@@ -16,6 +16,7 @@ import com.keepit.common.actor.FakeScheduler
 
 class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends CortexServiceClient {
   val batchUserURIsInterestsExpectations = collection.mutable.Map[Id[User], Seq[LDAUserURIInterestScores]]()
+  val userLibraryScoreExpectations = collection.mutable.Map[(Id[User], Id[Library]), Option[Float]]()
 
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
@@ -49,7 +50,13 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
   override def getTopicNames(uris: Seq[Id[NormalizedURI]], userIdOpt: Option[Id[User]])(implicit version: LDAVersionOpt = None): Future[Seq[Option[String]]] = Future.successful(Seq.fill(uris.length)(None))
   override def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Seq[Id[Keep]]]] = Future.successful(Seq.fill(uriIds.length)(Seq()))
   override def libraryTopic(libId: Id[Library])(implicit version: LDAVersionOpt = None): Future[Option[Array[Float]]] = ???
-  override def userLibraryScore(userId: Id[User], libId: Id[Library])(implicit version: LDAVersionOpt): Future[Option[Float]] = ???
+
+  override def userLibraryScore(userId: Id[User], libId: Id[Library])(implicit version: LDAVersionOpt): Future[Option[Float]] = {
+    Future.successful {
+      userLibraryScoreExpectations.getOrElse((userId, libId), Some(1f))
+    }
+  }
+
   override def similarURIs(uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt): Future[Seq[Id[NormalizedURI]]] = ???
 
   override def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])] = ???

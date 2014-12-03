@@ -9,14 +9,16 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.curator.model.{ LibraryRecommendationStates, LibraryScores, CuratorLibraryInfo, LibraryRecommendationGenerationState, LibraryRecommendation, LibraryRecommendationGenerationStateRepo, LibraryRecommendationRepo, CuratorLibraryInfoRepo }
+import com.keepit.curator.model.{ LibraryRecommendationStates, CuratorLibraryInfo, LibraryRecommendationGenerationState, LibraryRecommendation, LibraryRecommendationGenerationStateRepo, LibraryRecommendationRepo, CuratorLibraryInfoRepo }
 import com.keepit.curator.{ LibraryScoringHelper, ScoredLibraryInfo }
 import com.keepit.model.{ ExperimentType, Library, LibraryVisibility, User }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 
-case class LibraryRecoCandidate(userId: Id[User], libraryInfo: CuratorLibraryInfo)
+case class LibraryRecoCandidate(userId: Id[User], libraryInfo: CuratorLibraryInfo) {
+  val libraryId = libraryInfo.libraryId
+}
 
 @Singleton
 class LibraryRecommendationGenerationCommander @Inject() (
@@ -29,7 +31,6 @@ class LibraryRecommendationGenerationCommander @Inject() (
     experimentCommander: RemoteUserExperimentCommander,
     serviceDiscovery: ServiceDiscovery) extends Logging {
 
-  val defaultScore = 0.0f
   val recommendationGenerationLock = new ReactiveLock(8)
 
   private def usersToPrecomputeRecommendationsFor(): Future[Seq[Id[User]]] =

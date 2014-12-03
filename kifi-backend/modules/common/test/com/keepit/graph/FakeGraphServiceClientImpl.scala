@@ -19,14 +19,16 @@ class FakeGraphServiceClientImpl(
     override val httpClient: HttpClient,
     val airbrakeNotifier: AirbrakeNotifier) extends GraphServiceClient {
   var uriAndScores: Map[Id[NormalizedURI], Int] = Map.empty
-  var userAndScorePairs: Seq[ConnectedUserScore] = Seq.empty
+  val connectedUserScoresExpectations = collection.mutable.Map[Id[User], Seq[ConnectedUserScore]]()
+
   def getGraphStatistics(): Future[Map[AmazonInstanceId, PrettyGraphStatistics]] = Future.successful(Map.empty)
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]] = Future.successful(Map.empty)
   def getGraphKinds(): Future[GraphKinds] = Future.successful(GraphKinds.empty)
   def wander(wanderlust: Wanderlust): Future[Collisions] = Future.successful(Collisions.empty)
   def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]] = Future.successful(uriAndScores)
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[ConnectedUriScore]] = Future.successful(Seq.empty)
-  def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[ConnectedUserScore]] = Future.successful(userAndScorePairs)
+  def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[ConnectedUserScore]] =
+    Future.successful(connectedUserScoresExpectations.getOrElse(userId, Seq.empty))
 
   def setUriAndScorePairs(uris: Seq[Id[NormalizedURI]]) {
     uris.foreach(uri =>
@@ -34,11 +36,13 @@ class FakeGraphServiceClientImpl(
     )
   }
 
-  def setUserAndScorePairs() {
+  def setUserAndScorePairs(userId: Id[User]): Seq[ConnectedUserScore] = {
     val connectedUserScore1 = ConnectedUserScore(Id[User](1), 0.795)
     val connectedUserScore2 = ConnectedUserScore(Id[User](2), 0.795)
     val connectedUserScore3 = ConnectedUserScore(Id[User](3), 0.795)
-    userAndScorePairs = connectedUserScore1 :: connectedUserScore2 :: connectedUserScore3 :: Nil
+    val scores = Seq(connectedUserScore1, connectedUserScore2, connectedUserScore3)
+    connectedUserScoresExpectations(userId) = scores
+    scores
   }
 
   def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities]] = Future.successful(None)
