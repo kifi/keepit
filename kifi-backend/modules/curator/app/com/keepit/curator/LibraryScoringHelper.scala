@@ -2,7 +2,7 @@ package com.keepit.curator
 
 import java.util.concurrent.TimeUnit
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
@@ -21,6 +21,7 @@ case class ScoredLibraryInfo(libraryInfo: CuratorLibraryInfo, masterScore: Float
   val libraryId = libraryInfo.libraryId
 }
 
+@Singleton
 class LibraryScoringHelper @Inject() (
     db: Database,
     graph: GraphServiceClient,

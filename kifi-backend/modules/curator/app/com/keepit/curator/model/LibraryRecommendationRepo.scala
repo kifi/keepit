@@ -18,7 +18,7 @@ trait LibraryRecommendationRepo extends DbRepo[LibraryRecommendation] {
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[LibraryRecommendation]
   def getByLibraryAndUserId(libraryId: Id[Library], userId: Id[User], LibraryRecommendationState: Option[State[LibraryRecommendation]])(implicit session: RSession): Option[LibraryRecommendation]
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, LibraryRecommendationState: Option[State[LibraryRecommendation]] = Some(LibraryRecommendationStates.ACTIVE))(implicit session: RSession): Seq[LibraryRecommendation]
-  def cleanupLowMasterScoreRecos(userId: Id[User], limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Unit
+  def cleanupLowMasterScoreRecos(userId: Id[User], minNumRecosToKeep: Int, before: DateTime)(implicit session: RWSession): Unit
   def getLibraryIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[Library]]
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]]
 }
@@ -89,13 +89,12 @@ class LibraryRecommendationRepoImpl @Inject() (
     (byUser(userId)(rows) |> recommendable).sortBy(_.masterScore.desc).take(maxBatchSize).list
   }
 
-  def cleanupLowMasterScoreRecos(userId: Id[User], limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Unit = {
+  def cleanupLowMasterScoreRecos(userId: Id[User], minNumRecosToKeep: Int, before: DateTime)(implicit session: RWSession): Unit = {
     import scala.slick.jdbc.StaticQuery.interpolation
     sqlu"""
       DELETE FROM library_recommendation WHERE user_id=$userId AND master_score < (SELECT MIN(master_score) FROM (
-        SELECT master_score FROM library_recommendation WHERE user_id=$userId ORDER BY master_score DESC LIMIT $limitNumRecosForUser
+        SELECT master_score FROM library_recommendation WHERE user_id=$userId ORDER BY master_score DESC LIMIT $minNumRecosToKeep
       ) AS mScoreTable) AND updated_at < $before""".first()
-
   }
 
   def getLibraryIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[Library]] = {
