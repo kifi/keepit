@@ -3,7 +3,6 @@
 // @require scripts/html/keeper/compose.js
 // @require scripts/html/keeper/compose_toaster.js
 // @require scripts/html/keeper/sent.js
-// @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/q.min.js
 // @require scripts/formatting.js
 // @require scripts/look.js
@@ -157,16 +156,17 @@ k.toaster = k.toaster || (function () {
     progress($t.find('.kifi-compose-bar'), progressDeferred.promise)
     .done(function (threadId) {
       if ($toast === $t) {
-        var $parent = $t.parent().parent();
-        var confirm = showSentConfirmation.bind(null, $parent, text, recipients, threadId);
-        if ($parent.hasClass('kifi-pane')) {
+        var $parent = $t.parent();
+        var $gramps = $parent.parent();
+        if ($gramps.hasClass('kifi-pane')) {
           $t.on('transitionend', function f(e) {
             if (e.target === this && e.originalEvent.propertyName === 'opacity') {
               $(this).off(e.type, f);
-              confirm();
+              showSentConfirmation($parent, text, recipients, threadId);
             }
           });
         } else {
+          var confirm = showSentConfirmation.bind(null, $gramps, text, recipients, threadId);
           var pos = k.tile.dataset.pos;
           if (!pos || pos === '{"bottom":0}') {
             $(k.tile).on('kifi:keeper:remove', function f(e) {
@@ -241,19 +241,21 @@ k.toaster = k.toaster || (function () {
       api.require('scripts/pane.js', function () {
         k.pane.show({locator: '/messages/' + threadId, trigger: 'send'});
       });
-      hideSent();
+      hideSent(true);
     })
     .prependTo($parent);
 
     if ($parent.is(k.tile)) {
       $sent.layout();
     } else {
-      $sent.position({my: 'center bottom', at: 'center top-9', of: $parent.find('.kifi-dock-compose')})
+      var left = ($parent[0].clientWidth - $sent[0].offsetWidth) / 2;
+      $sent.css('left', left);
+      $sent.find('.kifi-sent-tri').css('left', 110 - left);
     }
 
     $sent
     .removeClass('kifi-hidden')
-    .data('timeout', setTimeout(hideSent, 2400));
+    .data('timeout', setTimeout(hideSent, 2700));
 
     $(k.tile).on('kifi:keeper:add', hideSent);
   }

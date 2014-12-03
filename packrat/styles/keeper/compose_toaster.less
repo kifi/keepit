@@ -197,16 +197,16 @@
     transform-origin: right bottom;
   }
   .kifi-pane & {
-    z-index: 1;
-    -webkit-transform-origin: center bottom;
-    transform-origin: center bottom;
+    bottom: 56px;
+    -webkit-transform-origin: 40% bottom;
+    transform-origin: 40% bottom;
   }
   &.kifi-hidden {
     opacity: 0;
     -webkit-transform: scale(.6) translate(0, 12px);
     transform: scale(.6) translate(0, 12px);
     &.kifi-slowly {
-      transition-duration: .8s;
+      transition-duration: .9s;
     }
   }
   &::before {
@@ -264,10 +264,6 @@
   border-color: inherit;
   .kifi-tile & {
     right: 6px;
-  }
-  .kifi-pane & {
-    left: 50%;
-    margin-left: -18px;
   }
   &::after {
     content: '';
