@@ -295,7 +295,7 @@ class AuthCommander @Inject() (
   def getSocialUserOpt(identityId: IdentityId): Option[Identity] = UserService.find(identityId)
 
   def exchangeLongTermToken(provider: IdentityProvider, oauth2Info: OAuth2Info): Future[OAuth2Info] = {
-    providerRegistry.get(ProviderIds.toProviderId(provider.id)) match {
+    providerRegistry.getOAuth2Provider(ProviderIds.toProviderId(provider.id)) match {
       case None =>
         log.warn(s"[exchangeLongTermToken(${provider.id})] provider not found")
         Future.successful(oauth2Info)

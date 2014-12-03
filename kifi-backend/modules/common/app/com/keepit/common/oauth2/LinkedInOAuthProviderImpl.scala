@@ -13,7 +13,7 @@ import play.api.libs.ws.WS
 
 import scala.concurrent.Future
 
-trait LinkedInOAuthProvider extends OAuthProvider {
+trait LinkedInOAuthProvider extends OAuthProvider with OAuth2Support {
   val providerId = ProviderIds.LinkedIn
 }
 
@@ -33,7 +33,7 @@ object LinkedInOAuthProvider {
 }
 
 @Singleton
-class LinkedInOAuthProviderImpl @Inject() (airbrake: AirbrakeNotifier) extends LinkedInOAuthProvider with Logging {
+class LinkedInOAuthProviderImpl @Inject() (airbrake: AirbrakeNotifier) extends LinkedInOAuthProvider with OAuth2Support with Logging {
 
   import LinkedInOAuthProvider._
   def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {

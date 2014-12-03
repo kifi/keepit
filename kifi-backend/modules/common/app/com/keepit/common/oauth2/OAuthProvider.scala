@@ -4,7 +4,7 @@ import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.OAuth2TokenInfo
+import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
 
 import scala.concurrent.Future
 
@@ -14,9 +14,11 @@ sealed abstract class ProviderId(val id: String) {
 object ProviderIds {
   object Facebook extends ProviderId("facebook")
   object LinkedIn extends ProviderId("linkedin")
+  object Twitter extends ProviderId("twitter") // revisit
   def toProviderId(id: String) = id match {
     case Facebook.id => Facebook
     case LinkedIn.id => LinkedIn
+    case Twitter.id => Twitter
     case _ => throw new IllegalArgumentException(s"[toProviderId] id=$id not supported")
   }
 }
@@ -57,17 +59,22 @@ object UserProfileInfo {
 }
 
 trait OAuthProvider {
-
   def providerId: ProviderId
+}
 
+trait OAuth1Support extends OAuthProvider {
+  def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo]
+}
+
+trait OAuth2Support extends OAuthProvider {
   def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo]
-
   def exchangeLongTermToken(tokenInfo: OAuth2TokenInfo): Future[OAuth2TokenInfo]
-
 }
 
 trait ProviderRegistry {
   def get(providerId: ProviderId): Option[OAuthProvider]
+  def getOAuth1Provider(providerId: ProviderId): Option[OAuth1Support]
+  def getOAuth2Provider(providerId: ProviderId): Option[OAuth2Support]
 }
 
 @Singleton
@@ -75,11 +82,16 @@ class ProviderRegistryImpl @Inject() (
     airbrake: AirbrakeNotifier,
     fbProvider: FacebookOAuthProvider,
     lnkdProvider: LinkedInOAuthProvider) extends ProviderRegistry with Logging {
-  def get(providerId: ProviderId): Option[OAuthProvider] = {
+
+  def get(providerId: ProviderId): Option[OAuthProvider] = getOAuth2Provider(providerId)
+
+  def getOAuth2Provider(providerId: ProviderId): Option[OAuth2Support] = {
     providerId match {
       case ProviderIds.Facebook => Some(fbProvider)
       case ProviderIds.LinkedIn => Some(lnkdProvider)
       case _ => None
     }
   }
+
+  def getOAuth1Provider(providerId: ProviderId): Option[OAuth1Support] = throw new UnsupportedOperationException()
 }

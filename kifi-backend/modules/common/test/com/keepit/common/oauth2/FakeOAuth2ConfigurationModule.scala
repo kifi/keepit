@@ -6,7 +6,7 @@ import com.keepit.model.OAuth2TokenInfo
 
 import scala.concurrent.Future
 
-trait FakeOAuthProvider extends OAuthProvider {
+trait FakeOAuthProvider extends OAuthProvider with OAuth2Support {
 
   var longTermTokenOpt: Option[OAuth2TokenInfo] = None
   def setLongTermToken(f: => OAuth2TokenInfo) { longTermTokenOpt = Some(f) }

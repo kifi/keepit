@@ -457,7 +457,7 @@ class AuthHelper @Inject() (
   val signUpUrl = com.keepit.controllers.core.routes.AuthController.signupPage().url
 
   def doAccessTokenSignup(providerName: String, oauth2InfoOrig: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
-    providerRegistry.get(ProviderIds.toProviderId(providerName)) match {
+    providerRegistry.getOAuth2Provider(ProviderIds.toProviderId(providerName)) match {
       case None =>
         log.error(s"[accessTokenSignup($providerName)] Failed to retrieve provider; request=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
@@ -497,7 +497,7 @@ class AuthHelper @Inject() (
   }
 
   def doAccessTokenLogin(providerName: String, oAuth2Info: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
-    providerRegistry.get(ProviderIds.toProviderId(providerName)) match {
+    providerRegistry.getOAuth2Provider(ProviderIds.toProviderId(providerName)) match {
       case None =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(provider) =>

@@ -14,7 +14,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import play.api.Play.current
 
-trait FacebookOAuthProvider extends OAuthProvider {
+trait FacebookOAuthProvider extends OAuthProvider with OAuth2Support {
 
   val MeApi = "https://graph.facebook.com/me?fields=name,first_name,last_name,picture,email&return_ssl_resources=1&access_token="
   val Error = "error"
@@ -37,7 +37,7 @@ trait FacebookOAuthProvider extends OAuthProvider {
 @Singleton
 class FacebookOAuthProviderImpl @Inject() (
     airbrake: AirbrakeNotifier,
-    oauth2Config: OAuth2Configuration) extends FacebookOAuthProvider with Logging {
+    oauth2Config: OAuth2Configuration) extends FacebookOAuthProvider with OAuth2Support with Logging {
 
   val config = oauth2Config.getProviderConfig(providerId.id) match {
     case None => throw new IllegalArgumentException(s"config not found for $providerId")
