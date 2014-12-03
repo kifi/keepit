@@ -60,7 +60,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         }
 
         // add new library
-        val jsBody1 = Json.obj("title" -> "Drones stuff", "visibility" -> "published")
+        val jsBody1 = Json.obj("name" -> "Drones stuff", "visibility" -> "published")
         val result1 = createLibrary(user, jsBody1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
@@ -71,7 +71,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         (resultJson \ "url").as[String] === "/r2d2/drones-stuff"
 
         // add library with same title
-        val jsBody2 = Json.obj("title" -> "Drones stuff", "visibility" -> "secret")
+        val jsBody2 = Json.obj("name" -> "Drones stuff", "visibility" -> "secret")
         val result2 = createLibrary(user, jsBody2)
         status(result2) must equalTo(BAD_REQUEST)
 
@@ -93,7 +93,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         lib1.slug.value === "krabby-patty"
 
         // change fields (to something different)
-        val jsBody1 = Json.obj("newTitle" -> "Feed Gary", "newDescription" -> "qwer", "newVisibility" -> "secret", "newSlug" -> "feed-gary")
+        val jsBody1 = Json.obj("newName" -> "Feed Gary", "newDescription" -> "qwer", "newVisibility" -> "secret", "newSlug" -> "feed-gary")
         val result1 = modifyLibrary(user, pubLib1, jsBody1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
@@ -104,7 +104,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         (resultJson \ "url").as[String] === "/spongebob/feed-gary"
 
         // change a library title to an existing library's title
-        val result2 = modifyLibrary(user, pubLib1, Json.obj("newTitle" -> lib2.name))
+        val result2 = modifyLibrary(user, pubLib1, Json.obj("newName" -> lib2.name))
         status(result2) must equalTo(BAD_REQUEST)
 
         // change a library slug to an existing library's slug

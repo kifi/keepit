@@ -35,11 +35,11 @@ class MobileLibraryController @Inject() (
 
   def createLibrary() = UserAction(parse.tolerantJson) { request =>
     val jsonBody = request.body
-    val title = (jsonBody \ "title").as[String]
+    val name = (jsonBody \ "name").as[String]
     val description = (jsonBody \ "description").asOpt[String]
     val visibility = (jsonBody \ "visibility").as[LibraryVisibility]
-    val slug = LibrarySlug.generateFromName(title)
-    val addRequest = LibraryAddRequest(title, visibility, description, slug)
+    val slug = LibrarySlug.generateFromName(name)
+    val addRequest = LibraryAddRequest(name, visibility, description, slug)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
@@ -53,7 +53,7 @@ class MobileLibraryController @Inject() (
   def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
     val libId = Library.decodePublicId(pubId).get
     val json = request.body
-    val newName = (json \ "newTitle").asOpt[String]
+    val newName = (json \ "newName").asOpt[String]
     val newDescription = (json \ "newDescription").asOpt[String]
     val newVisibility = (json \ "newVisibility").asOpt[LibraryVisibility]
     val newSlug = (json \ "newSlug").asOpt[String]
