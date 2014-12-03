@@ -132,7 +132,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         if (k.keepBox && k.keepBox.showing()) {
-          k.keepBox.hide('clickout');
+          k.keepBox.hide();
         } else {
           showKeepBox('keeper', e.originalEvent.guided);
         }
@@ -232,6 +232,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     log('[showSlider]', trigger || '');
 
     createSlider();
+    $(k.tile).triggerHandler('kifi:keeper:add');
     $slider.addClass('kifi-hidden kifi-transit')
       .prependTo(k.tile)
       .layout()
@@ -275,7 +276,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       css.transform = 'translate(0,' + y + 'px)';
       $(k.tile).css(css)
       .layout().css({transition: '', 'transition-duration': Math.min(1, 32 * Math.log(y)) + 'ms'})
-      .find('.kifi-count').css('zoom', 1); // webkit repaint workaround
+      .find('.kifi-tile-dot').css('zoom', 1); // webkit repaint workaround
       k.tile['kifi:position']();
       $(k.tile).on('transitionend', function end() {
         $(this).off('transitionend', end).css('transition-duration', '');
@@ -283,8 +284,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     }
     $slider.find('.kifi-keep-btn,.kifi-dock-btn').hoverfu('destroy');
     $slider.remove(), $slider = null;
-
-    $(k.tile).find('.kifi-tile-dot').remove().appendTo(k.tile); // invisible dot chrome bug workaround
+    $(k.tile).triggerHandler('kifi:keeper:remove');
 
     if (extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
       extMsgIntroEligible = false;
@@ -376,21 +376,21 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       k.keepBox.onHide.add(onKeepBoxHide);
     });
   }
-  function onKeepBoxHide(trigger) {
+  function onKeepBoxHide(doneWithKeeper) {
     endStickyKeepBox();
     if (k.pane) {
       k.pane.unshade();
     }
-    if (/^(?:x|esc|clickout|timer|enter|button|silence|history)$/.test(trigger)) {
+    if (doneWithKeeper) {
       setTimeout(hideDelayed.bind(null, 'keepBox'), 40);
     }
   }
-  function onToasterHide(trigger) {
+  function onToasterHide(doneWithKeeper) {
     endStickyToaster();
     if (k.pane) {
       k.pane.unshade();
     }
-    if (/^(?:x|esc|silence|history)$/.test(trigger)) {
+    if (doneWithKeeper) {
       setTimeout(hideDelayed.bind(null, 'toaster'), 40);
     }
   }

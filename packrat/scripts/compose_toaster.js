@@ -2,6 +2,9 @@
 // @require styles/keeper/compose_toaster.css
 // @require scripts/html/keeper/compose.js
 // @require scripts/html/keeper/compose_toaster.js
+// @require scripts/html/keeper/sent.js
+// @require scripts/lib/jquery-ui-position.min.js
+// @require scripts/lib/q.min.js
 // @require scripts/formatting.js
 // @require scripts/look.js
 // @require scripts/render.js
@@ -10,7 +13,8 @@
 
 k.toaster = k.toaster || (function () {
   'use strict';
-  var $toast;
+  var DEFAULT_MESSAGE_TEXT = 'Check this out.';
+  var $toast, $sent;
 
   var handlers = {
     page_thread_count: function (o) {
@@ -57,10 +61,13 @@ k.toaster = k.toaster || (function () {
     api.port.emit('prefs', function (prefs) {
       compose.reflectPrefs(prefs || {});
     });
+    if ($sent) {
+      hideSent(true);
+    }
     $toast = $(k.render('html/keeper/compose_toaster', {
       showTo: true,
       draftPlaceholder: 'Write something…',
-      draftDefault: 'Check this out.'
+      draftDefault: DEFAULT_MESSAGE_TEXT
     }, {
       compose: 'compose'
     }))
@@ -79,7 +86,7 @@ k.toaster = k.toaster || (function () {
     })
     .appendTo($parent);
 
-    var compose = k.compose($toast, {onSubmit: send.bind(null, $toast)});
+    var compose = k.compose($toast, send.bind(null, $toast));
     $toast.data('compose', compose);
     $(document).data('esc').add(hide);
 
@@ -110,17 +117,18 @@ k.toaster = k.toaster || (function () {
   function hide(e, trigger) {
     log('[toaster:hide]');
     trigger = trigger || (e && e.keyCode === 27 ? 'esc' : undefined);
+    var doneWithKeeper = /^(?:x|esc|sent|silence|history)$/.test(trigger);
     api.port.off(handlers);
     $(document).data('esc').remove(hide);
+    if (trigger !== 'sent') {
+      $toast.data('compose').save({});
+    }
     $toast.css('overflow', '')
       .on('transitionend', onHidden)
-      .addClass('kifi-down');
-    if (trigger !== 'sent') {
-      $toast.data('compose').save();
-    }
+      .addClass('kifi-down' + (doneWithKeeper && !(k.pane && k.pane.showing()) ? ' kifi-to-tile' : ''));
     $toast = null;
     if (e) e.preventDefault();
-    k.toaster.onHide.dispatch(trigger);
+    k.toaster.onHide.dispatch(doneWithKeeper);
   }
 
   function onHidden(e) {
@@ -136,18 +144,53 @@ k.toaster = k.toaster || (function () {
     $t.data('sending', true);
     api.port.emit(
       'send_message',
-      withTitles(withUrls({text: text, recipients: recipients.map(idOf), guided: guided})),
-      function (resp) {
-        log('[sendMessage] resp:', resp);
-        api.require('scripts/pane.js', function () {
-          $t.data('sending', false);
-          k.pane.show({locator: '/messages/' + resp.threadId, trigger: 'send'});
-          if ($toast === $t) {
-            hide();
-          }
-        });
+      withTitles(withUrls({text: text, recipients: recipients.map(getId), guided: guided})),
+      function (o) {
+        if (o && o.threadId) {
+          progressDeferred.fulfill(o.threadId);
+        } else {
+          progressDeferred.reject();
+        }
       });
-    api.require('scripts/pane.js', api.noop); // in parallel
+
+    var progressDeferred = Q.defer();
+    progress($t.find('.kifi-compose-bar'), progressDeferred.promise)
+    .done(function (threadId) {
+      if ($toast === $t) {
+        var $parent = $t.parent().parent();
+        var confirm = showSentConfirmation.bind(null, $parent, text, recipients, threadId);
+        if ($parent.hasClass('kifi-pane')) {
+          $t.on('transitionend', function f(e) {
+            if (e.target === this && e.originalEvent.propertyName === 'opacity') {
+              $(this).off(e.type, f);
+              confirm();
+            }
+          });
+        } else {
+          var pos = k.tile.dataset.pos;
+          if (!pos || pos === '{"bottom":0}') {
+            $(k.tile).on('kifi:keeper:remove', function f(e) {
+              $(this).off(e.type, f);
+              confirm();
+            });
+          } else {
+            $(k.tile).on('transitionend', function f(e) {
+              if (e.target === this && ~['transform', '-webkit-transform'].indexOf(e.originalEvent.propertyName)) {
+                $(this).off(e.type, f);
+                confirm();
+              }
+            });
+          }
+        }
+        hide(null, 'sent');
+      }
+    }, function fail() {
+      $t.data('sending', false);
+      formDeferred.resolve(false);  // do not reset
+    });
+
+    var formDeferred = Q.defer();
+    return formDeferred.promise;
   }
 
   function showOlder(threadId) {
@@ -156,7 +199,125 @@ k.toaster = k.toaster || (function () {
     });
   }
 
-  function idOf(o) {
+  function showSentConfirmation($parent, text, recipients, threadId) {
+    var toSelf = recipients[0].id === k.me.id;
+    if (toSelf && recipients.length > 1) {
+      toSelf = false;
+      recipients = recipients.slice(1);
+    }
+    var numOthers = 0;
+    var names = toSelf ? ['yourself'] : recipients.filter(isNotEmail).map(getFirstName);
+    var emails = recipients.filter(isEmail).map(getId);
+    switch (names.length) {
+      case 0:
+        if (emails.length !== 2) {
+          numOthers = emails.length - 1;
+          emails.length = 1;
+        }
+        break;
+      case 1:
+      case 2:
+      case 3:
+        if (emails.length > 2) {
+          numOthers = emails.length - 1;
+          emails.length = 1;
+        }
+        break;
+      default:
+        numOthers = recipients.length - 3;
+        names.length = 3;
+        emails.length = 0;
+    }
+    $sent = $(k.render('html/keeper/sent', {
+      customMessage: text !== DEFAULT_MESSAGE_TEXT,
+      toSelf: toSelf,
+      names: names,
+      emails: emails,
+      numOthers: numOthers,
+      multiline: names.length > 2 || emails.length > 0
+    }))
+    .click(function (e) {
+      if (e.which !== 1) return;
+      api.require('scripts/pane.js', function () {
+        k.pane.show({locator: '/messages/' + threadId, trigger: 'send'});
+      });
+      hideSent();
+    })
+    .prependTo($parent);
+
+    if ($parent.is(k.tile)) {
+      $sent.layout();
+    } else {
+      $sent.position({my: 'center bottom', at: 'center top-9', of: $parent.find('.kifi-dock-compose')})
+    }
+
+    $sent
+    .removeClass('kifi-hidden')
+    .data('timeout', setTimeout(hideSent, 2400));
+
+    $(k.tile).on('kifi:keeper:add', hideSent);
+  }
+
+  function hideSent(quickly) {
+    $(k.tile).off('kifi:keeper:add', hideSent);
+    clearTimeout($sent.data('timeout'));
+    $sent.on('transitionend', $.fn.remove.bind($sent, undefined))
+      .addClass('kifi-hidden' + (quickly ? '' : ' kifi-slowly'));
+    $sent = null;
+  }
+
+  // Takes a promise for a task's outcome. Returns a promise that relays
+  // the outcome after visual indication of the outcome is complete.
+  function progress(parent, promise) {
+    var $el = $('<div class="kifi-toast-progress"/>').appendTo(parent);
+    var frac = 0, ms = 10, deferred = Q.defer();
+    var timeout = setTimeout(function update() {
+      var left = .9 - frac;
+      frac += .06 * left;
+      $el[0].style.width = Math.min(frac * 100, 100) + '%';
+      if (left > .0001) {
+        timeout = setTimeout(update, ms);
+      }
+    }, ms);
+
+    promise.done(function (val) {
+      log('[progress:done]');
+      clearTimeout(timeout), timeout = null;
+      $el.on('transitionend', function (e) {
+        if (e.originalEvent.propertyName === 'clip') {
+          $el.off('transitionend');
+          deferred.resolve(val);
+        }
+      }).addClass('kifi-done');
+    }, function (reason) {
+      log('[progress:fail]');
+      clearTimeout(timeout), timeout = null;
+      if ($el[0].offsetWidth) {
+        $el.one('transitionend', finishFail).addClass('kifi-fail');
+      } else {
+        finishFail();
+      }
+      function finishFail() {
+        $el.remove();
+        deferred.reject(reason);
+      }
+    });
+    return deferred.promise;
+  }
+
+  function getId(o) {
     return o.id;
+  }
+
+  function getFirstName(o) {
+    return o.name.match(/^\S*/)[0];
+  }
+
+  function isEmail(o) {
+    return o.email;
+  }
+
+  function isNotEmail(o) {
+    return !o.email;
   }
 }());

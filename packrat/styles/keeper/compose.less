@@ -198,22 +198,6 @@ span.kifi-compose-tip-alt {
   &:not([href]) {
     background: #f3f3f3;
   }
-  &::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 48px;
-    height: 16px;
-    margin: -8px 0 0 -24px;
-    background: #f3f3f3 url(/images/spinner_32.gif) center no-repeat;
-    background-size: contain;
-    opacity: 0;
-  }
-  &:not([href])::after {
-    opacity: 1;
-    transition: opacity .2s linear;
-  }
 }
 
 .kifi-snapshot-highlight {

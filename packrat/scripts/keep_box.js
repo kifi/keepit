@@ -125,6 +125,7 @@ k.keepBox = k.keepBox || (function () {
   function hide(e, trigger) {
     clearInterval(hideInterval), hideInterval = null;
     trigger = trigger || (e && e.keyCode === 27 ? 'esc' : undefined);
+    var doneWithKeeper = /^(?:x|esc|clickout|timer|enter|button|silence|history)$/.test(trigger);
     log('[keepBox:hide]', trigger);
     $(document).data('esc').remove(hide);
     var $view = $box.find('.kifi-keep-box-view');
@@ -135,7 +136,7 @@ k.keepBox = k.keepBox || (function () {
       .addClass('kifi-down');
     $box = null;
     if (e) e.preventDefault();
-    k.keepBox.onHide.dispatch(trigger);
+    k.keepBox.onHide.dispatch(doneWithKeeper);
 
     api.port.emit('track_pane_click', {
       type: $view.hasClass('kifi-keep-box-view-libs') ? 'libraryChooser' :
@@ -929,7 +930,7 @@ k.keepBox = k.keepBox || (function () {
   // Takes a promise for a task's outcome. Returns a promise that relays
   // the outcome after visual indication of the outcome is complete.
   function progress(parent, promise) {
-    var $el = $('<div class=kifi-keep-box-progress>').appendTo(parent);
+    var $el = $('<div class="kifi-keep-box-progress"/>').appendTo(parent);
     var frac = 0, ms = 10, deferred = Q.defer();
     var timeout = setTimeout(function update() {
       var left = .9 - frac;
@@ -943,7 +944,7 @@ k.keepBox = k.keepBox || (function () {
     promise.done(function (val) {
       log('[progress:done]');
       clearTimeout(timeout), timeout = null;
-      $el.removeClass('kifi-doing').on('transitionend', function (e) {
+      $el.on('transitionend', function (e) {
         if (e.originalEvent.propertyName === 'clip') {
           $el.off('transitionend');
           deferred.resolve(val);
@@ -952,10 +953,15 @@ k.keepBox = k.keepBox || (function () {
     }, function (reason) {
       log('[progress:fail]');
       clearTimeout(timeout), timeout = null;
-      $el.removeClass('kifi-doing').one('transitionend', function () {
+      if ($el[0].offsetWidth) {
+        $el.one('transitionend', finishFail).addClass('kifi-fail');
+      } else {
+        finishFail();
+      }
+      function finishFail() {
         $el.remove();
         deferred.reject(reason);
-      }).addClass('kifi-fail');
+      }
     });
     return deferred.promise;
   }
