@@ -1,4 +1,4 @@
-package com.keepit.common.oauth2
+package com.keepit.common.oauth
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule

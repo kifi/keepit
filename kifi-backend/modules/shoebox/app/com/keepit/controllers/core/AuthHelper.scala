@@ -5,8 +5,8 @@ import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
-import com.keepit.common.oauth2.adaptor.SecureSocialAdaptor
-import com.keepit.common.oauth2.{ OAuth2AccessToken, ProviderIds, ProviderRegistry }
+import com.keepit.common.oauth.adaptor.SecureSocialAdaptor
+import com.keepit.common.oauth.{ OAuth2AccessToken, ProviderIds, ProviderRegistry }
 import play.api.libs.oauth.RequestToken
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }

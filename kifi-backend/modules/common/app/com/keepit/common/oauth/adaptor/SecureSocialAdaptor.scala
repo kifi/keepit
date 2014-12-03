@@ -1,6 +1,6 @@
-package com.keepit.common.oauth2.adaptor
+package com.keepit.common.oauth.adaptor
 
-import com.keepit.common.oauth2._
+import com.keepit.common.oauth._
 import securesocial.core._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 

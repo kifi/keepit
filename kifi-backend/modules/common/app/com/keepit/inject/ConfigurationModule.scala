@@ -5,7 +5,7 @@ import com.keepit.common.concurrent.ExecutionContextModule
 import com.keepit.common.logging.Logging
 import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.actor.{ ActorSystemModule, ProdActorSystemModule, DevActorSystemModule }
-import com.keepit.common.oauth2.{ DevOAuth2ConfigurationModule, ProdOAuth2ConfigurationModule }
+import com.keepit.common.oauth.{ DevOAuth2ConfigurationModule, ProdOAuth2ConfigurationModule }
 import com.keepit.common.zookeeper.{ ProdDiscoveryModule, ServiceTypeModule }
 import com.keepit.common.util.PlayAppConfigurationModule
 import com.keepit.common.zookeeper.{ DiscoveryModule, DevDiscoveryModule }

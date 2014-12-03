@@ -1,4 +1,4 @@
-package com.keepit.common.oauth2
+package com.keepit.common.oauth
 
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -11,9 +11,6 @@ import play.api.libs.ws.WS
 
 import scala.concurrent.Future
 
-/**
- * Twitter is (mostly) OAuth1a. May need to rename package for accuracy.
- */
 trait TwitterOAuthProvider extends OAuthProvider with OAuth1Support {
 
   val VerifyCredentials = "https://api.twitter.com/1.1/account/verify_credentials.json"

@@ -15,7 +15,7 @@ import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.oauth2.FakeOAuth2ConfigurationModule
+import com.keepit.common.oauth.FakeOAuth2ConfigurationModule
 import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time.FakeClockModule

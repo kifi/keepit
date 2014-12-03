@@ -1,4 +1,4 @@
-package com.keepit.common.oauth2
+package com.keepit.common.oauth
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.auth.AuthException

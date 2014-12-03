@@ -5,8 +5,8 @@ import java.util.UUID
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.controller.KifiSession._
 import com.keepit.common.logging.Logging
-import com.keepit.common.oauth2.TwitterOAuthProvider
-import com.keepit.common.oauth2.adaptor.{ SecureSocialAdaptor }
+import com.keepit.common.oauth.TwitterOAuthProvider
+import com.keepit.common.oauth.adaptor.{ SecureSocialAdaptor }
 import com.keepit.social.UserIdentity
 import play.api.Application
 import play.api.Play.current

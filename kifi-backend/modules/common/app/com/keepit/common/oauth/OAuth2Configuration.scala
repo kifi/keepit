@@ -1,4 +1,4 @@
-package com.keepit.common.oauth2
+package com.keepit.common.oauth
 
 import java.net.URL
 
