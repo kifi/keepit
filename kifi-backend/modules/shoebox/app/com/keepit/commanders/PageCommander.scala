@@ -142,4 +142,25 @@ class PageCommander @Inject() (
       Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, 0, Seq.empty[KeepData]))
     }
   }
+
+  def getUrlInfo(url: String, userId: Id[User]): Either[String, Seq[KeepData]] = {
+    URI.parse(url) match {
+      case Success(uri) =>
+        val (_, nUriOpt) = db.readOnlyMaster { implicit s =>
+          normalizedURIInterner.getByUriOrPrenormalize(uri.raw.get) match {
+            case Success(Left(nUri)) => (nUri.url, Some(nUri))
+            case Success(Right(pUri)) => (pUri, None)
+            case Failure(ex) => (uri.raw.get, None)
+          }
+        }
+        val keepData = nUriOpt.map { normUri =>
+          keepsCommander.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
+        }.getOrElse(Seq.empty[KeepData])
+        Right(keepData)
+
+      case Failure(e) =>
+        log.error(s"Error parsing url: $url", e)
+        Left("parse_url_error")
+    }
+  }
 }
