@@ -943,20 +943,26 @@ api.port.on({
     var drafts = loadDrafts();
     if (data.html || data.to && data.to.length) {
       saveDraft(data.to ? tab.nUri || tab.url : currentThreadId(tab), data);
+      if (data.track) {
+        var d = pageData[tab.nUri || tab.url];
+        var matches = data.html.match(/<a href=["']x-kifi-sel:./g) || [];
+        var nR = matches.filter(endsWith('r')).length;
+        var nI = matches.filter(endsWith('i')).length;
+        tracker.track('user_messaged', extend({
+          type: data.track.threadId ? 'draftedReply' : 'draftedConversationStarter',
+          isKeep: d ? /^(?:private|public)$/.test(d.howKept()) : false,
+          numLookHeres: nR + nI,
+          numSelectionLookHeres: nR,
+          numImageLookHeres: nI
+        }, data.track));
+      }
     } else {
       discardDraft(data.to ? [tab.nUri, tab.url] : [currentThreadId(tab)]);
     }
   },
-  track_draft: function (data, _, tab) {
-    var d = pageData[tab.nUri];
-    var how = d && d.howKept();
-    tracker.track('user_messaged', extend({
-      type: data.threadId ? 'draftedReply' : 'draftedConversationStarter',
-      isKeep: how === 'private' || how === 'public'
-    }, data));
-  },
   send_message: function (data, respond, tab) {
-    discardDraft([tab.nUri, tab.url]);
+    var sentAt = Date.now();
+    var draft = discardDraft([tab.nUri, tab.url]);
     ajax('eliza', 'POST', '/eliza/messages', {
       url: data.url,
       canonical: !tab.usedHistoryApi && data.canonical || undefined,
@@ -973,6 +979,18 @@ api.port.on({
       // thread (notification) JSON comes via socket
       messageData[o.parentId] = o.messages;
       respond({threadId: o.parentId});
+    }, function (req) {
+      log('#c00', '[send_message] resp:', req);
+      var response = {status: req.status};
+      var elapsedMs = Date.now() - sentAt;
+      if (elapsedMs < 500) {  // allow sending progress animation to show
+        api.timers.setTimeout(respond.bind(null, response), 500 - elapsedMs);
+      } else {
+        respond(response);
+      }
+      if (draft) {
+        saveDraft(tab.nUri || tab.url, draft);
+      }
     });
   },
   send_reply: function(data, respond) {
@@ -2324,18 +2342,19 @@ function saveDraft(key, draft) {
 }
 
 function discardDraft(keys) {
-  var drafts = loadDrafts(), found;
+  var drafts = loadDrafts(), draft;
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     if (key in drafts) {
-      log('[discardDraft]', key, drafts[key]);
+      draft = drafts[key];
+      log('[discardDraft]', key, draft);
       delete drafts[key];
-      found = true;
     }
   }
-  if (found) {
+  if (draft) {
     storeDrafts(drafts);
   }
+  return draft;
 }
 
 function loadLibraries(done, fail) {
@@ -2582,6 +2601,9 @@ function getThreadId(n) {
 }
 function idToThread(id) {
   return threadsById[id];
+}
+function endsWith(ch) {
+  return function (s) { return s.slice(-1) === ch; };
 }
 function setProp(name, val) {
   return function (o) { o[name] = val; };

@@ -22,11 +22,12 @@ k.compose = k.compose || (function() {
     }
   }
 
-  function saveDraft($form, $to, editor) {
+  function saveDraft($form, $to, editor, trackData) {
     if ($form.is($forms) && !$form.data('submitted')) {
       api.port.emit('save_draft', {
         to: $to.length ? $to.tokenInput('get').map(justFieldsToSave) : undefined,
-        html: editor.getRaw()
+        html: editor.getRaw(),
+        track: trackData
       });
     }
   }
@@ -50,10 +51,6 @@ k.compose = k.compose || (function() {
   function getSelRange() {
     var sel = window.getSelection();
     return sel.rangeCount ? sel.getRangeAt(0) : null;
-  }
-
-  function endsWith(ch) {
-    return function (s) { return s.slice(-1) === ch; };
   }
 
   function richEditorBorked() { // bugzil.la/1037055
@@ -220,7 +217,7 @@ k.compose = k.compose || (function() {
     }
   }
 
-  return function compose($container, opts) {
+  return function compose($container, handleSubmit) {
     var $form = $container.find('.kifi-compose').data('empty', true);
     $forms = $forms.add($form);
 
@@ -277,14 +274,15 @@ k.compose = k.compose || (function() {
         }
       }
       var $submit = $form.find('.kifi-compose-submit').removeAttr('href');
-      setTimeout($.fn.attr.bind($submit, 'href', 'javascript:'), opts.resetOnSubmit ? 100 : 2000);  // TODO: use promise
-      opts.onSubmit(text, recipients, e.originalEvent.guided);
-      if (opts.resetOnSubmit) {
-        editor.clear();
-        editor.$el.focus();
-      } else {
-        $form.data('submitted', true);
-      }
+      $form.data('submitted', true);
+      handleSubmit(text, recipients, e.originalEvent.guided).then(function reenable(reset) {
+        if (reset) {
+          editor.clear();
+          editor.$el.focus();
+        }
+        $submit.prop('href', 'javascript:');
+        $form.data('submitted', false);
+      });
     }
 
     $form.hoverfu('.kifi-compose-highlight', function (configureHover) {
@@ -408,24 +406,13 @@ k.compose = k.compose || (function() {
         return $form.hasClass('kifi-empty') && !($to.length && $to.tokenInput('get').length);
       },
       save: saveDraft.bind(null, $form, $to, editor),
-      destroy: function (draftTrackData) {
-        var blank = this.isBlank();
+      destroy: function () {
         $forms = $forms.not($form);
         if ($to.length) {
           $to.tokenInput('destroy');
         }
         if (!$forms.length) {
           k.snap.disable();
-        }
-        if (!blank) {
-          var matches = editor.getRaw().match(/<a href=["']x-kifi-sel:./g) || [];
-          var nR = matches.filter(endsWith('r')).length;
-          var nI = matches.filter(endsWith('i')).length;
-          api.port.emit('track_draft', $.extend({
-            numLookHeres: nR + nI,
-            numSelectionLookHeres: nR,
-            numImageLookHeres: nI
-          }, draftTrackData));
         }
       }
     };
