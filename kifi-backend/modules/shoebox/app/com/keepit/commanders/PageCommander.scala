@@ -126,8 +126,9 @@ class PageCommander @Inject() (
         items = Seq(AugmentableItem(normUri.id.get))).map {
           case Seq(info) =>
             db.readOnlyMaster { implicit session =>
-              val userIdSet = info.keepers.toSet - userId
-              (basicUserRepo.loadAll(userIdSet).values.toSeq, info.keepersOmitted, info.keepersTotal)
+              val userIdSet = info.keepers.toSet
+              val otherkeepersTotal = info.keepersTotal - (if (userIdSet.contains(userId)) 1 else 0)
+              (basicUserRepo.loadAll(userIdSet - userId).values.toSeq, info.keepersOmitted, otherKeepersTotal)
             }
         }
 
