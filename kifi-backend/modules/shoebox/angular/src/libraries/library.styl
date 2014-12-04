@@ -92,24 +92,6 @@ invite-header-orange = #ff7c3c
 //
 // For logged-out library search.
 //
-
-// Animations when transitioning to logged-out library search.
-@keyframes fade-out-fade-in
-  0%
-    opacity: 1
-  33%
-    opacity: 0
-  100%
-    opacity: 1
-
-@keyframes fade-in-slow
-  0%
-    opacity: 0
-  70%
-    opacity: 0
-  100%
-    opacity: 1
-
 html:not(.kf-mobile)
   .library-search .library-card
   .library-card.library-search-in-progress
@@ -151,22 +133,6 @@ html:not(.kf-mobile)
       display: block
       top: -10px
       right: -10px
-
-  .library-card.library-search-in-progress
-    .kf-keep-lib-search-input
-      animation: 0.8s fade-out-fade-in
-
-    .dialog-x
-      animation: 0.8s fade-in-slow
-
-  // When the url is a search url or when the search input has
-  // just become empty after a previous non-empty search input,
-  // do not play the animation.
-  .library-search .library-card
-  .library-search-falling-edge .library-card
-    .kf-keep-lib-search-input
-    .dialog-x
-      animation: none
 
 
 .public-library-empty-explain
