@@ -76,7 +76,7 @@ angular.module('kifi')
         // Internal methods.
         //
         function init() {
-          if (scope.isUserLoggedOut) {
+          if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
             $timeout(function() {
               angular.element('.kf-cols').css({ 'overflow-x': 'hidden' });
             });
