@@ -550,7 +550,9 @@ angular.module('kifi')
               });
             }
           });
-        }, 20);
+        }, 20, {
+          leading: true
+        });
 
 
         //
