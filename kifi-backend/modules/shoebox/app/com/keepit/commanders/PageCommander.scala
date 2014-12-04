@@ -120,25 +120,26 @@ class PageCommander @Inject() (
       val getKeepersFuture = searchClient.augment(
         userId = Some(userId),
         showPublishedLibraries = false,
-        maxKeepersShown = Int.MaxValue,
+        maxKeepersShown = Int.MaxValue,  // TODO: reduce to 5 once most users have extension 3.3.26 or later
         maxLibrariesShown = 0,
         maxTagsShown = 0,
         items = Seq(AugmentableItem(normUri.id.get))).map {
           case Seq(info) =>
             db.readOnlyMaster { implicit session =>
               val userIdSet = info.keepers.toSet
-              basicUserRepo.loadAll(userIdSet).values.toSeq
+              (basicUserRepo.loadAll(userIdSet).values.toSeq, info.keepersOmitted, info.keepersTotal)
             }
         }
 
       // find all keeps in database (with uri) (read_write actions)
       val keepsData = keepsCommander.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
 
-      getKeepersFuture.map { keepers =>
-        KeeperPageInfo(nUriStr, position, neverOnSite, shown, keepers, keepsData)
+      keepersFuture.map {
+        case (keepers, keepersOmitted, keepersTotal) =>
+          KeeperPageInfo(nUriStr, position, neverOnSite, shown, keepers, keepersOmitted, keepersTotal, keepsData)
       }
     }.getOrElse {
-      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], Seq.empty[KeepData])) // todo: add in otherKeepers?
+      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, 0, Seq.empty[KeepData]))
     }
   }
 }
