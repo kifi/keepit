@@ -75,6 +75,14 @@ angular.module('kifi')
         //
         // Internal methods.
         //
+        function init() {
+          if (scope.isUserLoggedOut) {
+            $timeout(function() {
+              angular.element('.kf-cols').css({ 'overflow-x': 'hidden' });
+            });
+          }
+        }
+
         function adjustFollowerPicsSize() {
           var statsAndFollowersDiv = element.find('.kf-keep-lib-stats-and-followers');
           var followerPicsDiv = element.find('.kf-keep-lib-follower-pics');
@@ -209,7 +217,7 @@ angular.module('kifi')
           });
         }
 
-        function preloadSocial () {
+        function preloadSocial() {
           if (!$FB.failedToLoad && !$FB.loaded) {
             $FB.init();
           }
@@ -605,6 +613,9 @@ angular.module('kifi')
         scope.$on('$destroy', function () {
           $window.removeEventListener('scroll', onScroll);
         });
+
+
+        init();
       }
     };
   }
