@@ -9,7 +9,7 @@ import com.keepit.common.service.ServiceType
 import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 import com.keepit.common.db.Id
-import com.keepit.curator.model.{ RecoInfo, RecommendationClientType }
+import com.keepit.curator.model.{ LibraryRecoInfo, RecoInfo, RecommendationClientType }
 import collection.mutable.ListBuffer
 
 class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends CuratorServiceClient {
@@ -33,6 +33,9 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String] = Future.successful("done")
 
   def refreshUserRecos(userId: Id[User]): Future[Unit] = { Future.successful() }
+
+  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[Seq[LibraryRecoInfo]] =
+    Future.successful(Seq.empty)
 
   // test helpers
   val updatedUriRecommendationFeedback = ListBuffer[(Id[User], Id[NormalizedURI], UriRecommendationFeedback)]()
