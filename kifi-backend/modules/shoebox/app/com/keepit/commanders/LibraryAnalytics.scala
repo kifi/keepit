@@ -14,9 +14,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @Singleton
 class LibraryAnalytics @Inject() (
-  db: Database,
-  keepRepo : KeepRepo
-) (heimdal: HeimdalServiceClient) {
+    db: Database,
+    keepRepo: KeepRepo)(heimdal: HeimdalServiceClient) {
 
   def sendLibraryInvite(userId: Id[User], libId: Id[Library], inviteeList: Seq[(Either[Id[User], EmailAddress])], eventContext: HeimdalContext) = {
     val builder = new HeimdalContextBuilder
