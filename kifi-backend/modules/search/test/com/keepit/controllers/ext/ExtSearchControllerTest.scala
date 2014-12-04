@@ -88,6 +88,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
             "othersTotal":123,
             "mayHaveMore":false,
             "show":true,
+            "cutPoint":1,
             "experimentId":10,
             "context":"AgFJAN8CZHg=",
             "experts":[]
@@ -214,6 +215,7 @@ object ExtSearchControllerTest {
       Set(100, 220), // idFilter
       false, // mayHaveMoreHits
       true, //show
+      1, //cutPoint
       Some(Id[SearchConfigExperiment](10)) //searchExperimentId
     )
   )

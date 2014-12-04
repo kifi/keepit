@@ -86,6 +86,7 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
             "othersTotal":123,
             "mayHaveMore":false,
             "show":true,
+            "cutPoint":1,
             "experimentId":10,
             "context":"AgFJAN8CZHg=",
             "experts":[]
@@ -140,6 +141,7 @@ object MobileSearchControllerTest {
       Set(100, 220), // idFilter
       false, // mayHaveMoreHits
       true, //show
+      1, //cutPoint
       Some(Id[SearchConfigExperiment](10)) //searchExperimentId
     )
   )

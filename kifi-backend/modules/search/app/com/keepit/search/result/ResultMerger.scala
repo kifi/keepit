@@ -28,13 +28,23 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig, isFinalMerg
     val hits = mergeHits(results, maxHits)
     val show = results.exists(_.show) // TODO: how to merge the show flag?
 
+    val cutPoint = {
+      if (!show) 0 else {
+        hits.headOption.map { head =>
+          val threshold = head.score * tailCutting
+          hits.iterator.count(_.score > threshold)
+        }.getOrElse(0)
+      }
+    }
+
     PartialSearchResult(
       hits,
       myTotal,
       friendsTotal,
       othersTotal,
       friendStats,
-      show
+      show,
+      cutPoint
     )
   }
 

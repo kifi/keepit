@@ -76,6 +76,7 @@ trait SearchControllerUtil {
       decoratedResult.othersTotal,
       decoratedResult.mayHaveMoreHits,
       decoratedResult.show,
+      decoratedResult.cutPoint,
       decoratedResult.searchExperimentId,
       IdFilterCompressor.fromSetToBase64(decoratedResult.idFilter),
       Nil).json
