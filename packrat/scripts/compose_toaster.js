@@ -255,7 +255,7 @@ k.toaster = k.toaster || (function () {
 
     $sent
     .removeClass('kifi-hidden')
-    .data('timeout', setTimeout(hideSent, 2700));
+    .data('timeout', setTimeout(hideSent, 3600));
 
     $(k.tile).on('kifi:keeper:add', hideSent);
   }
