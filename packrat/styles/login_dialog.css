@@ -55,37 +55,41 @@
   width: 24px;
   border-radius: 50% !important;
 }
-.kifi-login-dialog-x:before,
-.kifi-login-dialog-x:after {
-  content: ' ';
+.kifi-login-dialog-x:hover,
+.kifi-login-dialog-x:focus {
+  background: #444;
+}
+.kifi-login-dialog-x:hover:active {
+  background: #555;
+}
+.kifi-login-dialog-x::before,
+.kifi-login-dialog-x::after {
+  content: '';
   position: absolute;
   top: 4px;
   bottom: 4px;
   left: 50%;
   width: 2px;
-  background: #b1b8c1;
+  background: #ccc;
   font-size: 0;
 }
-.kifi-login-dialog-x:before {
+.kifi-login-dialog-x::before {
   -webkit-transform: translate(-1px) rotate(45deg);
   transform: translate(-1px) rotate(45deg);
 }
-.kifi-login-dialog-x:after {
+.kifi-login-dialog-x::after {
   -webkit-transform: translate(-1px) rotate(-45deg);
   transform: translate(-1px) rotate(-45deg);
 }
-.kifi-login-dialog-x:hover:before,
-.kifi-login-dialog-x:hover:after,
-.kifi-login-dialog-x:focus:before,
-.kifi-login-dialog-x:focus:after {
-  background: #c1c6cd;
+.kifi-login-dialog-x:hover::before,
+.kifi-login-dialog-x:hover::after,
+.kifi-login-dialog-x:focus::before,
+.kifi-login-dialog-x:focus::after {
+  background: #d8d8d8;
 }
-.kifi-login-dialog-x:active:before,
-.kifi-login-dialog-x:active:after {
+.kifi-login-dialog-x:active::before,
+.kifi-login-dialog-x:active::after {
   background: #fff;
-}
-.kifi-login-dialog-x:active {
-  background: #485b6e;
 }
 
 .kifi-login-dialog-header,
@@ -99,7 +103,7 @@
 }
 .kifi-login-dialog-header {
   height: 41px;
-  background: #34495e;
+  background: #333;
   border-top-left-radius: inherit !important;
   border-top-right-radius: inherit !important;
 }
