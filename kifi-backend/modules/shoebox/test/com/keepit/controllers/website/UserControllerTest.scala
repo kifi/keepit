@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.keepit.common.db.ExternalId
-import com.keepit.common.oauth2.FakeOAuth2ConfigurationModule
+import com.keepit.common.oauth.FakeOAuth2ConfigurationModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
 

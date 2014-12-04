@@ -1,10 +1,10 @@
-package com.keepit.common.oauth2
+package com.keepit.common.oauth
 
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.OAuth2TokenInfo
+import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
 
 import scala.concurrent.Future
 
@@ -14,9 +14,11 @@ sealed abstract class ProviderId(val id: String) {
 object ProviderIds {
   object Facebook extends ProviderId("facebook")
   object LinkedIn extends ProviderId("linkedin")
+  object Twitter extends ProviderId("twitter") // revisit
   def toProviderId(id: String) = id match {
     case Facebook.id => Facebook
     case LinkedIn.id => LinkedIn
+    case Twitter.id => Twitter
     case _ => throw new IllegalArgumentException(s"[toProviderId] id=$id not supported")
   }
 }
@@ -57,29 +59,50 @@ object UserProfileInfo {
 }
 
 trait OAuthProvider {
-
   def providerId: ProviderId
-
-  def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo]
-
-  def exchangeLongTermToken(tokenInfo: OAuth2TokenInfo): Future[OAuth2TokenInfo]
-
 }
 
-trait ProviderRegistry {
-  def get(providerId: ProviderId): Option[OAuthProvider]
+trait OAuth1Support extends OAuthProvider {
+  def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo]
+}
+
+trait OAuth2Support extends OAuthProvider {
+  def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo]
+  def exchangeLongTermToken(tokenInfo: OAuth2TokenInfo): Future[OAuth2TokenInfo]
+}
+
+trait OAuth1ProviderRegistry {
+  def get(providerId: ProviderId): Option[OAuth1Support]
 }
 
 @Singleton
-class ProviderRegistryImpl @Inject() (
+class OAuth1ProviderRegistryImpl @Inject() (
+    airbrake: AirbrakeNotifier,
+    twtrProvider: TwitterOAuthProvider) extends OAuth1ProviderRegistry with Logging {
+  def get(providerId: ProviderId): Option[OAuth1Support] = {
+    providerId match {
+      case ProviderIds.Twitter => Some(twtrProvider)
+      case _ => None
+    }
+  }
+}
+
+trait OAuth2ProviderRegistry {
+  def get(providerId: ProviderId): Option[OAuth2Support]
+}
+
+@Singleton
+class OAuth2ProviderRegistryImpl @Inject() (
     airbrake: AirbrakeNotifier,
     fbProvider: FacebookOAuthProvider,
-    lnkdProvider: LinkedInOAuthProvider) extends ProviderRegistry with Logging {
-  def get(providerId: ProviderId): Option[OAuthProvider] = {
+    lnkdProvider: LinkedInOAuthProvider) extends OAuth2ProviderRegistry with Logging {
+
+  def get(providerId: ProviderId): Option[OAuth2Support] = {
     providerId match {
       case ProviderIds.Facebook => Some(fbProvider)
       case ProviderIds.LinkedIn => Some(lnkdProvider)
       case _ => None
     }
   }
+
 }

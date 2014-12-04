@@ -1,7 +1,8 @@
 package com.keepit.model
 
-import com.keepit.common.oauth2.OAuth2AccessToken
+import com.keepit.common.oauth.OAuth2AccessToken
 import com.kifi.macros.json
+import play.api.libs.oauth.RequestToken
 import securesocial.core.{ OAuth1Info, OAuth2Info }
 
 // replaces securesocial.core.OAuth2Info
@@ -23,6 +24,8 @@ object OAuth2TokenInfo {
 @json case class OAuth1TokenInfo(token: String, secret: String)
 
 object OAuth1TokenInfo {
+  implicit def toRequestToken(token: OAuth1TokenInfo): RequestToken = RequestToken(token = token.token, secret = token.secret)
+
   implicit def toOAuth1Info(token: OAuth1TokenInfo): OAuth1Info = OAuth1Info(token.token, token.secret)
   implicit def fromOAuth1Info(old: OAuth1Info): OAuth1TokenInfo = OAuth1TokenInfo(old.token, old.secret)
 }

@@ -5,7 +5,7 @@ import com.keepit.common.cache._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.logging.{ AccessLog, LogPrefix, Logging }
 import java.net.{ URLDecoder, URLEncoder }
-import com.keepit.common.oauth2.{ OAuth2Configuration }
+import com.keepit.common.oauth.{ OAuth2Configuration }
 import com.kifi.macros.json
 import play.api.mvc._
 import play.api.libs.ws.WS

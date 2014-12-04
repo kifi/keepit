@@ -10,7 +10,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail._
-import com.keepit.common.oauth2.{ ProviderIds, ProviderRegistry, OAuth2Configuration }
+import com.keepit.common.oauth.{ ProviderIds, OAuth2ProviderRegistry, OAuth2Configuration }
 import com.keepit.common.performance.timing
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import com.keepit.common.time.Clock
@@ -102,7 +102,7 @@ class AuthCommander @Inject() (
     clock: Clock,
     airbrakeNotifier: AirbrakeNotifier,
     oauth2Config: OAuth2Configuration,
-    providerRegistry: ProviderRegistry,
+    oauth2ProviderRegistry: OAuth2ProviderRegistry,
     userRepo: UserRepo,
     userCredRepo: UserCredRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
@@ -295,7 +295,7 @@ class AuthCommander @Inject() (
   def getSocialUserOpt(identityId: IdentityId): Option[Identity] = UserService.find(identityId)
 
   def exchangeLongTermToken(provider: IdentityProvider, oauth2Info: OAuth2Info): Future[OAuth2Info] = {
-    providerRegistry.get(ProviderIds.toProviderId(provider.id)) match {
+    oauth2ProviderRegistry.get(ProviderIds.toProviderId(provider.id)) match {
       case None =>
         log.warn(s"[exchangeLongTermToken(${provider.id})] provider not found")
         Future.successful(oauth2Info)
