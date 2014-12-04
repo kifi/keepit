@@ -581,7 +581,7 @@ angular.module('kifi')
               });
             }
           });
-        }, 20, {
+        }, 100, {
           leading: true
         });
 

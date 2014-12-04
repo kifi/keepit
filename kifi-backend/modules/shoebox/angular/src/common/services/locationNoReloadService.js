@@ -22,8 +22,11 @@ angular.module('kifi')
     $location.reloadNextRouteChange = function () {
       $timeout(function () {
         cancelReloadNextRouteChange = $rootScope.$on('$locationChangeSuccess', function () {
-          $route.reload();
-          cancelReloadNextRouteChange();
+          if (cancelReloadNextRouteChange) {
+            $route.reload();
+            cancelReloadNextRouteChange();
+            cancelReloadNextRouteChange = null;
+          }
         });
       }, 0);
     };
@@ -31,6 +34,7 @@ angular.module('kifi')
     $location.cancelReloadNextRouteChange = function () {
       if (cancelReloadNextRouteChange) {
         cancelReloadNextRouteChange();
+        cancelReloadNextRouteChange = null;
       }
     };
 
