@@ -49,8 +49,6 @@ angular.module('kifi')
       userName = $routeParams.username || '';
       librarySlug = $routeParams.librarySlug || '';
 
-      $rootScope.$emit('newSearchQuery', query);
-
       var libraryIdPromise = null;
 
       if (userName && librarySlug) {

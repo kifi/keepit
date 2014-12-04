@@ -581,7 +581,7 @@ angular.module('kifi')
               });
             }
           });
-        }, 100, {
+        }, 50, {
           leading: true
         });
 
@@ -612,11 +612,6 @@ angular.module('kifi')
           }
         });
         scope.$on('$destroy', deregisterLibraryUpdated);
-
-        var deregisterNewSearchQuery = $rootScope.$on('newSearchQuery', function (e, query) {
-          scope.search.text = query;
-        });
-        scope.$on('$destroy', deregisterNewSearchQuery);
 
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);
