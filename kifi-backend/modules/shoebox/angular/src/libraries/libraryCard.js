@@ -32,6 +32,7 @@ angular.module('kifi')
         var headerLinksShifted = false;
         var headerLinksWidth = '60px';
 
+        var kfColsElement = angular.element('.kf-cols');
         var headerLinksElement = angular.element('.kf-header-right');
         var searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
         var libraryBodyElement = angular.element('.kf-library-body');
@@ -77,10 +78,20 @@ angular.module('kifi')
         //
         function init() {
           if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
-            $timeout(function() {
-              angular.element('.kf-cols').css({ 'overflow-x': 'hidden' });
-            });
+            showKfColsOverflow();
+            $timeout(hideKfColsOverflow);
           }
+        }
+
+        function hideKfColsOverflow() {
+          // Hide overflow so that there is no horizontal scrollbar due to the very
+          // wide white background on the library header.
+          kfColsElement.css({ 'overflow-x': 'hidden' });
+        }
+
+        function showKfColsOverflow() {
+          // Show overflow so that infinite scroll can be initialized correctly.
+          kfColsElement.css({ 'overflow-x': 'visible' });
         }
 
         function adjustFollowerPicsSize() {
@@ -477,6 +488,9 @@ angular.module('kifi')
         scope.onSearchExit = function () {
           scrollToTop();
 
+          if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
+            showKfColsOverflow();
+          }
           locationNoReload.skipReload().url(scope.library.url);
           locationNoReload.reloadNextRouteChange();
 
@@ -518,6 +532,9 @@ angular.module('kifi')
               locationNoReload.cancelReloadNextRouteChange();
 
               if (prevQuery) {
+                if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
+                  showKfColsOverflow();
+                }
                 locationNoReload.skipReload().search('q', query).replace();
 
                 // When we search using the input inside the library card header, we don't
@@ -531,6 +548,9 @@ angular.module('kifi')
                   });
                 }
               } else {
+                if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
+                  showKfColsOverflow();
+                }
                 locationNoReload.skipReload().url(scope.library.url + '/find?q=' + query + '&f=a');
               }
 
@@ -546,6 +566,9 @@ angular.module('kifi')
 
               prevQuery = query;
             } else {
+              if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
+                showKfColsOverflow();
+              }
               locationNoReload.skipReload().url(scope.library.url);
               locationNoReload.reloadNextRouteChange();
               prevQuery = '';
