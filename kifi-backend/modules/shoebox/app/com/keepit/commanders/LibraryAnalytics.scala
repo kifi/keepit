@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model._
 import com.keepit.heimdal._
@@ -8,10 +9,14 @@ import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
 import com.google.inject.{ Singleton, Inject }
 import org.joda.time.DateTime
+import play.api.db
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @Singleton
-class LibraryAnalytics @Inject() (heimdal: HeimdalServiceClient) {
+class LibraryAnalytics @Inject() (
+  db: Database,
+  keepRepo : KeepRepo
+) (heimdal: HeimdalServiceClient) {
 
   def sendLibraryInvite(userId: Id[User], libId: Id[Library], inviteeList: Seq[(Either[Id[User], EmailAddress])], eventContext: HeimdalContext) = {
     val builder = new HeimdalContextBuilder
@@ -175,7 +180,21 @@ class LibraryAnalytics @Inject() (heimdal: HeimdalServiceClient) {
     }
   }
 
-  def keptPages(userId: Id[User], keeps: Seq[Keep], existingContext: HeimdalContext): Unit = SafeFuture {
+  private def populateLibraryInfoForKeep(library: Library): HeimdalContext = {
+    val numKeepsInLibrary = db.readOnlyMaster { implicit s =>
+      keepRepo.getCountByLibrary(library.id.get)
+    }
+
+    val numDays = (currentDateTime.getMillis.toFloat - library.createdAt.getMillis) / (24 * 3600 * 1000)
+    val contextBuilder = new HeimdalContextBuilder
+    contextBuilder += ("libraryId", library.id.get.toString)
+    contextBuilder += ("libraryOwnerId", library.ownerId.toString)
+    contextBuilder += ("libraryKeepCount", numKeepsInLibrary)
+    contextBuilder += ("daysSinceLibraryCreated", numDays)
+    contextBuilder.build
+  }
+
+  def keptPages(userId: Id[User], keeps: Seq[Keep], library: Library, existingContext: HeimdalContext): Unit = SafeFuture {
     val keptAt = currentDateTime
 
     keeps.collect {
@@ -187,6 +206,8 @@ class LibraryAnalytics @Inject() (heimdal: HeimdalServiceClient) {
         contextBuilder += ("isPrivate", bookmark.isPrivate)
         contextBuilder += ("hasTitle", bookmark.title.isDefined)
         contextBuilder += ("uriId", bookmark.uriId.toString)
+        contextBuilder ++= populateLibraryInfoForKeep(library).data
+
         val context = contextBuilder.build
         heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
         if (!KeepSource.imports.contains(bookmark.source)) {
@@ -216,7 +237,7 @@ class LibraryAnalytics @Inject() (heimdal: HeimdalServiceClient) {
     }
   }
 
-  def unkeptPages(userId: Id[User], keeps: Seq[Keep], context: HeimdalContext): Unit = {
+  def unkeptPages(userId: Id[User], keeps: Seq[Keep], library: Library, context: HeimdalContext): Unit = {
     val unkeptAt = currentDateTime
 
     SafeFuture {
@@ -228,6 +249,7 @@ class LibraryAnalytics @Inject() (heimdal: HeimdalServiceClient) {
         contextBuilder += ("isPrivate", keep.isPrivate)
         contextBuilder += ("hasTitle", keep.title.isDefined)
         contextBuilder += ("uriId", keep.uriId.toString)
+        contextBuilder ++= populateLibraryInfoForKeep(library).data
         heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.KEPT, unkeptAt))
       }
       val unkept = keeps.length

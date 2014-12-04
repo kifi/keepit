@@ -481,8 +481,7 @@ class KeepsCommander @Inject() (
     log.info(s"[unkeepMulti] deactivatedKeeps:(len=${deactivatedBookmarks.length}):${deactivatedBookmarks.mkString(",")}")
 
     val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromKeep
-    libraryAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
-    searchClient.updateKeepIndex()
+    finalizeUnkeeping(deactivatedBookmarks, userId)
     deactivatedKeepInfos
   }
 
@@ -532,7 +531,11 @@ class KeepsCommander @Inject() (
 
   private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit context: HeimdalContext): Unit = {
     // TODO: broadcast over any open user channels
-    libraryAnalytics.unkeptPages(userId, keeps, context)
+    keeps.groupBy(_.libraryId).collect {
+      case (Some(libId), keepsInLib) =>
+        val library = db.readOnlyMaster { implicit s => libraryRepo.get(libId) }
+        libraryAnalytics.unkeptPages(userId, keeps, library, context)
+    }
     searchClient.updateKeepIndex()
   }
 
