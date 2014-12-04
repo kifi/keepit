@@ -605,35 +605,43 @@ class KeepsCommander @Inject() (
     } getOrElse 0
   }
 
-  def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep], updateIndex: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${keeps.length})") {
-    val result = db.readWrite { implicit s =>
-      val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
-      val existing = keepToCollectionRepo.getByCollection(collectionId, excludeState = None).toSet
-      val newKeepIds = keepsById.keySet -- existing.map(_.keepId)
-      val newK2C = newKeepIds map { kId => KeepToCollection(keepId = kId, collectionId = collectionId) }
-      timing(s"addToCollection($collectionId,${keeps.length}) -- keepToCollection.insertAll", 50) {
-        keepToCollectionRepo.insertAll(newK2C.toSeq)
-      }
-      val activated = existing collect {
-        case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
-          keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE, createdAt = clock.now()))
-      }
+  def addToCollection(collectionId: Id[Collection], allKeeps: Seq[Keep], updateIndex: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${allKeeps.length})") {
+    val result: Iterator[KeepToCollection] = allKeeps.grouped(50) flatMap { keeps =>
+      try {
+        db.readWrite(attempts = 3) { implicit s =>
+          val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
+          val existing = keepToCollectionRepo.getByCollection(collectionId, excludeState = None).toSet
+          val newKeepIds = keepsById.keySet -- existing.map(_.keepId)
+          val newK2C = newKeepIds map { kId => KeepToCollection(keepId = kId, collectionId = collectionId) }
+          timing(s"addToCollection($collectionId,${keeps.length}) -- keepToCollection.insertAll", 50) {
+            keepToCollectionRepo.insertAll(newK2C.toSeq)
+          }
+          val activated = existing collect {
+            case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
+              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE, createdAt = clock.now()))
+          }
 
-      val updatedCollection = timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
-        collectionRepo.collectionChanged(collectionId, (newK2C.size + activated.size) > 0, inactivateIfEmpty = false)
+          val updatedCollection = timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
+            collectionRepo.collectionChanged(collectionId, (newK2C.size + activated.size) > 0, inactivateIfEmpty = false)
+          }
+          val tagged: Set[KeepToCollection] = (activated ++ newK2C).toSet
+          val taggingAt = currentDateTime
+          tagged.foreach { ktc =>
+            keepRepo.save(keepsById(ktc.keepId)) // notify keep index
+            libraryAnalytics.taggedPage(updatedCollection, keepsById(ktc.keepId), context, taggingAt)
+          }
+          tagged
+        }
+      } catch {
+        case t: Throwable =>
+          airbrake.notify(s"error attaching collection id $collectionId to a batch of ${keeps.length} keeps (out of ${allKeeps.length})})", t)
+          Set.empty[KeepToCollection]
       }
-      val tagged = (activated ++ newK2C).toSet
-      val taggingAt = currentDateTime
-      tagged.foreach { ktc =>
-        keepRepo.save(keepsById(ktc.keepId)) // notify keep index
-        libraryAnalytics.taggedPage(updatedCollection, keepsById(ktc.keepId), context, taggingAt)
-      }
-      tagged
     }
     if (updateIndex) {
       searchClient.updateKeepIndex()
     }
-    result
+    result.toSet
   }
 
   def removeFromCollection(collection: Collection, keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = {
@@ -733,7 +741,7 @@ class KeepsCommander @Inject() (
   }
 
   //todo(hopefully not Léo): this method does not report to analytics, let's fix this after we get rid of Collection
-  def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String])(implicit context: HeimdalContext): Either[String, (KeepInfo, Seq[Collection])] = {
+  def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String])(implicit context: HeimdalContext): Either[String, (Keep, Seq[Collection])] = {
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
@@ -760,7 +768,7 @@ class KeepsCommander @Inject() (
           keepRepo.save(keep) // notify keep index
           keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
         }
-        Right((KeepInfo.fromKeep(keep), tags))
+        Right((keep, tags))
     }
   }
 

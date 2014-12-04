@@ -64,27 +64,28 @@ class MobileSearchController @Inject() (
 
     librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, context, maxHits, None, debugOpt).flatMap { librarySearchResult =>
       val librarySearcher = libraryIndexer.getSearcher
-      val libraryById = librarySearchResult.hits.flatMap(hit => LibraryIndexable.getRecord(librarySearcher, hit.id)).map(record => record.id -> record).toMap
-      val futureUsers = shoeboxClient.getBasicUsers(libraryById.values.map(_.ownerId).toSeq.distinct)
-      val futureLibraryStatistics = shoeboxClient.getBasicLibraryStatistics(libraryById.keySet)
+      val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
+      val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
+      val futureLibraryStatistics = shoeboxClient.getBasicLibraryStatistics(libraryRecordsAndVisibilityById.keySet)
       for {
         usersById <- futureUsers
         libraryStatisticsById <- futureLibraryStatistics
       } yield {
         val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
-          libraryById.get(hit.id).map { library =>
-            val statistics = libraryStatisticsById(library.id)
-            val description = library.description.getOrElse("")
-            Json.obj(
-              "id" -> Library.publicId(hit.id),
-              "score" -> hit.score,
-              "name" -> library.name,
-              "description" -> description,
-              "owner" -> usersById(library.ownerId),
-              "memberCount" -> statistics.memberCount,
-              "keepCount" -> statistics.keepCount,
-              "mostRelevantKeep" -> hit.keep.map { case (_, keepRecord) => Json.obj("id" -> keepRecord.externalId, "title" -> JsString(keepRecord.title.getOrElse("")), "url" -> keepRecord.url) }
-            )
+          libraryRecordsAndVisibilityById.get(hit.id).map {
+            case (library, visibility) =>
+              val statistics = libraryStatisticsById(library.id)
+              val description = library.description.getOrElse("")
+              Json.obj(
+                "id" -> Library.publicId(hit.id),
+                "score" -> hit.score,
+                "name" -> library.name,
+                "description" -> description,
+                "visibility" -> visibility,
+                "owner" -> usersById(library.ownerId),
+                "memberCount" -> statistics.memberCount,
+                "keepCount" -> statistics.keepCount
+              )
           }
         })
         val result = Json.obj(

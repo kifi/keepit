@@ -19,7 +19,9 @@ trait UserToDomainRepo extends Repo[UserToDomain] {
 }
 
 @Singleton
-class UserToDomainRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[UserToDomain] with UserToDomainRepo {
+class UserToDomainRepoImpl @Inject() (
+    val db: DataBaseComponent,
+    val clock: Clock) extends DbRepo[UserToDomain] with UserToDomainRepo {
 
   import db.Driver.simple._
 

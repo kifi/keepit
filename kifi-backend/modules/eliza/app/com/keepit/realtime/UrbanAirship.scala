@@ -1,7 +1,9 @@
 package com.keepit.realtime
 
+import scala.concurrent.duration._
 import java.util.concurrent.TimeUnit
 
+import akka.actor.Scheduler
 import com.google.common.cache.{ CacheLoader, CacheBuilder, LoadingCache }
 import com.google.inject.{ Singleton, ImplementedBy, Inject }
 import com.keepit.common.db._
@@ -45,7 +47,8 @@ class UrbanAirshipImpl @Inject() (
     deviceRepo: DeviceRepo,
     airbrake: AirbrakeNotifier,
     db: Database,
-    clock: Clock) extends UrbanAirship with Logging {
+    clock: Clock,
+    scheduler: Scheduler) extends UrbanAirship with Logging {
 
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean): Device = synchronized {
     log.info(s"Registering device: $token (user $userId)")
@@ -175,7 +178,22 @@ class UrbanAirshipImpl @Inject() (
       case DeviceType.IOS => createIosJson(notification, device)
       case DeviceType.Android => createAndroidJson(notification, device)
     }
-    client.send(json, device, notification)
+    client.send(json, device, notification).onFailure {
+      case e1 =>
+        log.error(s"fail to send a push notification $notification for device $device, retry in five seconds", e1)
+        scheduler.scheduleOnce(5 seconds) {
+          client.send(json, device, notification).onFailure {
+            case e2 =>
+              log.error(s"fail to send a push notification $notification for device $device, second retry in one minute", e2)
+              scheduler.scheduleOnce(1 minute) {
+                client.send(json, device, notification).onFailure {
+                  case e3 =>
+                    airbrake.notify(s"fail to send a push notification $notification for device $device, after two retries: $e3")
+                }
+              }
+          }
+        }
+    }
   }
 
 }

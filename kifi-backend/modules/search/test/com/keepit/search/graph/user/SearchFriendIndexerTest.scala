@@ -23,7 +23,7 @@ class SearchFriendIndexerTest extends Specification with CommonTestInjector {
     "work" in {
       withInjector(FakeShoeboxServiceModule()) { implicit injector =>
         val airbrake = inject[AirbrakeNotifier]
-        val client = new FakeShoeboxServiceClientImpl(airbrake)
+        val client = inject[FakeShoeboxServiceClientImpl]
         val uids = (1 to 4).map { Id[User](_) }
         client.excludeFriend(uids(0), uids(1))
         client.excludeFriend(uids(0), uids(2))
