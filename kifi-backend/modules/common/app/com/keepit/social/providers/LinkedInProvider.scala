@@ -1,8 +1,8 @@
 package com.keepit.social.providers
 
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.oauth2.{ LinkedInOAuthProvider, LinkedInOAuthProviderImpl }
-import com.keepit.common.oauth2.adaptor.SecureSocialProviderHelper
+import com.keepit.common.oauth.{ LinkedInOAuthProvider, LinkedInOAuthProviderImpl }
+import com.keepit.common.oauth.adaptor.SecureSocialProviderHelper
 import com.keepit.social.UserIdentityProvider
 import net.codingwell.scalaguice.InjectorExtensions._
 import play.api.libs.ws.WSResponse

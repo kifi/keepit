@@ -2,48 +2,36 @@ package com.keepit.social.providers
 
 import java.util.UUID
 
+import com.keepit.FortyTwoGlobal
 import com.keepit.common.controller.KifiSession._
 import com.keepit.common.logging.Logging
+import com.keepit.common.oauth.TwitterOAuthProvider
+import com.keepit.common.oauth.adaptor.{ SecureSocialAdaptor }
 import com.keepit.social.UserIdentity
 import play.api.Application
 import play.api.Play.current
 import play.api.cache.Cache
-import play.api.libs.oauth.{ OAuthCalculator, RequestToken }
-import play.api.libs.ws.WS
+import play.api.libs.oauth.{ RequestToken }
 import play.api.mvc.Results._
 import play.api.mvc.{ Request, Result }
 import securesocial.core._
 import securesocial.core.providers.utils.RoutesHelper
+import net.codingwell.scalaguice.InjectorExtensions._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class TwitterProvider(app: Application) extends securesocial.core.providers.TwitterProvider(app) with Logging {
 
-  import securesocial.core.providers.TwitterProvider
-  import TwitterProvider._
+  lazy val global = app.global.asInstanceOf[FortyTwoGlobal] // fail hard
+  lazy val provider = global.injector.instance[TwitterOAuthProvider]
+
   override def fillProfile(user: SocialUser): SocialUser = {
-    val oauthInfo = user.oAuth1Info.get
-    val call = WS.url(TwitterProvider.VerifyCredentials).sign(
-      OAuthCalculator(SecureSocial.serviceInfoFor(user).get.key,
-        RequestToken(oauthInfo.token, oauthInfo.secret))
-    ).get()
-
-    try {
-      val response = awaitResult(call)
-      log.info(s"[fillProfile] response.body=${response.body}")
-      val me = response.json
-      // should get screen name and follower count at a minimum
-      val userId = (me \ Id).as[Long]
-      val name = (me \ Name).as[String]
-      val splitted = name.split(' ')
-      val (firstName, lastName) = if (splitted.length < 2) (name, "") else (splitted.head, splitted.takeRight(1).head)
-      val profileImage = (me \ ProfileImage).asOpt[String]
-      user.copy(identityId = IdentityId(userId.toString, id), fullName = name, firstName = firstName, lastName = lastName, avatarUrl = profileImage)
-
-    } catch {
-      case e: Exception => {
-        log.error("[securesocial] error retrieving profile information from Twitter", e)
-        throw new AuthenticationException()
-      }
+    val socialUserF = provider.getUserProfileInfo(user.oAuth1Info.get) map { info =>
+      SecureSocialAdaptor.toSocialUser(info, user.authMethod).copy(oAuth1Info = user.oAuth1Info)
     }
+    Await.result(socialUserF, 5 minutes)
   }
 
   override def authenticate[A]()(implicit request: Request[A]): Either[Result, Identity] = {

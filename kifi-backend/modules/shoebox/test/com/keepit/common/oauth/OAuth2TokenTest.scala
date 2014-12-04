@@ -1,4 +1,4 @@
-package com.keepit.common.oauth2
+package com.keepit.common.oauth
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
@@ -32,7 +32,7 @@ import KifiSession._
 
 import scala.concurrent.Future
 
-class TokenAuthTest extends Specification with ShoeboxApplicationInjector {
+class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
 
   implicit val context = HeimdalContext.empty
 
@@ -73,6 +73,7 @@ class TokenAuthTest extends Specification with ShoeboxApplicationInjector {
     FakeScraperServiceClientModule(),
     KeepImportsModule(),
     FakeCuratorServiceClientModule(),
+    FakeOAuth1ConfigurationModule(),
     FakeOAuth2ConfigurationModule()
   )
 
