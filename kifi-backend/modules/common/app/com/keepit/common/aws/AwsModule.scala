@@ -39,3 +39,23 @@ case class AwsModule() extends ScalaModule {
     client
   }
 }
+
+case class AwsDevModule() extends ScalaModule {
+  def configure: Unit = {
+    bind[FortyTwoElasticLoadBalancingClient].to[FortyTwoElasticLoadBalancingClientImpl].in[AppScoped]
+  }
+
+  @Singleton
+  @Provides
+  def awsConfig: AwsConfig = AwsConfig(sqsEnabled = false)
+
+  @Singleton
+  @Provides
+  def basicAWSCredentials: BasicAWSCredentials = new BasicAWSCredentials("accessKey", "secretKey")
+
+  @Singleton
+  @Provides
+  def amazonELBClient(basicAWSCredentials: BasicAWSCredentials): AmazonElasticLoadBalancingClient = {
+    new AmazonElasticLoadBalancingClient(basicAWSCredentials)
+  }
+}

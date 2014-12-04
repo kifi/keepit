@@ -15,6 +15,7 @@ trait CuratorLibraryMembershipInfoRepo extends DbRepo[CuratorLibraryMembershipIn
   def getLibrariesByUserId(userId: Id[User])(implicit session: RSession): Seq[Id[Library]]
   def getUsersFollowingALibrary()(implicit session: RSession): Set[Id[User]]
   def getFollowedLibrariesWithUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Library]]
+  def getByLibrary(libraryId: Id[Library])(implicit session: RSession): Seq[CuratorLibraryMembershipInfo]
 }
 
 @Singleton
@@ -72,4 +73,7 @@ class CuratorLibraryMembershipInfoRepoImpl @Inject() (
     """.as[Id[Library]].list.toSet
 
   }
+
+  def getByLibrary(libraryId: Id[Library])(implicit session: RSession): Seq[CuratorLibraryMembershipInfo] =
+    (for (row <- rows if row.libraryId === libraryId && row.state === CuratorLibraryMembershipInfoStates.ACTIVE) yield row).list
 }

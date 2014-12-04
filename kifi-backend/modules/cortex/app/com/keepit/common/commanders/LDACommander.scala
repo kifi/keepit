@@ -46,13 +46,23 @@ class LDACommander @Inject() (
 
   // for admin
   def userLibraryScore(userId: Id[User], libId: Id[Library])(implicit version: ModelVersion[DenseLDA]): Option[Float] = {
-    val libFeatOpt = db.readOnlyReplica { implicit s => libTopicRepo.getActiveByLibraryId(libId, version) }
+    userLibrariesScores(userId, libId :: Nil)(version).headOption.flatMap(identity)
+  }
+
+  def userLibrariesScores(userId: Id[User], libIds: Seq[Id[Library]])(implicit version: ModelVersion[DenseLDA]): Seq[Option[Float]] = {
+    val libsTopics: Map[Id[Library], Option[LibraryLDATopic]] = db.readOnlyReplica { implicit s =>
+      libTopicRepo.getActiveByLibraryIds(libIds, version)
+    }.map { topic => (topic.libraryId, Some(topic)) }.toMap
+
     val userFeatOpt = db.readOnlyReplica { implicit s => userTopicRepo.getByUser(userId, version) }
-    val libVec = libFeatOpt.flatMap(_.topic).map { _.value }
-    val userVec = userFeatOpt.flatMap(_.userTopicMean).map { _.mean }
-    (libVec, userVec) match {
-      case (Some(u), Some(v)) => Some(cosineDistance(u, v))
-      case _ => None
+    libIds map { libId =>
+      val libFeat = libsTopics.getOrElse(libId, None)
+      val libVec = libFeat.flatMap(_.topic).map(_.value)
+      val userVec = userFeatOpt.flatMap(_.userTopicMean).map(_.mean)
+      (libVec, userVec) match {
+        case (Some(u), Some(v)) => Some(cosineDistance(u, v).toFloat)
+        case _ => None
+      }
     }
   }
 

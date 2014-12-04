@@ -27,10 +27,10 @@ class UriScoringHelperTest extends Specification with CuratorTestInjector with C
     "get raw social scores" in {
       withInjector(modules: _*) { implicit injector =>
         val graph = inject[GraphServiceClient].asInstanceOf[FakeGraphServiceClientImpl]
-        graph.setUserAndScorePairs()
+        val userId = Id[User](42)
+        graph.setUserAndScorePairs(userId)
 
         // set expectation for cortex client request to test that the topics get passed through
-        val userId = Id[User](42)
         val cortex = inject[CortexServiceClient].asInstanceOf[FakeCortexServiceClientImpl]
         cortex.batchUserURIsInterestsExpectations(userId) = (0 until 4).map { i =>
           LDAUserURIInterestScores(None, None, None, topic1 = Some(LDATopic(i + 1)), topic2 = Some(LDATopic(i + 2)))

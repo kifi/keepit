@@ -8,7 +8,7 @@ import org.joda.time.DateTime
 case class CuratorLibraryInfo(
   id: Option[Id[CuratorLibraryInfo]] = None,
   createdAt: DateTime = currentDateTime,
-  updateAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
   seq: SequenceNumber[CuratorLibraryInfo] = SequenceNumber.ZERO,
   libraryId: Id[Library],
   ownerId: Id[User],
@@ -23,7 +23,7 @@ case class CuratorLibraryInfo(
     extends Model[CuratorLibraryInfo] with ModelWithState[CuratorLibraryInfo] with ModelWithSeqNumber[CuratorLibraryInfo] {
 
   def withId(id: Id[CuratorLibraryInfo]): CuratorLibraryInfo = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime): CuratorLibraryInfo = this.copy(updateAt = updateTime)
+  def withUpdateTime(updateTime: DateTime): CuratorLibraryInfo = this.copy(updatedAt = updateTime)
 }
 
 object CuratorLibraryInfoStates extends States[CuratorLibraryInfo]
