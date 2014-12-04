@@ -117,10 +117,10 @@ class PageCommander @Inject() (
 
     nUriOpt.map { normUri =>
       // get all keepers from search (read_only data)
-      val getKeepersFuture = searchClient.augment(
+      val keepersFuture = searchClient.augment(
         userId = Some(userId),
         showPublishedLibraries = false,
-        maxKeepersShown = Int.MaxValue,  // TODO: reduce to 5 once most users have extension 3.3.26 or later
+        maxKeepersShown = Int.MaxValue, // TODO: reduce to 5 once most users have extension 3.3.26 or later
         maxLibrariesShown = 0,
         maxTagsShown = 0,
         items = Seq(AugmentableItem(normUri.id.get))).map {
