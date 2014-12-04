@@ -7,10 +7,12 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.mobile.ImplicitHelper._
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
+import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
@@ -23,10 +25,13 @@ class MobileLibraryController @Inject() (
   db: Database,
   libraryRepo: LibraryRepo,
   keepRepo: KeepRepo,
+  collectionRepo: CollectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
+  pageCommander: PageCommander,
   keepImageCommander: KeepImageCommander,
+  normalizedUriInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   val libraryCommander: LibraryCommander,
   val userActionsHelper: UserActionsHelper,
@@ -101,6 +106,45 @@ class MobileLibraryController @Inject() (
       case Left(fail) =>
         Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
     }
+  }
+
+  def getLibrarySummariesWithUrl = UserAction(parse.tolerantJson) { request =>
+    val urlOpt = (request.body \ "url").asOpt[String]
+    val parseUrl = urlOpt.map { url =>
+      pageCommander.getUrlInfo(url, request.userId)
+    }
+
+    val (librariesWithMemberships, _) = libraryCommander.getLibrariesByUser(request.userId)
+    val writeableLibraries = librariesWithMemberships.filter {
+      case (membership, _) =>
+        membership.canWrite
+    }.map {
+      case (mem, library) =>
+        val (owner, numKeeps) = db.readOnlyMaster { implicit s =>
+          (basicUserRepo.load(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
+        }
+        val info = LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps, None)
+        var memInfo = Json.obj("access" -> mem.access)
+        if (mem.lastViewed.nonEmpty) {
+          memInfo = memInfo ++ Json.obj("lastViewed" -> mem.lastViewed)
+        }
+        Json.toJson(info).as[JsObject] ++ memInfo
+    }
+
+    val libsResponse = Json.obj("libraries" -> writeableLibraries)
+    val keepResponse = parseUrl.collect {
+      case Left(error) =>
+        Json.obj("error" -> error)
+      case Right(keepData) if keepData.nonEmpty =>
+        val keepDataWithTags = db.readOnlyMaster { implicit s =>
+          keepData.map { keep =>
+            val kId = keepRepo.get(keep.id).id.get
+            Json.toJson(keep).as[JsObject] + ("tags", Json.toJson(collectionRepo.getTagsByKeepId(kId)))
+          }
+        }
+        Json.obj("alreadyKept" -> keepDataWithTags)
+    }.getOrElse(Json.obj())
+    Ok(libsResponse ++ keepResponse)
   }
 
   def getLibrarySummariesByUser = UserAction { request =>
@@ -256,12 +300,11 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def unkeepFromLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
+  def unkeepFromLibrary(pubId: PublicId[Library], kId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    val keepId = (request.body \ "id").as[ExternalId[Keep]]
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    keepsCommander.unkeepOneFromLibrary(keepId, libraryId, request.userId) match {
+    keepsCommander.unkeepOneFromLibrary(kId, libraryId, request.userId) match {
       case Left(failMsg) =>
         BadRequest(Json.obj("error" -> failMsg))
       case Right(keepInfo) =>

@@ -128,22 +128,52 @@ class PageCommander @Inject() (
 
       augmentFuture map {
         case Seq(info) =>
-          val (keepers, libraries) = db.readOnlyMaster { implicit session =>
-            val basicUsers = basicUserRepo.loadAll(info.keepers.toSet ++ info.libraries.map(_._2) - userId)
-            val keepers = info.keepers.filterNot(_ == userId).map(basicUsers)
-            val libraryIdPairs = info.libraries.filterNot(_._2 == userId) // TODO: also exclude libraries user is following
+          val userIdSet = info.keepers.toSet
+          val otherKeepersTotal = info.keepersTotal - (if (userIdSet.contains(userId)) 1 else 0)
+          val libraryIdPairs = info.libraries.filterNot(_._2 == userId) // TODO: also exclude libraries user is following
+          val (basicUserMap, libraryMap) = db.readOnlyMaster { implicit session =>
+            val basicUserMap = basicUserRepo.loadAll(userIdSet ++ libraryIdPairs.map(_._2) - userId)
             val libraryMap = libraryRepo.getLibraries(libraryIdPairs.map(_._1).toSet)
-            val libraries = libraryIdPairs.map { // TODO: proper sort: friends first, secondarily by num followers
-              case (libraryId, userId) =>
-                val library = libraryMap(libraryId); // TODO: num keeps, num followers
-                Json.obj("name" -> library.name, "slug" -> library.slug, "owner" -> basicUsers(userId))
-            }
-            (keepers, libraries)
+            (basicUserMap, libraryMap)
           }
-          KeeperPageInfo(nUriStr, position, neverOnSite, shown, keepers, info.keepersOmitted, info.keepersTotal, libraries, keepDatas)
+          val keepers = info.keepers.filterNot(_ == userId).map(basicUserMap) // preserving ordering
+          val libraries = libraryIdPairs.map { // TODO: sort by friends first, secondarily by num followers (or just trust search ordering?)
+            case (libraryId, userId) =>
+              val library = libraryMap(libraryId);
+              val numKeeps = 0 // TODO
+              val numFollowers = 0 // TODO
+              Json.obj(
+                "name" -> library.name,
+                "slug" -> library.slug,
+                "owner" -> basicUserMap(userId),
+                "keeps" -> numKeeps,
+                "followers" -> numFollowers)
+          }
+          KeeperPageInfo(nUriStr, position, neverOnSite, shown, keepers, info.keepersOmitted, otherKeepersTotal, libraries, keepDatas)
       }
     }.getOrElse {
       Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, 0, Seq.empty[JsObject], Seq.empty[KeepData]))
+    }
+  }
+
+  def getUrlInfo(url: String, userId: Id[User]): Either[String, Seq[KeepData]] = {
+    URI.parse(url) match {
+      case Success(uri) =>
+        val (_, nUriOpt) = db.readOnlyMaster { implicit s =>
+          normalizedURIInterner.getByUriOrPrenormalize(uri.raw.get) match {
+            case Success(Left(nUri)) => (nUri.url, Some(nUri))
+            case Success(Right(pUri)) => (pUri, None)
+            case Failure(ex) => (uri.raw.get, None)
+          }
+        }
+        val keepData = nUriOpt.map { normUri =>
+          keepsCommander.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
+        }.getOrElse(Seq.empty[KeepData])
+        Right(keepData)
+
+      case Failure(e) =>
+        log.error(s"Error parsing url: $url", e)
+        Left("parse_url_error")
     }
   }
 }

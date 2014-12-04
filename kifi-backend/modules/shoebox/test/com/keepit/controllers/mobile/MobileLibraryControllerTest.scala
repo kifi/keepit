@@ -2,10 +2,11 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.commanders.{ KeepData, LibraryInfo }
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -47,7 +48,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     FakeCortexServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeCuratorServiceClientModule()
+    FakeCuratorServiceClientModule(),
+    FakeSliderHistoryTrackerModule()
   )
 
   "MobileLibraryController" should {
@@ -374,13 +376,61 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           keep
         }
 
-        val delete1 = Json.obj("id" -> keep1.externalId)
-        val result1 = unkeepFromLibrary(user1, pubId1, delete1)
+        val result1 = unkeepFromLibrary(user1, pubId1, keep1.externalId)
         status(result1) must equalTo(NO_CONTENT)
 
         db.readOnlyMaster { implicit s =>
           keepRepo.getByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq.empty
         }
+      }
+    }
+
+    "get writeable libraries" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, lib1, lib2, _, _) = setupTwoUsersThreeLibraries()
+        val pubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val pubId2 = Library.publicId(lib2.id.get)(inject[PublicIdConfiguration])
+        val k1 = db.readWrite { implicit s =>
+          setupKeepInLibrary(user1, lib1, "http://www.yelp.com/krustykrab", "krustykrab", Seq("food1", "food2"))
+        }
+
+        val emptyBody = Json.obj()
+        val url1 = Json.toJson("www.yelp.com/krustykrab")
+        val url2 = Json.toJson("http://www.yelp.com/krustykrab")
+        val url3 = Json.toJson("http://www.google.com")
+
+        // no url in body
+        val result1 = getSummariesWithUrl(user1, emptyBody)
+        status(result1) must equalTo(OK)
+        val response1 = contentAsJson(result1)
+        (response1 \ "libraries").as[Seq[LibraryInfo]].length === 2
+
+        // unparseable url in body
+        println("********* Intended ERROR parsing url! *********")
+        val result2 = getSummariesWithUrl(user1, Json.obj("url" -> url1))
+        status(result2) must equalTo(OK)
+        val response2 = contentAsJson(result2)
+        (response2 \ "libraries").as[Seq[LibraryInfo]].length === 2
+        (response2 \ "error").as[String] === "parse_url_error"
+        println("********* End intended ERROR! *********")
+
+        // parseable url in body (kept in other libraries)
+        val result3 = getSummariesWithUrl(user1, Json.obj("url" -> url2))
+        status(result3) must equalTo(OK)
+        val response3 = contentAsJson(result3)
+        (response3 \ "libraries").as[Seq[LibraryInfo]].length === 2
+        (response3 \ "error").asOpt[String] === None
+        val keepData = (response3 \ "alreadyKept")
+        (keepData \\ "id").map(_.as[ExternalId[Keep]]) === Seq(k1.externalId)
+        (keepData \\ "libraryId").map(_.as[PublicId[Library]]) === Seq(pubId1)
+        (keepData \\ "tags").map(_.as[Seq[Hashtag]].map(_.tag)) === Seq(Seq("food1", "food2"))
+
+        val result4 = getSummariesWithUrl(user1, Json.obj("url" -> url3))
+        status(result4) must equalTo(OK)
+        val response4 = contentAsJson(result4)
+        (response4 \ "libraries").as[Seq[LibraryInfo]].length === 2
+        (response4 \ "error").asOpt[String] === None
+        (response4 \ "alreadyKept").asOpt[Seq[JsObject]] === None
       }
     }
 
@@ -431,9 +481,14 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     controller.keepToLibrary(libId)(request(routes.MobileLibraryController.keepToLibrary(libId)).withBody(body))
   }
 
-  private def unkeepFromLibrary(user: User, libId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {
+  private def unkeepFromLibrary(user: User, libId: PublicId[Library], keepId: ExternalId[Keep])(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.unkeepFromLibrary(libId)(request(routes.MobileLibraryController.unkeepFromLibrary(libId)).withBody(body))
+    controller.unkeepFromLibrary(libId, keepId)(request(routes.MobileLibraryController.unkeepFromLibrary(libId, keepId)))
+  }
+
+  private def getSummariesWithUrl(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.getLibrarySummariesWithUrl()(request(routes.MobileLibraryController.getLibrarySummariesWithUrl()).withBody(body))
   }
 
   // User 'Spongebob' has one library called "Krabby Patty" (secret)

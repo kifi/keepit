@@ -2,20 +2,22 @@ package com.keepit.curator.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.db.{ DbSequenceAssigner, Id }
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db.slick.{ SeqNumberDbFunction, Database, DataBaseComponent, DbRepo }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick.{ DataBaseComponent, Database, DbRepo, SeqNumberDbFunction }
+import com.keepit.common.db.{ DbSequenceAssigner, H2DatabaseDialect, Id, SequenceNumber, State }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
+import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.Clock
-import com.keepit.model.{ LibraryKind, LibraryVisibility, Library, User }
+import com.keepit.model.{ Library, LibraryKind, LibraryVisibility, User }
 import org.joda.time.DateTime
 
 import scala.concurrent.duration._
+import scala.slick.jdbc.{ GetResult, StaticQuery }
 
 @ImplementedBy(classOf[CuratorLibraryInfoRepoImpl])
 trait CuratorLibraryInfoRepo extends DbRepo[CuratorLibraryInfo] with SeqNumberDbFunction[CuratorLibraryInfo] {
   def getByLibraryId(libraryId: Id[Library])(implicit session: RSession): Option[CuratorLibraryInfo]
+  def getBySeqNum(start: SequenceNumber[CuratorLibraryInfo], maxBatchSize: Int)(implicit session: RSession): Seq[CuratorLibraryInfo]
 }
 
 @Singleton
@@ -56,6 +58,39 @@ class CuratorLibraryInfoRepoImpl @Inject() (
     (for (row <- rows if row.libraryId === libraryId) yield row).firstOption
   }
 
+  def getBySeqNum(start: SequenceNumber[CuratorLibraryInfo], maxBatchSize: Int)(implicit session: RSession): Seq[CuratorLibraryInfo] = {
+    import scala.slick.jdbc.StaticQuery.interpolation
+    val q = if (db.dialect == H2DatabaseDialect) {
+      sql"SELECT * FROM curator_library_info WHERE seq > ${start.value} ORDER BY seq LIMIT $maxBatchSize;"
+    } else {
+      sql"SELECT * FROM curator_library_info USE INDEX (curator_library_info_u_seq_user_id) WHERE seq > ${start.value} ORDER BY seq LIMIT $maxBatchSize;"
+    }
+    q.as[CuratorLibraryInfo].list
+  }
+
+  // update getCuratorLibraryInfoResult if you modify table
+  private implicit val getCuratorLibraryInfoResult: GetResult[CuratorLibraryInfo] = GetResult { r =>
+    CuratorLibraryInfo(
+      id = r.<<[Option[Id[CuratorLibraryInfo]]],
+      createdAt = r.<<[DateTime],
+      updatedAt = r.<<[DateTime],
+      seq = r.<<[SequenceNumber[CuratorLibraryInfo]],
+      libraryId = r.<<[Id[Library]],
+      ownerId = r.<<[Id[User]],
+      memberCount = r.<<[Int],
+      keepCount = r.<<[Int],
+      visibility = r.<<[LibraryVisibility],
+      lastKept = r.<<[Option[DateTime]],
+      lastFollowed = r.<<[Option[DateTime]],
+      kind = r.<<[LibraryKind],
+      libraryLastUpdated = r.<<[DateTime],
+      state = r.<<[State[CuratorLibraryInfo]]
+    )
+  }
+
+  private implicit val getLibraryKindResult: GetResult[LibraryKind] = GetResult { r =>
+    LibraryKind(str = r.<<[String])
+  }
 }
 
 trait CuratorLibraryInfoSequencingPlugin extends SequencingPlugin
