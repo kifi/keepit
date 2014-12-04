@@ -118,7 +118,7 @@ class PageCommander @Inject() (
     nUriOpt.map { normUri =>
       val augmentFuture = searchClient.augment(
         userId = Some(userId),
-        showPublishedLibraries = false,
+        showPublishedLibraries = true,
         maxKeepersShown = Int.MaxValue, // TODO: reduce to 5 once most users have extension 3.3.26 or later
         maxLibrariesShown = 2,
         maxTagsShown = 0,
