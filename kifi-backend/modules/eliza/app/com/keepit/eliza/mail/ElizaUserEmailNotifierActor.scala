@@ -90,7 +90,7 @@ class ElizaUserEmailNotifierActor @Inject() (
       s"${userThread.summary} not unread")
     airbrake.verify(!userThread.notificationEmailed,
       s"${userThread.summary} notification already emailed")
-    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)),
+    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusHours(5)),
       s"Late send (${Minutes.minutesBetween(now, userThread.notificationUpdatedAt)} min) of user thread ${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} ")
     airbrake.verify(userThread.notificationUpdatedAt.isBefore(now),
       s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} in the future (${Minutes.minutesBetween(userThread.notificationUpdatedAt, now)} min)")
