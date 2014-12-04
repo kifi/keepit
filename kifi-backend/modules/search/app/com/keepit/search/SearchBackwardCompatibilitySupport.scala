@@ -95,6 +95,6 @@ class SearchBackwardCompatibilitySupport @Inject() (
     }
 
     val detailedSearchHits = monitoredAwait.result(future, 3 seconds, "slow augmentation")
-    PartialSearchResult(detailedSearchHits, result.myTotal, result.friendsTotal, result.othersTotal, friendStats, result.show)
+    PartialSearchResult(detailedSearchHits, result.myTotal, result.friendsTotal, result.othersTotal, friendStats, result.show, result.cutPoint)
   }
 }

@@ -68,6 +68,7 @@ class ResultDecorator(
       idFilter,
       mayHaveMoreHits,
       result.show,
+      result.cutPoint,
       searchExperimentId)
   }
 
@@ -177,4 +178,5 @@ case class DecoratedResult(
   idFilter: Set[Long],
   mayHaveMoreHits: Boolean,
   show: Boolean,
+  cutPoint: Int,
   searchExperimentId: Option[Id[SearchConfigExperiment]])

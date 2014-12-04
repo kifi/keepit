@@ -61,7 +61,8 @@ class ResultMergerTest extends Specification {
       friendsTotal = 2,
       othersTotal = 0,
       friendStats = FriendStats(ids = Array(2L), scores = Array(2.4f)),
-      show = true
+      show = true,
+      cutPoint = 2
     )
   }
 
@@ -72,7 +73,8 @@ class ResultMergerTest extends Specification {
       friendsTotal = 1,
       othersTotal = 0,
       friendStats = FriendStats(ids = Array(2L, 3L), scores = Array(2f, 1.8f)),
-      show = true
+      show = true,
+      cutPoint = 1
     )
   }
 
@@ -120,7 +122,8 @@ class ResultMergerTest extends Specification {
     friendsTotal = 3,
     othersTotal = 0,
     friendStats = FriendStats(Array(2L, 3L), Array(4.4f, 1.8f)),
-    show = true
+    show = true,
+    cutPoint = mergedDetailedSearchHits.length
   )
 
   "result merger" should {

@@ -28,6 +28,7 @@ object KifiSearchResult extends Logging {
     othersTotal: Int,
     mayHaveMoreHits: Boolean,
     show: Boolean,
+    cutPoint: Int,
     experimentId: Option[Id[SearchConfigExperiment]],
     context: String,
     collections: Seq[ExternalId[Collection]]): KifiSearchResult = {
@@ -41,6 +42,7 @@ object KifiSearchResult extends Logging {
         "othersTotal" -> JsNumber(othersTotal),
         "mayHaveMore" -> JsBoolean(mayHaveMoreHits),
         "show" -> JsBoolean(show),
+        "cutPoint" -> JsNumber(cutPoint),
         "experimentId" -> experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull),
         "context" -> JsString(context),
         "experts" -> JsArray()
@@ -170,6 +172,7 @@ class PartialSearchResult(val json: JsValue) extends AnyVal {
   def othersTotal: Int = (json \ "othersTotal").as[Int]
   def friendStats: FriendStats = (json \ "friendStats").as[FriendStats]
   def show: Boolean = (json \ "show").as[Boolean] // TODO: remove
+  def cutPoint: Int = (json \ "cutPoint").as[Int]
 }
 
 object PartialSearchResult extends Logging {
@@ -179,8 +182,8 @@ object PartialSearchResult extends Logging {
     friendsTotal: Int,
     othersTotal: Int,
     friendStats: FriendStats,
-    show: Boolean // TODO: remove
-    ): PartialSearchResult = {
+    show: Boolean, // TODO: remove
+    cutPoint: Int): PartialSearchResult = {
     try {
       new PartialSearchResult(JsObject(List(
         "hits" -> JsArray(hits.map(_.json)),
@@ -188,7 +191,8 @@ object PartialSearchResult extends Logging {
         "friendsTotal" -> JsNumber(friendsTotal),
         "othersTotal" -> JsNumber(othersTotal),
         "friendStats" -> Json.toJson(friendStats),
-        "show" -> JsBoolean(show) // TODO: remove
+        "show" -> JsBoolean(show), // TODO: remove
+        "cutPoint" -> JsNumber(cutPoint)
       )))
     } catch {
       case e: Throwable =>

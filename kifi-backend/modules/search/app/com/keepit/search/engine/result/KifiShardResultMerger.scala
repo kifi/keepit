@@ -66,7 +66,7 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     // compute high score excluding others (an orphan uri sometimes makes results disappear)
     // and others high score (used for tailcutting of others hits)
     val highScore = {
-      var highScore = max(myHits.highScore, friendsHits.highScore)
+      val highScore = max(myHits.highScore, friendsHits.highScore)
       if (highScore > 0.0f) highScore else max(othersHits.highScore, highScore)
     }
 
@@ -74,7 +74,7 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     if (myHits.size > 0) {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          var score = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
+          val score = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
           hits.insert(score, null, hit.hit)
       }
     }
