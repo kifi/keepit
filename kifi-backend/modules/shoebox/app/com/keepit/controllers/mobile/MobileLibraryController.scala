@@ -26,6 +26,7 @@ class MobileLibraryController @Inject() (
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
+  keepImageCommander: KeepImageCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   val libraryCommander: LibraryCommander,
   val userActionsHelper: UserActionsHelper,
@@ -227,6 +228,44 @@ class MobileLibraryController @Inject() (
         } yield {
           Ok(Json.obj("keeps" -> keepInfos))
         }
+    }
+  }
+
+  def keepToLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId)).async(parse.tolerantJson) { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    val jsonBody = request.body
+    val title = (jsonBody \ "title").asOpt[String]
+    val url = (jsonBody \ "url").as[String]
+    val tagNames = (jsonBody \ "tagNames").as[Seq[String]]
+    val imageUrlOpt = (jsonBody \ "imageUrl").asOpt[String]
+    val rawKeep = RawBookmarkRepresentation(title, url, None)
+    val source = KeepSource.mobile
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
+    keepsCommander.keepWithSelectedTags(request.userId, rawKeep, libraryId, source, tagNames) match {
+      case Left(msg) =>
+        Future.successful(BadRequest(msg))
+      case Right((keep, tags)) =>
+        val returnObj = Json.obj(
+          "keep" -> Json.toJson(KeepInfo.fromKeep(keep)),
+          "tags" -> tags.map(tag => Json.obj("name" -> tag.name, "id" -> tag.externalId))
+        )
+        imageUrlOpt.map { imageUrl =>
+          keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserPicked)
+        }
+        Future.successful(Ok(returnObj))
+    }
+  }
+
+  def unkeepFromLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    val keepId = (request.body \ "id").as[ExternalId[Keep]]
+
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+    keepsCommander.unkeepOneFromLibrary(keepId, libraryId, request.userId) match {
+      case Left(failMsg) =>
+        BadRequest(Json.obj("error" -> failMsg))
+      case Right(keepInfo) =>
+        NoContent
     }
   }
 
