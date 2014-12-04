@@ -17,6 +17,7 @@ import scala.slick.jdbc.{ GetResult, StaticQuery }
 trait LibraryLDATopicRepo extends DbRepo[LibraryLDATopic] {
   def getByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic]
   def getActiveByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic]
+  def getActiveByLibraryIds(libIds: Seq[Id[Library]], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LibraryLDATopic]
   def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryTopicMean]
 }
 
@@ -55,6 +56,10 @@ class LibraryLDATopicRepoImpl @Inject() (
 
   def getActiveByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic] = {
     (for { r <- rows if r.libraryId === libId && r.version === version && r.state === LibraryLDATopicStates.ACTIVE } yield r).firstOption
+  }
+
+  def getActiveByLibraryIds(libIds: Seq[Id[Library]], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LibraryLDATopic] = {
+    (for { r <- rows if r.libraryId.inSet(libIds) && r.version === version && r.state === LibraryLDATopicStates.ACTIVE } yield r).list
   }
 
   def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryTopicMean] = {
