@@ -452,7 +452,6 @@ angular.module('kifi')
             });
 
             libraryBodyElement.css({
-              'transition': 'margin-top 0.1s ease',
               'margin-top': '90px'
             });
           }, 0);
