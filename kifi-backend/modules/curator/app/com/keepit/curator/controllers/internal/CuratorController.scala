@@ -9,11 +9,10 @@ import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.curator.commanders.email.FeedDigestMessage.Queue
 import com.keepit.curator.commanders.email.{ RecentInterestRankStrategy, EngagementEmailActor, FeedDigestEmailSender }
 import com.keepit.curator.commanders._
-import com.keepit.curator.model.RecommendationClientType
-import com.keepit.model._
+import com.keepit.curator.model.{ LibraryRecoInfo, RecommendationClientType, LibraryRecommendation }
+import com.keepit.model.{ Library, UserValueName, UriRecommendationFeedback, NormalizedURI, ExperimentType, User, UriRecommendationScores }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsString, Json }
@@ -27,6 +26,7 @@ class CuratorController @Inject() (
     shoebox: ShoeboxServiceClient,
     curatorAnalytics: CuratorAnalytics,
     recoGenCommander: RecommendationGenerationCommander,
+    libraryRecoGenCommander: LibraryRecommendationGenerationCommander,
     seedCommander: SeedIngestionCommander,
     recoFeedbackCommander: RecommendationFeedbackCommander,
     recoRetrievalCommander: RecommendationRetrievalCommander,
@@ -92,6 +92,15 @@ class CuratorController @Inject() (
     SafeFuture(seedCommander.forceIngestGraphData(userId), Some("Force ingesting Graph Data to refresh Recos"))
     scheduleToSendDigestEmail(userId)
     Ok
+  }
+
+  def topLibraryRecos(userId: Id[User], limit: Int) = Action.async { request =>
+    log.info(s"topLibraryRecos called userId=$userId limit=$limit")
+    libraryRecoGenCommander.getTopRecommendations(userId, limit) map { libRecos =>
+      val libRecoInfos = libRecos.map { r => LibraryRecommendation.toLibraryRecoInfo(r) }
+      log.info(s"topLibraryRecos returning userId=$userId resultCount=${libRecoInfos.size}")
+      Ok(Json.toJson(libRecoInfos))
+    }
   }
 
   private def scheduleToSendDigestEmail(userId: Id[User]) = {

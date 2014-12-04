@@ -5,6 +5,8 @@ import java.util.concurrent.TimeUnit
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model.{ CuratorLibraryMembershipInfoRepo, LibraryScores, CuratorLibraryInfo }
@@ -26,10 +28,14 @@ class LibraryScoringHelper @Inject() (
     db: Database,
     graph: GraphServiceClient,
     cortex: CortexServiceClient,
-    libMembershipRepo: CuratorLibraryMembershipInfoRepo) {
+    libMembershipRepo: CuratorLibraryMembershipInfoRepo,
+    private val airbrake: AirbrakeNotifier) extends Logging {
 
   def apply(userId: Id[User], libraries: Seq[CuratorLibraryInfo]): Future[Seq[ScoredLibraryInfo]] = {
     val userLibrariesScoresF = getLibraryInterestScores(userId, libraries)
+    userLibrariesScoresF.onSuccess {
+      case v => log.info(s"apply() userId=$userId interestScoresFetched=${v.size} [" + v.mkString(",") + "]")
+    }
 
     Future.sequence(Seq.tabulate(libraries.size) { idx: Int =>
       val candidate = libraries(idx)
@@ -43,10 +49,11 @@ class LibraryScoringHelper @Inject() (
           recencyScore = getRecencyScore(candidate),
           interestScore = interestScore(idx),
           popularityScore = getPopularityScore(candidate),
-          sizeScore = getSizeScore(candidate)
-        )
+          sizeScore = getSizeScore(candidate))
+        val masterScore = computeMasterScore(allScores)
 
-        ScoredLibraryInfo(candidate, computeMasterScore(allScores), allScores)
+        log.info(s"apply() scores calculated userId=$userId masterScore=$masterScore allScores=$allScores")
+        ScoredLibraryInfo(candidate, masterScore, allScores)
       }
     })
   }

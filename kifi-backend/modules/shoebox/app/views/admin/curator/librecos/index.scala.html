@@ -1,0 +1,14 @@
+@()(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin.admin("Library Recommendations") {
+
+<form id="filterForm" method="GET" action="@com.keepit.controllers.admin.routes.AdminLibraryRecommendationsController.view" target="_blank">
+  <input id="userId" name="userId" type="number" placeholder="User ID..." style="width:100px;">
+  <input type="submit" value="Submit">
+</form>
+
+<script type="text/javascript">
+</script>
+
+}
+

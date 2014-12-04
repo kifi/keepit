@@ -7,6 +7,17 @@ import com.keepit.model.{ Library, User }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 
+object LibraryRecommendation {
+  implicit def toLibraryRecoInfo(libReco: LibraryRecommendation): LibraryRecoInfo = {
+    LibraryRecoInfo(
+      libraryId = libReco.libraryId,
+      userId = libReco.userId,
+      masterScore = libReco.masterScore,
+      explain = libReco.allScores.toString
+    )
+  }
+}
+
 case class LibraryRecommendation(
     id: Option[Id[LibraryRecommendation]] = None,
     createdAt: DateTime = currentDateTime,
@@ -37,6 +48,6 @@ object LibraryRecommendationStates extends States[LibraryRecommendation]
        |i:$interestScore%1.2f-
        |r:$recencyScore%1.2f-
        |p:$popularityScore%1.2f-
-       |sz:$sizeScore%1.2f
+       |si:$sizeScore%1.2f
      """.stripMargin.replace("\n", "").trim()
 }
