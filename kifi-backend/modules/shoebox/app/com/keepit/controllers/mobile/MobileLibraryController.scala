@@ -25,6 +25,7 @@ class MobileLibraryController @Inject() (
   db: Database,
   libraryRepo: LibraryRepo,
   keepRepo: KeepRepo,
+  collectionRepo: CollectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
@@ -131,13 +132,19 @@ class MobileLibraryController @Inject() (
     }
 
     val libsResponse = Json.obj("libraries" -> writeableLibraries)
-    val response = parseUrl.map {
+    val keepResponse = parseUrl.collect {
       case Left(error) =>
-        libsResponse ++ Json.obj("error" -> error)
+        Json.obj("error" -> error)
       case Right(keepData) if keepData.nonEmpty =>
-        libsResponse ++ Json.obj("alreadyKept" -> keepData)
-    }.getOrElse(libsResponse)
-    Ok(response)
+        val keepDataWithTags = db.readOnlyMaster { implicit s =>
+          keepData.map { keep =>
+            val kId = keepRepo.get(keep.id).id.get
+            Json.toJson(keep).as[JsObject] + ("tags", Json.toJson(collectionRepo.getTagsByKeepId(kId)))
+          }
+        }
+        Json.obj("alreadyKept" -> keepDataWithTags)
+    }.getOrElse(Json.obj())
+    Ok(libsResponse ++ keepResponse)
   }
 
   def getLibrarySummariesByUser = UserAction { request =>

@@ -391,12 +391,13 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val pubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
         val pubId2 = Library.publicId(lib2.id.get)(inject[PublicIdConfiguration])
         val k1 = db.readWrite { implicit s =>
-          setupKeepInLibrary(user1, lib1, "http://www.yelp.com/krustykrab", "krustykrab", Seq("food1"))
+          setupKeepInLibrary(user1, lib1, "http://www.yelp.com/krustykrab", "krustykrab", Seq("food1", "food2"))
         }
 
         val emptyBody = Json.obj()
         val url1 = Json.toJson("www.yelp.com/krustykrab")
         val url2 = Json.toJson("http://www.yelp.com/krustykrab")
+        val url3 = Json.toJson("http://www.google.com")
 
         // no url in body
         val result1 = getSummariesWithUrl(user1, emptyBody)
@@ -405,21 +406,31 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         (response1 \ "libraries").as[Seq[LibraryInfo]].length === 2
 
         // unparseable url in body
-        println("Intended ERROR parsing url!")
+        println("********* Intended ERROR parsing url! *********")
         val result2 = getSummariesWithUrl(user1, Json.obj("url" -> url1))
         status(result2) must equalTo(OK)
         val response2 = contentAsJson(result2)
         (response2 \ "libraries").as[Seq[LibraryInfo]].length === 2
         (response2 \ "error").as[String] === "parse_url_error"
+        println("********* End intended ERROR! *********")
 
-        // parseable url in body
+        // parseable url in body (kept in other libraries)
         val result3 = getSummariesWithUrl(user1, Json.obj("url" -> url2))
         status(result3) must equalTo(OK)
         val response3 = contentAsJson(result3)
         (response3 \ "libraries").as[Seq[LibraryInfo]].length === 2
         (response3 \ "error").asOpt[String] === None
-        (response3 \ "alreadyKept" \\ "id").map(_.as[ExternalId[Keep]]) === Seq(k1.externalId)
-        (response3 \ "alreadyKept" \\ "libraryId").map(_.as[PublicId[Library]]) === Seq(pubId1)
+        val keepData = (response3 \ "alreadyKept")
+        (keepData \\ "id").map(_.as[ExternalId[Keep]]) === Seq(k1.externalId)
+        (keepData \\ "libraryId").map(_.as[PublicId[Library]]) === Seq(pubId1)
+        (keepData \\ "tags").map(_.as[Seq[Hashtag]].map(_.tag)) === Seq(Seq("food1", "food2"))
+
+        val result4 = getSummariesWithUrl(user1, Json.obj("url" -> url3))
+        status(result4) must equalTo(OK)
+        val response4 = contentAsJson(result4)
+        (response4 \ "libraries").as[Seq[LibraryInfo]].length === 2
+        (response4 \ "error").asOpt[String] === None
+        (response4 \ "alreadyKept").asOpt[Seq[JsObject]] === None
       }
     }
 
