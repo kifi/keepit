@@ -154,9 +154,13 @@ class LibraryRepoImpl @Inject() (
   }
 
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {
-    idCache.bulkGetOrElse(libraryIds.map(LibraryIdKey(_))) { missingKeys =>
-      (for (r <- rows if r.id.inSet(libraryIds)) yield r).list.map(library => LibraryIdKey(library.id.get) -> library).toMap
-    }.map { case (libraryKey, library) => libraryKey.id -> library }
+    if (libraryIds.isEmpty) {
+      Map.empty
+    } else {
+      idCache.bulkGetOrElse(libraryIds.map(LibraryIdKey(_))) { missingKeys =>
+        (for (r <- rows if r.id.inSet(libraryIds)) yield r).list.map(library => LibraryIdKey(library.id.get) -> library).toMap
+      }.map { case (libraryKey, library) => libraryKey.id -> library }
+    }
   }
 
   def getAllPublishedLibraries()(implicit session: RSession): Seq[Library] = {

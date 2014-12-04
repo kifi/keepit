@@ -116,30 +116,34 @@ class PageCommander @Inject() (
     }
 
     nUriOpt.map { normUri =>
-      // get all keepers from search (read_only data)
-      val keepersFuture = searchClient.augment(
+      val augmentFuture = searchClient.augment(
         userId = Some(userId),
         showPublishedLibraries = false,
         maxKeepersShown = Int.MaxValue, // TODO: reduce to 5 once most users have extension 3.3.26 or later
-        maxLibrariesShown = 0,
+        maxLibrariesShown = 2,
         maxTagsShown = 0,
-        items = Seq(AugmentableItem(normUri.id.get))).map {
-          case Seq(info) =>
-            db.readOnlyMaster { implicit session =>
-              val userIdSet = info.keepers.toSet - userId
-              (basicUserRepo.loadAll(userIdSet).values.toSeq, info.keepersOmitted, info.keepersTotal)
+        items = Seq(AugmentableItem(normUri.id.get)))
+
+      val keepDatas = keepsCommander.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
+
+      augmentFuture map {
+        case Seq(info) =>
+          val (keepers, libraries) = db.readOnlyMaster { implicit session =>
+            val basicUsers = basicUserRepo.loadAll(info.keepers.toSet ++ info.libraries.map(_._2) - userId)
+            val keepers = info.keepers.filterNot(_ == userId).map(basicUsers)
+            val libraryIdPairs = info.libraries.filterNot(_._2 == userId) // TODO: also exclude libraries user is following
+            val libraryMap = libraryRepo.getLibraries(libraryIdPairs.map(_._1).toSet)
+            val libraries = libraryIdPairs.map { // TODO: proper sort: friends first, secondarily by num followers
+              case (libraryId, userId) =>
+                val library = libraryMap(libraryId); // TODO: num keeps, num followers
+                Json.obj("name" -> library.name, "slug" -> library.slug, "owner" -> basicUsers(userId))
             }
-        }
-
-      // find all keeps in database (with uri) (read_write actions)
-      val keepsData = keepsCommander.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
-
-      keepersFuture.map {
-        case (keepers, keepersOmitted, keepersTotal) =>
-          KeeperPageInfo(nUriStr, position, neverOnSite, shown, keepers, keepersOmitted, keepersTotal, keepsData)
+            (keepers, libraries)
+          }
+          KeeperPageInfo(nUriStr, position, neverOnSite, shown, keepers, info.keepersOmitted, info.keepersTotal, libraries, keepDatas)
       }
     }.getOrElse {
-      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, 0, Seq.empty[KeepData]))
+      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, 0, Seq.empty[JsObject], Seq.empty[KeepData]))
     }
   }
 }
