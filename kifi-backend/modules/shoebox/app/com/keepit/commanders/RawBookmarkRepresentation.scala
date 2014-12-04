@@ -18,7 +18,7 @@ import org.joda.time.DateTime
 @json case class RawBookmarkRepresentation(
   title: Option[String] = None,
   url: String,
-  isPrivate: Option[Boolean] = None, // todo: (aaron) remove isPrivate fields
+  isPrivate: Option[Boolean],
   canonical: Option[String] = None,
   openGraph: Option[String] = None,
   keptAt: Option[DateTime] = None)
