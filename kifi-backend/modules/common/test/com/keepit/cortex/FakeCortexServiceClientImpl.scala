@@ -57,6 +57,12 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
     }
   }
 
+  override def userLibrariesScores(userId: Id[User], libIds: Seq[Id[Library]])(implicit version: LDAVersionOpt): Future[Seq[Option[Float]]] = {
+    Future.successful {
+      libIds.map(libId => userLibraryScoreExpectations.getOrElse((userId, libId), Some(1f)))
+    }
+  }
+
   override def similarURIs(uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt): Future[Seq[Id[NormalizedURI]]] = ???
 
   override def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])] = ???

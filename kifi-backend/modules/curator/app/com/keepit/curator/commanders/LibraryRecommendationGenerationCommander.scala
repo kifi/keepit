@@ -16,10 +16,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 
-case class LibraryRecoCandidate(userId: Id[User], libraryInfo: CuratorLibraryInfo) {
-  val libraryId = libraryInfo.libraryId
-}
-
 @Singleton
 class LibraryRecommendationGenerationCommander @Inject() (
     scoringHelper: LibraryScoringHelper,
@@ -59,14 +55,12 @@ class LibraryRecommendationGenerationCommander @Inject() (
     // TODO(josh) more checks (min followers? max age?)
   }
 
-  private def getCandidateLibrariesForUser(userId: Id[User], state: LibraryRecommendationGenerationState): (Seq[LibraryRecoCandidate], SequenceNumber[CuratorLibraryInfo]) = {
+  private def getCandidateLibrariesForUser(userId: Id[User], state: LibraryRecommendationGenerationState): (Seq[CuratorLibraryInfo], SequenceNumber[CuratorLibraryInfo]) = {
     val libs = db.readOnlyReplica { implicit session =>
       libraryInfoRepo.getBySeqNum(state.seq, 200)
-    } filter initialLibraryRecoFilterForUser(userId) map { libInfo =>
-      LibraryRecoCandidate(userId = userId, libraryInfo = libInfo)
-    }
+    } filter initialLibraryRecoFilterForUser(userId)
 
-    (libs, libs.lastOption.map(_.libraryInfo.seq).getOrElse(state.seq))
+    (libs, libs.lastOption.map(_.seq).getOrElse(state.seq))
   }
 
   private def saveLibraryRecommendations(scoredLibraryInfos: Seq[ScoredLibraryInfo], userId: Id[User], newState: LibraryRecommendationGenerationState) =
@@ -92,9 +86,9 @@ class LibraryRecommendationGenerationCommander @Inject() (
       genStateRepo.save(newState)
     }
 
-  private def processLibraries(candidates: Seq[LibraryRecoCandidate], newState: LibraryRecommendationGenerationState,
+  private def processLibraries(candidates: Seq[CuratorLibraryInfo], newState: LibraryRecommendationGenerationState,
     userId: Id[User], alwaysInclude: Set[Id[Library]]): Future[Unit] = {
-    scoringHelper(candidates) flatMap { scores =>
+    scoringHelper(userId, candidates) flatMap { scores =>
       val toBeSaved = scores filter (si => alwaysInclude.contains(si.libraryId) || shouldInclude(si))
       saveLibraryRecommendations(toBeSaved, userId, newState)
       precomputeRecommendationsForUser(userId, alwaysInclude)
