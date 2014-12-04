@@ -1,6 +1,7 @@
 package com.keepit.common.images
 
 import java.io.{ PrintWriter, ByteArrayOutputStream }
+import java.util
 import javax.imageio.ImageIO
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings.UTF8
@@ -13,6 +14,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.model.ImageFormat
 import org.im4java.core._
 import org.im4java.process.{ ErrorConsumer, ArrayListOutputConsumer }
+import play.api.libs.Files.TemporaryFile
 import scala.collection.JavaConversions._
 
 import scala.util.Try
@@ -62,26 +64,57 @@ class Image4javaWrapper @Inject() (
   def resizeImage(image: BufferedImage, format: ImageFormat, boundingBox: Int): Try[BufferedImage] =
     resizeImage(image: BufferedImage, format: ImageFormat, boundingBox, boundingBox)
 
+  /**
+   * using temporary file for resized image reading. for more info see http://www.imagemagick.org/discourse-server/viewtopic.php?t=19621
+   */
   def resizeImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): Try[BufferedImage] = Try {
     if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't resize format $format")
+    if (format == ImageFormat.GIF) {
+      safeResizeImage(gifToPng(image), ImageFormat.PNG, width, height)
+    } else {
+      safeResizeImage(image, format, width, height)
+    }
+  }
+
+  def gifToPng(image: BufferedImage): BufferedImage = {
+    val inputFile = TemporaryFile(prefix = "ImageMagicGifToPngImageIn", suffix = ".gif").file
+    inputFile.deleteOnExit()
+    ImageIO.write(image, "gif", inputFile)
+
+    val outputFile = TemporaryFile(prefix = "ImageMagicGifToPngImageOut", suffix = ".png").file
+    outputFile.deleteOnExit()
+
+    val operation = new IMOperation
+    operation.addImage(inputFile.getAbsolutePath)
+
+    operation.addImage(outputFile.getAbsolutePath)
+
+    val convert = command()
+
+    handleExceptions(convert, operation)
+
+    ImageIO.read(outputFile)
+  }
+
+  private def safeResizeImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): BufferedImage = {
     val operation = new IMOperation
 
-    operation.verbose()
+    val outputFile = TemporaryFile(prefix = "ImageMagicResizeImage", suffix = s".${format.value}").file
+    val filePath = outputFile.getAbsolutePath
+    outputFile.deleteOnExit()
+
     operation.addImage()
     operation.resize(width, height)
 
     addOptions(format, operation)
-
-    operation.addImage(s"${format.value}:-")
+    operation.addImage(filePath)
 
     val convert = command()
-    val s2b = new Stream2BufferedImage()
-    convert.setOutputConsumer(s2b)
 
     handleExceptions(convert, operation, Some(image))
 
-    val resized = s2b.getImage
-    log.info(s"resize image from ${imageByteSize(image, format)} bytes (${image.getWidth}w/${image.getWidth}h) to ${imageByteSize(resized, format)} bytes (${resized.getWidth}w/${resized.getWidth}h)")
+    val resized = ImageIO.read(outputFile)
+    log.info(s"resize image from ${imageByteSize(image, format)} bytes (${image.getWidth}w/${image.getWidth}h) to ${imageByteSize(resized, format)} bytes (${resized.getWidth}w/${resized.getWidth}h) using file $filePath")
     resized
   }
 
@@ -129,7 +162,8 @@ class Image4javaWrapper @Inject() (
             throw new Exception(installationInstructions, t)
           }
           val script = getScript(convert, operation)
-          throw new Exception(s"Error executing underlying tool: ${convert.getErrorText.mkString("\n")}\n Generated script is:\n$script", t)
+          val errorText = Option(convert.getErrorText).getOrElse(new util.ArrayList[String]())
+          throw new Exception(s"Error executing underlying tool: ${errorText.mkString("\n")}\n Generated script is:\n$script", t)
       }
     }
   }

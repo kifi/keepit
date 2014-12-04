@@ -33,6 +33,49 @@ class MobileLibraryController @Inject() (
   implicit val config: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
+  def createLibrary() = UserAction(parse.tolerantJson) { request =>
+    val jsonBody = request.body
+    val name = (jsonBody \ "name").as[String]
+    val description = (jsonBody \ "description").asOpt[String]
+    val visibility = (jsonBody \ "visibility").as[LibraryVisibility]
+    val slug = LibrarySlug.generateFromName(name)
+    val addRequest = LibraryAddRequest(name, visibility, description, slug)
+
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+    libraryCommander.addLibrary(addRequest, request.userId) match {
+      case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+      case Right(lib) =>
+        val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
+        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)))
+    }
+  }
+
+  def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
+    val libId = Library.decodePublicId(pubId).get
+    val json = request.body
+    val newName = (json \ "newName").asOpt[String]
+    val newDescription = (json \ "newDescription").asOpt[String]
+    val newVisibility = (json \ "newVisibility").asOpt[LibraryVisibility]
+    val newSlug = (json \ "newSlug").asOpt[String]
+    val res = libraryCommander.modifyLibrary(libId, request.userId, newName, newDescription, newSlug, newVisibility)
+    res match {
+      case Left(fail) =>
+        Status(fail.status)(Json.obj("error" -> fail.message))
+      case Right(lib) =>
+        val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
+        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)))
+    }
+  }
+
+  def deleteLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
+    val libId = Library.decodePublicId(pubId).get
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+    libraryCommander.removeLibrary(libId, request.userId) match {
+      case Some(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+      case _ => NoContent
+    }
+  }
+
   def getLibraryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val id = Library.decodePublicId(pubId).get
     libraryCommander.getLibraryById(request.userIdOpt, false, id) map {
@@ -212,7 +255,6 @@ class MobileLibraryController @Inject() (
       case _ => Future.successful(Forbidden)
     }
   }
-
 }
 
 private object ImplicitHelper {
