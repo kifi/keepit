@@ -987,7 +987,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       if (success) {
         log('[progress:done]');
         clearTimeout(timeout), timeout = null;
-        $el.removeClass('kifi-doing').on('transitionend', function (e) {
+        $el.on('transitionend', function (e) {
           if (e.originalEvent.propertyName === 'clip') {
             $el.off('transitionend');
             finished(true);
@@ -996,10 +996,15 @@ if (searchUrlRe.test(document.URL)) !function () {
       } else {
         log('[progress:fail]');
         clearTimeout(timeout), timeout = null;
-        $el.removeClass('kifi-doing').one('transitionend', function () {
+        if ($el[0].offsetWidth) {
+          $el.one('transitionend', finishFail).addClass('kifi-fail');
+        } else {
+          finishFail();
+        }
+        function finishFail() {
           $el.remove();
-          finished(false);
-        }).addClass('kifi-fail');
+          deferred.reject(reason);
+        }
       }
     };
   }

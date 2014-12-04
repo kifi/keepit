@@ -9,6 +9,7 @@
 // @require scripts/html/keeper/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/jquery-canscroll.js
+// @require scripts/lib/q.min.js
 // @require scripts/formatting.js
 // @require scripts/look.js
 // @require scripts/render.js
@@ -81,7 +82,7 @@ k.panes.thread = k.panes.thread || function () {
     }))
     .prependTo($tall);
 
-    var compose = k.compose($tall, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
+    var compose = k.compose($tall, sendReply.bind(null, threadId));
     var $holder = $tall.find('.kifi-scroll-inner')
       .preventAncestorScroll()
       .handleLookClicks('chat')
@@ -105,8 +106,8 @@ k.panes.thread = k.panes.thread || function () {
     });
 
     $paneBox
-    .on('kifi:removing', onRemoving.bind(null, compose))
-    .on('kifi:remove', onRemoved.bind(null, threadId, $who.find('.kifi-message-header'), compose, heighter));
+    .on('kifi:removing', onRemoving.bind(null, threadId, compose))
+    .on('kifi:remove', onRemoved.bind(null, $who.find('.kifi-message-header'), compose, heighter));
     if ($paneBox.data('shown')) {
       compose.focus();
     } else {
@@ -116,15 +117,15 @@ k.panes.thread = k.panes.thread || function () {
     return $holder;
   }
 
-  function onRemoving(compose) {
-    compose.save();
+  function onRemoving(threadId, compose) {
+    compose.save({threadId: threadId});
     api.port.off(handlers);
     $(window).off('resize.thread');
   }
 
-  function onRemoved(threadId, $header, compose, heighter) {
+  function onRemoved($header, compose, heighter) {
     k.messageHeader.destroy($header);
-    compose.destroy({threadId: threadId});
+    compose.destroy();
     heighter.destroy();
   }
 
@@ -208,12 +209,14 @@ k.panes.thread = k.panes.thread || function () {
 
     transmitReply($m, text, threadId);
 
-    setTimeout(function() {
+    setTimeout(function () {
       if (!$m.attr('data-id') && !$m.data('error')) {
         $m.find('time').hide();
         $m.find('.kifi-message-status').text('sending…');
       }
     }, 1000);
+
+    return Q(true);  // reset form
   }
 
   function renderMessage(m) {

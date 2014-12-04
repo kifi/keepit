@@ -239,7 +239,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   function positionTile(pos) { // goal: as close to target position as possible while still in window
     pos = pos || JSON.parse(tile && tile.dataset.pos || 0);
     if (!pos) return;
-    var maxPos = window.innerHeight - 54;  // height (42) + margin-top (6) + margin-bottom (6)
+    var maxPos = window.innerHeight - 62;
     if (pos.bottom >= 0) {
       setTileVertOffset(pos.bottom - Math.max(0, Math.min(pos.bottom, maxPos)));
     } else if (pos.top >= 0) {
