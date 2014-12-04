@@ -195,4 +195,28 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
       kind = LibraryKind.USER_CREATED, libraryLastUpdated = currentDateTime)
     inject[CuratorLibraryInfoRepo].save(libInfo)
   }
+
+  def makeLibraryRecommendation(libraryId: Int, userId: Int, masterScore: Float) = {
+    LibraryRecommendation(
+      libraryId = Id[Library](libraryId),
+      userId = Id[User](userId),
+      masterScore = masterScore,
+      allScores = LibraryScores(
+        socialScore = 1,
+        interestScore = 1,
+        recencyScore = 1,
+        popularityScore = 1,
+        sizeScore = 1
+      )
+    )
+  }
+
+  def saveLibraryMembership(userId: Id[User], libId: Id[Library], owner: Boolean = false)(implicit rw: RWSession, injector: Injector): CuratorLibraryMembershipInfo = {
+    inject[CuratorLibraryMembershipInfoRepo].save(CuratorLibraryMembershipInfo(
+      userId = userId,
+      libraryId = libId,
+      access = if (owner) LibraryAccess.OWNER else LibraryAccess.READ_ONLY,
+      state = CuratorLibraryMembershipInfoStates.ACTIVE
+    ))
+  }
 }

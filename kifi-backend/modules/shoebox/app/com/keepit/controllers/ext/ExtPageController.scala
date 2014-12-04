@@ -15,19 +15,6 @@ class ExtPageController @Inject() (
   pageCommander: PageCommander)
     extends UserActions with ShoeboxServiceController {
 
-  def getPageDetails() = UserAction(parse.tolerantJson) { request =>
-    val url = (request.body \ "url").as[String]
-    if (url.isEmpty) throw new Exception(s"empty url for json ${request.body} for user ${request.user}")
-    URI.parse(url) match {
-      case Success(_) =>
-        val info = pageCommander.getPageDetails(url, request.userId, request.experiments)
-        Ok(Json.toJson(info))
-      case Failure(e) =>
-        log.error(s"Error parsing url: $url", e)
-        BadRequest(Json.obj("error" -> s"Error parsing url: $url"))
-    }
-  }
-
   def getPageInfo() = UserAction.async(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     URI.parse(url) match {

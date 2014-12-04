@@ -106,9 +106,9 @@ class MobileKeepsController @Inject() (
     }
     keepsCommander.keepWithSelectedTags(request.userId, rawBookmark, libraryId, source, collectionNames) match {
       case Left(msg) => BadRequest(msg)
-      case Right((keepInfo, tags)) =>
+      case Right((keep, tags)) =>
         Ok(Json.obj(
-          "keep" -> Json.toJson(keepInfo),
+          "keep" -> Json.toJson(KeepInfo.fromKeep(keep)),
           "tags" -> tags.map(tag => Json.obj("name" -> tag.name, "id" -> tag.externalId))
         ))
     }

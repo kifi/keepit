@@ -1,0 +1,21 @@
+<a class="kifi-sent kifi-hidden" href="javascript:">
+  <div class="kifi-sent-top">
+    <div class="kifi-sent-shared{{#multiline}} kifi-multiline{{/multiline}}">
+      {{#customMessage}}Sent to{{/customMessage}}{{!
+    }}{{^customMessage}}Shared with{{/customMessage}}{{!
+  }}</div>
+    {{#names}}{{!
+    }}<span class="kifi-sent-li kifi-sent-name">{{.}}</span>{{!
+  }}{{/names}}{{!
+  }}{{#emails}}{{!
+    }}<span class="kifi-sent-li kifi-sent-email">{{.}}</span>{{!
+  }}{{/emails}}{{!
+  }}{{#numOthers}}{{!
+    }}<span class="kifi-sent-li kifi-sent-others" data-kifi-others="{{numOthers}}">
+        {{numOthers}} other{{!
+    }}</span>
+    {{/numOthers}}
+  </div>
+  <div class="kifi-sent-open" href="javascript:">View {{#toSelf}}notes{{/toSelf}}{{^toSelf}}conversation{{/toSelf}}</div>
+  <div class="kifi-sent-tri"></div>
+</a>

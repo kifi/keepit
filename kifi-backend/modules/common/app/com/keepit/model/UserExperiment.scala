@@ -65,11 +65,13 @@ object ExperimentType {
   val NEW_KEEP_NOTIFICATIONS = ExperimentType("new_keep_notifications")
   val CORTEX_NEW_MODEL = ExperimentType("cortex_new_model")
   val CURATOR_DIVERSE_TOPIC_RECOS = ExperimentType("curator_diverse_topic_recos")
+  val CURATOR_LIBRARY_RECOS = ExperimentType("curator_library_recos")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
     MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH ::
-    GRAPH_BASED_PEOPLE_TO_INVITE :: NEW_KEEP_NOTIFICATIONS :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS :: Nil
+    GRAPH_BASED_PEOPLE_TO_INVITE :: NEW_KEEP_NOTIFICATIONS :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
+    CURATOR_LIBRARY_RECOS :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL.map(e => e.value -> e).toMap
 

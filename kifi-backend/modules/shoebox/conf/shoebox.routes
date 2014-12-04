@@ -104,8 +104,6 @@ GET     /ext/auth                   @com.keepit.controllers.ext.ExtAuthControlle
 POST    /ext/session/end            @com.keepit.controllers.ext.ExtAuthController.logOut
 DELETE  /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.logOut
 
-# Note: /ext/pageDetails will be replaced by /ext/page when we launch libraries.
-POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPageInfo()
 
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules()
@@ -233,11 +231,14 @@ POST    /m/1/libraries/add                      @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/modify               @com.keepit.controllers.mobile.MobileLibraryController.modifyLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/delete               @com.keepit.controllers.mobile.MobileLibraryController.deleteLibrary(id: PublicId[Library])
 GET     /m/1/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getLibrarySummariesByUser()
+POST    /m/1/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getLibrarySummariesWithUrl()
 GET     /m/1/libraries/:id                      @com.keepit.controllers.mobile.MobileLibraryController.getLibraryById(id: PublicId[Library])
 POST    /m/1/libraries/:id/join                 @com.keepit.controllers.mobile.MobileLibraryController.joinLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/decline              @com.keepit.controllers.mobile.MobileLibraryController.declineLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/leave                @com.keepit.controllers.mobile.MobileLibraryController.leaveLibrary(id: PublicId[Library])
 GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
+POST    /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.keepToLibrary(id: PublicId[Library])
+DELETE  /m/1/libraries/:id/keeps/:kId           @com.keepit.controllers.mobile.MobileLibraryController.unkeepFromLibrary(id: PublicId[Library], kId: ExternalId[Keep])
 POST    /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.MobileLibraryController.inviteUsersToLibrary(id: PublicId[Library])
 GET     /m/1/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
 GET     /m/1/libraries/:id/members/suggest      @com.keepit.controllers.mobile.MobileLibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)

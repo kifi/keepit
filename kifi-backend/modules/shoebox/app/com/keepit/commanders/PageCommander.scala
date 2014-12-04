@@ -93,41 +93,87 @@ class PageCommander @Inject() (
   }
 
   def getPageInfo(uri: URI, userId: Id[User], experiments: Set[ExperimentType]): Future[KeeperPageInfo] = {
-    val (nUriOpt, nUriStr, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
-      val host: Option[String] = uri.host.map(_.name)
+    val host: Option[String] = uri.host.map(_.name)
+    val (nUriOpt, nUriStr, domain) = db.readOnlyMaster { implicit session =>
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
-      val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
-        (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
-          userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW))
-      }.getOrElse((None, false))
       val (nUriStr, nUri) = normalizedURIInterner.getByUriOrPrenormalize(uri.raw.get) match {
         case Success(Left(nUri)) => (nUri.url, Some(nUri))
         case Success(Right(pUri)) => (pUri, None)
         case Failure(ex) => (uri.raw.get, None)
       }
-      (nUri, nUriStr, position, neverOnSite, host)
+      (nUri, nUriStr, domain)
     }
 
-    val shown = nUriOpt.map { normUri => historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id) } getOrElse false
-    nUriOpt.map { normUri =>
-
-      // get all keepers from search (read_only data)
-      val getKeepersFuture = searchClient.augment(Some(userId), false, Int.MaxValue, 0, 0, Seq(AugmentableItem(normUri.id.get))).map {
-        case Seq(info) =>
-          db.readOnlyMaster { implicit session =>
-            val userIdSet = info.keepers.toSet
-            basicUserRepo.loadAll(userIdSet).values.toSeq
-          }
+    val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
+      db.readOnlyReplica { implicit session =>
+        (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
+          userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW))
       }
+    }.getOrElse((None, false))
 
-      // find all keeps in database (with uri) (read_write actions)
-      val keepsData = keepsCommander.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
+    val shown = nUriOpt.exists { normUri =>
+      historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id)
+    }
 
-      getKeepersFuture.map { keepers =>
-        KeeperPageInfo(nUriStr, position, neverOnSite, shown, keepers, keepsData)
+    nUriOpt.map { normUri =>
+      val augmentFuture = searchClient.augment(
+        userId = Some(userId),
+        showPublishedLibraries = false,
+        maxKeepersShown = Int.MaxValue, // TODO: reduce to 5 once most users have extension 3.3.26 or later
+        maxLibrariesShown = 2,
+        maxTagsShown = 0,
+        items = Seq(AugmentableItem(normUri.id.get)))
+
+      val keepDatas = keepsCommander.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
+
+      augmentFuture map {
+        case Seq(info) =>
+          val userIdSet = info.keepers.toSet
+          val otherKeepersTotal = info.keepersTotal - (if (userIdSet.contains(userId)) 1 else 0)
+          val libraryIdPairs = info.libraries.filterNot(_._2 == userId) // TODO: also exclude libraries user is following
+          val (basicUserMap, libraryMap) = db.readOnlyMaster { implicit session =>
+            val basicUserMap = basicUserRepo.loadAll(userIdSet ++ libraryIdPairs.map(_._2) - userId)
+            val libraryMap = libraryRepo.getLibraries(libraryIdPairs.map(_._1).toSet)
+            (basicUserMap, libraryMap)
+          }
+          val keepers = info.keepers.filterNot(_ == userId).map(basicUserMap) // preserving ordering
+          val libraries = libraryIdPairs.map { // TODO: sort by friends first, secondarily by num followers (or just trust search ordering?)
+            case (libraryId, userId) =>
+              val library = libraryMap(libraryId);
+              val numKeeps = 0 // TODO
+              val numFollowers = 0 // TODO
+              Json.obj(
+                "name" -> library.name,
+                "slug" -> library.slug,
+                "owner" -> basicUserMap(userId),
+                "keeps" -> numKeeps,
+                "followers" -> numFollowers)
+          }
+          KeeperPageInfo(nUriStr, position, neverOnSite, shown, keepers, info.keepersOmitted, otherKeepersTotal, libraries, keepDatas)
       }
     }.getOrElse {
-      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], Seq.empty[KeepData])) // todo: add in otherKeepers?
+      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, 0, Seq.empty[JsObject], Seq.empty[KeepData]))
+    }
+  }
+
+  def getUrlInfo(url: String, userId: Id[User]): Either[String, Seq[KeepData]] = {
+    URI.parse(url) match {
+      case Success(uri) =>
+        val (_, nUriOpt) = db.readOnlyMaster { implicit s =>
+          normalizedURIInterner.getByUriOrPrenormalize(uri.raw.get) match {
+            case Success(Left(nUri)) => (nUri.url, Some(nUri))
+            case Success(Right(pUri)) => (pUri, None)
+            case Failure(ex) => (uri.raw.get, None)
+          }
+        }
+        val keepData = nUriOpt.map { normUri =>
+          keepsCommander.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
+        }.getOrElse(Seq.empty[KeepData])
+        Right(keepData)
+
+      case Failure(e) =>
+        log.error(s"Error parsing url: $url", e)
+        Left("parse_url_error")
     }
   }
 }
