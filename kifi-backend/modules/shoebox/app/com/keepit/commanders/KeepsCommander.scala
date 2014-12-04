@@ -733,7 +733,7 @@ class KeepsCommander @Inject() (
   }
 
   //todo(hopefully not Léo): this method does not report to analytics, let's fix this after we get rid of Collection
-  def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String])(implicit context: HeimdalContext): Either[String, (KeepInfo, Seq[Collection])] = {
+  def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String])(implicit context: HeimdalContext): Either[String, (Keep, Seq[Collection])] = {
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
@@ -760,7 +760,7 @@ class KeepsCommander @Inject() (
           keepRepo.save(keep) // notify keep index
           keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
         }
-        Right((KeepInfo.fromKeep(keep), tags))
+        Right((keep, tags))
     }
   }
 
