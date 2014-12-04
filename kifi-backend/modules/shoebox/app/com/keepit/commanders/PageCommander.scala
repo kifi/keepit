@@ -120,7 +120,7 @@ class PageCommander @Inject() (
         userId = Some(userId),
         showPublishedLibraries = true,
         maxKeepersShown = Int.MaxValue, // TODO: reduce to 5 once most users have extension 3.3.26 or later
-        maxLibrariesShown = 2,
+        maxLibrariesShown = Int.MaxValue,
         maxTagsShown = 0,
         items = Seq(AugmentableItem(normUri.id.get)))
 
@@ -130,7 +130,7 @@ class PageCommander @Inject() (
         case Seq(info) =>
           val userIdSet = info.keepers.toSet
           val otherKeepersTotal = info.keepersTotal - (if (userIdSet.contains(userId)) 1 else 0)
-          val libraryIdPairs = info.libraries.filterNot(_._2 == userId) // TODO: also exclude libraries user is following
+          val libraryIdPairs = info.libraries.filterNot(_._2 == userId).take(2) // TODO: also exclude libraries user is following
           val (basicUserMap, libraryMap) = db.readOnlyMaster { implicit session =>
             val basicUserMap = basicUserRepo.loadAll(userIdSet ++ libraryIdPairs.map(_._2) - userId)
             val libraryMap = libraryRepo.getLibraries(libraryIdPairs.map(_._1).toSet)
