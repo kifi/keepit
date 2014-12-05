@@ -36,14 +36,14 @@ class LoggingFilter() extends EssentialFilter {
         Done(Result(header = ResponseHeader(Status.SERVICE_UNAVAILABLE), body = Enumerator()))
       } else {
         val timer = accessLog.timer(HTTP_IN)
-        var countStart = 0
+        var flightInfo: FlightInfo = EmptyFlightInfo
         val result = try {
-          countStart = midFlightRequests.comingIn(rh)
+          flightInfo = midFlightRequests.comingIn(rh)
           next(rh)
         } finally {
-          midFlightRequests.goingOut(rh)
+          midFlightRequests.goingOut(flightInfo)
         }
-        result.map { case plain: Result => logTime(rh, plain, countStart, timer) }
+        result.map { case plain: Result => logTime(rh, plain, flightInfo.concurrentFlights, timer) }
       }
     }
   }
