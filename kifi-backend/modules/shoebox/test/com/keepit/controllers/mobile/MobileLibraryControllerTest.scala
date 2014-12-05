@@ -341,7 +341,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val keepUrl = "http://www.airbnb.com/bikinibottom"
 
         // add new keep
-        val add1 = Json.obj("title" -> "Bikini Bottom", "url" -> keepUrl, "tagNames" -> Seq("vacation"))
+        val add1 = Json.obj("title" -> "Bikini Bottom", "url" -> keepUrl, "hashTags" -> Seq("vacation"))
         val result1 = keepToLibrary(user1, pubId1, add1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
@@ -353,10 +353,11 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         }
 
         // add same keep with different title & different set of tags
-        val add2 = Json.obj("title" -> "Airbnb", "url" -> keepUrl, "tagNames" -> Seq("tagA", "tagB"))
+        val add2 = Json.obj("title" -> "Airbnb", "url" -> keepUrl, "hashTags" -> Seq("tagA", "tagB"))
         val result2 = keepToLibrary(user1, pubId1, add2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
+        (contentAsJson(result2) \ "hashTags").as[Seq[Hashtag]].map(_.tag) === Seq("tagA", "tagB")
 
         db.readOnlyMaster { implicit s =>
           val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
@@ -423,7 +424,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val keepData = (response3 \ "alreadyKept")
         (keepData \\ "id").map(_.as[ExternalId[Keep]]) === Seq(k1.externalId)
         (keepData \\ "libraryId").map(_.as[PublicId[Library]]) === Seq(pubId1)
-        (keepData \\ "collections").map(_.as[Seq[Hashtag]].map(_.tag)) === Seq(Seq("food1", "food2"))
+        (keepData \\ "hashTags").map(_.as[Seq[Hashtag]].map(_.tag)) === Seq(Seq("food1", "food2"))
 
         val result4 = getSummariesWithUrl(user1, Json.obj("url" -> url3))
         status(result4) must equalTo(OK)
