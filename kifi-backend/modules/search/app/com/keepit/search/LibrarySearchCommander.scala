@@ -7,7 +7,7 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.search.engine.{ LibrarySearch, SearchFactory }
+import com.keepit.search.engine.{ DebugOption, LibrarySearch, SearchFactory }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.engine.result.{ LibraryShardHit, LibraryShardResult }
 import com.keepit.search.sharding.Shard
@@ -23,7 +23,8 @@ case class LibrarySearchRequest(
   lang1: Lang,
   lang2: Option[Lang],
   maxHits: Int,
-  predefinedConfig: Option[SearchConfig])
+  predefinedConfig: Option[SearchConfig],
+  debug: Option[String])
 
 object LibrarySearchRequest {
   implicit val format = Json.format[LibrarySearchRequest]
@@ -65,7 +66,7 @@ class LibrarySearchCommanderImpl @Inject() (
     val (localShards, remotePlan) = distributionPlan(userId, activeShards)
     languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, LibraryContext.None).flatMap {
       case (lang1, lang2) =>
-        val request = LibrarySearchRequest(userId, experiments, query, filter, context, lang1, lang2, maxHits, predefinedConfig)
+        val request = LibrarySearchRequest(userId, experiments, query, filter, context, lang1, lang2, maxHits, predefinedConfig, debug)
         val futureRemoteLibraryShardResults = searchClient.distLibrarySearch(remotePlan, request)
         val futureLocalLibraryShardResult = distLibrarySearch(localShards, request)
         val configFuture = searchFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig)
@@ -89,9 +90,16 @@ class LibrarySearchCommanderImpl @Inject() (
   def distLibrarySearch(shards: Set[Shard[NormalizedURI]], request: LibrarySearchRequest): Future[Seq[LibraryShardResult]] = {
     searchFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig).flatMap {
       case (searchConfig, _) =>
+        val debugOption = new DebugOption with Logging
+        val debug = request.debug
+        if (debug.isDefined) debugOption.debug(debug.get)
+
         val searchFilter = SearchFilter(request.filter, LibraryContext.None, request.context)
         val searches = searchFactory.getLibrarySearches(shards, request.userId, request.queryString, request.lang1, request.lang2, request.maxHits, searchFilter, searchConfig)
-        val futureResults: Seq[Future[LibraryShardResult]] = searches.map { librarySearch => SafeFuture { librarySearch.execute() } }
+        val futureResults: Seq[Future[LibraryShardResult]] = searches.map { librarySearch =>
+          if (debug.isDefined) librarySearch.debug(debugOption)
+          SafeFuture { librarySearch.execute() }
+        }
         Future.sequence(futureResults)
     }
   }
