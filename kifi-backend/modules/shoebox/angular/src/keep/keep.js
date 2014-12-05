@@ -82,7 +82,6 @@ angular.module('kifi')
         var useBigLayout = false;
         var strippedSchemeRe = /^https?:\/\//;
         var domainTrailingSlashRe = /^([^\/]*)\/$/;
-        var youtubeVideoUrlRe = /^(?:https?:\/\/)?(?:youtu\.be|(?:www\.)?youtube(?:-nocookie)?\.com)\/(?:|user\/[^\/?#]+)?(?:|.*?[\/=])([a-zA-Z0-9_-]{11})\b/;
 
         var tagDragMask = element.find('.kf-tag-drag-mask');
         var mouseX, mouseY;
@@ -122,9 +121,9 @@ angular.module('kifi')
         }
 
         function isYoutubeCard(url) {
-          var match = url.match(youtubeVideoUrlRe);
-          if (match && match[1]) {
-            scope.youtubeId = match[1];
+          var youtubeId = util.isYoutubeUrl(url);
+          if (youtubeId) {
+            scope.youtubeId = youtubeId;
           }
           return scope.youtubeId;
         }
