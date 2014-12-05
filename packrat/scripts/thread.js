@@ -99,19 +99,22 @@ k.panes.thread = k.panes.thread || function () {
     var $scroll = $tall.find('.kifi-scroll-wrap');
     var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
 
-    $scroll.antiscroll({x: false});
-    $(window).off('resize.thread').on('resize.thread', function () {
-      $scroll.data('antiscroll').refresh();
-      $holder.canScroll();
-    });
-
     $paneBox
     .on('kifi:removing', onRemoving.bind(null, threadId, compose))
     .on('kifi:remove', onRemoved.bind(null, $who.find('.kifi-message-header'), compose, heighter));
-    if ($paneBox.data('shown')) {
+
+    var onShown = function () {
+      $scroll.antiscroll({x: false});
+      $(window).off('resize.thread').on('resize.thread', function () {
+        $scroll.data('antiscroll').refresh();
+        $holder.canScroll();
+      });
       compose.focus();
+    };
+    if ($paneBox.data('shown')) {
+      onShown();
     } else {
-      $paneBox.on('kifi:shown', compose.focus);
+      $paneBox.on('kifi:shown', onShown);
     }
 
     return $holder;
