@@ -491,6 +491,7 @@ angular.module('kifi')
 
           if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
             showKfColsOverflow();
+            $timeout(hideKfColsOverflow);
           }
           locationNoReload.skipReload().url(scope.library.url);
           locationNoReload.reloadNextRouteChange();
