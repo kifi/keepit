@@ -34,7 +34,7 @@ class LibraryScoringHelper @Inject() (
   def apply(userId: Id[User], libraries: Seq[CuratorLibraryInfo]): Future[Seq[ScoredLibraryInfo]] = {
     val userLibrariesScoresF = getLibraryInterestScores(userId, libraries)
     userLibrariesScoresF.onSuccess {
-      case v => log.info(s"apply() userId=$userId interestScoresFetched=${v.size} [" + v.mkString(",") + "]")
+      case v => log.info(s"apply() userId=$userId interestScoresFetched=${v.size}")
     }
 
     Future.sequence(Seq.tabulate(libraries.size) { idx: Int =>
@@ -81,6 +81,10 @@ class LibraryScoringHelper @Inject() (
         case _ => 0f
       }
     }
+  } recover {
+    case ex: Throwable =>
+      airbrake.notify(s"LibraryScoringHelper failed getLibraryInterestScores(userId=$userId)", ex)
+      Seq.fill(candidates.size)(0f)
   }
 
   val maxIntervalMillis: Long = Duration(7, TimeUnit.DAYS).toMillis
@@ -114,6 +118,10 @@ class LibraryScoringHelper @Inject() (
 
       Math.tanh(0.5 * accScore).toFloat
     }
+  } recover {
+    case ex: Throwable =>
+      airbrake.notify(s"LibraryScoringHelper failed getSocialScore(userId=$userId)", ex)
+      0f
   }
 
   private def getPopularityScore(candidate: CuratorLibraryInfo): Float = {
