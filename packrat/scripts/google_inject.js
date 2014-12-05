@@ -873,7 +873,7 @@ if (searchUrlRe.test(document.URL)) !function () {
         // remove a library
         var el = libEls.pop();
         elsToRemove.push(el);
-        pxToGo -= libWidths[libEls.length] + 5;  // 5px left margin
+        pxToGo -= libWidths.pop() + 5;  // 5px left margin
 
         // increment omitted library count
         if (!nLibsEl) {
