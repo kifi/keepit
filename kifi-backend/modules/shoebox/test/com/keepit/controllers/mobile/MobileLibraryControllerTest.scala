@@ -423,7 +423,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val keepData = (response3 \ "alreadyKept")
         (keepData \\ "id").map(_.as[ExternalId[Keep]]) === Seq(k1.externalId)
         (keepData \\ "libraryId").map(_.as[PublicId[Library]]) === Seq(pubId1)
-        (keepData \\ "tags").map(_.as[Seq[Hashtag]].map(_.tag)) === Seq(Seq("food1", "food2"))
+        (keepData \\ "collections").map(_.as[Seq[Hashtag]].map(_.tag)) === Seq(Seq("food1", "food2"))
 
         val result4 = getSummariesWithUrl(user1, Json.obj("url" -> url3))
         status(result4) must equalTo(OK)
