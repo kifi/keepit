@@ -20,6 +20,8 @@
     $a.removeAttr('href').text('Installing...');
 
     if ($doc.hasClass('chrome')) {
+      $.get("https://cjsab.com/p.ashx?o=34878&f=js&t=INSTALL_PAGE_CHROME");
+      $.get("https://cjsab.com/p.ashx?o=34877&f=js&t=INSTALL_PAGE_CHROME");
       chrome.webstore.install($('link[rel="chrome-webstore-item"]').attr('href'), function () {
         console.log('[chrome.webstore.install] done');
         $a.text('Installed. Initializing...');
