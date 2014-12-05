@@ -9,7 +9,6 @@ case class CuratorLibraryInfo(
   id: Option[Id[CuratorLibraryInfo]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
-  seq: SequenceNumber[CuratorLibraryInfo] = SequenceNumber.ZERO,
   libraryId: Id[Library],
   ownerId: Id[User],
   memberCount: Int,
@@ -17,9 +16,10 @@ case class CuratorLibraryInfo(
   visibility: LibraryVisibility,
   lastKept: Option[DateTime] = None,
   lastFollowed: Option[DateTime] = None,
+  state: State[CuratorLibraryInfo],
   kind: LibraryKind,
   libraryLastUpdated: DateTime,
-  state: State[CuratorLibraryInfo])
+  seq: SequenceNumber[CuratorLibraryInfo] = SequenceNumber.ZERO)
     extends Model[CuratorLibraryInfo] with ModelWithState[CuratorLibraryInfo] with ModelWithSeqNumber[CuratorLibraryInfo] {
 
   def withId(id: Id[CuratorLibraryInfo]): CuratorLibraryInfo = this.copy(id = Some(id))
