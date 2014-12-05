@@ -270,7 +270,6 @@ angular.module('kifi')
       $rootScope.$emit('appStart');
     };
 
-    //registerModal();
-        thanksForRegisteringModal();
+    registerModal();
   }
 ]);
