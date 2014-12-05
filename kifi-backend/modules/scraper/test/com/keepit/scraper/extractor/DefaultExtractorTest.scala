@@ -59,10 +59,10 @@ class DefaultExtractorTest extends Specification {
       extractor.getMetadata("og:url") === Some("http://www.bbc.co.uk/news/technology-25233230")
     }
 
-    "double escape" in {
+    "ignore canonical URLs that are the page URL HTML-escaped twice" in {
       val longUrl = "http://www.livejournal.com/gsearch?engine=google&cx=partner-pub-5600223439108080%3A3711723852&cof=FORID%3A10&ie=UTF-8&q=test&sa=Search&siteurl="
       val extractor = setup(longUrl, "double-escape.txt")
-      extractor.getCanonicalUrl(longUrl) === Some(longUrl)
+      extractor.getCanonicalUrl(longUrl) === None
     }
 
     "stop when limit reached" in {

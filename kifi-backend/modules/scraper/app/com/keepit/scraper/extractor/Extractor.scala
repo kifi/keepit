@@ -22,9 +22,9 @@ trait Extractor {
             // in a canonical URL usually indicates a bad url.
             if (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?'))))) {
               None
-            // A common error is for sites to copy the page URL directly into a canoncial URL tag escaped an extra time.
-            } else if (unescapeHtml4(url) == destinationUrl) {
-              Some(destinationUrl)
+              // A common site error is copying the page URL directly into a canoncial URL tag, escaped an extra time.
+            } else if (url.length > destinationUrl.length && unescapeHtml4(url) == destinationUrl) {
+              None
             } else {
               Some(url)
             }
