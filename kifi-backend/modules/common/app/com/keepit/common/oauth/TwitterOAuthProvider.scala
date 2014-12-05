@@ -19,25 +19,20 @@ trait TwitterOAuthProvider extends OAuthProvider with OAuth1Support {
   val Name = "name"
   val ProfileImage = "profile_image_url_https"
 
-  val consumerKey = ConsumerKey(key = "cwXfTNd8iiKbWtXtszz9ADNmQ", secret = "sO2GthBWUMhNG7WYp0gyBq4yLpSzVlJkdVPjfaxhTEe92ZfPS1")
-
-  val serviceInfo = ServiceInfo(
-    requestTokenURL = "https://twitter.com/oauth/request_token",
-    accessTokenURL = "https://twitter.com/oauth/access_token",
-    authorizationURL = "https://twitter.com/oauth/authenticate",
-    key = consumerKey
-  )
-
   val providerId = ProviderIds.Twitter
 
 }
 
 @Singleton
 class TwitterOAuthProviderImpl @Inject() (
-    airbrake: AirbrakeNotifier) extends TwitterOAuthProvider with OAuth1Support with Logging {
+    airbrake: AirbrakeNotifier,
+    oauth1Config: OAuth1Configuration) extends TwitterOAuthProvider with OAuth1Support with Logging {
+
+  val providerCfg = oauth1Config.getProviderConfig(providerId.id).get
+
   def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = {
     val call = WS.url(VerifyCredentials)
-      .sign(OAuthCalculator(serviceInfo.key, accessToken))
+      .sign(OAuthCalculator(providerCfg.key, accessToken))
       .get()
 
     call map { response =>
