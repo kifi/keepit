@@ -121,8 +121,12 @@ angular.module('kifi')
             var newResults;
 
             if (contacts && contacts.length) {
-              // remove any contacts who are already following (anybody who has an access, but no lastInvitedAt field)
-              _.remove(contacts, function(c) { return c.membership && !c.lastInvitedAt; });
+
+              if (!opt_query) {
+                // remove any contacts who are already following (anybody who has an access, but no lastInvitedAt field)
+                // only if there's no query
+                _.remove(contacts, function(c) { return c.membership && !c.lastInvitedAt; });
+              }
 
               // Clone deeply; otherwise, the data augmentation we do on individual contacts
               // will be cached as part of the contacts cached by Clutch.
