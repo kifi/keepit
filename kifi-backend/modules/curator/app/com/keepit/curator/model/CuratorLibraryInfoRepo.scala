@@ -63,7 +63,7 @@ class CuratorLibraryInfoRepoImpl @Inject() (
     val q = if (db.dialect == H2DatabaseDialect) {
       sql"SELECT * FROM curator_library_info WHERE seq > ${start.value} ORDER BY seq LIMIT $maxBatchSize;"
     } else {
-      sql"SELECT * FROM curator_library_info USE INDEX (curator_library_info_u_seq_user_id) WHERE seq > ${start.value} ORDER BY seq LIMIT $maxBatchSize;"
+      sql"SELECT * FROM curator_library_info USE INDEX (curator_library_info_i_seq) WHERE seq > ${start.value} ORDER BY seq LIMIT $maxBatchSize;"
     }
     q.as[CuratorLibraryInfo].list
   }

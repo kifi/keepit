@@ -42,7 +42,7 @@ class CuratorTasksPlugin @Inject() (
     //   cleanupCommander.cleanupLowMasterScoreFeeds()
     // }
 
-    scheduleTaskOnLeader(system, 5 minutes, 5 minutes, "library recommendation precomputation") {
+    scheduleTaskOnLeader(system, 1 minutes, 3 minutes, "library recommendation precomputation") {
       libraryRecoGenerationCommander.precomputeRecommendations()
     }
     scheduleTaskOnLeader(system, 10 minutes, 10 minutes, "library recommendation reaper") {
