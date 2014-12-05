@@ -331,13 +331,24 @@ angular.module('kifi')
         }
       },
 
+      isMyLibrary: function (library) {
+        return library.owner && library.owner.id === profileService.me.id;
+      },
+
+      isFollowingLibrary: function (library) {
+        return (library.access && (library.access === 'read_only')) ||
+               (_.some(librarySummaries, { id: library.id }) && !this.isMyLibrary(library));
+      },
+
       getCommonTrackingAttributes: function (library) {
         var defaultAttributes = {
+          followerCount: library.numFollowers,
+          followingLibrary: this.isFollowingLibrary(library),
+          keepCount: library.numKeeps,
           libraryId: library.id,
           libraryOwnerUserId: library.owner.id,
           libraryOwnerUserName: library.owner.username,
-          followerCount: library.numFollowers,
-          keepCount: library.numKeeps,
+          owner: this.isMyLibrary(library),
           privacySetting: library.visibility,
           source: 'site'
         };

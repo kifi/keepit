@@ -16,7 +16,8 @@ class MidFlightRequests @Inject() (
     airbrake: Provider[AirbrakeNotifier],
     myInstanceInfo: Provider[MyInstanceInfo]) extends Logging {
 
-  private[this] val currentRequests: ConcurrentMap[RequestHeader, Long] = new ConcurrentHashMap()
+  private[this] val currentRequests: ConcurrentMap[FlightInfo, RequestHeader] = new ConcurrentHashMap()
+  private[this] val sequence = new AtomicLong(0)
 
   def count: Int = currentRequests.size
 
@@ -29,13 +30,14 @@ class MidFlightRequests @Inject() (
     max
   }
 
-  def comingIn(rh: RequestHeader): Int = {
-    currentRequests.put(rh, System.currentTimeMillis())
-    val count = currentRequests.size() //may not be accurate since we're not synchronizing this block, but good enough
+  def comingIn(rh: RequestHeader): FlightInfo = {
+    val count = currentRequests.size() + 1 //may not be accurate since we're not synchronizing this block, but good enough
+    val info = FlightInfo(sequence.getAndIncrement, System.currentTimeMillis(), count)
+    currentRequests.put(info, rh)
     if (count > MaxMidFlightRequests) { //say that more then 30 concurrent request is an issue
-      alert(count, rh: RequestHeader)
+      alert(info.concurrentFlights, rh: RequestHeader)
     }
-    count
+    info
   }
 
   private[this] val TEN_MINUTES = 600000L
@@ -52,10 +54,14 @@ class MidFlightRequests @Inject() (
   }
 
   def topRequests: String = {
-    val paths = currentRequests.keySet().toList map { rh => rh.path }
+    val paths = currentRequests.values().toList map { rh => rh.path }
     val countedPaths = paths.foldLeft(Map.empty[String, Int]) { (m, x) => m + ((x, m.getOrElse(x, 0) + 1)) }
     countedPaths.toList.sortWith { case t => t._1._2 > t._2._2 }.map { t => s"${t._2}:${t._1}" }.mkString(",")
   }
 
-  def goingOut(rh: RequestHeader): Long = currentRequests.remove(rh)
+  def goingOut(info: FlightInfo): Unit = currentRequests.remove(info)
 }
+
+case class FlightInfo(seqNum: Long, timestamp: Long, concurrentFlights: Int)
+
+object EmptyFlightInfo extends FlightInfo(-1, 0, 0)
