@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.cortex.{ CortexServiceClient, FakeCortexServiceClientImpl, FakeCortexServiceClientModule }
 import com.keepit.curator.commanders.LibraryRecommendationGenerationCommander
-import com.keepit.curator.model.{ CuratorLibraryInfoRepo, CuratorLibraryInfoSequenceNumberAssigner, LibraryRecommendationRepo }
+import com.keepit.curator.model.{ LibraryRecommendationGenerationStateRepo, LibraryRecommendationGenerationState, CuratorLibraryInfoRepo, CuratorLibraryInfoSequenceNumberAssigner, LibraryRecommendationRepo }
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.{ FakeGraphServiceClientImpl, FakeGraphServiceModule, GraphServiceClient }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
@@ -43,7 +43,8 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
       shoebox.saveUserExperiment(UserExperiment(userId = user2Id, experimentType = ExperimentType.CURATOR_LIBRARY_RECOS))
 
       // more users to sanity check reactive lock
-      (44 to 54) foreach { i => makeUser(i, shoebox) }
+      val moreUsers = (44 to 54) map { i => makeUser(i, shoebox).id.get }
+      val allUsers = Seq(user1Id, user2Id) ++ moreUsers
 
       val libRecoGenCommander = inject[LibraryRecommendationGenerationCommander]
       val libRecoRepo = inject[LibraryRecommendationRepo]
@@ -67,7 +68,7 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
       val userScores = graph.setUserAndScorePairs(user1Id)
       db.readWrite { implicit rw =>
         saveLibraryMembership(userScores(0).userId, lib1.libraryId)
-        saveLibraryMembership(userScores(1).userId, lib1.libraryId, true)
+        saveLibraryMembership(userScores(1).userId, lib1.libraryId, owner = true)
       }
 
       val preComputeF = libRecoGenCommander.precomputeRecommendations()
@@ -76,6 +77,11 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
       libRecoGenCommander.recommendationGenerationLock.waiting === 0
 
       db.readOnlyMaster { implicit s =>
+        val stateRepo = inject[LibraryRecommendationGenerationStateRepo]
+
+        val lib3Seq = libInfoRepo.getByLibraryId(lib3.libraryId).get.seq
+        allUsers.foreach { userId => stateRepo.getByUserId(userId).get.seq === lib3Seq }
+
         val libRecosUser1 = libRecoRepo.getByUserId(user1Id).sortBy(_.masterScore)
         libRecosUser1.size === 3
         libRecosUser1(0).allScores.socialScore === 0
