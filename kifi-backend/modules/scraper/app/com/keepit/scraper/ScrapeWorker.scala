@@ -293,7 +293,7 @@ class ScrapeWorkerImpl @Inject() (
                   id = normalizedUri.id.get,
                   title = title,
                   description = description,
-                  canonicalUrl = extractor.getCanonicalUrl,
+                  canonicalUrl = extractor.getCanonicalUrl(normalizedUri.url),
                   alternateUrls = extractor.getAlternateUrls,
                   keywords = extractor.getKeywords,
                   media = extractor.getMediaTypeString,
