@@ -135,14 +135,16 @@ class MobileLibraryController @Inject() (
     val keepResponse = parseUrl.collect {
       case Left(error) =>
         Json.obj("error" -> error)
-      case Right(keepData) if keepData.nonEmpty =>
-        val keepDataWithTags = db.readOnlyMaster { implicit s =>
-          keepData.map { keep =>
-            val kId = keepRepo.get(keep.id).id.get
-            Json.toJson(keep).as[JsObject] + ("tags", Json.toJson(collectionRepo.getTagsByKeepId(kId)))
+      case Right(keepDataList) if keepDataList.nonEmpty =>
+        val completeKeepData = db.readOnlyMaster { implicit s =>
+          keepDataList.map { keepData =>
+            val keep = keepRepo.get(keepData.id)
+            val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, MobileLibraryController.defaultImageSize).flatten.map(keepImageCommander.getUrl)
+            val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "imageUrl" -> keepImageUrl, "tags" -> Json.toJson(collectionRepo.getTagsByKeepId(keep.id.get)))
+            Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
           }
         }
-        Json.obj("alreadyKept" -> keepDataWithTags)
+        Json.obj("alreadyKept" -> completeKeepData)
     }.getOrElse(Json.obj())
     Ok(libsResponse ++ keepResponse)
   }
@@ -337,6 +339,10 @@ class MobileLibraryController @Inject() (
       case _ => Future.successful(Forbidden)
     }
   }
+}
+
+object MobileLibraryController {
+  val defaultImageSize = ImageSize(1024, 1024)
 }
 
 private object ImplicitHelper {
