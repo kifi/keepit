@@ -52,20 +52,26 @@ class CuratorLibraryInfoRepoImpl @Inject() (
   }
 
   def deleteCache(model: CuratorLibraryInfo)(implicit session: RSession): Unit = {}
+
   def invalidateCache(model: CuratorLibraryInfo)(implicit session: RSession): Unit = {}
 
   def getByLibraryId(libraryId: Id[Library])(implicit session: RSession): Option[CuratorLibraryInfo] = {
     (for (row <- rows if row.libraryId === libraryId) yield row).firstOption
   }
 
-  def getBySeqNum(start: SequenceNumber[CuratorLibraryInfo], maxBatchSize: Int)(implicit session: RSession): Seq[CuratorLibraryInfo] = {
+  def getBySeqNum(start: SequenceNumber[CuratorLibraryInfo], maxBatchSize: Int)(implicit session: RSession): Seq[CuratorLibraryInfo] = try {
     import scala.slick.jdbc.StaticQuery.interpolation
+    log.info(s"getBySeqNum start=$start maxBatchSize=$maxBatchSize")
     val q = if (db.dialect == H2DatabaseDialect) {
       sql"SELECT * FROM curator_library_info WHERE seq > ${start.value} ORDER BY seq LIMIT $maxBatchSize;"
     } else {
       sql"SELECT * FROM curator_library_info USE INDEX (curator_library_info_i_seq) WHERE seq > ${start.value} ORDER BY seq LIMIT $maxBatchSize;"
     }
     q.as[CuratorLibraryInfo].list
+  } catch {
+    case ex: Throwable =>
+      log.error("getBySeqNum ERROR " + ex.getMessage, ex)
+      Seq.empty
   }
 
   // update getCuratorLibraryInfoResult if you modify table
