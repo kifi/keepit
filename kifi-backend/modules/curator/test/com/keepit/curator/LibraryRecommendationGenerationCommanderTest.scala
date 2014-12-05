@@ -4,11 +4,11 @@ import com.google.inject.Injector
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.cortex.{ FakeCortexServiceClientImpl, CortexServiceClient, FakeCortexServiceClientModule }
+import com.keepit.cortex.{ CortexServiceClient, FakeCortexServiceClientImpl, FakeCortexServiceClientModule }
 import com.keepit.curator.commanders.LibraryRecommendationGenerationCommander
-import com.keepit.curator.model.{ CuratorLibraryInfoSequenceNumberAssigner, CuratorLibraryInfoRepo, LibraryRecommendationRepo }
+import com.keepit.curator.model.{ CuratorLibraryInfoRepo, CuratorLibraryInfoSequenceNumberAssigner, LibraryRecommendationRepo }
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.graph.{ FakeGraphServiceClientImpl, GraphServiceClient, FakeGraphServiceModule }
+import com.keepit.graph.{ FakeGraphServiceClientImpl, FakeGraphServiceModule, GraphServiceClient }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ ExperimentType, UserExperiment }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -42,6 +42,9 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
       shoebox.saveUserExperiment(UserExperiment(userId = user1Id, experimentType = ExperimentType.CURATOR_LIBRARY_RECOS))
       shoebox.saveUserExperiment(UserExperiment(userId = user2Id, experimentType = ExperimentType.CURATOR_LIBRARY_RECOS))
 
+      // more users to sanity check reactive lock
+      (44 to 54) foreach { i => makeUser(i, shoebox) }
+
       val libRecoGenCommander = inject[LibraryRecommendationGenerationCommander]
       val libRecoRepo = inject[LibraryRecommendationRepo]
       val libInfoRepo = inject[CuratorLibraryInfoRepo]
@@ -68,7 +71,9 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
       }
 
       val preComputeF = libRecoGenCommander.precomputeRecommendations()
-      Await.result(preComputeF, Duration(555, "seconds"))
+      Await.result(preComputeF, Duration(5, "seconds"))
+
+      libRecoGenCommander.recommendationGenerationLock.waiting === 0
 
       db.readOnlyMaster { implicit s =>
         val libRecosUser1 = libRecoRepo.getByUserId(user1Id).sortBy(_.masterScore)

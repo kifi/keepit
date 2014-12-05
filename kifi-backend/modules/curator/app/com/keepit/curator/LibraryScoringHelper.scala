@@ -33,9 +33,6 @@ class LibraryScoringHelper @Inject() (
 
   def apply(userId: Id[User], libraries: Seq[CuratorLibraryInfo]): Future[Seq[ScoredLibraryInfo]] = {
     val userLibrariesScoresF = getLibraryInterestScores(userId, libraries)
-    userLibrariesScoresF.onSuccess {
-      case v => log.info(s"apply() userId=$userId interestScoresFetched=${v.size}")
-    }
 
     Future.sequence(Seq.tabulate(libraries.size) { idx: Int =>
       val candidate = libraries(idx)
@@ -51,8 +48,6 @@ class LibraryScoringHelper @Inject() (
           popularityScore = getPopularityScore(candidate),
           sizeScore = getSizeScore(candidate))
         val masterScore = computeMasterScore(allScores)
-
-        log.info(s"apply() scores calculated userId=$userId masterScore=$masterScore allScores=$allScores")
         ScoredLibraryInfo(candidate, masterScore, allScores)
       }
     })
