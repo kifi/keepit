@@ -15,10 +15,6 @@ angular.module('util', [])
       '/': '&#x2F;'
     };
     var youtubeVideoUrlRe = /^(?:https?:\/\/)?(?:youtu\.be|(?:www\.)?youtube(?:-nocookie)?\.com)\/(?:|user\/[^\/?#]+)?(?:|.*?[\/=])([a-zA-Z0-9_-]{11})\b/;
-    function getYoutubeIdFromUrl(url) {
-      var match = url.match(youtubeVideoUrlRe);
-      return match && match[1];
-    }
 
     return {
       startsWith: function (str, prefix) {
@@ -70,8 +66,9 @@ angular.module('util', [])
            (/Trident/.exec(navigator.userAgent) != null))
         );
       },
-      isYoutubeUrl: function (url) {
-        return getYoutubeIdFromUrl(url);
+      getYoutubeIdFromUrl: function (url) {
+        var match = url.match(youtubeVideoUrlRe);
+        return match && match[1];
       },
       formatTitleFromUrl: function (url) {
         var aUrlParser = document.createElement('a');

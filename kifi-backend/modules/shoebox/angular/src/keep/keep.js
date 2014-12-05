@@ -120,16 +120,9 @@ angular.module('kifi')
           return text;
         }
 
-        function isYoutubeCard(url) {
-          var youtubeId = util.isYoutubeUrl(url);
-          if (youtubeId) {
-            scope.youtubeId = youtubeId;
-          }
-          return scope.youtubeId;
-        }
-
         function setCardType(url) {
-          if (isYoutubeCard(url)) {
+          scope.youtubeId = util.getYoutubeIdFromUrl(url);
+          if (scope.youtubeId) {
             scope.cardType = 'youtube';
           } else if (scope.keep.hasBigImage) {
             scope.cardType = 'big';
