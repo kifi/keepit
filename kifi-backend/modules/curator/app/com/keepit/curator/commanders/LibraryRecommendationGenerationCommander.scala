@@ -104,12 +104,12 @@ class LibraryRecommendationGenerationCommander @Inject() (
   private def precomputeRecommendationsForUser(userId: Id[User], alwaysInclude: Set[Id[Library]]): Future[Unit] = recommendationGenerationLock.withLockFuture {
     if (serviceDiscovery.isLeader()) {
       timing(s"precomputeRecommendationsForUser userId=$userId") {
-        val state: LibraryRecommendationGenerationState = db.readOnlyReplica { implicit session => getStateOfUser(userId)}
+        val state: LibraryRecommendationGenerationState = db.readOnlyReplica { implicit session => getStateOfUser(userId) }
         val (candidateLibraries, newSeqNum) = getCandidateLibrariesForUser(userId, state)
 
         val newState = state.copy(seq = newSeqNum)
         if (candidateLibraries.isEmpty) {
-          db.readWrite { implicit session => genStateRepo.save(newState)}
+          db.readWrite { implicit session => genStateRepo.save(newState) }
           if (state.seq < newSeqNum) precomputeRecommendationsForUser(userId, alwaysInclude) else Future.successful()
         } else {
           processLibraries(candidateLibraries, newState, userId, alwaysInclude)
