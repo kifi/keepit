@@ -140,7 +140,7 @@ class MobileLibraryController @Inject() (
           keepDataList.map { keepData =>
             val keep = keepRepo.get(keepData.id)
             val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, MobileLibraryController.defaultImageSize).flatten.map(keepImageCommander.getUrl)
-            val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "imageUrl" -> keepImageUrl, "tags" -> Json.toJson(collectionRepo.getTagsByKeepId(keep.id.get)))
+            val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "imageUrl" -> keepImageUrl, "collections" -> Json.toJson(collectionRepo.getTagsByKeepId(keep.id.get)))
             Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
           }
         }
@@ -293,7 +293,7 @@ class MobileLibraryController @Inject() (
       case Right((keep, tags)) =>
         val returnObj = Json.obj(
           "keep" -> Json.toJson(KeepInfo.fromKeep(keep)),
-          "tags" -> tags.map(tag => Json.obj("name" -> tag.name, "id" -> tag.externalId))
+          "collections" -> tags.map(tag => Json.obj("name" -> tag.name, "id" -> tag.externalId))
         )
         imageUrlOpt.map { imageUrl =>
           keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserPicked)
