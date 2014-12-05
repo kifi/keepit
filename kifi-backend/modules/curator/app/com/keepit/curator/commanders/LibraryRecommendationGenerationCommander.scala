@@ -2,15 +2,15 @@ package com.keepit.curator.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.RemoteUserExperimentCommander
-import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
-import com.keepit.common.db.slick.Database
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.curator.model.{ LibraryRecommendationStates, CuratorLibraryInfo, LibraryRecommendationGenerationState, LibraryRecommendation, LibraryRecommendationGenerationStateRepo, LibraryRecommendationRepo, CuratorLibraryInfoRepo }
+import com.keepit.curator.model.{ CuratorLibraryInfo, CuratorLibraryInfoRepo, LibraryRecommendation, LibraryRecommendationGenerationState, LibraryRecommendationGenerationStateRepo, LibraryRecommendationRepo, LibraryRecommendationStates }
 import com.keepit.curator.{ LibraryScoringHelper, ScoredLibraryInfo }
 import com.keepit.model.{ ExperimentType, Library, LibraryVisibility, User }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -93,7 +93,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
     scoringHelper(userId, candidates) flatMap { scores =>
       val toBeSaved = scores filter (si => alwaysInclude.contains(si.libraryId) || shouldInclude(si))
       saveLibraryRecommendations(toBeSaved, userId, newState)
-      precomputeRecommendationsForUser(userId, alwaysInclude)
+      if (toBeSaved.nonEmpty) precomputeRecommendationsForUser(userId, alwaysInclude)
+      else Future.successful()
     } recover {
       case ex: Throwable =>
         log.error(s"processLibraries ERROR ${ex.getMessage} userId=$userId candidateLibraryIds=[" + candidates.map(_.libraryId).mkString(" ") + "]", ex)
@@ -101,7 +102,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
     }
   }
 
-  private def precomputeRecommendationsForUser(userId: Id[User], alwaysInclude: Set[Id[Library]]): Future[Unit] = recommendationGenerationLock.withLockFuture {
+  private def precomputeRecommendationsForUser(userId: Id[User], alwaysInclude: Set[Id[Library]]): Future[Unit] = {
+    log.info(s"precomputeRecommendationsForUser called userId=$userId lock.waiting=${recommendationGenerationLock.waiting}")
     if (serviceDiscovery.isLeader()) {
       timing(s"precomputeRecommendationsForUser userId=$userId") {
         val state: LibraryRecommendationGenerationState = db.readOnlyReplica { implicit session => getStateOfUser(userId) }
@@ -110,10 +112,9 @@ class LibraryRecommendationGenerationCommander @Inject() (
         val newState = state.copy(seq = newSeqNum)
         if (candidateLibraries.isEmpty) {
           db.readWrite { implicit session => genStateRepo.save(newState) }
-          if (state.seq < newSeqNum) precomputeRecommendationsForUser(userId, alwaysInclude) else Future.successful()
-        } else {
-          processLibraries(candidateLibraries, newState, userId, alwaysInclude)
-        }
+          if (state.seq < newSeqNum) precomputeRecommendationsForUser(userId, alwaysInclude)
+          else Future.successful()
+        } else processLibraries(candidateLibraries, newState, userId, alwaysInclude)
       }
     } else {
       log.warn("precomputeRecommendationsForUser doing nothing on non-leader")
@@ -129,9 +130,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
       Future.sequence {
         if (recommendationGenerationLock.waiting < userIds.length + 1) {
           userIds map { userId =>
-            log.info(s"precomputeRecommendations starting: userId=$userId")
             val alwaysInclude: Set[Id[Library]] = db.readOnlyReplica { implicit session => libraryRecRepo.getLibraryIdsForUser(userId) }
-            precomputeRecommendationsForUser(userId, alwaysInclude)
+            recommendationGenerationLock.withLockFuture { precomputeRecommendationsForUser(userId, alwaysInclude) }
           }
         } else {
           log.info(s"precomputeRecommendations skipping: lock.waiting=${recommendationGenerationLock.waiting} userIds.length=${userIds.length}}")
