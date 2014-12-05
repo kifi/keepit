@@ -151,6 +151,7 @@ angular.module('kifi')
         $scope.hasMore = !!result.mayHaveMore;
         lastResult = result;
         $scope.loading = false;
+        $rootScope.$emit('newSearchQuery', query);
       });
     };
 
