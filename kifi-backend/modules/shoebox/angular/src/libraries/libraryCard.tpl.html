@@ -6,7 +6,7 @@
   </div>
   <div ng-if="!recommendation && isUserLoggedOut" class="kf-keep-lib-mobile-search">
     <span class="kf-keep-lib-mobile-search-icon"></span>
-    <input class="kf-keep-lib-search-input" type="search" placeholder="Search this library" ng-model="search.text" ng-focus="onSearchInputFocus()" ng-change="onSearchInputChange(search.text)">
+    <input class="kf-keep-lib-search-input" type="text" placeholder="Search this library" ng-model="search.text" ng-focus="onSearchInputFocus()" ng-change="onSearchInputChange(search.text)">
   </div>
   <button ng-if="!recommendation && isUserLoggedOut" ng-click="followLibrary(library)"
     class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-follow kf-keep-lib-footer-button-follow-in-search">Follow Library</button>
