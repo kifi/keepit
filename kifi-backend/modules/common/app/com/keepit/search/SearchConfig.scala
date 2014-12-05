@@ -59,7 +59,7 @@ object SearchConfig {
       "usefulPageBoost" -> "importance of usefulPage (clicked page)",
       "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
       "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
-      "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF)",
+      "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF) for a keep to show up",
       "halfDecayHours" -> "the time the recency boost becomes half",
       "recencyBoost" -> "importance of the recent bookmarks",
       "newContentBoost" -> "importance of a new content introduced to the network",
@@ -71,7 +71,9 @@ object SearchConfig {
       "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
-      "messageHalfLifeHours" -> "exponential time decay constant used in message search"
+      "messageHalfLifeHours" -> "exponential time decay constant used in message search",
+      "minMyLibraries" -> "the minimum number of my libraries in a library search result",
+      "myLibraryBoost" -> "boost value for my own libraries in library search"
     )
 
   val empty = new SearchConfig(Map.empty)
