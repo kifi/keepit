@@ -17,7 +17,7 @@
         <div class="kf-search-bar-lib-name-clear" ng-show="search.showName" ng-class="library.kind != 'user_created' ? 'system-created' : library.visibility == 'secret' ? 'secret' : 'published'" ng-click="clearLibraryName()">&times;</div>
 
         <div class="kf-query-lib" ng-class="{'extend': !search.showName}">
-          <input type="text" placeholder="Search Kifi…" ng-model="search.text" ng-focus="focusInput()" ng-blur="blurInput()" ng-change="changeSearchInput()" ng-keydown="onKeydown($event)">
+          <input type="text" placeholder="Search Kifi…" ng-model="search.text" ng-focus="focusInput()" ng-blur="blurInput()" ng-change="changeSearchInput()" ng-keydown="onKeydown($event)" ng-click="onSearchBarClicked()">
         </div>
         <div class="kf-search-bar-clear" ng-show="search.text" ng-click="clearInput()">Clear</div>
       </div>
