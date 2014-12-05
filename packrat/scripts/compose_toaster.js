@@ -294,14 +294,14 @@ k.toaster = k.toaster || (function () {
     }, function (reason) {
       log('[progress:fail]');
       clearTimeout(timeout), timeout = null;
+      var finishFail = function () {
+        $el.remove();
+        deferred.reject(reason);
+      };
       if ($el[0].offsetWidth) {
         $el.one('transitionend', finishFail).addClass('kifi-fail');
       } else {
         finishFail();
-      }
-      function finishFail() {
-        $el.remove();
-        deferred.reject(reason);
       }
     });
     return deferred.promise;
