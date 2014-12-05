@@ -124,19 +124,34 @@ k.pane = k.pane || function () {  // idempotent for Chrome
       }
       observePaneAncestry();
 
-      $pane.layout()
-      .on('transitionend', function onPaneShown(e) {
-        if (e.target !== this) return;
-        $pane.off('transitionend', onPaneShown);
+      var onPaneShown = function () {
         if (!bringSlider) {
           k.keeper.appendTo($pane);
           $pane.before(k.tile);
         }
         $pane.data('state', 'open');
         keepLastAndCleanUpIfRemoved();
-        $box.data("shown", true).triggerHandler("kifi:shown");
+        $box.data('shown', true).triggerHandler('kifi:shown');
         notifyPageOfResize(true);
+      }
+      if ($pane[0].offsetWidth) {
+        $pane.on('transitionend', function f(e) {
+        if (e.target === this) {
+          $(this).off(e.type, f);
+          onPaneShown();
+        }
       });
+      } else {
+        setTimeout(function f(ms) {
+          log('[onPaneShown:delayed]', ms);
+          if ($pane[0].offsetWidth) {
+            onPaneShown();
+          } else {
+            ms = Math.min(200, (ms || 5) * 2);
+            setTimeout(f.bind(null, ms), ms);
+          }
+        });
+      }
       $('html').attr('kifi-with-pane', '');
       var $box = $pane.find(".kifi-pane-box");
       populatePane($box, name, locator);
@@ -146,7 +161,7 @@ k.pane = k.pane || function () {  // idempotent for Chrome
 
   function attachPaneBindings() {
     $pane
-      .hoverfu('.kifi-pane-head-logo', function(configureHover) {
+      .hoverfu('.kifi-pane-head-logo', function (configureHover) {
         configureHover({
           mustHoverFor: 700, hideAfter: 2500, click: 'hide',
           position: {my: 'center top+10', at: 'center bottom', of: this, collision: 'none'}
