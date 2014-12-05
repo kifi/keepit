@@ -2,7 +2,7 @@ package com.keepit.curator.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.RemoteUserExperimentCommander
-import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -43,19 +43,23 @@ class LibraryRecommendationGenerationCommander @Inject() (
     true // TODO(josh)
   }
 
-  private def getStateOfUser(userId: Id[User]): LibraryRecommendationGenerationState =
+  private def getStateOfUser(userId: Id[User]): LibraryRecommendationGenerationState = {
+    log.info(s"getStateOfUser called userId=$userId")
     db.readOnlyMaster { implicit session =>
       genStateRepo.getByUserId(userId)
     } getOrElse {
       LibraryRecommendationGenerationState(userId = userId)
     }
+  }
 
   private def initialLibraryRecoFilterForUser(userId: Id[User])(libraryInfo: CuratorLibraryInfo): Boolean = {
+    log.info(s"initialLibraryRecoFilterForUser called userId=$userId")
     libraryInfo.ownerId != userId && libraryInfo.keepCount > 0 && libraryInfo.visibility != LibraryVisibility.SECRET
     // TODO(josh) more checks (min followers? max age?)
   }
 
   private def getCandidateLibrariesForUser(userId: Id[User], state: LibraryRecommendationGenerationState): (Seq[CuratorLibraryInfo], SequenceNumber[CuratorLibraryInfo]) = {
+    log.info(s"getCandidateLibrariesForUser called userId=$userId")
     val libs = db.readOnlyReplica { implicit session =>
       val candidates = libraryInfoRepo.getBySeqNum(state.seq, 200)
       log.info(s"getCandidateLibrariesForUser fromDb userId=$userId candidates=${candidates.size} seq=${state.seq}")
@@ -69,6 +73,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
 
   private def saveLibraryRecommendations(scoredLibraryInfos: Seq[ScoredLibraryInfo], userId: Id[User], newState: LibraryRecommendationGenerationState) =
     db.readWrite { implicit s =>
+      log.info(s"saveLibraryRecommendations called userId=$userId")
       scoredLibraryInfos foreach { scoredLibraryInfo =>
         val recoOpt = libraryRecRepo.getByLibraryAndUserId(scoredLibraryInfo.libraryId, userId, None)
         recoOpt.map { reco =>
@@ -92,9 +97,10 @@ class LibraryRecommendationGenerationCommander @Inject() (
 
   private def processLibraries(candidates: Seq[CuratorLibraryInfo], newState: LibraryRecommendationGenerationState,
     userId: Id[User], alwaysInclude: Set[Id[Library]]): Future[Unit] = {
-    log.warn(s"processLibraries userId=$userId candidates=${candidates.size}")
+    log.info(s"processLibraries userId=$userId candidates=${candidates.size}")
     scoringHelper(userId, candidates) flatMap { scores =>
       val toBeSaved = scores filter (si => alwaysInclude.contains(si.libraryId) || shouldInclude(si))
+      log.info(s"processLibraries toBeSaved userId=$userId $toBeSaved")
       saveLibraryRecommendations(toBeSaved, userId, newState)
       precomputeRecommendationsForUser(userId, alwaysInclude)
     } recover {
@@ -106,7 +112,9 @@ class LibraryRecommendationGenerationCommander @Inject() (
 
   private def precomputeRecommendationsForUser(userId: Id[User], alwaysInclude: Set[Id[Library]]): Future[Unit] = recommendationGenerationLock.withLockFuture {
     if (serviceDiscovery.isLeader()) {
+      log.info(s"precomputeRecommendationsForUser called inLeader userId=$userId")
       val state: LibraryRecommendationGenerationState = db.readOnlyReplica { implicit session => getStateOfUser(userId) }
+      log.info(s"precomputeRecommendationsForUser fetched state userId=$userId $state")
       val (candidateLibraries, newSeqNum) = getCandidateLibrariesForUser(userId, state)
 
       val newState = state.copy(seq = newSeqNum)
@@ -120,6 +128,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
       log.warn("precomputeRecommendationsForUser doing nothing on non-leader")
       Future.successful()
     }
+  } recover {
+    case ex: Throwable => log.error("precomputeRecommendationsForUser LockFuture failed", ex)
   }
 
   def precomputeRecommendations(): Future[Unit] = {
