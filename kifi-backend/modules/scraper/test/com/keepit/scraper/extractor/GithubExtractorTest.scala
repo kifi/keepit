@@ -13,7 +13,7 @@ class GithubExtractorTest extends Specification {
     val stream = new FileInputStream("test/com/keepit/scraper/extractor/" + file)
     val extractor = GithubExtractorProvider(uri)
     extractor.process(new HttpInputStream(stream))
-    extractor.getCanonicalUrl() ==== None
+    extractor.getCanonicalUrl("") ==== None
     extractor.getContent()
   }
 

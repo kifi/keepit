@@ -5,6 +5,7 @@ import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.scraper.{ BasicArticle, SignatureBuilder, Signature, HttpInputStream }
 
 import scala.util.{ Failure, Success }
+import org.apache.commons.lang3.StringEscapeUtils.escapeHtml4
 
 trait Extractor {
   def process(input: HttpInputStream): Unit
@@ -12,7 +13,7 @@ trait Extractor {
   def getMetadata(name: String): Option[String]
   def getKeywords(): Option[String]
   def getLinks(key: String): Set[String]
-  def getCanonicalUrl(): Option[String] = {
+  def getCanonicalUrl(destinationUrl: String): Option[String] = {
     getLinks("canonical").headOption orElse getMetadata("og:url") match {
       case Some(url) =>
         URI.parse(url) match {
@@ -21,6 +22,7 @@ trait Extractor {
               //it seems like the spec does not restricts question marks to appear in the query part http://tools.ietf.org/html/rfc3986#section-3.4
               //still, if they exist in a query part of canonical urls its usually a bad url so we'll skip it to be safe.
               case Some(query) if query.params.exists(p => p.name.contains("?") || p.value.exists(_.contains("?"))) => None
+              case _ if escapedDestination(destinationUrl, url) => Some(destinationUrl)
               case _ => Some(url)
             }
           case Failure(_) =>
@@ -28,6 +30,12 @@ trait Extractor {
         }
       case _ => None
     }
+  }
+  private def escapedDestination(destinationUrl: String, url: String): Boolean = {
+    val escaped = escapeHtml4(destinationUrl)
+    if (escaped == url) return true
+    val doubleEscaped = escapeHtml4(escaped)
+    doubleEscaped == url
   }
 
   // helper methods
@@ -47,7 +55,7 @@ trait Extractor {
     BasicArticle(
       title = getTitle,
       content = getContent,
-      canonicalUrl = getCanonicalUrl,
+      canonicalUrl = getCanonicalUrl(destinationUrl),
       description = getDescription,
       media = getMediaTypeString,
       httpContentType = getMetadata("Content-Type"),

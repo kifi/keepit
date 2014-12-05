@@ -22,7 +22,7 @@ object GithubExtractorProvider extends ExtractorProvider {
 
 class GithubExtractor(uri: URI, maxContentChars: Int) extends JsoupBasedExtractor(uri, maxContentChars) with Logging {
 
-  override def getCanonicalUrl(): Option[String] = None //we don't trust github's canonical urls
+  override def getCanonicalUrl(destinationUrl: String): Option[String] = None //we don't trust github's canonical urls
 
   def parse(doc: Document) = {
     val url = uri.toString()
