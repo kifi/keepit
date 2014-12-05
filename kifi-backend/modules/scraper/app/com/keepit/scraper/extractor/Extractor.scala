@@ -5,7 +5,7 @@ import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.scraper.{ BasicArticle, SignatureBuilder, Signature, HttpInputStream }
 
 import scala.util.{ Failure, Success }
-import org.apache.commons.lang3.StringEscapeUtils.escapeHtml4
+import org.apache.commons.lang3.StringEscapeUtils.unescapeHtml4
 
 trait Extractor {
   def process(input: HttpInputStream): Unit
@@ -18,24 +18,21 @@ trait Extractor {
       case Some(url) =>
         URI.parse(url) match {
           case Success(parsed) =>
-            parsed.query match {
-              //it seems like the spec does not restricts question marks to appear in the query part http://tools.ietf.org/html/rfc3986#section-3.4
-              //still, if they exist in a query part of canonical urls its usually a bad url so we'll skip it to be safe.
-              case Some(query) if query.params.exists(p => p.name.contains("?") || p.value.exists(_.contains("?"))) => None
-              case _ if escapedDestination(destinationUrl, url) => Some(destinationUrl)
-              case _ => Some(url)
+            // Question marks are allowed in query parameter names and values, but their presence
+            // in a canonical URL usually indicates a bad url.
+            if (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?'))))) {
+              None
+            // A common error is for sites to copy the page URL directly into a canoncial URL tag escaped an extra time.
+            } else if (unescapeHtml4(url) == destinationUrl) {
+              Some(destinationUrl)
+            } else {
+              Some(url)
             }
           case Failure(_) =>
             None
         }
       case _ => None
     }
-  }
-  private def escapedDestination(destinationUrl: String, url: String): Boolean = {
-    val escaped = escapeHtml4(destinationUrl)
-    if (escaped == url) return true
-    val doubleEscaped = escapeHtml4(escaped)
-    doubleEscaped == url
   }
 
   // helper methods
