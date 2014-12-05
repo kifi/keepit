@@ -128,7 +128,6 @@ angular.module('kifi')
                 _.remove(contacts, function(c) { return c.membership && !c.lastInvitedAt; });
               }
 
-
               // Clone deeply; otherwise, the data augmentation we do on individual contacts
               // will be cached as part of the contacts cached by Clutch.
               newResults = _.clone(contacts, true);
