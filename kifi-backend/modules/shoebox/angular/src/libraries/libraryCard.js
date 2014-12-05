@@ -31,6 +31,7 @@ angular.module('kifi')
         var prevQuery = '';
         var headerLinksShifted = false;
         var headerLinksWidth = '60px';
+        var updateSearchText = false;
 
         var kfColsElement = angular.element('.kf-cols');
         var headerLinksElement = angular.element('.kf-header-right');
@@ -578,6 +579,7 @@ angular.module('kifi')
                   scope.librarySearchInProgress = false;  // For mobile.
                 }
                 $rootScope.$emit('librarySearchChanged', false);
+                scope.search.text = '';
               });
             }
           });
@@ -612,6 +614,19 @@ angular.module('kifi')
           }
         });
         scope.$on('$destroy', deregisterLibraryUpdated);
+
+        var deregisterNewSearchUrl = $rootScope.$on('newSearchUrl', function () {
+          updateSearchText = true;
+        });
+        scope.$on('$destroy', deregisterNewSearchUrl);
+
+        var deregisterNewSearchQuery = $rootScope.$on('newSearchQuery', function (e, query) {
+          if (updateSearchText) {
+            scope.search.text = query;
+            updateSearchText = false;
+          }
+        });
+        scope.$on('$destroy', deregisterNewSearchQuery);
 
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);
