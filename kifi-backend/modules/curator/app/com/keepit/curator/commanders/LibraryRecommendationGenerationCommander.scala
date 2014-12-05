@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.performance._
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.curator.model.{ LibraryRecommendationStates, CuratorLibraryInfo, LibraryRecommendationGenerationState, LibraryRecommendation, LibraryRecommendationGenerationStateRepo, LibraryRecommendationRepo, CuratorLibraryInfoRepo }
@@ -44,7 +45,6 @@ class LibraryRecommendationGenerationCommander @Inject() (
   }
 
   private def getStateOfUser(userId: Id[User]): LibraryRecommendationGenerationState = {
-    log.info(s"getStateOfUser called userId=$userId")
     db.readOnlyMaster { implicit session =>
       genStateRepo.getByUserId(userId)
     } getOrElse {
@@ -53,27 +53,20 @@ class LibraryRecommendationGenerationCommander @Inject() (
   }
 
   private def initialLibraryRecoFilterForUser(userId: Id[User])(libraryInfo: CuratorLibraryInfo): Boolean = {
-    log.info(s"initialLibraryRecoFilterForUser called userId=$userId")
     libraryInfo.ownerId != userId && libraryInfo.keepCount > 0 && libraryInfo.visibility != LibraryVisibility.SECRET
     // TODO(josh) more checks (min followers? max age?)
   }
 
   private def getCandidateLibrariesForUser(userId: Id[User], state: LibraryRecommendationGenerationState): (Seq[CuratorLibraryInfo], SequenceNumber[CuratorLibraryInfo]) = {
-    log.info(s"getCandidateLibrariesForUser called userId=$userId")
     val libs = db.readOnlyReplica { implicit session =>
-      val candidates = libraryInfoRepo.getBySeqNum(state.seq, 200)
-      log.info(s"getCandidateLibrariesForUser fromDb userId=$userId candidates=${candidates.size} seq=${state.seq}")
-      candidates
+      libraryInfoRepo.getBySeqNum(state.seq, 200)
     } filter initialLibraryRecoFilterForUser(userId)
-
-    log.info(s"getCandidateLibrariesForUser afterInitialFilter userId=$userId candidates=${libs.size}")
 
     (libs, libs.lastOption.map(_.seq).getOrElse(state.seq))
   }
 
   private def saveLibraryRecommendations(scoredLibraryInfos: Seq[ScoredLibraryInfo], userId: Id[User], newState: LibraryRecommendationGenerationState) =
     db.readWrite { implicit s =>
-      log.info(s"saveLibraryRecommendations called userId=$userId")
       scoredLibraryInfos foreach { scoredLibraryInfo =>
         val recoOpt = libraryRecRepo.getByLibraryAndUserId(scoredLibraryInfo.libraryId, userId, None)
         recoOpt.map { reco =>
@@ -97,10 +90,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
 
   private def processLibraries(candidates: Seq[CuratorLibraryInfo], newState: LibraryRecommendationGenerationState,
     userId: Id[User], alwaysInclude: Set[Id[Library]]): Future[Unit] = {
-    log.info(s"processLibraries userId=$userId candidates=${candidates.size}")
     scoringHelper(userId, candidates) flatMap { scores =>
       val toBeSaved = scores filter (si => alwaysInclude.contains(si.libraryId) || shouldInclude(si))
-      log.info(s"processLibraries toBeSaved userId=$userId $toBeSaved")
       saveLibraryRecommendations(toBeSaved, userId, newState)
       precomputeRecommendationsForUser(userId, alwaysInclude)
     } recover {
@@ -112,17 +103,17 @@ class LibraryRecommendationGenerationCommander @Inject() (
 
   private def precomputeRecommendationsForUser(userId: Id[User], alwaysInclude: Set[Id[Library]]): Future[Unit] = recommendationGenerationLock.withLockFuture {
     if (serviceDiscovery.isLeader()) {
-      log.info(s"precomputeRecommendationsForUser called inLeader userId=$userId")
-      val state: LibraryRecommendationGenerationState = db.readOnlyReplica { implicit session => getStateOfUser(userId) }
-      log.info(s"precomputeRecommendationsForUser fetched state userId=$userId $state")
-      val (candidateLibraries, newSeqNum) = getCandidateLibrariesForUser(userId, state)
+      timing(s"precomputeRecommendationsForUser userId=$userId") {
+        val state: LibraryRecommendationGenerationState = db.readOnlyReplica { implicit session => getStateOfUser(userId)}
+        val (candidateLibraries, newSeqNum) = getCandidateLibrariesForUser(userId, state)
 
-      val newState = state.copy(seq = newSeqNum)
-      if (candidateLibraries.isEmpty) {
-        db.readWrite { implicit session => genStateRepo.save(newState) }
-        if (state.seq < newSeqNum) precomputeRecommendationsForUser(userId, alwaysInclude) else Future.successful()
-      } else {
-        processLibraries(candidateLibraries, newState, userId, alwaysInclude)
+        val newState = state.copy(seq = newSeqNum)
+        if (candidateLibraries.isEmpty) {
+          db.readWrite { implicit session => genStateRepo.save(newState)}
+          if (state.seq < newSeqNum) precomputeRecommendationsForUser(userId, alwaysInclude) else Future.successful()
+        } else {
+          processLibraries(candidateLibraries, newState, userId, alwaysInclude)
+        }
       }
     } else {
       log.warn("precomputeRecommendationsForUser doing nothing on non-leader")
