@@ -28,11 +28,13 @@ abstract class DbSequenceAssigner[M <: ModelWithSeqNumber[M]](
           reportUnsupported(e)
           throw e
         case e: Throwable =>
-          if (errorCount.getAndIncrement > 0) {
-            throw e
+          if (errorCount.getAndIncrement > 1) {
+            throw new Exception(s"Error #${errorCount.get} with batch size $currentBatchSize on ${this.getClass.getSimpleName}", e)
           } else {
             currentBatchSize = max(currentBatchSize / 2, 1)
             log.warn(s"${this.getClass.getSimpleName} reduced batch size to $currentBatchSize")
+            //we hate sleeping in production! but here we feel its something we must do to avoid repeating deadlocks
+            Thread.sleep(errorCount.get * 100)
           }
       }
     }
