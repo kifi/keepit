@@ -45,7 +45,7 @@ class ExtKeepImageController @Inject() (
         setImageF.map {
           case fail: KeepImageStoreFailure =>
             InternalServerError(Json.obj("error" -> fail.reason))
-          case success: ImageProcessSuccess =>
+          case success: KeepImageProcessSuccess =>
             Ok(JsString("success"))
         }
     }
@@ -104,7 +104,7 @@ class ExtKeepImageController @Inject() (
           keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserUpload, imageRequest.id) map {
             case fail: KeepImageStoreFailure =>
               InternalServerError(Json.obj("error" -> fail.reason))
-            case _: ImageProcessSuccess =>
+            case _: KeepImageProcessSuccess =>
               val idealSize = size.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
               Ok(Json.obj("image" -> keepImageCommander.getBestImageForKeep(keep.id.get, idealSize).flatten.map(keepImageCommander.getUrl)))
           }
