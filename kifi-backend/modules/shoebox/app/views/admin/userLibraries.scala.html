@@ -24,7 +24,8 @@
           <th>Secret</th>
           <th>Active</th>
           <th>Library</th>
-		      <th>Kind</th>
+          <th>Access</th>
+          <th>Kind</th>
           <th>Updated At</th>
           <th>Created At</th>
           <th>State</th>
@@ -43,6 +44,7 @@
               <center><input type="checkbox" id="active_@lib.id.get.id" name="active_@{lib.id.get.id}" value="1" @if(lib.state.value == "active") {checked="checked"}></input></center>
             </td>
 		        <td>@adminHelper.libraryDisplay(lib)</td>
+            <td>@access</td>
             <td>@lib.kind</td>
             <td>@adminHelper.dateTimeDisplay(lib.updatedAt)</td>
             <td>@adminHelper.dateTimeDisplay(lib.createdAt)</td>
