@@ -78,7 +78,7 @@ object PageInfo {
 }
 
 case class PageInfoUriKey(val id: Id[NormalizedURI]) extends Key[PageInfo] {
-  override val version = 1
+  override val version = 2
   val namespace = "page_info_by_uri_id"
   def toKey(): String = id.id.toString
 }
