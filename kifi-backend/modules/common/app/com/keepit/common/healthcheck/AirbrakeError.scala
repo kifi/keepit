@@ -63,7 +63,7 @@ case class AirbrakeError(
 
   lazy val signature: AirbrakeErrorSignature = {
     val permText: String =
-      causeStacktraceHead(4).getOrElse(message.map(_.take(AirbrakeError.Max8M)).getOrElse("")) +
+      causeStacktraceHead(4).getOrElse(message.map(_.take(AirbrakeError.MaxMessageSize)).getOrElse("")) +
         url.getOrElse("") +
         method.getOrElse("")
     val cleanText = permText.replaceAll("[0-9]", "")
@@ -118,7 +118,7 @@ case class AirbrakeError(
             ${t.getStackTrace.take(AirbrakeError.MaxStackTrace) map formatStackElementHtml mkString "\n<br/> "}<br/>
             ${causeString(Option(t.getCause))}"""
     }
-    causeString(Some(exception))
+    causeString(Some(exception)).take(AirbrakeError.MaxMessageSize)
   }
 
   private def formatStackElementHtml(e: StackTraceElement) = {
@@ -143,8 +143,7 @@ case class AirbrakeError(
 object AirbrakeError {
   import scala.collection.JavaConverters._
 
-  val MaxMessageSize = 10 * 1024 //10KB
-  val Max8M = 8 * 1024 * 1024
+  val MaxMessageSize = 5 * 1024 //5KB
   val MaxStackTrace = 50
 
   def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String, user: Option[User] = None, aggregateOnly: Boolean = false): AirbrakeError =
