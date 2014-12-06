@@ -97,23 +97,33 @@ class AirbrakeSender @Inject() (
       postTextFuture(DirectUrl("http://api.airbrake.io/deploys.txt"), payload, httpClient.ignoreFailure)
   }
 
-  def sendError(xml: NodeSeq): Unit = httpClient.
-    withTimeout(CallTimeouts(responseTimeout = Some(60000))).
-    withHeaders("Content-type" -> "text/xml").
-    postXmlFuture(DirectUrl("http://airbrakeapp.com/notifier_api/v2/notices"), xml, defaultFailureHandler) map { res =>
-      try {
-        val xmlRes = res.xml
-        val id = (xmlRes \ "id").head.text
-        val url = (xmlRes \ "url").head.text
-        log.info(s"sent to airbrake error $id more info at $url: $xml")
-        println(s"sent to airbrake error $id more info at $url: $xml")
-      } catch {
-        case t: Throwable => {
-          pagerDutySender.openIncident("Airbrake Response Deserialization Error!", t, moreInfo = Some(res.body.take(1000)))
-          throw t
+  def sendError(xml: NodeSeq): Unit = {
+    val futureResult = httpClient.
+      withTimeout(CallTimeouts(responseTimeout = Some(60000))).
+      withHeaders("Content-type" -> "text/xml").
+      postXmlFuture(DirectUrl("http://airbrakeapp.com/notifier_api/v2/notices"), xml, defaultFailureHandler)
+    futureResult.onSuccess {
+      case res =>
+        try {
+          val xmlRes = res.xml
+          val id = (xmlRes \ "id").head.text
+          val url = (xmlRes \ "url").head.text
+          log.info(s"sent to airbrake error $id more info at $url: $xml")
+          println(s"sent to airbrake error $id more info at $url: $xml")
+        } catch {
+          case t: Throwable => {
+            pagerDutySender.openIncident("Airbrake Response Deserialization Error!", t, moreInfo = Some(res.body.take(1000)))
+            throw t
+          }
         }
-      }
     }
+    futureResult.onFailure {
+      case exception =>
+        log.info(s"error sending airbrake xml: $xml", exception)
+        exception.printStackTrace()
+        println(s"error sending airbrake xml: $xml")
+    }
+  }
 }
 
 class PagerDutySender @Inject() (httpClient: HttpClient, serviceDiscovery: ServiceDiscovery) {
