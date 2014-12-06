@@ -5,6 +5,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{ AlertingActor, UnsupportedActorMessage }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.model.{ User, NotificationCategory }
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 
@@ -64,6 +65,7 @@ class AirbrakeSender @Inject() (
   httpClient: HttpClient,
   healthcheck: HealthcheckPlugin,
   pagerDutySender: PagerDutySender,
+  service: FortyTwoServices,
   systemAdminMailSender: SystemAdminMailSender)
     extends Logging {
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -77,12 +79,12 @@ class AirbrakeSender @Inject() (
         val he = healthcheck.addError(AirbrakeError(ex, message = Some("Fail to send airbrake message")))
         log.error(s"can't deal with error: $he")
         if (ex.getMessage.contains("Project is rate limited")) {
-          pagerDutySender.openIncident("Airbrake over Rate Limit!", ex)
+          pagerDutySender.openIncident(s"[${service.currentService}] Airbrake over Rate Limit!", ex)
         } else {
           systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG,
             to = Seq(SystemEmailAddress.ENG),
             category = NotificationCategory.System.HEALTHCHECK,
-            subject = s"[WARNING] Could not send airbrake error (Airbrake down?)",
+            subject = s"[${service.currentService}] [WARNING] Could not send airbrake error (Airbrake down?)",
             htmlBody = ex.getMessage))
         }
       }
