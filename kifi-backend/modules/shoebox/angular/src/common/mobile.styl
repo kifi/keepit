@@ -1,18 +1,6 @@
-//
-// Hide mobile-only elements when not on mobile platform.
-//
-.library-card
-  .kf-keep-lib-mobile-search
-    display: none
-
-.kf-main-search
-  .kf-mobile-search-no-results-message
-    display: none
-
-
-//
 // Mobile styles, logged out
-//
+
+
 .kf-logged-out.kf-mobile
 
   .kf-header.public-header
@@ -27,7 +15,7 @@
       top: -2px
 
     .kf-header-left
-      width: 410px
+      width: 450px
       margin-top: 23px
 
       .public-header-tagline
@@ -55,7 +43,7 @@
         font-size: 20px
 
   .kf-col-island
-    margin-top: 180px
+    margin-top: 40px
 
   .kf-main-library-keeps
 
@@ -63,7 +51,6 @@
       margin-bottom: -10px
 
       .library-card
-        overflow: hidden
 
         .kf-keep-lib-name-container
           padding-top: 70px
@@ -161,6 +148,7 @@
             line-height 52px
             margin-bottom: 20px
 
+
           .kf-keep-subtitle
             font-size: 32px
             height: 50px
@@ -208,89 +196,7 @@
               vertical-align: middle
               max-width: 230px
 
-        .kf-keep-tag-new
-          margin: 5px 8px
-          padding: 10px 8px
-          max-width: 200px
-
-          .kf-keep-tag-link-new > a
-            line-height: 36px
-            font-size: 28px
-
       .kf-keeps-load-more
         font-size: 42px
         line-height: 100px
         margin-bottom: 30px
-
-  .kf-main-library-keeps
-    .kf-library-card-header
-
-      // Hide most of library card header when
-      // displaying seach results in mobile.
-      .library-search .library-card
-      .library-card.library-search-in-progress
-        .kf-keep-body
-        .kf-keep-lib-image
-        .kf-keep-footer
-          display: none
-
-  // When displaying mobile results, hide small subtitle that is
-  // displayed on desktop. Instead, display a big "no results"
-  // message when there are no search results.
-  .kf-main-search
-    .kf-subtitle
-      display: none
-
-    .kf-mobile-search-no-results-message
-      display: block
-      margin: 100px auto
-      width: 400px
-      font-size: 30px
-
-  //
-  // Mobile search.
-  //
-  .kf-main-library-keeps
-    .kf-library-card-header
-      .library-card
-
-        // Mobile-only search box.
-        .kf-keep-lib-mobile-search
-          position: fixed
-          top: 120px
-          left: 0
-          display: block
-          width: 100%
-          height: 80px
-          z-index: 501
-
-          .kf-keep-lib-mobile-search-icon
-            position: absolute
-            top: 20px
-            left: 66px
-            width: 31px
-            height: 42px
-            display: block
-            background-image: url('/img/sprites.png')
-            background-position: -159px -205px
-            background-size: 310px auto
-
-          .kf-keep-lib-search-input
-            border: none
-            border-bottom: 1px solid #ccc
-            padding: 24px 80px 24px 108px
-            width: 100%
-            font-size: 28px
-
-        // In mobile, hide desktop search box.
-        .kf-keep-lib-search
-          display: none
-
-        .kf-keep-lib-info
-          .kf-keep-lib-owner
-
-            // During transition to search results display.
-            .kf-keep-lib-user-image
-            .kf-keep-lib-owner-text
-              transition: opacity 3s ease
-              opacity: 1

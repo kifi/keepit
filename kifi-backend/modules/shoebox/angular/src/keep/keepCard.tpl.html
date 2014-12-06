@@ -12,7 +12,7 @@
     <div class="kf-keep-contents">
       <div class="kf-keep-title">
         <div class="kf-keep-loader" ng-show="false"></div>
-        <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{keep.titleAttr}}" ng-bind-html="keep.titleHtml" ng-click="clickCallback({ 'keep': keep, event: $event })" rel="nofollow" click-action="clickedArticleTitle"></a>
+        <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{keep.titleAttr}}" ng-bind-html="keep.titleHtml" ng-click="clickCallback({ 'keep': keep, event: $event })" rel="nofollow" click-action="articleTitle"></a>
       </div>
       <div class="kf-keep-subtitle">
         <span class="kf-keep-subtitle-element kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></span>
@@ -26,7 +26,7 @@
       <div class="kf-keep-content-line">
         <div class="kf-keep-small-image" ng-if="showSmallImage(keep)">
           <a ng-href="{{keep.url}}" target="_blank" rel="nofollow">
-            <img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="clickedArticleImage" alt="{{keep.titleAttr}}">
+            <img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="articleImageSmall" alt="{{keep.titleAttr}}">
           </a>
         </div>
 
@@ -37,10 +37,10 @@
       </div>
 
       <!-- Large Image or Special Card -->
-      <a ng-href="{{keep.url}}" target="_blank" rel="nofollow"><img class="kf-keep-big-image" ng-if="showBigImage(keep)" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="clickedArticleImage"></a>
+      <a ng-href="{{keep.url}}" target="_blank" rel="nofollow"><img class="kf-keep-big-image" ng-if="showBigImage(keep)" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="articleImageBig"></a>
 
       <div ng-if="cardType=='youtube'" class="kf-keep-youtube-content">
-        <div ng-click="clickCallback({ 'keep': keep, event: $event })"><div kf-youtube video-id=youtubeId></div></div>
+        <div kf-youtube video-id=youtubeId></div>
         <div kf-ellipsis full-text="keep.summary.description" max-num-lines=3 class="kf-keep-description"></div>
       </div>
 
@@ -51,7 +51,7 @@
       <div kf-keep-who-libs-and-pics keep="keep" class="kf-keep-who-libs-and-pics"></div>
     </div>
 
-    <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep(keep)" adding-tag="addingTag" is-shown="showTags(keep)" ng-show="showTags(keep)" keep="keep" read-only-mode="!isTaggable(keep)" user-logged-in="userLoggedIn" library="library"></div>
+    <div kf-tag-list ng-if="userLoggedIn" class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep(keep)" adding-tag="addingTag" is-shown="showTags(keep)" ng-show="showTags(keep)" keep="keep" read-only-mode="!isTaggable(keep)"></div>
   </div>
 
   <div class="kf-keep-footer kf-keep-footer-buttons-wrapper clearfix" ng-if="userLoggedIn">
