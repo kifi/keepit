@@ -1,15 +1,8 @@
 package com.keepit.scraper.embedly
 
 import play.api.libs.functional.syntax._
-import com.keepit.model.PageMediaInfo
-import com.keepit.model.PageSafetyInfo
-import com.keepit.model.PageInfo
-import com.keepit.model.ImageInfo
-import com.keepit.model.PageGenericInfo
-import com.keepit.model.ImageGenericInfo
+import com.keepit.model._
 import com.keepit.common.db.Id
-import com.keepit.model.NormalizedURI
-import com.keepit.model.ImageProvider
 import play.api.libs.json._
 import com.keepit.common.time.DateTimeJsonFormat
 import org.joda.time.DateTime
@@ -48,6 +41,8 @@ case class EmbedlyInfo(
     url: Option[String],
     title: Option[String],
     description: Option[String],
+    authors: Seq[PageAuthor],
+    published: Option[DateTime],
     content: Option[String],
     safe: Option[Boolean],
     lang: Option[String],
@@ -61,6 +56,8 @@ case class EmbedlyInfo(
       uriId = nuriId,
       title = this.title,
       description = this.description.orElse(Some("")),
+      authors = authors,
+      publishedAt = published,
       safe = this.safe,
       lang = this.lang,
       faviconUrl = (this.faviconUrl.collect { case f: String if f.startsWith("http") => f }) // embedly bug
@@ -75,7 +72,7 @@ case class EmbedlyInfo(
 }
 
 object EmbedlyInfo {
-  val EMPTY = EmbedlyInfo("", None, None, None, None, None, None, None, Seq(), Seq(), Seq())
+  val EMPTY = EmbedlyInfo("", None, None, None, Seq.empty, None, None, None, None, None, Seq(), Seq(), Seq())
 
   implicit val idFormat = Id.format[NormalizedURI]
   implicit val entityFormat = Json.format[EmbedlyEntity]
@@ -86,6 +83,8 @@ object EmbedlyInfo {
     (__ \ 'url).formatNullable[String] and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'description).formatNullable[String] and
+    (__ \ 'authors).format[Seq[PageAuthor]] and
+    (__ \ 'published).formatNullable[DateTime] and
     (__ \ 'content).formatNullable[String] and
     (__ \ 'safe).formatNullable[Boolean] and
     (__ \ 'language).formatNullable[String] and

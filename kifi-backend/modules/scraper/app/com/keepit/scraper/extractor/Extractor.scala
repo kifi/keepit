@@ -6,6 +6,7 @@ import com.keepit.scraper.{ BasicArticle, SignatureBuilder, Signature, HttpInput
 
 import scala.util.{ Failure, Success }
 import org.apache.commons.lang3.StringEscapeUtils.unescapeHtml4
+import org.joda.time.DateTime
 
 trait Extractor {
   def process(input: HttpInputStream): Unit
@@ -37,6 +38,10 @@ trait Extractor {
   def getAlternateUrls(): Set[String] = getLinks("alternate")
   def getTitle(): String = getMetadata("title").getOrElse("")
   def getDescription(): Option[String] = getMetadata("description")
+  def getAuthor(): Option[String] = getMetadata("author")
+  def getPublishedAt(): Option[DateTime] = {
+    Stream("article:published_time", "article:published", "ptime", "pdate").map(getMetadata).flatten.headOption.map(DateTime.parse)
+  }
   def getSignature(): Signature = {
     new SignatureBuilder().add(Seq(
       getTitle(),

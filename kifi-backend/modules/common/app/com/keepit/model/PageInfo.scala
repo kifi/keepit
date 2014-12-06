@@ -8,7 +8,6 @@ import play.api.libs.functional.syntax._
 import com.keepit.common.db._
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.common.json._
 import org.apache.commons.lang3.RandomStringUtils
 import com.keepit.common.store.ImageSize
 import com.keepit.scraper.embedly.EmbedlyKeyword
@@ -24,8 +23,16 @@ trait PageMediaInfo {
 
 trait PageGenericInfo {
   def description: Option[String]
+  def authors: Seq[PageAuthor]
+  def publishedAt: Option[DateTime]
   // def content:Option[String]
   def faviconUrl: Option[String]
+}
+
+// Do not modify - PageAuthor is persisted as Json into the database
+case class PageAuthor(name: String, url: Option[String] = None)
+object PageAuthor {
+  implicit val format = Json.format[PageAuthor]
 }
 
 object PageInfoStates extends States[PageInfo]
@@ -39,6 +46,8 @@ case class PageInfo(
     uriId: Id[NormalizedURI],
     title: Option[String] = None,
     description: Option[String] = None,
+    authors: Seq[PageAuthor] = Seq.empty,
+    publishedAt: Option[DateTime] = None,
     safe: Option[Boolean] = None,
     lang: Option[String] = None,
     faviconUrl: Option[String] = None,
@@ -59,6 +68,8 @@ object PageInfo {
     (__ \ 'uri_id).format(Id.format[NormalizedURI]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'description).formatNullable[String] and
+    (__ \ 'authors).formatNullable[Seq[PageAuthor]].inmap[Seq[PageAuthor]](_.toSeq.flatten, Some(_)) and
+    (__ \ 'publishedAt).formatNullable[DateTime] and
     (__ \ 'safe).formatNullable[Boolean] and
     (__ \ 'lang).formatNullable[String] and
     (__ \ 'favicon_url).formatNullable[String] and
@@ -67,7 +78,7 @@ object PageInfo {
 }
 
 case class PageInfoUriKey(val id: Id[NormalizedURI]) extends Key[PageInfo] {
-  override val version = 1
+  override val version = 2
   val namespace = "page_info_by_uri_id"
   def toKey(): String = id.id.toString
 }
