@@ -33,7 +33,7 @@ class PageInfoRepoImpl @Inject() (
     def title = column[String]("title")
     def description = column[String]("description")
     def authors = column[Seq[PageAuthor]]("authors")
-    def publishedAt = column[DateTime]("publishedAt", O.Nullable)
+    def publishedAt = column[DateTime]("published_at", O.Nullable)
     def safe = column[Boolean]("safe")
     def lang = column[String]("lang")
     def faviconUrl = column[String]("favicon_url")

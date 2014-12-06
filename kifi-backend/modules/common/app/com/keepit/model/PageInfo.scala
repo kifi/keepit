@@ -68,7 +68,7 @@ object PageInfo {
     (__ \ 'uri_id).format(Id.format[NormalizedURI]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'description).formatNullable[String] and
-    (__ \ 'authors).formatNullable[Seq[PageAuthor]].inmap[Seq[PageAuthor]](_.toSeq.flatten, Some(_)) and
+    (__ \ 'authors).format[Seq[PageAuthor]] and
     (__ \ 'publishedAt).formatNullable[DateTime] and
     (__ \ 'safe).formatNullable[Boolean] and
     (__ \ 'lang).formatNullable[String] and
