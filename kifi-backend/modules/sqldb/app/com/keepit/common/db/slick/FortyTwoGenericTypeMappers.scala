@@ -78,7 +78,10 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val userValueNameTypeMapper = MappedColumnType.base[UserValueName, String](_.name, UserValueName.apply)
   implicit val hashtagTypeMapper = MappedColumnType.base[Hashtag, String](_.tag, Hashtag.apply)
   implicit def ldaTopicMapper = MappedColumnType.base[LDATopic, Int](_.index, LDATopic(_))
-  implicit val seqPageAuthorMapper = MappedColumnType.base[Seq[PageAuthor], String](authors => Json.stringify(Json.toJson(authors)), str => Json.parse(str).as[Seq[PageAuthor]])
+  implicit val seqPageAuthorMapper = MappedColumnType.base[Seq[PageAuthor], String](
+    authors => Json.stringify(Json.toJson(authors)),
+    str => if (str.isEmpty) Seq.empty[PageAuthor] else Json.parse(str).as[Seq[PageAuthor]]
+  )
 
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
     obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),
