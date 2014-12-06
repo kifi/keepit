@@ -83,8 +83,8 @@ object EmbedlyInfo {
     (__ \ 'url).formatNullable[String] and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'description).formatNullable[String] and
-    (__ \ 'authors).formatNullable[Seq[PageAuthor]].inmap(_.getOrElse(Seq.empty), { authors: Seq[PageAuthor] => Some(authors) }) and
-    (__ \ 'published).formatNullable[DateTime] and
+    OFormat((__ \ 'authors).read[Seq[PageAuthor]] orElse Reads.pure(Seq.empty[PageAuthor]), (__ \ 'authors).write[Seq[PageAuthor]]) and
+    OFormat((__ \ 'published).readNullable[DateTime] orElse Reads.pure(None), (__ \ 'published).writeNullable[DateTime]) and
     (__ \ 'content).formatNullable[String] and
     (__ \ 'safe).formatNullable[Boolean] and
     (__ \ 'language).formatNullable[String] and
