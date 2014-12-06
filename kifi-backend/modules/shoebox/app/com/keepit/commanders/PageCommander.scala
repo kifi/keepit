@@ -119,7 +119,7 @@ class PageCommander @Inject() (
       val augmentFuture = searchClient.augment(
         userId = Some(userId),
         showPublishedLibraries = true,
-        maxKeepersShown = Int.MaxValue, // TODO: reduce to 5 once most users have extension 3.3.26 or later
+        maxKeepersShown = Int.MaxValue, // TODO: reduce to 5 once most users have extension 3.3.28 or later
         maxLibrariesShown = Int.MaxValue,
         maxTagsShown = 0,
         items = Seq(AugmentableItem(normUri.id.get)))
@@ -129,30 +129,37 @@ class PageCommander @Inject() (
       augmentFuture map {
         case Seq(info) =>
           val userIdSet = info.keepers.toSet
-          val otherKeepersTotal = info.keepersTotal - (if (userIdSet.contains(userId)) 1 else 0)
-          val libraryIdPairs = info.libraries.filterNot(_._2 == userId).take(2) // TODO: also exclude libraries user is following
-          val (basicUserMap, libraryMap) = db.readOnlyMaster { implicit session =>
-            val basicUserMap = basicUserRepo.loadAll(userIdSet ++ libraryIdPairs.map(_._2) - userId)
-            val libraryMap = libraryRepo.getLibraries(libraryIdPairs.map(_._1).toSet)
-            (basicUserMap, libraryMap)
+          val (basicUserMap, libraries) = db.readOnlyMaster { implicit session =>
+            // filtering out libraries user owns or follows
+            val otherLibraryIds = info.libraries.map(_._1).filterNot(_ == userId)
+            val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).keys
+            val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq).take(2)
+            val libraryMap = libraryRepo.getLibraries(libraryIds.toSet)
+            val libraries = libraryIds.map(libraryMap)
+            val basicUserMap = basicUserRepo.loadAll(userIdSet ++ libraries.map(_.ownerId) - userId)
+            (basicUserMap, libraries)
           }
+
           val keepers = info.keepers.filterNot(_ == userId).map(basicUserMap) // preserving ordering
-          val libraries = libraryIdPairs.map { // TODO: sort by friends first, secondarily by num followers (or just trust search ordering?)
-            case (libraryId, userId) =>
-              val library = libraryMap(libraryId);
-              val numKeeps = 0 // TODO
-              val numFollowers = 0 // TODO
-              Json.obj(
-                "name" -> library.name,
-                "slug" -> library.slug,
-                "owner" -> basicUserMap(userId),
-                "keeps" -> numKeeps,
-                "followers" -> numFollowers)
+          val otherKeepersTotal = info.keepersTotal - (if (userIdSet.contains(userId)) 1 else 0)
+          val (keepCounts, followerCounts) = db.readOnlyReplica { implicit session =>
+            val libraryIds = libraries.map(_.id.get).toSet
+            val keepCounts = keepRepo.getCountsByLibrary(libraryIds)
+            val followerCounts = libraryMembershipRepo.countWithAccessByLibraryId(libraryIds, LibraryAccess.READ_ONLY)
+            (keepCounts, followerCounts)
           }
-          KeeperPageInfo(nUriStr, position, neverOnSite, shown, keepers, info.keepersOmitted, otherKeepersTotal, libraries, keepDatas)
+          val libraryObjs = libraries.map { lib => // TODO: sort by friends first, secondarily by num followers (or just trust search ordering?)
+            Json.obj(
+              "name" -> lib.name,
+              "slug" -> lib.slug,
+              "owner" -> basicUserMap(lib.ownerId),
+              "keeps" -> keepCounts(lib.id.get),
+              "followers" -> followerCounts(lib.id.get))
+          }
+          KeeperPageInfo(nUriStr, position, neverOnSite, shown, keepers, otherKeepersTotal, libraryObjs, keepDatas)
       }
     }.getOrElse {
-      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, 0, Seq.empty[JsObject], Seq.empty[KeepData]))
+      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[KeepData]))
     }
   }
 
