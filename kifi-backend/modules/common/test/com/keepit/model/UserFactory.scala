@@ -8,11 +8,11 @@ import org.apache.commons.lang3.RandomStringUtils.random
 object UserFactory {
   private[this] val idx = new AtomicLong(0)
 
-  def apply(): PartialUser = {
+  def user(): PartialUser = {
     new PartialUser(User(id = Some(Id[User](idx.incrementAndGet())), firstName = random(5), lastName = random(5), username = Username(random(5)), normalizedUsername = random(5)))
   }
 
-  def apply(count: Int): Seq[PartialUser] = List.fill(count)(apply())
+  def users(count: Int): Seq[PartialUser] = List.fill(count)(user())
 
   class PartialUser(user: User) {
     def withId(id: Id[User]) = new PartialUser(user.copy(id = Some(id)))

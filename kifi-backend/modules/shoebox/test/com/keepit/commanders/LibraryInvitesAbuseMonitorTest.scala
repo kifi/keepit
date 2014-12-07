@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 
 import com.google.inject.Injector
@@ -13,11 +14,11 @@ class LibraryInvitesAbuseMonitorTest extends Specification with ShoeboxTestInjec
 
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit s =>
-      val users = UserFactory(2).saved
-      val lib = libraryRepo.save(Library(name = "Lib", ownerId = users(0).id.get, slug = LibrarySlug("lib"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = users(0).id.get, access = LibraryAccess.OWNER, showInSearch = true))
+      val fakeUsers = users(2).saved
+      val lib = libraryRepo.save(Library(name = "Lib", ownerId = fakeUsers(0).id.get, slug = LibrarySlug("lib"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = fakeUsers(0).id.get, access = LibraryAccess.OWNER, showInSearch = true))
       val email = EmailAddress("daron@gmail.com")
-      (users(0), users(1), email, lib)
+      (fakeUsers(0), fakeUsers(1), email, lib)
     }
   }
 
