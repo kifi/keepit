@@ -49,10 +49,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     val emailHulk = EmailAddress("incrediblehulk@gmail.com")
 
     val (userIron, userCaptain, userAgent, userHulk) = db.readWrite { implicit s =>
-      val userIron = UserFactory().withUsername("ironman").save
-      val userCaptain = UserFactory().withUsername("captainamerica").save
-      val userAgent = UserFactory().withUsername("agentfury").save
-      val userHulk = UserFactory().withUsername("incrediblehulk").save
+      val userIron = UserFactory().withUsername("ironman").saved
+      val userCaptain = UserFactory().withUsername("captainamerica").saved
+      val userAgent = UserFactory().withUsername("agentfury").saved
+      val userHulk = UserFactory().withUsername("incrediblehulk").saved
 
       emailRepo.save(UserEmailAddress(userId = userIron.id.get, address = emailIron))
       emailRepo.save(UserEmailAddress(userId = userCaptain.id.get, address = emailCaptain))
