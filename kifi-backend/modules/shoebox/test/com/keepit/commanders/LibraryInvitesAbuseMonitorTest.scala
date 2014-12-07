@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import com.keepit.model.UserFactoryHelper._
+
 import com.google.inject.Injector
 import com.keepit.common.healthcheck.{ FakeAirbrakeNotifier, AirbrakeNotifier }
 import com.keepit.common.mail.EmailAddress
@@ -11,8 +13,8 @@ class LibraryInvitesAbuseMonitorTest extends Specification with ShoeboxTestInjec
 
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit s =>
-      val u1 = userRepo.save(User(firstName = "Aaron", lastName = "H", username = Username("test1"), normalizedUsername = "test1"))
-      val u2 = userRepo.save(User(firstName = "Baron", lastName = "H", username = Username("test2"), normalizedUsername = "test2"))
+      val u1 = UserFactory().save
+      val u2 = UserFactory().save
       val lib = libraryRepo.save(Library(name = "Lib", ownerId = u1.id.get, slug = LibrarySlug("lib"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = u1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
       val email = EmailAddress("daron@gmail.com")

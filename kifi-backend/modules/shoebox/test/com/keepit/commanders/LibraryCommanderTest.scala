@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.model.UserFactoryHelper._
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.TestKitSupport
@@ -48,10 +49,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     val emailHulk = EmailAddress("incrediblehulk@gmail.com")
 
     val (userIron, userCaptain, userAgent, userHulk) = db.readWrite { implicit s =>
-      val userIron = userRepo.save(User(firstName = "Tony", lastName = "Stark", createdAt = t1, primaryEmail = Some(emailIron), username = Username("ironman"), normalizedUsername = "foo1"))
-      val userCaptain = userRepo.save(User(firstName = "Steve", lastName = "Rogers", createdAt = t1, primaryEmail = Some(emailCaptain), username = Username("captainamerica"), normalizedUsername = "foo2"))
-      val userAgent = userRepo.save(User(firstName = "Nick", lastName = "Fury", createdAt = t1, primaryEmail = Some(emailAgent), username = Username("agentfury"), normalizedUsername = "foo3"))
-      val userHulk = userRepo.save(User(firstName = "Bruce", lastName = "Banner", createdAt = t1, primaryEmail = Some(emailHulk), username = Username("incrediblehulk"), normalizedUsername = "foo4"))
+      val userIron = UserFactory().withUsername("ironman").save
+      val userCaptain = UserFactory().withUsername("captainamerica").save
+      val userAgent = UserFactory().withUsername("agentfury").save
+      val userHulk = UserFactory().withUsername("incrediblehulk").save
 
       emailRepo.save(UserEmailAddress(userId = userIron.id.get, address = emailIron))
       emailRepo.save(UserEmailAddress(userId = userCaptain.id.get, address = emailCaptain))

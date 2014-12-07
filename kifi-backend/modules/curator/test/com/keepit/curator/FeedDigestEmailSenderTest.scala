@@ -89,18 +89,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
       shoebox.socialUserInfosByUserId(user1.id.get) = List()
       shoebox.socialUserInfosByUserId(user2.id.get) = List(SocialUserInfo(fullName = "Muggsy Bogues", profileUrl = Some("http://fb.com/me"), networkType = SocialNetworks.FACEBOOK, socialId = SocialId("123")))
 
-      val friend1 = User(id = Some(Id[User](44)), firstName = "Joe", lastName = "Mustache", username = Username("test"), normalizedUsername = "test",
-        pictureName = Some("mustache"))
-      val friend2 = User(id = Some(Id[User](45)), firstName = "Mr", lastName = "T", username = Username("test"), normalizedUsername = "test",
-        pictureName = Some("mrt"))
-      val friend3 = User(id = Some(Id[User](46)), firstName = "Dolly", lastName = "Parton", username = Username("test"), normalizedUsername = "test",
-        pictureName = Some("mrt"))
-      val friend4 = User(id = Some(Id[User](47)), firstName = "Benedict", lastName = "Arnold", username = Username("test"), normalizedUsername = "test",
-        pictureName = Some("mrt"))
-      val friend5 = User(id = Some(Id[User](48)), firstName = "Winston", lastName = "Churchill", username = Username("test"), normalizedUsername = "test",
-        pictureName = Some("mrt"))
-      val friend6 = User(id = Some(Id[User](49)), firstName = "Bob", lastName = "Marley", username = Username("test"), normalizedUsername = "test",
-        pictureName = Some("0"))
+      val (friend1, friend2, friend3, friend4, friend5, friend6) = (UserFactory().get, UserFactory().get, UserFactory().get, UserFactory().get, UserFactory().get, UserFactory().get)
 
       val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
       val friends = Seq(friend1, friend2, friend3, friend4, friend5, friend6)

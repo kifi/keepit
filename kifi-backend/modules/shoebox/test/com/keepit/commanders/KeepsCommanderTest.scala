@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller._
@@ -44,7 +45,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
         val user = db.readWrite { implicit s =>
 
-          val user1 = userRepo.save(User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val user1 = UserFactory().save
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Amazon")))

@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
@@ -77,7 +78,7 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
 
         // create user
         val (user, suiWithUser) = db.readWrite { implicit rw =>
-          val user = userRepo.save(User(firstName = "Foo", lastName = "bar", username = Username("foo-bar"), normalizedUsername = "foo-bar"))
+          val user = UserFactory().save
           val suiWithUser = suiRepo.save(sui.copy(userId = user.id))
           (user, suiWithUser)
         }
