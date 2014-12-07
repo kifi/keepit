@@ -196,7 +196,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     try {
       val errorId: ExternalId[_] = ex match {
         case reported: ReportedException => reported.id
-        case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex, s"Unreported Exception $ex")).id
+        case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex)).id
       }
       val cause = if (Option(ex.getCause).isDefined) ex.getCause else ex
       val bareErrorMessage = s"Play onError (${errorId.id} ): ${cause.toString} : ${request.path} : ${request.queryString}"
