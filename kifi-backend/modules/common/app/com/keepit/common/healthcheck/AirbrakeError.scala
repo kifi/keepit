@@ -146,7 +146,7 @@ object AirbrakeError {
   val MaxMessageSize = 5 * 1024 //5KB
   val MaxStackTrace = 50
 
-  def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String, user: Option[User] = None, aggregateOnly: Boolean = false): AirbrakeError =
+  def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String = "", user: Option[User] = None, aggregateOnly: Boolean = false): AirbrakeError =
     new AirbrakeError(
       exception = exception,
       message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),
