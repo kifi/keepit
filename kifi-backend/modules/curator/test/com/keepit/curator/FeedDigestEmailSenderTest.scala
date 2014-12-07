@@ -1,5 +1,6 @@
 package com.keepit.curator
 
+import com.keepit.model.UserFactory._
 import com.google.inject.Injector
 import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
 import com.keepit.common.cache.FakeCacheModule
@@ -89,7 +90,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
       shoebox.socialUserInfosByUserId(user1.id.get) = List()
       shoebox.socialUserInfosByUserId(user2.id.get) = List(SocialUserInfo(fullName = "Muggsy Bogues", profileUrl = Some("http://fb.com/me"), networkType = SocialNetworks.FACEBOOK, socialId = SocialId("123")))
 
-      val friends = UserFactory(6).get
+      val friends = users(6).get
       val (friend1, friend2) = (friends(0), friends(1))
 
       val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]

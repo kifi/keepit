@@ -8,6 +8,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.net.{ FakeHttpClientModule, FakeClientResponse, HttpUri }
 import com.keepit.model._
+import com.keepit.model.UserFactory._
 import com.keepit.search.Lang
 import com.keepit.test.CommonTestInjector
 
@@ -16,8 +17,8 @@ import com.keepit.common.cache.FakeCacheModule
 
 class ShoeboxServiceClientTest extends Specification with CommonTestInjector {
 
-  val user1965 = UserFactory().withId(1965).get
-  val user1933 = UserFactory().withId(1933).get
+  val user1965 = user().withId(1965).get
+  val user1933 = user().withId(1933).get
   val users = Seq(user1965, user1933)
   val phrases = Seq(
     Phrase(phrase = "grandeur extensive", lang = Lang("fr"), source = "physique statistique"),

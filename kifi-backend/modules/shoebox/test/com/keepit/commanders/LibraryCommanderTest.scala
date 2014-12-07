@@ -1,29 +1,32 @@
 package com.keepit.commanders
 
-import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryFactory._
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.abook.model.RichContact
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
-import com.keepit.common.db.{ Id }
-import com.keepit.common.mail.{ ElectronicMailRepo, FakeMailModule, EmailAddress }
+import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.db.Id
+import com.keepit.common.mail.{ ElectronicMailRepo, EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, FakeElizaServiceClientImpl, FakeElizaServiceClientModule }
-import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
+import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.social.BasicUser
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.joda.time.DateTime
-import org.specs2.mutable.{ SpecificationLike }
+import org.specs2.mutable.SpecificationLike
 
 import scala.concurrent._
 import scala.concurrent.duration.Duration
-import com.keepit.social.BasicUser
-import com.keepit.abook.model.RichContact
 
 class LibraryCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
@@ -49,10 +52,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     val emailHulk = EmailAddress("incrediblehulk@gmail.com")
 
     val (userIron, userCaptain, userAgent, userHulk) = db.readWrite { implicit s =>
-      val userIron = UserFactory().withUsername("ironman").saved
-      val userCaptain = UserFactory().withUsername("captainamerica").saved
-      val userAgent = UserFactory().withUsername("agentfury").saved
-      val userHulk = UserFactory().withUsername("incrediblehulk").saved
+      val userIron = user().withUsername("ironman").saved
+      val userCaptain = user().withUsername("captainamerica").saved
+      val userAgent = user().withUsername("agentfury").saved
+      val userHulk = user().withUsername("incrediblehulk").saved
 
       emailRepo.save(UserEmailAddress(userId = userIron.id.get, address = emailIron))
       emailRepo.save(UserEmailAddress(userId = userCaptain.id.get, address = emailCaptain))
@@ -72,12 +75,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     val t1 = new DateTime(2014, 8, 1, 1, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
     val t2 = new DateTime(2014, 8, 1, 1, 0, 0, 1, DEFAULT_DATE_TIME_ZONE)
     val (libShield, libMurica, libScience) = db.readWrite { implicit s =>
-      val libShield = libraryRepo.save(Library(name = "Avengers Missions", slug = LibrarySlug("avengers"),
-        visibility = LibraryVisibility.SECRET, ownerId = userAgent.id.get, createdAt = t1, memberCount = 1))
-      val libMurica = libraryRepo.save(Library(name = "MURICA", slug = LibrarySlug("murica"),
-        visibility = LibraryVisibility.PUBLISHED, ownerId = userCaptain.id.get, createdAt = t1, memberCount = 1))
-      val libScience = libraryRepo.save(Library(name = "Science & Stuff", slug = LibrarySlug("science"),
-        visibility = LibraryVisibility.DISCOVERABLE, ownerId = userIron.id.get, createdAt = t1, memberCount = 1))
+      val libShield = library().withUser(userAgent).withName("Avengers Missions").withSlug("avengers").secret().saved
+      val libMurica = library().withUser(userCaptain).withName("MURICA").withSlug("murica").published().saved
+      val libScience = library().withUser(userIron).withName("Science & Stuff").withSlug("science").discoverable().saved
 
       libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userAgent.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
       libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
