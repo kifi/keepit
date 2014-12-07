@@ -7,7 +7,7 @@ import com.keepit.model.LibraryVisibility.{ PUBLISHED, SECRET, DISCOVERABLE }
 import org.apache.commons.lang3.RandomStringUtils.random
 
 object LibraryFactory {
-  private[this] val idx = new AtomicLong(0)
+  private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
   def library(): PartialLibrary = {
     new PartialLibrary(Library(id = Some(Id[Library](idx.incrementAndGet())), name = random(5), slug = LibrarySlug(random(5)),
@@ -16,7 +16,7 @@ object LibraryFactory {
 
   def libraries(count: Int): Seq[PartialLibrary] = List.fill(count)(library())
 
-  class PartialLibrary(library: Library) {
+  class PartialLibrary private[LibraryFactory] (library: Library) {
     def withId(id: Id[Library]) = new PartialLibrary(library.copy(id = Some(id)))
     def withId(id: Int) = new PartialLibrary(library.copy(id = Some(Id[Library](id))))
     def withUser(id: Int) = new PartialLibrary(library.copy(ownerId = Id[User](id)))
