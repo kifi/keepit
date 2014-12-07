@@ -2,7 +2,7 @@ package com.keepit.model
 
 import java.util.concurrent.atomic.AtomicLong
 
-import com.keepit.common.db.{ExternalId, Id, State}
+import com.keepit.common.db.{ ExternalId, Id, State }
 import org.apache.commons.lang3.RandomStringUtils.random
 
 object UserFactory {
