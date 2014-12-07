@@ -6,7 +6,7 @@ import com.keepit.common.db.{ ExternalId, Id, State }
 import org.apache.commons.lang3.RandomStringUtils.random
 
 object UserFactory {
-  private[this] val idx = new AtomicLong(0)
+  private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
   def user(): PartialUser = {
     new PartialUser(User(id = Some(Id[User](idx.incrementAndGet())), firstName = random(5), lastName = random(5), username = Username(random(5)), normalizedUsername = random(5)))
