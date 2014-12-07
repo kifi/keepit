@@ -89,10 +89,10 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
       shoebox.socialUserInfosByUserId(user1.id.get) = List()
       shoebox.socialUserInfosByUserId(user2.id.get) = List(SocialUserInfo(fullName = "Muggsy Bogues", profileUrl = Some("http://fb.com/me"), networkType = SocialNetworks.FACEBOOK, socialId = SocialId("123")))
 
-      val (friend1, friend2, friend3, friend4, friend5, friend6) = (UserFactory().get, UserFactory().get, UserFactory().get, UserFactory().get, UserFactory().get, UserFactory().get)
+      val friends = UserFactory(6).get
+      val (friend1, friend2) = (friends(0), friends(1))
 
       val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
-      val friends = Seq(friend1, friend2, friend3, friend4, friend5, friend6)
       val friendIds = friends.map(_.id.get)
       abook.addFriendRecommendationsExpectations(user1.id.get, friendIds)
       abook.addFriendRecommendationsExpectations(user2.id.get, friendIds)

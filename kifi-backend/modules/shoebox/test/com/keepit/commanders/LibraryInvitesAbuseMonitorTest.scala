@@ -13,12 +13,11 @@ class LibraryInvitesAbuseMonitorTest extends Specification with ShoeboxTestInjec
 
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit s =>
-      val u1 = UserFactory().save
-      val u2 = UserFactory().save
-      val lib = libraryRepo.save(Library(name = "Lib", ownerId = u1.id.get, slug = LibrarySlug("lib"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = u1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+      val users = UserFactory(2).saved
+      val lib = libraryRepo.save(Library(name = "Lib", ownerId = users(0).id.get, slug = LibrarySlug("lib"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = users(0).id.get, access = LibraryAccess.OWNER, showInSearch = true))
       val email = EmailAddress("daron@gmail.com")
-      (u1, u2, email, lib)
+      (users(0), users(1), email, lib)
     }
   }
 

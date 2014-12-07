@@ -45,7 +45,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
         val user = db.readWrite { implicit s =>
 
-          val user1 = UserFactory().save
+          val user1 = UserFactory().saved
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Amazon")))

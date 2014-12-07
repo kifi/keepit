@@ -22,7 +22,7 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         val db = inject[Database]
         val keepRepo = inject[KeepRepo]
         val monitor = new KeepsAbuseMonitor(absoluteWarn = 200, absoluteError = 500, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
-        val user = db.readWrite { implicit s => UserFactory().save }
+        val user = db.readWrite { implicit s => UserFactory().saved }
         monitor.inspect(user.id.get, 20)
         1 === 1
       }
@@ -37,8 +37,8 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         val keepRepo = inject[KeepRepo]
         val monitor = new KeepsAbuseMonitor(absoluteWarn = 1, absoluteError = 2, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
         val user = db.readWrite { implicit s =>
-          UserFactory().save
-          val user1 = UserFactory().save
+          UserFactory().saved
+          val user1 = UserFactory().saved
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
@@ -74,8 +74,8 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         val keepRepo = inject[KeepRepo]
         val monitor = new KeepsAbuseMonitor(absoluteWarn = 1, absoluteError = 30, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
         val user = db.readWrite { implicit s =>
-          UserFactory().save
-          val user1 = UserFactory().save
+          UserFactory().saved
+          val user1 = UserFactory().saved
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
