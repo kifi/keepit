@@ -16,7 +16,7 @@ object LibraryFactory {
 
   def libraries(count: Int): Seq[PartialLibrary] = List.fill(count)(library())
 
-  class PartialLibrary(library: Library) {
+  class PartialLibrary private[LibraryFactory] (library: Library) {
     def withId(id: Id[Library]) = new PartialLibrary(library.copy(id = Some(id)))
     def withId(id: Int) = new PartialLibrary(library.copy(id = Some(Id[Library](id))))
     def withUser(id: Int) = new PartialLibrary(library.copy(ownerId = Id[User](id)))

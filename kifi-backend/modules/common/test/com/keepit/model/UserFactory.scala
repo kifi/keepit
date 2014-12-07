@@ -14,7 +14,7 @@ object UserFactory {
 
   def users(count: Int): Seq[PartialUser] = List.fill(count)(user())
 
-  class PartialUser(user: User) {
+  class PartialUser private[UserFactory] (user: User) {
     def withId(id: Id[User]) = new PartialUser(user.copy(id = Some(id)))
     def withId(id: Int) = new PartialUser(user.copy(id = Some(Id[User](id))))
     def withId(id: ExternalId[User]) = new PartialUser(user.copy(externalId = id))
