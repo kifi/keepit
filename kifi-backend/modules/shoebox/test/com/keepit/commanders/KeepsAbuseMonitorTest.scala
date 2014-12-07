@@ -22,9 +22,7 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         val db = inject[Database]
         val keepRepo = inject[KeepRepo]
         val monitor = new KeepsAbuseMonitor(absoluteWarn = 200, absoluteError = 500, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
-        val user = db.readWrite { implicit s =>
-          UserFactory().save
-        }
+        val user = db.readWrite { implicit s => UserFactory().save }
         monitor.inspect(user.id.get, 20)
         1 === 1
       }
