@@ -28,8 +28,11 @@ class LibrarySearch(
 
   def execute(): LibraryShardResult = {
     val (myHits, friendsHits, othersHits) = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn * 5)
+    debugLog(s"myHits: ${myHits.totalHits}")
+    debugLog(s"friendsHits: ${friendsHits.totalHits}")
+    debugLog(s"othersHits: ${othersHits.totalHits}")
     val libraryShardResult = LibrarySearch.merge(myHits, friendsHits, othersHits, numHitsToReturn, filter, config)(keepId => KeepRecord.retrieve(keepSearcher, keepId).get)
-
+    debugLog(s"libraryShardResult: ${libraryShardResult.hits.map(_.id).mkString(",")}")
     timeLogs.processHits()
     timeLogs.done()
 
@@ -41,7 +44,7 @@ class LibrarySearch(
 
   private def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
     val engine = engineBuilder.build()
-    debugLog("engine created")
+    debugLog("library search engine created")
 
     val collector = new LibraryResultCollector(maxTextHitsPerCategory, myLibraryBoost, percentMatch / 100.0f)
     val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
@@ -86,7 +89,6 @@ object LibrarySearch extends Logging {
     if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          hit.score = hit.score
           hit.normalizedScore = (hit.score / highScore) * KifiSearch.dampFunc(rank, dampingHalfDecayMine)
           hits.insert(hit)
       }
