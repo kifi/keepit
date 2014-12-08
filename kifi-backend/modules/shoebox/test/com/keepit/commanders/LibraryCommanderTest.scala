@@ -3,6 +3,8 @@ package com.keepit.commanders
 import com.keepit.model.UserFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.RichContact
@@ -75,13 +77,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     val t1 = new DateTime(2014, 8, 1, 1, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
     val t2 = new DateTime(2014, 8, 1, 1, 0, 0, 1, DEFAULT_DATE_TIME_ZONE)
     val (libShield, libMurica, libScience) = db.readWrite { implicit s =>
-      val libShield = library().withUser(userAgent).withName("Avengers Missions").withSlug("avengers").secret().saved
-      val libMurica = library().withUser(userCaptain).withName("MURICA").withSlug("murica").published().saved
-      val libScience = library().withUser(userIron).withName("Science & Stuff").withSlug("science").discoverable().saved
-
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userAgent.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libScience.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
+      val libShield = library().withUser(userAgent).withName("Avengers Missions").withSlug("avengers").secret().saved.savedOwnerMembership
+      val libMurica = library().withUser(userCaptain).withName("MURICA").withSlug("murica").published().saved.savedOwnerMembership
+      val libScience = library().withUser(userIron).withName("Science & Stuff").withSlug("science").discoverable().saved.savedOwnerMembership
       (libShield, libMurica, libScience)
     }
     db.readOnlyMaster { implicit s =>
@@ -131,9 +129,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       val inv3 = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId = libMurica.id.get, userId = userAgent.id.get).head
       libraryInviteRepo.save(inv3.withState(LibraryInviteStates.ACCEPTED))
 
-      libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId.get, access = inv1.access, showInSearch = true, createdAt = t1))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = inv2.libraryId, userId = inv2.userId.get, access = inv2.access, showInSearch = true, createdAt = t1))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = inv3.libraryId, userId = inv3.userId.get, access = inv3.access, showInSearch = true, createdAt = t1))
+      membership().fromLibraryInvite(inv1).saved
+      membership().fromLibraryInvite(inv2).saved
+      membership().fromLibraryInvite(inv3).saved
+
       libraryRepo.save(libMurica.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libMurica.id.get)))
       libraryRepo.save(libScience.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libScience.id.get)))
     }
@@ -1085,7 +1084,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // collaborators
         members._1.map(_.userId) === Seq()
         // followers
-        members._2.map(_.userId) === Seq(userAgent.id.get, userIron.id.get)
+        members._2.map(_.userId).toSet === Set(userAgent.id.get, userIron.id.get)
         // invitees
         members._3.map(t => (t._1)) === Seq(Left(userHulk.id.get), Right(EmailAddress("thor@asgard.com")))
       }
