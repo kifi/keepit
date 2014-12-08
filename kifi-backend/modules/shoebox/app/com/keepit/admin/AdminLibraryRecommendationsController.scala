@@ -1,21 +1,22 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
+import com.keepit.commanders.LibraryCommander
+import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.curator.CuratorServiceClient
-import com.keepit.model.{ LibraryRepo, User }
+import com.keepit.model.{ LibraryRepo, User, UserRepo }
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, Json }
 import views.html
-
-import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
-
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class AdminLibraryRecommendationsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     libRepo: LibraryRepo,
+    libCommander: LibraryCommander,
+    userRepo: UserRepo,
     db: Database,
     curator: CuratorServiceClient) extends AdminUserActions with Logging {
 
@@ -24,24 +25,29 @@ class AdminLibraryRecommendationsController @Inject() (
   }
 
   def view() = AdminUserAction.async { implicit request =>
-    val body = request.body.asFormUrlEncoded.map(_.mapValues(_.head)) getOrElse Map.empty
-    val userId = body.get("userId").map(s => Id[User](s.toInt)) getOrElse request.userId
+    val userId = request.request.getQueryString("userId").map(s => Id[User](s.toInt)) getOrElse request.userId
     val recosF = curator.topLibraryRecos(userId) map { libRecos =>
-      val libIds = libRecos.map(_.libraryId).toSet
-      val libraries = db.readOnlyReplica { implicit s => libRepo.getLibraries(libIds) }
+      val libIds = libRecos.map(_.libraryId)
+      val libInfos = (libIds zip libCommander.getLibrarySummaries(libIds)).toMap
 
       libRecos map { libReco =>
         val prettyExplain = libReco.explain.split("-").toSeq.map { s =>
           val parts = s.split(":")
-          (parts(0), parts(1))
+          val key = parts(0) match {
+            case "s" => "social"
+            case "i" => "interest"
+            case "r" => "recency"
+            case "p" => "popularity"
+            case "si" => "size"
+            case x => x
+          }
+          (key, parts(1))
         }.toMap
 
-        val library = libraries(libReco.libraryId)
+        val library = libInfos(libReco.libraryId)
         Json.obj(
           "libId" -> libReco.libraryId,
-          "name" -> library.name,
-          "desc" -> library.description,
-          "ownerId" -> library.ownerId,
+          "libInfo" -> Json.toJson(library),
           "score" -> libReco.masterScore,
           "explain" -> prettyExplain
         )

@@ -15,3 +15,4 @@ POST   /internal/curator/triggerEmailToUser 	@com.keepit.curator.controllers.int
 POST   /internal/curator/refreshUserRecos @com.keepit.curator.controllers.internal.CuratorController.refreshUserRecos(userId: Id[User])
 
 POST   /internal/curator/topLibraryRecos  @com.keepit.curator.controllers.internal.CuratorController.topLibraryRecos(userId: Id[User], limit: Int ?= 100)
+POST   /internal/curator/refreshLibraryRecos  @com.keepit.curator.controllers.internal.CuratorController.refreshLibraryRecos(userId: Id[User], await: Boolean ?= false)

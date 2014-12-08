@@ -37,7 +37,7 @@ object NotificationCategory {
     val CONNECTION_MADE = NotificationCategory("connection_made")
     val SOCIAL_FRIEND_JOINED = NotificationCategory("social_friend_joined")
 
-    val LIBRARY_INVITATION = NotificationCategory("library_invitation")
+    val LIBRARY_INVITATION = NotificationCategory("user_library_invitation")
     val LIBRARY_FOLLOWED = NotificationCategory("library_followed")
     val NEW_KEEP = NotificationCategory("new_keep")
 
@@ -74,12 +74,12 @@ object NotificationCategory {
     val DISCUSSION_STARTED = NotificationCategory("discussion_started")
     val ADDED_TO_DISCUSSION = NotificationCategory("added_to_discussion")
     val DISCUSSION_UPDATES = NotificationCategory("discussion_updates")
-    val LIBRARY_INVITATION = NotificationCategory("library_invitation")
+    val LIBRARY_INVITATION = NotificationCategory("visitor_library_invitation")
 
     val reportToAnalytics = Set(INVITATION, DISCUSSION_STARTED, DISCUSSION_UPDATES, ADDED_TO_DISCUSSION, LIBRARY_INVITATION)
 
     // Formatting Categories used in the extension
-    val fromFriends = Set(INVITATION, DISCUSSION_STARTED, ADDED_TO_DISCUSSION, DISCUSSION_UPDATES)
+    val fromFriends = Set(INVITATION, DISCUSSION_STARTED, ADDED_TO_DISCUSSION, DISCUSSION_UPDATES, LIBRARY_INVITATION)
   }
 
   implicit def toElectronicMailCategory(category: NotificationCategory): ElectronicMailCategory = ElectronicMailCategory(category.category)

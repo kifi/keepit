@@ -50,11 +50,12 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
       val libRecoRepo = inject[LibraryRecommendationRepo]
       val libInfoRepo = inject[CuratorLibraryInfoRepo]
 
-      val (lib1, lib2, lib3) = db.readWrite { implicit s =>
+      val (lib1, lib2, lib3, lib4) = db.readWrite { implicit s =>
         val lib1 = saveLibraryInfo(100, 600)
         val lib2 = saveLibraryInfo(101, 601)
         val lib3 = saveLibraryInfo(102, 602)
-        (lib1, lib2, lib3)
+        val lib4 = saveLibraryInfo(103, 603, keepCount = 2)
+        (lib1, lib2, lib3, lib4)
       }
       inject[CuratorLibraryInfoSequenceNumberAssigner].assignSequenceNumbers()
 
@@ -79,11 +80,13 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
       db.readOnlyMaster { implicit s =>
         val stateRepo = inject[LibraryRecommendationGenerationStateRepo]
 
-        val lib3Seq = libInfoRepo.getByLibraryId(lib3.libraryId).get.seq
-        allUsers.foreach { userId => stateRepo.getByUserId(userId).get.seq === lib3Seq }
+        val lib4Seq = libInfoRepo.getByLibraryId(lib4.libraryId).get.seq
+        allUsers.foreach { userId => stateRepo.getByUserId(userId).get.seq === lib4Seq }
 
         val libRecosUser1 = libRecoRepo.getByUserId(user1Id).sortBy(_.masterScore)
         libRecosUser1.size === 3
+
+        libRecosUser1.exists(_.libraryId == lib4.libraryId) must beFalse // keepCount too low
         libRecosUser1(0).allScores.socialScore === 0
         libRecosUser1(1).allScores.socialScore > 0
 

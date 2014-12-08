@@ -33,7 +33,7 @@ trait CortexServiceClient extends ServiceClient {
 
   def ldaNumOfTopics(implicit version: LDAVersionOpt = None): Future[Int]
   def ldaShowTopics(fromId: Int, toId: Int, topN: Int)(implicit version: LDAVersionOpt = None): Future[Seq[LDATopicInfo]]
-  def ldaConfigurations(implicit version: LDAVersionOpt = None): Future[LDATopicConfigurations]
+  def ldaConfigurations(implicit version: LDAVersionOpt): Future[LDATopicConfigurations]
   def ldaWordTopic(word: String)(implicit version: LDAVersionOpt = None): Future[Option[Array[Float]]]
   def ldaDocTopic(doc: String)(implicit version: LDAVersionOpt = None): Future[Option[Array[Float]]]
   def saveEdits(configs: Map[String, LDATopicConfiguration])(implicit version: LDAVersionOpt): Unit
@@ -130,7 +130,7 @@ class CortexServiceClientImpl(
     }
   }
 
-  def ldaConfigurations(implicit version: LDAVersionOpt = None): Future[LDATopicConfigurations] = {
+  def ldaConfigurations(implicit version: LDAVersionOpt): Future[LDATopicConfigurations] = {
     call(Cortex.internal.ldaConfigurations).map { r => (r.json).as[LDATopicConfigurations] }
   }
 

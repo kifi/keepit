@@ -7,7 +7,7 @@ import com.keepit.common.net.{ HttpClient, CallTimeouts }
 import com.keepit.common.routes.Curator
 import com.keepit.common.db.Id
 import com.keepit.model._
-import com.keepit.curator.model.{ LibraryRecoInfo, RecoInfo, RecommendationClientType }
+import com.keepit.curator.model.{ LibraryRecoSelectionParams, LibraryRecoInfo, RecoInfo, RecommendationClientType }
 
 import scala.concurrent.Future
 import play.api.libs.json._
@@ -23,6 +23,7 @@ trait CuratorServiceClient extends ServiceClient {
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String]
   def refreshUserRecos(userId: Id[User]): Future[Unit]
   def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[Seq[LibraryRecoInfo]]
+  def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None): Future[Unit]
 }
 
 class CuratorServiceClientImpl(
@@ -75,5 +76,10 @@ class CuratorServiceClientImpl(
     call(Curator.internal.topLibraryRecos(userId, limit)).map { response =>
       response.json.as[Seq[LibraryRecoInfo]]
     }
+  }
+
+  def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None) = {
+    val payload = Json.toJson(selectionParams)
+    call(Curator.internal.refreshLibraryRecos(userId, await), body = payload).map { _ => Unit }
   }
 }

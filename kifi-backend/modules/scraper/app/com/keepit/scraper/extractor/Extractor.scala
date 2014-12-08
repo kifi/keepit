@@ -6,6 +6,7 @@ import com.keepit.scraper.{ BasicArticle, SignatureBuilder, Signature, HttpInput
 
 import scala.util.{ Failure, Success }
 import org.apache.commons.lang3.StringEscapeUtils.unescapeHtml4
+import org.joda.time.DateTime
 
 trait Extractor {
   def process(input: HttpInputStream): Unit
@@ -14,24 +15,22 @@ trait Extractor {
   def getKeywords(): Option[String]
   def getLinks(key: String): Set[String]
   def getCanonicalUrl(destinationUrl: String): Option[String] = {
-    getLinks("canonical").headOption orElse getMetadata("og:url") match {
-      case Some(url) =>
-        URI.parse(url) match {
-          case Success(parsed) =>
-            // Question marks are allowed in query parameter names and values, but their presence
-            // in a canonical URL usually indicates a bad url.
-            if (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?'))))) {
-              None
-              // A common site error is copying the page URL directly into a canoncial URL tag, escaped an extra time.
-            } else if (url.length > destinationUrl.length && unescapeHtml4(url) == destinationUrl) {
-              None
-            } else {
-              Some(url)
-            }
-          case Failure(_) =>
+    getLinks("canonical").headOption orElse getMetadata("og:url") flatMap { url =>
+      URI.parse(url) match {
+        case Success(parsed) =>
+          // Question marks are allowed in query parameter names and values, but their presence
+          // in a canonical URL usually indicates a bad url.
+          if (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?'))))) {
             None
-        }
-      case _ => None
+            // A common site error is copying the page URL directly into a canoncial URL tag, escaped an extra time.
+          } else if (url.length > destinationUrl.length && unescapeHtml4(url) == destinationUrl) {
+            None
+          } else {
+            Some(url)
+          }
+        case Failure(_) =>
+          None
+      }
     }
   }
 
@@ -39,6 +38,10 @@ trait Extractor {
   def getAlternateUrls(): Set[String] = getLinks("alternate")
   def getTitle(): String = getMetadata("title").getOrElse("")
   def getDescription(): Option[String] = getMetadata("description")
+  def getAuthor(): Option[String] = getMetadata("author")
+  def getPublishedAt(): Option[DateTime] = {
+    Stream("article:published_time", "article:published", "ptime", "pdate").map(getMetadata).flatten.headOption.map(DateTime.parse)
+  }
   def getSignature(): Signature = {
     new SignatureBuilder().add(Seq(
       getTitle(),

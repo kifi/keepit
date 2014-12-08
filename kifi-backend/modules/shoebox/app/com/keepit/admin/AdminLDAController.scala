@@ -25,7 +25,8 @@ class AdminLDAController @Inject() (
 
   val MAX_WIDTH = 15
 
-  implicit def int2Version(n: Int) = Some(ModelVersion[DenseLDA](n))
+  implicit def int2VersionOpt(n: Int) = Some(ModelVersion[DenseLDA](n))
+  implicit def int2Version(n: Int) = ModelVersion[DenseLDA](n)
 
   val defaultVersion = ModelVersion[DenseLDA](2) // TODO soon: get this from cortex client
 
@@ -66,8 +67,8 @@ class AdminLDAController @Inject() (
     }
   }
 
-  private def showTopTopicDistributions(arr: Array[Float], topK: Int = 5): Future[String] = {
-    cortex.ldaConfigurations.map { ldaConf =>
+  private def showTopTopicDistributions(arr: Array[Float], topK: Int = 5)(version: ModelVersion[DenseLDA]): Future[String] = {
+    cortex.ldaConfigurations(Some(version)).map { ldaConf =>
       arr.zipWithIndex.sortBy(-1f * _._1).take(topK).map {
         case (score, topicId) =>
           val tname = ldaConf.configs(topicId.toString).topicName
@@ -81,7 +82,7 @@ class AdminLDAController @Inject() (
     val word = body.get("word").get
     val version = body.get("version").get.trim.toInt
     val futureMsg = cortex.ldaWordTopic(word)(version).flatMap {
-      case Some(arr) => showTopTopicDistributions(arr)
+      case Some(arr) => showTopTopicDistributions(arr)(version)
       case None => Future.successful("word not in dictionary")
     }
     futureMsg.map(msg => Ok(JsString(msg)))
@@ -110,7 +111,7 @@ class AdminLDAController @Inject() (
     val doc = body.get("doc").get
     val version = body.get("version").get.trim.toInt
     val futureMsg = cortex.ldaDocTopic(doc)(version).flatMap {
-      case Some(arr) => showTopTopicDistributions(arr)
+      case Some(arr) => showTopTopicDistributions(arr)(version)
       case None => Future.successful("not enough information.")
     }
     futureMsg.map(msg => Ok(JsString(msg)))
@@ -140,12 +141,12 @@ class AdminLDAController @Inject() (
     cortex.userTopicMean(Id[User](userId))(version).flatMap {
       case (global, recent) =>
         val globalMsgFut = global match {
-          case Some(arr) => showTopTopicDistributions(arr, topK = 10)
+          case Some(arr) => showTopTopicDistributions(arr, topK = 10)(version)
           case None => Future.successful("not enough information")
         }
 
         val recentMsgFut = recent match {
-          case Some(arr) => showTopTopicDistributions(arr, topK = 10)
+          case Some(arr) => showTopTopicDistributions(arr, topK = 10)(version)
           case None => Future.successful("not enough information")
         }
 
@@ -161,7 +162,7 @@ class AdminLDAController @Inject() (
   }
 
   def topicDetail(topicId: Int, version: Int) = AdminUserPage.async { implicit request =>
-    cortex.sampleURIsForTopic(topicId)(int2Version(version)).map {
+    cortex.sampleURIsForTopic(topicId)(int2VersionOpt(version)).map {
       case (uriIds, scores) =>
         val uris = db.readOnlyReplica { implicit s =>
           uriIds.map { id => uriRepo.get(id) }
@@ -181,7 +182,7 @@ class AdminLDAController @Inject() (
   }
 
   def unamedTopics(limit: Int, versionOpt: Option[Int]) = AdminUserPage.async { implicit request =>
-    val version = versionOpt.flatMap { int2Version(_) } getOrElse defaultVersion
+    val version = versionOpt.flatMap { int2VersionOpt(_) } getOrElse defaultVersion
     cortex.unamedTopics(limit)(Some(version)).map {
       case (topicInfo, topicWords) =>
         val words = topicWords.map { case words => getFormatted(words) }
@@ -196,7 +197,7 @@ class AdminLDAController @Inject() (
 
     val msgFut = cortex.libraryTopic(libId)(version).flatMap { feat =>
       feat match {
-        case Some(arr) => showTopTopicDistributions(arr, topK = 10)
+        case Some(arr) => showTopTopicDistributions(arr, topK = 10)(version)
         case None => Future.successful("not enough information")
       }
     }

@@ -52,7 +52,7 @@ class LibraryInviteEmailSender @Inject() (
         from = SystemEmailAddress.NOTIFICATIONS,
         subject = s"${fullName(fromUserId)} invited you to follow ${library.name}!",
         to = toRecipient,
-        category = NotificationCategory.User.LIBRARY_INVITATION,
+        category = toRecipient.fold(_ => NotificationCategory.User.LIBRARY_INVITATION, _ => NotificationCategory.NonUser.LIBRARY_INVITATION),
         htmlTemplate = views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken),
         textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken)),
         templateOptions = Seq(CustomLayout).toMap,
