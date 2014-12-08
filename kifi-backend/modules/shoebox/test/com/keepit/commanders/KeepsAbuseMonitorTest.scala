@@ -1,16 +1,16 @@
 package com.keepit.commanders
 
+import com.keepit.model.UserFactory._
 import com.keepit.test._
 import org.specs2.mutable.Specification
 import com.keepit.model._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.common.db.slick.Database
 import com.keepit.normalizer.NormalizationService
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import scala.Some
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, FakeAirbrakeNotifier }
 import com.google.inject.Injector
-import com.keepit.common.db.slick.DBSession.RSession
 
 class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
 
@@ -23,9 +23,7 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         val db = inject[Database]
         val keepRepo = inject[KeepRepo]
         val monitor = new KeepsAbuseMonitor(absoluteWarn = 200, absoluteError = 500, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
-        val user = db.readWrite { implicit s =>
-          inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-        }
+        val user = db.readWrite { implicit s => UserFactory.user().saved }
         monitor.inspect(user.id.get, 20)
         1 === 1
       }
@@ -39,9 +37,9 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         val db = inject[Database]
         val keepRepo = inject[KeepRepo]
         val monitor = new KeepsAbuseMonitor(absoluteWarn = 1, absoluteError = 2, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
-        val user = db.readWrite { implicit s =>
-          inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+        val fakeUser = db.readWrite { implicit s =>
+          user().saved
+          val user1 = user().saved
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
@@ -65,7 +63,7 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
           user1
         }
 
-        { monitor.inspect(user.id.get, 20) } must throwA[AbuseMonitorException]
+        { monitor.inspect(fakeUser.id.get, 20) } must throwA[AbuseMonitorException]
       }
     }
 
@@ -76,9 +74,9 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         val db = inject[Database]
         val keepRepo = inject[KeepRepo]
         val monitor = new KeepsAbuseMonitor(absoluteWarn = 1, absoluteError = 30, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
-        val user = db.readWrite { implicit s =>
-          inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+        val fakeUser = db.readWrite { implicit s =>
+          user().saved
+          val user1 = user().saved
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
@@ -103,7 +101,7 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         }
         val airbrake = inject[AirbrakeNotifier].asInstanceOf[FakeAirbrakeNotifier]
         airbrake.errorCount() === 0
-        monitor.inspect(user.id.get, 20) //should not throw an exception
+        monitor.inspect(fakeUser.id.get, 20) //should not throw an exception
         airbrake.errorCount() === 1
       }
     }

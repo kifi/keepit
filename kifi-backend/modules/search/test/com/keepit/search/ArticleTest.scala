@@ -5,7 +5,6 @@ import play.api.libs.json.Json
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.model.NormalizedURIStates._
-import org.joda.time.DateTimeZone
 
 class ArticleTest extends Specification {
 
@@ -15,6 +14,8 @@ class ArticleTest extends Specification {
         id = Id(22),
         title = "my title",
         description = Some("my description"),
+        author = Some("author"),
+        publishedAt = Some(currentDateTime),
         canonicalUrl = Some("canonical url"),
         alternateUrls = Set.empty,
         keywords = Some("my keyword"),
@@ -40,6 +41,8 @@ class ArticleTest extends Specification {
         id = Id(22),
         title = "my title",
         description = None,
+        author = None,
+        publishedAt = None,
         canonicalUrl = None,
         alternateUrls = Set.empty,
         keywords = None,
@@ -69,6 +72,8 @@ class ArticleTest extends Specification {
         id = Id(22),
         title = "my title",
         description = None,
+        author = None,
+        publishedAt = None,
         canonicalUrl = None,
         alternateUrls = Set.empty,
         keywords = None,

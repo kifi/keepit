@@ -75,6 +75,26 @@ class AirbrakeTest extends Specification with CommonTestInjector {
       }
     }
 
+    "clean formatter" in {
+      withInjector() { implicit injector =>
+        val formatter = inject[AirbrakeFormatter]
+        val error = AirbrakeError(message = Some("Execution exception in null:null"), exception = new IllegalArgumentException("hi there"))
+        val xml = formatter.format(error)
+        validate(xml)
+        (xml \ "error" \ "message").head === <message>[0L] java.lang.IllegalArgumentException: hi there</message>
+      }
+    }
+
+    "formatter not altering message" in {
+      withInjector() { implicit injector =>
+        val formatter = inject[AirbrakeFormatter]
+        val error = AirbrakeError(message = Some("Execution NPE in Foo.java:87"), exception = new IllegalArgumentException("hi there"))
+        val xml = formatter.format(error)
+        validate(xml)
+        (xml \ "error" \ "message").head === <message>[0L]Execution NPE in Foo.java:87 java.lang.IllegalArgumentException: hi there</message>
+      }
+    }
+
     "format with url and no params" in {
       withInjector(FakeFortyTwoModule(), FakeDiscoveryModule(), FakeActorSystemModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]

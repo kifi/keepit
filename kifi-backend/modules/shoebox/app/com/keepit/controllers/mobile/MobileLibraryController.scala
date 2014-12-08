@@ -140,7 +140,7 @@ class MobileLibraryController @Inject() (
           keepDataList.map { keepData =>
             val keep = keepRepo.get(keepData.id)
             val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, MobileLibraryController.defaultImageSize).flatten.map(keepImageCommander.getUrl)
-            val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "imageUrl" -> keepImageUrl, "hashTags" -> Json.toJson(collectionRepo.getTagsByKeepId(keep.id.get)))
+            val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getTagsByKeepId(keep.id.get)))
             Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
           }
         }
@@ -282,7 +282,7 @@ class MobileLibraryController @Inject() (
     val jsonBody = request.body
     val title = (jsonBody \ "title").asOpt[String]
     val url = (jsonBody \ "url").as[String]
-    val tagNames = (jsonBody \ "hashTags").as[Seq[String]]
+    val tagNames = (jsonBody \ "hashtags").as[Seq[String]]
     val imageUrlOpt = (jsonBody \ "imageUrl").asOpt[String]
     val rawKeep = RawBookmarkRepresentation(title, url, None)
     val source = KeepSource.mobile
@@ -293,7 +293,7 @@ class MobileLibraryController @Inject() (
       case Right((keep, tags)) =>
         val returnObj = Json.obj(
           "keep" -> Json.toJson(KeepInfo.fromKeep(keep)),
-          "hashTags" -> tags.map(_.name)
+          "hashtags" -> tags.map(_.name)
         )
         imageUrlOpt.map { imageUrl =>
           keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserPicked)

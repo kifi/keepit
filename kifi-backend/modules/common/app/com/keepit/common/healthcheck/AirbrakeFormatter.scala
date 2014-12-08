@@ -130,7 +130,8 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
           case _: DefaultAirbrakeException => ""
           case e: Throwable => e.toString
         }
-        s"[${instance.map(_.id.id).getOrElse("NA")}${if (leader) "L" else "_"}]${message.getOrElse("")} ${errorString}".trim
+        val cleanMessage = message.map(_.replaceAll("Execution exception in null:null", "")).getOrElse("")
+        s"[${instance.map(_.id.id).getOrElse("NA")}${if (leader) "L" else "_"}]$cleanMessage $errorString".trim
       }</message>
       <backtrace>
         { formatStacktrace(error) ++ formatCauseStacktrace(error.cause) }

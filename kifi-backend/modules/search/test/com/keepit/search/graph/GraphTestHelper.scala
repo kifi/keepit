@@ -80,6 +80,8 @@ trait GraphTestHelper extends SearchTestInjector {
       id = normalizedUriId,
       title = title,
       description = None,
+      author = None,
+      publishedAt = None,
       canonicalUrl = None,
       alternateUrls = Set.empty,
       keywords = None,

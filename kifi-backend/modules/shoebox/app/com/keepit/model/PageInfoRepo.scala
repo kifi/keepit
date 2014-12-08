@@ -9,6 +9,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import org.joda.time.DateTime
 
 @ImplementedBy(classOf[PageInfoRepoImpl])
 trait PageInfoRepo extends Repo[PageInfo] with SeqNumberFunction[PageInfo] {
@@ -31,11 +32,13 @@ class PageInfoRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def title = column[String]("title")
     def description = column[String]("description")
+    def authors = column[Seq[PageAuthor]]("authors")
+    def publishedAt = column[DateTime]("published_at", O.Nullable)
     def safe = column[Boolean]("safe")
     def lang = column[String]("lang")
     def faviconUrl = column[String]("favicon_url")
     def imageInfoId = column[Id[ImageInfo]]("image_info_id")
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, title.?, description.?, safe.?, lang.?, faviconUrl.?, imageInfoId.?) <> ((PageInfo.apply _).tupled, PageInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, title.?, description.?, authors, publishedAt.?, safe.?, lang.?, faviconUrl.?, imageInfoId.?) <> ((PageInfo.apply _).tupled, PageInfo.unapply _)
   }
 
   def table(tag: Tag) = new PageInfoTable(tag)
