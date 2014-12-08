@@ -24,11 +24,15 @@ class LibrarySearch(
     monitoredAwait: MonitoredAwait,
     timeLogs: SearchTimeLogs) extends DebugOption with Logging {
   private[this] val percentMatch = config.asFloat("percentMatch")
+  private[this] val myLibraryBoost = config.asFloat("myLibraryBoost")
 
   def execute(): LibraryShardResult = {
     val (myHits, friendsHits, othersHits) = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn * 5)
+    debugLog(s"myHits: ${myHits.totalHits}")
+    debugLog(s"friendsHits: ${friendsHits.totalHits}")
+    debugLog(s"othersHits: ${othersHits.totalHits}")
     val libraryShardResult = LibrarySearch.merge(myHits, friendsHits, othersHits, numHitsToReturn, filter, config)(keepId => KeepRecord.retrieve(keepSearcher, keepId).get)
-
+    debugLog(s"libraryShardResult: ${libraryShardResult.hits.map(_.id).mkString(",")}")
     timeLogs.processHits()
     timeLogs.done()
 
@@ -40,9 +44,9 @@ class LibrarySearch(
 
   private def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
     val engine = engineBuilder.build()
-    debugLog("engine created")
+    debugLog("library search engine created")
 
-    val collector = new LibraryResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
+    val collector = new LibraryResultCollector(maxTextHitsPerCategory, myLibraryBoost, percentMatch / 100.0f)
     val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
 
@@ -61,13 +65,12 @@ class LibrarySearch(
 }
 
 object LibrarySearch extends Logging {
-  def merge(myHits: HitQueue, friendsHits: HitQueue, othersHits: HitQueue, numHitsToReturn: Int, filter: SearchFilter, config: SearchConfig)(keepsRecords: Id[Keep] => KeepRecord): LibraryShardResult = {
+  def merge(myHits: HitQueue, friendsHits: HitQueue, othersHits: HitQueue, maxHits: Int, filter: SearchFilter, config: SearchConfig)(keepsRecords: Id[Keep] => KeepRecord): LibraryShardResult = {
 
     val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
     val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
     val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
     val minMyLibraries = config.asInt("minMyLibraries")
-    val myLibraryBoost = config.asFloat("myLibraryBoost")
 
     val isInitialSearch = filter.idFilter.isEmpty
 
@@ -75,7 +78,7 @@ object LibrarySearch extends Logging {
     val friendsTotal = friendsHits.totalHits
     val othersTotal = othersHits.totalHits
 
-    val hits = KifiSearch.createQueue(numHitsToReturn)
+    val hits = KifiSearch.createQueue(maxHits)
 
     // compute high score excluding others (an orphan uri sometimes makes results disappear)
     val highScore = {
@@ -86,19 +89,17 @@ object LibrarySearch extends Logging {
     if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          hit.score = hit.score * myLibraryBoost
           hit.normalizedScore = (hit.score / highScore) * KifiSearch.dampFunc(rank, dampingHalfDecayMine)
           hits.insert(hit)
       }
     }
 
     if (friendsHits.size > 0 && filter.includeFriends) {
-      val queue = KifiSearch.createQueue(numHitsToReturn - min(minMyLibraries, hits.size))
+      val queue = KifiSearch.createQueue(maxHits - min(minMyLibraries, hits.size))
       hits.discharge(hits.size - minMyLibraries).foreach { h => queue.insert(h) }
 
       friendsHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          hit.score = hit.score * (if ((hit.visibility & Visibility.MEMBER) != 0) myLibraryBoost else 1.0f)
           hit.normalizedScore = (hit.score / highScore) * KifiSearch.dampFunc(rank, dampingHalfDecayFriends)
           queue.insert(hit)
       }
@@ -108,12 +109,12 @@ object LibrarySearch extends Logging {
     val noFriendlyHits = (hits.size == 0)
 
     val othersHighScore = othersHits.highScore
-    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
+    if (hits.size < maxHits && othersHits.size > 0 && filter.includeOthers) {
 
-      val queue = KifiSearch.createQueue(numHitsToReturn - hits.size)
+      val queue = KifiSearch.createQueue(maxHits - hits.size)
       hits.discharge(hits.size - minMyLibraries).foreach { h => queue.insert(h) }
 
-      othersHits.toRankedIterator.take(numHitsToReturn - hits.size).foreach {
+      othersHits.toRankedIterator.take(maxHits - hits.size).foreach {
         case (hit, rank) =>
           val othersNorm = max(highScore, hit.score) * 1.1f // discount others hit
           hit.normalizedScore = (hit.score / othersNorm) * KifiSearch.dampFunc(rank, dampingHalfDecayOthers)
@@ -136,7 +137,8 @@ object LibrarySearch extends Logging {
     LibraryShardResult(libraryShardHits, show)
   }
 
-  def partition(libraryShardHits: Seq[LibraryShardHit], maxHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue, Map[Id[Keep], KeepRecord]) = {
+  def partition(libraryShardHits: Seq[LibraryShardHit]): (HitQueue, HitQueue, HitQueue, Map[Id[Keep], KeepRecord]) = {
+    val maxHitsPerCategory = libraryShardHits.length
     val myHits = KifiSearch.createQueue(maxHitsPerCategory)
     val friendsHits = KifiSearch.createQueue(maxHitsPerCategory)
     val othersHits = KifiSearch.createQueue(maxHitsPerCategory)
