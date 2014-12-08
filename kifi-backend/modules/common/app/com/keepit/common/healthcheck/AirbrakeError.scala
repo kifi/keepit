@@ -18,7 +18,9 @@ import com.ning.http.client.FluentCaseInsensitiveStringsMap
 import com.keepit.model.User
 
 case class AirbrakeErrorSignature(value: String) extends AnyVal
-class DefaultAirbrakeException extends Exception
+class DefaultAirbrakeException extends Exception {
+  override def toString: String = Option(getMessage).getOrElse("")
+}
 
 case class AirbrakeError(
     exception: Throwable = new DefaultAirbrakeException(),
