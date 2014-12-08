@@ -137,7 +137,7 @@ class PageCommander @Inject() (
             val libraryMap = libraryRepo.getLibraries(libraryIds.toSet)
             val libraries = libraryIds.map(libraryMap)
             val basicUserMap = basicUserRepo.loadAll(userIdSet ++ libraries.map(_.ownerId) - userId)
-            val keepCounts = keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet)
+            val keepCounts = keepRepo.getCountsByLibrary(libraryIds.toSet)
             (basicUserMap, libraries, keepCounts)
           }
 
