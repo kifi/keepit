@@ -135,10 +135,10 @@ class PageCommander @Inject() (
             val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).keys
             val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq).take(2)
             val libraryMap = libraryRepo.getLibraries(libraryIds.toSet)
-            val libraries = libraryIds.map(libraryMap)
+            val libraries = libraryIds.map(libraryMap).filter(l => PageCommander.testRe.findFirstIn(l.name).isEmpty)
             val basicUserMap = basicUserRepo.loadAll(userIdSet ++ libraries.map(_.ownerId) - userId)
-            val keepCounts = keepRepo.getCountsByLibrary(libraryIds.toSet)
-            (basicUserMap, libraries, keepCounts)
+            val keepCounts = keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet)
+            (basicUserMap, libraries.filter(l => keepCounts(l.id.get) >= 5), keepCounts)
           }
 
           val keepers = info.keepers.filterNot(_ == userId).map(basicUserMap) // preserving ordering
@@ -181,4 +181,8 @@ class PageCommander @Inject() (
         Left("parse_url_error")
     }
   }
+}
+
+object PageCommander {
+  val testRe = "[Tt]est".r
 }
