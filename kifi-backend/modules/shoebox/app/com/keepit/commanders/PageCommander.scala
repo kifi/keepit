@@ -129,7 +129,7 @@ class PageCommander @Inject() (
       augmentFuture map {
         case Seq(info) =>
           val userIdSet = info.keepers.toSet
-          val (basicUserMap, libraries) = db.readOnlyMaster { implicit session =>
+          val (basicUserMap, libraries, keepCounts) = db.readOnlyMaster { implicit session =>
             // filtering out libraries user owns or follows
             val otherLibraryIds = info.libraries.map(_._1).filterNot(_ == userId)
             val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).keys
@@ -137,18 +137,16 @@ class PageCommander @Inject() (
             val libraryMap = libraryRepo.getLibraries(libraryIds.toSet)
             val libraries = libraryIds.map(libraryMap)
             val basicUserMap = basicUserRepo.loadAll(userIdSet ++ libraries.map(_.ownerId) - userId)
-            (basicUserMap, libraries)
+            val keepCounts = keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet)
+            (basicUserMap, libraries, keepCounts)
           }
 
           val keepers = info.keepers.filterNot(_ == userId).map(basicUserMap) // preserving ordering
           val otherKeepersTotal = info.keepersTotal - (if (userIdSet.contains(userId)) 1 else 0)
-          val (keepCounts, followerCounts) = db.readOnlyReplica { implicit session =>
-            val libraryIds = libraries.map(_.id.get).toSet
-            val keepCounts = keepRepo.getCountsByLibrary(libraryIds)
-            val followerCounts = libraryMembershipRepo.countWithAccessByLibraryId(libraryIds, LibraryAccess.READ_ONLY)
-            (keepCounts, followerCounts)
+          val followerCounts = db.readOnlyReplica { implicit session =>
+            libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_.id.get).toSet, LibraryAccess.READ_ONLY)
           }
-          val libraryObjs = libraries.map { lib => // TODO: sort by friends first, secondarily by num followers (or just trust search ordering?)
+          val libraryObjs = libraries.map { lib =>
             Json.obj(
               "name" -> lib.name,
               "slug" -> lib.slug,
