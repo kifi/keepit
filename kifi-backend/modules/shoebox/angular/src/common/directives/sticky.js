@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfSticky', [
-  '$window', '$timeout',
-  function ($window, $timeout) {
+  '$window',
+  function ($window) {
     return {
       restrict: 'A',
       scope: {
@@ -48,20 +48,14 @@ angular.module('kifi')
           borderTopWidth = getCssPixelProperty('borderTopWidth');
           borderRightWidth = getCssPixelProperty('borderRightWidth');
           borderBottomWidth = getCssPixelProperty('borderBottomWidth');
-
-          // This timeout is needed for mobile Safari.
-          $timeout(function () {
-            offsetTop = element.offset().top - marginTop;
-            offsetLeft = element.offset().left - marginLeft;
-
-            if (isWidthCalculated) {
-              width = element.width() + borderLeftWidth + borderRightWidth;
-            }
-            height = element.height() + borderTopWidth + borderBottomWidth;
-          });
+          offsetTop = element.offset().top - marginTop;
+          offsetLeft = element.offset().left - marginLeft;
+          if (isWidthCalculated) {
+            width = element.width() + borderLeftWidth + borderRightWidth;
+          }
+          height = element.height() + borderTopWidth + borderBottomWidth;
         }
         updateProperties();
-
         /*
           TODO: test & cover wider variety of cases:
           * border-box vs content-box
@@ -168,17 +162,14 @@ angular.module('kifi')
           }, 2000);
         }
 
-        // This timeout is needed for mobile Safari.
-        $timeout(function () {
-          $win.on('mousewheel', onScroll);
-          $win.on('touchmove', onScrollTouch);
-          $win.on('touchend', onTouchEnd);
+        $win.on('mousewheel', onScroll);
+        $win.on('touchmove', onScrollTouch);
+        $win.on('touchend', onTouchEnd);
 
-          scope.$on('$destroy', function () {
-            $win.off('mousewheel', onScroll);
-            $win.off('touchmove', onScrollTouch);
-            $win.off('touchend', onTouchEnd);
-          });
+        scope.$on('$destroy', function () {
+          $win.off('mousewheel', onScroll);
+          $win.off('touchmove', onScrollTouch);
+          $win.off('touchend', onTouchEnd);
         });
       }
     };
