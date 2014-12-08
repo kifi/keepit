@@ -1,16 +1,4 @@
 //
-// Hide mobile-only elements when not on mobile platform.
-//
-.library-card
-  .kf-keep-lib-mobile-search
-    display: none
-
-.kf-main-search
-  .kf-mobile-search-no-results-message
-    display: none
-
-
-//
 // Mobile styles, logged out
 //
 .kf-logged-out.kf-mobile
@@ -55,7 +43,7 @@
         font-size: 20px
 
   .kf-col-island
-    margin-top: 180px
+    margin-top: 90px
 
   .kf-main-library-keeps
 
@@ -222,87 +210,11 @@
         line-height: 100px
         margin-bottom: 30px
 
-  .kf-main-library-keeps
-    .kf-library-card-header
-
-      // Hide most of library card header when
-      // displaying seach results in mobile.
-      .library-search .library-card
-      .library-card.library-search-in-progress
-        .kf-keep-body
-        .kf-keep-lib-image
-        .kf-keep-footer
-          display: none
-
-  // When displaying mobile results, hide small subtitle that is
-  // displayed on desktop. Instead, display a big "no results"
-  // message when there are no search results.
-  .kf-main-search
-    .kf-subtitle
-      display: none
-
-    .kf-mobile-search-no-results-message
-      display: block
-      margin: 100px auto
-      width: 400px
-      font-size: 30px
-
   //
-  // Mobile search.
+  // In mobile, hide desktop search box.
   //
   .kf-main-library-keeps
     .kf-library-card-header
       .library-card
-
-        // Mobile-only search box.
-        .kf-keep-lib-mobile-search
-          position: fixed
-          top: 120px
-          left: 0
-          display: block
-          width: 100%
-          height: 80px
-          z-index: 501
-
-          .kf-keep-lib-mobile-search-icon
-            position: absolute
-            top: 22px
-            left: 66px
-            width: 32px
-            height: 48px
-            display: block
-            background-image: url('/img/sprites.png')
-            background-position: -163px -205px
-            background-size: 318px auto
-
-          .kf-keep-lib-search-input
-            border: none
-            border-bottom: 1px solid #ccc
-            border-radius: 0
-            padding: 24px 80px 24px 108px
-            width: 100%
-            font-size: 2.5em
-
-          .dialog-x
-            top: 30px
-            right: 60px
-            width: 36px
-            height: 36px
-
-        // In mobile, hide desktop search box.
         .kf-keep-lib-search
           display: none
-
-        .kf-keep-lib-info
-          .kf-keep-lib-owner
-
-            // During transition to search results display.
-            .kf-keep-lib-user-image
-            .kf-keep-lib-owner-text
-              transition: opacity 3s ease
-              opacity: 1
-
-    .library-search .library-card
-    .library-card.library-search-in-progress
-      .dialog-x
-        display: block

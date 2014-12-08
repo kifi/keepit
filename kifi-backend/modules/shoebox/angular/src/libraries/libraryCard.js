@@ -480,7 +480,7 @@ angular.module('kifi')
         scope.onSearchInputFocus = function () {
           // Track click/focus on search bar.
           $rootScope.$emit('trackLibraryEvent', 'click', {
-            action: platformService.isSupportedMobilePlatform() ? 'clickedSearchPinned' : 'clickedSearchBody'
+            action: 'clickedSearchBody'
           });
 
           showLibrarySearchBar();
@@ -560,9 +560,6 @@ angular.module('kifi')
               $routeParams.f = 'a';
 
               $timeout(function () {
-                if (platformService.isSupportedMobilePlatform()) {
-                  scope.librarySearchInProgress = true;  // For mobile.
-                }
                 $rootScope.$emit('librarySearchChanged', true);
               });
 
@@ -576,9 +573,6 @@ angular.module('kifi')
               prevQuery = '';
 
               $timeout(function () {
-                if (platformService.isSupportedMobilePlatform()) {
-                  scope.librarySearchInProgress = false;  // For mobile.
-                }
                 $rootScope.$emit('librarySearchChanged', false);
                 scope.search = { 'text': '' };
               });
