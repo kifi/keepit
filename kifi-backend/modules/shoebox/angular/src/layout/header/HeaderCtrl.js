@@ -114,14 +114,6 @@ angular.module('kifi')
       'leading': true
     });
 
-    $scope.onSearchBarClicked = function () {
-      if ($scope.library && $scope.library.id) {
-        $rootScope.$emit('trackLibraryEvent', 'click', {
-          action: 'clickedSearchBar'
-        });
-      }
-    };
-
     $scope.clearInput = function () {
       $scope.search.text = '';
       $scope.changeSearchInput();
