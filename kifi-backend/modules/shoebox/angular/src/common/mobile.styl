@@ -266,7 +266,7 @@
 
           .kf-keep-lib-mobile-search-icon
             position: absolute
-            top: 26px
+            top: 22px
             left: 66px
             width: 32px
             height: 48px
@@ -283,6 +283,12 @@
             width: 100%
             font-size: 2.5em
 
+          .dialog-x
+            top: 30px
+            right: 60px
+            width: 36px
+            height: 36px
+
         // In mobile, hide desktop search box.
         .kf-keep-lib-search
           display: none
@@ -295,3 +301,8 @@
             .kf-keep-lib-owner-text
               transition: opacity 3s ease
               opacity: 1
+
+    .library-search .library-card
+    .library-card.library-search-in-progress
+      .dialog-x
+        display: block
