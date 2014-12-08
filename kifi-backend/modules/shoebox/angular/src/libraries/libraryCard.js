@@ -524,7 +524,7 @@ angular.module('kifi')
           });
 
           $timeout(function () {
-            scope.search.text = '';
+            scope.search = { text: '' };
           });
         };
 
@@ -580,7 +580,7 @@ angular.module('kifi')
                   scope.librarySearchInProgress = false;  // For mobile.
                 }
                 $rootScope.$emit('librarySearchChanged', false);
-                scope.search.text = '';
+                scope.search = { 'text': '' };
               });
             }
           });
@@ -623,7 +623,7 @@ angular.module('kifi')
 
         var deregisterNewSearchQuery = $rootScope.$on('newSearchQuery', function (e, query) {
           if (updateSearchText) {
-            scope.search.text = query;
+            scope.search = { 'text': query };
             updateSearchText = false;
           }
         });
