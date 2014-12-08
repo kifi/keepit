@@ -66,6 +66,7 @@ object ExperimentType {
   val CORTEX_NEW_MODEL = ExperimentType("cortex_new_model")
   val CURATOR_DIVERSE_TOPIC_RECOS = ExperimentType("curator_diverse_topic_recos")
   val CURATOR_LIBRARY_RECOS = ExperimentType("curator_library_recos")
+  val PROFILES_BETA = ExperimentType("profiles_beta")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
