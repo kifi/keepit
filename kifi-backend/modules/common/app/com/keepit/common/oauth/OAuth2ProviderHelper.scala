@@ -32,7 +32,7 @@ trait OAuth2ProviderHelper extends Logging {
       error match {
         case OAuth2Constants.AccessDenied => throw new AuthException(s"access denied")
         case _ =>
-          throw new AuthException(s"[doOAuth2] error $error returned by the authorization server. Provider type is $id")
+          throw new AuthException(s"[doOAuth2] error $error returned by the authorization server. Provider type is ${providerConfig.name}")
       }
       throw new AuthException(s"[doOAuth2] error=$error")
     })
@@ -64,34 +64,15 @@ trait OAuth2ProviderHelper extends Logging {
         Cache.set(sessionId, state, 300)
         var params = List(
           (OAuth2Constants.ClientId, providerConfig.clientId),
-          (OAuth2Constants.RedirectUri, BetterRoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled)),
+          (OAuth2Constants.RedirectUri, BetterRoutesHelper.authenticate(providerConfig.name).absoluteURL(IdentityProvider.sslEnabled)),
           (OAuth2Constants.ResponseType, OAuth2Constants.Code),
           (OAuth2Constants.State, state))
-        newSettings.scope.foreach(s => { params = (OAuth2Constants.Scope, s) :: params })
-        newSettings.authorizationUrlParams.foreach(e => { params = e :: params })
+        params = (OAuth2Constants.Scope, providerConfig.scope) :: params
         val url = providerConfig.authUrl +
           params.map(p => URLEncoder.encode(p._1, "UTF-8") + "=" + URLEncoder.encode(p._2, "UTF-8")).mkString("?", "&", "")
         log.info(s"[doOAuth2.1] authorizationUrl=${providerConfig.authUrl}; redirect to $url")
         Future.successful(Left(Results.Redirect(url).withSession(request.session + (IdentityProvider.SessionId, sessionId))))
     }
-  }
-
-  def id: String
-  val propKey = s"securesocial.$id." // SecureSocialKey + id + Dot
-
-  lazy val newSettings = createSettings()
-  private def createSettings(): PimpedOAuth2Settings = {
-    // looks like these "pimped" settings are not used
-    val authorizationUrlParams: Map[String, String] =
-      current.configuration.getObject(propKey + PimpedOAuth2Settings.AuthorizationUrlParams).map { o =>
-        o.unwrapped.mapValues(_.toString).toMap
-      }.getOrElse(Map())
-    val accessTokenUrlParams: Map[String, String] =
-      current.configuration.getObject(propKey + PimpedOAuth2Settings.AccessTokenUrlParams).map { o =>
-        o.unwrapped.mapValues(_.toString).toMap
-      }.getOrElse(Map())
-    log.info(s"[createSettings] authUrlParams=$authorizationUrlParams accessTkParams=$accessTokenUrlParams")
-    PimpedOAuth2Settings(providerConfig.authUrl, providerConfig.accessTokenUrl, providerConfig.clientId, providerConfig.clientSecret, Some(providerConfig.scope), authorizationUrlParams, accessTokenUrlParams)
   }
 
   private def getAccessToken[A](code: String)(implicit request: Request[A]): Future[OAuth2TokenInfo] = {
@@ -100,37 +81,13 @@ trait OAuth2ProviderHelper extends Logging {
       OAuth2Constants.ClientSecret -> Seq(providerConfig.clientSecret),
       OAuth2Constants.GrantType -> Seq(OAuth2Constants.AuthorizationCode),
       OAuth2Constants.Code -> Seq(code),
-      OAuth2Constants.RedirectUri -> Seq(BetterRoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled))
-    ) ++ newSettings.accessTokenUrlParams.mapValues(Seq(_))
-    try {
-      WS.url(providerConfig.accessTokenUrl).post(params) map { response =>
-        buildTokenInfo(response)
-      }
-    } catch {
-      case e: Exception =>
-        throw new AuthException(s"[getAccessToken($id)] error ($e) while retrieving access token", e)
+      OAuth2Constants.RedirectUri -> Seq(BetterRoutesHelper.authenticate(providerConfig.name).absoluteURL(IdentityProvider.sslEnabled))
+    )
+    WS.url(providerConfig.accessTokenUrl).post(params) map { response =>
+      buildTokenInfo(response)
     }
   }
 
-}
-
-case class PimpedOAuth2Settings(
-  authorizationUrl: String,
-  accessTokenUrl: String,
-  clientId: String,
-  clientSecret: String,
-  scope: Option[String],
-  authorizationUrlParams: Map[String, String],
-  accessTokenUrlParams: Map[String, String])
-
-object PimpedOAuth2Settings {
-  val AuthorizationUrl = "authorizationUrl"
-  val AccessTokenUrl = "accessTokenUrl"
-  val AuthorizationUrlParams = "authorizationUrlParams"
-  val AccessTokenUrlParams = "accessTokenUrlParams"
-  val ClientId = "clientId"
-  val ClientSecret = "clientSecret"
-  val Scope = "scope"
 }
 
 object OAuth2Constants {
