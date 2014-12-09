@@ -19,6 +19,7 @@ trait LibraryLDATopicRepo extends DbRepo[LibraryLDATopic] {
   def getActiveByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic]
   def getActiveByLibraryIds(libIds: Seq[Id[Library]], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LibraryLDATopic]
   def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryTopicMean]
+  def getLibraryByTopics(firstTopic: LDATopic, secondTopic: Option[LDATopic] = None, thirdTopic: Option[LDATopic] = None, version: ModelVersion[DenseLDA], minKeeps: Int = 5, limit: Int)(implicit session: RSession): Seq[LibraryLDATopic]
 }
 
 @Singleton
@@ -72,5 +73,17 @@ class LibraryLDATopicRepoImpl @Inject() (
            where mem.user_id = ${userId.id} and mem.state = 'active'
            and tp.version = ${version.version} and tp.state = 'active' and tp.num_of_evidence >= ${minEvidence} """
     q.as[LibraryTopicMean].list
+  }
+
+  def getLibraryByTopics(firstTopic: LDATopic, secondTopic: Option[LDATopic] = None, thirdTopic: Option[LDATopic] = None, version: ModelVersion[DenseLDA], minKeeps: Int = 5, limit: Int)(implicit session: RSession): Seq[LibraryLDATopic] = {
+    assume(!(secondTopic.isEmpty && thirdTopic.isDefined), "when specify third topic, must specify second topic as well")
+
+    if (thirdTopic.isDefined) {
+      (for { r <- rows if r.firstTopic === firstTopic && r.secondTopic === secondTopic.get && r.thirdTopic === thirdTopic.get && r.version === version && r.numOfEvidence >= minKeeps && r.state === LibraryLDATopicStates.ACTIVE } yield r).sortBy(_.updatedAt.desc).list.take(limit)
+    } else if (secondTopic.isDefined) {
+      (for { r <- rows if r.firstTopic === firstTopic && r.secondTopic === secondTopic.get && r.version === version && r.numOfEvidence >= minKeeps && r.state === LibraryLDATopicStates.ACTIVE } yield r).sortBy(_.updatedAt.desc).list.take(limit)
+    } else {
+      (for { r <- rows if r.firstTopic === firstTopic && r.version === version && r.numOfEvidence >= minKeeps && r.state === LibraryLDATopicStates.ACTIVE } yield r).sortBy(_.updatedAt.desc).list.take(limit)
+    }
   }
 }

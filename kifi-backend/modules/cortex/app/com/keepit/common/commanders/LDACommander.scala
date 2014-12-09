@@ -348,4 +348,32 @@ class LDACommander @Inject() (
     }
   }
 
+  def getSimilarLibraries(libId: Id[Library], limit: Int)(implicit version: ModelVersion[DenseLDA]): Seq[Id[Library]] = {
+
+    def getCandidates(libId: Id[Library], feat: LibraryLDATopic): Seq[LibraryLDATopic] = {
+      val (first, second) = (feat.firstTopic.get, feat.secondTopic.get)
+      val candidates = db.readOnlyReplica { implicit s => libTopicRepo.getLibraryByTopics(firstTopic = first, secondTopic = Some(second), version = version, limit = 25) }
+      candidates.filter(_.libraryId != libId)
+    }
+
+    def rankCandidates(feat: LibraryLDATopic, candidates: Seq[LibraryLDATopic]): Seq[Id[Library]] = {
+      val idsAndScores = Seq.tabulate(candidates.size) { i =>
+        val id = candidates(i).libraryId
+        val score = 1.0 - KL_divergence(feat.topic.get.value, candidates(i).topic.get.value) // score is higher the better
+        val boost = if (feat.thirdTopic == candidates(i).thirdTopic) 2.0 else 1.0
+        (id, score * boost)
+      }
+      idsAndScores.filter(_._2 > 0).sortBy(-_._2).map { _._1 }
+    }
+
+    val libFeatOpt = db.readOnlyReplica { implicit s => libTopicRepo.getActiveByLibraryId(libId, version) }
+    libFeatOpt match {
+      case None => Seq()
+      case Some(feat) =>
+        val candidates = getCandidates(libId, feat)
+        val ranked = rankCandidates(feat, candidates)
+        ranked.take(limit)
+    }
+  }
+
 }
