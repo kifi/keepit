@@ -123,7 +123,7 @@ class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Flo
   def getResults(): HitQueue = hits
 }
 
-class LibraryResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
+class LibraryResultCollector(maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
 
   import KifiResultCollector._
 
@@ -156,7 +156,8 @@ class LibraryResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) 
         } else {
           othersHits
         }
-        relevantQueue.insert(id, score, visibility, ctx.secondaryId)
+        val boostedScore = if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) score * myLibraryBoost else score
+        relevantQueue.insert(id, boostedScore, visibility, ctx.secondaryId)
       }
     }
   }

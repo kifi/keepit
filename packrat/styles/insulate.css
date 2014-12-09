@@ -218,6 +218,7 @@
   -moz-text-size-adjust: inherit;
   -moz-user-input: inherit;
   -moz-user-modify: inherit;
+  -webkit-font-smoothing: inherit;
   -webkit-text-combine: inherit;
   -webkit-text-orientation: inherit;
   -webkit-user-modify: inherit;
