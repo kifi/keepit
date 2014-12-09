@@ -243,13 +243,17 @@
   &.kifi-keepers-promo {
     -webkit-transform-origin: 98% bottom;
     transform-origin: 98% bottom;
-    transition-duration: .4s;
-    transition-timing-function: ease-in;
+    &.kifi-showing {
+      transition-timing-function: ease-in;
+      transition-duration: .4s;
+    }
     &:not(.kifi-showing) {
       -webkit-transform: translate(0,16px) scale(.6);
       transform: translate(0,16px) scale(.6);
-      transition-duration: .9s;
       transition-timing-function: ease-in-out, ease-in;
+      &.kifi-slowly {
+        transition-duration: .9s;
+      }
     }
   }
   &.kifi-showing {

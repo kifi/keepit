@@ -554,20 +554,26 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
               var params = setSocialParams(o, {cssClass: 'kifi-keepers-promo'});
               k.render('html/keeper/keepers', params, function (html) {
                 if (lastCreatedAt) return;
-                var $promo = $(html);
+                var $promo = $(html).addClass('kifi-slowly');
                 var $libs = $promo.find('.kifi-keepers-libs');
                 if ($libs.length) {
                   $promo.insertBefore($tile);
                   $libs.css('width', $libs[0].offsetWidth);
                   $promo.detach();
                 }
-                $promo.on('transitionend', function unhoverfu(e) {
+                configureHover($promo, {parent: $tile, mustHoverFor: 0, canLeaveFor: 1e9, ignoreWheel: true});
+                $promo
+                .data('timeout', setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000 + 1800 * o.libraries.length))
+                .on('mouseover', function f(e) {
+                  $promo.off(e.type, f).removeClass('kifi-slowly');
+                  clearTimeout($promo.data('timeout'));
+                })
+                .on('transitionend', function f(e) {
                   if (e.target === this && !this.classList.contains('kifi-showing') && e.originalEvent.propertyName === 'opacity') {
-                    $promo.off('transitionend', unhoverfu);
+                    $(this).off(e.type, f);
                     $tile.hoverfu('destroy');
                   }
                 });
-                configureHover($promo, {parent: $tile, mustHoverFor: 0, canLeaveFor: 1e9, ignoreWheel: true});
                 api.port.emit('track_notified', {
                   category: 'socialToolTip',
                   subsource: 'tile',
@@ -576,7 +582,6 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                 });
               });
             }).hoverfu('show');
-            setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000 + 1800 * o.libraries.length);
           }
         });
     },
