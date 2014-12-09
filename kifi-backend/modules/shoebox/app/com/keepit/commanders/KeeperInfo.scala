@@ -40,7 +40,6 @@ case class KeeperPageInfo(
   neverOnSite: Boolean,
   shown: Boolean,
   keepers: Seq[BasicUser],
-  keepersOmitted: Int,
   keepersTotal: Int,
   libraries: Seq[JsObject],
   keeps: Seq[KeepData])
@@ -51,7 +50,6 @@ object KeeperPageInfo {
     (__ \ 'neverOnSite).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'shown).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'keepers).writeNullable[Seq[BasicUser]].contramap[Seq[BasicUser]](Some(_).filter(_.nonEmpty)) and
-    (__ \ 'keepersOmitted).writeNullable[Int].contramap[Int](Some(_).filter(_ > 0)) and
     (__ \ 'keepersTotal).writeNullable[Int].contramap[Int](Some(_).filter(_ > 0)) and
     (__ \ 'libraries).writeNullable[Seq[JsObject]].contramap[Seq[JsObject]](Some(_).filter(_.nonEmpty)) and
     (__ \ 'keeps).write[Seq[KeepData]]

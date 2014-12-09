@@ -150,7 +150,9 @@
     if (data.opts.hideAfter) {
       data.hide = setTimeout(hide.bind(this), data.opts.hideAfter);
     }
-    $(doc).on('mousewheel.hoverfu', hide.bind(this));
+    if (!data.opts.ignoreWheel) {
+      $(doc).on('mousewheel.hoverfu', hide.bind(this));
+    }
   }
   function hide() {
     var data = getData(this);

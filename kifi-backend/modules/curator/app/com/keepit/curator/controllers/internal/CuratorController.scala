@@ -11,7 +11,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.curator.commanders.email.{ RecentInterestRankStrategy, EngagementEmailActor, FeedDigestEmailSender }
 import com.keepit.curator.commanders._
-import com.keepit.curator.model.{ LibraryRecoInfo, RecommendationClientType, LibraryRecommendation }
+import com.keepit.curator.model.{ LibraryRecoSelectionParams, LibraryRecoInfo, RecommendationClientType, LibraryRecommendation }
 import com.keepit.model.{ Library, UserValueName, UriRecommendationFeedback, NormalizedURI, ExperimentType, User, UriRecommendationScores }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -101,6 +101,13 @@ class CuratorController @Inject() (
       log.info(s"topLibraryRecos returning userId=$userId resultCount=${libRecoInfos.size}")
       Ok(Json.toJson(libRecoInfos))
     }
+  }
+
+  def refreshLibraryRecos(userId: Id[User], await: Boolean = false) = Action.async(parse.tolerantJson) { request =>
+    val selectionParams = request.body.as[Option[LibraryRecoSelectionParams]]
+    log.info(s"refreshLibraryRecos called userId=$userId await=$await selectionParams=$selectionParams")
+    val precomputeF = libraryRecoGenCommander.precomputeRecommendationsForUser(userId, selectionParams)
+    (if (await) precomputeF else Future.successful()) map { _ => Ok }
   }
 
   private def scheduleToSendDigestEmail(userId: Id[User]) = {

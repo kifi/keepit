@@ -14,6 +14,8 @@
     </div>
   </div>
 
+  <div ng-if="!loading && !resultKeeps.length" class="kf-mobile-search-no-results-message">Sorry, no search results found.</div>
+
   <div
     kf-keeps
     keeps="resultKeeps"

@@ -9,7 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.curator.model.{ CuratorLibraryMembershipInfoRepo, LibraryScores, CuratorLibraryInfo }
+import com.keepit.curator.model.{ LibraryRecoSelectionParams, CuratorLibraryMembershipInfoRepo, LibraryScores, CuratorLibraryInfo }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model.{ User, LibraryAccess }
 import org.joda.time.Interval
@@ -31,7 +31,7 @@ class LibraryScoringHelper @Inject() (
     libMembershipRepo: CuratorLibraryMembershipInfoRepo,
     private val airbrake: AirbrakeNotifier) extends Logging {
 
-  def apply(userId: Id[User], libraries: Seq[CuratorLibraryInfo]): Future[Seq[ScoredLibraryInfo]] = {
+  def apply(userId: Id[User], libraries: Seq[CuratorLibraryInfo], selectionParams: LibraryRecoSelectionParams): Future[Seq[ScoredLibraryInfo]] = {
     val userLibrariesScoresF = getLibraryInterestScores(userId, libraries)
 
     Future.sequence(Seq.tabulate(libraries.size) { idx: Int =>
@@ -47,26 +47,19 @@ class LibraryScoringHelper @Inject() (
           interestScore = interestScore(idx),
           popularityScore = getPopularityScore(candidate),
           sizeScore = getSizeScore(candidate))
-        val masterScore = computeMasterScore(allScores)
+        val masterScore = computeMasterScore(allScores, selectionParams)
         ScoredLibraryInfo(candidate, masterScore, allScores)
       }
     })
   }
 
-  // default weights
-  val interestScoreWeight = 1f
-  val recencyScoreWeight = 0.85f
-  val socialScoreWeight = 0.95f
-  val popularityScoreWeight = 0.9f
-  val sizeScoreWeight = 0.8f
-
-  private def computeMasterScore(allScores: LibraryScores): Float = {
+  private def computeMasterScore(allScores: LibraryScores, selectionParams: LibraryRecoSelectionParams): Float = {
     // TODO(josh) initial weights are arbitrary and will need updating
-    allScores.interestScore * interestScoreWeight +
-      allScores.recencyScore * recencyScoreWeight +
-      allScores.socialScore * socialScoreWeight +
-      allScores.popularityScore * popularityScoreWeight +
-      allScores.sizeScore * sizeScoreWeight
+    allScores.interestScore * selectionParams.interestScoreWeight +
+      allScores.recencyScore * selectionParams.recencyScoreWeight +
+      allScores.socialScore * selectionParams.socialScoreWeight +
+      allScores.popularityScore * selectionParams.popularityScoreWeight +
+      allScores.sizeScore * selectionParams.sizeScoreWeight
   }
 
   private def getLibraryInterestScores(userId: Id[User], candidates: Seq[CuratorLibraryInfo]): Future[Seq[Float]] = {

@@ -8,7 +8,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.mail.template.{ EmailTip, EmailTrackingParam }
-import com.keepit.common.mail.{ PostOffice, SystemEmailAddress, EmailAddress, FakeOutbox }
+import com.keepit.common.mail.{ ElectronicMailCategory, PostOffice, SystemEmailAddress, EmailAddress, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -376,6 +376,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
         email.subject === "Tom Brady invited you to follow Football!"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
@@ -400,6 +401,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.LIBRARY_INVITATION)
         email.subject === "Tom Brady invited you to follow Football!"
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")

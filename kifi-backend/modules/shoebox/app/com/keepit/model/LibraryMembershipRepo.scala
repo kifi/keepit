@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import java.sql.SQLException
+
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
@@ -7,13 +9,13 @@ import com.keepit.common.db.{ DbSequenceAssigner, State, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.performance.timing
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
-import org.joda.time.DateTime
 import com.keepit.common.time._
+import org.joda.time.DateTime
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
 import scala.collection.immutable.Seq
-
 import scala.concurrent.duration.FiniteDuration
 
 @ImplementedBy(classOf[LibraryMembershipRepoImpl])
@@ -25,8 +27,10 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership]
   def pageWithLibraryIdAndAccess(libraryId: Id[Library], offset: Int, limit: Int, accessSet: Set[LibraryAccess],
     excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
+  def countWithLibraryIdAndAccess(libraryId: Id[Library], access: LibraryAccess)(implicit session: RSession): Int
   def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): Map[LibraryAccess, Int]
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
+  def countWithAccessByLibraryId(libraryIds: Set[Id[Library]], access: LibraryAccess)(implicit session: RSession): Map[Id[Library], Int]
   def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
   def updateLastEmailSent(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
   def getMemberCountSinceForLibrary(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int
@@ -120,10 +124,13 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Library], LibraryMembership] = {
-    if (libraryIds.isEmpty) {
-      Map.empty
-    } else {
-      (for (b <- rows if b.libraryId.inSet(libraryIds) && b.userId === userId && b.state =!= excludeState.orNull) yield (b.libraryId, b)).list.toMap
+    libraryIds.size match {
+      case 0 =>
+        Map.empty
+      case 1 =>
+        getWithLibraryIdAndUserId(libraryIds.head, userId, excludeState) map { lm => (lm.libraryId -> lm) } toMap
+      case _ =>
+        (for (b <- rows if b.libraryId.inSet(libraryIds) && b.userId === userId && b.state =!= excludeState.orNull) yield (b.libraryId, b)).list.toMap
     }
   }
 
@@ -153,12 +160,48 @@ class LibraryMembershipRepoImpl @Inject() (
     }
   }
 
+  private val countWithLibraryIdAndAccessCompiled = Compiled { (libraryId: Column[Id[Library]], access: Column[LibraryAccess]) =>
+    (for (row <- rows if row.libraryId === libraryId && row.access === access && row.state =!= LibraryMembershipStates.INACTIVE) yield row).length
+  }
+  def countWithLibraryIdAndAccess(libraryId: Id[Library], access: LibraryAccess)(implicit session: RSession): Int = {
+    countWithLibraryIdAndAccessCompiled(libraryId, access).run
+  }
+
   def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): Map[LibraryAccess, Int] = {
     import StaticQuery.interpolation
     val existingAccessMap = sql"""select access, count(*) from library_membership where library_id=$libraryId and state='active' group by access""".as[(String, Int)].list
       .map(t => (LibraryAccess(t._1), t._2))
       .toMap
     LibraryAccess.getAll.map(access => (access -> existingAccessMap.getOrElse(access, 0))).toMap
+  }
+
+  def countWithAccessByLibraryId(libraryIds: Set[Id[Library]], access: LibraryAccess)(implicit session: RSession): Map[Id[Library], Int] = {
+    import StaticQuery.interpolation
+    libraryIds.size match {
+      case 0 =>
+        Map.empty
+      case 1 =>
+        val libraryId = libraryIds.head
+        Map(libraryId -> countWithLibraryIdAndAccess(libraryId, access))
+      case n =>
+        val ids = Seq.fill(n)("?").mkString(",")
+        val stmt = session.getPreparedStatement(s"select library_id, count(*) from library_membership where library_id in ($ids) and access='${access.value}' and state='active' group by library_id")
+        libraryIds.zipWithIndex.foreach {
+          case (id, idx) =>
+            stmt.setLong(idx + 1, id.id)
+        }
+        val res = timing(s"countWithAccessByLibraryId(sz=${libraryIds.size};ids=$libraryIds)") { stmt.execute() }
+        if (!res) throw new SQLException(s"[countWithAccessByLibraryId] ($stmt) failed to execute")
+        val rs = stmt.getResultSet()
+        val buf = collection.mutable.ArrayBuilder.make[(Id[Library], Int)]
+        while (rs.next()) {
+          val libraryId = Id[Library](rs.getLong(1))
+          val count = rs.getInt(2)
+          buf += (libraryId -> count)
+        }
+        val counts = buf.result.toMap
+        libraryIds.map(id => (id, counts.getOrElse(id, 0))).toMap
+    }
   }
 
   def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession) = {
