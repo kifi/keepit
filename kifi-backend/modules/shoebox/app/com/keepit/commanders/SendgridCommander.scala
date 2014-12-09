@@ -116,18 +116,18 @@ class SendgridCommander @Inject() (
    */
   private def sendUserUsedKifiEvent(userId: Id[User], email: ElectronicMail, event: SendgridEvent, context: HeimdalContext) = {
     val notification = NotificationCategory.fromElectronicMailCategory(email.category)
-    if (userUsedKifiCategories.contains(notification) &&
-      event.event.exists(_ == SendgridEventTypes.CLICK)) {
+
+    if (userUsedKifiCategories.contains(notification) && event.event.exists(_ == SendgridEventTypes.CLICK)) {
 
       // rename the `action` property based on what the subaction property is
       val subaction = context.get[String]("subaction")
-      val newActionOpt = subaction.collect {
-        case "recoTitle" => "clickedArticleTitle"
-        case "recoImage" => "clickedArticleImage"
-        case s => s
+
+      val newActionOpt = subaction match {
+        case Some(s) if s.startsWith("clicked") => Some(s)
+        case _ => None
       }
 
-      newActionOpt map { action =>
+      newActionOpt foreach { action =>
         val specialCtxBuilder = heimdalContextBuilder()
 
         // initialize the context with the context passed in
@@ -135,6 +135,7 @@ class SendgridCommander @Inject() (
         specialCtxBuilder += ("subsource", notification.category)
         specialCtxBuilder += ("action", action)
         val specialCtx = specialCtxBuilder.build
+
         heimdalClient.trackEvent(UserEvent(userId, specialCtx, UserEventTypes.USED_KIFI))
       }
 
