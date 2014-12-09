@@ -15,16 +15,24 @@ case class LibraryImage(
     format: ImageFormat,
     width: Int,
     height: Int,
+    originalWidth: Int,
+    originalHeight: Int,
     offsetWidth: Int,
     offsetHeight: Int,
+    selectedWidth: Int,
+    selectedHeight: Int,
     source: LibraryImageSource,
     sourceFileHash: ImageHash,
     sourceImageUrl: Option[String],
     isOriginal: Boolean) extends Model[LibraryImage] {
   val imageSize = ImageSize(width, height)
+  val imageSelection = LibraryImageSelection(selectedWidth, selectedHeight, offsetWidth, offsetHeight)
   def withId(id: Id[LibraryImage]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }
+case class LibraryImageSelection(
+  selectedWidth: Int, selectedHeight: Int,
+  offsetWidth: Int, offsetHeight: Int)
 
 object LibraryImageStates extends States[LibraryImage]
 

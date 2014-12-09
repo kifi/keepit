@@ -69,7 +69,7 @@ class KeepImageCommanderImpl @Inject() (
       None
     } else Some {
       val validKeepImages = keepImages.filter(_.state == KeepImageStates.ACTIVE)
-      ProcessedImageSize.pickBest(idealSize, validKeepImages)
+      ProcessedImageSize.pickBestKeepImage(idealSize, validKeepImages)
     }
   }
 
@@ -83,7 +83,7 @@ class KeepImageCommanderImpl @Inject() (
       }
       allImagesByKeepId.mapValues { keepImages =>
         val validKeepImages = keepImages.filter(_.state == KeepImageStates.ACTIVE)
-        ProcessedImageSize.pickBest(idealSize, validKeepImages)
+        ProcessedImageSize.pickBestKeepImage(idealSize, validKeepImages)
       }
     }
   }

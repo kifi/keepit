@@ -198,8 +198,8 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
         height <- 10 to 150 by 17
       } yield genKeepImage(width * 9, height * 9)
 
-      ProcessedImageSize.pickBest(ImageSize(201, 399), keepImages).get.imageSize === ImageSize(189, 396)
-      ProcessedImageSize.pickBest(ImageSize(800, 840), keepImages).get.imageSize === ImageSize(783, 855)
+      ProcessedImageSize.pickBestKeepImage(ImageSize(201, 399), keepImages).get.imageSize === ImageSize(189, 396)
+      ProcessedImageSize.pickBestKeepImage(ImageSize(800, 840), keepImages).get.imageSize === ImageSize(783, 855)
     }
   }
 

@@ -11,7 +11,7 @@ import com.keepit.common.core.File
 import com.keepit.common.net.{ URI, WebService }
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store.ImageSize
-import com.keepit.model.{ ImageFormat, ImageHash, KeepImage }
+import com.keepit.model.{ LibraryImage, ImageFormat, ImageHash, KeepImage }
 import org.imgscalr.Scalr
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
@@ -210,7 +210,11 @@ object ProcessedImageSize {
     allSizes.map(s => s -> maxDivergence(s.idealSize, size)).sortBy(_._2).head._1
   }
 
-  def pickBest(idealSize: ImageSize, images: Seq[KeepImage]): Option[KeepImage] = {
+  def pickBestKeepImage(idealSize: ImageSize, images: Seq[KeepImage]): Option[KeepImage] = {
+    images.map(s => s -> maxDivergence(idealSize, s.imageSize)).sortBy(_._2).headOption.map(_._1)
+  }
+
+  def pickBestLibraryImage(idealSize: ImageSize, images: Seq[LibraryImage]): Option[LibraryImage] = {
     images.map(s => s -> maxDivergence(idealSize, s.imageSize)).sortBy(_._2).headOption.map(_._1)
   }
 
