@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.logging.Logging
@@ -8,8 +9,8 @@ import com.keepit.common.mail.template.EmailTrackingParam
 import com.keepit.common.mail.template.EmailTip.toContextData
 import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
-import com.keepit.heimdal.{ HeimdalContextBuilder, NonUserEventTypes, NonUserEvent, UserEventTypes, UserEvent, HeimdalContextBuilderFactory, HeimdalServiceClient }
-import com.keepit.model.{ EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates, ExperimentType }
+import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder, NonUserEventTypes, NonUserEvent, UserEventTypes, UserEvent, HeimdalContextBuilderFactory, HeimdalServiceClient }
+import com.keepit.model.{ User, EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates, ExperimentType }
 import com.keepit.social.NonUserKinds
 import org.joda.time.DateTime
 import scala.concurrent.ExecutionContext
@@ -96,12 +97,47 @@ class SendgridCommander @Inject() (
           val builder = heimdalContextBuilder()
           builder.addExistingContext(context)
           builder += ("userStatus", ExperimentType.getUserStatus(experiments))
-          heimdalClient.trackEvent(UserEvent(userId, builder.build, UserEventTypes.WAS_NOTIFIED, eventTime))
+          val userEventContext = builder.build
+          heimdalClient.trackEvent(UserEvent(userId, userEventContext, UserEventTypes.WAS_NOTIFIED, eventTime))
+
+          sendUserUsedKifiEvent(userId, email, event, userEventContext)
         }
       }
       else if (NotificationCategory.NonUser.reportToAnalytics.contains(email.category)) {
         heimdalClient.trackEvent(NonUserEvent(address.address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, eventTime))
       }
+    }
+  }
+
+  private val userUsedKifiCategories = NotificationCategory.User.DIGEST :: NotificationCategory.User.MESSAGE :: Nil
+
+  /*
+   * Manually triggers user_used_kifi events for certain types of emails
+   */
+  private def sendUserUsedKifiEvent(userId: Id[User], email: ElectronicMail, event: SendgridEvent, context: HeimdalContext) = {
+    val notification = NotificationCategory.fromElectronicMailCategory(email.category)
+    if (userUsedKifiCategories.contains(notification) &&
+      event.event.exists(_ == SendgridEventTypes.CLICK)) {
+
+      // rename the `action` property based on what the subaction property is
+      val subaction = context.get[String]("subaction")
+      val newActionOpt = subaction.collect {
+        case "recoTitle" => "clickedArticleTitle"
+        case "recoImage" => "clickedArticleImage"
+        case s => s
+      }
+
+      newActionOpt map { action =>
+        val specialCtxBuilder = heimdalContextBuilder()
+
+        // initialize the context with the context passed in
+        specialCtxBuilder.data ++= (context.data - "subaction")
+        specialCtxBuilder += ("subsource", notification.category)
+        specialCtxBuilder += ("action", action)
+        val specialCtx = specialCtxBuilder.build
+        heimdalClient.trackEvent(UserEvent(userId, specialCtx, UserEventTypes.USED_KIFI))
+      }
+
     }
   }
 

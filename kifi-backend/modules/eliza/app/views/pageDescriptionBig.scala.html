@@ -1,8 +1,12 @@
 @(threadInfo: com.keepit.eliza.model.ThreadEmailInfo)
+@visitThisPageUrl = @{threadInfo.pageUrlWithTracking("clickedVisitPageLink")}
+@articleTitleUrl = @{threadInfo.pageUrlWithTracking("clickedArticleTitle")}
+@articleDomainUrl = @{threadInfo.pageUrlWithTracking("clickedArticleDomain")}
+@articleImageUrl = @{threadInfo.pageUrlWithTracking("clickedArticleImage")}
 <table width="100%" border="0" cellspacing="0" cellpadding="0">
   @threadInfo.heroImageUrl.map{ heroImageUrl =>
     <tr>
-        <td class="img_1" width="620" valign="top"><a href="@threadInfo.pageUrl" target="_blank"><img src="https:@heroImageUrl" width="620" class="img_1" style="display:block; padding-bottom: 5px;" border="0" title="Visit @threadInfo.pageName"/></a></td>
+        <td class="img_1" width="620" valign="top"><a href="@articleImageUrl" target="_blank"><img src="https:@heroImageUrl" width="620" class="img_1" style="display:block; padding-bottom: 5px;" border="0" title="Visit @threadInfo.pageName"/></a></td>
     </tr>
   }
   <tr>
@@ -15,13 +19,13 @@
     <td>
       <table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
-          <td><a href="@threadInfo.pageUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:24px;font-weight:bold;color:#333333;line-height:24px;text-decoration:none;">@threadInfo.pageTitle</a></td>
+          <td><a href="@articleTitleUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:24px;font-weight:bold;color:#333333;line-height:24px;text-decoration:none;">@threadInfo.pageTitle</a></td>
         </tr>
         <tr>
           <td height="8" style="line-height:1px;font-size:1px;">&nbsp;</td>
         </tr>
         <tr>
-          <td style="font-family:Arial, Helvetica, sans-serif;font-size:16px;color:#999999;line-height:16px;"><a style="font-family:Arial, Helvetica, sans-serif;font-size:16px;color:#999999;line-height:16px; text-decoration:none;" href="@threadInfo.pageUrl" target="_blank">@threadInfo.pageName @estimatedTime(threadInfo.readTimeMinutes)</a></td>
+          <td style="font-family:Arial, Helvetica, sans-serif;font-size:16px;color:#999999;line-height:16px;"><a style="font-family:Arial, Helvetica, sans-serif;font-size:16px;color:#999999;line-height:16px; text-decoration:none;" href="@articleDomainUrl" target="_blank">@threadInfo.pageName @estimatedTime(threadInfo.readTimeMinutes)</a></td>
         </tr>
         <tr>
           <td height="10" style="line-height:1px;font-size:1px;">&nbsp;</td>
@@ -40,7 +44,7 @@
                         <td height="6" style="line-height:1px;font-size:1px;">&nbsp;</td>
                       </tr>
                       <tr>
-                        <td class="txt_2" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:14px;text-decoration:underline;"><a href="@threadInfo.pageUrl" class="txt_2" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:14px;text-decoration:underline;">Visit this page</a></td>
+                        <td class="txt_2" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:14px;text-decoration:underline;"><a href="@visitThisPageUrl" class="txt_2" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:14px;text-decoration:underline;">Visit this page</a></td>
                       </tr>
                       <tr>
                         <td height="22"></td>

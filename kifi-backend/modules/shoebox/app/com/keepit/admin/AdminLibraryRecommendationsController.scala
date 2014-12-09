@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.model.{ LibraryRepo, User, UserRepo }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsArray, Json }
+import play.api.libs.json.{ JsString, JsArray, Json }
 import views.html
 
 class AdminLibraryRecommendationsController @Inject() (
@@ -25,8 +25,9 @@ class AdminLibraryRecommendationsController @Inject() (
   }
 
   def view() = AdminUserAction.async { implicit request =>
-    val userId = request.request.getQueryString("userId").map(s => Id[User](s.toInt)) getOrElse request.userId
-    val recosF = curator.topLibraryRecos(userId) map { libRecos =>
+    val userId = request.request.getQueryString("userId")
+      .filter(_.nonEmpty) map (s => Id[User](s.toInt)) getOrElse request.userId
+    val recosF = curator.topLibraryRecos(userId, Some(100)) map { libRecos =>
       val libIds = libRecos.map(_.libraryId)
       val libInfos = (libIds zip libCommander.getLibrarySummaries(libIds)).toMap
 
@@ -47,6 +48,7 @@ class AdminLibraryRecommendationsController @Inject() (
         val library = libInfos(libReco.libraryId)
         Json.obj(
           "libId" -> libReco.libraryId,
+          "link" -> JsString("https://www.kifi.com" + library.url),
           "libInfo" -> Json.toJson(library),
           "score" -> libReco.masterScore,
           "explain" -> prettyExplain

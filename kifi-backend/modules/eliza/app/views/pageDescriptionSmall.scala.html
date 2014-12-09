@@ -1,4 +1,8 @@
 @(threadInfo: com.keepit.eliza.model.ThreadEmailInfo)
+@visitThisPageUrl = @{threadInfo.pageUrlWithTracking("clickedVisitPageLink")}
+@articleTitleUrl = @{threadInfo.pageUrlWithTracking("clickedArticleTitle")}
+@articleDomainUrl = @{threadInfo.pageUrlWithTracking("clickedArticleDomain")}
+@articleImageUrl = @{threadInfo.pageUrlWithTracking("clickedArticleImage")}
 <table width="100%" border="0" cellspacing="0" cellpadding="0">
   <tr>
     <td height="14" style="line-height:1px;font-size:1px;">&nbsp;</td>
@@ -8,14 +12,14 @@
     <td>
       <table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
-          <td><a href="@threadInfo.pageUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:24px;font-weight:bold;color:#333333;line-height:24px;text-decoration:none;">@threadInfo.pageTitle</a></td>
+          <td><a href="@articleTitleUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:24px;font-weight:bold;color:#333333;line-height:24px;text-decoration:none;">@threadInfo.pageTitle</a></td>
         </tr>
         <tr>
           <td height="8" style="line-height:1px;font-size:1px;">&nbsp;</td>
         </tr>
         <tr>
           <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:14px;">
-            <a style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:14px; text-decoration:none;" href="@threadInfo.pageUrl" target="_blank">@threadInfo.pageName @estimatedTime(threadInfo.readTimeMinutes)</a>
+            <a style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:14px; text-decoration:none;" href="@articleDomainUrl" target="_blank">@threadInfo.pageName @estimatedTime(threadInfo.readTimeMinutes)</a>
           </td>
         </tr>
         <tr>
@@ -26,7 +30,7 @@
               <tr>
                 @threadInfo.pageDescription.map{ pageDescription =>
                   @threadInfo.heroImageUrl.map{ heroImageUrl =>
-                    <td class="img_1" width="130" valign="top"><a href="@threadInfo.pageUrl" target="_blank"><img src="https:@heroImageUrl" alt="New Yorker" width="130" class="img_1" style="display:block;" title="Visit @threadInfo.pageName" border="0" /></a></td>
+                    <td class="img_1" width="130" valign="top"><a href="@articleImageUrl" target="_blank"><img src="https:@heroImageUrl" alt="New Yorker" width="130" class="img_1" style="display:block;" title="Visit @threadInfo.pageName" border="0" /></a></td>
                     <td width="18" class="width">&nbsp;</td>
                   }
                   <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
@@ -37,7 +41,7 @@
                       <td height="6" style="line-height:1px;font-size:1px;">&nbsp;</td>
                     </tr>
                     <tr>
-                      <td class="txt_2" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:14px;text-decoration:underline;"><a href="@threadInfo.pageUrl" class="txt_2" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:14px;text-decoration:underline;">Visit this page</a></td>
+                      <td class="txt_2" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:14px;text-decoration:underline;"><a href="@visitThisPageUrl" class="txt_2" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:14px;text-decoration:underline;">Visit this page</a></td>
                     </tr>
                     <tr>
                       <td height="22"></td>
