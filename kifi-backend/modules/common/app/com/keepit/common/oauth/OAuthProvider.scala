@@ -1,10 +1,14 @@
 package com.keepit.common.oauth
 
 import com.google.inject.{ Singleton, Inject }
+import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
+import play.api.libs.ws.{ WS, WSResponse }
+import play.api.mvc.Request
+import securesocial.core.IdentityProvider
 
 import scala.concurrent.Future
 
@@ -67,6 +71,12 @@ trait OAuth1Support extends OAuthProvider {
 }
 
 trait OAuth2Support extends OAuthProvider {
+  def oauth2Config: OAuth2Configuration
+  def providerConfig: OAuth2ProviderConfiguration = oauth2Config.getProviderConfig(providerId.id) match {
+    case None => throw new IllegalArgumentException(s"config not found for $providerId")
+    case Some(cfg) => cfg
+  }
+  def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = response.json.as[OAuth2TokenInfo]
   def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo]
   def exchangeLongTermToken(tokenInfo: OAuth2TokenInfo): Future[OAuth2TokenInfo]
 }

@@ -4,6 +4,7 @@ import com.google.inject.{ Singleton, Provides }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
 import play.api.libs.oauth.ConsumerKey
+import play.api.libs.ws.WSResponse
 
 import scala.concurrent.Future
 
@@ -18,6 +19,11 @@ trait FakeOAuthProvider extends OAuthProvider {
 }
 
 trait FakeOAuth2Provider extends FakeOAuthProvider with OAuth2Support {
+
+  override def oauth2Config: OAuth2Configuration = ???
+
+  var oauth2Token = () => OAuth2TokenInfo(OAuth2AccessToken("fake-token"))
+  override def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = oauth2Token.apply()
 
   var longTermTokenOpt: Option[OAuth2TokenInfo] = None
   def setLongTermToken(f: => OAuth2TokenInfo) { longTermTokenOpt = Some(f) }

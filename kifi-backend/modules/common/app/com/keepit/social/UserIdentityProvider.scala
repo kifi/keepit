@@ -2,15 +2,11 @@ package com.keepit.social
 
 import com.keepit.common.controller.KifiSession._
 import com.keepit.common.logging.Logging
-import com.keepit.common.oauth.OAuth2ProviderHelper
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsNumber, JsString, _ }
+import com.keepit.common.oauth.{ OAuth2Constants, OAuth2ProviderHelper }
+import play.api.libs.json.{ JsNull, JsObject, JsNumber, JsString }
 import play.api.libs.ws.WSResponse
 import play.api.mvc._
-import securesocial.core.{ IdentityId, OAuth2Info, _ }
-
-import scala.concurrent.Await
-import scala.concurrent.duration._
+import securesocial.core.{ UserService, Identity, IdentityProvider, OAuth2Info }
 
 /**
  * An identity provider which returns UserIdentity instances. This allows us to know the currently logged in user when
@@ -32,39 +28,6 @@ trait UserIdentityProvider extends IdentityProvider with OAuth2ProviderHelper wi
     }
   }
 
-  // Next: skip doAuth() all together
-  override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
-    val call = doOAuth2() map { resOrToken =>
-      resOrToken match {
-        case Left(res) => Left(res)
-        case Right(token) => Right(SocialUser(IdentityId("", id), "", "", "", None, None, authMethod, oAuth2Info = Some(token)))
-      }
-    }
-    Await.result(call, 5 minutes)
-  }
-
-  protected def buildInfo(response: WSResponse): OAuth2Info = {
-    val parsed = try {
-      response.json.as[JsObject].value
-    } catch {
-      case _: Throwable =>
-        response.body.split("&").map { kv =>
-          val p = kv.split("=").take(2)
-          p(0) -> (if (p.length == 2) {
-            try { JsNumber(p(1).toInt) } catch {
-              case _: Throwable => JsString(p(1))
-            }
-          } else JsNull)
-        }.toMap
-    }
-
-    log.info(s"[buildInfo] parsed=$parsed")
-    OAuth2Info(
-      parsed.get(OAuth2Constants.AccessToken).map(_.as[String]).get,
-      parsed.get(OAuth2Constants.TokenType).map(_.asOpt[String]).flatten,
-      parsed.get(OAuth2Constants.ExpiresIn).map(_.asOpt[Int]).flatten,
-      parsed.get(OAuth2Constants.RefreshToken).map(_.asOpt[String]).flatten
-    )
-  }
+  protected def buildInfo(response: WSResponse): OAuth2Info = buildTokenInfo(response)
 
 }

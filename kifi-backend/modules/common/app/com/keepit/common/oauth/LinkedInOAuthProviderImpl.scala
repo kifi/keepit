@@ -33,7 +33,9 @@ object LinkedInOAuthProvider {
 }
 
 @Singleton
-class LinkedInOAuthProviderImpl @Inject() (airbrake: AirbrakeNotifier) extends LinkedInOAuthProvider with OAuth2Support with Logging {
+class LinkedInOAuthProviderImpl @Inject() (
+    airbrake: AirbrakeNotifier,
+    val oauth2Config: OAuth2Configuration) extends LinkedInOAuthProvider with OAuth2Support with Logging {
 
   import LinkedInOAuthProvider._
   def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {

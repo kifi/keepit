@@ -1,7 +1,7 @@
 package com.keepit.social.providers
 
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.oauth.{ LinkedInOAuthProvider, LinkedInOAuthProviderImpl }
+import com.keepit.common.oauth.{ OAuth2ProviderConfiguration, LinkedInOAuthProvider, LinkedInOAuthProviderImpl }
 import com.keepit.common.oauth.adaptor.SecureSocialProviderHelper
 import com.keepit.social.UserIdentityProvider
 import net.codingwell.scalaguice.InjectorExtensions._
@@ -24,4 +24,5 @@ class LinkedInProvider(app: Application)
 
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal] // fail hard
   lazy val provider = global.injector.instance[LinkedInOAuthProviderImpl]
+  lazy val providerConfig: OAuth2ProviderConfiguration = provider.providerConfig
 }

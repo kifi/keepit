@@ -7,8 +7,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.OAuth2TokenInfo
 import play.api.http.Status
-import play.api.libs.json.JsObject
-import play.api.libs.ws.WS
+import play.api.libs.json.{ JsNumber, JsString, JsNull, JsObject }
+import play.api.libs.ws.{ WSResponse, WS }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
@@ -37,11 +37,25 @@ trait FacebookOAuthProvider extends OAuthProvider with OAuth2Support {
 @Singleton
 class FacebookOAuthProviderImpl @Inject() (
     airbrake: AirbrakeNotifier,
-    oauth2Config: OAuth2Configuration) extends FacebookOAuthProvider with OAuth2Support with Logging {
+    val oauth2Config: OAuth2Configuration) extends FacebookOAuthProvider with OAuth2Support with Logging {
 
-  val config = oauth2Config.getProviderConfig(providerId.id) match {
-    case None => throw new IllegalArgumentException(s"config not found for $providerId")
-    case Some(cfg) => cfg
+  override def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = {
+    log.info(s"[buildTokenInfo(fb)] response.body=${response.body}")
+    val parsed = response.body.split("&").map { kv =>
+      val p = kv.split("=").take(2)
+      p(0) -> (if (p.length == 2) {
+        try { JsNumber(p(1).toInt) } catch {
+          case _: Throwable => JsString(p(1))
+        }
+      } else JsNull)
+    }.toMap
+    log.info(s"[buildTokenInfo] parsed=$parsed")
+    OAuth2TokenInfo(
+      OAuth2AccessToken(parsed.get(OAuth2Constants.AccessToken).map(_.as[String]).get),
+      parsed.get(OAuth2Constants.TokenType).map(_.asOpt[String]).flatten,
+      parsed.get(OAuth2Constants.ExpiresIn).map(_.asOpt[Int]).flatten,
+      parsed.get(OAuth2Constants.RefreshToken).map(_.asOpt[String]).flatten
+    )
   }
 
   def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {
@@ -77,10 +91,10 @@ class FacebookOAuthProviderImpl @Inject() (
   }
 
   def exchangeLongTermToken(oauth2Info: OAuth2TokenInfo): Future[OAuth2TokenInfo] = {
-    val resF = WS.url(config.exchangeTokenUrl.get.toString).withQueryString(
+    val resF = WS.url(providerConfig.exchangeTokenUrl.get.toString).withQueryString(
       "grant_type" -> "fb_exchange_token",
-      "client_id" -> config.clientId,
-      "client_secret" -> config.clientSecret,
+      "client_id" -> providerConfig.clientId,
+      "client_secret" -> providerConfig.clientSecret,
       "fb_exchange_token" -> oauth2Info.accessToken.token
     ).get
     resF map { res =>
@@ -92,7 +106,7 @@ class FacebookOAuthProviderImpl @Inject() (
         }.toMap
         oauth2Info.copy(accessToken = OAuth2AccessToken(params("access_token")), expiresIn = params.get("expires").map(_.toInt))
       } else {
-        log.warn(s"[exchangeToken] failed to obtain exchange token. status=${res.statusText} resp=${res.body} oauth2Info=$oauth2Info; config=$config")
+        log.warn(s"[exchangeToken] failed to obtain exchange token. status=${res.statusText} resp=${res.body} oauth2Info=$oauth2Info; config=$providerConfig")
         oauth2Info
       }
     } recover {
