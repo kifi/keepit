@@ -1,19 +1,29 @@
-<kifi class="kifi-root kifi-tip kifi-keepers-box {{cssClass}}{{#numOthers}} kifi-with-others{{/numOthers}}">
-  <div class="kifi-keepers-pics kifi-keepers-pics-{{numSquares}}">
-  {{#keepers}}
-    <a class="kifi-keepers-pic"{{#linkKeepers}} href="javascript:"{{/linkKeepers}} style="background-image:url({{cdnBase}}/users/{{id}}/pics/{{#big}}200{{/big}}{{^big}}100{{/big}}/{{pictureName}})" data-id="{{id}}"></a>
-  {{/keepers}}
-  {{#numMore}}
-    <span class="kifi-keepers-more">+{{numMore}}</span>
-  {{/numMore}}
-  </div>
-  <div class="kifi-keepers-who">
-    <div class="kifi-keepers-kept-by">kept by</div>
-    <span class="kifi-keepers-you"{{^kept}} style="display:none"{{/kept}}></span>
-    <span class="kifi-keepers-friends" data-n="{{numFriends}}">{{numFriends}} friend</span>
-    {{#numOthers}}
-      and <span class="kifi-keepers-others" data-n="{{numOthers}}">{{numOthers}} other</span>
-    {{/numOthers}}
-  </div>
-  <div class="kifi-keepers-tri-shadow"></div>
+<kifi class="kifi-root kifi-keepers {{cssClass}}">
+  {{#libs.length}}
+    <div class="kifi-keepers-h">Kept In {{#oneLib}}This Library{{/oneLib}}{{^oneLib}}These Libraries{{/oneLib}}</div>
+    <div class="kifi-keepers-libs">
+    {{#libs}}
+      <a class="kifi-keepers-lib" href="{{origin}}/{{owner.username}}/{{slug}}" target="_blank" tabindex="-1">
+        <img class="kifi-keepers-lib-owner-pic" src="{{{cdnBase}}}/users/{{owner.id}}/pics/100/{{owner.pictureName}}"/>
+        <div class="kifi-keepers-lib-name">{{name}}</div>
+        <span class="kifi-keepers-lib-keeps" data-n="{{keeps}}">{{keeps}} keep</span>
+        {{#followers}}
+          &#xb7; <span class="kifi-keepers-lib-followers" data-n="{{followers}}">{{followers}} follower</span>
+        {{/followers}}
+      </a>
+    {{/libs}}
+    </div>
+  {{/libs.length}}
+  {{#keepers.length}}
+    <div class="kifi-keepers-h">Kept By</div>
+    <div class="kifi-keepers-pics">
+    {{#keepers}}
+      <a class="kifi-keepers-pic"{{#linkKeepers}} href="javascript:"{{/linkKeepers}} style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})" data-id="{{id}}"></a>
+    {{/keepers}}
+    {{#numMore}}
+      <span class="kifi-keepers-more">{{numMore}}</span>
+    {{/numMore}}
+    </div>
+  {{/keepers.length}}
+  <div class="kifi-keepers-tri"></div>
 </kifi>

@@ -104,6 +104,8 @@ PageData.prototype = {
     this.neverOnSite = o.neverOnSite;
     this.shown = o.shown;
     this.keepers = o.keepers || [];
+    this.keepersTotal = o.keepersTotal || this.keepers.length;
+    this.libraries = o.libraries || [];
   },
   howKept: function () {
     var keeps = this.keeps;
@@ -596,7 +598,13 @@ api.port.on({
   get_keepers: function(_, respond, tab) {
     log('[get_keepers]', tab.id);
     var d = pageData[tab.nUri];
-    respond(d ? {kept: d.kept, keepers: d.keepers.filter(idIsNot(me.id)), otherKeeps: 0} : {keepers: []});
+    respond({
+      kept: d ? d.kept : undefined,
+      keepers: d ? d.keepers : [],
+      keepersTotal: d ? d.keepersTotal : 0,
+      libraries: d ? d.libraries : [],
+      origin: webBaseUri()
+    });
   },
   keep: function (data, respond, tab) {
     log('[keep]', data);
@@ -1995,7 +2003,7 @@ function kififyWithPageData(tab, d) {
         log('[initTab]', tab.id, 'restricted');
       } else if (d.shown) {
         log('[initTab]', tab.id, 'shown before');
-      } else if (d.keepers.length) {
+      } else if (d.keepers.length || d.libraries.length) {
         tab.keepersSec = 20;
         if (api.tabs.isFocused(tab)) scheduleAutoEngage(tab, 'keepers');
       }

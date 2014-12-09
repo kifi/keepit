@@ -113,7 +113,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         }
       }
     }).mousedown(function (e) {
-      if (e.which !== 1 || e.isDefaultPrevented() || data.stickiness || $(e.target).is('.kifi-tip,.kifi-tip *') || e.originalEvent.isTrusted === false) return;
+      if (e.which !== 1 || e.isDefaultPrevented() || data.stickiness || $(e.target).is('.kifi-tip,.kifi-tip *,.kifi-keepers,.kifi-keepers *') || e.originalEvent.isTrusted === false) return;
       e.preventDefault();  // prevents selection and selection scrolling
       data.dragTimer = setTimeout(startDrag.bind(null, data), 900);
       data.mousedownEvent = e.originalEvent;
@@ -141,8 +141,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     .hoverfu('.kifi-keep-btn', function (configureHover) {
       var btn = this;
       api.port.emit('get_keepers', function (o) {
-        if (o.keepers.length) {
-          var params = setKeepersAndCounts(o.keepers, o.otherKeeps, {
+        if (o.libraries.length || o.keepers.length) {
+          var params = setSocialParams(o, {
             cssClass: 'kifi-keepers-hover',
             linkKeepers: true,
             kept: o.kept
@@ -335,7 +335,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       k.render('html/friend_card', friend, function (html) {
         configureHover(html, {
           mustHoverFor: 100, hideAfter: 4000, click: 'toggle', parent: $tip,
-          position: {my: 'center bottom-13', at: 'center top', of: $pic, collision: 'fit', using: function (pos, o) {
+          position: {my: 'center bottom-16', at: 'center top', of: $pic, collision: 'fit', using: function (pos, o) {
             var xTC = o.target.left + .5 * o.target.width;
             var xEC = o.element.left + .5 * o.element.width;
             if (xTC - xEC >= 1) {
@@ -437,20 +437,17 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     }
   }
 
-  function setKeepersAndCounts(keepers, numOthers, o) {
-    var n = keepers.length;
-    o.numFriends = n;
-    o.numOthers = numOthers;
-    o.numSquares = n === 5 || n === 7 ? n - 1 : Math.min(8, n);
-    o.keepers = pick(keepers, n === 5 || n === 7 ? n - 2 : (n > 8 ? 7 : n));
-    o.numMore = n - o.keepers.length;
-    if (n <= 3) {
-      o.keepers[n-1].big = true;
-      if (n === 2) {
-        o.keepers[0].big = true;
-      }
+  function setSocialParams(o, params) {
+    if (o.keepers.length === o.keepersTotal && o.keepersTotal <= 5) {
+      params.keepers = o.keepers;
+    } else {
+      params.keepers = o.keepers.slice(0, 4);
+      params.numMore = o.keepersTotal - params.keepers.length;
     }
-    return o;
+    params.origin = o.origin;
+    params.libs = o.libraries.slice(0, 2);
+    params.oneLib = params.libs.length === 1;
+    return params;
   }
 
   function pick(arr, n) {
@@ -551,19 +548,26 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       if (lastCreatedAt) return;
       var $tile = $(k.tile);
         api.port.emit('get_keepers', function (o) {
-          if (o.keepers.length && !lastCreatedAt) {
+          if ((o.keepers.length || o.libraries.length) && !lastCreatedAt) {
             $tile.hoverfu(function (configureHover) {
               // TODO: preload friend pictures
-              var params = setKeepersAndCounts(o.keepers, o.otherKeeps, {cssClass: 'kifi-keepers-promo'});
+              var params = setSocialParams(o, {cssClass: 'kifi-keepers-promo'});
               k.render('html/keeper/keepers', params, function (html) {
                 if (lastCreatedAt) return;
-                var $promo = $(html).on('transitionend', function unhoverfu(e) {
+                var $promo = $(html);
+                var $libs = $promo.find('.kifi-keepers-libs');
+                if ($libs.length) {
+                  $promo.insertBefore($tile);
+                  $libs.css('width', $libs[0].offsetWidth);
+                  $promo.detach();
+                }
+                $promo.on('transitionend', function unhoverfu(e) {
                   if (e.target === this && !this.classList.contains('kifi-showing') && e.originalEvent.propertyName === 'opacity') {
                     $promo.off('transitionend', unhoverfu);
                     $tile.hoverfu('destroy');
                   }
                 });
-                configureHover($promo, {parent: $tile, mustHoverFor: 0, canLeaveFor: 1e9});
+                configureHover($promo, {parent: $tile, mustHoverFor: 0, canLeaveFor: 1e9, ignoreWheel: true});
                 api.port.emit('track_notified', {
                   category: 'socialToolTip',
                   subsource: 'tile',
@@ -572,7 +576,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                 });
               });
             }).hoverfu('show');
-            setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000);
+            setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000 + 1800 * o.libraries.length);
           }
         });
     },
