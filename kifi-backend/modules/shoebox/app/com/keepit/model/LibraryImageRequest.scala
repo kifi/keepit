@@ -28,6 +28,8 @@ object LibraryImageRequestStates extends States[LibraryImageRequest] {
   val FETCHING = State[LibraryImageRequest]("fetching") // Fetching image in progress
   val PROCESSING = State[LibraryImageRequest]("processing") // Decoding the image, including resizing
   val PERSISTING = State[LibraryImageRequest]("persisting") // Uploading image (with all sizes) to S3
+  val UPLOADED = State[LibraryImageRequest]("uploaded") // Uploaded image but not positioned yet
+  val POSITIONED = State[LibraryImageRequest]("positioned") // Finalize positioning image
 
   // Failure states
   val UPSTREAM_FAILED = State[LibraryImageRequest]("upstream_failed") // Upstream provider failed to provide image. Typically, simply did not have an image.

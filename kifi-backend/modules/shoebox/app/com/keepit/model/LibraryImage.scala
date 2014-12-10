@@ -32,4 +32,8 @@ case class LibraryImagePosition(
   centerX: Int, centerY: Int,
   width: Int, height: Int)
 
+object LibraryImagePosition {
+  val default = LibraryImagePosition(50, 50, 100, 100)
+}
+
 object LibraryImageStates extends States[LibraryImage]

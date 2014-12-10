@@ -21,7 +21,7 @@ trait LibraryImageCommander {
 
   def getUrl(libraryImage: LibraryImage): String
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage]
-  def setLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], imagePos: LibraryImagePosition, source: ImageSource, requestId: Option[Id[LibraryImageRequest]] = None): Future[ImageProcessDone]
+  def setLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], imagePos: Option[LibraryImagePosition], source: ImageSource, requestId: Option[Id[LibraryImageRequest]] = None): Future[ImageProcessDone]
   def positionLibraryImage(libraryId: Id[Library], imagePosition: LibraryImagePosition): Seq[LibraryImage]
   def removeImageForLibrary(libraryId: Id[Library]): Boolean // Returns true if images were removed, false otherwise
 }
@@ -50,7 +50,7 @@ class LibraryImageCommanderImpl @Inject() (
     ProcessedImageSize.pickBestImage(idealSize, validLibraryImages)
   }
 
-  def setLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
+  def setLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: Option[LibraryImagePosition], source: ImageSource, requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
     fetchAndSet(image, libraryId, position, source)(requestId).map { done =>
       finalizeImageRequestState(libraryId, requestId, done)
       done
@@ -82,11 +82,11 @@ class LibraryImageCommanderImpl @Inject() (
   // Internal helper methods!
   //
 
-  private def fetchAndSet(imageFile: TemporaryFile, libraryId: Id[Library], imagePos: LibraryImagePosition, source: ImageSource)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
+  private def fetchAndSet(imageFile: TemporaryFile, libraryId: Id[Library], imagePos: Option[LibraryImagePosition], source: ImageSource)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
     runFetcherAndPersist(libraryId, imagePos, source)(fetchAndHashLocalImage(imageFile))
   }
 
-  private def runFetcherAndPersist(libraryId: Id[Library], imagePos: LibraryImagePosition, source: ImageSource)(fetcher: => Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]])(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
+  private def runFetcherAndPersist(libraryId: Id[Library], imagePos: Option[LibraryImagePosition], source: ImageSource)(fetcher: => Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]])(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
     updateRequestState(LibraryImageRequestStates.FETCHING)
 
     fetcher.flatMap {
@@ -104,7 +104,7 @@ class LibraryImageCommanderImpl @Inject() (
     }
   }
 
-  private def uploadAndPersistImages(originalImage: ImageProcessState.ImageLoadedAndHashed, toPersist: Set[ImageProcessState.ReadyToPersist], libraryId: Id[Library], selection: LibraryImagePosition, source: ImageSource): Future[ImageProcessDone] = {
+  private def uploadAndPersistImages(originalImage: ImageProcessState.ImageLoadedAndHashed, toPersist: Set[ImageProcessState.ReadyToPersist], libraryId: Id[Library], imagePosOpt: Option[LibraryImagePosition], source: ImageSource)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
     val uploads = toPersist.map { image =>
       log.info(s"[lic] Persisting ${image.key} (${image.bytes} B)")
       libraryImageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
@@ -115,12 +115,15 @@ class LibraryImageCommanderImpl @Inject() (
     Future.sequence(uploads).map { results =>
       val libraryImages = results.map {
         case uploadedImage =>
+          updateRequestState(LibraryImageRequestStates.UPLOADED)
           val isOriginal = uploadedImage.key.takeRight(7).indexOf(originalLabel) != -1
+          val imagePos = imagePosOpt.getOrElse(LibraryImagePosition.default)
           val libImg = LibraryImage(libraryId = libraryId, imagePath = uploadedImage.key, format = uploadedImage.format,
             width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight,
-            cropCenterX = selection.centerX, cropCenterY = selection.centerY,
-            cropWidth = selection.width, cropHeight = selection.height,
+            cropCenterX = imagePos.centerX, cropCenterY = imagePos.centerY,
+            cropWidth = imagePos.width, cropHeight = imagePos.height,
             source = source, sourceFileHash = originalImage.hash, isOriginal = isOriginal)
+          updateRequestState(LibraryImageRequestStates.POSITIONED)
           uploadedImage.image.flush()
           libImg
       }
