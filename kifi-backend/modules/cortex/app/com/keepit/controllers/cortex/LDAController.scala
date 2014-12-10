@@ -194,7 +194,7 @@ class LDAController @Inject() (
 
   def getSimilarLibraries(libId: Id[Library], limit: Int, version: Option[Int]) = Action { request =>
     val ver = ModelVersion[DenseLDA](3) // just use this for now.
-    val libs = lda.getSimilarLibraries(libId, limit)(ver)
+    val libs = statsd.time("ldaController.getSimilarLibraries", 1.0){ _ => lda.getSimilarLibraries(libId, limit)(ver) }
     Ok(Json.toJson(libs))
   }
 
