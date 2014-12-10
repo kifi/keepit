@@ -4,7 +4,7 @@ import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.time._
 import com.keepit.cortex.CortexTestInjector
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.DenseLDA
+import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA }
 import com.keepit.model._
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -41,6 +41,29 @@ class LibraryLDATopicRepoTest extends Specification with CortexTestInjector {
 
           feats = libTopicRepo.getUserFollowedLibraryFeatures(Id[User](2), ModelVersion[DenseLDA](1))
           feats.map { _.value }.flatten.toList === List(0.7f, 0.3f)
+        }
+
+      }
+    }
+
+    "retrieve libraries by topic ids" in {
+      withDb() { implicit injector =>
+        val libTopicRepo = inject[LibraryLDATopicRepo]
+        val libTopic1 = LibraryLDATopic(libraryId = Id[Library](1), version = ModelVersion[DenseLDA](1), state = LibraryLDATopicStates.ACTIVE, numOfEvidence = 10, firstTopic = Some(LDATopic(0)), secondTopic = Some(LDATopic(1)), thirdTopic = Some(LDATopic(2)), topic = None)
+        val libTopic2 = LibraryLDATopic(libraryId = Id[Library](2), version = ModelVersion[DenseLDA](1), state = LibraryLDATopicStates.ACTIVE, numOfEvidence = 10, firstTopic = Some(LDATopic(0)), secondTopic = Some(LDATopic(1)), thirdTopic = Some(LDATopic(2)), topic = None)
+        val libTopic3 = LibraryLDATopic(libraryId = Id[Library](3), version = ModelVersion[DenseLDA](1), state = LibraryLDATopicStates.ACTIVE, numOfEvidence = 10, firstTopic = Some(LDATopic(0)), secondTopic = Some(LDATopic(1)), thirdTopic = Some(LDATopic(3)), topic = None)
+        val libTopic4 = LibraryLDATopic(libraryId = Id[Library](4), version = ModelVersion[DenseLDA](1), state = LibraryLDATopicStates.ACTIVE, numOfEvidence = 10, firstTopic = Some(LDATopic(0)), secondTopic = Some(LDATopic(2)), thirdTopic = Some(LDATopic(3)), topic = None)
+
+        db.readWrite { implicit s =>
+          List(libTopic1, libTopic2, libTopic3, libTopic4) foreach { libTopicRepo.save(_) }
+        }
+
+        val (first, second, third) = (LDATopic(0), LDATopic(1), LDATopic(2))
+
+        db.readOnlyReplica { implicit s =>
+          libTopicRepo.getLibraryByTopics(first, Some(second), Some(third), limit = 10, version = ModelVersion[DenseLDA](1)).sortBy(_.libraryId).map(_.libraryId.id) === List(1, 2)
+          libTopicRepo.getLibraryByTopics(first, Some(second), limit = 10, version = ModelVersion[DenseLDA](1)).sortBy(_.libraryId).map(_.libraryId.id) === List(1, 2, 3)
+          libTopicRepo.getLibraryByTopics(first, limit = 10, version = ModelVersion[DenseLDA](1)).sortBy(_.libraryId).map(_.libraryId.id) === List(1, 2, 3, 4)
         }
 
       }
