@@ -120,7 +120,7 @@ class KeepImageCommanderImpl @Inject() (
           val realUrl = if (imageUrl.startsWith("//")) "http:" + imageUrl else imageUrl
           fetchAndSet(realUrl, keepId, ImageSource.EmbedlyOrPagePeeker, overwriteExistingImage = overwriteExistingChoice)(None)
         }.getOrElse {
-          Future.successful(ImageProcessState.UpstreamProviderNoImage$)
+          Future.successful(ImageProcessState.UpstreamProviderNoImage)
         }
       }.recover {
         case ex: Throwable =>
@@ -157,8 +157,8 @@ class KeepImageCommanderImpl @Inject() (
       val (state, failureCode, failureReason) = doneResult match {
         case err: UpstreamProviderFailed =>
           (UPSTREAM_FAILED, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
-        case UpstreamProviderNoImage$ =>
-          (UPSTREAM_FAILED, Some(UpstreamProviderNoImage$.reason), None)
+        case UpstreamProviderNoImage =>
+          (UPSTREAM_FAILED, Some(UpstreamProviderNoImage.reason), None)
         case err: SourceFetchFailed =>
           (FETCHING_FAILED, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
         case err: HashFailed =>

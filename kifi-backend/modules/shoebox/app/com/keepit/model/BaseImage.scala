@@ -53,7 +53,7 @@ object ImageProcessState {
 
   // Failures
   case class UpstreamProviderFailed(ex: Throwable) extends ImageStoreFailureWithException(ex, "upstream_provider_failed")
-  case object UpstreamProviderNoImage$ extends ImageStoreFailure("upstream_provider_no_image")
+  case object UpstreamProviderNoImage extends ImageStoreFailure("upstream_provider_no_image")
   case class SourceFetchFailed(ex: Throwable) extends ImageStoreFailureWithException(ex, "source_fetch_failed")
   case class HashFailed(ex: Throwable) extends ImageStoreFailureWithException(ex, "image_hash_failed")
   case class InvalidImage(ex: Throwable) extends ImageStoreFailureWithException(ex, "invalid_image")
