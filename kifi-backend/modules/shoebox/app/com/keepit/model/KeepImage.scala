@@ -15,7 +15,7 @@ case class KeepImage(
     format: ImageFormat,
     width: Int,
     height: Int,
-    source: BaseImageSource,
+    source: ImageSource,
     sourceFileHash: ImageHash,
     sourceImageUrl: Option[String],
     isOriginal: Boolean) extends BaseImage with Model[KeepImage] {
@@ -25,4 +25,3 @@ case class KeepImage(
 }
 
 object KeepImageStates extends States[KeepImage]
-

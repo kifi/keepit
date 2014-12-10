@@ -60,14 +60,14 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         val (user, lib, uri, keep1, keep2) = setup()
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, BaseImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === BaseImageProcessState.StoreSuccess
+          saved === ImageProcessState.StoreSuccess
         }
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, BaseImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === BaseImageProcessState.StoreSuccess
+          saved === ImageProcessState.StoreSuccess
         }
         // If this complains about not having an `all`, then it's not using FakeKeepImageStore
         inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet.size === 1
@@ -91,9 +91,9 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         bulk2.mapValues(_.map(_.id)) === Map(keep1.id.get -> Some(keepImage1.get.id), keep2.id.get -> Some(keepImage2.get.id))
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile2, keep2.id.get, BaseImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile2, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === BaseImageProcessState.StoreSuccess // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
+          saved === ImageProcessState.StoreSuccess // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
         }
 
         inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet.size === 4
@@ -108,9 +108,9 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         bulk3.mapValues(_.map(_.id)) === Map(keep1.id.get -> Some(keepImage1.get.id), keep2.id.get -> Some(keepImage3.get.id))
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, BaseImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === BaseImageProcessState.StoreSuccess
+          saved === ImageProcessState.StoreSuccess
         }
 
         val keepImage4 = commander.getBestImageForKeep(keep2.id.get, ImageSize(100, 100)).flatten
@@ -144,9 +144,9 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         val (user, lib, uri, keep1, _) = setup()
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, BaseImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === BaseImageProcessState.StoreSuccess
+          saved === ImageProcessState.StoreSuccess
         }
 
         {
@@ -154,11 +154,11 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
             keepImageRepo.all().head.imagePath
           }
           val existingUrl = inject[S3ImageConfig].cdnBase + "/" + path
-          val savedF = commander.setKeepImageFromUrl(existingUrl, keep1.id.get, BaseImageSource.UserPicked)
+          val savedF = commander.setKeepImageFromUrl(existingUrl, keep1.id.get, ImageSource.UserPicked)
           val saved = Await.result(savedF, Duration("10 seconds"))
 
           // If this didn't de-dupe, it would fail, because the HTTP fetcher is disabled when no application is running
-          saved === BaseImageProcessState.StoreSuccess
+          saved === ImageProcessState.StoreSuccess
         }
 
         true === true

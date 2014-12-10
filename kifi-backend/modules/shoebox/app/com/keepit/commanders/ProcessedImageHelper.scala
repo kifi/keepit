@@ -31,45 +31,45 @@ trait ProcessedImageHelper {
 
   val originalLabel: String = "_o"
 
-  def fetchAndHashLocalImage(file: TemporaryFile): Future[Either[BaseImageStoreFailure, BaseImageProcessState.ImageLoadedAndHashed]] = {
-    log.info(s"[kic] Fetching ${file.file.getAbsolutePath}")
+  def fetchAndHashLocalImage(file: TemporaryFile): Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
+    log.info(s"[pih] Fetching ${file.file.getAbsolutePath}")
 
     val formatOpt = detectImageType(file)
 
     formatOpt match {
       case Some(format) =>
-        log.info(s"[kic] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
+        log.info(s"[pih] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
         hashImageFile(file.file) match {
           case Success(hash) =>
-            log.info(s"[kic] Hashed: ${hash.hash}")
-            Future.successful(Right(BaseImageProcessState.ImageLoadedAndHashed(file, format, hash, None)))
+            log.info(s"[pih] Hashed: ${hash.hash}")
+            Future.successful(Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, None)))
           case Failure(ex) =>
-            Future.successful(Left(BaseImageProcessState.HashFailed(ex)))
+            Future.successful(Left(ImageProcessState.HashFailed(ex)))
         }
       case None =>
-        Future.successful(Left(BaseImageProcessState.SourceFetchFailed(new RuntimeException(s"Unknown image type"))))
+        Future.successful(Left(ImageProcessState.SourceFetchFailed(new RuntimeException(s"Unknown image type"))))
     }
   }
 
-  def fetchAndHashRemoteImage(imageUrl: String): Future[Either[BaseImageStoreFailure, BaseImageProcessState.ImageLoadedAndHashed]] = {
-    log.info(s"[kic] Fetching $imageUrl")
+  def fetchAndHashRemoteImage(imageUrl: String): Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
+    log.info(s"[pih] Fetching $imageUrl")
     fetchRemoteImage(imageUrl).map {
       case (format, file) =>
-        log.info(s"[kic] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
+        log.info(s"[pih] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
         hashImageFile(file.file) match {
           case Success(hash) =>
-            log.info(s"[kic] Hashed: ${hash.hash}")
-            Right(BaseImageProcessState.ImageLoadedAndHashed(file, format, hash, Some(imageUrl)))
+            log.info(s"[pih] Hashed: ${hash.hash}")
+            Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, Some(imageUrl)))
           case Failure(ex) =>
-            Left(BaseImageProcessState.HashFailed(ex))
+            Left(ImageProcessState.HashFailed(ex))
         }
     }.recover {
       case ex: Throwable =>
-        Left(BaseImageProcessState.SourceFetchFailed(ex))
+        Left(ImageProcessState.SourceFetchFailed(ex))
     }
   }
 
-  def buildPersistSet(sourceImage: BaseImageProcessState.ImageLoadedAndHashed, baseLabel: String)(implicit photoshop: Photoshop): Either[BaseImageStoreFailure, Set[BaseImageProcessState.ReadyToPersist]] = {
+  def buildPersistSet(sourceImage: ImageProcessState.ImageLoadedAndHashed, baseLabel: String)(implicit photoshop: Photoshop): Either[ImageStoreFailure, Set[ImageProcessState.ReadyToPersist]] = {
     val outFormat = inputFormatToOutputFormat(sourceImage.format)
     def keygen(width: Int, height: Int, label: String = "") = {
       baseLabel + "/" + sourceImage.hash.hash + "_" + width + "x" + height + label + "." + outFormat.value
@@ -77,16 +77,16 @@ trait ProcessedImageHelper {
     validateAndLoadImageFile(sourceImage.file.file) match {
       case Success(image) =>
         val resizedImages = calcSizesForImage(image).map { boundingBox =>
-          log.info(s"[kic] Using bounding box $boundingBox px")
+          log.info(s"[pih] Using bounding box $boundingBox px")
           photoshop.resizeImage(image, sourceImage.format, boundingBox).map { resizedImage =>
             bufferedImageToInputStream(resizedImage, outFormat).map {
               case (is, bytes) =>
                 val key = keygen(resizedImage.getWidth, resizedImage.getHeight)
-                BaseImageProcessState.ReadyToPersist(key, outFormat, is, resizedImage, bytes)
+                ImageProcessState.ReadyToPersist(key, outFormat, is, resizedImage, bytes)
             }
           }.flatten match {
             case Success(img) => Right(img)
-            case Failure(ex) => Left(BaseImageProcessState.InvalidImage(ex))
+            case Failure(ex) => Left(ImageProcessState.InvalidImage(ex))
           }
         }
 
@@ -97,17 +97,17 @@ trait ProcessedImageHelper {
             val original = bufferedImageToInputStream(image, inputFormatToOutputFormat(sourceImage.format)).map {
               case (is, bytes) =>
                 val key = keygen(image.getWidth, image.getHeight, originalLabel)
-                BaseImageProcessState.ReadyToPersist(key, outFormat, is, image, bytes)
+                ImageProcessState.ReadyToPersist(key, outFormat, is, image, bytes)
             }
             original match {
               case Success(o) =>
                 val resizedSet = resizedImages.collect { case Right(img) => img }
                 Right(resizedSet + o)
-              case Failure(ex) => Left(BaseImageProcessState.InvalidImage(ex))
+              case Failure(ex) => Left(ImageProcessState.InvalidImage(ex))
             }
         }
       case Failure(ex) =>
-        Left(BaseImageProcessState.InvalidImage(ex))
+        Left(ImageProcessState.InvalidImage(ex))
     }
   }
 
@@ -293,7 +293,7 @@ object ProcessedImageSize {
     allSizes.map(s => s -> maxDivergence(s.idealSize, size)).sortBy(_._2).head._1
   }
 
-  def pickBestImage(idealSize: ImageSize, images: Seq[BaseImage]): Option[BaseImage] = {
+  def pickBestImage[T <: BaseImage](idealSize: ImageSize, images: Seq[T]): Option[T] = {
     images.map(s => s -> maxDivergence(idealSize, s.imageSize)).sortBy(_._2).headOption.map(_._1)
   }
 

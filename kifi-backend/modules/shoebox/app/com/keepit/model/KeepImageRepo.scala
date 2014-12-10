@@ -21,7 +21,7 @@ class KeepImageRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  implicit val KeepImageSourceMapper = MappedColumnType.base[BaseImageSource, String](_.name, BaseImageSource.apply)
+  implicit val KeepImageSourceMapper = MappedColumnType.base[ImageSource, String](_.name, ImageSource.apply)
   implicit val imageHashMapper = MappedColumnType.base[ImageHash, String](_.hash, ImageHash.apply)
 
   type RepoImpl = KeepImageTable
@@ -32,7 +32,7 @@ class KeepImageRepoImpl @Inject() (
     def format = column[ImageFormat]("image_format", O.NotNull)
     def width = column[Int]("width", O.NotNull)
     def height = column[Int]("height", O.NotNull)
-    def source = column[BaseImageSource]("source", O.NotNull)
+    def source = column[ImageSource]("source", O.NotNull)
     def sourceFileHash = column[ImageHash]("source_file_hash", O.NotNull)
     def sourceImageUrl = column[Option[String]]("source_image_url", O.Nullable)
     def isOriginal = column[Boolean]("is_original", O.NotNull)

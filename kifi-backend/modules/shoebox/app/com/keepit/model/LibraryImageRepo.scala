@@ -19,7 +19,7 @@ class LibraryImageRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  implicit val LibraryImageSourceMapper = MappedColumnType.base[BaseImageSource, String](_.name, BaseImageSource.apply)
+  implicit val LibraryImageSourceMapper = MappedColumnType.base[ImageSource, String](_.name, ImageSource.apply)
   implicit val imageHashMapper = MappedColumnType.base[ImageHash, String](_.hash, ImageHash.apply)
 
   type RepoImpl = LibraryImageTable
@@ -30,21 +30,20 @@ class LibraryImageRepoImpl @Inject() (
     def format = column[ImageFormat]("image_format", O.NotNull)
     def width = column[Int]("width", O.NotNull)
     def height = column[Int]("height", O.NotNull)
-    def centerX = column[Int]("center_x", O.NotNull)
-    def centerY = column[Int]("center_y", O.NotNull)
-    def selectedWidth = column[Int]("selected_width", O.NotNull)
-    def selectedHeight = column[Int]("selected_height", O.NotNull)
-    def source = column[BaseImageSource]("source", O.NotNull)
+    def centerX = column[Int]("crop_center_x", O.NotNull)
+    def centerY = column[Int]("crop_center_y", O.NotNull)
+    def cropWidth = column[Int]("crop_width", O.NotNull)
+    def cropHeight = column[Int]("crop_height", O.NotNull)
+    def source = column[ImageSource]("source", O.NotNull)
     def sourceFileHash = column[ImageHash]("source_file_hash", O.NotNull)
-    def sourceImageUrl = column[Option[String]]("source_image_url", O.Nullable)
     def isOriginal = column[Boolean]("is_original", O.NotNull)
 
     def idxLibraryId = index("library_image_f_library_id", libraryId, unique = false)
     def idxSourceFileHashSize = index("library_image_u_source_file_hash_size_library_id", (sourceFileHash, width, height, libraryId), unique = true)
 
     def * = (id.?, createdAt, updatedAt, state, libraryId, width, height,
-      centerX, centerY, selectedWidth, selectedHeight,
-      imagePath, format, source, sourceFileHash, sourceImageUrl, isOriginal) <> ((LibraryImage.apply _).tupled, LibraryImage.unapply _)
+      centerX, centerY, cropWidth, cropHeight,
+      imagePath, format, source, sourceFileHash, isOriginal) <> ((LibraryImage.apply _).tupled, LibraryImage.unapply _)
   }
 
   def table(tag: Tag) = new LibraryImageTable(tag)
