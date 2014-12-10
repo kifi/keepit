@@ -27,10 +27,9 @@ trait LibraryImageCommander {
 
   def getUrl(libraryImage: LibraryImage): String
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage]
-  def setLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], imageSizing: LibraryImageSelection, source: LibraryImageSource, requestId: Option[Id[LibraryImageRequest]] = None): Future[LibraryImageProcessDone]
+  def setLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], imageSizing: LibraryImageSelection, source: BaseImageSource, requestId: Option[Id[LibraryImageRequest]] = None): Future[BaseImageProcessDone]
   def setLibraryImageSizing(libraryId: Id[Library], imageSizing: LibraryImageSelection): Seq[LibraryImage]
   def removeImageForLibrary(libraryId: Id[Library]): Boolean // Returns true if images were removed, false otherwise
-
 }
 
 @Singleton
@@ -54,10 +53,10 @@ class LibraryImageCommanderImpl @Inject() (
     val validLibraryImages = db.readOnlyMaster { implicit s =>
       libraryImageRepo.getForLibraryId(libraryId)
     }
-    ProcessedImageSize.pickBestLibraryImage(idealSize, validLibraryImages)
+    ProcessedImageSize.pickBestImage(idealSize, validLibraryImages).asInstanceOf[Option[LibraryImage]]
   }
 
-  def setLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], selection: LibraryImageSelection, source: LibraryImageSource, requestId: Option[Id[LibraryImageRequest]]): Future[LibraryImageProcessDone] = {
+  def setLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], selection: LibraryImageSelection, source: BaseImageSource, requestId: Option[Id[LibraryImageRequest]]): Future[BaseImageProcessDone] = {
     fetchAndSet(image, libraryId, selection, source, overwriteExistingImage = true)(requestId).map { done =>
       finalizeImageRequestState(libraryId, requestId, done)
       done
@@ -85,36 +84,16 @@ class LibraryImageCommanderImpl @Inject() (
     images.nonEmpty
   }
 
-  val originalLabel: String = "_o"
-
-  private def fetchAndSet(imageFile: TemporaryFile, libraryId: Id[Library], selection: LibraryImageSelection, source: LibraryImageSource, overwriteExistingImage: Boolean)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[LibraryImageProcessDone] = {
+  private def fetchAndSet(imageFile: TemporaryFile, libraryId: Id[Library], selection: LibraryImageSelection, source: BaseImageSource, overwriteExistingImage: Boolean)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[BaseImageProcessDone] = {
     runFetcherAndPersist(libraryId, selection, source, overwriteExistingImage)(fetchAndHashLocalImage(imageFile))
   }
-  private def fetchAndHashLocalImage(file: TemporaryFile): Future[Either[LibraryImageStoreFailure, LibraryImageProcessState.LibraryImageLoadedAndHashed]] = {
-    log.info(s"[kic] Fetching ${file.file.getAbsolutePath}")
 
-    val formatOpt = detectImageType(file)
-
-    formatOpt match {
-      case Some(format) =>
-        log.info(s"[kic] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
-        hashImageFile(file.file) match {
-          case Success(hash) =>
-            log.info(s"[kic] Hashed: ${hash.hash}")
-            Future.successful(Right(LibraryImageProcessState.LibraryImageLoadedAndHashed(file, format, hash, None)))
-          case Failure(ex) =>
-            Future.successful(Left(LibraryImageProcessState.HashFailed(ex)))
-        }
-      case None =>
-        Future.successful(Left(LibraryImageProcessState.SourceFetchFailed(new RuntimeException(s"Unknown image type"))))
-    }
-  }
-  private def runFetcherAndPersist(libraryId: Id[Library], selection: LibraryImageSelection, source: LibraryImageSource, overwriteExistingImage: Boolean)(fetcher: => Future[Either[LibraryImageStoreFailure, LibraryImageProcessState.LibraryImageLoadedAndHashed]])(implicit requestId: Option[Id[LibraryImageRequest]]): Future[LibraryImageProcessDone] = {
+  private def runFetcherAndPersist(libraryId: Id[Library], selection: LibraryImageSelection, source: BaseImageSource, overwriteExistingImage: Boolean)(fetcher: => Future[Either[BaseImageStoreFailure, BaseImageProcessState.ImageLoadedAndHashed]])(implicit requestId: Option[Id[LibraryImageRequest]]): Future[BaseImageProcessDone] = {
     val existingImagesForLibrary = db.readOnlyMaster { implicit session =>
       libraryImageRepo.getForLibraryId(libraryId)
     }
     if (existingImagesForLibrary.nonEmpty && !overwriteExistingImage) {
-      Future.successful(LibraryImageProcessState.ExistingStoredImagesFound(existingImagesForLibrary))
+      Future.successful(BaseImageProcessState.ExistingStoredImagesFound(existingImagesForLibrary))
     } else {
       updateRequestState(LibraryImageRequestStates.FETCHING)
 
@@ -126,10 +105,10 @@ class LibraryImageCommanderImpl @Inject() (
           }
           if (existingSameHash.isEmpty || overwriteExistingImage) {
             // never seen this image, or we're reprocessing an image
-            buildPersistSet(loadedImage) match {
-              case Right((toPersist, originalWidth, originalHeight)) =>
+            buildPersistSet(loadedImage, "library")(photoshop) match {
+              case Right(toPersist) =>
                 updateRequestState(LibraryImageRequestStates.PERSISTING)
-                uploadAndPersistImages(loadedImage, originalWidth, originalHeight, toPersist, libraryId, selection, source, overwriteExistingImage)
+                uploadAndPersistImages(loadedImage, toPersist, libraryId, selection, source, overwriteExistingImage)
               case Left(failure) =>
                 Future.successful(failure)
             }
@@ -143,53 +122,11 @@ class LibraryImageCommanderImpl @Inject() (
     }
   }
 
-  private def buildPersistSet(sourceImage: LibraryImageProcessState.LibraryImageLoadedAndHashed): Either[LibraryImageStoreFailure, (Set[LibraryImageProcessState.ReadyToPersist], Int, Int)] = {
-    val outFormat = inputFormatToOutputFormat(sourceImage.format)
-    def keygen(width: Int, height: Int, label: String = "") = {
-      "library/" + sourceImage.hash.hash + "_" + width + "x" + height + label + "." + outFormat.value
-    }
-    validateAndLoadImageFile(sourceImage.file.file) match {
-      case Success(image) =>
-        val resizedImages = calcSizesForImage(image).map { boundingBox =>
-          log.info(s"[kic] Using bounding box $boundingBox px")
-          photoshop.resizeImage(image, sourceImage.format, boundingBox).map { resizedImage =>
-            bufferedImageToInputStream(resizedImage, outFormat).map {
-              case (is, bytes) =>
-                val key = keygen(resizedImage.getWidth, resizedImage.getHeight)
-                LibraryImageProcessState.ReadyToPersist(key, outFormat, is, resizedImage, bytes)
-            }
-          }.flatten match {
-            case Success(img) => Right(img)
-            case Failure(ex) => Left(LibraryImageProcessState.InvalidLibraryImage(ex))
-          }
-        }
-
-        resizedImages.find(_.isLeft) match {
-          case Some(error) => // failure of at least one of the images
-            Left(error.left.get)
-          case None =>
-            val original = bufferedImageToInputStream(image, inputFormatToOutputFormat(sourceImage.format)).map {
-              case (is, bytes) =>
-                val key = keygen(image.getWidth, image.getHeight, originalLabel)
-                LibraryImageProcessState.ReadyToPersist(key, outFormat, is, image, bytes)
-            }
-            original match {
-              case Success(o) =>
-                val resizedSet = resizedImages.collect { case Right(img) => img }
-                Right((resizedSet + o, image.getWidth, image.getHeight)) // return original image width & height
-              case Failure(ex) => Left(LibraryImageProcessState.InvalidLibraryImage(ex))
-            }
-        }
-      case Failure(ex) =>
-        Left(LibraryImageProcessState.InvalidLibraryImage(ex))
-    }
-  }
-
-  private def uploadAndPersistImages(originalImage: LibraryImageProcessState.LibraryImageLoadedAndHashed, originalHeight: Int, originalWidth: Int, toPersist: Set[LibraryImageProcessState.ReadyToPersist], libraryId: Id[Library], selection: LibraryImageSelection, source: LibraryImageSource, overwriteExistingImage: Boolean): Future[LibraryImageProcessDone] = {
+  private def uploadAndPersistImages(originalImage: BaseImageProcessState.ImageLoadedAndHashed, toPersist: Set[BaseImageProcessState.ReadyToPersist], libraryId: Id[Library], selection: LibraryImageSelection, source: BaseImageSource, overwriteExistingImage: Boolean): Future[BaseImageProcessDone] = {
     val uploads = toPersist.map { image =>
       log.info(s"[kic] Persisting ${image.key} (${image.bytes} B)")
       libraryImageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
-        LibraryImageProcessState.UploadedLibraryImage(image.key, image.format, image.image)
+        BaseImageProcessState.UploadedImage(image.key, image.format, image.image)
       }
     }
 
@@ -199,7 +136,6 @@ class LibraryImageCommanderImpl @Inject() (
           val isOriginal = uploadedImage.key.takeRight(7).indexOf(originalLabel) != -1
           val libImg = LibraryImage(libraryId = libraryId, imagePath = uploadedImage.key, format = uploadedImage.format,
             width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight,
-            originalWidth = originalWidth, originalHeight = originalHeight,
             offsetWidth = selection.offsetWidth, offsetHeight = selection.offsetHeight,
             selectedWidth = selection.selectedWidth, selectedHeight = selection.selectedHeight,
             source = source, sourceImageUrl = originalImage.sourceImageUrl, sourceFileHash = originalImage.hash, isOriginal = isOriginal)
@@ -210,13 +146,13 @@ class LibraryImageCommanderImpl @Inject() (
         val existingImagesForLibrary = libraryImageRepo.getForLibraryId(libraryId).toSet
         replaceOldLibraryImagesWithNew(existingImagesForLibrary, libraryImages)
       }
-      LibraryImageProcessState.StoreSuccess
+      BaseImageProcessState.StoreSuccess
     }.recover {
       case ex: SQLException =>
         log.error("Could not persist library image", ex)
-        LibraryImageProcessState.DbPersistFailed(ex)
+        BaseImageProcessState.DbPersistFailed(ex)
       case ex: Throwable =>
-        LibraryImageProcessState.CDNUploadFailed(ex)
+        BaseImageProcessState.CDNUploadFailed(ex)
     }
   }
 
@@ -243,20 +179,20 @@ class LibraryImageCommanderImpl @Inject() (
     }
   }
 
-  private def copyExistingImagesAndReplace(libraryId: Id[Library], selection: LibraryImageSelection, source: LibraryImageSource, existingSameHash: Seq[LibraryImage]) = {
+  private def copyExistingImagesAndReplace(libraryId: Id[Library], selection: LibraryImageSelection, source: BaseImageSource, existingSameHash: Seq[LibraryImage]) = {
     val allForThisLibrary = existingSameHash.filter(i => i.libraryId == libraryId)
     val activeForThisLibrary = allForThisLibrary.filter(i => i.state == LibraryImageStates.ACTIVE)
     if (activeForThisLibrary.nonEmpty) {
-      LibraryImageProcessState.ExistingStoredImagesFound(activeForThisLibrary)
+      BaseImageProcessState.ExistingStoredImagesFound(activeForThisLibrary)
     } else if (allForThisLibrary.nonEmpty) {
       val saved = db.readWrite { implicit session =>
         allForThisLibrary.map(_.copy(state = LibraryImageStates.ACTIVE)).map { img => libraryImageRepo.save(img) }
       }
-      LibraryImageProcessState.ExistingStoredImagesFound(saved)
+      BaseImageProcessState.ExistingStoredImagesFound(saved)
     } else {
       val copiedImages = existingSameHash.map { prev =>
         LibraryImage(state = LibraryImageStates.ACTIVE, libraryId = libraryId, imagePath = prev.imagePath, format = prev.format,
-          width = prev.width, height = prev.height, originalWidth = prev.originalWidth, originalHeight = prev.originalHeight,
+          width = prev.width, height = prev.height,
           offsetWidth = selection.offsetWidth, offsetHeight = selection.offsetHeight, selectedWidth = selection.selectedWidth, selectedHeight = selection.selectedHeight,
           source = source, sourceFileHash = prev.sourceFileHash, sourceImageUrl = prev.sourceImageUrl, isOriginal = prev.isOriginal)
       }
@@ -270,7 +206,7 @@ class LibraryImageCommanderImpl @Inject() (
           libraryImageRepo.save(img)
         }
       }
-      LibraryImageProcessState.ExistingStoredImagesFound(saved)
+      BaseImageProcessState.ExistingStoredImagesFound(saved)
     }
   }
 
@@ -282,27 +218,27 @@ class LibraryImageCommanderImpl @Inject() (
     }
   }
 
-  private def finalizeImageRequestState(libraryId: Id[Library], requestIdOpt: Option[Id[LibraryImageRequest]], doneResult: LibraryImageProcessDone): Unit = {
-    import com.keepit.commanders.LibraryImageProcessState._
+  private def finalizeImageRequestState(libraryId: Id[Library], requestIdOpt: Option[Id[LibraryImageRequest]], doneResult: BaseImageProcessDone): Unit = {
+    import com.keepit.model.BaseImageProcessState._
     import com.keepit.model.LibraryImageRequestStates._
 
     requestIdOpt.map { requestId =>
       val (state, failureCode, failureReason) = doneResult match {
         case err: UpstreamProviderFailed =>
           (UPSTREAM_FAILED, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
-        case UpstreamProviderNoLibraryImage$ =>
-          (UPSTREAM_FAILED, Some(UpstreamProviderNoLibraryImage$.reason), None)
+        case UpstreamProviderNoImage$ =>
+          (UPSTREAM_FAILED, Some(UpstreamProviderNoImage$.reason), None)
         case err: SourceFetchFailed =>
           (FETCHING_FAILED, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
         case err: HashFailed =>
           (FETCHING_FAILED, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
-        case err: InvalidLibraryImage =>
+        case err: InvalidImage =>
           (PROCESSING_FAILED, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
         case err: DbPersistFailed =>
           (PERSISTING, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
         case err: CDNUploadFailed =>
           (PERSISTING, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
-        case success: LibraryImageProcessSuccess =>
+        case success: BaseImageProcessSuccess =>
           (INACTIVE, None, None)
       }
 
@@ -324,31 +260,4 @@ class LibraryImageCommanderImpl @Inject() (
         t.getFileName + ":" + t.getLineNumber
     }.take(5).mkString("\n")
   }
-}
-
-sealed trait LibraryImageProcessState
-sealed trait LibraryImageProcessDone extends LibraryImageProcessState
-sealed trait LibraryImageProcessSuccess extends LibraryImageProcessDone
-sealed trait LibraryImageStoreInProgress extends LibraryImageProcessState
-sealed abstract class LibraryImageStoreFailure(val reason: String) extends LibraryImageProcessState with LibraryImageProcessDone
-sealed abstract class LibraryImageStoreFailureWithException(ex: Throwable, reason: String) extends LibraryImageStoreFailure(reason)
-object LibraryImageProcessState {
-  // In-progress
-  case class LibraryImageLoadedAndHashed(file: TemporaryFile, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends LibraryImageStoreInProgress
-  case class LibraryImageValid(image: BufferedImage, format: ImageFormat, hash: ImageHash) extends LibraryImageStoreInProgress
-  case class ReadyToPersist(key: String, format: ImageFormat, is: ByteArrayInputStream, image: BufferedImage, bytes: Int) extends LibraryImageStoreInProgress
-  case class UploadedLibraryImage(key: String, format: ImageFormat, image: BufferedImage) extends LibraryImageStoreInProgress
-
-  // Failures
-  case class UpstreamProviderFailed(ex: Throwable) extends LibraryImageStoreFailureWithException(ex, "upstream_provider_failed")
-  case object UpstreamProviderNoLibraryImage$ extends LibraryImageStoreFailure("upstream_provider_no_image")
-  case class SourceFetchFailed(ex: Throwable) extends LibraryImageStoreFailureWithException(ex, "source_fetch_failed")
-  case class HashFailed(ex: Throwable) extends LibraryImageStoreFailureWithException(ex, "image_hash_failed")
-  case class InvalidLibraryImage(ex: Throwable) extends LibraryImageStoreFailureWithException(ex, "invalid_image")
-  case class DbPersistFailed(ex: Throwable) extends LibraryImageStoreFailureWithException(ex, "db_persist_failed")
-  case class CDNUploadFailed(ex: Throwable) extends LibraryImageStoreFailureWithException(ex, "cdn_upload_failed")
-
-  // Success
-  case object StoreSuccess extends LibraryImageProcessState with LibraryImageProcessSuccess
-  case class ExistingStoredImagesFound(images: Seq[LibraryImage]) extends LibraryImageProcessState with LibraryImageProcessSuccess
 }

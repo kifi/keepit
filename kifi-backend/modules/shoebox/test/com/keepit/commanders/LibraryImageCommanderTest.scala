@@ -52,15 +52,12 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
 
         val libraryImageRepo = inject[LibraryImageRepo]
         val (user, lib) = setup()
+        val (file1, width, height) = fakeFile1
+        val sizing = LibraryImageSelection(0, 0, 100, 100)
+        val savedF = commander.setLibraryImageFromFile(file1, lib.id.get, sizing, BaseImageSource.UserUpload)
+        val saved = Await.result(savedF, Duration("10 seconds"))
+        saved === BaseImageProcessState.StoreSuccess
 
-        {
-
-          val (file1, width, height) = fakeFile1
-          val sizing = LibraryImageSelection(0, 0, 100, 100)
-          val savedF = commander.setLibraryImageFromFile(file1, lib.id.get, sizing, LibraryImageSource.UserUpload)
-          val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === LibraryImageProcessState.StoreSuccess
-        }
         // If this complains about not having an `all`, then it's not using FakeKeepImageStore
         inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 1
 
@@ -70,15 +67,12 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
           libraryImageRepo.getBySourceHash(libraryImages(0).sourceFileHash).length === 1
         }
 
-        {
-          commander.removeImageForLibrary(lib.id.get) === true
-        }
+        commander.removeImageForLibrary(lib.id.get) === true
+
         db.readOnlyMaster { implicit s =>
           libraryImageRepo.getForLibraryId(lib.id.get).length === 0
           libraryImageRepo.getForLibraryId(lib.id.get, None).length === 1
         }
-
-        true === true
       }
     }
 
@@ -88,14 +82,13 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
 
         val libraryImageRepo = inject[LibraryImageRepo]
         val (user, lib) = setup()
+        val (file1, width, height) = fakeFile1
 
-        {
-          val (file1, width, height) = fakeFile1
-          val sizing = LibraryImageSelection(0, 0, 100, 100)
-          val savedF = commander.setLibraryImageFromFile(file1, lib.id.get, sizing, LibraryImageSource.UserUpload)
-          val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === LibraryImageProcessState.StoreSuccess
-        }
+        val sizing = LibraryImageSelection(0, 0, 100, 100)
+        val savedF = commander.setLibraryImageFromFile(file1, lib.id.get, sizing, BaseImageSource.UserUpload)
+        val saved = Await.result(savedF, Duration("10 seconds"))
+        saved === BaseImageProcessState.StoreSuccess
+
         db.readOnlyMaster { implicit s =>
           libraryImageRepo.getForLibraryId(lib.id.get).map { libImage =>
             libImage.imageSelection === LibraryImageSelection(0, 0, 100, 100)
@@ -110,7 +103,6 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
             libImage.imageSelection === LibraryImageSelection(1, 1, 100, 100)
           }
         }
-        true === true
       }
     }
 

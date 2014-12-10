@@ -15,17 +15,18 @@ case class KeepImage(
     format: ImageFormat,
     width: Int,
     height: Int,
-    source: KeepImageSource,
+    source: BaseImageSource,
     sourceFileHash: ImageHash,
     sourceImageUrl: Option[String],
-    isOriginal: Boolean) extends Model[KeepImage] {
-  val imageSize = ImageSize(width, height)
+    isOriginal: Boolean) extends BaseImage with Model[KeepImage] {
+  //val imageSize = ImageSize(width, height)
   def withId(id: Id[KeepImage]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }
 
 object KeepImageStates extends States[KeepImage]
 
+/*
 sealed abstract class KeepImageSource(val name: String)
 object KeepImageSource {
   sealed abstract class UserInitiated(name: String) extends KeepImageSource(name)
@@ -45,3 +46,4 @@ object KeepImageSource {
 
 }
 case class ImageHash(hash: String)
+*/

@@ -15,7 +15,7 @@ case class LibraryImageRequest(
     failureCode: Option[String] = None,
     failureReason: Option[String] = None,
     successHash: Option[ImageHash] = None,
-    source: LibraryImageSource) extends Model[LibraryImageRequest] {
+    source: BaseImageSource) extends Model[LibraryImageRequest] {
   def withId(id: Id[LibraryImageRequest]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }

@@ -21,7 +21,7 @@ case class KeepImageRequest(
     failureReason: Option[String] = None,
     successHash: Option[ImageHash] = None,
     imageUri: Option[String] = None,
-    source: KeepImageSource) extends Model[KeepImageRequest] {
+    source: BaseImageSource) extends Model[KeepImageRequest] {
   def withId(id: Id[KeepImageRequest]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }
@@ -40,7 +40,7 @@ class KeepImageRequestRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  implicit val keepImageSourceMapper = MappedColumnType.base[KeepImageSource, String](_.name, KeepImageSource.apply)
+  implicit val keepImageSourceMapper = MappedColumnType.base[BaseImageSource, String](_.name, BaseImageSource.apply)
   implicit val imageHashMapper = MappedColumnType.base[ImageHash, String](_.hash, ImageHash.apply)
 
   type RepoImpl = KeepImageRequestTable
@@ -52,7 +52,7 @@ class KeepImageRequestRepoImpl @Inject() (
     def failureReason = column[String]("failure_reason", O.Nullable)
     def successHash = column[ImageHash]("success_hash", O.Nullable)
     def imageUri = column[String]("image_uri", O.Nullable)
-    def source = column[KeepImageSource]("source", O.NotNull)
+    def source = column[BaseImageSource]("source", O.NotNull)
 
     def idxSourceFileHashSize = index("keep_image_request_u_token", token, unique = true)
 

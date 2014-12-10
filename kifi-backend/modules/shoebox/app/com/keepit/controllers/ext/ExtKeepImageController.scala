@@ -39,13 +39,13 @@ class ExtKeepImageController @Inject() (
         Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
       case Some(keep) =>
         val imageRequest = db.readWrite { implicit session =>
-          keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserUpload))
+          keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = BaseImageSource.UserUpload))
         }
-        val setImageF = keepImageCommander.setKeepImageFromFile(request.body, keep.id.get, KeepImageSource.UserUpload, Some(imageRequest.id.get))
+        val setImageF = keepImageCommander.setKeepImageFromFile(request.body, keep.id.get, BaseImageSource.UserUpload, Some(imageRequest.id.get))
         setImageF.map {
-          case fail: KeepImageStoreFailure =>
+          case fail: BaseImageStoreFailure =>
             InternalServerError(Json.obj("error" -> fail.reason))
-          case success: KeepImageProcessSuccess =>
+          case success: BaseImageProcessSuccess =>
             Ok(JsString("success"))
         }
     }
@@ -99,12 +99,12 @@ class ExtKeepImageController @Inject() (
           Future.successful(Ok(Json.obj("image" -> JsNull)))
         case JsString(imageUrl @ URI(scheme, _, _, _, _, _, _)) if scheme.exists(_.startsWith("http")) =>
           val imageRequest = db.readWrite { implicit session =>
-            keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserUpload))
+            keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = BaseImageSource.UserUpload))
           }
-          keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserUpload, imageRequest.id) map {
-            case fail: KeepImageStoreFailure =>
+          keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, BaseImageSource.UserUpload, imageRequest.id) map {
+            case fail: BaseImageStoreFailure =>
               InternalServerError(Json.obj("error" -> fail.reason))
-            case _: KeepImageProcessSuccess =>
+            case _: BaseImageProcessSuccess =>
               val idealSize = size.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
               Ok(Json.obj("image" -> keepImageCommander.getBestImageForKeep(keep.id.get, idealSize).flatten.map(keepImageCommander.getUrl)))
           }

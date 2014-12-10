@@ -11,43 +11,25 @@ case class LibraryImage(
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryImage] = LibraryImageStates.ACTIVE,
     libraryId: Id[Library],
-    imagePath: String,
-    format: ImageFormat,
     width: Int,
     height: Int,
-    originalWidth: Int,
-    originalHeight: Int,
     offsetWidth: Int,
     offsetHeight: Int,
     selectedWidth: Int,
     selectedHeight: Int,
-    source: LibraryImageSource,
+    imagePath: String,
+    format: ImageFormat,
+    source: BaseImageSource,
     sourceFileHash: ImageHash,
     sourceImageUrl: Option[String],
-    isOriginal: Boolean) extends Model[LibraryImage] {
-  val imageSize = ImageSize(width, height)
+    isOriginal: Boolean) extends BaseImage with Model[LibraryImage] {
   val imageSelection = LibraryImageSelection(selectedWidth, selectedHeight, offsetWidth, offsetHeight)
   def withId(id: Id[LibraryImage]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }
+
 case class LibraryImageSelection(
   selectedWidth: Int, selectedHeight: Int,
   offsetWidth: Int, offsetHeight: Int)
 
 object LibraryImageStates extends States[LibraryImage]
-
-sealed abstract class LibraryImageSource(val name: String)
-object LibraryImageSource {
-  sealed abstract class UserInitiated(name: String) extends LibraryImageSource(name)
-  sealed abstract class SystemInitiated(name: String) extends LibraryImageSource(name)
-
-  case object UserUpload extends UserInitiated("user_upload")
-  case object Unknown extends LibraryImageSource("unknown")
-
-  private val all: Seq[LibraryImageSource] = Seq(Unknown, UserUpload)
-
-  def apply(name: String) = {
-    all.find(_.name == name).getOrElse(throw new Exception(s"Can't find LibraryImageSource for $name"))
-  }
-
-}

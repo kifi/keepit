@@ -191,15 +191,15 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
 
     "pick the best KeepImage for a target size" in {
       def genKeepImage(width: Int, height: Int) = {
-        KeepImage(keepId = Id[Keep](0), imagePath = "", format = ImageFormat.PNG, width = width, height = height, source = KeepImageSource.UserPicked, sourceFileHash = ImageHash("000"), sourceImageUrl = None, isOriginal = false)
+        KeepImage(keepId = Id[Keep](0), imagePath = "", format = ImageFormat.PNG, width = width, height = height, source = BaseImageSource.UserPicked, sourceFileHash = ImageHash("000"), sourceImageUrl = None, isOriginal = false)
       }
       val keepImages = for {
         width <- 10 to 140 by 11
         height <- 10 to 150 by 17
       } yield genKeepImage(width * 9, height * 9)
 
-      ProcessedImageSize.pickBestKeepImage(ImageSize(201, 399), keepImages).get.imageSize === ImageSize(189, 396)
-      ProcessedImageSize.pickBestKeepImage(ImageSize(800, 840), keepImages).get.imageSize === ImageSize(783, 855)
+      ProcessedImageSize.pickBestImage(ImageSize(201, 399), keepImages).get.imageSize === ImageSize(189, 396)
+      ProcessedImageSize.pickBestImage(ImageSize(800, 840), keepImages).get.imageSize === ImageSize(783, 855)
     }
   }
 
