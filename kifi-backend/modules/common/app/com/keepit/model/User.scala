@@ -71,6 +71,15 @@ case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
   def toKey(): String = externalId.id
 }
 
+case class UsernameKey(username: Username) extends Key[User] {
+  override val version = 1
+  val namespace = "username"
+  def toKey(): String = username.value
+}
+
+class UsernameCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends ImmutableJsonCacheImpl[UsernameKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 class UserExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[UserExternalIdKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
