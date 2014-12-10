@@ -18,7 +18,6 @@ CREATE TABLE library_image (
   crop_height tinyint(3) unsigned NOT NULL,
   source varchar(32) NOT NULL,
   source_file_hash varchar(32) DEFAULT NULL,
-  source_image_url varchar(3072) DEFAULT NULL,
   is_original tinyint(1) DEFAULT NULL,
   PRIMARY KEY (id),
   UNIQUE KEY library_image_u_source_file_hash_size_library_id (source_file_hash,width,height,library_id),
