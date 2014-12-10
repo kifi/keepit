@@ -48,6 +48,10 @@ class LDALibraryUpdaterImpl @Inject() (
    * main update() logic is driven by keep's seqNum. This cleanup process is driven by Library's seqNum. This is mostly designed for:
    * library changes state from active to inactive or vice versa. Such event is not caputured from keep events, we want to
    * make sure inactive library has inactive library LDA feature.
+   * NOTE: In update(), we never bring an inactive library's feature from inactive to active, and for an active library, we never bring
+   * its feature state from active to inactive. In cleanup(), the only mutation is switching active and inactive state of library features.
+   * Thus, update() and cleanup() perform "disjoint" mutations. This is critical, because we are listening on two seqNums, and the two seqNum
+   * may proceed at different speed. We don't want mutation from one method is overwritten by the other method, in an unexpected way.
    */
   private def cleanup(version: ModelVersion[DenseLDA]): Unit = {
 
