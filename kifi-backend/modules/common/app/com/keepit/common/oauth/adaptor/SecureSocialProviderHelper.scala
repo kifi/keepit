@@ -26,7 +26,6 @@ trait SecureSocialProviderHelper { self: OAuth2Provider with OAuth2ProviderHelpe
     Await.result(socialUserF, 5 minutes)
   }
 
-  // Next: skip doAuth() all together
   override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
     val call = doOAuth2() map { resOrToken =>
       resOrToken match {

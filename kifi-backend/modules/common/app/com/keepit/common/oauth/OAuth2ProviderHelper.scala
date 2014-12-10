@@ -24,7 +24,15 @@ import OAuth2Configuration._
 trait OAuth2ProviderHelper extends Logging {
 
   def providerConfig: OAuth2ProviderConfiguration
-  def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = response.json.as[OAuth2TokenInfo]
+  def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = {
+    log.info(s"[buildTokenInfo] response.body=${response.body}")
+    try {
+      response.json.as[OAuth2TokenInfo]
+    } catch {
+      case t: Throwable =>
+        throw new AuthException(s"[buildTokenInfo] failed to retrieve token; response.status=${response.status}; body=${response.body}")
+    }
+  }
 
   // Next: factor out Result
   def doOAuth2[A]()(implicit request: Request[A]): Future[Either[Result, OAuth2TokenInfo]] = {
