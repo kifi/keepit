@@ -25,7 +25,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.concurrent.WatchableExecutionContext
 
 class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
-  def setup(db: Database)(implicit injector: Injector): (User, UserEmailAddress, ElectronicMail) = {
+  def setup(db: Database, category: NotificationCategory = NotificationCategory.User.WELCOME)(implicit injector: Injector): (User, UserEmailAddress, ElectronicMail) = {
     val emailAddrRepo = inject[UserEmailAddressRepo]
     val userRepo = inject[UserRepo]
     val emailRepo = inject[ElectronicMailRepo]
@@ -38,7 +38,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
         to = List(EmailAddress("johndoe@gmail.com")),
         subject = "Welcome",
         htmlBody = "Hi",
-        category = NotificationCategory.User.WELCOME
+        category = category
       ))
 
       (user, emailAddr, email)
@@ -116,6 +116,31 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
           actualEvent.context.get[String]("tipLocation").get === "top"
           actualEvent.context.get[Boolean]("isAdmin").get === true
           actualEvent.context.get[DateTime]("someDate").get === someDate
+        }
+      }
+
+      "sends user_user_kifi for digest email clicks" in {
+        withDb(modules: _*) { implicit injector =>
+          val commander = inject[SendgridCommander]
+          val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
+          val (user, emailAddr, email) = setup(db, NotificationCategory.User.DIGEST)
+
+          val trackingParam = EmailTrackingParam(subAction = Some("clickedArticleTitle"))
+
+          val sgEvent = mockSendgridEvent(email.externalId, Some(email)).copy(
+            url = Some(s"http://www.kifi.com/?${EmailTrackingParam.paramName}=${EmailTrackingParam.encode(trackingParam)}"),
+            event = Some(SendgridEventTypes.CLICK))
+
+          commander.processNewEvents(Seq(sgEvent))
+          inject[WatchableExecutionContext].drain()
+
+          heimdal.trackedEvents.size === 2
+          heimdal.trackedEvents(0).eventType === UserEventTypes.WAS_NOTIFIED
+
+          val actualEvent = heimdal.trackedEvents(1)
+          actualEvent.eventType === UserEventTypes.USED_KIFI
+          actualEvent.context.get[String]("action").get === "clickedArticleTitle"
+          actualEvent.context.get[String]("subsource").get === "digest"
         }
       }
 

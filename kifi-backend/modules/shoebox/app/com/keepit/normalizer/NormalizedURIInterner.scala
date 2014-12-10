@@ -1,5 +1,6 @@
 package com.keepit.normalizer
 
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.Database

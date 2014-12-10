@@ -1,10 +1,12 @@
 package com.keepit.commanders
 
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
 import java.io.File
-
 import com.google.inject.Injector
 import com.keepit.common.logging.Logging
 import com.keepit.common.store.{ S3ImageConfig, FakeKeepImageStore, ImageSize, KeepImageStore }
+import com.keepit.model.LibraryFactory._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
@@ -35,7 +37,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
       val user = userRepo.save(User(firstName = "Shamdrew", lastName = "Bronner", username = Username("test"), normalizedUsername = "test"))
-      val lib = libraryRepo.save(Library(name = "Lib1", ownerId = user.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
+      val lib = library().saved
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER, showInSearch = true))
       val uri = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
       val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))

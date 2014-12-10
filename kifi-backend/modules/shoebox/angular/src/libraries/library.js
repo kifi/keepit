@@ -13,6 +13,7 @@ angular.module('kifi')
     var selectedCount = 0;
     var prePopulated = false;
     var authToken = $location.search().authToken || '';
+    var prevLibrarySearch = false;
 
 
     //
@@ -114,13 +115,8 @@ angular.module('kifi')
     };
 
     $scope.libraryKeepClicked = function (keep, event) {
-      var target = event.target;
-      var eventAction = target.getAttribute('click-action');
-      if ($scope.$root.userLoggedIn) {
-        libraryService.trackEvent('user_clicked_page', $scope.library, { action: eventAction });
-      } else {
-        libraryService.trackEvent('visitor_clicked_page', $scope.library, { action: eventAction });
-      }
+      var eventAction = event.target.getAttribute('click-action');
+      $rootScope.$emit('trackLibraryEvent', 'click', { action: eventAction });
     };
 
 
@@ -171,8 +167,10 @@ angular.module('kifi')
     var deregisterTrackLibraryEvent = $rootScope.$on('trackLibraryEvent', function (e, eventType, attributes) {
       if (eventType === 'click') {
         if (!$rootScope.userLoggedIn) {
+          attributes.type = attributes.type || 'libraryLanding';
           libraryService.trackEvent('visitor_clicked_page', $scope.library, attributes);
         } else {
+          attributes.type = attributes.type || 'library';
           libraryService.trackEvent('user_clicked_page', $scope.library, attributes);
         }
       } else if (eventType === 'view') {
@@ -182,7 +180,9 @@ angular.module('kifi')
     $scope.$on('$destroy', deregisterTrackLibraryEvent);
 
     var deregisterUpdateLibrarySearch = $rootScope.$on('librarySearchChanged', function (e, librarySearch) {
+      prevLibrarySearch = $scope.librarySearch;
       $scope.librarySearch = librarySearch;
+      $scope.librarySearchFallingEdge = prevLibrarySearch && !$scope.librarySearch;
     });
     $scope.$on('$destroy', deregisterUpdateLibrarySearch);
 

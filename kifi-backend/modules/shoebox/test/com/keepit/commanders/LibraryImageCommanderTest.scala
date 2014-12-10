@@ -1,10 +1,11 @@
 package com.keepit.commanders
 
 import java.io.File
-
+import com.keepit.model.LibraryFactoryHelper._
 import com.google.inject.Injector
 import com.keepit.common.logging.Logging
 import com.keepit.common.store.{ LibraryImageStore, FakeLibraryImageStore }
+import com.keepit.model.LibraryFactory._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
@@ -36,7 +37,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
       val user = userRepo.save(User(firstName = "Noraa", lastName = "Ush", username = Username("test"), normalizedUsername = "test"))
-      val lib = libraryRepo.save(Library(name = "Lib1", ownerId = user.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
+      val lib = library().saved
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
       (user, lib)
@@ -56,7 +57,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         val sizing = LibraryImageSelection(0, 0, 100, 100)
         val savedF = commander.setLibraryImageFromFile(file1, lib.id.get, sizing, BaseImageSource.UserUpload)
         val saved = Await.result(savedF, Duration("10 seconds"))
-        saved === BaseImageProcessState.StoreSuccess
+        saved === BaseImageProcessState.StoreSuccess // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
 
         // If this complains about not having an `all`, then it's not using FakeKeepImageStore
         inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 1
