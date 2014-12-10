@@ -11,7 +11,7 @@ import play.api.Play._
 import play.api.cache.Cache
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.ws.{ WS, WSResponse }
-import play.api.mvc.{ Call, Request, Result, Results }
+import play.api.mvc.{ Request, Result, Results }
 import securesocial.core.IdentityProvider
 
 import scala.concurrent.Future
@@ -41,6 +41,7 @@ trait OAuth2ProviderHelper extends OAuth2Support with Logging {
 
   // Next: factor out Result
   def doOAuth2[A]()(implicit request: Request[A]): Future[Either[Result, OAuth2TokenInfo]] = {
+    log.info(s"[doOAuth2] request=$request; headers=${request.headers}; session=${request.session.data}")
     request.queryString.get(OAuth2Constants.Error).flatMap(_.headOption).map(error => {
       error match {
         case OAuth2Constants.AccessDenied => throw new AuthException(s"access denied")
@@ -101,33 +102,5 @@ trait OAuth2ProviderHelper extends OAuth2Support with Logging {
     }
   }
 
-}
-
-object OAuth2Constants {
-  val ClientId = "client_id"
-  val ClientSecret = "client_secret"
-  val RedirectUri = "redirect_uri"
-  val Scope = "scope"
-  val ResponseType = "response_type"
-  val State = "state"
-  val GrantType = "grant_type"
-  val AuthorizationCode = "authorization_code"
-  val AccessToken = "access_token"
-  val Error = "error"
-  val Code = "code"
-  val TokenType = "token_type"
-  val ExpiresIn = "expires_in"
-  val RefreshToken = "refresh_token"
-  val AccessDenied = "access_denied"
-}
-
-object BetterRoutesHelper {
-  // todo(andrew): Fix!
-  def authenticateByPost(provider: scala.Predef.String): play.api.mvc.Call = {
-    Call("POST", s"/authenticate/$provider")
-  }
-  def authenticate(provider: scala.Predef.String): play.api.mvc.Call = {
-    Call("GET", s"/authenticate/$provider")
-  }
 }
 

@@ -11,7 +11,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 // Adaptor for SecureSocial OAuth2 providers
-trait SecureSocialOAuth2Adaptor extends Logging { self: OAuth2Provider =>
+trait SecureSocialOAuth2Adaptor extends OAuth2Provider with Logging {
 
   def provider: OAuth2Support
 
