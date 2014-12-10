@@ -75,7 +75,7 @@ class LibraryScoringHelper @Inject() (
       Seq.fill(candidates.size)(0f)
   }
 
-  val maxIntervalMillis: Long = Duration(7, TimeUnit.DAYS).toMillis
+  val maxIntervalMillis: Long = Duration(30, TimeUnit.DAYS).toMillis
 
   // uses the lastKept date of the library to determine recency
   // TODO(josh) consider date the library was created either for this score or another

@@ -21,7 +21,7 @@ class EmailTrackingParamTest extends Specification {
 
       EmailTrackingParam(
         subAction = Some("kifiLogo"),
-        tips = Seq(EmailTip.FriendRecommendations),
+        tip = Some(EmailTip.FriendRecommendations),
         variableComponents = Seq("wut"),
         auxiliaryData = Some(ctx.build))
     }
@@ -39,7 +39,8 @@ class EmailTrackingParamTest extends Specification {
           "datetime" -> "2014-08-30T13:14:00.000Z"),
         "l" -> "kifiLogo",
         "c" -> Seq("wut"),
-        "t" -> Seq("PYMK")
+        "t" -> Seq[String](),
+        "t1" -> "PYMK"
       )
 
       val expectedTrackingParam = Json.fromJson[EmailTrackingParam](json).get

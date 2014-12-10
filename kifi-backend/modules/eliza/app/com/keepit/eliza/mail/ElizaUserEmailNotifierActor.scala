@@ -119,7 +119,7 @@ class ElizaUserEmailNotifierActor @Inject() (
             case unsubUrl =>
               val threadEmailInfo: ThreadEmailInfo =
                 elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, false, allUsers, allUserImageUrls, None,
-                  Some(unsubUrl), None, readTimeMinutesOpt).copy(pageUrl = deepUrl)
+                  Some(unsubUrl), None, readTimeMinutesOpt).copy(pageUrl = deepUrl, isDeepLink = true)
               val magicAddress = SystemEmailAddress.discussion(userThread.accessToken.token)
               ElectronicMail(
                 from = magicAddress,
