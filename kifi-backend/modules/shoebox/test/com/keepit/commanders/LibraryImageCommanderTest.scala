@@ -54,7 +54,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         val libraryImageRepo = inject[LibraryImageRepo]
         val (user, lib) = setup()
         val (file1, width, height) = fakeFile1
-        val sizing = LibraryImageSelection(0, 0, 100, 100)
+        val sizing = LibraryImageSelection(50, 50, 30, 30)
         val savedF = commander.setLibraryImageFromFile(file1, lib.id.get, sizing, BaseImageSource.UserUpload)
         val saved = Await.result(savedF, Duration("10 seconds"))
         saved === BaseImageProcessState.StoreSuccess // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
@@ -85,23 +85,23 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         val (user, lib) = setup()
         val (file1, width, height) = fakeFile1
 
-        val sizing = LibraryImageSelection(0, 0, 100, 100)
+        val sizing = LibraryImageSelection(50, 50, 30, 30)
         val savedF = commander.setLibraryImageFromFile(file1, lib.id.get, sizing, BaseImageSource.UserUpload)
         val saved = Await.result(savedF, Duration("10 seconds"))
         saved === BaseImageProcessState.StoreSuccess
 
         db.readOnlyMaster { implicit s =>
           libraryImageRepo.getForLibraryId(lib.id.get).map { libImage =>
-            libImage.imageSelection === LibraryImageSelection(0, 0, 100, 100)
+            libImage.imageSelection === LibraryImageSelection(50, 50, 30, 30)
           }
         }
 
-        val newSizing = LibraryImageSelection(1, 1, 100, 100)
+        val newSizing = LibraryImageSelection(50, 50, 30, 30)
         commander.setLibraryImageSizing(lib.id.get, newSizing)
 
         db.readOnlyMaster { implicit s =>
           libraryImageRepo.getForLibraryId(lib.id.get).map { libImage =>
-            libImage.imageSelection === LibraryImageSelection(1, 1, 100, 100)
+            libImage.imageSelection === LibraryImageSelection(50, 50, 30, 30)
           }
         }
       }

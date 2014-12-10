@@ -30,10 +30,10 @@ class LibraryImageRepoImpl @Inject() (
     def format = column[ImageFormat]("image_format", O.NotNull)
     def width = column[Int]("width", O.NotNull)
     def height = column[Int]("height", O.NotNull)
+    def centerX = column[Int]("center_x", O.NotNull)
+    def centerY = column[Int]("center_y", O.NotNull)
     def selectedWidth = column[Int]("selected_width", O.NotNull)
     def selectedHeight = column[Int]("selected_height", O.NotNull)
-    def offsetWidth = column[Int]("offset_width", O.NotNull)
-    def offsetHeight = column[Int]("offset_height", O.NotNull)
     def source = column[BaseImageSource]("source", O.NotNull)
     def sourceFileHash = column[ImageHash]("source_file_hash", O.NotNull)
     def sourceImageUrl = column[Option[String]]("source_image_url", O.Nullable)
@@ -43,7 +43,7 @@ class LibraryImageRepoImpl @Inject() (
     def idxSourceFileHashSize = index("library_image_u_source_file_hash_size_library_id", (sourceFileHash, width, height, libraryId), unique = true)
 
     def * = (id.?, createdAt, updatedAt, state, libraryId, width, height,
-      selectedWidth, selectedHeight, offsetWidth, offsetHeight,
+      centerX, centerY, selectedWidth, selectedHeight,
       imagePath, format, source, sourceFileHash, sourceImageUrl, isOriginal) <> ((LibraryImage.apply _).tupled, LibraryImage.unapply _)
   }
 

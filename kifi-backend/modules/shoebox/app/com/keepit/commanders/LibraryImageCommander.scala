@@ -67,8 +67,8 @@ class LibraryImageCommanderImpl @Inject() (
     db.readWrite { implicit s =>
       libraryImageRepo.getForLibraryId(libraryId).map { libImage =>
         libraryImageRepo.save(libImage.copy(
-          offsetWidth = selection.offsetWidth,
-          offsetHeight = selection.offsetHeight,
+          centerX = selection.centerX,
+          centerY = selection.centerY,
           selectedWidth = selection.selectedWidth,
           selectedHeight = selection.selectedHeight))
       }
@@ -136,7 +136,7 @@ class LibraryImageCommanderImpl @Inject() (
           val isOriginal = uploadedImage.key.takeRight(7).indexOf(originalLabel) != -1
           val libImg = LibraryImage(libraryId = libraryId, imagePath = uploadedImage.key, format = uploadedImage.format,
             width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight,
-            offsetWidth = selection.offsetWidth, offsetHeight = selection.offsetHeight,
+            centerX = selection.centerX, centerY = selection.centerY,
             selectedWidth = selection.selectedWidth, selectedHeight = selection.selectedHeight,
             source = source, sourceImageUrl = originalImage.sourceImageUrl, sourceFileHash = originalImage.hash, isOriginal = isOriginal)
           uploadedImage.image.flush()
@@ -193,7 +193,7 @@ class LibraryImageCommanderImpl @Inject() (
       val copiedImages = existingSameHash.map { prev =>
         LibraryImage(state = LibraryImageStates.ACTIVE, libraryId = libraryId, imagePath = prev.imagePath, format = prev.format,
           width = prev.width, height = prev.height,
-          offsetWidth = selection.offsetWidth, offsetHeight = selection.offsetHeight, selectedWidth = selection.selectedWidth, selectedHeight = selection.selectedHeight,
+          centerX = selection.centerX, centerY = selection.centerY, selectedWidth = selection.selectedWidth, selectedHeight = selection.selectedHeight,
           source = source, sourceFileHash = prev.sourceFileHash, sourceImageUrl = prev.sourceImageUrl, isOriginal = prev.isOriginal)
       }
 
