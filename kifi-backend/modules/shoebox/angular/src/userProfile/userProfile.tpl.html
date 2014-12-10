@@ -1,0 +1,37 @@
+<div class="kf-user-profile"><!-- User Profile Page -->
+
+  <!-- Note that all this will be moved around when we start using AngularUI router. -->
+  <div class="kf-user-profile-header">
+    <div class="kf-user-profile-content"><!-- limit to 800px or so -->
+      <div class="kf-user-profile-connect"><!-- connect to this user; only if logged-in and not the user; absolute position this -->
+
+      <div class="kf-user-profile-basic-info">
+        <img class="kf-user-profile-picture"><!-- ng-src? -->
+        <div class="kf-user-profile-name"></div><!-- first name, last name -->
+      </div>
+
+      <nav class="kf-user-profile-user-nav">
+        <ul class="kf-user-profile-user-nav-links-list"><!-- actually, use ng-repeat for this -->
+          <li class="kf-user-profile-user-nav-links-list-item"><!-- only one for now! highlighted if we're on that page right now; also the entire item should be clickable -->
+            <div class="kf-user-profile-user-nav-item-name">LIBRARIES</div>
+            <div class="kf-user-profile-user-nav-item-count"></div>
+          </li><!-- For now, just one! -->
+        </ul>
+      </nav>
+
+    </div><!-- kf-user-profile-content -->
+  </div><!-- kf-user-profile-header -->
+
+  <div class="kf-user-profile-libraries-nav-container">
+    <nav class="kf-user-profile-libraries-nav"><!-- center this -->
+      <ul class="kf-user-profile-libraries-nav-links-list">
+        <li class="kf-user-profile-libraries-nav-links-list-item"><!-- ng-repeat this -->
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  <div class="kf-user-profile-libraries"><!-- fill in with libraries list -->
+    Placeholder Three
+  </div>
+</div>

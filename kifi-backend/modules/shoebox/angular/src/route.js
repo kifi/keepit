@@ -39,7 +39,7 @@ angular.module('kifi')
     }).when('/tags/manage', {
       templateUrl: 'tagManage/tagManage.tpl.html',
       controller: 'ManageTagCtrl'
-    }).when('/:username/profile', {
+    }).when('/:username', {
       templateUrl: 'userProfile/userProfile.tpl.html',
       controller: 'UserProfileCtrl'
     })
