@@ -673,10 +673,10 @@ class LibraryCommander @Inject() (
 
             val activeLib = libs.head._2.copy(state = LibraryStates.ACTIVE, slug = LibrarySlug(slug), name = name, visibility = visibility, memberCount = 1)
             val membership = libMem.find(m => m.libraryId == activeLib.id.get && m.access == LibraryAccess.OWNER)
-            if (membership.isEmpty) airbrake.notify(s"user $userId - non-existing ownership of library kind ${kind} (id: ${activeLib.id.get})")
+            if (membership.isEmpty) airbrake.notify(s"user $userId - non-existing ownership of library kind $kind (id: ${activeLib.id.get})")
             val activeMembership = membership.getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true)).copy(state = LibraryMembershipStates.ACTIVE)
             val active = (activeMembership, activeLib)
-            if (libs.tail.length > 0) airbrake.notify(s"user $userId - duplicate active ownership of library kind ${kind} (ids: ${libs.tail.map(_._2.id.get)})")
+            if (libs.tail.length > 0) airbrake.notify(s"user $userId - duplicate active ownership of library kind $kind (ids: ${libs.tail.map(_._2.id.get)})")
             val otherLibs = libs.tail.map {
               case (a, l) =>
                 val inactMem = libMem.find(_.libraryId == l.id.get)
@@ -699,7 +699,7 @@ class LibraryCommander @Inject() (
         val mainLib = libraryRepo.save(Library(name = "Main Library", ownerId = userId, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN, memberCount = 1))
         libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
         if (!generateNew) {
-          airbrake.notify(s"${userId} missing main library")
+          airbrake.notify(s"$userId missing main library")
         }
         searchClient.updateLibraryIndex()
         Some(mainLib)
@@ -709,7 +709,7 @@ class LibraryCommander @Inject() (
         val secretLib = libraryRepo.save(Library(name = "Secret Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET, memberCount = 1))
         libraryMembershipRepo.save(LibraryMembership(libraryId = secretLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
         if (!generateNew) {
-          airbrake.notify(s"${userId} missing secret library")
+          airbrake.notify(s"$userId missing secret library")
         }
         searchClient.updateLibraryIndex()
         Some(secretLib)

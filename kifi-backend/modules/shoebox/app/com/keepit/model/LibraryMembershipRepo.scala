@@ -37,6 +37,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def countByLibraryAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
   def countsByLibraryAccess(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
+  def countFollowersWithOwnerId(ownerId: Id[User])(implicit session: RSession): Int
 }
 
 @Singleton
@@ -45,6 +46,7 @@ class LibraryMembershipRepoImpl @Inject() (
   val clock: Clock,
   val libraryRepo: LibraryRepo,
   val libraryMembershipCountCache: LibraryMembershipCountCache,
+  val followersCountCache: FollowersCountCache,
   val memberIdCache: LibraryMembershipIdCache)
     extends DbRepo[LibraryMembership] with DbRepoWithDelete[LibraryMembership] with LibraryMembershipRepo with SeqNumberDbFunction[LibraryMembership] with Logging {
 
@@ -220,6 +222,8 @@ class LibraryMembershipRepoImpl @Inject() (
     libMem.id.map { id =>
       memberIdCache.remove(LibraryMembershipIdKey(id))
       libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
+      // ugly! but the library is in an in memory cache so the cost is low
+      followersCountCache.remove(FollowersCountKey(libraryRepo.get(libMem.libraryId).ownerId))
     }
   }
 
@@ -230,6 +234,8 @@ class LibraryMembershipRepoImpl @Inject() (
       } else {
         memberIdCache.set(LibraryMembershipIdKey(id), libMem)
         libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
+        // ugly! but the library is in an in memory cache so the cost is low
+        followersCountCache.remove(FollowersCountKey(libraryRepo.get(libMem.libraryId).ownerId))
       }
     }
   }
@@ -247,6 +253,13 @@ class LibraryMembershipRepoImpl @Inject() (
 
       keys.toSeq.map(k => k -> counts.getOrElse(k.access.value, 0)).toMap
     }.map { case (k, v) => k.access -> v }
+  }
+
+  def countFollowersWithOwnerId(ownerId: Id[User])(implicit session: RSession): Int = {
+    followersCountCache.getOrElse(FollowersCountKey(ownerId)) {
+      import StaticQuery.interpolation
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.state = 'active'".as[Int].firstOption.getOrElse(0)
+    }
   }
 }
 

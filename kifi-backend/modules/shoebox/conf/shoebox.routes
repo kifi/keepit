@@ -294,6 +294,9 @@ GET     /users/:id/pics/:size/:name @com.keepit.controllers.assets.UserPictureCo
 
 POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureController.update()
 
+# Profile pages
+GET     /site/user/profile/:username @com.keepit.controllers.website.UserController.profile(username)
+
 ##########################################
 # Feeds (RSS)
 ##########################################
