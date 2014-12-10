@@ -57,14 +57,6 @@ class UsernamePasswordProvider(app: Application)
     )
   }
 
-  override protected def buildInfo(response: WSResponse): OAuth2Info = {
-    try super.buildInfo(response) catch {
-      case e: Throwable =>
-        log.info(s"[securesocial] Failed to build oauth2 info. Response was ${response.body}")
-        throw e
-    }
-  }
-
   private def error(errorCode: String) = Forbidden(Json.obj("error" -> errorCode))
 }
 

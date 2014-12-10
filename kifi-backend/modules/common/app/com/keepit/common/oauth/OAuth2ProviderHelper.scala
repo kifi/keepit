@@ -8,11 +8,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.OAuth2TokenInfo
 import play.api.Play._
 import play.api.cache.Cache
+import play.api.libs.json.{ JsNull, JsString, JsNumber }
 import play.api.libs.ws.{ WSResponse, WS }
 import play.api.mvc.{ Call, Results, Result, Request }
-import securesocial.core._
-import scala.collection.JavaConversions._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import securesocial.core.IdentityProvider
 
 import scala.concurrent.Future
 import OAuth2Configuration._
@@ -25,7 +25,7 @@ trait OAuth2ProviderHelper extends Logging {
 
   def providerConfig: OAuth2ProviderConfiguration
   def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = {
-    log.info(s"[buildTokenInfo] response.body=${response.body}")
+    log.info(s"[buildTokenInfo(${providerConfig.name})] response.body=${response.body}")
     try {
       response.json.as[OAuth2TokenInfo]
     } catch {

@@ -28,6 +28,4 @@ trait UserIdentityProvider extends IdentityProvider with OAuth2ProviderHelper wi
     }
   }
 
-  protected def buildInfo(response: WSResponse): OAuth2Info = buildTokenInfo(response)
-
 }

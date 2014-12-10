@@ -15,9 +15,9 @@ class LinkedInProvider(app: Application)
   override def id = LinkedInOAuthProvider.LinkedIn
 
   override protected def buildInfo(response: WSResponse): OAuth2Info = {
-    try super.buildInfo(response) catch {
+    try buildTokenInfo(response) catch {
       case e: Throwable =>
-        Logger.info(s"[securesocial] Failed to build linkedin oauth2 info. Response was ${response.body}")
+        Logger.info(s"[buildInfo($id)] Failed to build linkedin oauth2 info. Response was ${response.body}")
         throw e
     }
   }
