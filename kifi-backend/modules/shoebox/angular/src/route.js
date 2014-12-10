@@ -39,6 +39,9 @@ angular.module('kifi')
     }).when('/tags/manage', {
       templateUrl: 'tagManage/tagManage.tpl.html',
       controller: 'ManageTagCtrl'
+    }).when('/:username/profile', {
+      templateUrl: 'userProfile/userProfile.tpl.html',
+      controller: 'UserProfileCtrl'
     })
     // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
     .when('/:username/:librarySlug/find', {
