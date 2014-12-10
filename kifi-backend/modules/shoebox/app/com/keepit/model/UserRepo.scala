@@ -51,6 +51,7 @@ class UserRepoImpl @Inject() (
   val idCache: UserIdCache,
   airbrake: AirbrakeNotifier,
   basicUserCache: BasicUserUserIdCache,
+  usernameCache: UsernameCache,
   heimdal: HeimdalServiceClient,
   expRepoProvider: Provider[UserExperimentRepoImpl])
     extends DbRepo[User] with DbRepoWithDelete[User] with UserRepo with ExternalIdColumnDbFunction[User] with SeqNumberDbFunction[User] with Logging {
@@ -146,6 +147,7 @@ class UserRepoImpl @Inject() (
     user.id map { id =>
       idCache.remove(UserIdKey(id))
       basicUserCache.remove(BasicUserUserIdKey(id))
+      usernameCache.remove(UsernameKey(user.username))
       externalIdCache.remove(UserExternalIdKey(user.externalId))
     }
     invalidateMixpanel(user.withState(UserStates.INACTIVE))
@@ -154,7 +156,9 @@ class UserRepoImpl @Inject() (
   override def invalidateCache(user: User)(implicit session: RSession) = {
     for (id <- user.id) {
       idCache.set(UserIdKey(id), user)
-      basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
+      val basicUser = BasicUser.fromUser(user)
+      basicUserCache.set(BasicUserUserIdKey(id), basicUser)
+      usernameCache.set(UsernameKey(user.username), user)
     }
 
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
@@ -233,7 +237,9 @@ class UserRepoImpl @Inject() (
 
   def getByUsername(username: Username)(implicit session: RSession): Option[User] = {
     val normalizedUsername = UsernameOps.normalize(username.value)
-    getByNormalizedUsernameCompiled(normalizedUsername).firstOption
+    usernameCache.getOrElseOpt(UsernameKey(username)) {
+      getByNormalizedUsernameCompiled(normalizedUsername).firstOption
+    }
   }
 
   private val getByNormalizedUsernameCompiled = Compiled { normalizedUsername: Column[String] =>
