@@ -30,7 +30,7 @@ class LDALibraryUpdaterTest extends Specification with CortexTestInjector with L
           uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](2L), uriSeq = SequenceNumber[NormalizedURI](2L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0.2f, 0f, 0.8f))), state = URILDATopicStates.ACTIVE))
           uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](3L), uriSeq = SequenceNumber[NormalizedURI](3L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(1f, 0f))), state = URILDATopicStates.ACTIVE))
           libRepo.save(CortexLibrary(libraryId = Id[Library](1), ownerId = Id[User](1), kind = LibraryKind.USER_CREATED, state = State[CortexLibrary]("active"), seq = SequenceNumber[CortexLibrary](1)))
-          libRepo.save(CortexLibrary(libraryId = Id[Library](1), ownerId = Id[User](1), kind = LibraryKind.SYSTEM_SECRET, state = State[CortexLibrary]("active"), seq = SequenceNumber[CortexLibrary](2)))
+          libRepo.save(CortexLibrary(libraryId = Id[Library](2), ownerId = Id[User](1), kind = LibraryKind.SYSTEM_SECRET, state = State[CortexLibrary]("active"), seq = SequenceNumber[CortexLibrary](2)))
         }
 
         updater.update()
@@ -47,6 +47,36 @@ class LDALibraryUpdaterTest extends Specification with CortexTestInjector with L
 
           libLDARepo.getActiveByLibraryId(Id[Library](2), uriRep.version) === None // no feature for SYSTEM CREATED library
           commitRepo.getByModelAndVersion(StatModelName.LDA_LIBRARY, uriRep.version.version).get.seq === 3
+          commitRepo.getByModelAndVersion(StatModelName.LDA_LIBRARY_CLEANUP, uriRep.version.version).get.seq === 2
+        }
+
+        // active => inactive
+        db.readWrite { implicit s =>
+          libRepo.getByLibraryId(Id[Library](1)).foreach { lib =>
+            libRepo.save(lib.copy(state = State[CortexLibrary]("inactive"), seq = SequenceNumber[CortexLibrary](3)))
+          }
+        }
+
+        updater.update()
+
+        db.readOnlyReplica { implicit s =>
+          libLDARepo.getActiveByLibraryId(Id[Library](1), uriRep.version) === None
+          commitRepo.getByModelAndVersion(StatModelName.LDA_LIBRARY_CLEANUP, uriRep.version.version).get.seq === 3
+        }
+
+        // inactive => active
+        db.readWrite { implicit s =>
+          libRepo.getByLibraryId(Id[Library](1)).foreach { lib =>
+            libRepo.save(lib.copy(state = State[CortexLibrary]("active"), seq = SequenceNumber[CortexLibrary](4)))
+          }
+        }
+
+        updater.update()
+
+        db.readOnlyReplica { implicit s =>
+          val model = libLDARepo.getActiveByLibraryId(Id[Library](1), uriRep.version).get
+          model.topic.get.value.toList === List(0.1f, 0.5f, 0.4f)
+          commitRepo.getByModelAndVersion(StatModelName.LDA_LIBRARY_CLEANUP, uriRep.version.version).get.seq === 4
         }
       }
     }
