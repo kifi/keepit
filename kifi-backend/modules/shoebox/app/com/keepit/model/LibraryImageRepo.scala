@@ -30,10 +30,10 @@ class LibraryImageRepoImpl @Inject() (
     def format = column[ImageFormat]("image_format", O.NotNull)
     def width = column[Int]("width", O.NotNull)
     def height = column[Int]("height", O.NotNull)
-    def centerX = column[Int]("crop_center_x", O.NotNull)
-    def centerY = column[Int]("crop_center_y", O.NotNull)
-    def cropWidth = column[Int]("crop_width", O.NotNull)
-    def cropHeight = column[Int]("crop_height", O.NotNull)
+    def centerX = column[Int]("crop_center_x", O.Nullable)
+    def centerY = column[Int]("crop_center_y", O.Nullable)
+    def cropWidth = column[Int]("crop_width", O.Nullable)
+    def cropHeight = column[Int]("crop_height", O.Nullable)
     def source = column[ImageSource]("source", O.NotNull)
     def sourceFileHash = column[ImageHash]("source_file_hash", O.NotNull)
     def isOriginal = column[Boolean]("is_original", O.NotNull)
@@ -42,7 +42,7 @@ class LibraryImageRepoImpl @Inject() (
     def idxSourceFileHashSize = index("library_image_u_source_file_hash_size_library_id", (sourceFileHash, width, height, libraryId), unique = true)
 
     def * = (id.?, createdAt, updatedAt, state, libraryId, width, height,
-      centerX, centerY, cropWidth, cropHeight,
+      centerX.?, centerY.?, cropWidth.?, cropHeight.?,
       imagePath, format, source, sourceFileHash, isOriginal) <> ((LibraryImage.apply _).tupled, LibraryImage.unapply _)
   }
 

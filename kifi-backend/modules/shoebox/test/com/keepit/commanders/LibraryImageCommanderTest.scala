@@ -92,7 +92,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
 
         db.readOnlyMaster { implicit s =>
           libraryImageRepo.getForLibraryId(lib.id.get).map { libImage =>
-            libImage.imageSelection === LibraryImagePosition(50, 50, 30, 30)
+            libImage.imagePosition === Some(LibraryImagePosition(50, 50, 30, 30))
           }
         }
 
@@ -101,7 +101,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
 
         db.readOnlyMaster { implicit s =>
           libraryImageRepo.getForLibraryId(lib.id.get).map { libImage =>
-            libImage.imageSelection === LibraryImagePosition(50, 50, 30, 30)
+            libImage.imagePosition === Some(LibraryImagePosition(50, 50, 30, 30))
           }
         }
       }

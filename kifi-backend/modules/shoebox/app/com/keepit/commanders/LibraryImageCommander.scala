@@ -61,10 +61,10 @@ class LibraryImageCommanderImpl @Inject() (
     db.readWrite { implicit s =>
       libraryImageRepo.getForLibraryId(libraryId).map { libImage =>
         libraryImageRepo.save(libImage.copy(
-          cropCenterX = position.centerX,
-          cropCenterY = position.centerY,
-          cropWidth = position.width,
-          cropHeight = position.height))
+          cropCenterX = Some(position.centerX),
+          cropCenterY = Some(position.centerY),
+          cropWidth = Some(position.width),
+          cropHeight = Some(position.height)))
       }
     }
   }
@@ -115,15 +115,13 @@ class LibraryImageCommanderImpl @Inject() (
     Future.sequence(uploads).map { results =>
       val libraryImages = results.map {
         case uploadedImage =>
-          updateRequestState(LibraryImageRequestStates.UPLOADED)
           val isOriginal = uploadedImage.key.takeRight(7).indexOf(originalLabel) != -1
           val imagePos = imagePosOpt.getOrElse(LibraryImagePosition.default)
           val libImg = LibraryImage(libraryId = libraryId, imagePath = uploadedImage.key, format = uploadedImage.format,
             width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight,
-            cropCenterX = imagePos.centerX, cropCenterY = imagePos.centerY,
-            cropWidth = imagePos.width, cropHeight = imagePos.height,
+            cropCenterX = Some(imagePos.centerX), cropCenterY = Some(imagePos.centerY),
+            cropWidth = Some(imagePos.width), cropHeight = Some(imagePos.height),
             source = source, sourceFileHash = originalImage.hash, isOriginal = isOriginal)
-          updateRequestState(LibraryImageRequestStates.POSITIONED)
           uploadedImage.image.flush()
           libImg
       }
