@@ -116,11 +116,10 @@ class LibraryImageCommanderImpl @Inject() (
       val libraryImages = results.map {
         case uploadedImage =>
           val isOriginal = uploadedImage.key.takeRight(7).indexOf(originalLabel) != -1
-          val imagePos = imagePosOpt.getOrElse(LibraryImagePosition.default)
           val libImg = LibraryImage(libraryId = libraryId, imagePath = uploadedImage.key, format = uploadedImage.format,
             width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight,
-            cropCenterX = Some(imagePos.centerX), cropCenterY = Some(imagePos.centerY),
-            cropWidth = Some(imagePos.width), cropHeight = Some(imagePos.height),
+            cropCenterX = imagePosOpt.map(_.centerX), cropCenterY = imagePosOpt.map(_.centerY),
+            cropWidth = imagePosOpt.map(_.width), cropHeight = imagePosOpt.map(_.height),
             source = source, sourceFileHash = originalImage.hash, isOriginal = isOriginal)
           uploadedImage.image.flush()
           libImg
