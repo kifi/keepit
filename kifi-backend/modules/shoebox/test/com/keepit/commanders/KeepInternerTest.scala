@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.healthcheck._
 import com.keepit.common.social.FakeSocialGraphModule
@@ -74,7 +76,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val (user, lib) = db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-          val lib = libraryRepo.save(Library(name = "Lib1", ownerId = user.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
+          val lib = library().saved
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           (user, lib)
         }
