@@ -6,7 +6,7 @@
   </div>
   <button ng-if="!recommendation && isUserLoggedOut" ng-click="followLibrary()"
     class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-follow kf-keep-lib-footer-button-follow-in-search">Follow Library</button>
-  <div class="kf-keep-body">
+  <div class="kf-keep-lib-body">
     <div class="kf-keep-lib-header">
       <div ng-if="!isUserLoggedOut" ng-switch="library.kind" class="kf-keep-lib-icon-container">
         <div ng-switch-when="system_main" class="kf-keep-lib-icon svg-main-library-big"></div>
