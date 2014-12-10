@@ -49,6 +49,7 @@ trait CortexServiceClient extends ServiceClient {
   def userLibraryScore(userId: Id[User], libId: Id[Library])(implicit version: LDAVersionOpt): Future[Option[Float]]
   def userLibrariesScores(userId: Id[User], libIds: Seq[Id[Library]])(implicit version: LDAVersionOpt): Future[Seq[Option[Float]]]
   def similarURIs(uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt): Future[Seq[Id[NormalizedURI]]]
+  def similarLibraries(libId: Id[Library], limit: Int)(implicit version: LDAVersionOpt = None): Future[Seq[Id[Library]]]
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -233,6 +234,10 @@ class CortexServiceClientImpl(
 
   def similarURIs(uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt): Future[Seq[Id[NormalizedURI]]] = {
     call(Cortex.internal.similarURIs(uriId)).map { r => (r.json).as[Seq[Id[NormalizedURI]]] }
+  }
+
+  def similarLibraries(libId: Id[Library], limit: Int)(implicit version: LDAVersionOpt = None): Future[Seq[Id[Library]]] = {
+    call(Cortex.internal.similarLibraries(libId, limit)).map { r => r.json.as[Seq[Id[Library]]] }
   }
 
 }

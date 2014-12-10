@@ -3,7 +3,8 @@
   keepCount: Int,
   contributors: Seq[User],
   followers: Seq[User],
-  publicId: com.keepit.common.crypto.PublicId[Library]
+  publicId: com.keepit.common.crypto.PublicId[Library],
+  relatedLibs: Seq[Library]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin(owner.firstName + " " + owner.lastName + "'s " + library.name, stylesheets = List("admin_library")) {
@@ -69,6 +70,22 @@
   <p>
     <a href="@com.keepit.controllers.admin.routes.AdminLibraryController.libraryKeepsView(library.id.get, 0)">Library Keeps</a>
   </p>
+
+
+  <h3>@relatedLibs.size Related Libraries</h3>
+  <table class="library-summary table table-bordered">
+
+  <tr>
+      <th>id</th>
+      <th>name</th>
+  </tr>
+
+  @for(lib <- relatedLibs){
+    <tr>
+      <td>@lib.id.get.id</td>
+      <td><a href="@com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(lib.id.get)">@lib.name</td>
+    </tr>
+  }
 }
 
 <script type="text/javascript">
