@@ -39,5 +39,6 @@ GET     /internal/cortex/lda/userLibraryScore                                   
 POST    /internal/cortex/lda/userLibrariesScores                                    @com.keepit.controllers.cortex.LDAController.userLibrariesScores(userId: Id[User], version: Option[Int] ?= None)
 GET     /internal/cortex/lda/dumpFeature                                            @com.keepit.controllers.cortex.LDAController.dumpFeature(dataType: String, id: Long, version: Option[Int] ?= None)
 GET     /internal/cortex/lda/similarURIs                                            @com.keepit.controllers.cortex.LDAController.getSimilarURIs(uriId: Id[NormalizedURI], version: Option[Int] ?= None)
+GET     /internal/cortex/lda/getSimilarLibraries                                    @com.keepit.controllers.cortex.LDAController.getSimilarLibraries(libId: Id[Library], limit: Int, version: Option[Int] ?= None)
 
 GET     /internal/cortex/data/sparseLDAFeaturesChanged        @com.keepit.controllers.cortex.CortexDataPipeController.getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)

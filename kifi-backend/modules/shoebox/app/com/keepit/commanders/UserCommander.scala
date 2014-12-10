@@ -70,6 +70,10 @@ object UpdatableUserInfo {
 
 case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String])
 
+case class UserProfile(user: User, numFriends: Int, numFollowers: Int)
+
+case class UserNotFoundException(username: Username) extends Exception(username.toString)
+
 class UserCommander @Inject() (
     db: Database,
     userRepo: UserRepo,
@@ -94,8 +98,17 @@ class UserCommander @Inject() (
     heimdalClient: HeimdalServiceClient,
     userImageUrlCache: UserImageUrlCache,
     libraryCommander: LibraryCommander,
+    libraryMembershipRepo: LibraryMembershipRepo,
     emailSender: EmailSenderProvider,
+    usernameCache: UsernameCache,
     airbrake: AirbrakeNotifier) extends Logging { self =>
+
+  def profile(username: Username, viewer: Option[User]): UserProfile = db.readOnlyMaster { implicit session =>
+    val user = userRepo.getByUsername(username).getOrElse(throw UserNotFoundException(username)) //cached
+    val friends = userConnectionRepo.getConnectionCount(user.id.get) //cached
+    val numFollowers = libraryMembershipRepo.countFollowersWithOwnerId(user.id.get) //cached
+    UserProfile(user, friends, numFollowers)
+  }
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {
     db.readWrite { implicit session =>
@@ -539,6 +552,8 @@ class UserCommander @Inject() (
           case _ => {
             if (!readOnly) {
               val user = userRepo.get(userId)
+              //we have to do cache invalidation now, the repo will not have the old username for that
+              usernameCache.remove(UsernameKey(user.username))
               val normalizedUsername = UsernameOps.normalize(username.value)
               if (user.normalizedUsername != normalizedUsername) {
                 usernameRepo.alias(user.username, userId) // create an alias for the old username

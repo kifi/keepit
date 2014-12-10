@@ -586,4 +586,29 @@ class UserController @Inject() (
     Status(200).chunked(returnEnumerator.andThen(Enumerator.eof))
   }
 
+  /**
+   * ‘firstName’ - User’s first name
+   * lastName’ - User’s last name
+   * pictureName’  - Name of user’s picture file
+   * numLibraries’ - Number of user’s libraries
+   * numKeeps’ - Number of user’s keeps
+   * numFriends’ - Number of user’s friends
+   * numFollowers’ - Number of users following any of the user’s libraries
+   * helpedRekeep’ - Number of times the user’s keeps has been rekept by the user’s friends.
+   */
+  def profile(username: String) = MaybeUserAction { request =>
+    val viewer = request.userOpt
+    val profile = userCommander.profile(Username(username), viewer)
+    Ok(Json.obj(
+      "firstName" -> profile.user.firstName,
+      "lastName" -> profile.user.lastName,
+      "pictureName" -> profile.user.pictureName,
+      "numLibraries" -> 0,
+      "numKeeps" -> 0,
+      "numFriends" -> profile.numFriends,
+      "numFollowers" -> profile.numFollowers,
+      "helpedRekeep" -> 0
+    ))
+  }
+
 }

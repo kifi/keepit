@@ -25,7 +25,7 @@ case class UserValue(
 }
 
 case class UserValueKey(userId: Id[User], key: UserValueName) extends Key[String] {
-  override val version = 2
+  override val version = 3
   val namespace = "uservalue"
   def toKey(): String = userId.id + "_" + key.name
 }
