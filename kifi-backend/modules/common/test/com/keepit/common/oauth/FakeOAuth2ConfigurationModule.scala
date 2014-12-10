@@ -18,9 +18,9 @@ trait FakeOAuthProvider extends OAuthProvider {
 
 }
 
-trait FakeOAuth2Provider extends FakeOAuthProvider with OAuth2Support {
+trait FakeOAuth2Provider extends FakeOAuthProvider with OAuth2ProviderHelper {
 
-  override def oauth2Config: OAuth2Configuration = ???
+  def oauth2Config: OAuth2Configuration = ???
 
   var oauth2Token = () => OAuth2TokenInfo(OAuth2AccessToken("fake-token"))
   override def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = oauth2Token.apply()

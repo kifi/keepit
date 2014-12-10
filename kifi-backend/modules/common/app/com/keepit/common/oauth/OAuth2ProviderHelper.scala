@@ -5,25 +5,30 @@ import java.util.UUID
 
 import com.keepit.common.auth.AuthException
 import com.keepit.common.logging.Logging
+import com.keepit.common.oauth.OAuth2Configuration._
 import com.keepit.model.OAuth2TokenInfo
 import play.api.Play._
 import play.api.cache.Cache
-import play.api.libs.json.{ JsNull, JsString, JsNumber }
-import play.api.libs.ws.{ WSResponse, WS }
-import play.api.mvc.{ Call, Results, Result, Request }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.ws.{ WS, WSResponse }
+import play.api.mvc.{ Call, Request, Result, Results }
 import securesocial.core.IdentityProvider
 
 import scala.concurrent.Future
-import OAuth2Configuration._
 
 /**
  * Adapted from UserIdentityProvider -- less coupled with SS, async vs sync, etc.
  * No functional changes.
  */
-trait OAuth2ProviderHelper extends Logging {
+trait OAuth2ProviderHelper extends OAuth2Support with Logging {
 
-  def providerConfig: OAuth2ProviderConfiguration
+  def oauth2Config: OAuth2Configuration
+
+  def providerConfig: OAuth2ProviderConfiguration = oauth2Config.getProviderConfig(providerId.id) match {
+    case None => throw new IllegalArgumentException(s"config not found for $providerId")
+    case Some(cfg) => cfg
+  }
+
   def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = {
     log.info(s"[buildTokenInfo(${providerConfig.name})] response.body=${response.body}")
     try {

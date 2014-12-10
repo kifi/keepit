@@ -11,10 +11,8 @@ import securesocial.core.{ UserService, Identity, IdentityProvider, OAuth2Info }
 /**
  * An identity provider which returns UserIdentity instances. This allows us to know the currently logged in user when
  * SecureSocial authenticates the same user via a different social network.
- *
- * All our providers should extend this trait.
  */
-trait UserIdentityProvider extends IdentityProvider with OAuth2ProviderHelper with Logging {
+trait UserIdentityProvider extends IdentityProvider with Logging {
 
   abstract override def authenticate[A]()(implicit request: Request[A]): Either[Result, Identity] = {
     log.info(s"[authenticate] userId=${request.session.getUserId} session.data=${request.session.data} request=$request")

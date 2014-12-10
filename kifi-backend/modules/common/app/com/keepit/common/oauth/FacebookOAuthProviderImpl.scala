@@ -14,7 +14,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import play.api.Play.current
 
-trait FacebookOAuthProvider extends OAuthProvider with OAuth2Support {
+trait FacebookOAuthProvider extends OAuth2Support {
 
   val MeApi = "https://graph.facebook.com/me?fields=name,first_name,last_name,picture,email&return_ssl_resources=1&access_token="
   val Error = "error"
@@ -36,27 +36,11 @@ trait FacebookOAuthProvider extends OAuthProvider with OAuth2Support {
 
 @Singleton
 class FacebookOAuthProviderImpl @Inject() (
-    airbrake: AirbrakeNotifier,
-    val oauth2Config: OAuth2Configuration) extends FacebookOAuthProvider with OAuth2Support with Logging {
-
-  override def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = {
-    log.info(s"[buildTokenInfo(fb)] response.body=${response.body}")
-    val parsed = response.body.split("&").map { kv =>
-      val p = kv.split("=").take(2)
-      p(0) -> (if (p.length == 2) {
-        try { JsNumber(p(1).toInt) } catch {
-          case _: Throwable => JsString(p(1))
-        }
-      } else JsNull)
-    }.toMap
-    log.info(s"[buildTokenInfo] parsed=$parsed")
-    OAuth2TokenInfo(
-      OAuth2AccessToken(parsed.get(OAuth2Constants.AccessToken).map(_.as[String]).get),
-      parsed.get(OAuth2Constants.TokenType).map(_.asOpt[String]).flatten,
-      parsed.get(OAuth2Constants.ExpiresIn).map(_.asOpt[Int]).flatten,
-      parsed.get(OAuth2Constants.RefreshToken).map(_.asOpt[String]).flatten
-    )
-  }
+  airbrake: AirbrakeNotifier,
+  val oauth2Config: OAuth2Configuration)
+    extends FacebookOAuthProvider
+    with FacebookOAuth2ProviderHelper
+    with Logging {
 
   def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {
     WS.url(MeApi + accessToken.token).get() map { response =>
