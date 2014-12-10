@@ -74,6 +74,8 @@ class MobileSearchController @Inject() (
         val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
           libraryRecordsAndVisibilityById.get(hit.id).map {
             case (library, visibility) =>
+              val owner = usersById(library.ownerId)
+              val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
               val statistics = libraryStatisticsById(library.id)
               val description = library.description.getOrElse("")
               Json.obj(
@@ -81,8 +83,9 @@ class MobileSearchController @Inject() (
                 "score" -> hit.score,
                 "name" -> library.name,
                 "description" -> description,
+                "path" -> path,
                 "visibility" -> visibility,
-                "owner" -> usersById(library.ownerId),
+                "owner" -> owner,
                 "memberCount" -> statistics.memberCount,
                 "keepCount" -> statistics.keepCount
               )
