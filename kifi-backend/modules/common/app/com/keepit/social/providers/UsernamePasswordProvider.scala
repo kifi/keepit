@@ -3,6 +3,7 @@ package com.keepit.social.providers
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.oauth.OAuth2ProviderConfiguration
 import com.keepit.model.User
 import com.keepit.social.{ UserIdentity, UserIdentityProvider }
 
@@ -25,6 +26,7 @@ class UsernamePasswordProvider(app: Application)
   // see SecureSocialAuthenticatorStore
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal] // fail hard
   lazy val passwordAuth = global.injector.instance[PasswordAuthentication]
+  lazy val providerConfig: OAuth2ProviderConfiguration = throw new UnsupportedOperationException(s"OAuth2 is not supported by provider $id")
 
   override def doAuth[A]()(implicit request: Request[A]): Either[Result, UserIdentity] = {
     UPP.loginForm.bindFromRequest().fold(
@@ -53,14 +55,6 @@ class UsernamePasswordProvider(app: Application)
         }
       }
     )
-  }
-
-  override protected def buildInfo(response: WSResponse): OAuth2Info = {
-    try super.buildInfo(response) catch {
-      case e: Throwable =>
-        log.info(s"[securesocial] Failed to build oauth2 info. Response was ${response.body}")
-        throw e
-    }
   }
 
   private def error(errorCode: String) = Forbidden(Json.obj("error" -> errorCode))
