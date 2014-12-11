@@ -288,7 +288,7 @@ class KeepImageCommanderImpl @Inject() (
       db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
         val existingImagesForKeep = keepImageRepo.getAllForKeepId(keepId).toSet
         replaceOldKeepImagesWithNew(existingImagesForKeep, keepImages)
-      }.map(_.sourceFileHash).toSet
+      }
       ImageProcessState.StoreSuccess
     }.recover {
       case ex: SQLException =>
@@ -339,8 +339,7 @@ class KeepImageCommanderImpl @Inject() (
           db.readWrite(attempts = 3) { implicit session =>
             val existingForHash = keepImageRepo.getBySourceHash(ImageHash(hash))
             if (existingForHash.nonEmpty) {
-              val replacedImages = copyExistingImagesAndReplace(keepId, ImageSource.UserPicked, existingForHash)
-              val replacedHashes = replacedImages.images.map(_.sourceFileHash).toSet
+              copyExistingImagesAndReplace(keepId, ImageSource.UserPicked, existingForHash)
               Some(ImageProcessState.StoreSuccess)
             } else {
               None

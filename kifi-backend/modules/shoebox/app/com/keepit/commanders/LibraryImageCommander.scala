@@ -162,7 +162,7 @@ class LibraryImageCommanderImpl @Inject() (
         }.isEmpty
       }
 
-      log.info("[kic] Activating:" + toActivate.map(_.imagePath) + "\nDeactivating:" + toDeactivate.map(_.imagePath) + "\nCreating:" + toCreate.map(_.imagePath))
+      log.info("[lic] Activating:" + toActivate.map(_.imagePath) + "\nDeactivating:" + toDeactivate.map(_.imagePath) + "\nCreating:" + toCreate.map(_.imagePath))
       toDeactivate.foreach(libraryImageRepo.save)
       (toActivate ++ toCreate).map(libraryImageRepo.save)
     }
