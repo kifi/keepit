@@ -1,4 +1,4 @@
-package com.keepit.dev
+package com.keepit.graph.dev
 
 import com.keepit.FortyTwoGlobal
 import play.api.Mode._
