@@ -26,14 +26,14 @@ class EventProxyController @Inject() (
         val builder = heimdalContextBuilderFactoryBean.withRequestInfo(request)
         builder.addExistingContext(eventContext)
         val fullContext = builder.build
-        val event = request.userIdOpt match {
-          case Some(userId) => {
+        val event = request match {
+          case userRequest: UserRequest[_] => {
             intendedEventOpt.foreach { intendedEvent => require(intendedEvent == UserEvent, s"Was expecting a user event, got $rawEventType") }
-            val userEvent = UserEvent(userId, fullContext, eventType, sentAt)
+            val userEvent = UserEvent(userRequest.userId, fullContext, eventType, sentAt)
             optionallySendUserUsedKifiEvent(userEvent)
             userEvent
           }
-          case None => {
+          case _ => {
             intendedEventOpt.foreach { intendedEvent => require(intendedEvent == VisitorEvent, s"Was expecting a visitor event, got $rawEventType") }
             VisitorEvent(fullContext, eventType, sentAt)
           }
