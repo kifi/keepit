@@ -76,6 +76,17 @@ case object AnonymousEvent extends HeimdalEventCompanion[AnonymousEvent] {
   implicit val typeCode = "anonymous"
 }
 
+case class VisitorEvent(context: HeimdalContext, eventType: EventType, time: DateTime = currentDateTime) extends HeimdalEvent {
+  type E = VisitorEvent
+  def companion = VisitorEvent
+  override def toString(): String = s"VisitorEvent[type=${eventType.name},time=$time]"
+}
+
+case object VisitorEvent extends HeimdalEventCompanion[VisitorEvent] {
+  implicit val format = Json.format[VisitorEvent]
+  implicit val typeCode = "visitor"
+}
+
 case class NonUserEvent(
     identifier: String,
     kind: NonUserKind,

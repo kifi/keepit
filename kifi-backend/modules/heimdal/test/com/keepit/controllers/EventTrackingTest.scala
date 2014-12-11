@@ -26,16 +26,17 @@ class EventTrackingTest extends Specification with HeimdalTestInjector {
     val userEventRepo = inject[UserEventLoggingRepo].asInstanceOf[FakeUserEventLoggingRepo]
     val systemEventRepo = inject[SystemEventLoggingRepo].asInstanceOf[FakeSystemEventLoggingRepo]
     val anonymousEventRepo = inject[AnonymousEventLoggingRepo].asInstanceOf[FakeAnonymousEventLoggingRepo]
+    val visitorEventRepo = inject[VisitorEventLoggingRepo].asInstanceOf[FakeVisitorEventLoggingRepo]
     val nonUserEventRepo = inject[NonUserEventLoggingRepo].asInstanceOf[FakeNonUserEventLoggingRepo]
 
-    (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, nonUserEventRepo, testContext)
+    (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, visitorEventRepo, nonUserEventRepo, testContext)
   }
 
   "Event Tracking Controller" should {
 
     "store correctly" in {
       withInjector(modules: _*) { implicit injector =>
-        val (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, nonUserEventRepo, testContext) = setup()
+        val (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, visitorEventRepo, nonUserEventRepo, testContext) = setup()
         val userEvent: HeimdalEvent = UserEvent(Id(1), testContext, EventType("user_test_event"))
         userEventRepo.eventCount() === 0
         eventTrackingController.trackInternalEvent(Json.toJson(userEvent))
@@ -54,6 +55,12 @@ class EventTrackingTest extends Specification with HeimdalTestInjector {
         anonymousEventRepo.eventCount() === 1
         anonymousEventRepo.lastEvent.context.data("testField").asInstanceOf[ContextStringData].value === "Yay!"
 
+        val visitorEvent: HeimdalEvent = VisitorEvent(testContext, EventType("visitor_test_event"))
+        visitorEventRepo.eventCount() === 0
+        eventTrackingController.trackInternalEvent(Json.toJson(visitorEvent))
+        visitorEventRepo.eventCount() === 1
+        visitorEventRepo.lastEvent.context.data("testField").asInstanceOf[ContextStringData].value === "Yay!"
+
         val nonUserEvent: HeimdalEvent = NonUserEvent("non_user@join.com", NonUserKinds.email, testContext, EventType("non_user_test_event"))
         nonUserEventRepo.eventCount() === 0
         eventTrackingController.trackInternalEvent(Json.toJson(nonUserEvent))
@@ -64,7 +71,7 @@ class EventTrackingTest extends Specification with HeimdalTestInjector {
 
     "store array" in {
       withInjector(modules: _*) { implicit injector =>
-        val (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, nonUserEventRepo, testContext) = setup()
+        val (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, visitorEventRepo, nonUserEventRepo, testContext) = setup()
         val events: Array[HeimdalEvent] = Array(
           UserEvent(Id(1), testContext, EventType("test_event")),
           UserEvent(Id(2), testContext, EventType("user_test_event")),
@@ -72,6 +79,7 @@ class EventTrackingTest extends Specification with HeimdalTestInjector {
           UserEvent(Id(4), testContext, EventType("user_test_event")),
           SystemEvent(testContext, EventType("system_test_event")),
           AnonymousEvent(testContext, EventType("anonymous_test_event")),
+          VisitorEvent(testContext, EventType("visitor_test_event")),
           NonUserEvent("non_user@join.com", NonUserKinds.email, testContext, EventType("non_user_test_event"))
         )
         userEventRepo.eventCount() === 0
@@ -91,6 +99,9 @@ class EventTrackingTest extends Specification with HeimdalTestInjector {
 
         anonymousEventRepo.eventCount() === 1
         anonymousEventRepo.events(0).eventType === EventType("anonymous_test_event")
+
+        visitorEventRepo.eventCount() === 1
+        visitorEventRepo.events(0).eventType === EventType("visitor_test_event")
 
         nonUserEventRepo.eventCount === 1
         nonUserEventRepo.events(0).eventType === EventType("non_user_test_event")

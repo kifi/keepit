@@ -1,78 +1,66 @@
 package com.keepit.controllers.tracking
 
 import com.keepit.common.controller._
+import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsArray, JsObject, JsNumber, JsBoolean, JsString, JsNull, JsValue }
-import play.api.mvc.RequestHeader
 
 import com.google.inject.Inject
+import play.api.libs.json.JsObject
 
 class EventProxyController @Inject() (
     val userActionsHelper: UserActionsHelper,
+    clock: Clock,
     heimdal: HeimdalServiceClient,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory) extends UserActions with ShoeboxServiceController {
 
-  private def jsValue2SimpleContextData(datum: JsValue): SimpleContextData = {
-    datum match {
-      case JsNumber(x) => ContextDoubleData(x.toDouble)
-      case JsBoolean(b) => ContextBoolean(b)
-      case JsString(s) => ContextStringData(s)
-      case huh => ContextStringData(huh.toString) //unexpected, trying our best not to loose data
-    }
-  }
-
-  private def jsObject2HeimdalContext(data: JsObject, request: RequestHeader): HeimdalContext = {
-    val contextBuilder = heimdalContextBuilderFactoryBean.withRequestInfo(request)
-    data.fields.foreach {
-      case (name, datum) =>
-        datum match {
-          case JsArray(a) => (name, a.map(jsValue2SimpleContextData(_)))
-          case x => contextBuilder += (name, jsValue2SimpleContextData(x))
-        }
-    }
-    contextBuilder.build
-  }
-
-  def track() = UserAction(parse.tolerantJson) { request =>
+  def track() = MaybeUserAction(parse.tolerantJson) { request =>
     SafeFuture("event proxy") {
-      val rawEvents: Seq[JsObject] = request.body.as[JsArray].value.map(_.as[JsObject])
-      rawEvents.foreach { rawEvent =>
-        val eventType = (rawEvent \ "event").as[String]
-        val eventContext = (rawEvent \ "properties").as[JsObject]
-        val context = jsObject2HeimdalContext(eventContext, request)
+      val sentAt = clock.now()
+      request.body.as[Seq[JsObject]].foreach { rawEvent =>
+        val eventType = getEventType(rawEvent)
+        val eventContext = (rawEvent \ "properties").as[HeimdalContext]
         val builder = heimdalContextBuilderFactoryBean.withRequestInfo(request)
-        builder.addExistingContext(context)
-        val fullcontext = builder.build
-
-        heimdal.trackEvent(UserEvent(
-          userId = request.userId,
-          context = fullcontext,
-          eventType = EventType(eventType)
-        ))
-        optionallySendUserUsedKifiEvent(request, fullcontext, eventType)
+        builder.addExistingContext(eventContext)
+        val fullContext = builder.build
+        val event = request.userIdOpt match {
+          case Some(userId) => {
+            val userEvent = UserEvent(userId, fullContext, eventType, sentAt)
+            optionallySendUserUsedKifiEvent(userEvent)
+            userEvent
+          }
+          case None => VisitorEvent(fullContext, eventType, sentAt)
+        }
+        heimdal.trackEvent(event)
       }
     }
     NoContent
   }
 
   // integrate some events into used_kifi events as actions
-  def optionallySendUserUsedKifiEvent(request: UserRequest[_], existingContext: HeimdalContext, triggeringEvent: String): Unit = {
-    val validEvents = Set("user_viewed_page", "user_viewed_pane")
-    if (validEvents.contains(triggeringEvent)) {
+  def optionallySendUserUsedKifiEvent(event: UserEvent): Unit = {
+    val validEvents = Set(UserEventTypes.VIEWED_PAGE, UserEventTypes.VIEWED_PANE)
+    if (validEvents.contains(event.eventType)) {
       val builder = heimdalContextBuilderFactoryBean()
-      builder.addExistingContext(existingContext)
-      triggeringEvent match {
-        case "user_viewed_page" =>
-          builder += ("action", "viewedSite")
-          heimdal.trackEvent(UserEvent(request.userId, builder.build, UserEventTypes.USED_KIFI))
-        case "user_viewed_pane" =>
-          builder += ("action", "viewedPane")
-          heimdal.trackEvent(UserEvent(request.userId, builder.build, UserEventTypes.USED_KIFI))
-        case _ =>
+      builder.addExistingContext(event.context)
+      val action = event.eventType match {
+        case UserEventTypes.VIEWED_PAGE => "viewedSite"
+        case UserEventTypes.VIEWED_PANE => "viewedPane"
       }
+      builder += ("action", action)
+      heimdal.trackEvent(UserEvent(event.userId, builder.build, UserEventTypes.USED_KIFI, event.time))
     }
+  }
+
+  // Events are coming in from clients with the "user_" or "visitor_" prefix already present, stripping it here since it's automatically prepended in MixpanelClient.
+  private def getEventType(rawEvent: JsObject): EventType = {
+    val rawEventType = (rawEvent \ "event").as[String]
+    val cleanEventType = HeimdalEventCompanion.all.find(companion => rawEventType.startsWith(companion.typeCode)) match {
+      case None => rawEventType
+      case Some(typeCode) => rawEventType.stripPrefix(typeCode + "_")
+    }
+    EventType(cleanEventType)
   }
 }

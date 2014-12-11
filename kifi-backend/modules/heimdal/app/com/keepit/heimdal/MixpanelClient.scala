@@ -30,7 +30,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
   private def getDistinctId[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): String = event match {
     case userEvent: UserEvent => getDistinctId(userEvent.userId)
     case nonUserEvent: NonUserEvent => nonUserEvent.identifier
-    case _ => companion.typeCode
+    case otherEvent => otherEvent.context.get[String]("distinct_id") getOrElse companion.typeCode
   }
 
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]) = {
