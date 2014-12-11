@@ -20,8 +20,9 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
 
   "RelatedLibraryCommander" should withDb() { implicit injector =>
 
-    def setup() = {
+    def setup(): Unit = {
       val libRepo = inject[LibraryRepo]
+      val libMemRepo = inject[LibraryMembershipRepo]
 
       db.readWrite { implicit s =>
         (1 to 10).foreach { i =>
@@ -29,13 +30,19 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
           libRepo.save(lib)
         }
       }
+
+      db.readWrite { implicit s =>
+        libMemRepo.save(LibraryMembership(libraryId = Id[Library](2), userId = Id[User](1), access = LibraryAccess.READ_WRITE, showInSearch = true))
+        libMemRepo.save(LibraryMembership(libraryId = Id[Library](3), userId = Id[User](2), access = LibraryAccess.READ_WRITE, showInSearch = true))
+        libMemRepo.save(LibraryMembership(libraryId = Id[Library](3), userId = Id[User](3), access = LibraryAccess.READ_ONLY, showInSearch = true))
+      }
     }
+
+    step { setup() }
 
     "query related libraries" in {
 
-      setup() // setup only once, reuse db contents in other sub tests
-
-      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], fakeCortex)
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], null, null, fakeCortex)
 
       val libsF = commander.relatedLibraries(Id[Library](1))
       Await.result(libsF, FiniteDuration(5, SECONDS)).sortBy(_.id.get).map { _.id.get.id } === List(2, 3, 4, 5)
@@ -46,14 +53,15 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
 
     "get top followed libraries" in {
 
-      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], fakeCortex)
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], null, null, fakeCortex)
 
       val libsF = commander.topFollowedLibraries(5, 10)
       Await.result(libsF, FiniteDuration(5, SECONDS)).sortBy(_.id.get).map { _.id.get.id } === List(6, 7, 8, 9, 10)
     }
 
     "be smart when no related libraries were found" in {
-      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], fakeCortex)
+
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], null, null, fakeCortex)
 
       val libsF = commander.suggestedLibraries(Id[Library](1))
       Await.result(libsF, FiniteDuration(5, SECONDS)).sortBy(_.id.get).map { _.id.get.id }.toList === List(2, 3, 4, 5)
