@@ -1,98 +1,98 @@
 ##########################################
 # Search Admin
 ##########################################
-GET         /admin/search/instance         @com.keepit.controllers.search.SearchAdminController.instance()
+GET         /admin/search/instance         @com.keepit.search.controllers.search.SearchAdminController.instance()
 
 ##########################################
 # Search Extension API
 ##########################################
 # Note:     /search will be deprecated when libraries launch
-GET         /search        @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String])
-GET         /ext/search                    @com.keepit.controllers.ext.ExtSearchController.search2(q: String, n: Int ?= 5, f: Option[String], u: Option[String], c: Option[String], v: Option[KifiExtVersion], debug: Option[String])
+GET         /search        @com.keepit.search.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String])
+GET         /ext/search                    @com.keepit.search.controllers.ext.ExtSearchController.search2(q: String, n: Int ?= 5, f: Option[String], u: Option[String], c: Option[String], v: Option[KifiExtVersion], debug: Option[String])
 
 # Note:     /search/warmUp is deprecated, was last used in extension 3.2.16
-GET         /search/warmUp        @com.keepit.controllers.ext.ExtSearchController.warmUp()
-POST        /ext/search/prime              @com.keepit.controllers.ext.ExtSearchController.warmUp()
+GET         /search/warmUp        @com.keepit.search.controllers.ext.ExtSearchController.warmUp()
+POST        /ext/search/prime              @com.keepit.search.controllers.ext.ExtSearchController.warmUp()
 
 # Note:     /search/events routes are deprecated, were last used in extension 3.2.16
-POST        /search/events/resultClicked        @com.keepit.controllers.ext.ExtSearchEventController.clickedSearchResult()
-POST        /search/events/searched        @com.keepit.controllers.ext.ExtSearchEventController.searched()
-POST        /ext/search/events/searched    @com.keepit.controllers.ext.ExtSearchEventController.searched()
-POST        /ext/search/events/clicked     @com.keepit.controllers.ext.ExtSearchEventController.clickedSearchResult()
+POST        /search/events/resultClicked        @com.keepit.search.controllers.ext.ExtSearchEventController.clickedSearchResult()
+POST        /search/events/searched        @com.keepit.search.controllers.ext.ExtSearchEventController.searched()
+POST        /ext/search/events/searched    @com.keepit.search.controllers.ext.ExtSearchEventController.searched()
+POST        /ext/search/events/clicked     @com.keepit.search.controllers.ext.ExtSearchEventController.clickedSearchResult()
 
 # Note:     /ext/search/message is not yet in use
-GET         /ext/search/message            @com.keepit.controllers.ext.ExtMessageSearchController.search(q: String, page: Int ?= 0)
+GET         /ext/search/message            @com.keepit.search.controllers.ext.ExtMessageSearchController.search(q: String, page: Int ?= 0)
 
 ##########################################
 # Mobile V1
 ##########################################
-GET         /m/1/search        @com.keepit.controllers.mobile.MobileSearchController.searchV1(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], withUriSummary: Boolean ?= false)
-GET         /m/1/search/users/page        @com.keepit.controllers.mobile.MobileUserSearchController.pageV1(query: String, filter: Option[String], pageNum: Int, pageSize: Int)
-GET         /m/1/search/users/search        @com.keepit.controllers.mobile.MobileUserSearchController.searchV1(query: String, filter: Option[String], context: Option[String], maxHits: Int)
-POST        /m/1/search/events/clickedSearchResult        @com.keepit.controllers.mobile.MobileSearchEventController.clickedSearchResult()
-POST        /m/1/search/events/searched        @com.keepit.controllers.mobile.MobileSearchEventController.searched()
-GET         /m/1/search/message        @com.keepit.controllers.mobile.MobileMessageSearchController.search(q: String, page: Int ?= 0)
-GET         /m/1/search/library        @com.keepit.controllers.mobile.MobileSearchController.librarySearch(q: String, f: Option[String], maxHits: Int, context: Option[String], debug: Option[String])
+GET         /m/1/search        @com.keepit.search.controllers.mobile.MobileSearchController.searchV1(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], withUriSummary: Boolean ?= false)
+GET         /m/1/search/users/page        @com.keepit.search.controllers.mobile.MobileUserSearchController.pageV1(query: String, filter: Option[String], pageNum: Int, pageSize: Int)
+GET         /m/1/search/users/search        @com.keepit.search.controllers.mobile.MobileUserSearchController.searchV1(query: String, filter: Option[String], context: Option[String], maxHits: Int)
+POST        /m/1/search/events/clickedSearchResult        @com.keepit.search.controllers.mobile.MobileSearchEventController.clickedSearchResult()
+POST        /m/1/search/events/searched        @com.keepit.search.controllers.mobile.MobileSearchEventController.searched()
+GET         /m/1/search/message        @com.keepit.search.controllers.mobile.MobileMessageSearchController.search(q: String, page: Int ?= 0)
+GET         /m/1/search/library        @com.keepit.search.controllers.mobile.MobileSearchController.librarySearch(q: String, f: Option[String], maxHits: Int, context: Option[String], debug: Option[String])
 
 
 ##########################################
 # Search Website API
 ##########################################
-GET         /site/search2                       @com.keepit.controllers.website.WebsiteSearchController.search2(q: String, f: Option[String], l: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], auth: Option[String], debug: Option[String])
-GET         /site/search/warmUp                 @com.keepit.controllers.website.WebsiteSearchController.warmUp()
-POST        /site/search/events/resultClicked   @com.keepit.controllers.website.WebsiteSearchEventController.clickedKifiResult()
-POST        /site/search/events/searched        @com.keepit.controllers.website.WebsiteSearchEventController.searched()
-GET         /site/search/library                @com.keepit.controllers.website.WebsiteSearchController.librarySearch(q: String, f: Option[String], maxHits: Int, context: Option[String], debug: Option[String])
+GET         /site/search2                       @com.keepit.search.controllers.website.WebsiteSearchController.search2(q: String, f: Option[String], l: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], auth: Option[String], debug: Option[String])
+GET         /site/search/warmUp                 @com.keepit.search.controllers.website.WebsiteSearchController.warmUp()
+POST        /site/search/events/resultClicked   @com.keepit.search.controllers.website.WebsiteSearchEventController.clickedKifiResult()
+POST        /site/search/events/searched        @com.keepit.search.controllers.website.WebsiteSearchEventController.searched()
+GET         /site/search/library                @com.keepit.search.controllers.website.WebsiteSearchController.librarySearch(q: String, f: Option[String], maxHits: Int, context: Option[String], debug: Option[String])
 
 
 ##########################################
 # INTERNAL ROUTES/Search
 ##########################################
 
-POST        /internal/search/dist/search          @com.keepit.controllers.search.SearchController.distSearch()
-POST        /internal/search/dist/search2         @com.keepit.controllers.search.SearchController.distSearch2()
-POST        /internal/search/dist/langFreqs       @com.keepit.controllers.search.SearchController.distLangFreqs()
-POST        /internal/search/dist/augmentation    @com.keepit.controllers.search.SearchController.distAugmentation()
-POST        /internal/search/dist/librarySearch   @com.keepit.controllers.search.SearchController.distLibrarySearch()
+POST        /internal/search/dist/search          @com.keepit.search.controllers.search.SearchController.distSearch()
+POST        /internal/search/dist/search2         @com.keepit.search.controllers.search.SearchController.distSearch2()
+POST        /internal/search/dist/langFreqs       @com.keepit.search.controllers.search.SearchController.distLangFreqs()
+POST        /internal/search/dist/augmentation    @com.keepit.search.controllers.search.SearchController.distAugmentation()
+POST        /internal/search/dist/librarySearch   @com.keepit.search.controllers.search.SearchController.distLibrarySearch()
 
-GET         /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])
+GET         /internal/search/warmUp/:userId        @com.keepit.search.controllers.search.SearchController.warmUpUser(userId: Id[User])
 
-POST        /internal/search/events/browsed/:userId        @com.keepit.controllers.search.SearchEventController.updateBrowsingHistory(userId: Id[User])
+POST        /internal/search/events/browsed/:userId        @com.keepit.search.controllers.search.SearchEventController.updateBrowsingHistory(userId: Id[User])
 
-GET         /internal/search/updateKeepIndex        @com.keepit.controllers.search.IndexController.updateKeepIndex()
-GET         /internal/search/updateLibraryIndex     @com.keepit.controllers.search.IndexController.updateLibraryIndex()
+GET         /internal/search/updateKeepIndex        @com.keepit.search.controllers.search.IndexController.updateKeepIndex()
+GET         /internal/search/updateLibraryIndex     @com.keepit.search.controllers.search.IndexController.updateLibraryIndex()
 
-POST        /internal/search/user/reindex        @com.keepit.controllers.search.UserIndexController.reindex()
-POST        /internal/search/user/update        @com.keepit.controllers.search.UserIndexController.update()
-POST        /internal/search/userGraph/update        @com.keepit.controllers.search.UserGraphController.updateUserGraph()
-POST        /internal/search/searchFriendGraph/update        @com.keepit.controllers.search.UserGraphController.updateSearchFriends()
-POST        /internal/search/userGraphs/reindex        @com.keepit.controllers.search.UserGraphController.reindex()
+POST        /internal/search/user/reindex        @com.keepit.search.controllers.search.UserIndexController.reindex()
+POST        /internal/search/user/update        @com.keepit.search.controllers.search.UserIndexController.update()
+POST        /internal/search/userGraph/update        @com.keepit.search.controllers.search.UserGraphController.updateUserGraph()
+POST        /internal/search/searchFriendGraph/update        @com.keepit.search.controllers.search.UserGraphController.updateSearchFriends()
+POST        /internal/search/userGraphs/reindex        @com.keepit.search.controllers.search.UserGraphController.reindex()
 
-POST        /internal/search/index/update        @com.keepit.controllers.search.ArticleIndexerController.index()
-POST        /internal/search/index/reindex        @com.keepit.controllers.search.ArticleIndexerController.reindex()
-GET         /internal/search/index/sequenceNumber        @com.keepit.controllers.search.ArticleIndexerController.getSequenceNumber()
-POST        /internal/search/index/refreshSearcher        @com.keepit.controllers.search.ArticleIndexerController.refreshSearcher()
-POST        /internal/search/index/refreshPhrases        @com.keepit.controllers.search.ArticleIndexerController.refreshPhrases()
-POST        /internal/search/index/dumpDoc/:id        @com.keepit.controllers.search.ArticleIndexerController.dumpLuceneDocument(id: Id[NormalizedURI])
-GET         /internal/search/index/refreshWriter        @com.keepit.controllers.search.ArticleIndexerController.refreshWriter()
+POST        /internal/search/index/update        @com.keepit.search.controllers.search.ArticleIndexerController.index()
+POST        /internal/search/index/reindex        @com.keepit.search.controllers.search.ArticleIndexerController.reindex()
+GET         /internal/search/index/sequenceNumber        @com.keepit.search.controllers.search.ArticleIndexerController.getSequenceNumber()
+POST        /internal/search/index/refreshSearcher        @com.keepit.search.controllers.search.ArticleIndexerController.refreshSearcher()
+POST        /internal/search/index/refreshPhrases        @com.keepit.search.controllers.search.ArticleIndexerController.refreshPhrases()
+POST        /internal/search/index/dumpDoc/:id        @com.keepit.search.controllers.search.ArticleIndexerController.dumpLuceneDocument(id: Id[NormalizedURI])
+GET         /internal/search/index/refreshWriter        @com.keepit.search.controllers.search.ArticleIndexerController.refreshWriter()
 
-GET         /internal/search/indexInfo/listAll        @com.keepit.controllers.search.IndexController.listIndexInfo
+GET         /internal/search/indexInfo/listAll        @com.keepit.search.controllers.search.IndexController.listIndexInfo
 
 
-POST        /internal/search/search/users        @com.keepit.controllers.search.SearchController.searchUsers()
-POST        /internal/search/search/userTypeahead        @com.keepit.controllers.search.SearchController.userTypeahead()
-GET         /internal/search/search/explainResult        @com.keepit.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], debug: Option[String])
-POST        /internal/searchWithConfig        @com.keepit.controllers.search.SearchController.searchWithConfig
+POST        /internal/search/search/users        @com.keepit.search.controllers.search.SearchController.searchUsers()
+POST        /internal/search/search/userTypeahead        @com.keepit.search.controllers.search.SearchController.userTypeahead()
+GET         /internal/search/search/explainResult        @com.keepit.search.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], debug: Option[String])
+POST        /internal/searchWithConfig        @com.keepit.search.controllers.search.SearchController.searchWithConfig
 
-GET         /internal/search/searchConfig/:id        @com.keepit.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
-POST        /internal/search/searchConfig/:id/set        @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])
-GET         /internal/search/searchConfig/:id/reset        @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
-GET         /internal/search/defaultSearchConfig/defaultSearchConfig        @com.keepit.controllers.search.SearchConfigController.getSearchDefaultConfig
+GET         /internal/search/searchConfig/:id        @com.keepit.search.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
+POST        /internal/search/searchConfig/:id/set        @com.keepit.search.controllers.search.SearchConfigController.setUserConfig(id: Id[User])
+GET         /internal/search/searchConfig/:id/reset        @com.keepit.search.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
+GET         /internal/search/defaultSearchConfig/defaultSearchConfig        @com.keepit.search.controllers.search.SearchConfigController.getSearchDefaultConfig
 
-GET         /internal/search/cache/warmResultClick        @com.keepit.controllers.search.SearchCacheController.warmResultClick()
+GET         /internal/search/cache/warmResultClick        @com.keepit.search.controllers.search.SearchCacheController.warmResultClick()
 
-GET         /internal/search/searchMessages @com.keepit.controllers.search.MessageSearchController.search(userId: Id[User], query: String, page: Int ?= 0)
-POST        /internal/search/augmentation   @com.keepit.controllers.search.SearchController.augmentation()
-POST        /internal/search/augment   @com.keepit.controllers.search.SearchController.augment()
+GET         /internal/search/searchMessages @com.keepit.search.controllers.search.MessageSearchController.search(userId: Id[User], query: String, page: Int ?= 0)
+POST        /internal/search/augmentation   @com.keepit.search.controllers.search.SearchController.augmentation()
+POST        /internal/search/augment   @com.keepit.search.controllers.search.SearchController.augment()
 
 ->          /        common.Routes
