@@ -72,6 +72,9 @@ class NonLinearRecoScoringStrategy extends RecoScoringStrategy {
       7 * scores.recentInterestScore +
       4 * scores.libraryInducedScore.getOrElse(0.0f)
     )
+    val normalizer = (5f + 7f + scores.libraryInducedScore.fold(0f)(_ => 4f))
+    val factor = interestPart / normalizer
+
     val socialPart = (
       4 * scores.socialScore +
       2 * scores.priorScore +
@@ -81,7 +84,6 @@ class NonLinearRecoScoringStrategy extends RecoScoringStrategy {
       3 * scores.discoveryScore +
       4 * scores.curationScore.getOrElse(0.0f)
     )
-    val factor = interestPart / (5f + 7f + scores.libraryInducedScore.fold(0f)(_ => 4f)) // normalized to [0, 1]
 
     (interestPart + factor * socialPart) * scores.multiplier.getOrElse(1.0f)
   }
