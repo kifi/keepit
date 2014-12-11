@@ -99,9 +99,9 @@ class LibraryImageControllerTest extends Specification with ShoeboxTestInjector 
         val imagePath1 = (contentAsJson(uploadResp) \ "imagePath").as[String]
 
         // apply positioning to bad imageUrl
-        status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x" -> 20))) === BAD_REQUEST
-        status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "library/asdf_30x20.jpg", "x" -> 20))) === BAD_REQUEST
-        status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "library/26dbdc56d54dbc94830f7cfc85031481_30xa.jpg", "x" -> 20))) === BAD_REQUEST
+        status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x" -> 20))) === BAD_REQUEST // wrong path
+        status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "library/asdf_30x20.jpg", "x" -> 20))) === BAD_REQUEST // bad image hash
+        status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "library/26dbdc56d54dbc94830f7cfc85031481_30xa.jpg", "x" -> 20))) === BAD_REQUEST // bad width or height
 
         // Invalid Access to Library (wrong user)
         status(positionImage(user2, libPubId1, Json.obj("imagePath" -> imagePath1, "x" -> 5))) === FORBIDDEN

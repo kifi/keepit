@@ -51,7 +51,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         val libraryImageRepo = inject[LibraryImageRepo]
         val (user, lib) = setup()
 
-        // upload 2 images
+        // upload an image
         {
           val position = LibraryImagePosition(Some(40), None)
           val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload)
@@ -67,6 +67,21 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
           libImages.map(_.imagePosition === LibraryImagePosition(Some(40), Some(50)))
         }
 
+        // upload same image
+        {
+          val position = LibraryImagePosition(Some(40), None)
+          val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload)
+          val saved = Await.result(savedF, Duration("10 seconds"))
+          saved === ImageProcessState.StoreSuccess
+        }
+        inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 1
+        db.readOnlyMaster { implicit s =>
+          val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
+          libImages.length === 1
+          libImages.map(_.imagePosition === LibraryImagePosition(Some(40), Some(50)))
+        }
+
+        // upload another image
         {
           val position = LibraryImagePosition(Some(40), None)
           val savedF = commander.uploadLibraryImageFromFile(fakeFile2, lib.id.get, position, ImageSource.UserUpload)
