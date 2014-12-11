@@ -90,7 +90,7 @@ case class LDAConfigCommander(db: Database, topicInfoRepo: LDAInfoRepo, topicWor
 
   def getTopicName(topicId: Int)(implicit version: ModelVersion[DenseLDA]): Option[String] = {
     val conf = currentConfigs(version).configs(topicId.toString)
-    if (conf.isNameable && conf.topicName != LDAInfo.DEFUALT_NAME) Some(conf.topicName) else None
+    if (version.version < 3 && conf.isNameable && conf.topicName != LDAInfo.DEFUALT_NAME) Some(conf.topicName) else None
   }
 
   def topicConfigs(fromId: Int, toId: Int)(implicit version: ModelVersion[DenseLDA]): Map[String, LDATopicConfiguration] = {
