@@ -12,7 +12,6 @@ import com.keepit.common.net.WebService
 import com.keepit.common.store.{ ImageSize, LibraryImageStore, S3ImageConfig }
 import com.keepit.model._
 import play.api.libs.Files.TemporaryFile
-import play.api.http.Status._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
@@ -121,12 +120,11 @@ class LibraryImageCommanderImpl @Inject() (
       val libraryImages = results.map {
         case uploadedImage =>
           val isOriginal = uploadedImage.key.takeRight(7).indexOf(originalLabel) != -1
-
-          val setX = position.x.getOrElse(50)
-          val setY = position.y.getOrElse(50)
+          val setX = position.x.orElse(Some(50))
+          val setY = position.y.orElse(Some(50))
 
           val libImg = LibraryImage(libraryId = libraryId, imagePath = uploadedImage.key, format = uploadedImage.format,
-            width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight, positionX = Some(setX), positionY = Some(setY),
+            width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight, positionX = setX, positionY = setY,
             source = source, sourceFileHash = originalImage.hash, isOriginal = isOriginal, state = LibraryImageStates.ACTIVE)
           uploadedImage.image.flush()
           libImg
