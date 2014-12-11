@@ -19,6 +19,10 @@ object LibraryFactoryHelper {
       membership().withLibraryOwner(library).saved
       library
     }
+    def savedFollowerMembership(follower: User)(implicit injector: Injector, session: RWSession): Library = {
+      membership().withLibraryFollower(library, follower).saved
+      library
+    }
   }
 
   implicit class LibrarysPersister(partialLibrarys: Seq[PartialLibrary]) {
