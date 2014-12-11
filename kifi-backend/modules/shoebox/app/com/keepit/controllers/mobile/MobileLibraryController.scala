@@ -296,7 +296,7 @@ class MobileLibraryController @Inject() (
           "hashtags" -> tags.map(_.name)
         )
         imageUrlOpt.map { imageUrl =>
-          keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserPicked)
+          keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, ImageSource.UserPicked)
         }
         Future.successful(Ok(returnObj))
     }

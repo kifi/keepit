@@ -2,11 +2,8 @@ package com.keepit.commanders
 
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
-import java.awt.image.BufferedImage
 import java.io.File
-
 import com.google.inject.Injector
-import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.store.{ S3ImageConfig, FakeKeepImageStore, ImageSize, KeepImageStore }
 import com.keepit.model.LibraryFactory._
@@ -63,12 +60,12 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         val (user, lib, uri, keep1, keep2) = setup()
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, KeepImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, KeepImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
@@ -94,9 +91,9 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         bulk2.mapValues(_.map(_.id)) === Map(keep1.id.get -> Some(keepImage1.get.id), keep2.id.get -> Some(keepImage2.get.id))
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile2, keep2.id.get, KeepImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile2, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === ImageProcessState.StoreSuccess
+          saved === ImageProcessState.StoreSuccess // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
         }
 
         inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet.size === 4
@@ -111,7 +108,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         bulk3.mapValues(_.map(_.id)) === Map(keep1.id.get -> Some(keepImage1.get.id), keep2.id.get -> Some(keepImage3.get.id))
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, KeepImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
@@ -147,7 +144,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         val (user, lib, uri, keep1, _) = setup()
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, KeepImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
@@ -157,7 +154,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
             keepImageRepo.all().head.imagePath
           }
           val existingUrl = inject[S3ImageConfig].cdnBase + "/" + path
-          val savedF = commander.setKeepImageFromUrl(existingUrl, keep1.id.get, KeepImageSource.UserPicked)
+          val savedF = commander.setKeepImageFromUrl(existingUrl, keep1.id.get, ImageSource.UserPicked)
           val saved = Await.result(savedF, Duration("10 seconds"))
 
           // If this didn't de-dupe, it would fail, because the HTTP fetcher is disabled when no application is running

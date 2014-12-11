@@ -39,11 +39,11 @@ class ExtKeepImageController @Inject() (
         Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
       case Some(keep) =>
         val imageRequest = db.readWrite { implicit session =>
-          keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserUpload))
+          keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = ImageSource.UserUpload))
         }
-        val setImageF = keepImageCommander.setKeepImageFromFile(request.body, keep.id.get, KeepImageSource.UserUpload, Some(imageRequest.id.get))
+        val setImageF = keepImageCommander.setKeepImageFromFile(request.body, keep.id.get, ImageSource.UserUpload, Some(imageRequest.id.get))
         setImageF.map {
-          case fail: KeepImageStoreFailure =>
+          case fail: ImageStoreFailure =>
             InternalServerError(Json.obj("error" -> fail.reason))
           case success: ImageProcessSuccess =>
             Ok(JsString("success"))
@@ -99,10 +99,10 @@ class ExtKeepImageController @Inject() (
           Future.successful(Ok(Json.obj("image" -> JsNull)))
         case JsString(imageUrl @ URI(scheme, _, _, _, _, _, _)) if scheme.exists(_.startsWith("http")) =>
           val imageRequest = db.readWrite { implicit session =>
-            keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserUpload))
+            keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = ImageSource.UserUpload))
           }
-          keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserUpload, imageRequest.id) map {
-            case fail: KeepImageStoreFailure =>
+          keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, ImageSource.UserUpload, imageRequest.id) map {
+            case fail: ImageStoreFailure =>
               InternalServerError(Json.obj("error" -> fail.reason))
             case _: ImageProcessSuccess =>
               val idealSize = size.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
