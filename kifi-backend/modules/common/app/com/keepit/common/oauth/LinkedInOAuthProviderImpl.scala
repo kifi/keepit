@@ -1,6 +1,6 @@
 package com.keepit.common.oauth
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -33,13 +33,7 @@ object LinkedInOAuthProvider {
 }
 
 @Singleton
-class LinkedInOAuthProviderImpl @Inject() (
-  airbrake: AirbrakeNotifier,
-  val oauth2Config: OAuth2Configuration)
-    extends LinkedInOAuthProvider
-    with OAuth2Support
-    with OAuth2ProviderHelper
-    with Logging {
+class LinkedInOAuthProviderImpl @Inject() (airbrake: AirbrakeNotifier) extends LinkedInOAuthProvider with OAuth2Support with Logging {
 
   import LinkedInOAuthProvider._
   def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {

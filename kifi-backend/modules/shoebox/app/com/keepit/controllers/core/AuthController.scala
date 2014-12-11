@@ -310,7 +310,8 @@ class AuthController @Inject() (
   }
 
   def signup(provider: String) = Action.async(parse.anyContent) { implicit request =>
-    val authRes = ProviderController.authenticate(provider)
+    val authRes = timing(s"[signup($provider)] authenticate") { ProviderController.authenticate(provider) }
+
     authRes(request).map { result =>
       authHelper.authHandler(request, result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
