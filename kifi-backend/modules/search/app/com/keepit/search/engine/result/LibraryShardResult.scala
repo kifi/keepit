@@ -3,7 +3,7 @@ package com.keepit.search.engine.result
 import com.keepit.model.{ Keep, Library }
 import com.keepit.common.db.{ Id }
 import play.api.libs.json.Json
-import com.keepit.search.graph.keep.KeepRecord
+import com.keepit.search.index.graph.keep.KeepRecord
 import com.keepit.common.json.TupleFormat
 
 case class LibraryShardHit(

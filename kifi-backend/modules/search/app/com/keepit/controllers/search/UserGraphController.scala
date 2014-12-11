@@ -2,7 +2,7 @@ package com.keepit.controllers.search
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
-import com.keepit.search.graph.user._
+import com.keepit.search.index.graph.user._
 import play.api.mvc.Action
 
 class UserGraphController @Inject() (

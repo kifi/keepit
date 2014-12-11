@@ -12,12 +12,12 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import play.api.libs.json._
 import com.keepit.search.sharding.ShardSpecParser
-import com.keepit.search.user.UserSearchRequest
+import com.keepit.search.index.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.routes.Search
 import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest, AugmentationCommander }
-import com.keepit.search.graph.library.{ LibraryIndexable, LibraryIndexer }
+import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryIndexer }
 import com.keepit.controllers.util.SearchControllerUtil
 
 class SearchController @Inject() (

@@ -2,15 +2,15 @@ package com.keepit.controllers.search
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
-import com.keepit.search.graph.keep.KeepIndexerPlugin
-import com.keepit.search.graph.library.LibraryIndexerPlugin
+import com.keepit.search.index.graph.keep.KeepIndexerPlugin
+import com.keepit.search.index.graph.library.LibraryIndexerPlugin
 import play.api.libs.json.Json
 import play.api.mvc.Action
-import com.keepit.search.article.ArticleIndexerPlugin
-import com.keepit.search.graph.collection.CollectionGraphPlugin
-import com.keepit.search.graph.user._
-import com.keepit.search.user.UserIndexerPlugin
-import com.keepit.search.message.MessageIndexerPlugin
+import com.keepit.search.index.article.ArticleIndexerPlugin
+import com.keepit.search.index.graph.collection.CollectionGraphPlugin
+import com.keepit.search.index.graph.user._
+import com.keepit.search.index.user.UserIndexerPlugin
+import com.keepit.search.index.message.MessageIndexerPlugin
 import com.keepit.search.phrasedetector.PhraseIndexerPlugin
 
 class IndexController @Inject() (

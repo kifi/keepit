@@ -5,8 +5,8 @@ import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db._
 import com.keepit.model._
 import com.keepit.search.IndexInfo
-import com.keepit.search.article.ArticleIndexer
-import com.keepit.search.article.ArticleIndexerPlugin
+import com.keepit.search.index.article.ArticleIndexer
+import com.keepit.search.index.article.ArticleIndexerPlugin
 import com.keepit.search.index.Indexer.CommitData
 import com.keepit.search.phrasedetector.PhraseIndexer
 import com.keepit.shoebox.ShoeboxServiceClient

@@ -1,4 +1,4 @@
-package com.keepit.search.message
+package com.keepit.search.index.message
 
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.social.{ BasicUserLikeEntity }

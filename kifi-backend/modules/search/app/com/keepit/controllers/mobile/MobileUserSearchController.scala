@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, SearchServiceController }
 import com.keepit.common.logging.Logging
 import com.keepit.search.UserSearchCommander
-import com.keepit.search.user._
+import com.keepit.search.index.user._
 import play.api.libs.json.Json
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await

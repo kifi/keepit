@@ -12,7 +12,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import play.api.libs.json._
-import com.keepit.search.graph.library.{ LibraryIndexable, LibraryIndexer }
+import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryIndexer }
 import play.api.libs.json.JsArray
 import com.keepit.model._
 import com.keepit.search.util.IdFilterCompressor

@@ -1,7 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.search.{ SearchFilter, Searcher }
-import com.keepit.search.article.{ ArticleFields, ArticleVisibility }
+import com.keepit.search.index.article.{ ArticleFields, ArticleVisibility }
 import com.keepit.search.engine.query.QueryProjector
 import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.util.join.{ BloomFilter, DataBuffer, DataBufferWriter }

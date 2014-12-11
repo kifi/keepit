@@ -2,14 +2,14 @@ package com.keepit.search.sharding
 
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.search.article.ArticleRecord
-import com.keepit.search.article.ArticleRecordSerializer
-import com.keepit.search.graph.keep.{ KeepRecord, KeepFields, ShardedKeepIndexer }
+import com.keepit.search.index.article.ArticleRecord
+import com.keepit.search.index.article.ArticleRecordSerializer
+import com.keepit.search.index.graph.keep.{ KeepRecord, KeepFields, ShardedKeepIndexer }
 import org.apache.lucene.index.Term
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.search.graph.collection._
+import com.keepit.search.index.graph.collection._
 import com.keepit.search.SearchTestHelper
 import com.keepit.test._
 import com.keepit.shoebox.ShoeboxServiceClient

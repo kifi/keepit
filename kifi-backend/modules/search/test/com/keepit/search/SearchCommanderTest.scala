@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.search.graph.keep.ShardedKeepIndexer
+import com.keepit.search.index.graph.keep.ShardedKeepIndexer
 import com.keepit.test._
 import org.specs2.mutable._
 import com.keepit.common.akka.MonitoredAwait

@@ -20,7 +20,7 @@ import com.keepit.search._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.result.DecoratedResult
 import play.api.libs.json.{ Json, JsObject }
-import com.keepit.search.graph.library.{ LibraryRecord, LibraryIndexable }
+import com.keepit.search.index.graph.library.{ LibraryRecord, LibraryIndexable }
 
 import scala.util.{ Failure, Success }
 import com.keepit.search.augmentation._

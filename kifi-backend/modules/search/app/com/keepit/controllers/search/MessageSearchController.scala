@@ -1,7 +1,7 @@
 package com.keepit.controllers.search
 
 import com.keepit.common.controller.{ SearchServiceController, UserActions, UserActionsHelper }
-import com.keepit.search.message.MessageSearchCommander
+import com.keepit.search.index.message.MessageSearchCommander
 import com.keepit.common.db.Id
 import com.keepit.model.User
 

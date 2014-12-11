@@ -19,8 +19,8 @@ import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.FakeShoeboxServiceModule
 
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.search.user.UserIndexer
-import com.keepit.search.user.UserSearchFilterFactory
+import com.keepit.search.index.user.UserIndexer
+import com.keepit.search.index.user.UserSearchFilterFactory
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.util.PlayAppConfigurationModule
 

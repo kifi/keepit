@@ -10,7 +10,7 @@ import com.keepit.search.{ LibrarySearchCommander, SearchCommander }
 import com.keepit.model.ExperimentType._
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsString
-import com.keepit.search.graph.library.{ LibraryIndexer, LibraryIndexable }
+import com.keepit.search.index.graph.library.{ LibraryIndexer, LibraryIndexable }
 import com.keepit.controllers.util.SearchControllerUtil
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.shoebox.ShoeboxServiceClient

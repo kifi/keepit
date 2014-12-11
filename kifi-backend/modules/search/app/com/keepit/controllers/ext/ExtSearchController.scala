@@ -8,7 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.controllers.util.{ SearchControllerUtil }
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
-import com.keepit.search.graph.library.LibraryIndexer
+import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.{ SearchCommander }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
