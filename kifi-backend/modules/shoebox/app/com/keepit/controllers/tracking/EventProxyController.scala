@@ -20,18 +20,23 @@ class EventProxyController @Inject() (
     SafeFuture("event proxy") {
       val sentAt = clock.now()
       request.body.as[Seq[JsObject]].foreach { rawEvent =>
-        val eventType = getEventType(rawEvent)
+        val rawEventType = (rawEvent \ "event").as[String]
+        val (eventType, intendedEventOpt) = getEventType(rawEventType)
         val eventContext = (rawEvent \ "properties").as[HeimdalContext]
         val builder = heimdalContextBuilderFactoryBean.withRequestInfo(request)
         builder.addExistingContext(eventContext)
         val fullContext = builder.build
         val event = request.userIdOpt match {
           case Some(userId) => {
+            intendedEventOpt.foreach { intendedEvent => require(intendedEvent == UserEvent, s"Was expecting a user event, got $rawEventType") }
             val userEvent = UserEvent(userId, fullContext, eventType, sentAt)
             optionallySendUserUsedKifiEvent(userEvent)
             userEvent
           }
-          case None => VisitorEvent(fullContext, eventType, sentAt)
+          case None => {
+            intendedEventOpt.foreach { intendedEvent => require(intendedEvent == VisitorEvent, s"Was expecting a visitor event, got $rawEventType") }
+            VisitorEvent(fullContext, eventType, sentAt)
+          }
         }
         heimdal.trackEvent(event)
       }
@@ -55,12 +60,9 @@ class EventProxyController @Inject() (
   }
 
   // Events are coming in from clients with the "user_" or "visitor_" prefix already present, stripping it here since it's automatically prepended in MixpanelClient.
-  private def getEventType(rawEvent: JsObject): EventType = {
-    val rawEventType = (rawEvent \ "event").as[String]
-    val cleanEventType = HeimdalEventCompanion.all.map(_.typeCode).find(rawEventType.startsWith) match {
-      case None => rawEventType
-      case Some(typeCode) => rawEventType.stripPrefix(typeCode + "_")
-    }
-    EventType(cleanEventType)
+  private def getEventType(rawEventType: String): (EventType, Option[HeimdalEventCompanion[_ <: HeimdalEvent]]) = {
+    val companionOpt = HeimdalEventCompanion.all.find(companion => rawEventType.startsWith(companion.typeCode))
+    val eventType = EventType(companionOpt.map(companion => rawEventType.stripPrefix(companion.typeCode + "_")) getOrElse rawEventType)
+    (eventType, companionOpt)
   }
 }
