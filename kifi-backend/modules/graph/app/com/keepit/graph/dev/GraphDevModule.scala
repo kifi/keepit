@@ -1,4 +1,4 @@
-package com.keepit.dev
+package com.keepit.graph.dev
 
 import com.keepit.common.controller.DevRemoteUserActionsHelperModule
 import com.keepit.inject.CommonDevModule

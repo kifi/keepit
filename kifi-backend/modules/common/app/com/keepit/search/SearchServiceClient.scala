@@ -8,8 +8,8 @@ import com.keepit.common.db.Id
 import com.keepit.common.net.{ ClientResponse, HttpClient }
 import com.keepit.common.routes.{ ServiceRoute, Search, Common }
 import com.keepit.model.{ BasicLibrary, Collection, NormalizedURI, User }
-import com.keepit.search.user.UserSearchResult
-import com.keepit.search.user.UserSearchRequest
+import com.keepit.search.index.user.UserSearchResult
+import com.keepit.search.index.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
 import play.api.libs.json._
 import play.twirl.api.Html

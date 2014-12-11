@@ -11,16 +11,16 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.User
 import com.keepit.scraper.FakeArticleStore
-import com.keepit.search.article.ArticleIndexer
+import com.keepit.search.index.article.ArticleIndexer
 import com.keepit.search.engine.SearchFactory
-import com.keepit.search.graph.collection._
-import com.keepit.search.graph.keep.{ ShardedKeepIndexer, KeepIndexer }
-import com.keepit.search.graph.library.LibraryIndexer
+import com.keepit.search.index.graph.collection._
+import com.keepit.search.index.graph.keep.{ ShardedKeepIndexer, KeepIndexer }
+import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.phrasedetector._
-import com.keepit.search.user.UserIndexer
+import com.keepit.search.index.user.UserIndexer
+import com.keepit.search.test.SearchTestInjector
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
-import com.keepit.test._
 import scala.concurrent.duration._
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
@@ -28,7 +28,7 @@ import com.keepit.search.tracker.ProbablisticLRU
 import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
 import com.keepit.search.sharding._
 import com.keepit.common.aws.AwsModule
-import com.keepit.search.graph.user._
+import com.keepit.search.index.graph.user._
 import com.google.inject.Injector
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.util.PlayAppConfigurationModule

@@ -10,19 +10,19 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.inject.AppScoped
 import com.keepit.model.NormalizedURI
 import com.keepit.search.ArticleStore
-import com.keepit.search.article._
-import com.keepit.search.graph.collection._
-import com.keepit.search.graph.user._
-import com.keepit.search.message.{ MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl }
+import com.keepit.search.index.article._
+import com.keepit.search.index.graph.collection._
+import com.keepit.search.index.graph.user._
+import com.keepit.search.index.message.{ MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl }
 import com.keepit.search.phrasedetector.{ PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer }
 import com.keepit.search.sharding._
-import com.keepit.search.user._
+import com.keepit.search.index.user._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.{ Provides, Singleton }
 import org.apache.commons.io.FileUtils
 import java.io.File
-import com.keepit.search.graph.library.{ LibraryIndexerPluginImpl, LibraryIndexerPlugin, LibraryIndexer }
-import com.keepit.search.graph.keep.{ KeepIndexer, KeepIndexerPluginImpl, KeepIndexerPlugin, ShardedKeepIndexer }
+import com.keepit.search.index.graph.library.{ LibraryIndexerPluginImpl, LibraryIndexerPlugin, LibraryIndexer }
+import com.keepit.search.index.graph.keep.{ KeepIndexer, KeepIndexerPluginImpl, KeepIndexerPlugin, ShardedKeepIndexer }
 import com.keepit.common.util.Configuration
 
 trait IndexModule extends ScalaModule with Logging {

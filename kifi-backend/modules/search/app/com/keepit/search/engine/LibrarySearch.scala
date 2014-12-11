@@ -9,7 +9,7 @@ import scala.concurrent.Future
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
-import com.keepit.search.graph.keep.KeepRecord
+import com.keepit.search.index.graph.keep.KeepRecord
 
 class LibrarySearch(
     userId: Id[User],

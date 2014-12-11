@@ -2,7 +2,7 @@ package com.keepit.graph.model
 
 import com.keepit.model._
 import com.keepit.common.db.Id
-import com.keepit.search.message.ThreadContent
+import com.keepit.search.index.message.ThreadContent
 import play.api.libs.json.{ JsNumber, Writes, Reads, Format }
 import com.keepit.graph.manager.LDATopicId
 import com.keepit.abook.model.EmailAccountInfo
