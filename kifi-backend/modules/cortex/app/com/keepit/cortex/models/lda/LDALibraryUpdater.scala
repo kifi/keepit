@@ -29,6 +29,7 @@ class LDALibraryUpdaterImpl @Inject() (
   private val fetchSize = 10000
   private val modelName = StatModelName.LDA_LIBRARY
   private val cleanupSeq = StatModelName.LDA_LIBRARY_CLEANUP
+  private val cleanupBatch = 2000
   private val min_num_words = 50
   protected val min_num_evidence = 1
 
@@ -59,7 +60,9 @@ class LDALibraryUpdaterImpl @Inject() (
     val commitOpt = db.readOnlyReplica { implicit s => commitRepo.getByModelAndVersion(cleanupSeq, version.version) }
     if (commitOpt.isEmpty) db.readWrite { implicit s => commitRepo.save(FeatureCommitInfo(modelName = cleanupSeq, modelVersion = version.version, seq = 0L)) }
     val fromSeq = SequenceNumber[CortexLibrary](commitOpt.map { _.seq }.getOrElse(0L))
-    val libs = db.readOnlyReplica { implicit s => libRepo.getSince(fromSeq, fetchSize) }
+    val libs = db.readOnlyReplica { implicit s => libRepo.getSince(fromSeq, cleanupBatch) }
+
+    log.info(s"library lda updater cleanup, version = ${version}, fromSeq = ${fromSeq}, num of libs = ${libs.size}")
 
     // make sure non-system library has consitent library state and library feature state
     libs.filter { x => x.kind != LibraryKind.SYSTEM_MAIN && x.kind != LibraryKind.SYSTEM_SECRET }
@@ -81,7 +84,7 @@ class LDALibraryUpdaterImpl @Inject() (
     libs.lastOption.foreach { lib =>
       db.readWrite { implicit s =>
         val commitInfo = commitRepo.getByModelAndVersion(cleanupSeq, version.version).get
-        log.info(s"committing with lib seq = ${lib.seq.value}")
+        log.info(s"one round of cleanup is done. Committing with lib seq = ${lib.seq.value}")
         commitRepo.save(commitInfo.withSeq(lib.seq.value))
       }
     }
