@@ -60,7 +60,7 @@ class LibraryImageController @Inject() (
     val posY = (request.body \ "y").asOpt[Int]
 
     imagePath match {
-      case LibraryImageController.pathRegex(hashStr, _, _) =>
+      case LibraryImageController.pathRegex(hashStr) =>
         val currentHash = db.readOnlyMaster { implicit s =>
           libraryImageRepo.getForLibraryId(libraryId)
         }.map(_.sourceFileHash).toSet
@@ -84,5 +84,5 @@ class LibraryImageController @Inject() (
 
 object LibraryImageController {
   val defaultImageSize = ImageSize(600, 480)
-  val pathRegex = """library/(.*)_(\d+)x(\d+).+""".r
+  val pathRegex = """^library/(.*?)_\d+x\d+.+""".r
 }
