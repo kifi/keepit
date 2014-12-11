@@ -365,7 +365,7 @@ POST    /site/libraries/:id/importTag   @com.keepit.controllers.website.LibraryC
 POST    /site/libraries/:id/moveTag     @com.keepit.controllers.website.LibraryController.moveKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
 POST    /site/libraries/:id/import-file  @com.keepit.controllers.website.BookmarkImporter.importFileToLibrary(id: PublicId[Library])
 
-POST    /site/libraries/:id/image/upload    @com.keepit.controllers.website.LibraryImageController.uploadLibraryImage(id: PublicId[Library], is: Option[String] ?= None)
+POST    /site/libraries/:id/image/upload    @com.keepit.controllers.website.LibraryImageController.uploadLibraryImage(id: PublicId[Library], is: Option[String] ?= None, x: Option[Int] ?= None, y: Option[Int] ?= None)
 POST    /site/libraries/:id/image/position  @com.keepit.controllers.website.LibraryImageController.positionLibraryImage(id: PublicId[Library])
 DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.LibraryImageController.removeLibraryImage(id: PublicId[Library])
 

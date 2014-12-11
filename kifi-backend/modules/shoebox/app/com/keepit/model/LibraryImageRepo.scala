@@ -9,8 +9,6 @@ import com.keepit.common.time.Clock
 @ImplementedBy(classOf[LibraryImageRepoImpl])
 trait LibraryImageRepo extends Repo[LibraryImage] {
   def getForLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryImage]] = Some(LibraryImageStates.INACTIVE))(implicit session: RSession): Seq[LibraryImage]
-  def getForLibraryIdOrWithHash(libraryId: Id[Library], hash: ImageHash)(implicit session: RSession): Seq[LibraryImage]
-  def getByLibraryIdAndHash(libraryId: Id[Library], hash: ImageHash)(implicit session: RSession): Seq[LibraryImage]
 }
 
 @Singleton
@@ -64,20 +62,6 @@ class LibraryImageRepoImpl @Inject() (
       case Some(excludeState) =>
         getForLibraryIdAndStatesCompiled(libraryId, excludeState).list
     }
-  }
-
-  private val getForLibraryIdOrWithHashCompiled = Compiled { (libraryId: Column[Id[Library]], hash: Column[ImageHash]) =>
-    for (r <- rows if r.libraryId === libraryId && (r.sourceFileHash === hash || r.state === LibraryImageStates.ACTIVE)) yield r
-  }
-  def getForLibraryIdOrWithHash(libraryId: Id[Library], hash: ImageHash)(implicit session: RSession): Seq[LibraryImage] = {
-    getForLibraryIdOrWithHashCompiled(libraryId, hash).list
-  }
-
-  private val getBySourceHashCompiled = Compiled { (libraryId: Column[Id[Library]], hash: Column[ImageHash]) =>
-    for (r <- rows if r.libraryId === libraryId && r.sourceFileHash === hash) yield r
-  }
-  def getByLibraryIdAndHash(libraryId: Id[Library], hash: ImageHash)(implicit session: RSession): Seq[LibraryImage] = {
-    getBySourceHashCompiled(libraryId, hash).list
   }
 
 }

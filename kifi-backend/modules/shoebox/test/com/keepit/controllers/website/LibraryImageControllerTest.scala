@@ -61,31 +61,28 @@ class LibraryImageControllerTest extends Specification with ShoeboxTestInjector 
         val libPubId2 = Library.publicId(lib2.id.get)
 
         // Invalid Access to Library (wrong user)
-        status(uploadFile(user2, libPubId1, fakeFile)) === FORBIDDEN
+        status(uploadFile(user2, libPubId1, fakeFile, None, None, None)) === FORBIDDEN
 
         // Correct Upload
-        val uploadResp1 = uploadFile(user1, libPubId1, fakeFile)
+        val uploadResp1 = uploadFile(user1, libPubId1, fakeFile, None, None, None)
         status(uploadResp1) === OK
         Json.parse(contentAsString(uploadResp1)) === Json.parse(
-          s"""
-             | { "imagePath" : "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png" }
-           """.stripMargin)
+          s""" { "imagePath" : "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png" }"""
+        )
 
         // Upload again to same library - same image path
-        val uploadResp2 = uploadFile(user1, libPubId1, fakeFile)
+        val uploadResp2 = uploadFile(user1, libPubId1, fakeFile, None, None, None)
         status(uploadResp2) === OK
         Json.parse(contentAsString(uploadResp2)) === Json.parse(
-          s"""
-             | { "imagePath" : "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png" }
-           """.stripMargin)
+          s""" { "imagePath" : "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png" }"""
+        )
 
         // Upload again to different library - same image path
-        val uploadResp3 = uploadFile(user1, libPubId2, fakeFile)
+        val uploadResp3 = uploadFile(user1, libPubId2, fakeFile, None, None, None)
         status(uploadResp3) === OK
         Json.parse(contentAsString(uploadResp3)) === Json.parse(
-          s"""
-             | { "imagePath" : "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png" }
-           """.stripMargin)
+          s""" { "imagePath" : "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png" }"""
+        )
 
       }
     }
@@ -97,13 +94,13 @@ class LibraryImageControllerTest extends Specification with ShoeboxTestInjector 
         val libPubId1 = Library.publicId(lib1.id.get)
 
         // Correct Upload
-        val uploadResp = uploadFile(user1, libPubId1, fakeFile)
+        val uploadResp = uploadFile(user1, libPubId1, fakeFile, None, None, None)
         status(uploadResp) === OK
         val imagePath1 = (contentAsJson(uploadResp) \ "imagePath").as[String]
 
         // apply positioning to bad imageUrl
         status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x" -> 20))) === BAD_REQUEST
-        status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "library/asdf_30x20.jpg", "x" -> 20))) === NOT_FOUND
+        status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "library/asdf_30x20.jpg", "x" -> 20))) === BAD_REQUEST
         status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "library/26dbdc56d54dbc94830f7cfc85031481_30xa.jpg", "x" -> 20))) === BAD_REQUEST
 
         // Invalid Access to Library (wrong user)
@@ -126,13 +123,8 @@ class LibraryImageControllerTest extends Specification with ShoeboxTestInjector 
         val libPubId1 = Library.publicId(lib1.id.get)
 
         // Correct Upload
-        val uploadResp = uploadFile(user1, libPubId1, fakeFile)
+        val uploadResp = uploadFile(user1, libPubId1, fakeFile, None, None, None)
         status(uploadResp) === OK
-        val imagePath1 = (contentAsJson(uploadResp) \ "imagePath").as[String]
-
-        // apply positioning
-        val position1 = Json.obj("imagePath" -> imagePath1)
-        status(positionImage(user1, libPubId1, position1)) === NO_CONTENT
 
         // Invalid Access to Library (wrong user)
         status(removeImage(user2, libPubId1)) === FORBIDDEN
@@ -149,9 +141,9 @@ class LibraryImageControllerTest extends Specification with ShoeboxTestInjector 
 
   }
 
-  private def uploadFile(user: User, libraryId: PublicId[Library], file: TemporaryFile)(implicit injector: Injector): Future[Result] = {
+  private def uploadFile(user: User, libraryId: PublicId[Library], file: TemporaryFile, imageSize: Option[String], posX: Option[Int], posY: Option[Int])(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    inject[LibraryImageController].uploadLibraryImage(libraryId)(request(routes.LibraryImageController.uploadLibraryImage(libraryId)).withBody(file))
+    inject[LibraryImageController].uploadLibraryImage(libraryId, imageSize, posX, posY)(request(routes.LibraryImageController.uploadLibraryImage(libraryId, imageSize, posX, posY)).withBody(file))
   }
 
   private def positionImage(user: User, libraryId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {

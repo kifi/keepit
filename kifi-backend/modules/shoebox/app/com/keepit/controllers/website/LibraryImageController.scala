@@ -32,20 +32,19 @@ class LibraryImageController @Inject() (
   implicit val config: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
-  def uploadLibraryImage(pubId: PublicId[Library], imageSize: Option[String] = None) = (UserAction andThen LibraryWriteAction(pubId)).async(parse.temporaryFile) { request =>
+  def uploadLibraryImage(pubId: PublicId[Library], imageSize: Option[String] = None, posX: Option[Int] = None, posY: Option[Int] = None) = (UserAction andThen LibraryWriteAction(pubId)).async(parse.temporaryFile) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     val imageRequest = db.readWrite { implicit session =>
       libraryImageRequestRepo.save(LibraryImageRequest(libraryId = libraryId, source = ImageSource.UserUpload))
     }
-    val uploadImageF = libraryImageCommander.uploadLibraryImageFromFile(request.body, libraryId, ImageSource.UserUpload, Some(imageRequest.id.get))
+    val position = LibraryImagePosition(posX, posY)
+    val uploadImageF = libraryImageCommander.uploadLibraryImageFromFile(request.body, libraryId, position, ImageSource.UserUpload, Some(imageRequest.id.get))
     uploadImageF.map {
       case fail: ImageStoreFailure =>
-        println("**************" + fail.reason)
         InternalServerError(Json.obj("error" -> fail.reason))
       case success: ImageProcessSuccess =>
-        val hash = success.hashes.head
         val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryImageController.defaultImageSize)
-        libraryImageCommander.getBestImageForLibraryAndHash(libraryId, hash, idealSize) match {
+        libraryImageCommander.getBestImageForLibrary(libraryId, idealSize) match {
           case Some(img) =>
             Ok(Json.obj("imagePath" -> img.imagePath))
           case None =>
@@ -60,14 +59,16 @@ class LibraryImageController @Inject() (
     val posX = (request.body \ "x").asOpt[Int]
     val posY = (request.body \ "y").asOpt[Int]
 
-    val pathRegex = """library/(.*)_(\d+)x(\d+).+""".r
     imagePath match {
-      case pathRegex(hashStr, _, _) =>
-        libraryImageCommander.positionLibraryImage(libraryId, ImageHash(hashStr), LibraryImagePosition(posX, posY)) match {
-          case Left((status, error)) =>
-            Status(status)(Json.obj("error" -> error))
-          case Right(_) =>
-            NoContent
+      case LibraryImageController.pathRegex(hashStr, _, _) =>
+        val currentHash = db.readOnlyMaster { implicit s =>
+          libraryImageRepo.getForLibraryId(libraryId)
+        }.map(_.sourceFileHash).toSet
+        if (currentHash.contains(ImageHash(hashStr))) {
+          libraryImageCommander.positionLibraryImage(libraryId, LibraryImagePosition(posX, posY))
+          NoContent
+        } else {
+          BadRequest(Json.obj("error" -> "incorrect_image"))
         }
       case _ =>
         BadRequest(Json.obj("error" -> "invalid_image_path"))
@@ -83,4 +84,5 @@ class LibraryImageController @Inject() (
 
 object LibraryImageController {
   val defaultImageSize = ImageSize(600, 480)
+  val pathRegex = """library/(.*)_(\d+)x(\d+).+""".r
 }

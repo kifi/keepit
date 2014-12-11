@@ -53,27 +53,33 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
 
         // upload 2 images
         {
-          val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, ImageSource.UserUpload)
+          val position = LibraryImagePosition(Some(40), None)
+          val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved.isInstanceOf[ImageProcessState.StoreSuccess] === true // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
+          saved === ImageProcessState.StoreSuccess // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
         }
         // If this complains about not having an `all`, then it's not using FakeKeepImageStore
         inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 1
 
+        db.readOnlyMaster { implicit s =>
+          val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
+          libImages.length === 1
+          libImages.map(_.imagePosition === LibraryImagePosition(Some(40), Some(50)))
+        }
+
         {
-          val savedF = commander.uploadLibraryImageFromFile(fakeFile2, lib.id.get, ImageSource.UserUpload)
+          val position = LibraryImagePosition(Some(40), None)
+          val savedF = commander.uploadLibraryImageFromFile(fakeFile2, lib.id.get, position, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved.isInstanceOf[ImageProcessState.StoreSuccess] === true
+          saved === ImageProcessState.StoreSuccess
         }
         inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 4
 
         db.readOnlyMaster { implicit s =>
-          libraryImageRepo.getForLibraryId(lib.id.get).length === 0 // no uploaded image should be active
-          val libImages = libraryImageRepo.getForLibraryId(lib.id.get, None)
-          libImages.length === 4
-          libImages.map { img =>
-            img.imagePosition === LibraryImagePosition(None, None) // all images should have null positions
-          }
+          val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
+          libImages.length === 3
+          libImages.map(_.imagePosition === LibraryImagePosition(Some(40), Some(50)))
+          libraryImageRepo.getForLibraryId(lib.id.get, None).length === 4
         }
 
       }
@@ -85,30 +91,36 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         val libraryImageRepo = inject[LibraryImageRepo]
         val (user, lib) = setup()
 
-        val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, ImageSource.UserUpload)
+        // first upload should have null positions (should default)
+        val position = LibraryImagePosition(None, None)
+        val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload)
         val saved = Await.result(savedF, Duration("10 seconds"))
-        saved.isInstanceOf[ImageProcessState.StoreSuccess] === true
+        saved === ImageProcessState.StoreSuccess
 
-        val hash = db.readOnlyMaster { implicit s =>
-          val libraryImages = libraryImageRepo.getForLibraryId(lib.id.get, None)
-          libraryImages.map(_.imagePosition === LibraryImagePosition(None, None))
-          libraryImages.map(_.sourceFileHash).toSet.head
+        db.readOnlyMaster { implicit s =>
+          val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
+          libImages.length === 1
+          libImages.map { libImage =>
+            libImage.imagePosition === LibraryImagePosition(Some(50), Some(50))
+          }
         }
 
-        // re-position one dimension (should default)
-        commander.positionLibraryImage(lib.id.get, hash, LibraryImagePosition(Some(30), None))
+        // re-position one dimension
+        commander.positionLibraryImage(lib.id.get, LibraryImagePosition(Some(30), Some(50)))
         db.readOnlyMaster { implicit s =>
-          val libraryImages = libraryImageRepo.getForLibraryId(lib.id.get)
-          libraryImages.length === 1
-          libraryImages.map { libImage =>
+          val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
+          libImages.length === 1
+          libImages.map { libImage =>
             libImage.imagePosition === LibraryImagePosition(Some(30), Some(50))
           }
         }
 
         // position both dimensions
-        commander.positionLibraryImage(lib.id.get, hash, LibraryImagePosition(Some(35), Some(45)))
+        commander.positionLibraryImage(lib.id.get, LibraryImagePosition(Some(35), Some(45)))
         db.readOnlyMaster { implicit s =>
-          libraryImageRepo.getForLibraryId(lib.id.get).map { libImage =>
+          val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
+          libImages.length === 1
+          libImages.map { libImage =>
             libImage.imagePosition === LibraryImagePosition(Some(35), Some(45))
           }
         }

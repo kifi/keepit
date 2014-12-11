@@ -285,11 +285,11 @@ class KeepImageCommanderImpl @Inject() (
           uploadedImage.image.flush()
           ki
       }
-      val persistedHashes = db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
+      db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
         val existingImagesForKeep = keepImageRepo.getAllForKeepId(keepId).toSet
         replaceOldKeepImagesWithNew(existingImagesForKeep, keepImages)
       }.map(_.sourceFileHash).toSet
-      ImageProcessState.StoreSuccess(persistedHashes)
+      ImageProcessState.StoreSuccess
     }.recover {
       case ex: SQLException =>
         log.error("Could not persist keepimage", ex)
@@ -341,7 +341,7 @@ class KeepImageCommanderImpl @Inject() (
             if (existingForHash.nonEmpty) {
               val replacedImages = copyExistingImagesAndReplace(keepId, ImageSource.UserPicked, existingForHash)
               val replacedHashes = replacedImages.images.map(_.sourceFileHash).toSet
-              Some(ImageProcessState.StoreSuccess(replacedHashes))
+              Some(ImageProcessState.StoreSuccess)
             } else {
               None
             }
