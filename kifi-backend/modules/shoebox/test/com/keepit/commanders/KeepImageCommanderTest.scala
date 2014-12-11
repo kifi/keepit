@@ -62,12 +62,12 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         {
           val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === ImageProcessState.StoreSuccess
+          saved.isInstanceOf[ImageProcessState.StoreSuccess] === true // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
         }
         {
           val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === ImageProcessState.StoreSuccess
+          saved.isInstanceOf[ImageProcessState.StoreSuccess] === true
         }
         // If this complains about not having an `all`, then it's not using FakeKeepImageStore
         inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet.size === 1
@@ -93,7 +93,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         {
           val savedF = commander.setKeepImageFromFile(fakeFile2, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === ImageProcessState.StoreSuccess // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
+          saved.isInstanceOf[ImageProcessState.StoreSuccess] === true
         }
 
         inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet.size === 4
@@ -110,7 +110,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         {
           val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === ImageProcessState.StoreSuccess
+          saved.isInstanceOf[ImageProcessState.StoreSuccess] === true
         }
 
         val keepImage4 = commander.getBestImageForKeep(keep2.id.get, ImageSize(100, 100)).flatten
@@ -146,7 +146,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         {
           val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === ImageProcessState.StoreSuccess
+          saved.isInstanceOf[ImageProcessState.StoreSuccess] === true
         }
 
         {
@@ -158,7 +158,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
           val saved = Await.result(savedF, Duration("10 seconds"))
 
           // If this didn't de-dupe, it would fail, because the HTTP fetcher is disabled when no application is running
-          saved === ImageProcessState.StoreSuccess
+          saved.isInstanceOf[ImageProcessState.StoreSuccess] === true
         }
 
         true === true

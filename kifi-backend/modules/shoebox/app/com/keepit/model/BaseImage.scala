@@ -39,11 +39,14 @@ object ImageSource {
 }
 
 sealed trait ImageProcessState
-sealed trait ImageProcessDone extends ImageProcessState
-sealed trait ImageProcessSuccess extends ImageProcessDone
 sealed trait ImageStoreInProgress extends ImageProcessState
+sealed trait ImageProcessDone extends ImageProcessState
+
+sealed abstract class ImageProcessSuccess(val hashes: Set[ImageHash]) extends ImageProcessState with ImageProcessDone
+
 sealed abstract class ImageStoreFailure(val reason: String) extends ImageProcessState with ImageProcessDone
 sealed abstract class ImageStoreFailureWithException(ex: Throwable, reason: String) extends ImageStoreFailure(reason)
+
 object ImageProcessState {
   // In-progress
   case class ImageLoadedAndHashed(file: TemporaryFile, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends ImageStoreInProgress
@@ -61,8 +64,8 @@ object ImageProcessState {
   case class CDNUploadFailed(ex: Throwable) extends ImageStoreFailureWithException(ex, "cdn_upload_failed")
 
   // Success
-  case object StoreSuccess extends ImageProcessState with ImageProcessSuccess
-  case class ExistingStoredImagesFound(images: Seq[BaseImage]) extends ImageProcessState with ImageProcessSuccess
+  case class StoreSuccess(hashSet: Set[ImageHash]) extends ImageProcessSuccess(hashSet)
+  case class ExistingStoredImagesFound(images: Seq[BaseImage]) extends ImageProcessSuccess(images.map(_.sourceFileHash).toSet)
 }
 
 case class ImageHash(hash: String)
