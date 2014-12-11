@@ -25,14 +25,14 @@
   </div><!-- kf-user-profile-header -->
 
   <div class="kf-user-profile-libraries-nav-container">
-    <nav class="kf-user-profile-libraries-nav"><!-- center this -->
+    <nav class="kf-user-profile-libraries-nav">
       <a class="kf-user-profile-libraries-nav-link" ng-repeat="libraryNavLink in libraryNavLinks" ng-href="{{libraryNavLink.url}}">
         {{libraryNavLink.name}}
       </a>
     </nav>
   </div>
 
-  <div class="kf-user-profile-libraries"><!-- fill in with libraries list -->
-    Placeholder Three
+  <div class="kf-user-profile-libraries">
+    <div kf-library-card ng-repeat="library in libraries" library="library" recommendation="true"></div>
   </div>
 </div>

@@ -48,9 +48,17 @@ angular.module('kifi')
         initProfile(profile);
         initViewingUserStatus();
         initUserNavLinks();
+
+        // Need to add in a check for whether we're on the libraries tab.
+        var libraryType = 'my';  // hard-coded for now.
+        userProfileStubService.getLibraries($scope.profile.id, libraryType).then(function (libraries) {
+          initLibraries(libraries);
+        });
       });
 
       initLibraryNavLinks();
+
+
     }
 
     function initProfile(profile) {
@@ -86,6 +94,10 @@ angular.module('kifi')
           url: getFullUserNavLinkPath(config.subpath)
         };
       });
+    }
+
+    function initLibraries(libraries) {
+      $scope.libraries = libraries;
     }
 
     function getFullUserNavLinkPath(subpath) {

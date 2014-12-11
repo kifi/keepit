@@ -4,28 +4,10 @@ angular.module('kifi')
 
 .factory('userProfileStubService', ['$q',
   function ($q) {
-    var getProfile = function (username) {
-      var profiles = {
-        'lydialaurenson': {
-          id: 'f2f153db-6952-4b32-8854-8c0e452e1c64',
-          firstName: 'Lydia',
-          lastName: 'Laurenson',
-          pictureName: 'FSPNP.jpg',
-          numKeeps: 77777,
-          numLibraries: 7,
-          numFriends: 77,
-          numFollowers: 777,
-          helpedRekeep: 7777,
-          friendsWith: false
-        }
-      };
-
-      return profiles[username] ?
-        $q.when(profiles[username]) :
-        $q.when(null);
-    };
-
-    var getLibraries = function (userId) {
+    //
+    // Internal functions.
+    //
+    function getMyLibraries(userId) {
       var libraries = {
         'f2f153db-6952-4b32-8854-8c0e452e1c64': {  // Lydia Laurenson
           libraries: [
@@ -76,20 +58,75 @@ angular.module('kifi')
       };
 
       return libraries[userId] ?
-        $q.when(libraries[userId]) :
+        $q.when(libraries[userId].libraries) :
+        $q.when(null);
+    }
+
+    function getFollowingLibraries(/* userId */) {
+      return null;
+    }
+
+    function getInvitedLibraries(/* userId */) {
+      return null;
+    }
+
+    function getFriends(/* userId */) {
+      return null;
+    }
+
+    function getFollowers(/* userId */) {
+      return null;
+    }
+
+
+    //
+    // Functions exposed on the API.
+    //
+    var getProfile = function (username) {
+      var profiles = {
+        'lydialaurenson': {
+          id: 'f2f153db-6952-4b32-8854-8c0e452e1c64',
+          firstName: 'Lydia',
+          lastName: 'Laurenson',
+          pictureName: 'FSPNP.jpg',
+          numKeeps: 77777,
+          numLibraries: 7,
+          numFriends: 77,
+          numFollowers: 777,
+          helpedRekeep: 7777,
+          friendsWith: false
+        }
+      };
+
+      return profiles[username] ?
+        $q.when(profiles[username]) :
         $q.when(null);
     };
 
-    var getFollowingLibraries = function (/* userId */) {
-      return null;
+    var getLibraries = function (userId, libraryType) {
+      switch (libraryType) {
+        case 'my':
+          return getMyLibraries(userId);
+        case 'following':
+          return getFollowingLibraries(userId);
+        case 'invited':
+          return getInvitedLibraries(userId);
+        default:
+          // Unknown type? Return empty array as libraries.
+          return $q.when([]);
+      }
     };
 
-    var getFriends = function (/* userId */) {
-      return null;
-    };
-
-    var getFollowers = function (/* userId */) {
-      return null;
+    var getUsers = function (userId, userType) {
+      switch (userType) {
+        case 'friends':
+          return getFriends(userId);
+        case 'followers':
+          return getFollowers(userId);
+        default:
+          // Unknown type? Return empty array as users.
+          return $q.when([]);
+      }
     };
 
     var getHelped = function (/* userId */) {
@@ -99,9 +136,7 @@ angular.module('kifi')
     var api = {
       getProfile: getProfile,
       getLibraries: getLibraries,
-      getFollowingLibraries: getFollowingLibraries,
-      getFriends: getFriends,
-      getFollowers: getFollowers,
+      getPeople: getUsers,
       getHelped: getHelped
     };
 
