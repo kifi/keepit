@@ -2,6 +2,10 @@ package com.keepit.controllers.website
 
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
+import com.keepit.model.UserConnectionFactoryHelper._
+import com.keepit.model.UserConnectionFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryFactory._
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
@@ -289,27 +293,46 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
       withDb(controllerTestModules: _*) { implicit injector =>
         val userConnectionRepo = inject[UserConnectionRepo]
         val (userGW, userAL, userTJ, userJA, userBF) = db.readWrite { implicit session =>
-          val userGW = userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GDubs"), normalizedUsername = "gdubs"))
-          val userAL = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("abe"), normalizedUsername = "abe"))
-          val userTJ = userRepo.save(User(firstName = "Thomas", lastName = "Jefferson", username = Username("TJ"), normalizedUsername = "tj"))
-          val userJA = userRepo.save(User(firstName = "John", lastName = "Adams", username = Username("jayjayadams"), normalizedUsername = "jayjayadams"))
-          val userBF = userRepo.save(User(firstName = "Ben", lastName = "Franklin", username = Username("Benji"), normalizedUsername = "benji"))
-          userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userAL.id.get))
-          userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userTJ.id.get))
-          userConnectionRepo.save(UserConnection(user1 = userJA.id.get, user2 = userGW.id.get))
+          val userGW = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val userAL = user().withName("Abe", "Lincoln").withUsername("abe").saved.savedConnection(userGW)
+          val userTJ = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val userJA = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val userBF = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          connect(userGW -> userAL,
+            userGW -> userTJ,
+            userJA -> userGW,
+            userAL -> userTJ).saved
+
+          libraries(3).map(_.withUser(userGW).secret()).saved.head.savedFollowerMembership(userAL)
+
+          library().withUser(userGW).published().saved.savedOwnerMembership.savedFollowerMembership(userBF).savedFollowerMembership(userJA)
+          library().withUser(userTJ).published().saved.savedOwnerMembership
+          library().withUser(userBF).published().saved.savedOwnerMembership.savedFollowerMembership(userGW)
+
           (userGW, userAL, userTJ, userJA, userBF)
         }
         val userController = inject[UserController]
-
-        inject[FakeUserActionsHelper].setUser(userGW)
-        val request1 = FakeRequest("GET", routes.UserController.profile(userGW.username.value).url)
-        val result1: Future[Result] = userController.profile(userGW.username.value)(request1)
+        def call(viewer: Option[User], viewing: Username) = {
+          viewer.foreach(v => inject[FakeUserActionsHelper].setUser(v))
+          val request = FakeRequest("GET", routes.UserController.profile(viewing.value).url)
+          userController.profile(viewing.value)(request)
+        }
+        //non existing username
+        status(call(Some(userGW), Username("foo"))) must equalTo(NOT_FOUND)
+        //seeing my own profile
+        val result1 = call(Some(userGW), userGW.username)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         val res = contentAsJson(result1)
         res === Json.parse(
           """
-            |{"firstName":"George","lastName":"Washington","pictureName":null,"numLibraries":0,"numKeeps":0,"numFriends":3,"numFollowers":0,"helpedRekeep":0}
+            |{
+            |  "firstName":"George",
+            |  "lastName":"Washington",
+            |  "pictureName":"pic1",
+            |  "numLibraries":0
+            |}
           """.stripMargin)
       }
     }

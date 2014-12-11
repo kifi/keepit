@@ -598,17 +598,18 @@ class UserController @Inject() (
    */
   def profile(username: String) = MaybeUserAction { request =>
     val viewer = request.userOpt
-    val profile = userCommander.profile(Username(username), viewer)
-    Ok(Json.obj(
-      "firstName" -> profile.user.firstName,
-      "lastName" -> profile.user.lastName,
-      "pictureName" -> profile.user.pictureName,
-      "numLibraries" -> 0,
-      "numKeeps" -> 0,
-      "numFriends" -> profile.numFriends,
-      "numFollowers" -> profile.numFollowers,
-      "helpedRekeep" -> 0
-    ))
+    try {
+      val profile = userCommander.profile(Username(username), viewer)
+      Ok(Json.obj(
+        "firstName" -> profile.user.firstName,
+        "lastName" -> profile.user.lastName,
+        "pictureName" -> profile.user.pictureName,
+        "numLibraries" -> 0
+      ))
+    } catch {
+      case unfe: UserNotFoundException => NotFound(username)
+      case e: Throwable => throw e
+    }
   }
 
 }

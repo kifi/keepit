@@ -43,9 +43,11 @@ k.guide.step3 = k.guide.step3 || function () {
       substep: true
     },
     {
-      afterTransition: '.kifi-pane',
-      litFor: 1000,
-      pos: {bottom: 200, right: 400},
+      lit: {bottom: 0, right: -20, width: 240, height: 160},
+      pad: [0],
+      afterTransition: '.kifi-sent',
+      litFor: 4000,
+      pos: {bottom: 200, right: 300},
       transition: 'opacity'
     },
     {
@@ -110,13 +112,13 @@ k.guide.step3 = k.guide.step3 || function () {
         break;
       case 3:
         observer = new MutationObserver(function (records) {
-          if (attrRemoved(records, 'href')) {
+          if (elementAdded(records, 'kifi-sent')) {
             observer.disconnect();
             observer = null;
             step.show(4);
           }
         });
-        observer.observe(document.querySelector('.kifi-compose-submit'), {attributes: true, attributeFilter: ['href']});
+        observer.observe(k.tile, {childList: true});
         break;
     }
   }

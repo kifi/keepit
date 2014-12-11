@@ -46,6 +46,20 @@ class FakeAnonymousEventLoggingRepo extends DevAnonymousEventLoggingRepo {
   }
 }
 
+class FakeVisitorEventLoggingRepo extends DevVisitorEventLoggingRepo {
+
+  var events: Vector[VisitorEvent] = Vector()
+
+  def eventCount(): Int = events.length
+
+  def lastEvent(): VisitorEvent = events.head
+
+  override def persist(obj: VisitorEvent): Future[Unit] = {
+    synchronized { events = events :+ obj }
+    Future.successful(())
+  }
+}
+
 class FakeNonUserEventLoggingRepo extends DevNonUserEventLoggingRepo {
 
   var events: Vector[NonUserEvent] = Vector()

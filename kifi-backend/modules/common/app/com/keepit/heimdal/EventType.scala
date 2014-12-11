@@ -20,6 +20,8 @@ object UserEventTypes {
   val CONNECTED = EventType("connected")
   val USED_KIFI = EventType("used_kifi")
   val UPDATED_EXTENSION = EventType("updated_extension")
+  val VIEWED_PAGE = EventType("viewed_page")
+  val VIEWED_PANE = EventType("viewed_pane")
 
   // Keeping
   val KEPT = EventType("kept")

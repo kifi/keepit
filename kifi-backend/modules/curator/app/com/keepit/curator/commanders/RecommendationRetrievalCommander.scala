@@ -49,22 +49,54 @@ class DiverseRecoSelectionStrategy(val minScore: Float = 5f) extends RecoSelecti
   }
 }
 
-@Singleton
-class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: UriRecommendationRepo, analytics: CuratorAnalytics, publicFeedRepo: PublicFeedRepo) {
-
-  private def scoreItem(masterScore: Float, scores: UriScores, timesDelivered: Int, timesClicked: Int, goodBad: Option[Boolean], heavyPenalty: Boolean, recencyWeight: Float): Float = {
+trait RecoScoringStrategy {
+  def scoreItem(masterScore: Float, scores: UriScores, timesDelivered: Int, timesClicked: Int, goodBad: Option[Boolean], heavyPenalty: Boolean, recencyWeight: Float): Float = {
     val basePenaltyFactor = Math.pow(0.97, timesDelivered) * Math.pow(0.8, timesClicked)
     val votePenaltyFactor = goodBad.map { vote => if (vote) 0.97 else 0.5 }.getOrElse(1.0)
     val finalPenaltyFactor = Math.pow(basePenaltyFactor * votePenaltyFactor, if (heavyPenalty) 5 else 1)
     val adjustedScore = masterScore + recencyWeight * (4 * scores.recentInterestScore + 2 * scores.recencyScore)
     (adjustedScore * finalPenaltyFactor).toFloat
   }
+}
 
-  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, clientType: RecommendationClientType, recoSortStrategy: RecoSelectionStrategy): Seq[RecoInfo] = {
+class DefaultRecoScoringStrategy extends RecoScoringStrategy
+
+class NonLinearRecoScoringStrategy extends RecoScoringStrategy {
+  override def scoreItem(masterScore: Float, scores: UriScores, timesDelivered: Int, timesClicked: Int, goodBad: Option[Boolean], heavyPenalty: Boolean, recencyWeight: Float): Float = {
+    super.scoreItem(recomputeScore(scores), scores, timesDelivered, timesClicked, goodBad, heavyPenalty, recencyWeight)
+  }
+
+  private def recomputeScore(scores: UriScores): Float = {
+    val interestPart = (
+      5 * scores.overallInterestScore +
+      7 * scores.recentInterestScore +
+      4 * scores.libraryInducedScore.getOrElse(0.0f)
+    )
+    val normalizer = (5f + 7f + scores.libraryInducedScore.fold(0f)(_ => 4f))
+    val factor = interestPart / normalizer
+
+    val socialPart = (
+      4 * scores.socialScore +
+      2 * scores.priorScore +
+      1 * scores.recencyScore +
+      1 * scores.popularityScore +
+      6 * scores.rekeepScore +
+      3 * scores.discoveryScore +
+      4 * scores.curationScore.getOrElse(0.0f)
+    )
+
+    (interestPart + factor * socialPart) * scores.multiplier.getOrElse(1.0f)
+  }
+}
+
+@Singleton
+class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: UriRecommendationRepo, analytics: CuratorAnalytics, publicFeedRepo: PublicFeedRepo) {
+
+  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, clientType: RecommendationClientType, recoSortStrategy: RecoSelectionStrategy, scoringStrategy: RecoScoringStrategy): Seq[RecoInfo] = {
     require(recencyWeight <= 1.0f && recencyWeight >= 0.0f, "recencyWeight must be between 0 and 1")
 
     def scoreReco(reco: UriRecommendation) =
-      UriRecoScore(scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
+      UriRecoScore(scoringStrategy.scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
 
     val recos = db.readOnlyReplica { implicit session =>
       val recosByTopScore = uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
@@ -85,7 +117,7 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
         RecoInfo(
           userId = Some(reco.userId),
           uriId = reco.uriId,
-          score = scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight),
+          score = scoringStrategy.scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight),
           explain = Some(reco.allScores.toString),
           attribution = Some(reco.attribution)
         )
