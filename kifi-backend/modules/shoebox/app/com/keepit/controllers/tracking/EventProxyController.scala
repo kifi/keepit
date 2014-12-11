@@ -40,7 +40,7 @@ class EventProxyController @Inject() (
   }
 
   // integrate some events into used_kifi events as actions
-  def optionallySendUserUsedKifiEvent(event: UserEvent): Unit = {
+  private def optionallySendUserUsedKifiEvent(event: UserEvent): Unit = {
     val validEvents = Set(UserEventTypes.VIEWED_PAGE, UserEventTypes.VIEWED_PANE)
     if (validEvents.contains(event.eventType)) {
       val builder = heimdalContextBuilderFactoryBean()
@@ -57,7 +57,7 @@ class EventProxyController @Inject() (
   // Events are coming in from clients with the "user_" or "visitor_" prefix already present, stripping it here since it's automatically prepended in MixpanelClient.
   private def getEventType(rawEvent: JsObject): EventType = {
     val rawEventType = (rawEvent \ "event").as[String]
-    val cleanEventType = HeimdalEventCompanion.all.find(companion => rawEventType.startsWith(companion.typeCode)) match {
+    val cleanEventType = HeimdalEventCompanion.all.map(_.typeCode).find(rawEventType.startsWith) match {
       case None => rawEventType
       case Some(typeCode) => rawEventType.stripPrefix(typeCode + "_")
     }
