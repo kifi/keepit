@@ -1,0 +1,229 @@
+// TEMPORARY
+
+// START: NON-RELATED-LIBRARY CLASSES // TODO move these?
+.kf-logged-out {
+  .kf-library-not-search {
+    max-width: 800px;
+    float: left;
+  }
+  &.kf-mobile .kf-library-not-search {
+    max-width: initial;
+    float: none;
+  }
+
+  .kf-library-body {
+    min-width: 995px;
+    .kf-main-keeps {
+      max-width: 800px;
+    }
+  }
+  &.kf-mobile .kf-library-body {
+    min-width: initial;
+    .kf-main-keeps {
+      max-width: initial;
+    }
+  }
+}
+
+.kf-related-libraries {
+  margin-top: 42px;
+  float: left;
+  width: 195px;
+  padding: 0;
+  .kf-mobile & {
+    margin-top: 0;
+    float: none;
+    width: initial;
+  }
+}
+
+.kf-related-libraries-see-more {
+  display: block;
+  margin: 0 4px 16px;
+  font-size: 15px;
+  &, &:link, &:hover, &:visited {
+    color: #74a6e5;
+  }
+  .kf-mobile & {
+    font-size: 36px;
+    margin: 60px 38px;
+  }
+}
+
+.kf-related-libraries-card-your-own-card {
+  background: #6abc5f;
+  border-radius: 19px;
+  font-size: 20px;
+  text-align: center;
+  color: #fff;
+  padding: 30px 0;
+  .kf-related-libraries-card-your-own-card-btn {
+    &, &:link, &:visited, &:hover {
+      color: #fff;
+    }
+    background: #418cc9;
+    display: inline-block;
+    margin: 18px auto 0;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 6px 16px;
+  }
+
+  .kf-mobile & {
+    display: none;
+  }
+}
+
+.kf-related-library-explore-more-header {
+  text-transform: uppercase;
+  color: #4e4754;
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  text-align: left;
+  margin-bottom: 1em;
+  .kf-mobile & {
+    text-align: center;
+    background: #e8e8e8;
+    font-size: 30px;
+    line-height: 3em;
+    clear: both;
+    float: none;
+    margin-bottom: 0;
+  }
+}
+
+.kf-related-lib-card {
+  float: left;
+  width: 100%;
+  text-align: center;
+  color: #fff;
+  font-family: 'Helvetica Neue';
+  margin-bottom: 1em;
+
+  .kf-mobile & {
+    margin: 40px 25px 10px 30px;
+    float: none;
+    width: auto;
+  }
+}
+
+.kf-related-lib-card-header {
+  border-radius: 19px 19px 0 0;
+  padding: 33px 0;
+  .kf-mobile & {
+    border-radius: 30px 30px 0 0;
+    padding: 100px 0;
+  }
+}
+
+.kf-related-lib-name {
+  font-family: Lato;
+  color: #FFFFFF;
+  text-align: center;
+  font-size: 20px;
+  padding: 0 10%;
+  .kf-mobile & {
+    font-size: 65px;
+    padding: 0 15%;
+  }
+}
+
+.kf-related-lib-counts-row {
+  margin-top: 14px;
+  font-family: 'Helvetica Neue';
+  color: rgba(255,255,255,0.50);
+  font-size: 11px;
+  .kf-mobile & {
+    margin-top: 50px;
+    font-size: 35px;
+  }
+}
+
+.kf-related-lib-count {
+  padding: 0 4px;
+}
+
+.kf-related-lib-owner {
+  z-index: 10;
+  position: absolute;
+  width: 100%;
+  top: 16px;
+  .kf-mobile & {
+    top: 100px;
+  }
+}
+
+.kf-related-lib-owner-pic {
+  width: 70px;
+  height: 70px;
+  display: inline-block;
+  border-radius: 100%;
+  background-size: 100%;
+  .kf-mobile & {
+    width: 167px;
+    height: 167px;
+  }
+}
+
+.kf-related-lib-owner-name {
+  margin: 10px 0 16px;
+  padding: 0 6px;
+  font-family: 'Helvetica Neue';
+  color: #FFFFFF;
+  font-size: 12px;
+  white-space: nowrap;
+  b {
+    font-weight: normal;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .kf-mobile & {
+    margin: 20px 0 100px;
+    font-size: 30px;
+    b {
+      letter-spacing: 3px;
+      font-size: 30px;
+    }
+  }
+}
+
+.kf-related-lib-image-wrapper {
+  border-radius: 0 0 19px 19px;
+  background: #000;
+  position: relative;
+  .kf-mobile & {
+    border-radius: 0 0 30px 30px;
+  }
+}
+
+.kf-related-lib-image {
+  background-size: cover;
+  background-position: center center;
+  // filter: blur(1px);
+  // -webkit-filter: blur(1px);
+  opacity(.7);
+  border-radius: 0 0 19px 19px;
+  z-index: 0;
+  height: 160px;
+  .kf-mobile & {
+    padding: 100px 0 0;
+    border-radius: 0 0 30px 30px;
+    height: 455px;
+  }
+}
+
+.kf-related-lib-topic-attribution {
+  border-top: 1px solid rgba(255,255,255,.3);
+  line-height: 40px;
+  .kf-mobile & {
+    line-height: 150px;
+  }
+}
+
+// WIDE SCREEN STYLES
+
+  // END: NON-RELATED-LIBRARY CLASSES
+
+

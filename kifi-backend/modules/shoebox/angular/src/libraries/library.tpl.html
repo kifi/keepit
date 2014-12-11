@@ -14,7 +14,7 @@
     </div>
 
     <div class="kf-library-body">
-      <div ng-if="!librarySearch">
+      <div ng-if="!librarySearch" class="kf-library-not-search">
         <div class="kf-empty-state" ng-if="keeps.length === 0 && userIsOwner()" ng-show="!loading">
           You don't have any keeps in this Library yet. You can:
           <ul>
@@ -46,6 +46,10 @@
       </div>
 
       <div ng-if="librarySearch" ng-include="'search/search.tpl.html'" ng-controller="SearchCtrl"></div>
+
+      <div kf-related-libraries ng-if="!userLoggedIn">
+      </div>
+      <div style="clear:both;"></div> <!-- TODO(josh) -->
     </div>
   </div>
 

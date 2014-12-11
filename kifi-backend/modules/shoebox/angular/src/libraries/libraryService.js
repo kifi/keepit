@@ -360,6 +360,30 @@ angular.module('kifi')
         return defaultAttributes;
       },
 
+      getRelatedLibraries: function (library) {
+        var deferred = $q.defer();
+        var exampleLibrary = {
+          name: 'How to always be happy',
+          numKeeps: 20,
+          numFollowers: 60,
+          owner: {
+            id: '32384833-8803-4a16-946f-fd3c59b62b1b',
+            firstName: 'Mark',
+            lastName: 'Yoshitake',
+            picName: 'fqknJ.jpg'
+          },
+          visibility: 'published',
+          primaryTopic: 'Design'
+        };
+        deferred.resolve([
+          _.merge(_.clone(exampleLibrary), { visibility: 'secret' }),
+          _.merge(_.clone(exampleLibrary), { visibility: 'discoverable' }),
+          // _.merge(_.clone(exampleLibrary), { visibility: 'published' }),
+          // _.clone(exampleLibrary)
+        ]);
+        return deferred.promise;
+      },
+
       trackEvent: function (eventName, library, attributes) {
         var defaultAttributes = api.getCommonTrackingAttributes(library);
         attributes = _.extend(defaultAttributes, attributes || {});

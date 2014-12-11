@@ -1,0 +1,19 @@
+<div class="kf-related-lib-card">
+  <div class="kf-related-lib-card-header" ng-attr-style="background-color: {{library.cardColor}}">
+    <div class="kf-related-lib-name">{{ library.name }}</div>
+    <div class="kf-related-lib-counts-row">
+      <span class="kf-related-lib-count" ng-if="library.numKeeps > 0">{{ library.numKeeps }} Keeps</span>
+      <span class="kf-related-lib-count-sep" ng-if="library.numKeeps > 0">·</span>
+      <span class="kf-related-lib-count" ng-if="library.numFollowers > 0">{{ library.numFollowers }} Followers</span>
+    </div>
+  </div>
+  <div class="kf-related-lib-image-wrapper">
+    <div class="kf-related-lib-owner">
+      <div href="javascript:" class="kf-related-lib-owner-pic" ng-attr-style="background-image: url({{library.ownerPicUrl}})"></div>
+      <div class="kf-related-lib-owner-name">by <b>{{ library.ownerFullName }}</b></div>
+      <div class="kf-related-lib-topic-attribution">&nbsp;</div>
+    </div>
+    <div class="kf-related-lib-image" ng-attr-style="background-image: url({{library.imageUrl}})">
+    </div>
+  </div>
+</div>
