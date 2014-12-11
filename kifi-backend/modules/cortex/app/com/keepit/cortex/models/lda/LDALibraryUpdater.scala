@@ -28,6 +28,7 @@ class LDALibraryUpdaterImpl @Inject() (
 
   private val fetchSize = 10000
   private val modelName = StatModelName.LDA_LIBRARY
+  private val cleanupSeq = StatModelName.LDA_LIBRARY_CLEANUP
   private val min_num_words = 50
   protected val min_num_evidence = 1
 
@@ -38,6 +39,51 @@ class LDALibraryUpdaterImpl @Inject() (
       val tasks = fetchTasks
       log.info(s"fetched ${tasks.size} tasks")
       processTasks(tasks)
+    }
+
+    representer.versions.foreach { version => cleanup(version) }
+  }
+
+  /**
+   * main update() logic is driven by keep's seqNum. This cleanup process is driven by Library's seqNum. This is mostly designed for:
+   * library changes state from active to inactive or vice versa. Such event is not caputured from keep events, we want to
+   * make sure inactive library has inactive library LDA feature.
+   * NOTE: In update(), we never bring an inactive library's feature from inactive to active, and for an active library, we never bring
+   * its feature state from active to inactive. In cleanup(), the only mutation is switching active and inactive state of library features.
+   * Thus, update() and cleanup() perform "disjoint" mutations. This is critical, because we are listening on two seqNums, and the two seqNum
+   * may proceed at different speed. We don't want mutation from one method is overwritten by the other method, in an unexpected way.
+   */
+  private def cleanup(version: ModelVersion[DenseLDA]): Unit = {
+
+    // fetch libs from seq
+    val commitOpt = db.readOnlyReplica { implicit s => commitRepo.getByModelAndVersion(cleanupSeq, version.version) }
+    if (commitOpt.isEmpty) db.readWrite { implicit s => commitRepo.save(FeatureCommitInfo(modelName = cleanupSeq, modelVersion = version.version, seq = 0L)) }
+    val fromSeq = SequenceNumber[CortexLibrary](commitOpt.map { _.seq }.getOrElse(0L))
+    val libs = db.readOnlyReplica { implicit s => libRepo.getSince(fromSeq, fetchSize) }
+
+    // make sure non-system library has consitent library state and library feature state
+    libs.filter { x => x.kind != LibraryKind.SYSTEM_MAIN && x.kind != LibraryKind.SYSTEM_SECRET }
+      .foreach { lib =>
+        db.readWrite { implicit s =>
+          val libFeatOpt = libraryLDARepo.getByLibraryId(lib.libraryId, version)
+
+          libFeatOpt.foreach { libFeat =>
+            (lib.state.value, libFeat.state.value) match {
+              case ("inactive", "active") => libraryLDARepo.save(libFeat.copy(state = LibraryLDATopicStates.INACTIVE))
+              case ("active", "inactive") => libraryLDARepo.save(libFeat.copy(state = LibraryLDATopicStates.ACTIVE))
+              case _ =>
+            }
+          }
+        }
+      }
+
+    // commit seq
+    libs.lastOption.foreach { lib =>
+      db.readWrite { implicit s =>
+        val commitInfo = commitRepo.getByModelAndVersion(cleanupSeq, version.version).get
+        log.info(s"committing with lib seq = ${lib.seq.value}")
+        commitRepo.save(commitInfo.withSeq(lib.seq.value))
+      }
     }
   }
 
