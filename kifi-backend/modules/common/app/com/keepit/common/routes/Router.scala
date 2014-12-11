@@ -7,7 +7,7 @@ import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
-import com.keepit.search.message.ThreadContent
+import com.keepit.search.index.message.ThreadContent
 import com.keepit.eliza.model.MessageHandle
 import com.keepit.cortex.core.{ StatModel, ModelVersion }
 import com.keepit.cortex.models.lda.DenseLDA

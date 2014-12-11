@@ -4,10 +4,10 @@ import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.explain.DirectExplainContext
 import com.keepit.search.engine.query.QueryProjector
-import com.keepit.search.graph.library.LibraryFields
+import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.query.IdSetFilter
 import com.keepit.search.{ SearchConfig, SearchFilter, Searcher }
-import com.keepit.search.graph.keep.KeepFields
+import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.util.join.{ DataBufferReader, DataBuffer, DataBufferWriter }

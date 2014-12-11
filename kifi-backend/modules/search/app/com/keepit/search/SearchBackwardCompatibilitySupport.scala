@@ -7,8 +7,8 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.{ Collection, Library, NormalizedURI, User }
 import com.keepit.search.engine.Visibility
 import com.keepit.search.engine.result.{ KifiShardHit, KifiShardResult }
-import com.keepit.search.graph.collection.{ CollectionSearcher, CollectionSearcherWithUser }
-import com.keepit.search.graph.library.LibraryIndexer
+import com.keepit.search.index.graph.collection.{ CollectionSearcher, CollectionSearcherWithUser }
+import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.result._
 import com.keepit.search.sharding.{ ShardedCollectionIndexer, Shard }
 import com.google.inject.{ Singleton, Inject }

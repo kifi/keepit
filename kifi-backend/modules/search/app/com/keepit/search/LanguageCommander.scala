@@ -10,7 +10,7 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.common.akka.SafeFuture
-import com.keepit.search.graph.keep.{ ShardedKeepIndexer, KeepLangs }
+import com.keepit.search.index.graph.keep.{ ShardedKeepIndexer, KeepLangs }
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.search.engine.SearchFactory
 import com.keepit.common.logging.Logging

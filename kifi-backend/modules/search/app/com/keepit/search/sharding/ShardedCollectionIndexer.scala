@@ -3,7 +3,7 @@ package com.keepit.search.sharding
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.Collection
 import com.keepit.model.NormalizedURI
-import com.keepit.search.graph.collection.CollectionIndexer
+import com.keepit.search.index.graph.collection.CollectionIndexer
 import com.keepit.shoebox.ShoeboxServiceClient
 
 class ShardedCollectionIndexer(

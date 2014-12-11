@@ -3,7 +3,7 @@ package com.keepit.search.sharding
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.NormalizedURI
 import com.keepit.search.ArticleStore
-import com.keepit.search.article.ArticleIndexer
+import com.keepit.search.index.article.ArticleIndexer
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._

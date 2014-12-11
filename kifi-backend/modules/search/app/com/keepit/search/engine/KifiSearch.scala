@@ -5,10 +5,10 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.NormalizedURI
 import com.keepit.search.Searcher
-import com.keepit.search.article.ArticleRecord
+import com.keepit.search.index.article.ArticleRecord
 import com.keepit.search.engine.explain.Explanation
 import com.keepit.search.engine.result.{ Hit, HitQueue, KifiShardResult, KifiShardHit }
-import com.keepit.search.graph.keep.{ KeepFields, KeepRecord }
+import com.keepit.search.index.graph.keep.{ KeepFields, KeepRecord }
 import org.apache.lucene.index.Term
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
@@ -30,7 +30,7 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
   }
 
   def getArticleRecord(uriId: Long): Option[ArticleRecord] = {
-    import com.keepit.search.article.ArticleRecordSerializer._
+    import com.keepit.search.index.article.ArticleRecordSerializer._
     articleSearcher.getDecodedDocValue[ArticleRecord]("rec", uriId)
   }
 

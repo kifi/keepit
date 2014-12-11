@@ -7,7 +7,7 @@ import com.keepit.search.augmentation._
 import play.twirl.api.Html
 import scala.concurrent.Future
 import play.api.libs.json.JsArray
-import com.keepit.search.user.UserSearchResult
+import com.keepit.search.index.user.UserSearchResult
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.social.{ TypeaheadUserHit, BasicUser }
 import com.keepit.common.healthcheck.BenchmarkResults
