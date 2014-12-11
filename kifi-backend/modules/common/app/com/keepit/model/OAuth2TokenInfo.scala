@@ -22,12 +22,21 @@ object OAuth2TokenInfo {
 
   import play.api.libs.functional.syntax._
   import play.api.libs.json._
-  implicit val format = (
-    (__ \ 'access_token).format[String].inmap(OAuth2AccessToken.apply, unlift(OAuth2AccessToken.unapply)) and
-    (__ \ 'token_type).formatNullable[String] and
-    (__ \ 'expires_in).formatNullable[Int] and
-    (__ \ 'refresh_token).formatNullable[String]
-  )(OAuth2TokenInfo.apply _, unlift(OAuth2TokenInfo.unapply))
+  // @json macro uses camelCase instead of underscore
+  implicit val reads: Reads[OAuth2TokenInfo] = (
+    (__ \ 'access_token).read[String] orElse (__ \ 'accessToken).read[String] fmap (OAuth2AccessToken.apply) and
+    ((__ \ 'token_type).read[String] orElse (__ \ 'tokenType).read[String] orElse Reads.pure("")).fmap(s => if (s.isEmpty) None else Some(s)) and
+    ((__ \ 'expires_in).read[Int] orElse (__ \ 'expiresIn).read[Int] orElse Reads.pure(-1)).fmap(i => if (i == -1) None else Some(i)) and
+    ((__ \ 'refresh_token).read[String] orElse (__ \ 'refreshToken).read[String] orElse Reads.pure("")).fmap(s => if (s.isEmpty) None else Some(s))
+  )(OAuth2TokenInfo.apply _)
+
+  implicit val writes: Writes[OAuth2TokenInfo] = (
+    (__ \ 'access_token).write[String] contramap (unlift(OAuth2AccessToken.unapply)) and
+    (__ \ 'token_type).writeNullable[String] and
+    (__ \ 'expires_in).writeNullable[Int] and
+    (__ \ 'refresh_token).writeNullable[String]
+  )(unlift(OAuth2TokenInfo.unapply))
+
 }
 
 @json case class OAuth1TokenInfo(token: String, secret: String)
