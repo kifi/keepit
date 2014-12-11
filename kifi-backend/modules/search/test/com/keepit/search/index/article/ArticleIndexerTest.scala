@@ -11,7 +11,7 @@ import com.keepit.search.Article
 import com.keepit.search.Lang
 import com.keepit.search.engine.parser.KQueryExpansion
 import com.keepit.search.query.parser._
-import com.keepit.test._
+import com.keepit.search.test.SearchTestInjector
 import org.specs2.mutable._
 import org.specs2.specification.Scope
 import scala.collection.JavaConversions._

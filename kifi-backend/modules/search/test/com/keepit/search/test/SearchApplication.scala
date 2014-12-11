@@ -1,4 +1,4 @@
-package com.keepit.test
+package com.keepit.search.test
 
 import akka.actor.ActorSystem
 import com.keepit.common.concurrent.FakeExecutionContextModule
@@ -9,10 +9,11 @@ import com.keepit.common.time.FakeClockModule
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
 import com.google.inject.util.Modules
 import com.google.inject.Module
-import com.keepit.common.cache.{ HashMapMemoryCacheModule, SearchCacheModule }
+import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.search.common.cache.SearchCacheModule
 import com.keepit.search.index.{ DevIndexModule, FakeIndexModule }
 import com.keepit.search.tracker.{ DevTrackingModule, FakeTrackingModule }
 import com.keepit.common.store.SearchFakeStoreModule
@@ -20,6 +21,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.search.{ FakeDistributedSearchServiceClientModule, SearchConfigModule, FakeSearchServiceClientModule, SearchServiceTypeModule, FakeSearchConfigModule }
+import com.keepit.test.{ TestInjector, TestApplication }
 
 class SearchApplication(overridingModules: Module*)(implicit path: File = new File("./modules/search/"))
   extends TestApplication(path, overridingModules, Seq(

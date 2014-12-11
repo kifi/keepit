@@ -2,7 +2,7 @@ package com.keepit.search.controllers.ext
 
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardHit, KifiShardResult }
-import com.keepit.test.SearchTestInjector
+import com.keepit.search.test.SearchTestInjector
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.common.db.{ Id, ExternalId }

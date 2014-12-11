@@ -5,13 +5,13 @@ import com.keepit.common.db.Id
 import com.keepit.search.index.article.ArticleRecord
 import com.keepit.search.index.article.ArticleRecordSerializer
 import com.keepit.search.index.graph.keep.{ KeepRecord, KeepFields, ShardedKeepIndexer }
+import com.keepit.search.test.SearchTestInjector
 import org.apache.lucene.index.Term
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.index.graph.collection._
 import com.keepit.search.SearchTestHelper
-import com.keepit.test._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import scala.concurrent._

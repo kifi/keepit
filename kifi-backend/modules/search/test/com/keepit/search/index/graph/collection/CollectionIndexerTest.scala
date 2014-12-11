@@ -3,7 +3,7 @@ package com.keepit.search.index.graph.collection
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.strings._
-import com.keepit.test._
+import com.keepit.search.test.SearchTestInjector
 import org.specs2.mutable._
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS

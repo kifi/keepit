@@ -1,4 +1,4 @@
-package com.keepit.test
+package com.keepit.search.test
 
 import com.keepit.inject._
 import com.keepit.model._

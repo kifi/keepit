@@ -11,6 +11,7 @@ import com.keepit.curator.CuratorServices
 import com.keepit.eliza.ElizaServices
 import com.keepit.graph.dev.GraphDevModule
 import com.keepit.heimdal.HeimdalServices
+import com.keepit.search.dev.SearchDevModule
 import com.keepit.search.{ SearchServices, SearchProdModule }
 import com.keepit.shoebox.{ ShoeboxServices, ShoeboxProdModule }
 import net.codingwell.scalaguice.ScalaModule

@@ -1,7 +1,7 @@
 package com.keepit.search.controllers.mobile
 
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.test.{ SearchApplication, SearchTestInjector }
+import com.keepit.search.test.{ SearchApplication, SearchTestInjector }
 import org.specs2.mutable._
 
 import com.keepit.model._

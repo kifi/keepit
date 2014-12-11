@@ -6,7 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.Collection
 import com.keepit.model.User
 import com.keepit.search.index.graph.GraphTestHelper
-import com.keepit.test.SearchTestInjector
+import com.keepit.search.test.SearchTestInjector
 import com.keepit.common.util.PlayAppConfigurationModule
 
 class CollectionSearcherTest extends Specification with SearchTestInjector with GraphTestHelper {

@@ -19,8 +19,8 @@ import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.phrasedetector._
 import com.keepit.search.index.user.UserIndexer
+import com.keepit.search.test.SearchTestInjector
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
-import com.keepit.test._
 import scala.concurrent.duration._
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker

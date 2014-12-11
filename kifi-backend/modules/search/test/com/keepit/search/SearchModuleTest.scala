@@ -1,6 +1,6 @@
 package com.keepit.search
 
 import com.keepit.test.ServiceModuleTest
-import com.keepit.dev.SearchDevModule
+import com.keepit.search.dev.SearchDevModule
 
 class SearchModuleTest extends ServiceModuleTest(expectedModule = SearchDevModule())

@@ -1,7 +1,7 @@
 package com.keepit.search.controllers.website
 
 import org.specs2.mutable.SpecificationLike
-import com.keepit.test.SearchTestInjector
+import com.keepit.search.test.SearchTestInjector
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.search._
 import com.keepit.search.engine.result.{ KifiShardHit, KifiShardResult, KifiPlainResult }

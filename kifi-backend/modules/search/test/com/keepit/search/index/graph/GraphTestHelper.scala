@@ -14,7 +14,7 @@ import com.keepit.search.index.graph.user._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.search.index.{ IndexDirectory, VolatileIndexDirectory }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.test.SearchTestInjector
+import com.keepit.search.test.SearchTestInjector
 import play.api.test.Helpers._
 
 trait GraphTestHelper extends SearchTestInjector {

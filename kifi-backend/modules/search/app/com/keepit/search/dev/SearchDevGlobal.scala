@@ -1,9 +1,8 @@
-package com.keepit.dev
+package com.keepit.search.dev
 
 import com.keepit.FortyTwoGlobal
 import play.api.Mode._
-import com.keepit.search.{ SearchProdModule, SearchServices }
-import com.google.inject.util.Modules
+import com.keepit.search.SearchServices
 import play.api.Application
 
 object SearchDevGlobal extends FortyTwoGlobal(Dev) with SearchServices {

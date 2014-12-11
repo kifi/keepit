@@ -8,7 +8,7 @@ import com.keepit.model._
 import com.keepit.search._
 import com.keepit.search.result.{ DecoratedResult, _ }
 import com.keepit.social.BasicUser
-import com.keepit.test.SearchTestInjector
+import com.keepit.search.test.SearchTestInjector
 import com.keepit.common.util.PlayAppConfigurationModule
 import org.specs2.mutable._
 import play.api.libs.json._
