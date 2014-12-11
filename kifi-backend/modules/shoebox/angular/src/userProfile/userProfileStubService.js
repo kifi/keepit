@@ -4,22 +4,24 @@ angular.module('kifi')
 
 .factory('userProfileStubService', ['$q',
   function ($q) {
-    var getProfile = function (userName) {
+    var getProfile = function (username) {
       var profiles = {
         'lydialaurenson': {
           id: 'f2f153db-6952-4b32-8854-8c0e452e1c64',
           firstName: 'Lydia',
           lastName: 'Laurenson',
           pictureName: 'FSPNP.jpg',
+          numKeeps: 77777,
           numLibraries: 7,
           numFriends: 77,
           numFollowers: 777,
-          helpedRekeep: 7777
+          helpedRekeep: 7777,
+          friendsWith: false
         }
       };
 
-      return profiles[userName] ?
-        $q.when(profiles[userName]) :
+      return profiles[username] ?
+        $q.when(profiles[username]) :
         $q.when(null);
     };
 

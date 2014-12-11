@@ -3,31 +3,32 @@
   <!-- Note that all this will be moved around when we start using AngularUI router. -->
   <div class="kf-user-profile-header">
     <div class="kf-user-profile-content"><!-- limit to 800px or so -->
-      <div class="kf-user-profile-connect"><!-- connect to this user; only if logged-in and not the user; absolute position this -->
+      <div class="kf-user-profile-connect">
+        <!-- need graphic for this -->CONNECT
+      </div>
 
-      <div class="kf-user-profile-basic-info">
-        <img class="kf-user-profile-picture"><!-- ng-src? -->
-        <div class="kf-user-profile-name"></div><!-- first name, last name -->
+      <div class="kf-user-profile-basic-info" itemscope itemtype="http://data-vocabulary.org/Person">
+        <img class="kf-user-profile-picture" ng-src="{{profile.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
+             alt="{{profile.firstName}} {{profile.lastName}}" itemprop="photo">
+        <div class="kf-user-profile-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</div>
       </div>
 
       <nav class="kf-user-profile-user-nav">
-        <ul class="kf-user-profile-user-nav-links-list"><!-- actually, use ng-repeat for this -->
-          <li class="kf-user-profile-user-nav-links-list-item"><!-- only one for now! highlighted if we're on that page right now; also the entire item should be clickable -->
-            <div class="kf-user-profile-user-nav-item-name">LIBRARIES</div>
-            <div class="kf-user-profile-user-nav-item-count"></div>
-          </li><!-- For now, just one! -->
-        </ul>
+        <!-- For testing AngularUI routing, using <a> tags. However, will make into divs for V1 release. -->
+        <!-- Switch back to <a> tags in V2. -->
+        <a class="kf-user-profile-user-nav-link" ng-repeat="userNavLink in userNavLinks" ng-href="{{userNavLink.url}}">
+          <div class="kf-user-profile-user-nav-item-name">{{userNavLink.name}}</div>
+          <div class="kf-user-profile-user-nav-item-count">{{userNavLink.count}}</div>
+        </a>
       </nav>
-
     </div><!-- kf-user-profile-content -->
   </div><!-- kf-user-profile-header -->
 
   <div class="kf-user-profile-libraries-nav-container">
     <nav class="kf-user-profile-libraries-nav"><!-- center this -->
-      <ul class="kf-user-profile-libraries-nav-links-list">
-        <li class="kf-user-profile-libraries-nav-links-list-item"><!-- ng-repeat this -->
-        </li>
-      </ul>
+      <a class="kf-user-profile-libraries-nav-link" ng-repeat="libraryNavLink in libraryNavLinks" ng-href="{{libraryNavLink.url}}">
+        {{libraryNavLink.name}}
+      </a>
     </nav>
   </div>
 

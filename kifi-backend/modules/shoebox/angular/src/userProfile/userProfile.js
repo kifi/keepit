@@ -3,12 +3,101 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', 'userProfileStubService',
-  function ($scope, userProfileStubService) {
+  '$scope', '$rootScope', '$routeParams', 'keepWhoService', 'profileService', 'userProfileStubService',
+  function ($scope, $rootScope, $routeParams, keepWhoService, profileService, userProfileStubService) {
+    //
+    // Configs.
+    //
+    var userNavLinksConfig = [
+      { name: 'LIBRARY', subpath: '/', countFieldName: 'numLibraries' },
+      { name: 'KEEPS', subpath: '/keeps'/* for testing only */, countFieldName: 'numKeeps' }
+
+      /*
+       * For V2.
+       */
+      // { name: 'FRIENDS', subpath: '/friends', countFieldName: 'numFriends' },
+      // { name: 'FOLLOWERS', subpath: '/followers', countFieldName: 'numFollowers' },
+      // { name: 'HELPED', subpath: '/helped/rekeep', countFieldName: 'helpedRekeep' }
+    ];
+
+    var libraryNavLinksConfig = [
+      { name: 'MY', subpath: '/' },
+      { name: 'FOLLOWING', subpath :'/following' },
+      { name: 'INVITED', subpath: '/invited' }
+    ];
+
+
+    //
+    // Scope data.
+    //
+    $scope.profile = null;
+    $scope.userLoggedIn = false;
+    $scope.viewingOwnProfile = false;
+    $scope.canConnectToUser = false;
+    $scope.userNavLinks = [];
+    $scope.libraryNavLinks = [];
+
+
+    //
+    // Internal functions.
+    //
     function init() {
-      console.log('I am on the USER PROFILE page!');
+      var username = $routeParams.username;
+
+      userProfileStubService.getProfile(username).then(function (profile) {
+        initProfile(profile);
+        initViewingUserStatus();
+        initUserNavLinks();
+      });
+
+      initLibraryNavLinks();
     }
 
+    function initProfile(profile) {
+      $scope.profile = _.cloneDeep(profile);
+
+      // Picture URL.
+      $scope.profile.picUrl = keepWhoService.getPicUrl({
+        id: $scope.profile.id,
+        pictureName: $scope.profile.pictureName
+      }, 100);
+    }
+
+    function initViewingUserStatus() {
+      $scope.userLoggedIn = $rootScope.userLoggedIn;
+      $scope.viewingOwnProfile = $scope.profile.id === profileService.me.id;
+      $scope.canConnectToUser = $scope.userLoggedIn && !$scope.viewingOwnProfile && !$scope.profile.friendsWith;
+    }
+
+    function initUserNavLinks() {
+      $scope.userNavLinks = _.map(userNavLinksConfig, function (config) {
+        return {
+          name: config.name,
+          url: getFullUserNavLinkPath(config.subpath),
+          count: $scope.profile[config.countFieldName]
+        };
+      });
+    }
+
+    function initLibraryNavLinks() {
+      $scope.libraryNavLinks = _.map(libraryNavLinksConfig, function (config) {
+        return {
+          name: config.name,
+          url: getFullUserNavLinkPath(config.subpath)
+        };
+      });
+    }
+
+    function getFullUserNavLinkPath(subpath) {
+      // Return a full path to the user nav link.
+      // Example:
+      //   subpath: '/friends'
+      //   returns: '/:username/friends'
+      return $routeParams.username + subpath;
+    }
+
+
+    // Initialize controller.
     init();
   }
 ]);
