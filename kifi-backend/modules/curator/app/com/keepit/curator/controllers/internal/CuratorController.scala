@@ -39,6 +39,9 @@ class CuratorController @Inject() (
   val topScoreRecoStrategy = new TopScoreRecoSelectionStrategy()
   val diverseRecoStrategy = new DiverseRecoSelectionStrategy()
 
+  val defaultRecoScoringStrategy = new DefaultRecoScoringStrategy()
+  val nonlinearRecoScoringStrategy = new NonLinearRecoScoringStrategy()
+
   def adHocRecos(userId: Id[User], n: Int) = Action.async { request =>
     recoGenCommander.getAdHocRecommendations(userId, n, request.body.asJson match {
       case Some(json) => json.as[UriRecommendationScores]
@@ -55,8 +58,11 @@ class CuratorController @Inject() (
       val sortStrategy =
         if (experiments.contains(ExperimentType.CURATOR_DIVERSE_TOPIC_RECOS)) diverseRecoStrategy
         else topScoreRecoStrategy
+      val scoringStrategy =
+        if (experiments.contains(ExperimentType.CURATOR_NONLINEAR_SCORING)) nonlinearRecoScoringStrategy
+        else defaultRecoScoringStrategy
 
-      Ok(Json.toJson(recoRetrievalCommander.topRecos(userId, more, recencyWeight, clientType, sortStrategy)))
+      Ok(Json.toJson(recoRetrievalCommander.topRecos(userId, more, recencyWeight, clientType, sortStrategy, scoringStrategy)))
     }
   }
 
