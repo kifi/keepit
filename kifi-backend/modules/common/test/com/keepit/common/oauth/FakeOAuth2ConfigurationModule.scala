@@ -4,7 +4,6 @@ import com.google.inject.{ Singleton, Provides }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
 import play.api.libs.oauth.ConsumerKey
-import play.api.libs.ws.WSResponse
 
 import scala.concurrent.Future
 
@@ -18,12 +17,7 @@ trait FakeOAuthProvider extends OAuthProvider {
 
 }
 
-trait FakeOAuth2Provider extends FakeOAuthProvider with OAuth2ProviderHelper {
-
-  def oauth2Config: OAuth2Configuration = ???
-
-  var oauth2Token = () => OAuth2TokenInfo(OAuth2AccessToken("fake-token"))
-  override def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = oauth2Token.apply()
+trait FakeOAuth2Provider extends FakeOAuthProvider with OAuth2Support {
 
   var longTermTokenOpt: Option[OAuth2TokenInfo] = None
   def setLongTermToken(f: => OAuth2TokenInfo) { longTermTokenOpt = Some(f) }
@@ -72,7 +66,6 @@ case class FakeOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
     import OAuth2Providers._
     val providerMap = Map(
       FB -> fbConfigBuilder("530357056981814", "cdb2939941a1147a4b88b6c8f3902745"),
-      LNKD -> lnkdConfigBuilder("ovlhms1y0fjr", "5nz8568RERDuTNpu"),
       GOOG -> googConfigBuilder("991651710157.apps.googleusercontent.com", "vt9BrxsxM6iIG4EQNkm18L-m")
     )
     OAuth2Configuration(providerMap)
