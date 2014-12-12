@@ -3,7 +3,7 @@
 
 ->  / eliza.Routes
 
--> /  search.Routes
+-> /  searchService.Routes
 
 -> /  heimdal.Routes
 
