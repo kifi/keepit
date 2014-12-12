@@ -92,6 +92,7 @@ var libJsFiles = [
   ['lib/angular-sanitize/angular-sanitize.js', 'lib/angular-sanitize/angular-sanitize.min.js'],
   ['lib/angular-route/angular-route.js', 'lib/angular-route/angular-route.min.js'],
   ['lib/angular-animate/angular-animate.js', 'lib/angular-animate/angular-animate.min.js'],
+  ['lib/angular-ui-router/release/angular-ui-router.js', 'lib/angular-ui-router/release/angular-ui-router.min.js'],
   'lib/jquery-mousewheel/jquery.mousewheel.js',
   'lib/antiscroll/antiscroll.js',
   ['lib/moment/moment.js', 'lib/moment/min/moment.min.js'],

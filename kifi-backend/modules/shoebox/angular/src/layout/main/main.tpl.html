@@ -1,6 +1,13 @@
 <div class="kf-col-inner" ng-controller="MainCtrl">
   <div kf-delighted-survey ng-show="showDelightedSurvey" class="delighted-survey" ng-class="{ 'delighted-visible': showDelightedSurvey }" show-survey="showDelightedSurvey"></div>
-  <div ng-view></div>
+
+  <div ui-view></div>
+
+  <!-- for dev only -->
+  <a ui-sref="friends">Friends</a>
+  <a ui-sref="state1">State 1</a>
+  <a ui-sref="state2">State 2</a>
+
   <div class="kf-small-tooltip" ng-if="undo.isSet() || tooltipMessage">
     <span class="kf-small-tooltip-box">
       <span class="kf-small-tooltip-message">{{undo.message || tooltipMessage}}</span>

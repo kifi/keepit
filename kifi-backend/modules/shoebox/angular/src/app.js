@@ -6,7 +6,7 @@ angular.module('kifi', [
   'ngRoute',
   'ngSanitize',
   'ngAnimate',
-  //'ui.router',
+  'ui.router',
   'util',
   'dom',
   'antiscroll',
@@ -21,7 +21,9 @@ angular.module('kifi', [
 
 // fix for when ng-view is inside of ng-include:
 // http://stackoverflow.com/questions/16674279/how-to-nest-ng-view-inside-ng-include
-.run(['$route', angular.noop])
+// (12-12-2014) Note that we have switched from ng-view to ui-view, but the following
+//              is still needed (probably because ui-view is nested inside ng-include).
+.run(['$state', angular.noop])
 
 .constant('linkedinConfigSettings', {
   appKey: 'r11loldy9zlg'
