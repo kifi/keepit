@@ -1,4 +1,4 @@
-package com.keepit.search.query.parser
+package com.keepit.search.engine.parser
 
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute

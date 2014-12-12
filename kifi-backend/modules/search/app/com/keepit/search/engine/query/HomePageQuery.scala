@@ -1,4 +1,4 @@
-package com.keepit.search.query
+package com.keepit.search.engine.query
 
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.{ Query, PhraseQuery, TermQuery }

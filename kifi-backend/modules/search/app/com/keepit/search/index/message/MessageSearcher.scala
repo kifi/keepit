@@ -3,7 +3,7 @@ package com.keepit.search.index.message
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.search.{ SearchConfig, Searcher }
-import com.keepit.search.query.ConditionalQuery
+import com.keepit.search.engine.query.ConditionalQuery
 import com.keepit.common.strings.UTF8
 
 import org.apache.lucene.index.Term

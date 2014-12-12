@@ -1,4 +1,4 @@
-package com.keepit.search.query
+package com.keepit.search.engine.query
 
 import com.keepit.common.logging.Logging
 import com.keepit.search.Searcher

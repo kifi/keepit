@@ -1,4 +1,4 @@
-package com.keepit.search.query
+package com.keepit.search.engine.query
 
 import org.specs2.mutable.Specification
 

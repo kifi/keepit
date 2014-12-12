@@ -2,7 +2,7 @@ package com.keepit.search.tracking
 
 import com.keepit.common.db.Id
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.query.QueryHash
+import com.keepit.search.engine.query.QueryHash
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 import scala.concurrent._

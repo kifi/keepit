@@ -1,6 +1,6 @@
 package com.keepit.search.engine.query.core
 
-import com.keepit.search.query.{ FixedScoreQuery, HomePageQuery }
+import com.keepit.search.engine.query.{ FixedScoreQuery, HomePageQuery }
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.{ BooleanQuery, DisjunctionMaxQuery, PhraseQuery, TermQuery }

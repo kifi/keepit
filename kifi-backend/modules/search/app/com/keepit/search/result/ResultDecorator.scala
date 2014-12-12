@@ -8,9 +8,9 @@ import com.keepit.model._
 import com.keepit.search.{ SearchFilter, ArticleSearchResult, Lang, SearchConfigExperiment }
 import com.keepit.search.index.Analyzer
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.query.QueryUtil
-import com.keepit.search.query.parser.DefaultSyntax
-import com.keepit.search.query.parser.QueryParser
+import com.keepit.search.engine.query.QueryUtil
+import com.keepit.search.engine.parser.DefaultSyntax
+import com.keepit.search.engine.parser.QueryParser
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Promise

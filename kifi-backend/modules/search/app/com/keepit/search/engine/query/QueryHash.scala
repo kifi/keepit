@@ -1,9 +1,9 @@
-package com.keepit.search.query
+package com.keepit.search.engine.query
 
 import com.keepit.common.db.Id
 import com.keepit.model.User
-import com.keepit.search.query.parser.QueryParser
-import com.keepit.search.query.parser.DefaultSyntax
+import com.keepit.search.engine.parser.QueryParser
+import com.keepit.search.engine.parser.DefaultSyntax
 import org.apache.lucene.analysis.Analyzer
 
 object QueryHash {

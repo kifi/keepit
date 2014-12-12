@@ -1,18 +1,19 @@
-package com.keepit.search.query
+package com.keepit.search.engine.query
 
 import java.util.Random
 
 import com.keepit.search.index.DefaultAnalyzer
-import org.apache.lucene.document.{ NumericDocValuesField, Document }
-import org.apache.lucene.index.{ SlowCompositeReaderWrapper, DirectoryReader, IndexWriter, IndexWriterConfig }
+import org.apache.lucene.document.{ Document, NumericDocValuesField }
+import org.apache.lucene.index.{ DirectoryReader, IndexWriter, IndexWriterConfig, SlowCompositeReaderWrapper }
 import org.apache.lucene.search.{ DocIdSetIterator, IndexSearcher, MatchAllDocsQuery }
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
 import org.specs2.mutable.Specification
+
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
 
-class RecencyQueryTest extends Specification {
+class SlowDecayingRecencyQueryTest extends Specification {
 
   private[this] val config = new IndexWriterConfig(Version.LATEST, DefaultAnalyzer.defaultAnalyzer)
 
@@ -49,7 +50,7 @@ class RecencyQueryTest extends Specification {
 
   "scores recent documents higher" in {
     val searcher = new IndexSearcher(reader)
-    val query = new RecencyQuery(new MatchAllDocsQuery(), "createdAt", 1.0f, range / 2)
+    val query = new SlowDecayingRecencyQuery(new MatchAllDocsQuery(), "createdAt", 1.0f, range / 2)
     val weight = searcher.createNormalizedWeight(query)
     val scorer = weight.scorer(readerContext, reader.getLiveDocs)
 
@@ -69,7 +70,7 @@ class RecencyQueryTest extends Specification {
   "scores recent documents within [1.0f, 1.0f + boostStrength]" in {
     val boostStrength = 0.5f
     val searcher = new IndexSearcher(reader)
-    val query = new RecencyQuery(new MatchAllDocsQuery(), "createdAt", boostStrength, range / 2)
+    val query = new SlowDecayingRecencyQuery(new MatchAllDocsQuery(), "createdAt", boostStrength, range / 2)
     val weight = searcher.createNormalizedWeight(query)
     val scorer = weight.scorer(readerContext, reader.getLiveDocs)
 

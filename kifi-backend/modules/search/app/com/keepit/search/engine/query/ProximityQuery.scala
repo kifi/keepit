@@ -1,6 +1,6 @@
-package com.keepit.search.query
+package com.keepit.search.engine.query
 
-import com.keepit.search.query.QueryUtil._
+import com.keepit.search.engine.query.QueryUtil._
 import com.keepit.search.util.LocalAlignment
 import com.keepit.search.util.LocalAlignment._
 import org.apache.lucene.index.AtomicReaderContext

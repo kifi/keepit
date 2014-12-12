@@ -1,4 +1,4 @@
-package com.keepit.search.query
+package com.keepit.search.engine.query
 
 import com.keepit.search.index.{ IdMapper, WrappedSubReader }
 import com.keepit.search.util.{ IntArrayBuilder, LongArraySet }

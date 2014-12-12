@@ -1,23 +1,17 @@
-package com.keepit.search.query
+package com.keepit.search.engine.query
 
-import com.keepit.search.util.LocalAlignment
-import org.specs2.mutable._
-import scala.collection.mutable.ArrayBuffer
-import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.util.LocalAlignment._
-import org.apache.lucene.document.Document
-import org.apache.lucene.document.Field
-import org.apache.lucene.document.TextField
-import org.apache.lucene.index.DirectoryReader
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.index.IndexWriter
-import org.apache.lucene.index.Term
-import org.apache.lucene.index.SlowCompositeReaderWrapper
-import org.apache.lucene.store.RAMDirectory
-import org.apache.lucene.search.DocIdSetIterator
-import org.apache.lucene.search.IndexSearcher
-import org.apache.lucene.util.Version
 import com.keepit.search.SearchConfig
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.util.LocalAlignment
+import com.keepit.search.util.LocalAlignment._
+import org.apache.lucene.document.{ Document, Field, TextField }
+import org.apache.lucene.index.{ DirectoryReader, IndexWriter, IndexWriterConfig, SlowCompositeReaderWrapper, Term }
+import org.apache.lucene.search.{ DocIdSetIterator, IndexSearcher }
+import org.apache.lucene.store.RAMDirectory
+import org.apache.lucene.util.Version
+import org.specs2.mutable._
+
+import scala.collection.mutable.ArrayBuffer
 
 class ProximityQueryTest extends Specification {
 

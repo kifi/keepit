@@ -1,7 +1,7 @@
 package com.keepit.search.engine.query.core
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.query.{ BoostQuery, BoostWeight }
+import com.keepit.search.engine.query.{ BoostQuery, BoostWeight }
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits

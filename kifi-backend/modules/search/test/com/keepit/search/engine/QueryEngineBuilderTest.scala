@@ -4,7 +4,7 @@ import com.keepit.search.Lang
 import com.keepit.search.engine.parser.KQueryExpansion
 import com.keepit.search.engine.query.core.{ KBoostQuery, KBooleanQuery }
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.query.parser.{ DefaultSyntax, QueryParser }
+import com.keepit.search.engine.parser.{ DefaultSyntax, QueryParser }
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.TermQuery
 import org.specs2.mutable.Specification

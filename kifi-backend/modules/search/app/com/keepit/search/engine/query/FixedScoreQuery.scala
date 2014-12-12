@@ -1,4 +1,4 @@
-package com.keepit.search.query
+package com.keepit.search.engine.query
 
 import com.keepit.search.engine.query.core.ProjectableQuery
 import org.apache.lucene.index.{ Term, AtomicReaderContext, IndexReader }

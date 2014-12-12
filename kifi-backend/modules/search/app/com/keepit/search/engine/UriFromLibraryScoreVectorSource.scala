@@ -5,7 +5,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.engine.explain.DirectExplainContext
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.index.graph.library.LibraryFields
-import com.keepit.search.query.IdSetFilter
+import com.keepit.search.engine.query.IdSetFilter
 import com.keepit.search.{ SearchConfig, SearchFilter, Searcher }
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.WrappedSubReader

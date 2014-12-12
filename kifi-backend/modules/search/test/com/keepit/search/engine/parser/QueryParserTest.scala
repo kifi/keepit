@@ -1,10 +1,9 @@
-package com.keepit.search.query.parser
+package com.keepit.search.engine.parser
 
-import org.specs2.specification.Scope
-import org.specs2.mutable._
 import org.apache.lucene.search.BooleanClause._
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.Query
+import org.apache.lucene.search.{ BooleanQuery, Query }
+import org.specs2.mutable._
+import org.specs2.specification.Scope
 
 class QueryParserTest extends Specification {
 
