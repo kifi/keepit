@@ -1,12 +1,12 @@
 <div class="kf-keep library-card" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress, 'pageScrolled': pageScrolled }">
   <div ng-show="library.invite && !library.invite.actedOn" class="library-card-invite-header">
-    <button class="library-card-invite-header-button library-card-invite-header-accept" ng-click="acceptInvitation(library)">Accept</button>
-    <button class="library-card-invite-header-button library-card-invite-header-ignore" ng-click="ignoreInvitation(library)">Ignore</button>
+    <button class="library-card-invite-header-button library-card-invite-header-accept" ng-click="acceptInvitation()">Accept</button>
+    <button class="library-card-invite-header-button library-card-invite-header-ignore" ng-click="ignoreInvitation()">Ignore</button>
     <span class="library-card-invite-header-info">{{library.invite.inviterName}} has invited you to follow this library</span>
   </div>
-  <button ng-if="!recommendation && isUserLoggedOut" ng-click="followLibrary(library)"
+  <button ng-if="!recommendation && isUserLoggedOut" ng-click="followLibrary()"
     class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-follow kf-keep-lib-footer-button-follow-in-search">Follow Library</button>
-  <div class="kf-keep-body">
+  <div class="kf-keep-lib-body">
     <div class="kf-keep-lib-header">
       <div ng-if="!isUserLoggedOut" ng-switch="library.kind" class="kf-keep-lib-icon-container">
         <div ng-switch-when="system_main" class="kf-keep-lib-icon svg-main-library-big"></div>
@@ -56,7 +56,7 @@
             <span class="kf-keep-lib-stats-number">{{library.numKeeps}}</span>
           </div>
 
-          <div ng-if="isUserLibrary(library)" class="kf-keep-lib-keeps-followers-stats">
+          <div ng-if="isUserCreatedLibrary()" class="kf-keep-lib-keeps-followers-stats">
             <span class="kf-keep-lib-stats-heading">Followers</span>
             <span class="kf-keep-lib-stats-number">{{library.numFollowers}}</span>
           </div>
@@ -86,26 +86,26 @@
   </div>
   <img ng-if="magicImage" class="kf-keep-lib-image" ng-src="{{magicImage}}" alt="{{library.name}}">
   <div class="kf-keep-footer clearfix">
-    <button ng-if="isMyLibrary(library) && isUserLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right library-button-with-icon" ng-click="manageLibrary()">
+    <button ng-if="isMyLibrary() && isUserCreatedLibrary()" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right library-button-with-icon" ng-click="manageLibrary()">
       <span class="kf-keep-lib-footer-button-icon svg-pen"></span>Manage Library
     </button>
-    <button ng-if="isMyLibrary(library) && library.numKeeps > 0" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-edit-keeps-button" ng-click="toggleEditKeeps()">
+    <button ng-if="isMyLibrary() && library.numKeeps > 0" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-edit-keeps-button" ng-click="toggleEditKeeps()">
       {{editKeepsText}}
     </button>
-    <button kf-sticky sticky-if="isUserLoggedOut" max-top="followButtonMaxTop" sticky-width-mode="ignored" on-stick="followStick" ng-class="{stickable: isUserLoggedOut}" ng-if="canFollowLibrary(library) && !librarySearchInProgress" ng-click="followLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-follow kf-keep-lib-footer-sticky-follow-button">
+    <button kf-sticky sticky-if="isUserLoggedOut" max-top="followButtonMaxTop" sticky-width-mode="ignored" on-stick="followStick" ng-class="{stickable: isUserLoggedOut}" ng-if="canFollowLibrary() && !librarySearchInProgress" ng-click="followLibrary()" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-follow kf-keep-lib-footer-sticky-follow-button">
       Follow Library
     </button>
-    <button ng-if="alreadyFollowingLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-unfollow" ng-click="unfollowLibrary(library)"></button>
-    <div ng-if="canBeShared(library)" kf-library-share-search library="library" class="kf-keep-lib-footer-button-right"></div>
+    <button ng-if="alreadyFollowingLibrary()" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-unfollow" ng-click="unfollowLibrary()"></button>
+    <div ng-if="canBeShared()" kf-library-share-search library="library" class="kf-keep-lib-footer-button-right"></div>
 
-    <button ng-if="isPublic(library)" class="kf-keep-lib-footer-button library-button-with-icon kf-keep-lib-footer-twitter-button">
+    <button ng-if="isPublic()" class="kf-keep-lib-footer-button library-button-with-icon kf-keep-lib-footer-twitter-button">
       <a class="kf-keep-lib-footer-share-link" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}" ng-click="shareTwitter()">
         <span class="kf-keep-lib-footer-button-icon svg-twitter"></span>
         <span class="kf-keep-lib-footer-button-icon svg-twitter-white"></span><!-- for non-logged-in users -->
         <span class="kf-keep-lib-footer-share-link-text">Tweet</span>
       </a>
     </button>
-    <button ng-if="isPublic(library)" ng-click="shareFB()" class="kf-keep-lib-footer-button library-button-with-icon kf-keep-lib-footer-facebook-button">
+    <button ng-if="isPublic()" ng-click="shareFB()" class="kf-keep-lib-footer-button library-button-with-icon kf-keep-lib-footer-facebook-button">
       <span class="kf-keep-lib-footer-button-icon svg-facebook"></span>
       <span class="kf-keep-lib-footer-button-icon svg-facebook-white"></span><!-- for non-logged-in users -->
       <a class="kf-keep-lib-footer-share-link-text" href="javascript:">Post</a>

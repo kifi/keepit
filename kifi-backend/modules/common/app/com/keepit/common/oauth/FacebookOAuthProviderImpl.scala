@@ -7,14 +7,14 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.OAuth2TokenInfo
 import play.api.http.Status
-import play.api.libs.json.JsObject
-import play.api.libs.ws.WS
+import play.api.libs.json.{ JsNumber, JsString, JsNull, JsObject }
+import play.api.libs.ws.{ WSResponse, WS }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import play.api.Play.current
 
-trait FacebookOAuthProvider extends OAuthProvider with OAuth2Support {
+trait FacebookOAuthProvider extends OAuth2Support {
 
   val MeApi = "https://graph.facebook.com/me?fields=name,first_name,last_name,picture,email&return_ssl_resources=1&access_token="
   val Error = "error"
@@ -36,13 +36,11 @@ trait FacebookOAuthProvider extends OAuthProvider with OAuth2Support {
 
 @Singleton
 class FacebookOAuthProviderImpl @Inject() (
-    airbrake: AirbrakeNotifier,
-    oauth2Config: OAuth2Configuration) extends FacebookOAuthProvider with OAuth2Support with Logging {
-
-  val config = oauth2Config.getProviderConfig(providerId.id) match {
-    case None => throw new IllegalArgumentException(s"config not found for $providerId")
-    case Some(cfg) => cfg
-  }
+  airbrake: AirbrakeNotifier,
+  val oauth2Config: OAuth2Configuration)
+    extends FacebookOAuthProvider
+    with FacebookOAuth2ProviderHelper
+    with Logging {
 
   def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {
     WS.url(MeApi + accessToken.token).get() map { response =>
@@ -77,10 +75,10 @@ class FacebookOAuthProviderImpl @Inject() (
   }
 
   def exchangeLongTermToken(oauth2Info: OAuth2TokenInfo): Future[OAuth2TokenInfo] = {
-    val resF = WS.url(config.exchangeTokenUrl.get.toString).withQueryString(
+    val resF = WS.url(providerConfig.exchangeTokenUrl.get.toString).withQueryString(
       "grant_type" -> "fb_exchange_token",
-      "client_id" -> config.clientId,
-      "client_secret" -> config.clientSecret,
+      "client_id" -> providerConfig.clientId,
+      "client_secret" -> providerConfig.clientSecret,
       "fb_exchange_token" -> oauth2Info.accessToken.token
     ).get
     resF map { res =>
@@ -92,7 +90,7 @@ class FacebookOAuthProviderImpl @Inject() (
         }.toMap
         oauth2Info.copy(accessToken = OAuth2AccessToken(params("access_token")), expiresIn = params.get("expires").map(_.toInt))
       } else {
-        log.warn(s"[exchangeToken] failed to obtain exchange token. status=${res.statusText} resp=${res.body} oauth2Info=$oauth2Info; config=$config")
+        log.warn(s"[exchangeToken] failed to obtain exchange token. status=${res.statusText} resp=${res.body} oauth2Info=$oauth2Info; config=$providerConfig")
         oauth2Info
       }
     } recover {

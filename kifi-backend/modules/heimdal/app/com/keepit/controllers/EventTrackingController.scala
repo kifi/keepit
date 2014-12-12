@@ -7,7 +7,7 @@ import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.curator.RecommendationUserAction
 import com.keepit.heimdal._
-import com.keepit.model.{ AnonymousEventLoggingRepo, NonUserEventLoggingRepo, SystemEventLoggingRepo, UserEventLoggingRepo }
+import com.keepit.model._
 import com.kifi.franz.SQSQueue
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsValue }
@@ -19,6 +19,7 @@ class EventTrackingController @Inject() (
     userEventLoggingRepo: UserEventLoggingRepo,
     systemEventLoggingRepo: SystemEventLoggingRepo,
     anonymousEventLoggingRepo: AnonymousEventLoggingRepo,
+    visitorEventLoggingRepo: VisitorEventLoggingRepo,
     nonUserEventLoggingRepo: NonUserEventLoggingRepo,
     heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]],
     eventTrackingCommander: HelpRankEventTrackingCommander,
@@ -30,11 +31,11 @@ class EventTrackingController @Inject() (
     case systemEvent: SystemEvent => systemEventLoggingRepo.persist(systemEvent)
     case userEvent: UserEvent => handleUserEvent(userEvent)
     case anonymousEvent: AnonymousEvent => anonymousEventLoggingRepo.persist(anonymousEvent)
+    case visitorEvent: VisitorEvent => visitorEventLoggingRepo.persist(visitorEvent)
     case nonUserEvent: NonUserEvent => nonUserEventLoggingRepo.persist(nonUserEvent)
   }
 
   private def handleUserEvent(rawUserEvent: UserEvent) = {
-    //Some user events are coming in from clients with the "user_" prefix already present. This is a stop gap to end fragmentation in mixpanel into user_* and user_user_*. Investigating to stop the cause.
     val userEvent = if (rawUserEvent.eventType.name.startsWith("user_")) rawUserEvent.copy(eventType = EventType(rawUserEvent.eventType.name.substring(5))) else rawUserEvent
     SafeFuture { userEventLoggingRepo.persist(userEvent) }
     userEvent.eventType match {

@@ -18,6 +18,7 @@ object StatModelName {
   val LDA_USER = StatModelName("lda_user")
   val LDA_USER_STATS = StatModelName("lda_user_stats")
   val LDA_LIBRARY = StatModelName("lda_library")
+  val LDA_LIBRARY_CLEANUP = StatModelName("lda_library_cleanup") // not really a stat model
 }
 
 object ModelVersion {

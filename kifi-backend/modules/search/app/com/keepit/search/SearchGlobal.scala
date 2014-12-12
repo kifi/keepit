@@ -3,16 +3,16 @@ package com.keepit.search
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ InMemoryCachePlugin, FortyTwoCachePlugin }
 import com.keepit.common.healthcheck._
-import com.keepit.search.graph.keep.KeepIndexerPlugin
-import com.keepit.search.message.MessageIndexerPlugin
-import com.keepit.search.article.ArticleIndexerPlugin
+import com.keepit.search.index.graph.keep.KeepIndexerPlugin
+import com.keepit.search.index.message.MessageIndexerPlugin
+import com.keepit.search.index.article.ArticleIndexerPlugin
 import play.api.Mode._
 import play.api._
-import com.keepit.search.user.UserIndexerPlugin
+import com.keepit.search.index.user.UserIndexerPlugin
 import com.keepit.search.phrasedetector.PhraseIndexerPlugin
-import com.keepit.search.graph.collection.CollectionGraphPlugin
-import com.keepit.search.graph.user._
-import com.keepit.search.graph.library.LibraryIndexerPlugin
+import com.keepit.search.index.graph.collection.CollectionGraphPlugin
+import com.keepit.search.index.graph.user._
+import com.keepit.search.index.graph.library.LibraryIndexerPlugin
 
 object SearchGlobal extends FortyTwoGlobal(Prod) with SearchServices {
   val module = SearchProdModule()

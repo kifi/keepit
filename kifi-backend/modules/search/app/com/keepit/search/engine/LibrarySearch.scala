@@ -9,7 +9,7 @@ import scala.concurrent.Future
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
-import com.keepit.search.graph.keep.KeepRecord
+import com.keepit.search.index.graph.keep.KeepRecord
 
 class LibrarySearch(
     userId: Id[User],
@@ -110,17 +110,12 @@ object LibrarySearch extends Logging {
 
     val othersHighScore = othersHits.highScore
     if (hits.size < maxHits && othersHits.size > 0 && filter.includeOthers) {
-
-      val queue = KifiSearch.createQueue(maxHits - hits.size)
-      hits.discharge(hits.size - minMyLibraries).foreach { h => queue.insert(h) }
-
       othersHits.toRankedIterator.take(maxHits - hits.size).foreach {
         case (hit, rank) =>
           val othersNorm = max(highScore, hit.score) * 1.1f // discount others hit
           hit.normalizedScore = (hit.score / othersNorm) * KifiSearch.dampFunc(rank, dampingHalfDecayOthers)
-          queue.insert(hit)
+          hits.insert(hit)
       }
-      queue.foreach { h => hits.insert(h) }
     }
 
     val show = if (filter.isDefault && isInitialSearch && noFriendlyHits) false else (highScore > 0.6f || othersHighScore > 0.8f)

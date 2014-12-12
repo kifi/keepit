@@ -3,7 +3,7 @@ package com.keepit.search.augmentation
 import com.keepit.common.db.Id
 import com.keepit.model.{ NormalizedURI, Library, User }
 import com.keepit.search.{ Searcher }
-import com.keepit.search.graph.library.LibraryIndexable
+import com.keepit.search.index.graph.library.LibraryIndexable
 import scala.collection.mutable.{ ListBuffer }
 import com.keepit.common.CollectionHelpers
 

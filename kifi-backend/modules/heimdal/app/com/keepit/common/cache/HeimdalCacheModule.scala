@@ -127,6 +127,11 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides
   @Singleton
+  def visitorEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new VisitorEventDescriptorNameCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+
+  @Provides
+  @Singleton
   def nonUserEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new NonUserEventDescriptorNameCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 

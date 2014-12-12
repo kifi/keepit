@@ -199,7 +199,7 @@
         event.preventDefault();
 
         $.post('@com.keepit.controllers.admin.routes.AdminLDAController.docTopic',
-          {doc: $('#doc').val(), version: $('#version_number').val()}
+          {doc: $('#doc').val(), version: @version}
         ).done(done).fail(fail);
 
         function done(data){ $("#doc_topic_result").empty().prepend(data) }

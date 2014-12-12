@@ -37,6 +37,7 @@ class LibraryController @Inject() (
   collectionRepo: CollectionRepo,
   fortyTwoConfig: FortyTwoConfig,
   clock: Clock,
+  relatedLibraryCommander: RelatedLibraryCommander,
   val libraryCommander: LibraryCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
@@ -512,6 +513,18 @@ class LibraryController @Inject() (
       case _ => Future.successful(Forbidden)
     }
 
+  }
+
+  def relatedLibraries(pubId: PublicId[Library]) = MaybeUserAction.async { request =>
+    val id = Library.decodePublicId(pubId).get
+    val userIdOpt = request.userIdOpt
+    val isUserAction = userIdOpt.isDefined
+    relatedLibraryCommander.suggestedLibrariesInfo(id, userIdOpt)
+      .map {
+        case (fullInfos, isRelated) =>
+          val libs = fullInfos.map { info => RelatedLibraryInfo.fromFullLibraryInfo(info, isUserAction) }
+          Ok(Json.obj("libs" -> libs, "related" -> isRelated))
+      }
   }
 }
 

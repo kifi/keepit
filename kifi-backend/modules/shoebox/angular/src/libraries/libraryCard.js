@@ -254,14 +254,14 @@ angular.module('kifi')
         //
         // Scope methods.
         //
-        scope.acceptInvitation = function (library) {
-          scope.followLibrary(library);
+        scope.acceptInvitation = function () {
+          scope.followLibrary();
         };
 
-        scope.ignoreInvitation = function (library) {
-          if (library.invite) {
-            libraryService.declineToJoinLibrary(library.id).then(function () {
-              library.invite.actedOn = true;
+        scope.ignoreInvitation = function () {
+          if (scope.library.invite) {
+            libraryService.declineToJoinLibrary(scope.library.id).then(function () {
+              scope.library.invite.actedOn = true;
             })['catch'](modalService.openGenericErrorModal);
           }
         };
@@ -270,25 +270,24 @@ angular.module('kifi')
           scope.clippedDescription = false;
         };
 
-        scope.isUserLibrary = function (library) {
-          return library.kind === 'user_created';
+        scope.isUserCreatedLibrary = function () {
+          return scope.library.kind === 'user_created';
         };
 
-        scope.isMyLibrary = function (library) {
-          return libraryService.isMyLibrary(library);
+        scope.isMyLibrary = function () {
+          return libraryService.isMyLibrary(scope.library);
         };
 
-        scope.canBeShared = function (library) {
-          // Only user created (i.e. not Main or Secret) libraries can be shared.
-          // Of the user created libraries, public libraries can be shared by any Kifi user;
+        scope.canBeShared = function () {
+          // Only user-created (i.e. not Main or Secret) libraries can be shared.
+          // Of the user-created libraries, public libraries can be shared by any Kifi user;
           // discoverable/secret libraries can be shared only by the library owner.
-          return !scope.isUserLoggedOut && scope.isUserLibrary(library) &&
-                 (library.visibility === 'published' ||
-                  scope.isMyLibrary(library));
+          return !scope.isUserLoggedOut && scope.isUserCreatedLibrary() &&
+                 (scope.isPublic() || scope.isMyLibrary());
         };
 
-        scope.isPublic = function (library) {
-          return library.visibility === 'published';
+        scope.isPublic = function () {
+          return scope.library.visibility === 'published';
         };
 
         scope.shareFB = function () {
@@ -304,15 +303,15 @@ angular.module('kifi')
         };
 
         // TODO: determine this on the server side in the library response. For now, doing it client side.
-        scope.canFollowLibrary = function (library) {
-          return !scope.alreadyFollowingLibrary(library) && !scope.isMyLibrary(library);
+        scope.canFollowLibrary = function () {
+          return !scope.alreadyFollowingLibrary() && !scope.isMyLibrary();
         };
 
-        scope.alreadyFollowingLibrary = function (library) {
-          return libraryService.isFollowingLibrary(library);
+        scope.alreadyFollowingLibrary = function () {
+          return libraryService.isFollowingLibrary(scope.library);
         };
 
-        scope.followLibrary = function (library) {
+        scope.followLibrary = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedFollowButton' });
 
           if (platformService.isSupportedMobilePlatform()) {
@@ -328,10 +327,8 @@ angular.module('kifi')
             return signupService.register({libraryId: scope.library.id});
           }
 
-          libraryService.joinLibrary(library.id).then(function (result) {
-            if (library.invite) {
-              library.invite.actedOn = true;
-            }
+          libraryService.joinLibrary(scope.library.id).then(function (result) {
+            (scope.library.invite || {}).actedOn = true;
 
             if (result === 'already_joined') {
               modalService.openGenericErrorModal({
@@ -342,7 +339,7 @@ angular.module('kifi')
               return;
             }
 
-            library.followers.push({
+            scope.library.followers.push({
               id: profileService.me.id,
               firstName: profileService.me.firstName,
               lastName: profileService.me.lastName,
@@ -354,12 +351,12 @@ angular.module('kifi')
           })['catch'](modalService.openGenericErrorModal);
         };
 
-        scope.unfollowLibrary = function (library) {
+        scope.unfollowLibrary = function () {
           // TODO(yrl): ask Jen about whether we can remove this.
-          libraryService.trackEvent('user_clicked_page', library, { action: 'unfollow' });
+          libraryService.trackEvent('user_clicked_page', scope.library, { action: 'unfollow' });
 
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedUnfollowButton' });
-          libraryService.leaveLibrary(library.id)['catch'](modalService.openGenericErrorModal);
+          libraryService.leaveLibrary(scope.library.id)['catch'](modalService.openGenericErrorModal);
         };
 
         scope.followStick = function (isStuck) {

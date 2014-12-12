@@ -1,30 +1,33 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.db.ExternalId
-import com.keepit.common.oauth.FakeOAuth2ConfigurationModule
-import com.keepit.curator.FakeCuratorServiceClientModule
-import org.specs2.mutable.Specification
-
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserConnectionFactoryHelper._
+import com.keepit.model.UserConnectionFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryFactory._
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller._
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.oauth.FakeOAuth2ConfigurationModule
+import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
-import com.keepit.test.{ ShoeboxTestInjector }
-
-import play.api.libs.json.{ Json, JsNull }
+import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.test.ShoeboxTestInjector
+import org.specs2.mutable.Specification
+import play.api.libs.json.{ JsNull, Json }
 import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
-import com.keepit.shoebox.{ FakeShoeboxServiceModule }
-import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ FakeSocialGraphModule }
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.scraper.{ FakeScrapeSchedulerModule }
-
-import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.cortex.FakeCortexServiceClientModule
 
 import scala.concurrent.Future
 
@@ -50,7 +53,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     "get currentUser" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          val user = inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
           inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.ADMIN))
           user
         }
@@ -283,6 +286,54 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val resultJson = contentAsJson(result1)
         val resultIds = (resultJson \\ "id").map(_.as[ExternalId[User]])
         resultIds === List(userAL.externalId, userTJ.externalId, userJA.externalId)
+      }
+    }
+
+    "get profile for self" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val userConnectionRepo = inject[UserConnectionRepo]
+        val (userGW, userAL, userTJ, userJA, userBF) = db.readWrite { implicit session =>
+          val userGW = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val userAL = user().withName("Abe", "Lincoln").withUsername("abe").saved.savedConnection(userGW)
+          val userTJ = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val userJA = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val userBF = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          connect(userGW -> userAL,
+            userGW -> userTJ,
+            userJA -> userGW,
+            userAL -> userTJ).saved
+
+          libraries(3).map(_.withUser(userGW).secret()).saved.head.savedFollowerMembership(userAL)
+
+          library().withUser(userGW).published().saved.savedOwnerMembership.savedFollowerMembership(userBF).savedFollowerMembership(userJA)
+          library().withUser(userTJ).published().saved.savedOwnerMembership
+          library().withUser(userBF).published().saved.savedOwnerMembership.savedFollowerMembership(userGW)
+
+          (userGW, userAL, userTJ, userJA, userBF)
+        }
+        val userController = inject[UserController]
+        def call(viewer: Option[User], viewing: Username) = {
+          viewer.foreach(v => inject[FakeUserActionsHelper].setUser(v))
+          val request = FakeRequest("GET", routes.UserController.profile(viewing.value).url)
+          userController.profile(viewing.value)(request)
+        }
+        //non existing username
+        status(call(Some(userGW), Username("foo"))) must equalTo(NOT_FOUND)
+        //seeing my own profile
+        val result1 = call(Some(userGW), userGW.username)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        val res = contentAsJson(result1)
+        res === Json.parse(
+          """
+            |{
+            |  "firstName":"George",
+            |  "lastName":"Washington",
+            |  "pictureName":"pic1",
+            |  "numLibraries":0
+            |}
+          """.stripMargin)
       }
     }
 

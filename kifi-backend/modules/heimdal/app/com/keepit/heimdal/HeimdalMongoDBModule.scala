@@ -93,6 +93,26 @@ case class ProdMongoModule() extends MongoModule {
   }
 
   @Provides @Singleton
+  def visitorEventLoggingRepo(descriptorRepo: VisitorEventDescriptorRepo, mixpanel: MixpanelClient, airbrake: AirbrakeNotifier): VisitorEventLoggingRepo = {
+    val (nodeA, nodeB, auth) = getHeimdalCredentials()
+    val driver = new MongoDriver
+    val connection = driver.connection(List(nodeA), List(auth), 2, Some("VisitorEventLoggingMongoActorSystem"))
+    val db = connection("heimdal")
+    val collection = db("visitor_events")
+    new ProdVisitorEventLoggingRepo(collection, mixpanel, descriptorRepo, airbrake)
+  }
+
+  @Provides @Singleton
+  def visitorEventDescriptorRepo(cache: VisitorEventDescriptorNameCache, airbrake: AirbrakeNotifier): VisitorEventDescriptorRepo = {
+    val (nodeA, nodeB, auth) = getHeimdalCredentials()
+    val driver = new MongoDriver
+    val connection = driver.connection(List(nodeA), List(auth), 2, Some("VisitorEventDescriptorMongoActorSystem"))
+    val db = connection("heimdal")
+    val collection = db("visitor_event_descriptors")
+    new ProdVisitorEventDescriptorRepo(collection, cache, airbrake)
+  }
+
+  @Provides @Singleton
   def nonUserEventLoggingRepo(descriptorRepo: NonUserEventDescriptorRepo, mixpanel: MixpanelClient, airbrake: AirbrakeNotifier): NonUserEventLoggingRepo = {
     val (nodeA, nodeB, auth) = getHeimdalCredentials()
     val driver = new MongoDriver
@@ -153,6 +173,9 @@ case class DevMongoModule() extends MongoModule {
 
   @Provides @Singleton
   def anonymousEventLoggingRepo: AnonymousEventLoggingRepo = new DevAnonymousEventLoggingRepo
+
+  @Provides @Singleton
+  def visitorEventLoggingRepo: VisitorEventLoggingRepo = new DevVisitorEventLoggingRepo
 
   @Provides @Singleton
   def nonUserEventLoggingRepo: NonUserEventLoggingRepo = new DevNonUserEventLoggingRepo

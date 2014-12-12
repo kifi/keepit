@@ -10,8 +10,8 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import com.keepit.search._
 import com.keepit.search.engine.parser.KQueryParser
-import com.keepit.search.graph.keep.{ KeepFields, ShardedKeepIndexer }
-import com.keepit.search.graph.library.{ LibraryFields, LibraryIndexer }
+import com.keepit.search.index.graph.keep.{ KeepFields, ShardedKeepIndexer }
+import com.keepit.search.index.graph.library.{ LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.PhraseDetector
 import com.keepit.search.util.LongArraySet
@@ -22,7 +22,7 @@ import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
-import com.keepit.search.graph.user.UserGraphsSearcherFactory
+import com.keepit.search.index.graph.user.UserGraphsSearcherFactory
 import com.keepit.search.sharding._
 
 @Singleton
