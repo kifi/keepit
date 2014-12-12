@@ -41,7 +41,7 @@ class RelatedLibraryCommanderImpl @Inject() (
     val infoFut = suggestedLibsFut
       .map { case (libs, _) => libs }
       .map { libs => libs.filter { x => !userLibs.contains(x.id.get) }.take(5) }
-      .flatMap { libs => libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs) }
+      .flatMap { libs => libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize) }
 
     for {
       info <- infoFut
