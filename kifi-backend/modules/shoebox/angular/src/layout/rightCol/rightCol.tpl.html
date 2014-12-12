@@ -25,6 +25,15 @@
       <div ng-if="!hasNoFriendsOrConnections()" ng-include="'friends/rightColFriendsView.tpl.html'"></div>
     </div>
 
+    <div ng-if="relatedLibraries">
+      <div class="kf-horizontal-separator"></div>
+      <div class="kf-rightcol-related-libraries">
+        <div kf-related-library-card ng-repeat="library in relatedLibraries" library="library">
+        </div>
+        <div class="clearfix"></div>
+      </div>
+    </div>
+
     <div class="kf-horizontal-separator"></div>
 
     <h2 class="kf-rightcol-header">Essentials</h2>

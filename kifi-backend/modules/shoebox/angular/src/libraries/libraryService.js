@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('libraryService', [
-  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService', '$analytics',
-  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService, $analytics) {
+  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService', '$analytics', '$location',
+  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService, $analytics, $location) {
     var librarySummaries = [],
         invitedSummaries = [];
 
@@ -100,6 +100,21 @@ angular.module('kifi')
                librarySummary.access === 'owner' &&
                !(oldName && name === oldName);
       });
+    }
+
+    function RelatedLibraryDecorator(library) {
+      this.ownerFullName = library.owner.firstName + ' ' + library.owner.lastName;
+      this.numFollowers = library.numFollowers;
+      this.numKeeps = library.numKeeps;
+      this.ownerPicUrl = routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 200);
+      this.name = library.name;
+      this.imageUrl = null; // TODO(josh) add when we get this image from the backend
+      this.libraryUrl = library.url;
+      this.followers = library.followers.map(function (user) {
+        return _.merge(user, { picUrl: routeService.formatPicUrl(user.id, user.pictureName, 200) });
+      });
+      // default color until we're passed colors from the backend
+      this.cardColor = '#73c785';
     }
 
 
@@ -360,27 +375,23 @@ angular.module('kifi')
         return defaultAttributes;
       },
 
-      getRelatedLibraries: function (library) {
+      getRelatedLibraries: function (libraryId) {
         var deferred = $q.defer();
-        var exampleLibrary = {
-          name: 'How to always be happy',
-          numKeeps: 20,
-          numFollowers: 60,
-          owner: {
-            id: '32384833-8803-4a16-946f-fd3c59b62b1b',
-            firstName: 'Mark',
-            lastName: 'Yoshitake',
-            picName: 'fqknJ.jpg'
-          },
-          visibility: 'published',
-          primaryTopic: 'Design'
-        };
-        deferred.resolve([
-          _.merge(_.clone(exampleLibrary), { visibility: 'secret' }),
-          _.merge(_.clone(exampleLibrary), { visibility: 'discoverable' }),
-          // _.merge(_.clone(exampleLibrary), { visibility: 'published' }),
-          // _.clone(exampleLibrary)
-        ]);
+
+        // temporary - put ?grl=1 in URL to see related libraries
+        // using a query param so it's easy to test on mobile devices
+        if ($location.url().indexOf('grl=1') < 0) {
+          deferred.resolve([]);
+          return deferred.promise;
+        }
+
+        $http.get(routeService.getRelatedLibraries(libraryId)).then(function (resp) {
+          var decoratedLibs = resp.data.libs.map(function (lib) {
+            return new RelatedLibraryDecorator(lib);
+          });
+          deferred.resolve(decoratedLibs);
+        });
+
         return deferred.promise;
       },
 
@@ -393,4 +404,6 @@ angular.module('kifi')
 
     return api;
   }
-]);
+])
+
+;

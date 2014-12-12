@@ -29,6 +29,11 @@ angular.module('kifi')
         trackLibraryAttributes.owner = $scope.userIsOwner() ? 'Yes' : 'No';
       }
 
+      // o=lr shorthand for origin=libraryRec
+      if ($location.url().indexOf('o=lr') > -1) {
+        trackLibraryAttributes.origin = 'libraryRec';
+      }
+
       $analytics.pageTrack(url, trackLibraryAttributes);
     }
 
@@ -126,8 +131,13 @@ angular.module('kifi')
     //
     $scope.$watch('library.id', function (id) {
       $rootScope.$broadcast('currentLibraryChanged', $scope.library);
+
       if (id) {
-        trackPageView();
+        libraryService.getRelatedLibraries(id, profileService.me.id).then(function (libraries) {
+          $scope.relatedLibraries = libraries;
+          trackPageView({ libraryRecCount: libraries.length });
+          $rootScope.$broadcast('relatedLibrariesChanged', $scope.library, libraries);
+        });
       }
     });
 
@@ -169,6 +179,7 @@ angular.module('kifi')
       if (eventType === 'click') {
         if (!$rootScope.userLoggedIn) {
           attributes.type = attributes.type || 'libraryLanding';
+          console.log(attributes);
           libraryService.trackEvent('visitor_clicked_page', $scope.library, attributes);
         } else {
           attributes.type = attributes.type || 'library';

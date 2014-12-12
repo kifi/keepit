@@ -3,36 +3,15 @@
 angular.module('kifi')
 
 .directive('kfRelatedLibraries', [
-  'libraryService', 'routeService',
-  function (libraryService, routeService) {
+  function () {
     return {
       restrict: 'A',
       replace: true,
       scope: {
+        relatedLibraries: '='
       },
       templateUrl: 'libraries/relatedLibraries.tpl.html',
-      link: function (scope/*, element, attrs*/) {
-        function RelatedLibrary(library) {
-          this.ownerFullName = library.owner.firstName + ' ' + library.owner.lastName;
-          this.numFollowers = library.numFollowers;
-          this.numKeeps = library.numKeeps;
-          this.ownerPicUrl = routeService.formatPicUrl(library.owner.id, library.owner.picName, 200);
-          this.name = library.name;
-          this.primaryTopic = library.primaryTopic;
-          this.imageUrl = 'https://djty7jcqog9qu.cloudfront.net/special-libs/l7SZ3gr3kUQJ.png';
-
-          if (library.visibility === 'published') this.cardColor = 'green';
-          else if (library.visibility === 'secret') this.cardColor = 'red';
-          else this.cardColor = 'yellow';
-          this.cardColor = '#935eb2';
-
-        }
-
-        libraryService.getRelatedLibraries(null).then(function (libraries) {
-          scope.relatedLibraries = libraries.map(function (lib) {
-            return new RelatedLibrary(lib);
-          });
-        });
+      link: function (/*scope, element, attrs*/) {
       }
     };
   }
@@ -47,7 +26,19 @@ angular.module('kifi')
         library: '='
       },
       templateUrl: 'libraries/relatedLibraryCard.tpl.html',
-      link: function (/*scope, element, attrs*/) {
+      link: function (scope/*, element, attrs*/) {
+        scope.clickLibraryReco = function ($event) {
+          $event.target.href = scope.library.libraryUrl + '?o=lr';
+          scope.$emit('trackLibraryEvent', 'click', { action: 'clickedLibraryRec' });
+        };
+
+        if (scope.library.followers.length > 0 && scope.library.otherFollowersCount > 0) {
+          scope.followersToShow = _.take(scope.library.followers, 3);
+        } else {
+          scope.followersToShow = scope.library.followers;
+        }
+
+        scope.otherFollowersCount = scope.library.numFollowers - scope.followersToShow.length;
       }
     };
   }

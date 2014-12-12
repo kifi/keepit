@@ -1,19 +1,31 @@
-<div class="kf-related-lib-card">
-  <div class="kf-related-lib-card-header" ng-attr-style="background-color: {{library.cardColor}}">
-    <div class="kf-related-lib-name">{{ library.name }}</div>
+<div class="kf-related-lib-card" ng-attr-style="background-color: {{library.cardColor}}">
+  <div class="kf-related-lib-card-header">
+    <a ng-href="{{library.libraryUrl}}" ng-click="clickLibraryReco($event)" class="kf-related-lib-name">{{ library.name }}</a>
     <div class="kf-related-lib-counts-row">
-      <span class="kf-related-lib-count" ng-if="library.numKeeps > 0">{{ library.numKeeps }} Keeps</span>
+      <span class="kf-related-lib-count" ng-if="library.numKeeps > 0">
+        <ng-pluralize count="library.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}"></ng-pluralize>
+      </span>
       <span class="kf-related-lib-count-sep" ng-if="library.numKeeps > 0">·</span>
-      <span class="kf-related-lib-count" ng-if="library.numFollowers > 0">{{ library.numFollowers }} Followers</span>
+      <span class="kf-related-lib-count" ng-if="library.numFollowers > 0">
+        <ng-pluralize count="library.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}"></ng-pluralize>
+      </span>
     </div>
   </div>
-  <div class="kf-related-lib-image-wrapper">
+  <div class="kf-related-lib-image-wrapper" ng-class="{'has-image': library.imageUrl}" ng-attr-style="background-color: {{library.cardColor}}">
     <div class="kf-related-lib-owner">
-      <div href="javascript:" class="kf-related-lib-owner-pic" ng-attr-style="background-image: url({{library.ownerPicUrl}})"></div>
+      <div class="kf-related-lib-owner-pic" ng-attr-style="background-image: url({{library.ownerPicUrl}})"></div>
       <div class="kf-related-lib-owner-name">by <b>{{ library.ownerFullName }}</b></div>
-      <div class="kf-related-lib-topic-attribution">&nbsp;</div>
+      <div class="kf-related-lib-followers" ng-if="followersToShow">
+        <span ng-repeat="user in followersToShow" ng-attr-style="background-image:url({{user.picUrl}})"
+          class="kf-related-lib-followers-chip"></span>
+        <span ng-if="otherFollowersCount > 0" class="kf-related-lib-followers-text">
+          + &nbsp;<ng-pluralize count="otherFollowersCount" when="{'1':'{} other ','other':'{} others '}"></ng-pluralize>
+          follow this
+        </span>
+      </div>
     </div>
-    <div class="kf-related-lib-image" ng-attr-style="background-image: url({{library.imageUrl}})">
-    </div>
+    <div ng-if="library.imageUrl"  class="kf-related-lib-image" ng-attr-style="background-image: url({{library.imageUrl}})"></div>
   </div>
+  <div class="kf-related-lib-card-bottom card-1"></div>
+  <div class="kf-related-lib-card-bottom card-2"></div>
 </div>

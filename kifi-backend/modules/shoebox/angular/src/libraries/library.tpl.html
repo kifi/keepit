@@ -47,9 +47,8 @@
 
       <div ng-if="librarySearch" ng-include="'search/search.tpl.html'" ng-controller="SearchCtrl"></div>
 
-      <div kf-related-libraries ng-if="!userLoggedIn">
+      <div kf-related-libraries ng-if="!userLoggedIn && relatedLibraries" related-libraries="relatedLibraries">
       </div>
-      <div style="clear:both;"></div> <!-- TODO(josh) -->
     </div>
   </div>
 

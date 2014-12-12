@@ -1,9 +1,12 @@
 // TEMPORARY
+keepsColumnWidth = 800px
+relatedLibrariesColumnWidth = 226px
+desktopBorderRadius = 19px
+mobileBorderRadius = 54px
 
-// START: NON-RELATED-LIBRARY CLASSES // TODO move these?
 .kf-logged-out {
   .kf-library-not-search {
-    max-width: 800px;
+    max-width: keepsColumnWidth;
     float: left;
   }
   &.kf-mobile .kf-library-not-search {
@@ -12,9 +15,9 @@
   }
 
   .kf-library-body {
-    min-width: 995px;
+    min-width: keepsColumnWidth + relatedLibrariesColumnWidth;
     .kf-main-keeps {
-      max-width: 800px;
+      max-width: keepsColumnWidth;
     }
   }
   &.kf-mobile .kf-library-body {
@@ -28,7 +31,8 @@
 .kf-related-libraries {
   margin-top: 42px;
   float: left;
-  width: 195px;
+  width: relatedLibrariesColumnWidth;
+  box-sizing: border-box;
   padding: 0;
   .kf-mobile & {
     margin-top: 0;
@@ -43,6 +47,7 @@
   font-size: 15px;
   &, &:link, &:hover, &:visited {
     color: #74a6e5;
+    text-decoration: none;
   }
   .kf-mobile & {
     font-size: 36px;
@@ -51,15 +56,16 @@
 }
 
 .kf-related-libraries-card-your-own-card {
-  background: #6abc5f;
-  border-radius: 19px;
+  background: #73c785;
+  border-radius: desktopBorderRadius;
   font-size: 20px;
   text-align: center;
   color: #fff;
-  padding: 30px 0;
+  padding: 21px 10px;
   .kf-related-libraries-card-your-own-card-btn {
     &, &:link, &:visited, &:hover {
       color: #fff;
+      text-decoration: none;
     }
     background: #418cc9;
     display: inline-block;
@@ -79,7 +85,7 @@
   text-transform: uppercase;
   color: #4e4754;
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: bold;
   text-align: left;
   margin-bottom: 1em;
@@ -95,48 +101,95 @@
 }
 
 .kf-related-lib-card {
+  position: relative;
+  border-radius: desktopBorderRadius desktopBorderRadius;
+  z-index: 1;
   float: left;
   width: 100%;
   text-align: center;
   color: #fff;
-  font-family: 'Helvetica Neue';
+  font-family: Lato;
   margin-bottom: 1em;
 
   .kf-mobile & {
+    border-radius: mobileBorderRadius mobileBorderRadius;
     margin: 40px 25px 10px 30px;
     float: none;
     width: auto;
   }
 }
 
-.kf-related-lib-card-header {
-  border-radius: 19px 19px 0 0;
-  padding: 33px 0;
+.kf-related-lib-card-bottom {
+  position: absolute;
+  top: desktopBorderRadius * 2;
+  left: 0;
+  right: 0;
+  background: transparent;
+  border: 1px solid #CCC;
+  border-radius: desktopBorderRadius;
+  border-width: 0 0 1px;
+  z-index: 0;
+  &.card-1 {
+    bottom: -3px;
+  }
+  &.card-2 {
+    bottom: -6px;
+  }
   .kf-mobile & {
-    border-radius: 30px 30px 0 0;
-    padding: 100px 0;
+    top: mobileBorderRadius * 2;
+    border-radius: mobileBorderRadius;
+    border-color: #999;
+    &.card-1 {
+      bottom -8px;
+    }
+    &.card-2 {
+      bottom -16px;
+    }
+  }
+}
+
+.kf-related-lib-card-header {
+  border-radius: desktopBorderRadius desktopBorderRadius 0 0;
+  padding-top: 36px;
+  height: 122px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  .kf-mobile & {
+    border-radius: mobileBorderRadius mobileBorderRadius 0 0;
+    padding-top: 100px;
+    height: 432px;
   }
 }
 
 .kf-related-lib-name {
-  font-family: Lato;
-  color: #FFFFFF;
+  &, &:link, &:visited, &:hover {
+    color: #FFFFFF;
+    text-decoration: none;
+  }
+  display: block;
+  font: 21px Lato;
+  font-weight: 900;
   text-align: center;
-  font-size: 20px;
-  padding: 0 10%;
+  padding: 0 15px;
+  line-height: 25px;
+  max-height: 50px;
+  overflow: hidden;
   .kf-mobile & {
-    font-size: 65px;
+    font-size: 72px;
     padding: 0 15%;
+    line-height: 74px;
+    max-height: 148px;
   }
 }
 
 .kf-related-lib-counts-row {
-  margin-top: 14px;
+  margin-top: 6px;
   font-family: 'Helvetica Neue';
-  color: rgba(255,255,255,0.50);
+  color: rgba(255,255,255,0.70);
   font-size: 11px;
   .kf-mobile & {
-    margin-top: 50px;
+    margin-top: 38px;
     font-size: 35px;
   }
 }
@@ -146,12 +199,11 @@
 }
 
 .kf-related-lib-owner {
-  z-index: 10;
-  position: absolute;
-  width: 100%;
-  top: 16px;
+  margin-top: 16px;
+  position: relative;
+  z-index: 1;
   .kf-mobile & {
-    top: 100px;
+    margin-top: 100px;
   }
 }
 
@@ -162,68 +214,109 @@
   border-radius: 100%;
   background-size: 100%;
   .kf-mobile & {
-    width: 167px;
-    height: 167px;
+    width: 200px;
+    height: 200px;
   }
 }
 
 .kf-related-lib-owner-name {
-  margin: 10px 0 16px;
-  padding: 0 6px;
-  font-family: 'Helvetica Neue';
+  margin: 10px 0 0;
+  padding: 0 6px 14px;
+  font: 10px 'Helvetica Neue';
   color: #FFFFFF;
-  font-size: 12px;
   white-space: nowrap;
+  border-bottom: 1px solid rgba(255,255,255,.3);
   b {
+    font-family: Lato;
+    padding-left: 2px;
     font-weight: normal;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
   }
   .kf-mobile & {
-    margin: 20px 0 100px;
-    font-size: 30px;
+    margin: 46px 0 0;
+    padding: 0 10px 88px;
+    font-size: 36px;
     b {
       letter-spacing: 3px;
-      font-size: 30px;
+      padding-left: 6px;
     }
   }
 }
 
 .kf-related-lib-image-wrapper {
-  border-radius: 0 0 19px 19px;
-  background: #000;
+  border-radius: 0 0 desktopBorderRadius desktopBorderRadius;
   position: relative;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  height: 167px;
+
+  &.has-image::after {
+    position: absolute;
+    background: rgba(0,0,0,.5);
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    content: "";
+  }
+
   .kf-mobile & {
-    border-radius: 0 0 30px 30px;
+    border-radius: 0 0 mobileBorderRadius mobileBorderRadius;
+    height: 611px;
   }
 }
 
 .kf-related-lib-image {
+  position: absolute;
+  z-index: 0;
   background-size: cover;
   background-position: center center;
-  // filter: blur(1px);
-  // -webkit-filter: blur(1px);
-  opacity(.7);
-  border-radius: 0 0 19px 19px;
-  z-index: 0;
-  height: 160px;
-  .kf-mobile & {
-    padding: 100px 0 0;
-    border-radius: 0 0 30px 30px;
-    height: 455px;
-  }
+  top: -2px;
+  bottom: -2px;
+  left: -2px;
+  right: -2px;
+  filter: blur(1px);
+  -webkit-filter: blur(1px);
 }
 
-.kf-related-lib-topic-attribution {
+.kf-related-lib-followers {
   border-top: 1px solid rgba(255,255,255,.3);
-  line-height: 40px;
+  text-align: left;
+  padding: 9px 10px 0;
+
   .kf-mobile & {
-    line-height: 150px;
+    border-color: #fff;
+    padding: 26px 26px 0;
   }
 }
 
-// WIDE SCREEN STYLES
+.kf-related-lib-followers-chip {
+  width: 23px;
+  height: 23px;
+  background-size: cover;
+  background-position: center center;
+  float: left;
+  display: block;
+  border-radius: 100%;
+  margin-right: 4px;
+  .kf-mobile & {
+    width: 80px;
+    height: 80px;
+    margin-right: 12px;
+  }
+}
 
-  // END: NON-RELATED-LIBRARY CLASSES
-
-
+.kf-related-lib-followers-text {
+  float: left;
+  display: block;
+  line-height: 23px;
+  font-size: 12px;
+  .kf-mobile & {
+    padding-left: 10px;
+    font-size: 30px;
+    line-height: 80px;
+    font-size: 38px;
+  }
+}
