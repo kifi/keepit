@@ -57,11 +57,11 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
           libRepo.save(lib)
 
           // user i owns library i
-          libMemRepo.save(LibraryMembership(libraryId = Id[Library](i), userId = Id[User](i), access = LibraryAccess.READ_WRITE, showInSearch = true))
+          libMemRepo.save(LibraryMembership(libraryId = Id[Library](i), userId = Id[User](i), access = LibraryAccess.READ_WRITE, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           // a few followers for library i
           (1 until i).foreach { j =>
-            libMemRepo.save(LibraryMembership(libraryId = Id[Library](i), userId = Id[User](j), access = LibraryAccess.READ_ONLY, showInSearch = true))
+            libMemRepo.save(LibraryMembership(libraryId = Id[Library](i), userId = Id[User](j), access = LibraryAccess.READ_ONLY, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
           }
         }
 
