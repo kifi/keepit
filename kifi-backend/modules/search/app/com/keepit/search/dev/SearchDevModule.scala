@@ -5,8 +5,8 @@ import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.DevHeimdalServiceClientModule
 import com.keepit.search._
 import com.keepit.common.cache.HashMapMemoryCacheModule
-import com.keepit.search.cache.SearchCacheModule
-import com.keepit.search.store.SearchDevStoreModule
+import com.keepit.search.common.cache.SearchCacheModule
+import com.keepit.search.common.store.SearchDevStoreModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.search.tracker.DevTrackingModule

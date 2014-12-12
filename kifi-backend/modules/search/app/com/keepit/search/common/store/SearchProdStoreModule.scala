@@ -1,4 +1,4 @@
-package com.keepit.search.store
+package com.keepit.search.common.store
 
 import java.io.File
 

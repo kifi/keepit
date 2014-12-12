@@ -13,7 +13,7 @@ POST    /internal/scraper/embedly/imageInfos            @com.keepit.controllers.
 POST    /internal/scraper/uriSummary/embedly            @com.keepit.controllers.scraper.URISummaryController.getURISummaryFromEmbedly
 POST     /internal/scraper/uriWordCount                  @com.keepit.controllers.scraper.URISummaryController.getURIWordCount
 
-->  / common.Routes
+->  / commonService.Routes
 
 
 
