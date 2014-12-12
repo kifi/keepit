@@ -6,7 +6,7 @@ import com.keepit.commander.{ AttributionCommander, HelpRankCommander }
 import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time._
-import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit }
+import com.keepit.heimdal.{ SearchHitReportKey, SearchHitReportCache, SearchHitReport }
 import com.keepit.model._
 import com.keepit.search.ArticleSearchResult
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -118,11 +118,11 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
         }
 
         val kc0 = db.readWrite { implicit rw =>
-          val kifiHitCache = inject[KifiHitCache]
+          val kifiHitCache = inject[SearchHitReportCache]
           val origin = "https://www.google.com"
           val kc0 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = k1(FORTYTWO).id.get, uriId = k1(FORTYTWO).uriId))
           // u2 -> 42 (u1) [discovery]
-          kifiHitCache.set(KifiHitKey(u2.id.get, k1(FORTYTWO).uriId), SanitizedKifiHit(kc0.hitUUID, origin, k1(FORTYTWO).url, kc0.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId), None, Seq.empty, None, 0, 0)))
+          kifiHitCache.set(SearchHitReportKey(u2.id.get, k1(FORTYTWO).uriId), SearchHitReport(u2.id.get, kc0.uriId, false, Seq(u1.externalId), origin, kc0.hitUUID))
           kc0
         }
 
@@ -136,7 +136,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
         }
 
         val (kc1, kc2, kc3) = db.readWrite { implicit rw =>
-          val kifiHitCache = inject[KifiHitCache]
+          val kifiHitCache = inject[SearchHitReportCache]
           val origin = "https://www.google.com"
 
           val ts = currentDateTime
@@ -144,13 +144,13 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
           val kc1 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = k1(KIFI).id.get, uriId = k1(KIFI).uriId))
           val kc2 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = k2(KIFI).id.get, uriId = k2(KIFI).uriId))
           // u3 -> kifi (u1, u2) [rekeep]
-          kifiHitCache.set(KifiHitKey(u3.id.get, k1(KIFI).uriId), SanitizedKifiHit(kc1.hitUUID, origin, k1(KIFI).url, kc1.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId, u2.externalId), None, Seq.empty, None, 0, 0)))
+          kifiHitCache.set(SearchHitReportKey(u3.id.get, k1(KIFI).uriId), SearchHitReport(u3.id.get, kc1.uriId, false, Seq(u1.externalId), origin, kc1.hitUUID))
 
           // u3 -> bing (u2) [rekeep]
           val ts3 = currentDateTime
           val uuid3 = ExternalId[ArticleSearchResult]()
           val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts3, hitUUID = uuid3, numKeepers = 1, keeperId = u2.id.get, keepId = k2(BING).id.get, uriId = k2(BING).uriId))
-          kifiHitCache.set(KifiHitKey(u3.id.get, k2(BING).uriId), SanitizedKifiHit(kc3.hitUUID, origin, k2(BING).url, kc3.uriId, KifiHitContext(false, false, 0, Seq(u2.externalId), None, Seq.empty, None, 0, 0)))
+          kifiHitCache.set(SearchHitReportKey(u3.id.get, k2(BING).uriId), SearchHitReport(u3.id.get, kc3.uriId, false, Seq(u2.externalId), origin, kc3.hitUUID))
           (kc1, kc2, kc3)
         }
         Await.result(commander.processKeepAttribution(u3.id.get, keeps3), Duration.Inf)
@@ -173,11 +173,11 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
         }
 
         val kc4 = db.readWrite { implicit rw =>
-          val kifiHitCache = inject[KifiHitCache]
+          val kifiHitCache = inject[SearchHitReportCache]
           val origin = "https://www.google.com"
           val kc4 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = k3(KIFI).id.get, uriId = k3(KIFI).uriId))
           // u4 -> kifi (u3) [rekeep]
-          kifiHitCache.set(KifiHitKey(u4.id.get, k3(KIFI).uriId), SanitizedKifiHit(kc4.hitUUID, origin, k3(KIFI).url, kc4.uriId, KifiHitContext(false, false, 0, Seq(u3.externalId), None, Seq.empty, None, 0, 0)))
+          kifiHitCache.set(SearchHitReportKey(u4.id.get, k3(KIFI).uriId), SearchHitReport(u4.id.get, kc4.uriId, false, Seq(u2.externalId), origin, kc4.hitUUID))
           kc4
         }
         Await.result(commander.processKeepAttribution(u4.id.get, keeps4), Duration.Inf)

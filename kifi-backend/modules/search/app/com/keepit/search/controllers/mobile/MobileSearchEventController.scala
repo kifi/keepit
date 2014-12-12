@@ -2,14 +2,14 @@ package com.keepit.search.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ SearchServiceController, UserActions, UserActionsHelper }
-import com.keepit.heimdal.{ KifiHitContext, SearchEngine, BasicSearchContext, HeimdalContextBuilderFactory }
+import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.search.{ KifiHitContext, SearchEngine, BasicSearchContext }
 import com.keepit.search.SearchEventCommander
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model.ExperimentType
 import com.keepit.common.akka.SafeFuture
-import play.api.libs.json.JsArray
 import play.api.libs.concurrent.Execution.Implicits._
 
 class MobileSearchEventController @Inject() (
