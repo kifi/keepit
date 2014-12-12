@@ -6,7 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.model.{ User, LibraryMembershipRepo, LibraryRepo, Library }
+import com.keepit.model.{ User, LibraryMembershipRepo, LibraryRepo, Library, LibraryVisibility }
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits._
@@ -40,7 +40,7 @@ class RelatedLibraryCommanderImpl @Inject() (
     }
     val infoFut = suggestedLibsFut
       .map { case (libs, _) => libs }
-      .map { libs => libs.filter { x => !userLibs.contains(x.id.get) } }
+      .map { libs => libs.filter { x => !userLibs.contains(x.id.get) }.take(5) }
       .flatMap { libs => libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize) }
 
     for {
@@ -55,16 +55,16 @@ class RelatedLibraryCommanderImpl @Inject() (
       popular <- topFollowedLibraries()
     } yield {
       if (related.isEmpty) {
-        (util.Random.shuffle(popular.filter(_.id.get != libId)).take(5), false)
+        (util.Random.shuffle(popular.filter(_.id.get != libId)), false)
       } else (related, true)
     }
   }
 
   def relatedLibraries(libId: Id[Library]): Future[Seq[Library]] = {
-    cortex.similarLibraries(libId, limit = 5).map { ids =>
+    cortex.similarLibraries(libId, limit = 20).map { ids =>
       db.readOnlyReplica { implicit s =>
         ids.map { id => libRepo.get(id) }
-      }
+      }.filter(_.visibility == LibraryVisibility.PUBLISHED)
     }
   }
 

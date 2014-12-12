@@ -1,5 +1,7 @@
 package com.keepit.controllers.website
 
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
 import java.io.File
 
 import com.google.inject.Injector
@@ -40,13 +42,13 @@ class LibraryImageControllerTest extends Specification with ShoeboxTestInjector 
     db.readWrite { implicit session =>
       val user1 = userRepo.save(User(firstName = "Noraa", lastName = "Ush", username = Username("test"), normalizedUsername = "test"))
       val lib1 = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l"), memberCount = 1))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, visibility = LibraryMembershipVisibilityStates.VISIBLE, showInSearch = true))
+      membership().withLibraryOwner(lib1).saved
       val lib2 = libraryRepo.save(Library(name = "L2", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l2"), memberCount = 1))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, visibility = LibraryMembershipVisibilityStates.VISIBLE, showInSearch = true))
+      membership().withLibraryOwner(lib2).saved
 
       // user2 has READ_ONLY membership to user1's library
       val user2 = userRepo.save(User(firstName = "Noraa", lastName = "Ush", username = Username("test2"), normalizedUsername = "test2"))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, visibility = LibraryMembershipVisibilityStates.VISIBLE, showInSearch = true))
+      membership().withLibraryFollower(lib1, user2).saved
       (user1, lib1, lib2, user2)
     }
   }
