@@ -1,18 +1,15 @@
-package com.keepit.search.common.store
+package com.keepit.search.store
 
-import com.google.inject.{ Provides, Singleton }
-import com.amazonaws.services.s3.AmazonS3
-import com.keepit.common.store.{ DevStoreModule, S3Bucket, ProdStoreModule }
-import play.api.Play._
-import com.keepit.common.logging.AccessLog
-import com.keepit.search.index.{ IndexStoreInbox, InMemoryIndexStoreImpl, IndexStore, S3IndexStoreImpl }
-import com.keepit.search.tracker.S3ClickHistoryStoreImpl
-import com.keepit.search.tracker.InMemoryClickHistoryStoreImpl
-import com.keepit.search.tracker.ClickHistoryUserIdCache
-import com.keepit.search.tracker.ClickHistoryStore
-import com.keepit.search.tracker.ClickHistoryBuilder
 import java.io.File
+
+import com.amazonaws.services.s3.AmazonS3
+import com.google.inject.{ Provides, Singleton }
+import com.keepit.common.logging.AccessLog
+import com.keepit.common.store.{ DevStoreModule, ProdStoreModule, S3Bucket }
+import com.keepit.search.index.{ InMemoryIndexStoreImpl, IndexStore, IndexStoreInbox, S3IndexStoreImpl }
+import com.keepit.search.tracker.{ ClickHistoryBuilder, ClickHistoryStore, ClickHistoryUserIdCache, InMemoryClickHistoryStoreImpl, S3ClickHistoryStoreImpl }
 import org.apache.commons.io.FileUtils
+import play.api.Play._
 
 case class SearchProdStoreModule() extends ProdStoreModule {
   def configure {

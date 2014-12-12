@@ -62,7 +62,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         {
           val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === ImageProcessState.StoreSuccess
+          saved === ImageProcessState.StoreSuccess // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
         }
         {
           val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, ImageSource.UserUpload)
@@ -93,7 +93,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         {
           val savedF = commander.setKeepImageFromFile(fakeFile2, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === ImageProcessState.StoreSuccess // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
+          saved === ImageProcessState.StoreSuccess
         }
 
         inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet.size === 4

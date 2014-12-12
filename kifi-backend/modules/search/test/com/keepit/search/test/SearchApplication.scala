@@ -13,7 +13,7 @@ import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.search.common.cache.SearchCacheModule
+import com.keepit.search.cache.SearchCacheModule
 import com.keepit.search.index.{ DevIndexModule, FakeIndexModule }
 import com.keepit.search.tracker.{ DevTrackingModule, FakeTrackingModule }
 import com.keepit.common.store.SearchFakeStoreModule
