@@ -2,9 +2,14 @@
 
   <!-- Note that all this will be moved around when we start using AngularUI router. -->
   <div class="kf-user-profile-header">
-    <div class="kf-user-profile-content"><!-- limit to 800px or so -->
-      <div class="kf-user-profile-connect">
-        <!-- need graphic for this -->CONNECT
+    <div class="kf-user-profile-header-content"><!-- limit to 800px or so -->
+      <div ng-switch="optionalAction" class="kf-user-profile-optional-action">
+        <div ng-switch-when="connect" class="kf-user-profile-connect">
+          <!-- need connect graphic -->CONNECT
+        </div>
+        <div ng-switch-when="settings" class="kf-user-profile-user-settings">
+          <!-- need gear graphic -->SETTINGS
+        </div>
       </div>
 
       <div class="kf-user-profile-basic-info" itemscope itemtype="http://data-vocabulary.org/Person">
@@ -17,8 +22,8 @@
         <!-- For testing AngularUI routing, using <a> tags. However, will make into divs for V1 release. -->
         <!-- Switch back to <a> tags in V2. -->
         <a class="kf-user-profile-user-nav-link" ng-repeat="userNavLink in userNavLinks" ng-href="{{userNavLink.url}}">
-          <div class="kf-user-profile-user-nav-item-name">{{userNavLink.name}}</div>
-          <div class="kf-user-profile-user-nav-item-count">{{userNavLink.count}}</div>
+          <span class="kf-user-profile-user-nav-item-count">{{userNavLink.count}}</span>
+          <span class="kf-user-profile-user-nav-item-name">{{userNavLink.name}}</span>
         </a>
       </nav>
     </div><!-- kf-user-profile-content -->

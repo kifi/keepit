@@ -9,8 +9,8 @@ angular.module('kifi')
     // Configs.
     //
     var userNavLinksConfig = [
-      { name: 'LIBRARY', subpath: '/', countFieldName: 'numLibraries' },
-      { name: 'KEEPS', subpath: '/keeps'/* for testing only */, countFieldName: 'numKeeps' }
+      { name: 'Libraries', subpath: '/', countFieldName: 'numLibraries' },
+      { name: 'Keeps', subpath: '/keeps'/* for testing only */, countFieldName: 'numKeeps' }
 
       /*
        * For V2.
@@ -36,6 +36,7 @@ angular.module('kifi')
     $scope.canConnectToUser = false;
     $scope.userNavLinks = [];
     $scope.libraryNavLinks = [];
+    $scope.optionalAction = null;
 
 
     //
@@ -75,6 +76,8 @@ angular.module('kifi')
       $scope.userLoggedIn = $rootScope.userLoggedIn;
       $scope.viewingOwnProfile = $scope.profile.id === profileService.me.id;
       $scope.canConnectToUser = $scope.userLoggedIn && !$scope.viewingOwnProfile && !$scope.profile.friendsWith;
+      $scope.optionalAction = ($scope.viewingOwnProfile ? 'settings' : false) ||
+                              ($scope.canConnectToUser ? 'connect' : false);
     }
 
     function initUserNavLinks() {
