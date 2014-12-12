@@ -1,15 +1,14 @@
-// TEMPORARY
 keepsColumnWidth = 800px
 relatedLibrariesColumnWidth = 226px
 desktopBorderRadius = 19px
 mobileBorderRadius = 54px
 
 .kf-logged-out {
-  .kf-library-not-search {
-    max-width: keepsColumnWidth;
+  .kf-library-results-wrapper {
+    width: keepsColumnWidth;
     float: left;
   }
-  &.kf-mobile .kf-library-not-search {
+  &.kf-mobile .kf-library-results-wrapper {
     max-width: initial;
     float: none;
   }
@@ -62,6 +61,8 @@ mobileBorderRadius = 54px
   text-align: center;
   color: #fff;
   padding: 21px 10px;
+  margin-bottom: 1em;
+
   .kf-related-libraries-card-your-own-card-btn {
     &, &:link, &:visited, &:hover {
       color: #fff;

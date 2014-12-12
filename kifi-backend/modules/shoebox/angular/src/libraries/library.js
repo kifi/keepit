@@ -179,7 +179,6 @@ angular.module('kifi')
       if (eventType === 'click') {
         if (!$rootScope.userLoggedIn) {
           attributes.type = attributes.type || 'libraryLanding';
-          console.log(attributes);
           libraryService.trackEvent('visitor_clicked_page', $scope.library, attributes);
         } else {
           attributes.type = attributes.type || 'library';
