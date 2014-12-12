@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import com.keepit.search.KifiHitContext
 import org.specs2.mutable.Specification
 import play.api.libs.json._
 import com.keepit.model.{ Username, Collection, User }

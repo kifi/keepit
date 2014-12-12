@@ -1,8 +1,8 @@
-package com.keepit.heimdal
+package com.keepit.search
 
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ Library, NormalizedURI, Collection, User }
-import com.keepit.search._
+import com.keepit.heimdal._
+import com.keepit.model.{ Library, User }
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.{ ExternalId, Id }
 import javax.crypto.Mac
@@ -125,23 +125,6 @@ object KifiHitContext {
     (__ \ 'titleMatches).write[Int] and
     (__ \ 'urlMatches).write[Int]
   )(unlift(KifiHitContext.unapply))
-}
-
-case class SanitizedKifiHit(
-  uuid: ExternalId[ArticleSearchResult],
-  origin: String,
-  url: String,
-  uriId: Id[NormalizedURI],
-  context: KifiHitContext)
-
-object SanitizedKifiHit {
-  implicit val format = (
-    (__ \ 'uuid).format(ExternalId.format[ArticleSearchResult]) and
-    (__ \ 'origin).format[String] and
-    (__ \ 'url).format[String] and
-    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'context).format[KifiHitContext]
-  )(SanitizedKifiHit.apply _, unlift(SanitizedKifiHit.unapply))
 }
 
 @Singleton

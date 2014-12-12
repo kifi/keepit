@@ -89,7 +89,7 @@ trait HeimdalServiceClient extends ServiceClient with KeepDiscoveryRepoAccess wi
 
   def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]]
 
-  def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit]
+  def processSearchHitAttribution(hit: SearchHitReport): Future[Unit]
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit]
 }
@@ -335,12 +335,8 @@ class HeimdalServiceClientImpl @Inject() (
     }
   }
 
-  def processKifiHit(clickerId: Id[User], hit: SanitizedKifiHit): Future[Unit] = {
-    val payload = Json.obj(
-      "clickerId" -> clickerId,
-      "kifiHit" -> hit
-    )
-    call(Heimdal.internal.processKifiHit, payload) map { r => Unit }
+  def processSearchHitAttribution(hit: SearchHitReport): Future[Unit] = {
+    call(Heimdal.internal.processSearchHitAttribution, Json.toJson(hit)) map { r => Unit }
   }
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = {

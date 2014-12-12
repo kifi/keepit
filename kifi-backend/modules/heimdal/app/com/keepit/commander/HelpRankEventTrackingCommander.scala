@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.{ LogPrefix, Logging }
-import com.keepit.heimdal.{ HeimdalContext, KifiHitContext, SanitizedKifiHit, UserEvent }
+import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.helprank.{ KeepDiscoveryRepo }
 import com.keepit.search.ArticleSearchResult
@@ -27,7 +27,7 @@ object HelpRankEventTrackingCommander {
 class HelpRankEventTrackingCommander @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
-    kifiHitCache: KifiHitCache,
+    kifiHitCache: SearchHitReportCache,
     shoebox: ShoeboxServiceClient,
     keepDiscoveryRepo: KeepDiscoveryRepo) extends Logging {
 
@@ -58,17 +58,16 @@ class HelpRankEventTrackingCommander @Inject() (
           val ts = userEvent.time
           val numKeepers = keeperIds.size
           implicit val dca = TransactionalCaching.Implicits.directCacheAccess
-          kifiHitCache.get(KifiHitKey(userId, uriId)) match {
+          kifiHitCache.get(SearchHitReportKey(userId, uriId)) match {
             case Some(hit) =>
               log.warnP(s"already recorded hit ($hit) for user within threshold -- skipped")
               Future.successful[Unit]()
             case None =>
-              // todo(ray): remove dependency on KifiHitContext
               val res = shoebox.getBasicUsers(keeperIds) flatMap { userMap =>
                 val extKeeperIds = keeperIds.collect { case id if userMap.get(id).isDefined => userMap(id).externalId }
-                val sanitizedHit = SanitizedKifiHit(hitUUID, "feed", "", uriId, KifiHitContext(false, false, 0, extKeeperIds, None, Seq.empty, None, 0, 0))
-                kifiHitCache.set(KifiHitKey(userId, uriId), sanitizedHit)
-                log.infoP(s"key=${KifiHitKey(userId, uriId)} cached=${kifiHitCache.get(KifiHitKey(userId, uriId))}")
+                val sanitizedHit = SearchHitReport(userId, uriId, false, extKeeperIds, "feed", hitUUID)
+                kifiHitCache.set(SearchHitReportKey(userId, uriId), sanitizedHit)
+                log.infoP(s"key=${SearchHitReportKey(userId, uriId)} cached=${kifiHitCache.get(SearchHitReportKey(userId, uriId))}")
                 val futures = keeperIds map { keeperId =>
                   shoebox.getBookmarkByUriAndUser(uriId, keeperId) map { keepOpt =>
                     keepOpt match {

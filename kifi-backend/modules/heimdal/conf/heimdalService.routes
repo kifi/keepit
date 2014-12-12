@@ -54,7 +54,7 @@ POST /internal/heimdal/helprank/getHelpRankInfo        @com.keepit.controllers.H
 POST /internal/heimdal/helprank/getUserReKeepsByDegree @com.keepit.controllers.HelpRankController.getUserReKeepsByDegree()
 GET  /internal/heimdal/helprank/getReKeepsByDegree     @com.keepit.controllers.HelpRankController.getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep])
 GET  /internal/heimdal/helprank/getKeepAttributionInfo @com.keepit.controllers.HelpRankController.getKeepAttributionInfo(userId: Id[User])
-POST /internal/heimdal/helprank/processKifiHit         @com.keepit.controllers.HelpRankController.processKifiHit()
+POST /internal/heimdal/helprank/processSearchHitAttribution         @com.keepit.controllers.HelpRankController.processSearchHitAttribution()
 POST /internal/heimdal/helprank/processKeepAttribution @com.keepit.controllers.HelpRankController.processKeepAttribution()
 
 ->  / commonService.Routes

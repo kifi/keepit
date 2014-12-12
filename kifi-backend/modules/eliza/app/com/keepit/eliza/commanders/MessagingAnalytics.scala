@@ -127,8 +127,9 @@ class MessagingAnalytics @Inject() (
 
       sender match {
         case MessageSender.User(userId) => {
-          shoebox.getBookmarkByUriAndUser(thread.uriId.get, userId).foreach { bookmarkOption =>
-            contextBuilder += ("isKeep", bookmarkOption.isDefined)
+          val uriId = thread.uriId.get
+          shoebox.getBasicKeeps(userId, Set(uriId)).foreach { basicKeeps =>
+            contextBuilder += ("isKeep", basicKeeps.get(uriId).exists(_.nonEmpty))
             val context = contextBuilder.build
             heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
             heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
@@ -136,7 +137,7 @@ class MessagingAnalytics @Inject() (
 
             // Anonymized event with page information
             anonymise(contextBuilder)
-            bookmarkOption.map(_.url) orElse thread.url foreach contextBuilder.addUrlInfo
+            thread.url foreach contextBuilder.addUrlInfo
             heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.MESSAGED, sentAt))
           }
         }
