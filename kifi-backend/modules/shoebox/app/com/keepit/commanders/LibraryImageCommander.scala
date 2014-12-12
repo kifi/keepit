@@ -21,7 +21,7 @@ trait LibraryImageCommander {
 
   def getUrl(libraryImage: LibraryImage): String
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage]
-  def setLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], source: ImageSource, requestId: Option[Id[LibraryImageRequest]] = None): Future[ImageProcessDone]
+  def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, requestId: Option[Id[LibraryImageRequest]] = None): Future[ImageProcessDone]
   def positionLibraryImage(libraryId: Id[Library], imagePosition: LibraryImagePosition): Seq[LibraryImage]
   def removeImageForLibrary(libraryId: Id[Library]): Boolean // Returns true if images were removed, false otherwise
 }
@@ -44,14 +44,14 @@ class LibraryImageCommanderImpl @Inject() (
   }
 
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage] = {
-    val validLibraryImages = db.readOnlyMaster { implicit s =>
+    val targetLibraryImages = db.readOnlyMaster { implicit s =>
       libraryImageRepo.getForLibraryId(libraryId)
     }
-    ProcessedImageSize.pickBestImage(idealSize, validLibraryImages)
+    ProcessedImageSize.pickBestImage(idealSize, targetLibraryImages)
   }
 
-  def setLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], source: ImageSource, requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
-    fetchAndSet(image, libraryId, source)(requestId).map { done =>
+  def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
+    fetchAndSet(image, libraryId, position, source)(requestId).map { done =>
       finalizeImageRequestState(libraryId, requestId, done)
       done
     }
@@ -59,11 +59,17 @@ class LibraryImageCommanderImpl @Inject() (
 
   def positionLibraryImage(libraryId: Id[Library], position: LibraryImagePosition): Seq[LibraryImage] = {
     db.readWrite { implicit s =>
-      libraryImageRepo.getForLibraryId(libraryId).map { libImage =>
+      val toPosition = libraryImageRepo.getForLibraryId(libraryId)
+      val positionedImages = toPosition.map { libImage =>
+        val setX = position.x.getOrElse(libImage.positionX.getOrElse(50))
+        val setY = position.y.getOrElse(libImage.positionY.getOrElse(50))
         libraryImageRepo.save(libImage.copy(
-          positionX = position.x,
-          positionY = position.y))
+          positionX = Some(setX),
+          positionY = Some(setY),
+          state = LibraryImageStates.ACTIVE))
       }
+      log.info("[lic] Positioning: " + toPosition.map(_.imagePath))
+      positionedImages
     }
   }
 
@@ -73,6 +79,7 @@ class LibraryImageCommanderImpl @Inject() (
         libraryImageRepo.save(libImage.copy(state = LibraryImageStates.INACTIVE))
       }
     }
+    log.info("[lic] Removing: " + images.map(_.imagePath))
     images.nonEmpty
   }
 
@@ -80,21 +87,20 @@ class LibraryImageCommanderImpl @Inject() (
   // Internal helper methods!
   //
 
-  private def fetchAndSet(imageFile: TemporaryFile, libraryId: Id[Library], source: ImageSource)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
-    runFetcherAndPersist(libraryId, source)(fetchAndHashLocalImage(imageFile))
+  private def fetchAndSet(imageFile: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
+    runFetcherAndPersist(libraryId, position, source)(fetchAndHashLocalImage(imageFile))
   }
 
-  private def runFetcherAndPersist(libraryId: Id[Library], source: ImageSource)(fetcher: => Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]])(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
+  private def runFetcherAndPersist(libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource)(fetcher: => Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]])(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
     updateRequestState(LibraryImageRequestStates.FETCHING)
 
     fetcher.flatMap {
       case Right(loadedImage) =>
         updateRequestState(LibraryImageRequestStates.PROCESSING)
-        // never seen this image, or we're reprocessing an image
         buildPersistSet(loadedImage, "library")(photoshop) match {
           case Right(toPersist) =>
             updateRequestState(LibraryImageRequestStates.PERSISTING)
-            uploadAndPersistImages(loadedImage, toPersist, libraryId, source)
+            uploadAndPersistImages(loadedImage, toPersist, libraryId, position, source)
           case Left(failure) =>
             Future.successful(failure)
         }
@@ -102,7 +108,7 @@ class LibraryImageCommanderImpl @Inject() (
     }
   }
 
-  private def uploadAndPersistImages(originalImage: ImageProcessState.ImageLoadedAndHashed, toPersist: Set[ImageProcessState.ReadyToPersist], libraryId: Id[Library], source: ImageSource)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
+  private def uploadAndPersistImages(originalImage: ImageProcessState.ImageLoadedAndHashed, toPersist: Set[ImageProcessState.ReadyToPersist], libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
     val uploads = toPersist.map { image =>
       log.info(s"[lic] Persisting ${image.key} (${image.bytes} B)")
       libraryImageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
@@ -114,15 +120,18 @@ class LibraryImageCommanderImpl @Inject() (
       val libraryImages = results.map {
         case uploadedImage =>
           val isOriginal = uploadedImage.key.takeRight(7).indexOf(originalLabel) != -1
+          val setX = position.x.orElse(Some(50))
+          val setY = position.y.orElse(Some(50))
+
           val libImg = LibraryImage(libraryId = libraryId, imagePath = uploadedImage.key, format = uploadedImage.format,
-            width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight, positionX = None, positionY = None,
-            source = source, sourceFileHash = originalImage.hash, isOriginal = isOriginal)
+            width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight, positionX = setX, positionY = setY,
+            source = source, sourceFileHash = originalImage.hash, isOriginal = isOriginal, state = LibraryImageStates.ACTIVE)
           uploadedImage.image.flush()
           libImg
       }
       db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
-        val existingImagesForLibrary = libraryImageRepo.getForLibraryId(libraryId).toSet
-        replaceOldLibraryImagesWithNew(existingImagesForLibrary, libraryImages)
+        val existingImages = libraryImageRepo.getForLibraryId(libraryId, None).toSet
+        replaceOldLibraryImagesWithNew(existingImages, libraryImages)
       }
       ImageProcessState.StoreSuccess
     }.recover {

@@ -9,7 +9,6 @@ import com.keepit.common.time.Clock
 @ImplementedBy(classOf[LibraryImageRepoImpl])
 trait LibraryImageRepo extends Repo[LibraryImage] {
   def getForLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryImage]] = Some(LibraryImageStates.INACTIVE))(implicit session: RSession): Seq[LibraryImage]
-  def getBySourceHash(hash: ImageHash)(implicit session: RSession): Seq[LibraryImage]
 }
 
 @Singleton
@@ -63,13 +62,6 @@ class LibraryImageRepoImpl @Inject() (
       case Some(excludeState) =>
         getForLibraryIdAndStatesCompiled(libraryId, excludeState).list
     }
-  }
-
-  private val getBySourceHashCompiled = Compiled { hash: Column[ImageHash] =>
-    for (r <- rows if r.sourceFileHash === hash) yield r
-  }
-  def getBySourceHash(hash: ImageHash)(implicit session: RSession): Seq[LibraryImage] = {
-    getBySourceHashCompiled(hash).list
   }
 
 }
