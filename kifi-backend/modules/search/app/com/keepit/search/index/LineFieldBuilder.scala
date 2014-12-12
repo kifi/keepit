@@ -1,12 +1,9 @@
-package com.keepit.search.line
+package com.keepit.search.index
 
-import org.apache.lucene.document.Field
-import org.apache.lucene.analysis.TokenStream
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
-import org.apache.lucene.document.FieldType
-import org.apache.lucene.document.TextField
 import com.keepit.search.Lang
+import org.apache.lucene.analysis.TokenStream
+import org.apache.lucene.analysis.tokenattributes.{ CharTermAttribute, PositionIncrementAttribute }
+import org.apache.lucene.document.{ Field, FieldType, TextField }
 
 object LineField {
   val MAX_POSITION_PER_LINE = 2048

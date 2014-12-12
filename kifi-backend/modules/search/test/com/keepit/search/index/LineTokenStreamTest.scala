@@ -1,12 +1,13 @@
-package com.keepit.search.line
+package com.keepit.search.index
 
-import org.specs2.mutable._
+import java.io.StringReader
+
 import com.keepit.search.Lang
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
+import org.apache.lucene.analysis.tokenattributes.{ CharTermAttribute, PositionIncrementAttribute }
+import org.specs2.mutable._
+
 import scala.collection.mutable.ArrayBuffer
-import java.io.StringReader
 
 class LineTokenStreamTest extends Specification {
   val en = Lang("en")
