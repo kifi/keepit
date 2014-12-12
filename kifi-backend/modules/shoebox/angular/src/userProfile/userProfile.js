@@ -97,6 +97,9 @@ angular.module('kifi')
           url: getFullUserNavLinkPath(config.subpath)
         };
       });
+
+      // For dev testing only.
+      $scope.libraryNavLinks[0].selected = true;
     }
 
     function initLibraries(libraries) {

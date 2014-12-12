@@ -31,8 +31,9 @@
 
   <div class="kf-user-profile-libraries-nav-container">
     <nav class="kf-user-profile-libraries-nav">
-      <a class="kf-user-profile-libraries-nav-link" ng-repeat="libraryNavLink in libraryNavLinks" ng-href="{{libraryNavLink.url}}">
-        {{libraryNavLink.name}}
+      <a class="kf-user-profile-libraries-nav-link" ng-repeat="libraryNavLink in libraryNavLinks"
+         ng-href="{{libraryNavLink.url}}" ng-class="{'selected': libraryNavLink.selected}">
+        <span class="kf-user-profile-libraries-nav-link-text">{{libraryNavLink.name}}</span>
       </a>
     </nav>
   </div>
