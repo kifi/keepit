@@ -92,20 +92,20 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
       val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], null, null, fakeCortex)
 
       val libsF = commander.suggestedLibraries(Id[Library](1))
-      Await.result(libsF, FiniteDuration(5, SECONDS)).sortBy(_.id.get).map { _.id.get.id }.toList === List(2, 3, 4, 5)
+      Await.result(libsF, FiniteDuration(5, SECONDS))._1.sortBy(_.id.get).map { _.id.get.id }.toList === List(2, 3, 4, 5)
 
       val libsF2 = commander.suggestedLibraries(Id[Library](6))
-      Await.result(libsF2, FiniteDuration(5, SECONDS)).sortBy(_.id.get).map { _.id.get.id }.toList === List(7, 8, 9, 10)
+      Await.result(libsF2, FiniteDuration(5, SECONDS))._1.sortBy(_.id.get).map { _.id.get.id }.toList === List(7, 8, 9, 10)
 
       val libsF3 = commander.suggestedLibraries(Id[Library](2))
-      Await.result(libsF3, FiniteDuration(5, SECONDS)).sortBy(_.id.get).map { _.id.get.id }.toList === List(6, 7, 8, 9, 10)
+      Await.result(libsF3, FiniteDuration(5, SECONDS))._1.sortBy(_.id.get).map { _.id.get.id }.toList === List(6, 7, 8, 9, 10)
 
     }
 
     "get full library info for non-user" in {
       val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex)
       val resF = commander.suggestedLibrariesInfo(Id[Library](1), None)
-      val res = Await.result(resF, FiniteDuration(5, SECONDS))
+      val res = Await.result(resF, FiniteDuration(5, SECONDS))._1
       res.seq.sortBy(_.numFollowers).map { _.numFollowers } === List(1, 2, 3, 4)
       res.seq.sortBy(_.numFollowers).map { _.owner.firstName } === List(2, 3, 4, 5).map { i => "test" + i }
     }
@@ -113,14 +113,14 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
     "do not show libraries user already know" in {
       val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex)
       val resF = commander.suggestedLibrariesInfo(Id[Library](1), Some(Id[User](1)))
-      Await.result(resF, FiniteDuration(5, SECONDS)).size === 0
+      Await.result(resF, FiniteDuration(5, SECONDS))._1.size === 0
 
       val resF2 = commander.suggestedLibrariesInfo(Id[Library](2), Some(Id[User](8)))
-      val res2 = Await.result(resF2, FiniteDuration(5, SECONDS))
+      val res2 = Await.result(resF2, FiniteDuration(5, SECONDS))._1
       res2.seq.sortBy(_.numFollowers).map { _.owner.firstName } === List(6, 7).map { i => "test" + i }
 
       val resF3 = commander.suggestedLibrariesInfo(Id[Library](6), Some(Id[User](8)))
-      val res3 = Await.result(resF3, FiniteDuration(5, SECONDS))
+      val res3 = Await.result(resF3, FiniteDuration(5, SECONDS))._1
       res3.seq.sortBy(_.numFollowers).map { _.owner.firstName } === List(7).map { i => "test" + i }
     }
   }
