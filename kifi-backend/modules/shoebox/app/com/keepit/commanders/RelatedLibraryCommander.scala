@@ -91,7 +91,7 @@ object RelatedLibraryInfo {
     if (isAuthenticatedRequest) {
       val showableFollowers = {
         val goodLooking = info.followers.filter(_.pictureName != "0.jpg")
-        if (goodLooking.size < 8) goodLooking else goodLooking.take(3)      // cannot show more than 8 avatars in frontend
+        if (goodLooking.size < 8) goodLooking else goodLooking.take(3) // cannot show more than 8 avatars in frontend
       }
       RelatedLibraryInfo(info.id, info.name, info.url, info.owner, showableFollowers, info.numKeeps, info.numFollowers)
     } else {
