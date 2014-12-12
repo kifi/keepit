@@ -4,6 +4,7 @@ import com.keepit.common.controller._
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.core._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -26,17 +27,10 @@ class EventProxyController @Inject() (
         val builder = heimdalContextBuilderFactoryBean.withRequestInfo(request)
         builder.addExistingContext(eventContext)
         val fullContext = builder.build
-        val event = request match {
-          case userRequest: UserRequest[_] => {
-            intendedEventOpt.foreach { intendedEvent => require(intendedEvent == UserEvent, s"Was expecting a user event, got $rawEventType") }
-            val userEvent = UserEvent(userRequest.userId, fullContext, eventType, sentAt)
-            optionallySendUserUsedKifiEvent(userEvent)
-            userEvent
-          }
-          case _ => {
-            intendedEventOpt.foreach { intendedEvent => require(intendedEvent == VisitorEvent, s"Was expecting a visitor event, got $rawEventType") }
-            VisitorEvent(fullContext, eventType, sentAt)
-          }
+        val event = (request, intendedEventOpt) match {
+          case (_, Some(VisitorEvent)) => VisitorEvent(fullContext, eventType, sentAt)
+          case (userRequest: UserRequest[_], _) => UserEvent(userRequest.userId, fullContext, eventType, sentAt) tap optionallySendUserUsedKifiEvent
+          case _ => VisitorEvent(fullContext, eventType, sentAt)
         }
         heimdal.trackEvent(event)
       }
