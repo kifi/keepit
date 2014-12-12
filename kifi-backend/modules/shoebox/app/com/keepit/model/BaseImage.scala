@@ -39,11 +39,13 @@ object ImageSource {
 }
 
 sealed trait ImageProcessState
-sealed trait ImageProcessDone extends ImageProcessState
-sealed trait ImageProcessSuccess extends ImageProcessDone
 sealed trait ImageStoreInProgress extends ImageProcessState
+sealed trait ImageProcessDone extends ImageProcessState
+
+sealed trait ImageProcessSuccess extends ImageProcessDone
 sealed abstract class ImageStoreFailure(val reason: String) extends ImageProcessState with ImageProcessDone
 sealed abstract class ImageStoreFailureWithException(ex: Throwable, reason: String) extends ImageStoreFailure(reason)
+
 object ImageProcessState {
   // In-progress
   case class ImageLoadedAndHashed(file: TemporaryFile, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends ImageStoreInProgress
