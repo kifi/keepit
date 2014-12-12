@@ -89,7 +89,11 @@ case class RelatedLibraryInfo(
 object RelatedLibraryInfo {
   def fromFullLibraryInfo(info: FullLibraryInfo, isAuthenticatedRequest: Boolean): RelatedLibraryInfo = {
     if (isAuthenticatedRequest) {
-      RelatedLibraryInfo(info.id, info.name, info.url, info.owner, info.followers, info.numKeeps, info.numFollowers)
+      val showableFollowers = {
+        val goodLooking = info.followers.filter(_.pictureName != "0.jpg")
+        if (goodLooking.size < 8) goodLooking else goodLooking.take(3)      // cannot show more than 8 avatars in frontend
+      }
+      RelatedLibraryInfo(info.id, info.name, info.url, info.owner, showableFollowers, info.numKeeps, info.numFollowers)
     } else {
       RelatedLibraryInfo(info.id, info.name, info.url, info.owner, Seq(), info.numKeeps, info.numFollowers)
     }
