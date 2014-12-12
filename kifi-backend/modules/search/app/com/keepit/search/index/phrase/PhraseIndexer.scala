@@ -1,4 +1,4 @@
-package com.keepit.search.phrasedetector
+package com.keepit.search.index.phrase
 
 import com.keepit.search.index.{ Indexable, Indexer, IndexDirectory }
 import com.keepit.model.{ Collection, Phrase }

@@ -1,4 +1,4 @@
-package com.keepit.search.phrasedetector
+package com.keepit.search.index.phrase
 
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance

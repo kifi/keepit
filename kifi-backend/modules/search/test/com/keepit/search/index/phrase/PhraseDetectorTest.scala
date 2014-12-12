@@ -1,4 +1,4 @@
-package com.keepit.search.phrasedetector
+package com.keepit.search.index.phrase
 
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier

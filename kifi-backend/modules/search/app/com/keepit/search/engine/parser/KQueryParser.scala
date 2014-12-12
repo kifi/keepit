@@ -7,7 +7,7 @@ import com.keepit.search.engine.query.KProximityQuery
 import com.keepit.search.engine.QueryEngineBuilder
 import com.keepit.search.{ SearchConfig, Lang }
 import com.keepit.search.index.Analyzer
-import com.keepit.search.phrasedetector.PhraseDetector
+import com.keepit.search.index.phrase.PhraseDetector
 import com.keepit.search.query._
 import com.keepit.search.query.parser.{ DefaultSyntax, QueryParser }
 import scala.collection.mutable.ArrayBuffer

@@ -1,4 +1,4 @@
-package com.keepit.search.phrasedetector
+package com.keepit.search.index.phrase
 
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.DocsAndPositionsEnum

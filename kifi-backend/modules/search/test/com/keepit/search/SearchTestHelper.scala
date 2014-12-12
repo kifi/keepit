@@ -17,7 +17,7 @@ import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.keep.{ ShardedKeepIndexer, KeepIndexer }
 import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.index.VolatileIndexDirectory
-import com.keepit.search.phrasedetector._
+import com.keepit.search.index.phrase._
 import com.keepit.search.index.user.UserIndexer
 import com.keepit.search.test.SearchTestInjector
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }

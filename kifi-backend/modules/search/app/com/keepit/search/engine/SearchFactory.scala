@@ -13,7 +13,7 @@ import com.keepit.search.engine.parser.KQueryParser
 import com.keepit.search.index.graph.keep.{ KeepFields, ShardedKeepIndexer }
 import com.keepit.search.index.graph.library.{ LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.phrasedetector.PhraseDetector
+import com.keepit.search.index.phrase.PhraseDetector
 import com.keepit.search.util.LongArraySet
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.TermQuery
