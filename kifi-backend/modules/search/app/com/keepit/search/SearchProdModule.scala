@@ -1,12 +1,12 @@
 package com.keepit.search
 
 import com.keepit.common.cache.{ EhCacheCacheModule, MemcachedCacheModule }
-import com.keepit.search.common.cache.SearchCacheModule
 import com.keepit.common.controller.ProdRemoteUserActionsHelperModule
-import com.keepit.search.common.store.SearchProdStoreModule
+import com.keepit.search.cache.SearchCacheModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.inject.CommonProdModule
+import com.keepit.search.store.SearchProdStoreModule
 import com.keepit.search.tracker.ProdTrackingModule
 import com.keepit.search.index.ProdIndexModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
