@@ -95,4 +95,4 @@ GET         /internal/search/searchMessages @com.keepit.search.controllers.searc
 POST        /internal/search/augmentation   @com.keepit.search.controllers.search.SearchController.augmentation()
 POST        /internal/search/augment   @com.keepit.search.controllers.search.SearchController.augment()
 
-->          /        common.Routes
+->          /        commonService.Routes

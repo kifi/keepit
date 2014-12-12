@@ -64,4 +64,4 @@ POST  /internal/eliza/checkUrisDiscussed         @com.keepit.eliza.controllers.i
 # IMPORTS
 ##########################################
 
-->  / common.Routes
+->  / commonService.Routes

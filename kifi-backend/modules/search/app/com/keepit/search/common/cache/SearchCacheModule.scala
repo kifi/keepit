@@ -1,4 +1,4 @@
-package com.keepit.search.cache
+package com.keepit.search.common.cache
 
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.cache._
