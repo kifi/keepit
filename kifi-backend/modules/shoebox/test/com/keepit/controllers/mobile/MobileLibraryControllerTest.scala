@@ -1,8 +1,10 @@
 package com.keepit.controllers.mobile
 
+import java.io.File
+
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ KeepData, LibraryInfo }
+import com.keepit.commanders.{ LibraryImageCommander, KeepData, LibraryInfo }
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -24,12 +26,15 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
+import org.apache.commons.io.FileUtils
 import org.joda.time.DateTime
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import org.specs2.mutable.Specification
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{ JsObject, Json }
 import play.api.mvc.{ Result, Call }
-import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ Await, Future }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
@@ -144,6 +149,13 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val (user1, lib1) = setupOneUserOneLibrary()
         val pubLib1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
 
+        // upload an image
+        {
+          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload)
+          val saved = Await.result(savedF, Duration("10 seconds"))
+          saved === ImageProcessState.StoreSuccess
+        }
+
         val result1 = getLibraryById(user1, pubLib1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
@@ -156,6 +168,11 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
              |    "visibility" : "secret",
              |    "slug" : "krabby-patty",
              |    "url" : "/spongebob/krabby-patty",
+             |    "image":{
+             |        "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
+             |        "x":50,
+             |        "y":50
+             |      },
              |    "kind" : "user_created",
              |    "owner" : {
              |      "id" : "${user1.externalId}",
@@ -434,7 +451,6 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         (response4 \ "alreadyKept").asOpt[Seq[JsObject]] === None
       }
     }
-
   }
 
   private def createLibrary(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
@@ -535,4 +551,11 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
   private def controller(implicit injector: Injector) = inject[MobileLibraryController]
   private def request(route: Call) = FakeRequest(route.method, route.url)
+
+  private def fakeImage1 = {
+    val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
+    tf.file.deleteOnExit()
+    FileUtils.copyFile(new File("test/data/image1.png"), tf.file)
+    tf
+  }
 }
