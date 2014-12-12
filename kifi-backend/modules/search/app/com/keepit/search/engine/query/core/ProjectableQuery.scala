@@ -1,6 +1,7 @@
-package com.keepit.search.engine.query
+package com.keepit.search.engine.query.core
 
 import org.apache.lucene.search._
+
 import scala.collection.JavaConversions._
 
 trait ProjectableQuery {

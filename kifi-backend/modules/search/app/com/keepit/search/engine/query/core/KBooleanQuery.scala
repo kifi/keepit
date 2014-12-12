@@ -1,7 +1,8 @@
-package com.keepit.search.engine.query
+package com.keepit.search.engine.query.core
 
 import org.apache.lucene.index.{ AtomicReaderContext, IndexReader }
-import org.apache.lucene.search.{ BooleanQuery, ComplexExplanation, Explanation, IndexSearcher, Query, Scorer, Weight }
+import org.apache.lucene.search.{ BooleanQuery, ComplexExplanation, Explanation, IndexSearcher, Query, Weight }
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.math._

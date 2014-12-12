@@ -1,12 +1,11 @@
-package com.keepit.search.engine.query
+package com.keepit.search.engine.query.core
 
+import com.keepit.common.db.Id
+import com.keepit.search.{ Tst, TstIndexer }
+import com.keepit.search.index.VolatileIndexDirectory
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.TermQuery
 import org.specs2.mutable.Specification
-import com.keepit.common.db.Id
-import com.keepit.search.index.VolatileIndexDirectory
-import com.keepit.search.Tst
-import com.keepit.search.TstIndexer
 
 class KTextQueryTest extends Specification {
 

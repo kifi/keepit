@@ -3,6 +3,7 @@ package com.keepit.search.engine.parser
 import com.keepit.classify.Domain
 import com.keepit.search.Lang
 import com.keepit.search.engine.query._
+import com.keepit.search.engine.query.core._
 import com.keepit.search.index.Analyzer
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.parser.{ QueryParser, QueryParserException, QuerySpec }

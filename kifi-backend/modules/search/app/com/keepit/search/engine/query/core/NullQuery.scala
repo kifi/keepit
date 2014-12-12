@@ -1,9 +1,10 @@
-package com.keepit.search.engine.query
+package com.keepit.search.engine.query.core
+
+import java.util.{ Set => JSet }
 
 import org.apache.lucene.index.{ AtomicReaderContext, IndexReader, Term }
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
-import java.util.{ Set => JSet }
 
 class NullQuery() extends Query {
 

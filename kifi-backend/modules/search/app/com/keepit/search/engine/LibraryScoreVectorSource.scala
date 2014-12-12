@@ -1,9 +1,9 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
-import com.keepit.search.engine.query.QueryProjector
 import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
 import org.apache.lucene.index.AtomicReaderContext

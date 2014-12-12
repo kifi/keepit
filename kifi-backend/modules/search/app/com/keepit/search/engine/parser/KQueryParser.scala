@@ -1,9 +1,9 @@
 package com.keepit.search.engine.parser
 
+import com.keepit.search.engine.query.core.KProximityQuery
 import org.apache.lucene.index.Term
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.search.engine.query.KProximityQuery
 import com.keepit.search.engine.QueryEngineBuilder
 import com.keepit.search.{ SearchConfig, Lang }
 import com.keepit.search.index.Analyzer

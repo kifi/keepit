@@ -1,4 +1,4 @@
-package com.keepit.search.engine.query
+package com.keepit.search.engine.query.core
 
 import org.apache.lucene.index.{ AtomicReaderContext, Term }
 import org.apache.lucene.search._

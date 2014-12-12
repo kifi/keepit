@@ -1,6 +1,6 @@
 package com.keepit.search.query
 
-import com.keepit.search.engine.query.ProjectableQuery
+import com.keepit.search.engine.query.core.ProjectableQuery
 import org.apache.lucene.index.{ Term, AtomicReaderContext, IndexReader }
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits

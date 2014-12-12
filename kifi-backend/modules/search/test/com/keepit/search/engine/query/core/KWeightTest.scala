@@ -1,8 +1,8 @@
-package com.keepit.search.engine.query
+package com.keepit.search.engine.query.core
 
 import com.keepit.common.db.Id
-import com.keepit.search.{ Tst, TstIndexer }
 import com.keepit.search.index.VolatileIndexDirectory
+import com.keepit.search.{ Tst, TstIndexer }
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.{ TermQuery, Weight }

@@ -1,11 +1,13 @@
-package com.keepit.search.engine.query
+package com.keepit.search.engine.query.core
+
+import java.util.{ Set => JSet }
 
 import com.keepit.common.logging.Logging
-import org.apache.lucene.index.{ IndexReader, Term, AtomicReaderContext }
+import org.apache.lucene.index.{ AtomicReaderContext, IndexReader, Term }
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
+
 import scala.collection.mutable.ArrayBuffer
-import java.util.{ Set => JSet }
 
 class KWrapperQuery(private val subQuery: Query, val label: String) extends Query with ProjectableQuery with Logging {
   def this(subQuery: Query) = this(subQuery, subQuery.toString)

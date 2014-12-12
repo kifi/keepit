@@ -1,14 +1,14 @@
-package com.keepit.search.engine.query
+package com.keepit.search.engine.query.core
 
 import com.keepit.search.query.{ FixedScoreQuery, HomePageQuery }
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
-import org.apache.lucene.search.{ DisjunctionMaxQuery, PhraseQuery, BooleanQuery, TermQuery }
+import org.apache.lucene.search.{ BooleanQuery, DisjunctionMaxQuery, PhraseQuery, TermQuery }
 import org.specs2.mutable.Specification
 
 class QueryProjectorTest extends Specification {
 
-  import QueryProjector._
+  import com.keepit.search.engine.query.core.QueryProjector._
 
   private[this] val t1 = new TermQuery(new Term("a", "t"))
   private[this] val t2 = new TermQuery(new Term("b", "t"))

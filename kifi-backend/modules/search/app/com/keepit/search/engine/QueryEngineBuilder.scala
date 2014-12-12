@@ -1,6 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.search.engine.query._
+import com.keepit.search.engine.query.core._
 import com.keepit.search.query.{ FixedScoreQuery, HomePageQuery, ProximityQuery }
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanClause.Occur._

@@ -2,8 +2,8 @@ package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.engine.explain.TargetedScorer
+import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
-import com.keepit.search.engine.query.QueryProjector
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ IdMapper, WrappedSubReader }
 import com.keepit.search.util.LongArraySet

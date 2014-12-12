@@ -1,10 +1,11 @@
-package com.keepit.search.engine.query
+package com.keepit.search.engine.query.core
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.query.{ BoostWeight, BoostQuery }
+import com.keepit.search.query.{ BoostQuery, BoostWeight }
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
+
 import scala.collection.mutable.ArrayBuffer
 
 class KBoostQuery(override val textQuery: Query, override val boosterQuery: Query, val boosterStrength: Float) extends BoostQuery with ProjectableQuery {
