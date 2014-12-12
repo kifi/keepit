@@ -16,7 +16,7 @@ class LibraryInvitesAbuseMonitorTest extends Specification with ShoeboxTestInjec
     db.readWrite { implicit s =>
       val fakeUsers = users(2).saved
       val lib = libraryRepo.save(Library(name = "Lib", ownerId = fakeUsers(0).id.get, slug = LibrarySlug("lib"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = fakeUsers(0).id.get, access = LibraryAccess.OWNER, showInSearch = true))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = fakeUsers(0).id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
       val email = EmailAddress("daron@gmail.com")
       (fakeUsers(0), fakeUsers(1), email, lib)
     }

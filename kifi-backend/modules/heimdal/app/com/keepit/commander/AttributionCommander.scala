@@ -3,6 +3,7 @@ package com.keepit.commander
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.heimdal.SearchHitReportCache
 import com.keepit.model._
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
@@ -22,7 +23,7 @@ class AttributionCommander @Inject() (
     userBookmarkClicksRepo: UserBookmarkClicksRepo,
     keepClicksRepo: KeepDiscoveryRepo,
     rekeepRepo: ReKeepRepo,
-    kifiHitCache: KifiHitCache) extends Logging {
+    kifiHitCache: SearchHitReportCache) extends Logging {
 
   // potentially expensive -- admin only
   def getUserReKeepsByDegree(keepIds: Seq[KeepIdInfo], n: Int = 3): Map[Id[Keep], Seq[Seq[Id[User]]]] = {

@@ -12,7 +12,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.common.performance._
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.SanitizedKifiHit
+import com.keepit.heimdal.{ SearchHitReportCache, SearchHitReport, SearchHitReportKey }
 import com.keepit.model._
 import com.keepit.model.helprank.{ UserBookmarkClicksRepo, KeepDiscoveryRepo, ReKeepRepo }
 import com.keepit.search.ArticleSearchResult
@@ -25,28 +25,29 @@ class HelpRankCommander @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
     clock: Clock,
-    kifiHitCache: KifiHitCache,
+    kifiHitCache: SearchHitReportCache,
     userKeepInfoRepo: UserBookmarkClicksRepo,
     keepDiscoveryRepo: KeepDiscoveryRepo,
     rekeepRepo: ReKeepRepo,
     elizaClient: ElizaServiceClient,
     shoeboxClient: ShoeboxServiceClient) extends Logging {
 
-  def processKifiHit(discoverer: Id[User], kifiHit: SanitizedKifiHit): Future[Unit] = {
-    log.info(s"[kifiHit($discoverer)] hit=$kifiHit")
-    val keepers = kifiHit.context.keepers
-    if (kifiHit.context.isOwnKeep || kifiHit.context.isPrivate || keepers.isEmpty) {
+  def processSearchHitAttribution(kifiHit: SearchHitReport): Future[Unit] = {
+    log.info(s"hit=$kifiHit")
+    val discoverer = kifiHit.userId
+    val keepers = kifiHit.keepers
+    if (kifiHit.isOwnKeep || keepers.isEmpty) {
       db.readWriteAsync { implicit rw =>
         userKeepInfoRepo.increaseCounts(discoverer, kifiHit.uriId, true)
       }
     } else {
       implicit val dca = TransactionalCaching.Implicits.directCacheAccess
-      kifiHitCache.get(KifiHitKey(discoverer, kifiHit.uriId)) match { // simple throttling
+      kifiHitCache.get(SearchHitReportKey(discoverer, kifiHit.uriId)) match { // simple throttling
         case Some(hit) =>
           log.warn(s"[kifiHit($discoverer,${kifiHit.uriId})] already recorded kifiHit ($hit) for user within threshold -- skip")
           Future.successful(Unit)
         case None =>
-          kifiHitCache.set(KifiHitKey(discoverer, kifiHit.uriId), kifiHit)
+          kifiHitCache.set(SearchHitReportKey(discoverer, kifiHit.uriId), kifiHit)
           shoeboxClient.getUserIdsByExternalIds(keepers) map { keeperIds =>
             keeperIds foreach { keeperId =>
               db.readWrite { implicit rw =>
@@ -93,7 +94,7 @@ class HelpRankCommander @Inject() (
   private def searchAttribution(userId: Id[User], keep: Keep): Seq[ReKeep] = {
     log.info(s"[searchAttribution($userId)] keep=$keep")
     implicit val dca = TransactionalCaching.Implicits.directCacheAccess
-    kifiHitCache.get(KifiHitKey(userId, keep.uriId)) map { hit =>
+    kifiHitCache.get(SearchHitReportKey(userId, keep.uriId)) map { hit =>
       val res = db.readWrite { implicit rw =>
         keepDiscoveryRepo.getDiscoveriesByUUID(hit.uuid) collect {
           case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>

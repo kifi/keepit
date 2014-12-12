@@ -21,6 +21,7 @@ object LibraryMembershipFormatter {
     (__ \ 'state).format(State.format[LibraryMembership]) and
     (__ \ 'seq).format(SequenceNumber.format[LibraryMembership]) and
     (__ \ 'showInSearch).format[Boolean] and
+    (__ \ 'visibility).format[LibraryMembershipVisibility] and
     (__ \ 'lastViewed).formatNullable[DateTime] and
     (__ \ 'lastEmailSent).formatNullable[DateTime]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))

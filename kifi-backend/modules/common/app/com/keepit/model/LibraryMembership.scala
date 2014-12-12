@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model.view.LibraryMembershipView
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json._
 
@@ -16,6 +17,7 @@ case class LibraryMembership(
     state: State[LibraryMembership] = LibraryMembershipStates.ACTIVE,
     seq: SequenceNumber[LibraryMembership] = SequenceNumber.ZERO,
     showInSearch: Boolean,
+    visibility: LibraryMembershipVisibility, //using this field only if the user is the LibraryAccess is OWNER (may change in the future)
     lastViewed: Option[DateTime] = None,
     lastEmailSent: Option[DateTime] = None) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
@@ -31,6 +33,17 @@ case class LibraryMembership(
 
   def toLibraryMembershipView: LibraryMembershipView =
     LibraryMembershipView(id = id.get, libraryId = libraryId, userId = userId, access = access, createdAt = createdAt, state = state, seq = seq, showInSearch = showInSearch)
+}
+
+case class LibraryMembershipVisibility(value: String)
+
+object LibraryMembershipVisibility {
+  implicit val format = Json.format[LibraryMembershipVisibility]
+}
+
+object LibraryMembershipVisibilityStates {
+  val HIDDEN = LibraryMembershipVisibility("hidden")
+  val VISIBLE = LibraryMembershipVisibility("visible")
 }
 
 object LibraryMembershipStates extends States[LibraryMembership]

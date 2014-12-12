@@ -38,6 +38,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countByLibraryAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
   def countsByLibraryAccess(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
   def countFollowersWithOwnerId(ownerId: Id[User])(implicit session: RSession): Int
+  def countLibrariesOfUserFromAnonymos(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int
 }
 
 @Singleton
@@ -62,7 +63,8 @@ class LibraryMembershipRepoImpl @Inject() (
     def showInSearch = column[Boolean]("show_in_search", O.NotNull)
     def lastViewed = column[Option[DateTime]]("last_viewed", O.Nullable)
     def lastEmailSent = column[Option[DateTime]]("last_email_sent", O.Nullable)
-    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, lastViewed, lastEmailSent) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
+    def visibility = column[LibraryMembershipVisibility]("visibility", O.NotNull)
+    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, visibility, lastViewed, lastEmailSent) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
 
   def table(tag: Tag) = new LibraryMemberTable(tag)
@@ -261,6 +263,19 @@ class LibraryMembershipRepoImpl @Inject() (
       sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.state = 'active'".as[Int].firstOption.getOrElse(0)
     }
   }
+
+  //non user: number of public libraries that are “displayable on profile” (see library pref) plus libraries i follow that are public unless I oped in the "don't show libraries I follow" pref
+  //todo(eishay): add cache
+  def countLibrariesOfUserFromAnonymos(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+    val query = if (countFollowLibraries) {
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.visibility = 'visible' and lib.visibility = 'published'"
+    } else {
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.visibility = 'visible' and lib.visibility = 'published' and lm.access='owner'"
+    }
+    query.as[Int].firstOption.getOrElse(0)
+  }
+
 }
 
 trait LibraryMembershipSequencingPlugin extends SequencingPlugin

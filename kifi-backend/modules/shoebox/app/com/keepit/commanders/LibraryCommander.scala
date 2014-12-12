@@ -406,12 +406,12 @@ class LibraryCommander @Inject() (
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
                     visibility = libAddReq.visibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
-                  libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
+                  libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
                   lib
                 case Some(lib) =>
                   val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
                   libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId, None) match {
-                    case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
+                    case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
                     case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
                   }
                   newLib
@@ -677,13 +677,13 @@ class LibraryCommander @Inject() (
             val activeLib = libs.head._2.copy(state = LibraryStates.ACTIVE, slug = LibrarySlug(slug), name = name, visibility = visibility, memberCount = 1)
             val membership = libMem.find(m => m.libraryId == activeLib.id.get && m.access == LibraryAccess.OWNER)
             if (membership.isEmpty) airbrake.notify(s"user $userId - non-existing ownership of library kind $kind (id: ${activeLib.id.get})")
-            val activeMembership = membership.getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true)).copy(state = LibraryMembershipStates.ACTIVE)
+            val activeMembership = membership.getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE)).copy(state = LibraryMembershipStates.ACTIVE)
             val active = (activeMembership, activeLib)
             if (libs.tail.length > 0) airbrake.notify(s"user $userId - duplicate active ownership of library kind $kind (ids: ${libs.tail.map(_._2.id.get)})")
             val otherLibs = libs.tail.map {
               case (a, l) =>
                 val inactMem = libMem.find(_.libraryId == l.id.get)
-                  .getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
+                  .getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
                   .copy(state = LibraryMembershipStates.INACTIVE)
                 (inactMem, l.copy(state = LibraryStates.INACTIVE))
             }
@@ -700,7 +700,7 @@ class LibraryCommander @Inject() (
       // If user is missing a system lib, create it
       val mainOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_MAIN).isEmpty) {
         val mainLib = libraryRepo.save(Library(name = "Main Library", ownerId = userId, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN, memberCount = 1))
-        libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
+        libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
         if (!generateNew) {
           airbrake.notify(s"$userId missing main library")
         }
@@ -710,7 +710,7 @@ class LibraryCommander @Inject() (
 
       val secretOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_SECRET).isEmpty) {
         val secretLib = libraryRepo.save(Library(name = "Secret Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET, memberCount = 1))
-        libraryMembershipRepo.save(LibraryMembership(libraryId = secretLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
+        libraryMembershipRepo.save(LibraryMembership(libraryId = secretLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
         if (!generateNew) {
           airbrake.notify(s"$userId missing secret library")
         }
@@ -833,7 +833,7 @@ class LibraryCommander @Inject() (
         val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
-            libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true))
+            libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
             notifyOwnerOfNewFollower(userId, lib)
           case Some(mem) =>
             val maxWithExisting = (maxAccess :: mem.access :: Nil).sorted.last
@@ -1136,6 +1136,31 @@ class LibraryCommander @Inject() (
     }
   }
 
+  /**
+   * 1. non user: number of public libraries that are “displayable on profile” (see library pref) plus libraries i follow that are public
+   * 2. my own profile view: total number of libraries I own and I follow, including main and secret, not including pending invites to libs
+   * 3. logged in user viewing another’s profile: Everything in 1 (above) + libraries user has access to (even if private)
+   */
+  def countLibraries(userId: Id[User], viewer: Option[Id[User]]): Int = viewer match {
+    case None => countLibrariesForAnonymous(userId)
+    case Some(id) if id == userId => countLibrariesForSelf(userId)
+    case Some(id) => countLibrariesForOtherUser(userId, id)
+  }
+
+  private def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User]): Int = {
+    -1
+  }
+
+  private def countLibrariesForSelf(userId: Id[User]): Int = {
+    -1
+  }
+
+  private def countLibrariesForAnonymous(userId: Id[User]): Int = {
+    //todo(eishay): get countFollowLibraries
+    db.readOnlyReplica { implicit s =>
+      libraryMembershipRepo.countLibrariesOfUserFromAnonymos(userId, countFollowLibraries = true)
+    }
+  }
 }
 
 sealed abstract class LibraryError(val message: String)
@@ -1211,6 +1236,7 @@ object LibraryInfo {
     case Some(s) => { Some(s.dropRight(s.length - MaxDescriptionLength)) } // will change later!
     case _ => None
   }
+
 }
 
 case class MaybeLibraryMember(member: Either[BasicUser, BasicContact], access: Option[LibraryAccess], lastInvitedAt: Option[DateTime])
