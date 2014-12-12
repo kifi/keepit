@@ -10,14 +10,38 @@ angular.module('kifi')
   $httpProvider.defaults.withCredentials = true;
 
   // For any unmatched url, redirect to '/'
-  $urlRouterProvider.otherwise('/recos');
+  $urlRouterProvider.otherwise('/');
 
   // Now set up the states
   $stateProvider
+    .state('/', {
+      url: '/',
+      templateUrl: 'recos/recosView.tpl.html'
+    })
     .state('friends', {
       url: '/friends',
       templateUrl: 'friends/friends.tpl.html'
     })
+
+    .state('userProfile', {  // Shows "My" libraries in the "libraries" tab.
+      url: '/:username',
+      templateUrl: 'userProfile/userProfile.tpl.html',
+      controller: 'UserProfileCtrl'
+    })
+    .state('userProfile.myLibraries', {
+      url: '',
+      templateUrl: 'userProfile/test1.tpl.html'
+    })
+    .state('userProfile.followingLibraries', {
+      url: '/following',
+      templateUrl: 'userProfile/test2.tpl.html'
+    })
+    .state('userProfile.invitedLibraries', {
+      url: '/invited',
+      templateUrl: 'userProfile/test3.tpl.html'
+    })
+
+    // For testing only.
     .state('state1', {
       url: '/state1',
       templateUrl: 'partials/state1.html'

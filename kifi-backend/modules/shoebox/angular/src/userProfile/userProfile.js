@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$rootScope', '$routeParams', 'keepWhoService', 'profileService', 'userProfileStubService',
-  function ($scope, $rootScope, $routeParams, keepWhoService, profileService, userProfileStubService) {
+  '$scope', '$rootScope', '$state', '$stateParams', 'keepWhoService', 'profileService', 'userProfileStubService',
+  function ($scope, $rootScope, $state, $stateParams, keepWhoService, profileService, userProfileStubService) {
     //
     // Configs.
     //
@@ -21,7 +21,7 @@ angular.module('kifi')
     ];
 
     var libraryNavLinksConfig = [
-      { name: 'MY', subpath: '/' },
+      { name: 'MY', subpath: '' },
       { name: 'FOLLOWING', subpath :'/following' },
       { name: 'INVITED', subpath: '/invited' }
     ];
@@ -43,7 +43,7 @@ angular.module('kifi')
     // Internal functions.
     //
     function init() {
-      var username = $routeParams.username;
+      var username = $stateParams.username;
 
       userProfileStubService.getProfile(username).then(function (profile) {
         initProfile(profile);
@@ -59,7 +59,7 @@ angular.module('kifi')
 
       initLibraryNavLinks();
 
-
+      $state.go('.myLibraries');
     }
 
     function initProfile(profile) {
@@ -111,7 +111,7 @@ angular.module('kifi')
       // Example:
       //   subpath: '/friends'
       //   returns: '/:username/friends'
-      return $routeParams.username + subpath;
+      return $stateParams.username + subpath;
     }
 
 

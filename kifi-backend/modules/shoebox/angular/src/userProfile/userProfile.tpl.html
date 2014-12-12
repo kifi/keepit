@@ -39,6 +39,12 @@
   </div>
 
   <div class="kf-user-profile-libraries">
-    <div kf-library-card ng-repeat="library in libraries" library="library" recommendation="true"></div>
+    <a ui-sref="userProfile.myLibraries">My Libraries</a>
+    <a ui-sref="userProfile.followingLibraries">Following Libraries</a>
+    <a ui-sref="userProfile.invitedLibraries">Invited Libraries</a>
+
+    <div ui-view></div>
+
+    <!-- <div kf-library-card ng-repeat="library in libraries" library="library" recommendation="true"></div> -->
   </div>
 </div>
