@@ -2,7 +2,7 @@ package com.keepit.search.engine.explain
 
 import com.keepit.search.engine.{ Visibility, ScoreContext }
 import com.keepit.search.engine.result.{ KifiResultCollector, ResultCollector }
-import com.keepit.search.tracker.ResultClickBoosts
+import com.keepit.search.tracking.ResultClickBoosts
 import scala.collection.mutable.ListBuffer
 
 class ScoreDetailCollector(targetId: Long, clickBoostsProvider: Option[() => ResultClickBoosts], val matchingThreshold: Float, sharingBoost: Option[Float]) extends ResultCollector[ScoreContext] {

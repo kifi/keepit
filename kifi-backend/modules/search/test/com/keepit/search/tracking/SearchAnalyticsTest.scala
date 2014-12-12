@@ -1,12 +1,12 @@
-package com.keepit.heimdal
+package com.keepit.search.tracking
 
-import com.keepit.search.KifiHitContext
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.model.{ Collection, User, Username }
+import com.keepit.search.result.{ BasicSearchHit, KifiSearchHit }
+import com.keepit.search.tracking.KifiHitContext
+import com.keepit.social.BasicUser
 import org.specs2.mutable.Specification
 import play.api.libs.json._
-import com.keepit.model.{ Username, Collection, User }
-import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.search.result.{ BasicSearchHit, KifiSearchHit }
-import com.keepit.social.BasicUser
 
 class SearchAnalyticsTest extends Specification {
 

@@ -11,8 +11,8 @@ import com.keepit.search.engine.result.KifiResultCollector._
 import scala.math._
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
-import com.keepit.search.tracker.ClickedURI
-import com.keepit.search.tracker.ResultClickBoosts
+import com.keepit.search.tracking.ClickedURI
+import com.keepit.search.tracking.ResultClickBoosts
 
 class KifiSearchImpl(
     userId: Id[User],

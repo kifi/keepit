@@ -1,4 +1,4 @@
-package com.keepit.search.tracker
+package com.keepit.search.tracking
 
 import com.keepit.common.store.ObjectStore
 import com.keepit.serializer.{ SerializerException, BinaryFormat }

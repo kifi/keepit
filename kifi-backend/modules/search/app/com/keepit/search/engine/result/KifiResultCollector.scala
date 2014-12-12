@@ -3,7 +3,7 @@ package com.keepit.search.engine.result
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.ScoreContext
 import com.keepit.search.engine.Visibility
-import com.keepit.search.tracker.ResultClickBoosts
+import com.keepit.search.tracking.ResultClickBoosts
 
 object KifiResultCollector {
   val MIN_MATCHING = 0.6f

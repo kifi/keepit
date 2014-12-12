@@ -1,4 +1,4 @@
-package com.keepit.search.tracker
+package com.keepit.search.tracking
 
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{ Provides, Singleton }

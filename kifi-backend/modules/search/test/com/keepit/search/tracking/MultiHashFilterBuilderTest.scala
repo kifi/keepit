@@ -1,4 +1,4 @@
-package com.keepit.search.tracker
+package com.keepit.search.tracking
 
 import org.specs2.mutable._
 import scala.util.Random

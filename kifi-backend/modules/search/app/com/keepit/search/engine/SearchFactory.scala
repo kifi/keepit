@@ -20,8 +20,8 @@ import org.apache.lucene.search.TermQuery
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.search.tracker.ClickHistoryTracker
-import com.keepit.search.tracker.ResultClickTracker
+import com.keepit.search.tracking.ClickHistoryTracker
+import com.keepit.search.tracking.ResultClickTracker
 import com.keepit.search.index.graph.user.UserGraphsSearcherFactory
 import com.keepit.search.sharding._
 

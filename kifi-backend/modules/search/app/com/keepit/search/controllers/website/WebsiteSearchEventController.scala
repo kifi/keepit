@@ -8,6 +8,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.model.ExperimentType
+import com.keepit.search.tracking.{ SearchEventCommander, KifiHitContext, BasicSearchContext }
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.akka.SafeFuture
 

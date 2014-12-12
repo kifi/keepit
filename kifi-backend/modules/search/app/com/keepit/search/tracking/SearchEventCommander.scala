@@ -1,16 +1,14 @@
-package com.keepit.search
+package com.keepit.search.tracking
 
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.search.tracker._
 import com.keepit.heimdal._
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.{ Id }
 import com.keepit.model.User
 import org.joda.time.DateTime
 import com.keepit.common.net.URI
 import com.keepit.common.core._
 import com.keepit.common.logging.Logging
-import com.keepit.search.tracker.ClickedURI
 import play.api.libs.concurrent.Execution.Implicits._
 
 class SearchEventCommander @Inject() (

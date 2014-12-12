@@ -1,21 +1,23 @@
-package com.keepit.search
+package com.keepit.search.tracking
 
-import com.keepit.common.logging.Logging
-import com.keepit.heimdal._
-import com.keepit.model.{ Library, User }
-import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.db.{ ExternalId, Id }
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.crypto.PublicId
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.json.TupleFormat
+import com.keepit.common.logging.Logging
+import com.keepit.common.net.URI
+import com.keepit.heimdal._
+import com.keepit.model.{ Library, User }
+import com.keepit.search.{ SearchConfigExperiment, ArticleHit, ArticleSearchResult, ArticleSearchResultStore }
+import com.keepit.social.BasicUser
 import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTime
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import com.keepit.social.BasicUser
-import com.keepit.common.net.URI
-import com.keepit.common.crypto.PublicId
-import com.keepit.common.json.TupleFormat
+import play.api.libs.json._
 
 case class SearchEngine(name: String) {
   override def toString = name
