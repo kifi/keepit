@@ -80,4 +80,18 @@
     </div>
   </div>
 
+  <div class="kf-lib-info-footer" ng-if="!$root.userLoggedIn">
+    <div class="first-line">
+      <a class="kf-footer-item-link" href="https://www.kifi.com/how_it_works">How it works</a>&middot;
+      <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/about">About</a> &middot;
+      <a class="kf-footer-item-link" href="http://blog.kifi.com">Blog</a>
+    </div>
+    <span ng-if="!isMobile">
+      &middot;
+    </span>
+    <div class="second-line">
+      <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/privacy">Privacy</a> &middot;
+      <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/terms">Terms</a>
+    </div>
+  </div>
 </div>
