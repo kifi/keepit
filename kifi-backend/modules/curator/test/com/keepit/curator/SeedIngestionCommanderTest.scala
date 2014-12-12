@@ -364,7 +364,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           library.copy(name = "bar", slug = LibrarySlug("bar"))
         )
 
-        val libMem = LibraryMembership(libraryId = Id[Library](1), userId = Id[User](1), access = LibraryAccess.OWNER, showInSearch = true)
+        val libMem = LibraryMembership(libraryId = Id[Library](1), userId = Id[User](1), access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE)
         shoebox.saveLibraryMemberships(
           libMem,
           libMem.copy(libraryId = Id[Library](2)),
