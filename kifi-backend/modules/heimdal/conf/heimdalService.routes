@@ -57,4 +57,4 @@ GET  /internal/heimdal/helprank/getKeepAttributionInfo @com.keepit.controllers.H
 POST /internal/heimdal/helprank/processKifiHit         @com.keepit.controllers.HelpRankController.processKifiHit()
 POST /internal/heimdal/helprank/processKeepAttribution @com.keepit.controllers.HelpRankController.processKeepAttribution()
 
-->  / common.Routes
+->  / commonService.Routes

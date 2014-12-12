@@ -848,6 +848,6 @@ POST    /internal/shoebox/libraries/canView             @com.keepit.controllers.
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)
 GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path = "/public/ng/img", file)
 
-->  / common.Routes
+->  / commonService.Routes
 
 GET     /*wildcard                 @com.keepit.controllers.website.KifiSiteRouter.app(wildcard)
