@@ -49,6 +49,7 @@ angular.module('kifi')
     $scope.loading = false;
     $scope.hasMore = true;
     $scope.page = null; // This is used to decide which page to show (library, permission denied, login)
+    $scope.isMobile = platformService.isSupportedMobilePlatform();
     $scope.passphrase = $scope.passphrase || {};
     $scope.$error = $scope.$error || {};
 
