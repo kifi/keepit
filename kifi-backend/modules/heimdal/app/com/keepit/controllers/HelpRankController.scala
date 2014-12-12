@@ -5,7 +5,7 @@ import com.keepit.commander.{ AttributionCommander, HelpRankCommander }
 import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.heimdal.SanitizedKifiHit
+import com.keepit.heimdal.SearchHitReport
 import com.keepit.model._
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -16,11 +16,9 @@ class HelpRankController @Inject() (
     helprankCommander: HelpRankCommander,
     attributionCommander: AttributionCommander) extends HeimdalServiceController {
 
-  def processKifiHit() = Action.async(parse.tolerantJson) { request =>
-    val json = request.body
-    val clicker = (json \ "clickerId").as(Id.format[User])
-    val kifiHit = (json \ "kifiHit").as[SanitizedKifiHit]
-    helprankCommander.processKifiHit(clicker, kifiHit) map { r =>
+  def processSearchHitAttribution() = Action.async(parse.tolerantJson) { request =>
+    val hit = request.body.as[SearchHitReport]
+    helprankCommander.processSearchHitAttribution(hit) map { r =>
       Ok
     }
   }
