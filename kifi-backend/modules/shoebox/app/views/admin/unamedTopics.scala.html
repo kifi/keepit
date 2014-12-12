@@ -80,7 +80,7 @@
         }
 
         $.postJson('@com.keepit.controllers.admin.routes.AdminLDAController.saveEdits',
-          {topic_ids: retIds, topic_names: retNames, topic_states: retStates, topic_nameable: retNameable}
+          {topic_ids: retIds, topic_names: retNames, topic_states: retStates, topic_nameable: retNameable, version: @version}
         ).done(done).fail(fail);
 
         function done(data){ alert("changes saved"); location.reload() }
