@@ -42,5 +42,6 @@ object SendgridEventTypes {
   val UNSUBSCRIBE = SendgridEventType("unsubscribe")
   val BOUNCE = SendgridEventType("bounce")
   val SPAM_REPORT = SendgridEventType("spamreport")
+  val DELIVERED = SendgridEventType("delivered")
 }
 
