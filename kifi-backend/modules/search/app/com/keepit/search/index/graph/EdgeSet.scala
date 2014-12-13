@@ -2,7 +2,7 @@ package com.keepit.search.index.graph
 
 import com.keepit.common.db.Id
 import com.keepit.search.Searcher
-import com.keepit.search.query.QueryUtil._
+import com.keepit.search.engine.query.QueryUtil._
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.index.Term

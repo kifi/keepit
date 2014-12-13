@@ -1,15 +1,13 @@
 package com.keepit.search.engine.parser
 
+import com.keepit.search.engine.query.core.KProximityQuery
 import org.apache.lucene.index.Term
-import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.search.engine.query.KProximityQuery
 import com.keepit.search.engine.QueryEngineBuilder
 import com.keepit.search.{ SearchConfig, Lang }
 import com.keepit.search.index.Analyzer
-import com.keepit.search.phrasedetector.PhraseDetector
-import com.keepit.search.query._
-import com.keepit.search.query.parser.{ DefaultSyntax, QueryParser }
+import com.keepit.search.index.phrase.PhraseDetector
+import com.keepit.search.engine.query._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.DurationInt

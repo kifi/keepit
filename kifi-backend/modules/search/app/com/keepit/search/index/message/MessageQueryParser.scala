@@ -1,7 +1,7 @@
 package com.keepit.search.index.message
 
-import com.keepit.search.query.parser.{ QueryParser, DefaultSyntax, QueryParserException }
-import com.keepit.search.query.QueryUtil.copy
+import com.keepit.search.engine.parser.{ QueryParser, DefaultSyntax, QueryParserException }
+import com.keepit.search.engine.query.QueryUtil.copy
 
 import org.apache.lucene.search.{ Query, TermQuery, PhraseQuery, DisjunctionMaxQuery }
 import org.apache.lucene.analysis.Analyzer

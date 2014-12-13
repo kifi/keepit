@@ -21,7 +21,7 @@ import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryIndexer 
 import com.keepit.search.controllers.util.SearchControllerUtil
 
 class SearchController @Inject() (
-    searchCommander: SearchCommander,
+    searchCommander: UriSearchCommander,
     augmentationCommander: AugmentationCommander,
     languageCommander: LanguageCommander,
     librarySearchCommander: LibrarySearchCommander,

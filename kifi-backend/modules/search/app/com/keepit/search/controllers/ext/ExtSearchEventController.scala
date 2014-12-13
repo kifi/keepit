@@ -4,13 +4,12 @@ import com.keepit.common.http._
 import com.google.inject.Inject
 import com.keepit.common.controller.{ SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.heimdal._
-import com.keepit.search._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.model.ExperimentType
+import com.keepit.search.tracking.{ SearchEventCommander, KifiHitContext, BasicSearchContext, SearchEngine }
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json._
 import com.keepit.common.akka.SafeFuture
 
 class ExtSearchEventController @Inject() (

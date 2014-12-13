@@ -3,7 +3,7 @@ package com.keepit.search.engine
 import com.keepit.common.db.Id
 import com.keepit.search.engine.parser.KQueryExpansion
 import com.keepit.search.engine.result.ResultCollector
-import com.keepit.search.query.parser.{ DefaultSyntax, QueryParser }
+import com.keepit.search.engine.parser.{ DefaultSyntax, QueryParser }
 import com.keepit.search.util.join.{ DataBufferWriter, DataBuffer }
 import com.keepit.search.{ Searcher, Lang, Tst, TstIndexer }
 import com.keepit.search.index.{ WrappedSubReader, DefaultAnalyzer, VolatileIndexDirectory }

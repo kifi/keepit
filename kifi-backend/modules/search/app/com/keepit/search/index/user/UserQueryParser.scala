@@ -1,14 +1,14 @@
 package com.keepit.search.index.user
 
 import com.keepit.search.index.Analyzer
-import com.keepit.search.query.parser.QueryParser
+import com.keepit.search.engine.parser.QueryParser
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.PrefixQuery
-import com.keepit.search.query.parser.QuerySpec
+import com.keepit.search.engine.parser.QuerySpec
 import java.io.StringReader
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import com.keepit.typeahead.PrefixFilter

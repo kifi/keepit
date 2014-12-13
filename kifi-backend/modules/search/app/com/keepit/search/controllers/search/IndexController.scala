@@ -11,7 +11,7 @@ import com.keepit.search.index.graph.collection.CollectionGraphPlugin
 import com.keepit.search.index.graph.user._
 import com.keepit.search.index.user.UserIndexerPlugin
 import com.keepit.search.index.message.MessageIndexerPlugin
-import com.keepit.search.phrasedetector.PhraseIndexerPlugin
+import com.keepit.search.index.phrase.PhraseIndexerPlugin
 
 class IndexController @Inject() (
     articleIndexerPlugin: ArticleIndexerPlugin,

@@ -1,7 +1,7 @@
 package com.keepit.search.index.article
 
 import org.apache.lucene.index.Term
-import com.keepit.search.query.QueryUtil
+import com.keepit.search.engine.query.QueryUtil
 import org.apache.lucene.search.DocIdSetIterator
 import com.keepit.search.index.WrappedSubReader
 

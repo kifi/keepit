@@ -17,15 +17,15 @@ import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.keep.{ ShardedKeepIndexer, KeepIndexer }
 import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.index.VolatileIndexDirectory
-import com.keepit.search.phrasedetector._
+import com.keepit.search.index.phrase._
 import com.keepit.search.index.user.UserIndexer
 import com.keepit.search.test.SearchTestInjector
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import scala.concurrent.duration._
-import com.keepit.search.tracker.ClickHistoryTracker
-import com.keepit.search.tracker.ResultClickTracker
-import com.keepit.search.tracker.ProbablisticLRU
-import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
+import com.keepit.search.tracking.ClickHistoryTracker
+import com.keepit.search.tracking.ResultClickTracker
+import com.keepit.search.tracking.ProbablisticLRU
+import com.keepit.search.tracking.InMemoryResultClickTrackerBuffer
 import com.keepit.search.sharding._
 import com.keepit.common.aws.AwsModule
 import com.keepit.search.index.graph.user._
