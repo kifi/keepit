@@ -14,32 +14,68 @@ angular.module('kifi')
 
   // Now set up the states
   $stateProvider
+    // Home page.
     .state('/', {
       url: '/',
       templateUrl: 'recos/recosView.tpl.html'
     })
+
+    // Flat top-level routes.
     .state('friends', {
       url: '/friends',
       templateUrl: 'friends/friends.tpl.html'
     })
 
-    .state('userProfile', {  // Shows "My" libraries in the "libraries" tab.
+    // Routes with nesting.
+    .state('userProfile', {
       url: '/:username',
       templateUrl: 'userProfile/userProfile.tpl.html',
-      controller: 'UserProfileCtrl'
+      controller: 'UserProfileCtrl',
+      'abstract': true
     })
-    .state('userProfile.myLibraries', {
-      url: '',
-      templateUrl: 'userProfile/test1.tpl.html'
-    })
-    .state('userProfile.followingLibraries', {
-      url: '/following',
-      templateUrl: 'userProfile/test2.tpl.html'
-    })
-    .state('userProfile.invitedLibraries', {
-      url: '/invited',
-      templateUrl: 'userProfile/test3.tpl.html'
-    })
+
+      .state('userProfile.libraries', {
+        url: '',
+        templateUrl: 'userProfile/userProfileLibraries.tpl.html',
+        'abstract': true
+      })
+
+        .state('userProfile.libraries.my', {
+          url: '',
+          templateUrl: 'userProfile/test1.tpl.html'
+        })
+        .state('userProfile.libraries.following', {
+          url: '/following',
+          templateUrl: 'userProfile/test2.tpl.html'
+        })
+        .state('userProfile.libraries.invited', {
+          url: '/invited',
+          templateUrl: 'userProfile/test3.tpl.html'
+        })
+
+      .state('userProfile.friends', {
+        url: '/friends',
+        templateUrl: 'userProfile/userProfilePeople.tpl.html',
+        controller: function ($scope) {
+          $scope.peopleType = 'Friends';
+        }
+      })
+
+      .state('userProfile.followers', {
+        url: '/followers',
+        templateUrl: 'userProfile/userProfilePeople.tpl.html',
+        controller: function ($scope) {
+          $scope.peopleType = 'Followers';
+        }
+      })
+
+      .state('userProfile.helped', {
+        url: '/helped',
+        templateUrl: 'userProfile/userProfileKeeps.tpl.html',
+        controller: function ($scope) {
+          $scope.keepType = 'Helped Rekeep';
+        }
+      })
 
     // For testing only.
     .state('state1', {

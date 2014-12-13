@@ -3,27 +3,27 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', 'keepWhoService', 'profileService', 'userProfileStubService',
-  function ($scope, $rootScope, $state, $stateParams, keepWhoService, profileService, userProfileStubService) {
+  '$scope', '$rootScope', '$stateParams', 'keepWhoService', 'profileService', 'userProfileStubService',
+  function ($scope, $rootScope, $stateParams, keepWhoService, profileService, userProfileStubService) {
     //
     // Configs.
     //
     var userNavLinksConfig = [
-      { name: 'Libraries', subpath: '/', countFieldName: 'numLibraries' },
-      { name: 'Keeps', subpath: '/keeps'/* for testing only */, countFieldName: 'numKeeps' }
+      { name: 'Libraries', routeState: 'userProfile.libraries.my', countFieldName: 'numLibraries' },
+      // { name: 'Keeps', routeState: '/keeps'/* for testing only */, countFieldName: 'numKeeps' }
 
       /*
        * For V2.
        */
-      // { name: 'FRIENDS', subpath: '/friends', countFieldName: 'numFriends' },
-      // { name: 'FOLLOWERS', subpath: '/followers', countFieldName: 'numFollowers' },
-      // { name: 'HELPED', subpath: '/helped/rekeep', countFieldName: 'helpedRekeep' }
+      { name: 'FRIENDS', routeState: 'userProfile.friends', countFieldName: 'numFriends' },
+      { name: 'FOLLOWERS', routeState: 'userProfile.followers', countFieldName: 'numFollowers' },
+      { name: 'HELPED', routeState: 'userProfile.helped', countFieldName: 'helpedRekeep' }
     ];
 
     var libraryNavLinksConfig = [
-      { name: 'MY', subpath: '' },
-      { name: 'FOLLOWING', subpath :'/following' },
-      { name: 'INVITED', subpath: '/invited' }
+      { name: 'MY', routeState: 'userProfile.libraries.my' },
+      { name: 'FOLLOWING', routeState: 'userProfile.libraries.following' },
+      { name: 'INVITED', routeState: 'userProfile.libraries.invited' }
     ];
 
 
@@ -58,8 +58,6 @@ angular.module('kifi')
       });
 
       initLibraryNavLinks();
-
-      $state.go('.myLibraries');
     }
 
     function initProfile(profile) {
@@ -84,8 +82,8 @@ angular.module('kifi')
       $scope.userNavLinks = _.map(userNavLinksConfig, function (config) {
         return {
           name: config.name,
-          url: getFullUserNavLinkPath(config.subpath),
-          count: $scope.profile[config.countFieldName]
+          count: $scope.profile[config.countFieldName],
+          routeState: config.routeState
         };
       });
     }
@@ -94,7 +92,7 @@ angular.module('kifi')
       $scope.libraryNavLinks = _.map(libraryNavLinksConfig, function (config) {
         return {
           name: config.name,
-          url: getFullUserNavLinkPath(config.subpath)
+          routeState: config.routeState
         };
       });
 
@@ -104,14 +102,6 @@ angular.module('kifi')
 
     function initLibraries(libraries) {
       $scope.libraries = libraries;
-    }
-
-    function getFullUserNavLinkPath(subpath) {
-      // Return a full path to the user nav link.
-      // Example:
-      //   subpath: '/friends'
-      //   returns: '/:username/friends'
-      return $stateParams.username + subpath;
     }
 
 
