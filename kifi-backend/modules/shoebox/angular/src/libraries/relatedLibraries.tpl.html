@@ -1,6 +1,7 @@
 <div class="kf-related-libraries">
   <div class="kf-related-library-explore-more-header" ng-if="!$root.userLoggedIn">Explore More Kifi Libraries</div>
-  <div kf-related-library-card ng-repeat="library in relatedLibraries" library="library">
+  <div class="kf-related-library-card" ng-repeat="library in relatedLibraries">
+    <div kf-small-library-card library="library" origin="rl" action="clickedLibraryRec"></div>
   </div>
   <div ng-if="!$root.userLoggedIn">
     <a class="kf-related-libraries-see-more">See more &raquo;</a>
