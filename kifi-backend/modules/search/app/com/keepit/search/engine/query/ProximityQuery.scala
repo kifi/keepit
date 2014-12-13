@@ -67,7 +67,9 @@ class ProximityQuery(val terms: Seq[Seq[Term]], val phrases: Set[(Int, Int)] = S
 
   override def toString(s: String) = {
     val termsString = terms.map { t => if (t.size == 1) t.head.toString else t.mkString("(", ",", ")") }.mkString(",")
-    s"proximity(${termsString})${ToStringUtils.boost(getBoost())}"
+    val phraseString = phrases.map { case (pos, len) => terms.slice(pos, pos + len).map(_.head.text).mkString(" ") }.mkString("[", " ; ", "]")
+
+    s"proximity(${termsString}, ${phraseString})${ToStringUtils.boost(getBoost())}"
   }
 
   override def equals(obj: Any): Boolean = obj match {
