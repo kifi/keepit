@@ -1,16 +1,15 @@
-package com.keepit.search.engine.result
+package com.keepit.search.engine.uri
 
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import com.keepit.model.Keep
-import scala.math.BigDecimal.double2bigDecimal
-import scala.math.BigDecimal.int2bigDecimal
-import scala.math.BigDecimal.long2bigDecimal
 import play.api.libs.json._
 
-class KifiShardResult(val json: JsValue) extends AnyVal {
-  def hits: Seq[KifiShardHit] = (json \ "hits").as[JsArray] match {
-    case JsArray(hits) => hits.map { hit => new KifiShardHit(hit.as[JsObject]) }
+import scala.math.BigDecimal.{ double2bigDecimal, int2bigDecimal, long2bigDecimal }
+
+class UriShardResult(val json: JsValue) extends AnyVal {
+  def hits: Seq[UriShardHit] = (json \ "hits").as[JsArray] match {
+    case JsArray(hits) => hits.map { hit => new UriShardHit(hit.as[JsObject]) }
     case _ => Seq.empty
   }
   def myTotal: Int = (json \ "myTotal").as[Int]
@@ -20,10 +19,10 @@ class KifiShardResult(val json: JsValue) extends AnyVal {
   def cutPoint: Int = (json \ "cutPoint").as[Int]
 }
 
-object KifiShardResult extends Logging {
-  def apply(hits: Seq[KifiShardHit], myTotal: Int, friendsTotal: Int, othersTotal: Int, show: Boolean, cutPoint: Int = 0): KifiShardResult = {
+object UriShardResult extends Logging {
+  def apply(hits: Seq[UriShardHit], myTotal: Int, friendsTotal: Int, othersTotal: Int, show: Boolean, cutPoint: Int = 0): UriShardResult = {
     try {
-      new KifiShardResult(JsObject(List(
+      new UriShardResult(JsObject(List(
         "hits" -> JsArray(hits.map(_.json)),
         "myTotal" -> JsNumber(myTotal),
         "friendsTotal" -> JsNumber(friendsTotal),
@@ -37,8 +36,8 @@ object KifiShardResult extends Logging {
         throw e
     }
   }
-  lazy val empty: KifiShardResult = {
-    new KifiShardResult(JsObject(List(
+  lazy val empty: UriShardResult = {
+    new UriShardResult(JsObject(List(
       "hits" -> JsArray(),
       "myTotal" -> JsNumber(0),
       "friendsTotal" -> JsNumber(0),
@@ -49,7 +48,7 @@ object KifiShardResult extends Logging {
   }
 }
 
-class KifiShardHit(val json: JsObject) extends AnyVal {
+class UriShardHit(val json: JsObject) extends AnyVal {
   def id: Long = (json \ "id").as[Long]
   def score: Float = (json \ "score").as[Float]
   def visibility: Int = (json \ "visibility").as[Int]
@@ -64,17 +63,17 @@ class KifiShardHit(val json: JsObject) extends AnyVal {
   def urlJson: JsValue = json \ "url"
   def externalIdJson: JsValue = json \ "externalId"
 
-  def set(key: String, value: JsValue): KifiShardHit = {
-    new KifiShardHit((json - key) + (key -> value))
+  def set(key: String, value: JsValue): UriShardHit = {
+    new UriShardHit((json - key) + (key -> value))
   }
 
-  def withFinalScore(value: Float): KifiShardHit = {
+  def withFinalScore(value: Float): UriShardHit = {
     set("finalScore", JsNumber(value.toDouble))
   }
 }
 
-object KifiShardHit extends Logging {
-  def apply(id: Long, score: Float, visibility: Int, libraryId: Long, keepId: Long, title: String, url: String, externalId: ExternalId[Keep]): KifiShardHit = {
+object UriShardHit extends Logging {
+  def apply(id: Long, score: Float, visibility: Int, libraryId: Long, keepId: Long, title: String, url: String, externalId: ExternalId[Keep]): UriShardHit = {
     try {
       var json = JsObject(List(
         "id" -> JsNumber(id),
@@ -87,7 +86,7 @@ object KifiShardHit extends Logging {
       if (libraryId >= 0) { json = json + ("libId" -> JsNumber(libraryId)) }
       if (keepId >= 0) { json = json + ("keepId" -> JsNumber(keepId)) }
       if (externalId != null) { json = json + ("externalId" -> JsString(externalId.id)) }
-      new KifiShardHit(json)
+      new UriShardHit(json)
     } catch {
       case e: Throwable =>
         log.error(s"can't serialize KifiShardHit [id=$id][score=$score][visibility=$visibility]", e)

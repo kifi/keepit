@@ -1,9 +1,11 @@
-package com.keepit.search.engine
+package com.keepit.search.engine.library
 
 import com.keepit.common.db.Id
 import com.keepit.model.{ Keep, User }
+import com.keepit.search.engine._
+import com.keepit.search.engine.uri.UriSearch
 import com.keepit.search.{ Searcher, SearchConfig, SearchFilter }
-import com.keepit.search.engine.result.{ HitQueue, LibraryShardHit, LibraryResultCollector, LibraryShardResult }
+import com.keepit.search.engine.result.{ HitQueue }
 import com.keepit.common.logging.Logging
 import scala.concurrent.Future
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
@@ -78,7 +80,7 @@ object LibrarySearch extends Logging {
     val friendsTotal = friendsHits.totalHits
     val othersTotal = othersHits.totalHits
 
-    val hits = KifiSearch.createQueue(maxHits)
+    val hits = UriSearch.createQueue(maxHits)
 
     // compute high score excluding others (an orphan uri sometimes makes results disappear)
     val highScore = {
@@ -89,18 +91,18 @@ object LibrarySearch extends Logging {
     if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          hit.normalizedScore = (hit.score / highScore) * KifiSearch.dampFunc(rank, dampingHalfDecayMine)
+          hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayMine)
           hits.insert(hit)
       }
     }
 
     if (friendsHits.size > 0 && filter.includeFriends) {
-      val queue = KifiSearch.createQueue(maxHits - min(minMyLibraries, hits.size))
+      val queue = UriSearch.createQueue(maxHits - min(minMyLibraries, hits.size))
       hits.discharge(hits.size - minMyLibraries).foreach { h => queue.insert(h) }
 
       friendsHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          hit.normalizedScore = (hit.score / highScore) * KifiSearch.dampFunc(rank, dampingHalfDecayFriends)
+          hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayFriends)
           queue.insert(hit)
       }
       queue.foreach { h => hits.insert(h) }
@@ -113,7 +115,7 @@ object LibrarySearch extends Logging {
       othersHits.toRankedIterator.take(maxHits - hits.size).foreach {
         case (hit, rank) =>
           val othersNorm = max(highScore, hit.score) * 1.1f // discount others hit
-          hit.normalizedScore = (hit.score / othersNorm) * KifiSearch.dampFunc(rank, dampingHalfDecayOthers)
+          hit.normalizedScore = (hit.score / othersNorm) * UriSearch.dampFunc(rank, dampingHalfDecayOthers)
           hits.insert(hit)
       }
     }
@@ -134,9 +136,9 @@ object LibrarySearch extends Logging {
 
   def partition(libraryShardHits: Seq[LibraryShardHit]): (HitQueue, HitQueue, HitQueue, Map[Id[Keep], KeepRecord]) = {
     val maxHitsPerCategory = libraryShardHits.length
-    val myHits = KifiSearch.createQueue(maxHitsPerCategory)
-    val friendsHits = KifiSearch.createQueue(maxHitsPerCategory)
-    val othersHits = KifiSearch.createQueue(maxHitsPerCategory)
+    val myHits = UriSearch.createQueue(maxHitsPerCategory)
+    val friendsHits = UriSearch.createQueue(maxHitsPerCategory)
+    val othersHits = UriSearch.createQueue(maxHitsPerCategory)
 
     val keepRecords = libraryShardHits.map { hit =>
       val visibility = hit.visibility

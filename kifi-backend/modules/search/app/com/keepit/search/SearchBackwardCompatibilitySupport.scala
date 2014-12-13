@@ -6,7 +6,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.{ Collection, Library, NormalizedURI, User }
 import com.keepit.search.engine.Visibility
-import com.keepit.search.engine.result.{ KifiShardHit, KifiShardResult }
+import com.keepit.search.engine.uri.{ UriShardHit, UriShardResult }
 import com.keepit.search.index.graph.collection.{ CollectionSearcher, CollectionSearcherWithUser }
 import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.result._
@@ -42,7 +42,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
     if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map { id => collectionSearcher.getExternalId(id) }.collect { case Some(extId) => extId })
   }
 
-  def toDetailedSearchHit(shards: Set[Shard[NormalizedURI]], userId: Id[User], hit: KifiShardHit, augmentedItem: AugmentedItem, friendStats: FriendStats, librarySearcher: Searcher): DetailedSearchHit = {
+  def toDetailedSearchHit(shards: Set[Shard[NormalizedURI]], userId: Id[User], hit: UriShardHit, augmentedItem: AugmentedItem, friendStats: FriendStats, librarySearcher: Searcher): DetailedSearchHit = {
     val uriId = augmentedItem.uri
     val isMyBookmark = ((hit.visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0)
     val isFriendsBookmark = ((hit.visibility & Visibility.NETWORK) != 0)
@@ -79,7 +79,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
     }
   }
 
-  def toPartialSearchResult(shards: Set[Shard[NormalizedURI]], userId: Id[User], friendIds: Set[Long], result: KifiShardResult): PartialSearchResult = {
+  def toPartialSearchResult(shards: Set[Shard[NormalizedURI]], userId: Id[User], friendIds: Set[Long], result: UriShardResult): PartialSearchResult = {
     val items = result.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
     val augmentationRequest = ItemAugmentationRequest.uniform(userId, items: _*)
     val friendStats = FriendStats(friendIds)

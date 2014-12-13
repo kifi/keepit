@@ -1,10 +1,11 @@
 package com.keepit.search.engine.result
 
+import com.keepit.search.engine.uri.{ UriResultCollectorWithBoost, UriResultCollector }
 import com.keepit.search.engine.{ Visibility, ScoreContext, MaxExpr, DisjunctiveSumExpr }
 import com.keepit.search.tracking.ResultClickBoosts
 import org.specs2.mutable.Specification
 
-class KifiResultCollectorTest extends Specification {
+class UriResultCollectorTest extends Specification {
   private class TstResultClickBoosts(clickedIds: Set[Long] = Set.empty[Long], boost: Float = 1.0f) extends ResultClickBoosts {
     override def apply(id: Long): Float = if (clickedIds.contains(id)) boost else 1.0f
   }
@@ -14,7 +15,7 @@ class KifiResultCollectorTest extends Specification {
 
   "MainResultCollector" should {
     "collect hits above matchingThreshold" in {
-      val collector = new KifiResultCollectorWithBoost(
+      val collector = new UriResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.7f,
@@ -57,9 +58,9 @@ class KifiResultCollectorTest extends Specification {
     "collect hits above matchingThreshold which is below MIN_MATCHING" in {
       val matchingThreshold = 0.2f
 
-      (matchingThreshold < KifiResultCollector.MIN_MATCHING) === true
+      (matchingThreshold < UriResultCollector.MIN_MATCHING) === true
 
-      val collector = new KifiResultCollectorWithBoost(
+      val collector = new UriResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = matchingThreshold,
@@ -95,13 +96,13 @@ class KifiResultCollectorTest extends Specification {
     }
 
     "collect a hit below matchingThreshold if clicked" in {
-      val collector = new KifiResultCollectorWithBoost(
+      val collector = new UriResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 3.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.99f,
         sharingBoost = 0.0f)
-      val remainingWeight = 1.0f - KifiResultCollector.MIN_MATCHING - 0.01f
-      val ctx = new ScoreContext(expr, exprSize, Array(KifiResultCollector.MIN_MATCHING - 0.01f, 0.02f, remainingWeight), collector)
+      val remainingWeight = 1.0f - UriResultCollector.MIN_MATCHING - 0.01f
+      val ctx = new ScoreContext(expr, exprSize, Array(UriResultCollector.MIN_MATCHING - 0.01f, 0.02f, remainingWeight), collector)
 
       ctx.set(10)
       ctx.visibility = Visibility.OWNER
@@ -128,11 +129,11 @@ class KifiResultCollectorTest extends Specification {
 
       val hit = mHits.pop()
       hit.id === 20L
-      hit.score === 2.0f * (KifiResultCollector.MIN_MATCHING + 0.01f) * 3.0f // sum * pctMatch * click boost
+      hit.score === 2.0f * (UriResultCollector.MIN_MATCHING + 0.01f) * 3.0f // sum * pctMatch * click boost
     }
 
     "collect hits by category" in {
-      val collector = new KifiResultCollectorWithBoost(
+      val collector = new UriResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f,
@@ -176,7 +177,7 @@ class KifiResultCollectorTest extends Specification {
     }
 
     "not collect restricted hits" in {
-      val collector = new KifiResultCollectorWithBoost(
+      val collector = new UriResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f,
@@ -206,7 +207,7 @@ class KifiResultCollectorTest extends Specification {
     }
 
     "boost scores by sharing degree" in {
-      val collector = new KifiResultCollectorWithBoost(
+      val collector = new UriResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f,

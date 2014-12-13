@@ -1,6 +1,7 @@
-package com.keepit.search.engine
+package com.keepit.search.engine.library
 
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.search.engine.{ DirectScoreContext, Visibility, VisibilityEvaluator, ScoreVectorSourceLike }
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }

@@ -15,7 +15,7 @@ import play.api.libs.json._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.search.controllers.{ FixedResultSearchCommander, FixedResultIndexModule }
+import com.keepit.search.controllers.{ FixedResultUriSearchCommander, FixedResultIndexModule }
 
 class MobileSearchControllerTest extends SpecificationLike with SearchTestInjector {
 
@@ -35,7 +35,7 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
         val path = com.keepit.search.controllers.mobile.routes.MobileSearchController.searchV1("test", None, 7, None, None, None, None, None, None, None).toString
         path === "/m/1/search?q=test&maxHits=7"
 
-        inject[SearchCommander].asInstanceOf[FixedResultSearchCommander].setDecoratedResults(MobileSearchControllerTest.decoratedTestResults)
+        inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setDecoratedResults(MobileSearchControllerTest.decoratedTestResults)
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)

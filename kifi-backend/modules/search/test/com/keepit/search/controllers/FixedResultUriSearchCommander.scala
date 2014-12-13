@@ -1,22 +1,17 @@
 package com.keepit.search.controllers
 
+import com.keepit.search.engine.uri.{ UriShardResult, UriSearchResult }
 import com.keepit.search.index._
 import com.keepit.common.util.Configuration
 import com.keepit.search._
 import com.keepit.inject.AppScoped
 import com.keepit.search.result._
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.db.Id
 import com.keepit.model._
-import play.api.libs.json.Json
-import com.keepit.social.BasicUser
 import scala.concurrent.Future
-import play.api.libs.json.JsArray
 import com.keepit.search.result.DecoratedResult
-import com.keepit.model.Username
 import com.keepit.search.sharding.Shard
-import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardResult }
 import com.keepit.search.engine.explain.Explanation
-import com.keepit.search.augmentation.{ AugmentedItem, FullAugmentationInfo, RestrictedKeepInfo, AugmentationCommander }
 
 case class FixedResultIndexModule() extends IndexModule {
   var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
@@ -33,17 +28,17 @@ case class FixedResultIndexModule() extends IndexModule {
 
   override def configure() {
     super.configure()
-    bind[SearchCommander].to[FixedResultSearchCommander].in[AppScoped]
+    bind[UriSearchCommander].to[FixedResultUriSearchCommander].in[AppScoped]
   }
 }
 
-class FixedResultSearchCommander extends SearchCommander {
+class FixedResultUriSearchCommander extends UriSearchCommander {
 
   private var decoratedResults: Map[String, DecoratedResult] = Map.empty
-  private var plainResults: Map[String, KifiPlainResult] = Map.empty
+  private var plainResults: Map[String, UriSearchResult] = Map.empty
 
   def setDecoratedResults(results: Map[String, DecoratedResult]): Unit = { decoratedResults = results }
-  def setPlainResults(results: Map[String, KifiPlainResult]): Unit = { plainResults = results }
+  def setPlainResults(results: Map[String, UriSearchResult]): Unit = { plainResults = results }
 
   def search(
     userId: Id[User],
@@ -96,7 +91,7 @@ class FixedResultSearchCommander extends SearchCommander {
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
-    debug: Option[String]): Future[KifiShardResult] = ???
+    debug: Option[String]): Future[UriShardResult] = ???
 
   def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[Explanation]] = ???
   def warmUp(userId: Id[User]): Unit = {}

@@ -1,20 +1,21 @@
-package com.keepit.search.engine
+package com.keepit.search.engine.uri
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.explain.{ ScoreDetailCollector, Explanation }
+import com.keepit.search.engine.explain.{ Explanation, ScoreDetailCollector }
+import UriResultCollector._
 import com.keepit.search.engine.result._
-import com.keepit.search.engine.result.KifiResultCollector._
-import scala.math._
-import scala.concurrent.{ Await, Future }
-import scala.concurrent.duration._
-import com.keepit.search.tracking.ClickedURI
-import com.keepit.search.tracking.ResultClickBoosts
+import com.keepit.search.engine.{ QueryEngineBuilder, SearchTimeLogs, Visibility }
+import com.keepit.search.tracking.{ ClickedURI, ResultClickBoosts }
 
-class KifiSearchImpl(
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
+import scala.math._
+
+class UriSearchImpl(
     userId: Id[User],
     numHitsToReturn: Int,
     filter: SearchFilter,
@@ -28,7 +29,7 @@ class KifiSearchImpl(
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     monitoredAwait: MonitoredAwait,
-    timeLogs: SearchTimeLogs) extends KifiSearch(articleSearcher, keepSearcher, timeLogs) with Logging {
+    timeLogs: SearchTimeLogs) extends UriSearch(articleSearcher, keepSearcher, timeLogs) with Logging {
 
   private[this] val isInitialSearch = filter.idFilter.isEmpty
 
@@ -53,10 +54,10 @@ class KifiSearchImpl(
     val engine = engineBuilder.build()
     debugLog("engine created")
 
-    val collector: KifiResultCollector = if (engine.recencyOnly) {
-      new KifiResultCollectorWithNoBoost(maxTextHitsPerCategory, percentMatch / 100.0f)
+    val collector: UriResultCollector = if (engine.recencyOnly) {
+      new UriResultCollectorWithNoBoost(maxTextHitsPerCategory, percentMatch / 100.0f)
     } else {
-      new KifiResultCollectorWithBoost(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f, sharingBoostInNetwork)
+      new UriResultCollectorWithBoost(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f, sharingBoostInNetwork)
     }
 
     val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait)
@@ -77,7 +78,7 @@ class KifiSearchImpl(
     collector.getResults()
   }
 
-  def execute(): KifiShardResult = {
+  def execute(): UriShardResult = {
     val (myHits, friendsHits, othersHits) = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn * 5)
 
     val myTotal = myHits.totalHits
@@ -97,7 +98,7 @@ class KifiSearchImpl(
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
           hit.score = hit.score * myBookmarkBoost * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.normalizedScore = (hit.score / highScore) * KifiSearch.dampFunc(rank, dampingHalfDecayMine)
+          hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayMine)
           hits.insert(hit)
       }
     }
@@ -109,7 +110,7 @@ class KifiSearchImpl(
       friendsHits.toRankedIterator.foreach {
         case (hit, rank) =>
           hit.score = hit.score * (if ((hit.visibility & Visibility.MEMBER) != 0) myBookmarkBoost else 1.0f) * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.normalizedScore = (hit.score / highScore) * KifiSearch.dampFunc(rank, dampingHalfDecayFriends)
+          hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayFriends)
           queue.insert(hit)
       }
       queue.foreach { h => hits.insert(h) }
@@ -130,7 +131,7 @@ class KifiSearchImpl(
             othersNorm = max(highScore, hit.score) * 1.1f // discount others hit
           }
           hit.score = hit.score * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.normalizedScore = (hit.score / othersNorm) * KifiSearch.dampFunc(rank, dampingHalfDecayOthers)
+          hit.normalizedScore = (hit.score / othersNorm) * UriSearch.dampFunc(rank, dampingHalfDecayOthers)
           hits.insert(hit)
           rank += 1
         } else {
@@ -148,7 +149,7 @@ class KifiSearchImpl(
 
     debugLog(s"myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
 
-    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
+    UriShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
   }
 
   def explain(uriId: Id[NormalizedURI]): Explanation = {

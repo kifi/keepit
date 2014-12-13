@@ -12,7 +12,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.search.augmentation.AugmentationCommanderImpl
 
-class SearchCommanderTest extends Specification with SearchTestInjector with SearchTestHelper {
+class UriSearchCommanderTest extends Specification with SearchTestInjector with SearchTestHelper {
 
   implicit private val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse("0,1 / 2"))
 
@@ -39,7 +39,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         val augmentationCommander = new AugmentationCommanderImpl(activeShards, shardedKeepIndexer, libraryIndexer, searchFactory, inject[DistributedSearchServiceClient])
         val compatibilitySupport = new SearchBackwardCompatibilitySupport(libraryIndexer, augmentationCommander, shardedCollectionIndexer, inject[MonitoredAwait])
 
-        val searchCommander = new SearchCommanderImpl(
+        val searchCommander = new UriSearchCommanderImpl(
           activeShards,
           searchFactory,
           languageCommander,

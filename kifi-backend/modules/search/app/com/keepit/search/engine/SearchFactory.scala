@@ -9,7 +9,9 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import com.keepit.search._
+import com.keepit.search.engine.library.LibrarySearch
 import com.keepit.search.engine.parser.KQueryParser
+import com.keepit.search.engine.uri.{ UriSearch, UriSearchImpl, UriSearchNonUserImpl }
 import com.keepit.search.index.graph.keep.{ KeepFields, ShardedKeepIndexer }
 import com.keepit.search.index.graph.library.{ LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
@@ -52,7 +54,7 @@ class SearchFactory @Inject() (
     lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
-    config: SearchConfig): Seq[KifiSearch] = {
+    config: SearchConfig): Seq[UriSearch] = {
 
     val currentTime = System.currentTimeMillis()
 
@@ -91,7 +93,7 @@ class SearchFactory @Inject() (
           val timeLogs = new SearchTimeLogs(currentTime)
           timeLogs.queryParsing(parseDoneAt)
 
-          new KifiSearchImpl(
+          new UriSearchImpl(
             userId,
             numHitsToReturn,
             filter,
@@ -108,7 +110,7 @@ class SearchFactory @Inject() (
             timeLogs
           )
         }
-      case None => Seq.empty[KifiSearch]
+      case None => Seq.empty[UriSearch]
     }
   }
 
@@ -151,7 +153,7 @@ class SearchFactory @Inject() (
     lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
-    config: SearchConfig): Seq[KifiSearchNonUserImpl] = {
+    config: SearchConfig): Seq[UriSearchNonUserImpl] = {
 
     val currentTime = System.currentTimeMillis()
 
@@ -190,7 +192,7 @@ class SearchFactory @Inject() (
           val timeLogs = new SearchTimeLogs(currentTime)
           timeLogs.queryParsing(parseDoneAt)
 
-          new KifiSearchNonUserImpl(
+          new UriSearchNonUserImpl(
             numHitsToReturn,
             filter,
             config,
@@ -204,7 +206,7 @@ class SearchFactory @Inject() (
             timeLogs
           )
         }
-      case None => Seq.empty[KifiSearchNonUserImpl]
+      case None => Seq.empty[UriSearchNonUserImpl]
     }
   }
 

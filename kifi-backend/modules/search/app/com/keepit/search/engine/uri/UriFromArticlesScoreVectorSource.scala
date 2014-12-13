@@ -1,5 +1,6 @@
-package com.keepit.search.engine
+package com.keepit.search.engine.uri
 
+import com.keepit.search.engine.{ DirectScoreContext, Visibility, DebugOption, ScoreVectorSourceLike }
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.{ SearchFilter, Searcher }
 import com.keepit.search.index.article.{ ArticleFields, ArticleVisibility }

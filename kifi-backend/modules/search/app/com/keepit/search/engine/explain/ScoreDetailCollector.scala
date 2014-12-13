@@ -1,13 +1,14 @@
 package com.keepit.search.engine.explain
 
+import com.keepit.search.engine.uri.UriResultCollector
 import com.keepit.search.engine.{ Visibility, ScoreContext }
-import com.keepit.search.engine.result.{ KifiResultCollector, ResultCollector }
+import com.keepit.search.engine.result.ResultCollector
 import com.keepit.search.tracking.ResultClickBoosts
 import scala.collection.mutable.ListBuffer
 
 class ScoreDetailCollector(targetId: Long, clickBoostsProvider: Option[() => ResultClickBoosts], val matchingThreshold: Float, sharingBoost: Option[Float]) extends ResultCollector[ScoreContext] {
 
-  val minMatchingThreshold = scala.math.min(matchingThreshold, KifiResultCollector.MIN_MATCHING)
+  val minMatchingThreshold = scala.math.min(matchingThreshold, UriResultCollector.MIN_MATCHING)
 
   private[this] var _matching: Float = 0.0f
   private[this] var _boostedScore: Float = 0.0f

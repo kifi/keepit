@@ -1,6 +1,7 @@
-package com.keepit.search.engine
+package com.keepit.search.engine.uri
 
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.search.engine._
 import com.keepit.search.engine.explain.TargetedScorer
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }

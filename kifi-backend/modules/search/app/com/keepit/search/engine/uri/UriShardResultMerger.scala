@@ -1,12 +1,13 @@
-package com.keepit.search.engine.result
+package com.keepit.search.engine.uri
 
 import com.keepit.search.SearchConfig
 import com.keepit.search.engine.Visibility
 import com.keepit.search.util.MergeQueue
 import play.api.libs.json.JsResultException
+
 import scala.math._
 
-class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
+class UriShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   // get config params
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
@@ -16,7 +17,7 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
 
-  def merge(results: Seq[KifiShardResult], maxHits: Int, withFinalScores: Boolean = false): KifiShardResult = {
+  def merge(results: Seq[UriShardResult], maxHits: Int, withFinalScores: Boolean = false): UriShardResult = {
     val (myTotal, friendsTotal, othersTotal) = mergeTotals(results)
     val hits = mergeHits(results, maxHits, withFinalScores)
     val show = results.exists(_.show)
@@ -30,7 +31,7 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
       }
     }
 
-    KifiShardResult(
+    UriShardResult(
       hits,
       myTotal,
       friendsTotal,
@@ -40,7 +41,7 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     )
   }
 
-  private def mergeHits(results: Seq[KifiShardResult], maxHits: Int, withFinalScores: Boolean): Seq[KifiShardHit] = {
+  private def mergeHits(results: Seq[UriShardResult], maxHits: Int, withFinalScores: Boolean): Seq[UriShardHit] = {
 
     val myHits = createQueue(maxHits)
     val friendsHits = createQueue(maxHits)
@@ -108,11 +109,11 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     }
   }
 
-  @inline private[this] def createQueue(maxHits: Int) = new MergeQueue[KifiShardHit](maxHits)
+  @inline private[this] def createQueue(maxHits: Int) = new MergeQueue[UriShardHit](maxHits)
 
   @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 
-  private def mergeTotals(results: Seq[KifiShardResult]): (Int, Int, Int) = {
+  private def mergeTotals(results: Seq[UriShardResult]): (Int, Int, Int) = {
     var myTotal = 0
     var friendsTotal = 0
     var othersTotal = 0

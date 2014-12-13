@@ -1,27 +1,27 @@
-package com.keepit.search.engine.result
+package com.keepit.search.engine.uri
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.engine.ScoreContext
-import com.keepit.search.engine.Visibility
+import com.keepit.search.engine.result.{ HitQueue, ResultCollector }
+import com.keepit.search.engine.{ ScoreContext, Visibility }
 import com.keepit.search.tracking.ResultClickBoosts
 
-object KifiResultCollector {
+object UriResultCollector {
   val MIN_MATCHING = 0.6f
 
   def createQueue(sz: Int): HitQueue = new HitQueue(sz)
 }
 
-abstract class KifiResultCollector extends ResultCollector[ScoreContext] {
+abstract class UriResultCollector extends ResultCollector[ScoreContext] {
   def getResults(): (HitQueue, HitQueue, HitQueue)
 }
 
-class KifiResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, maxHitsPerCategory: Int, matchingThreshold: Float, sharingBoost: Float) extends KifiResultCollector with Logging {
+class UriResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, maxHitsPerCategory: Int, matchingThreshold: Float, sharingBoost: Float) extends UriResultCollector with Logging {
 
-  import KifiResultCollector._
+  import com.keepit.search.engine.uri.UriResultCollector._
 
   require(matchingThreshold <= 1.0f)
 
-  private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, KifiResultCollector.MIN_MATCHING)
+  private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, UriResultCollector.MIN_MATCHING)
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory)
@@ -64,13 +64,13 @@ class KifiResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts,
   def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
 }
 
-class KifiResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: Float) extends KifiResultCollector with Logging {
+class UriResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: Float) extends UriResultCollector with Logging {
 
-  import KifiResultCollector._
+  import com.keepit.search.engine.uri.UriResultCollector._
 
   require(matchingThreshold <= 1.0f)
 
-  private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, KifiResultCollector.MIN_MATCHING)
+  private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, UriResultCollector.MIN_MATCHING)
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory)
@@ -99,13 +99,13 @@ class KifiResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold:
   def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
 }
 
-class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
+class NonUserUriResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
 
-  import KifiResultCollector._
+  import com.keepit.search.engine.uri.UriResultCollector._
 
   require(matchingThreshold <= 1.0f)
 
-  private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, KifiResultCollector.MIN_MATCHING)
+  private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, UriResultCollector.MIN_MATCHING)
   private[this] val hits = createQueue(maxHitsPerCategory)
 
   override def collect(ctx: ScoreContext): Unit = {
@@ -121,46 +121,4 @@ class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Flo
   }
 
   def getResults(): HitQueue = hits
-}
-
-class LibraryResultCollector(maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
-
-  import KifiResultCollector._
-
-  require(matchingThreshold <= 1.0f)
-
-  private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, KifiResultCollector.MIN_MATCHING)
-  private[this] val myHits = createQueue(maxHitsPerCategory)
-  private[this] val friendsHits = createQueue(maxHitsPerCategory)
-  private[this] val othersHits = createQueue(maxHitsPerCategory)
-
-  override def collect(ctx: ScoreContext): Unit = {
-    val id = ctx.id
-
-    // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
-    val matching = ctx.computeMatching(minMatchingThreshold)
-
-    if (matching > 0.0f) {
-      var score = 0.0f
-
-      if (matching >= matchingThreshold) {
-        score = ctx.score() * matching
-      }
-
-      if (score > 0.0f) {
-        val visibility = ctx.visibility
-        val relevantQueue = if ((visibility & Visibility.OWNER) != 0) {
-          myHits
-        } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
-          friendsHits
-        } else {
-          othersHits
-        }
-        val boostedScore = if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) score * myLibraryBoost else score
-        relevantQueue.insert(id, boostedScore, visibility, ctx.secondaryId)
-      }
-    }
-  }
-
-  def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
 }

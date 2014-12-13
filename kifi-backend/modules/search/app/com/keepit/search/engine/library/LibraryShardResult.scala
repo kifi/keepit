@@ -1,10 +1,10 @@
-package com.keepit.search.engine.result
+package com.keepit.search.engine.library
 
-import com.keepit.model.{ Keep, Library }
-import com.keepit.common.db.{ Id }
-import play.api.libs.json.Json
-import com.keepit.search.index.graph.keep.KeepRecord
+import com.keepit.common.db.Id
 import com.keepit.common.json.TupleFormat
+import com.keepit.model.{ Keep, Library }
+import com.keepit.search.index.graph.keep.KeepRecord
+import play.api.libs.json.Json
 
 case class LibraryShardHit(
   id: Id[Library],

@@ -1,8 +1,8 @@
 package com.keepit.search
 
 import com.keepit.search.engine.explain.Explanation
-import com.keepit.search.engine.{ KifiSearch, DebugOption, SearchFactory }
-import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardResultMerger, KifiShardResult }
+import com.keepit.search.engine.uri.{ UriSearch, UriShardResultMerger, UriShardResult, UriSearchResult }
+import com.keepit.search.engine.{ DebugOption, SearchFactory }
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
 import scala.util.Try
@@ -21,8 +21,8 @@ import com.keepit.search.result._
 import com.keepit.search.index.DefaultAnalyzer
 import scala.collection.mutable.ListBuffer
 
-@ImplementedBy(classOf[SearchCommanderImpl])
-trait SearchCommander {
+@ImplementedBy(classOf[UriSearchCommanderImpl])
+trait UriSearchCommander {
   def search(
     userId: Id[User],
     acceptLangs: Seq[String],
@@ -60,7 +60,7 @@ trait SearchCommander {
     lastUUIDStr: Option[String],
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String] = None): Future[KifiPlainResult]
+    debug: Option[String] = None): Future[UriSearchResult]
 
   def distSearch2(
     shards: Set[Shard[NormalizedURI]],
@@ -74,7 +74,7 @@ trait SearchCommander {
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
-    debug: Option[String]): Future[KifiShardResult]
+    debug: Option[String]): Future[UriShardResult]
 
   def explain(
     userId: Id[User],
@@ -90,7 +90,7 @@ trait SearchCommander {
 }
 
 @Singleton
-class SearchCommanderImpl @Inject() (
+class UriSearchCommanderImpl @Inject() (
     shards: ActiveShards,
     searchFactory: SearchFactory,
     languageCommander: LanguageCommander,
@@ -99,7 +99,7 @@ class SearchCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     override val searchClient: DistributedSearchServiceClient,
     shoeboxClient: ShoeboxServiceClient,
-    monitoredAwait: MonitoredAwait) extends SearchCommander with Sharding with Logging {
+    monitoredAwait: MonitoredAwait) extends UriSearchCommander with Sharding with Logging {
 
   implicit private[this] val defaultExecutionContext = fj
 
@@ -252,7 +252,7 @@ class SearchCommanderImpl @Inject() (
     lastUUID: Option[String],
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String]): Future[KifiPlainResult] = {
+    debug: Option[String]): Future[UriSearchResult] = {
 
     if (maxHits <= 0) throw new IllegalArgumentException("maxHits is zero")
 
@@ -273,7 +273,7 @@ class SearchCommanderImpl @Inject() (
     if (libraryContext == LibraryContext.Invalid) {
       // return an empty result for an invalid library public id
       val searchFilter = SearchFilter(filter, libraryContext, context)
-      return Future.successful(KifiPlainResult(query, searchFilter, Lang("en"), KifiShardResult.empty, Set(), None))
+      return Future.successful(UriSearchResult(query, searchFilter, Lang("en"), UriShardResult.empty, Set(), None))
     }
 
     val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, libraryContext)
@@ -282,12 +282,12 @@ class SearchCommanderImpl @Inject() (
 
     timing.presearch
 
-    var resultFutures = new ListBuffer[Future[KifiShardResult]]()
+    var resultFutures = new ListBuffer[Future[UriShardResult]]()
 
     if (dispatchPlan.nonEmpty) {
       // dispatch query
       searchClient.distSearch2(dispatchPlan, userId, firstLang, secondLang, query, filter, libraryContext, maxHits, context, debug).foreach { f =>
-        resultFutures += f.map(json => new KifiShardResult(json))(immediate)
+        resultFutures += f.map(json => new UriShardResult(json))(immediate)
       }
     }
 
@@ -300,7 +300,7 @@ class SearchCommanderImpl @Inject() (
     Future.sequence(resultFutures).map { results =>
       val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
       val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
-      val resultMerger = new KifiShardResultMerger(enableTailCutting, config)
+      val resultMerger = new UriShardResultMerger(enableTailCutting, config)
       val mergedResult = resultMerger.merge(results, maxHits, withFinalScores = true)
 
       timing.search
@@ -308,7 +308,7 @@ class SearchCommanderImpl @Inject() (
       timing.done
 
       val idFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.id)
-      val plainResult = KifiPlainResult(query, searchFilter, firstLang, mergedResult, idFilter, searchExperimentId)
+      val plainResult = UriSearchResult(query, searchFilter, firstLang, mergedResult, idFilter, searchExperimentId)
 
       SafeFuture {
         // stash timing information
@@ -357,7 +357,7 @@ class SearchCommanderImpl @Inject() (
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String] = None): Future[KifiShardResult] = {
+    debug: Option[String] = None): Future[UriShardResult] = {
 
     val configFuture = searchFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
@@ -375,7 +375,7 @@ class SearchCommanderImpl @Inject() (
       } catch {
         case e: Exception =>
           log.error("unable to create KifiNonUserSearch", e)
-          Seq.empty[KifiSearch]
+          Seq.empty[UriSearch]
       }
     } else {
       // logged in user
@@ -386,7 +386,7 @@ class SearchCommanderImpl @Inject() (
       if (debug.isDefined) search.debug(debugOption)
       SafeFuture { search.execute() }
     }.map { results =>
-      val resultMerger = new KifiShardResultMerger(enableTailCutting, config)
+      val resultMerger = new UriShardResultMerger(enableTailCutting, config)
       resultMerger.merge(results, maxHits)
     }
   }

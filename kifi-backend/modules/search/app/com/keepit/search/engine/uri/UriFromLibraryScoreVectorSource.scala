@@ -1,7 +1,8 @@
-package com.keepit.search.engine
+package com.keepit.search.engine.uri
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.logging.Logging
+import com.keepit.search.engine._
 import com.keepit.search.engine.explain.DirectExplainContext
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.index.graph.library.LibraryFields
