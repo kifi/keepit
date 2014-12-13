@@ -61,6 +61,7 @@ class UserController @Inject() (
     searchClient: SearchServiceClient,
     abookUploadConf: ABookUploadConf,
     emailSender: EmailSenderProvider,
+    libraryCommander: LibraryCommander,
     fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
@@ -600,11 +601,12 @@ class UserController @Inject() (
     val viewer = request.userOpt
     try {
       val profile = userCommander.profile(Username(username), viewer)
+      val numLibraries = libraryCommander.countLibraries(profile.user.id.get, viewer.map(_.id.get))
       Ok(Json.obj(
         "firstName" -> profile.user.firstName,
         "lastName" -> profile.user.lastName,
         "pictureName" -> profile.user.pictureName,
-        "numLibraries" -> 0
+        "numLibraries" -> numLibraries
       ))
     } catch {
       case unfe: UserNotFoundException => NotFound(username)

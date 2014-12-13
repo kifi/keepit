@@ -39,6 +39,7 @@ class FakeUserActionsHelper(
 
   def unsetUser(): Unit = {
     fixedUser = None
+    fixedExperiments = Set()
   }
 
   override def getUserIdOptWithFallback(implicit request: Request[_]): Future[Option[Id[User]]] = Future.successful(fixedUser.flatMap(_.id))

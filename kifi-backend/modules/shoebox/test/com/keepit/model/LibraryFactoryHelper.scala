@@ -10,17 +10,15 @@ object LibraryFactoryHelper {
 
   implicit class LibraryPersister(partialLibrary: PartialLibrary) {
     def saved(implicit injector: Injector, session: RWSession): Library = {
-      injector.getInstance(classOf[LibraryRepo]).save(partialLibrary.get.copy(id = None))
+      val library = injector.getInstance(classOf[LibraryRepo]).save(partialLibrary.get.copy(id = None))
+      membership().withLibraryOwner(library).saved
+      library
     }
   }
 
   implicit class LibraryOwnershipPersister(library: Library) {
-    def savedOwnerMembership(implicit injector: Injector, session: RWSession): Library = {
-      membership().withLibraryOwner(library).saved
-      library
-    }
-    def savedFollowerMembership(follower: User)(implicit injector: Injector, session: RWSession): Library = {
-      membership().withLibraryFollower(library, follower).saved
+    def savedFollowerMembership(followers: User*)(implicit injector: Injector, session: RWSession): Library = {
+      followers foreach { follower => membership().withLibraryFollower(library, follower).saved }
       library
     }
   }

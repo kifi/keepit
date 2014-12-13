@@ -192,7 +192,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
         val (user, oldOrdering, tag1, tag2, tag3) = db.readWrite { implicit s =>
           val user1 = UserFactory.user().saved
           val lib1 = library().saved
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = false))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = false, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           val marioTag = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Mario")))
           val luigiTag = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Luigi")))

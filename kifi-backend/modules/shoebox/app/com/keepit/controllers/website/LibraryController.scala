@@ -12,6 +12,7 @@ import com.keepit.common.json
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.ImageSize
 import com.keepit.common.time.Clock
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
@@ -21,7 +22,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
 
 import scala.concurrent.Future
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 
 class LibraryController @Inject() (
   db: Database,
@@ -51,7 +52,7 @@ class LibraryController @Inject() (
       case Left(fail) =>
         Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
       case Right(newLibrary) =>
-        libraryCommander.createFullLibraryInfo(Some(request.userId), false, newLibrary).map { lib =>
+        libraryCommander.createFullLibraryInfo(Some(request.userId), false, newLibrary, LibraryController.defaultLibraryImageSize).map { lib =>
           Ok(Json.toJson(lib))
         }
     }
@@ -83,9 +84,10 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibraryById(pubId: PublicId[Library], showPublishedLibraries: Boolean) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getLibraryById(pubId: PublicId[Library], showPublishedLibraries: Boolean, imageSize: Option[String] = None) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val id = Library.decodePublicId(pubId).get
-    libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, id) map {
+    val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
+    libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, id, idealSize) map {
       case (libInfo, accessStr) => Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
     }
   }
@@ -96,12 +98,13 @@ class LibraryController @Inject() (
     Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean) = MaybeUserAction.async { request =>
+  def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), followRedirect = false) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
+          val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
           request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library).map { libInfo =>
+          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize).map { libInfo =>
             val accessStr = request.userIdOpt.map { userId =>
               libraryCommander.getAccessStr(userId, library.id.get)
             }.flatten.getOrElse {
@@ -523,6 +526,10 @@ class LibraryController @Inject() (
           Ok(Json.obj("libs" -> libs, "related" -> isRelated))
       }
   }
+}
+
+object LibraryController {
+  val defaultLibraryImageSize = ImageSize(640, 480)
 }
 
 private object ImplicitHelper {

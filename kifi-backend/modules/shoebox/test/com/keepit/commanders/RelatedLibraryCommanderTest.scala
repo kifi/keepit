@@ -37,6 +37,7 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
   val fakeCortex = new FakeCortexServiceClientImpl(null) {
     override def similarLibraries(libId: Id[Library], limit: Int)(implicit version: LDAVersionOpt): Future[Seq[Id[Library]]] = {
       if (libId == Id[Library](1)) return Future.successful((2 to 5).map { Id[Library](_) })
+      else if (libId == Id[Library](10)) return Future.successful(Seq(Id[Library](11)))
       else return Future.successful(Seq())
     }
   }
@@ -56,13 +57,16 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
           libRepo.save(lib)
 
           // user i owns library i
-          libMemRepo.save(LibraryMembership(libraryId = Id[Library](i), userId = Id[User](i), access = LibraryAccess.READ_WRITE, showInSearch = true))
+          libMemRepo.save(LibraryMembership(libraryId = Id[Library](i), userId = Id[User](i), access = LibraryAccess.READ_WRITE, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           // a few followers for library i
           (1 until i).foreach { j =>
-            libMemRepo.save(LibraryMembership(libraryId = Id[Library](i), userId = Id[User](j), access = LibraryAccess.READ_ONLY, showInSearch = true))
+            libMemRepo.save(LibraryMembership(libraryId = Id[Library](i), userId = Id[User](j), access = LibraryAccess.READ_ONLY, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
           }
         }
+
+        // 1 secret library
+        libRepo.save(Library(name = s"Library 11", ownerId = Id[User](1), visibility = LibraryVisibility.SECRET, slug = LibrarySlug("slug"), memberCount = 1))
       }
     }
 
@@ -77,6 +81,12 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
 
       val libsF2 = commander.relatedLibraries(Id[Library](6))
       Await.result(libsF2, FiniteDuration(5, SECONDS)).sortBy(_.id.get).map { _.id.get.id } === List()
+    }
+
+    "do not show non-publised libraries" in {
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex)
+      val libsF = commander.relatedLibraries(Id[Library](10))
+      Await.result(libsF, FiniteDuration(5, SECONDS)).sortBy(_.id.get).map { _.id.get.id } === List()
     }
 
     "get top followed libraries" in {
