@@ -2,9 +2,10 @@ package com.keepit.search.index.message
 
 import com.keepit.common.db.Id
 import com.keepit.model.User
-import com.keepit.search.{ SearchConfig, Searcher }
+import com.keepit.search.SearchConfig
 import com.keepit.search.engine.query.ConditionalQuery
 import com.keepit.common.strings.UTF8
+import com.keepit.search.index.Searcher
 
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.{ Query, TermQuery }

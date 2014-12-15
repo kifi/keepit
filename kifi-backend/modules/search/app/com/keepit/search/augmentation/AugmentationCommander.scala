@@ -6,7 +6,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.search.index.graph.keep.{ KeepRecord, ShardedKeepIndexer, KeepFields }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.index.Term
-import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import scala.collection.JavaConversions._
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.index.graph.library.LibraryFields.Visibility.{ SECRET, DISCOVERABLE, PUBLISHED }
@@ -19,7 +19,7 @@ import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.SearchFactory
 import com.keepit.common.core._
-import com.keepit.search.{ Searcher, LibraryContext, DistributedSearchServiceClient }
+import com.keepit.search.{ LibraryContext, DistributedSearchServiceClient }
 import com.keepit.search.augmentation.AugmentationCommander.DistributionPlan
 import com.keepit.search.index.graph.library.{ LibraryRecord, LibraryFields, LibraryIndexer }
 import com.keepit.common.strings.Profanity

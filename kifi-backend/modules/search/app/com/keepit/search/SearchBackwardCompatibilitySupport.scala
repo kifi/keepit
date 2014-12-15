@@ -7,6 +7,7 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.{ Collection, Library, NormalizedURI, User }
 import com.keepit.search.engine.Visibility
 import com.keepit.search.engine.uri.{ UriShardHit, UriShardResult }
+import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.collection.{ CollectionSearcher, CollectionSearcherWithUser }
 import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.result._

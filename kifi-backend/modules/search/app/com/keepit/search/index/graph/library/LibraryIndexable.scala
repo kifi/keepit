@@ -3,8 +3,8 @@ package com.keepit.search.index.graph.library
 import com.keepit.common.db.Id
 import com.keepit.model.view.LibraryMembershipView
 import com.keepit.model._
-import com.keepit.search.index.{ DefaultAnalyzer, Indexable, FieldDecoder }
-import com.keepit.search.{ Searcher, LangDetector }
+import com.keepit.search.index.{ Searcher, DefaultAnalyzer, Indexable, FieldDecoder }
+import com.keepit.search.LangDetector
 
 object LibraryFields {
   val nameField = "t"

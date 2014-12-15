@@ -3,10 +3,10 @@ package com.keepit.search.index.graph.keep
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model.{ Hashtag, Keep }
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
+import com.keepit.search.index.Searcher
 import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
 import scala.collection.JavaConversions._
 import play.api.libs.json.Json
-import com.keepit.search.Searcher
 
 case class KeepRecord(title: Option[String], url: String, createdAt: Long, libraryId: Long, externalId: ExternalId[Keep], tags: Set[Hashtag])
 
