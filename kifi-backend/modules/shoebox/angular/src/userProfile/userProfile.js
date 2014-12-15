@@ -120,17 +120,17 @@ angular.module('kifi')
 
 
 .controller('UserProfileLibrariesListCtrl', [
-  '$scope', 'libraryType',
-  function ($scope, libraryType) {
-    $scope.libraryType = libraryType;
+  '$scope', '$state',
+  function ($scope, $state) {
+    $scope.libraryType = $state.current.data.libraryType;
   }
 ])
 
 
 .controller('UserProfilePeopleCtrl', [
-  '$scope', 'peopleType',
-  function ($scope, peopleType) {
-    $scope.peopleType = peopleType;
+  '$scope', '$state',
+  function ($scope, $state) {
+    $scope.peopleType = $state.current.data.peopleType;
   }
 ])
 

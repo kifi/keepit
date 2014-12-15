@@ -38,31 +38,41 @@ angular.module('kifi')
           url: '',
           templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
           controller: 'UserProfileLibrariesListCtrl',
-          resolve: { libraryType: function () { return 'My'; } }
+          data: {
+            libraryType: 'My'
+          }
         })
         .state('userProfile.libraries.following', {
           url: '/following',
           templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
           controller: 'UserProfileLibrariesListCtrl',
-          resolve: { libraryType: function () { return 'Following'; } }
+          data: {
+            libraryType: 'Following'
+          }
         })
         .state('userProfile.libraries.invited', {
           url: '/invited',
           templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
           controller: 'UserProfileLibrariesListCtrl',
-          resolve: { libraryType: function () { return 'Invited'; } }
+          data: {
+            libraryType: 'Invited'
+          }
         })
       .state('userProfile.friends', {
         url: '/friends',
         templateUrl: 'userProfile/userProfilePeople.tpl.html',
         controller: 'UserProfilePeopleCtrl',
-        resolve: { peopleType: function () { return 'Friends'; } }
+        data: {
+          peopleType: 'Friends'
+        }
       })
       .state('userProfile.followers', {
         url: '/followers',
         templateUrl: 'userProfile/userProfilePeople.tpl.html',
         controller: 'UserProfilePeopleCtrl',
-        resolve: { peopleType: function () { return 'Followers'; } }
+        data: {
+          peopleType: 'Followers'
+        }
       })
       .state('userProfile.helped', {
         url: '/helped',
