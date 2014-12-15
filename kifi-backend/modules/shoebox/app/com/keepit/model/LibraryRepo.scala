@@ -50,12 +50,13 @@ class LibraryRepoImpl @Inject() (
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def description = column[Option[String]]("description", O.Nullable)
     def slug = column[LibrarySlug]("slug", O.NotNull)
+    def color = column[HexColor]("color", O.Nullable)
     def kind = column[LibraryKind]("kind", O.NotNull)
     def universalLink = column[String]("universal_link", O.NotNull)
     def memberCount = column[Int]("member_count", O.NotNull)
     def lastKept = column[Option[DateTime]]("last_kept", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind, universalLink, memberCount, lastKept) <> ((Library.applyFromDbRow _).tupled, Library.unapply)
+    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, color.?, state, seq, kind, universalLink, memberCount, lastKept) <> ((Library.applyFromDbRow _).tupled, Library.unapply)
   }
 
   def table(tag: Tag) = new LibraryTable(tag)
