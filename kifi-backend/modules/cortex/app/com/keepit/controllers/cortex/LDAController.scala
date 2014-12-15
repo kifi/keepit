@@ -160,8 +160,9 @@ class LDAController @Inject() (
     val js = request.body
     val userId = (js \ "user").as[Id[User]]
     val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+    val experiment = (js \ "experiment").asOpt[Boolean].getOrElse(false)
     val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, Some(userId))
-    val explain = lda.explainFeed(userId, uris)(version)
+    val explain = lda.explainFeed(userId, uris, experiment)(version)
     Ok(Json.toJson(explain))
   }
 
