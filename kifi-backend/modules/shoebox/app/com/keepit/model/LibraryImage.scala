@@ -21,14 +21,14 @@ case class LibraryImage(
     sourceFileHash: ImageHash,
     isOriginal: Boolean) extends BaseImage with Model[LibraryImage] {
 
-  val imagePosition = LibraryImagePosition(positionX, positionY)
+  def position = LibraryImagePosition(positionX, positionY)
   def withId(id: Id[LibraryImage]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }
 
-@json case class LibraryImageInfo(path: String, x: Option[Int], y: Option[Int])
+@json case class LibraryImageInfo(path: String, x: Int, y: Int)
 object LibraryImageInfo {
-  def createInfo(img: LibraryImage) = LibraryImageInfo(img.imagePath, img.positionX, img.positionY)
+  def createInfo(img: LibraryImage) = LibraryImageInfo(img.imagePath, img.positionX.getOrElse(50), img.positionY.getOrElse(50))
 }
 
 case class LibraryImagePosition(x: Option[Int], y: Option[Int])
