@@ -22,7 +22,7 @@ trait LibraryImageCommander {
   def getUrl(libraryImage: LibraryImage): String
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage]
   def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, requestId: Option[Id[LibraryImageRequest]] = None): Future[ImageProcessDone]
-  def positionLibraryImage(libraryId: Id[Library], imagePosition: LibraryImagePosition): Seq[LibraryImage]
+  def positionLibraryImage(libraryId: Id[Library], position: LibraryImagePosition): Seq[LibraryImage]
   def removeImageForLibrary(libraryId: Id[Library]): Boolean // Returns true if images were removed, false otherwise
 }
 
@@ -61,11 +61,9 @@ class LibraryImageCommanderImpl @Inject() (
     db.readWrite { implicit s =>
       val toPosition = libraryImageRepo.getForLibraryId(libraryId)
       val positionedImages = toPosition.map { libImage =>
-        val setX = position.x.getOrElse(libImage.positionX.getOrElse(50))
-        val setY = position.y.getOrElse(libImage.positionY.getOrElse(50))
         libraryImageRepo.save(libImage.copy(
-          positionX = Some(setX),
-          positionY = Some(setY),
+          positionX = position.x,
+          positionY = position.y,
           state = LibraryImageStates.ACTIVE))
       }
       log.info("[lic] Positioning: " + toPosition.map(_.imagePath))
@@ -120,18 +118,16 @@ class LibraryImageCommanderImpl @Inject() (
       val libraryImages = results.map {
         case uploadedImage =>
           val isOriginal = uploadedImage.key.takeRight(7).indexOf(originalLabel) != -1
-          val setX = position.x.orElse(Some(50))
-          val setY = position.y.orElse(Some(50))
 
           val libImg = LibraryImage(libraryId = libraryId, imagePath = uploadedImage.key, format = uploadedImage.format,
-            width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight, positionX = setX, positionY = setY,
+            width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight, positionX = position.x, positionY = position.y,
             source = source, sourceFileHash = originalImage.hash, isOriginal = isOriginal, state = LibraryImageStates.ACTIVE)
           uploadedImage.image.flush()
           libImg
       }
       db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
         val existingImages = libraryImageRepo.getForLibraryId(libraryId, None).toSet
-        replaceOldLibraryImagesWithNew(existingImages, libraryImages)
+        replaceOldLibraryImagesWithNew(existingImages, libraryImages, position)
       }
       ImageProcessState.StoreSuccess
     }.recover {
@@ -143,27 +139,25 @@ class LibraryImageCommanderImpl @Inject() (
     }
   }
 
-  private def replaceOldLibraryImagesWithNew(oldLibraryImages: Set[LibraryImage], newLibraryImages: Set[LibraryImage])(implicit session: RWSession) = {
+  private def replaceOldLibraryImagesWithNew(oldLibraryImages: Set[LibraryImage], newLibraryImages: Set[LibraryImage], position: LibraryImagePosition)(implicit session: RWSession) = {
     if (oldLibraryImages.isEmpty) {
       newLibraryImages.map(libraryImageRepo.save)
     } else {
-      val (shouldBeActive, shouldBeInactive) = oldLibraryImages.partition { existingImg =>
-        newLibraryImages.find { newImg =>
-          existingImg.sourceFileHash == newImg.sourceFileHash && existingImg.width == newImg.width && existingImg.height == newImg.height
-        }.nonEmpty
-      }
-      val toActivate = shouldBeActive.filter(_.state != LibraryImageStates.ACTIVE).map(_.copy(state = LibraryImageStates.ACTIVE))
+      val (shouldBeActive, shouldBeInactive) = oldLibraryImages.partition(sameHashAndWidthAndHeightAsAnyOf(newLibraryImages))
+      val toUpdate = shouldBeActive
+        .filter(i => i.state != LibraryImageStates.ACTIVE || i.positionX != position.x || i.positionY != position.y)
+        .map(_.copy(state = LibraryImageStates.ACTIVE, positionX = position.x, positionY = position.y))
       val toDeactivate = shouldBeInactive.filter(_.state != LibraryImageStates.INACTIVE).map(_.copy(state = LibraryImageStates.INACTIVE))
-      val toCreate = newLibraryImages.filter { newImg =>
-        oldLibraryImages.find { existingImg =>
-          existingImg.sourceFileHash == newImg.sourceFileHash && existingImg.width == newImg.width && existingImg.height == newImg.height
-        }.isEmpty
-      }
+      val toCreate = newLibraryImages.filterNot(sameHashAndWidthAndHeightAsAnyOf(oldLibraryImages))
 
-      log.info("[lic] Activating:" + toActivate.map(_.imagePath) + "\nDeactivating:" + toDeactivate.map(_.imagePath) + "\nCreating:" + toCreate.map(_.imagePath))
+      log.info("[lic] Updating:" + toUpdate.map(_.imagePath) + "\nDeactivating:" + toDeactivate.map(_.imagePath) + "\nCreating:" + toCreate.map(_.imagePath))
       toDeactivate.foreach(libraryImageRepo.save)
-      (toActivate ++ toCreate).map(libraryImageRepo.save)
+      (toUpdate ++ toCreate).map(libraryImageRepo.save)
     }
+  }
+
+  private def sameHashAndWidthAndHeightAsAnyOf(images: Set[LibraryImage])(image: LibraryImage): Boolean = {
+    images.exists(i => i.sourceFileHash == image.sourceFileHash && i.width == image.width && i.height == image.height)
   }
 
   private def updateRequestState(state: State[LibraryImageRequest])(implicit requestIdOpt: Option[Id[LibraryImageRequest]]): Unit = {
