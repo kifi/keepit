@@ -262,7 +262,7 @@ class LDACommander @Inject() (
     }
   }
 
-  def explainFeed(userId: Id[User], uris: Seq[Id[NormalizedURI]], experiment: Boolean)(implicit version: ModelVersion[DenseLDA]): Seq[Seq[Id[Keep]]] = {
+  def explainFeed(userId: Id[User], uris: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[Seq[Id[Keep]]] = {
 
     val MAX_KL_DIST = 0.5f // empirically this should be < 1.0
     val topK = 3
@@ -270,22 +270,18 @@ class LDACommander @Inject() (
     def bestMatch(userFeats: Seq[(Id[Keep], Seq[LDATopic], LDATopicFeature)], uriFeat: URILDATopic): Seq[Id[Keep]] = {
 
       val bitSet = new BitSet(uriFeat.feature.get.value.size)
-      List(uriFeat.firstTopic.get, uriFeat.firstTopic.get, uriFeat.thirdTopic.get).foreach { t => bitSet.set(t.index) }
+      List(uriFeat.firstTopic.get, uriFeat.secondTopic.get, uriFeat.thirdTopic.get).foreach { t => bitSet.set(t.index) }
       var numIntersects = 0
 
       val scored = userFeats.map {
         case (kid, topics, ufeat) =>
           val score = KL_divergence(ufeat.value, uriFeat.feature.get.value)
-          log.info("uri has topics: " + topics.mkString(", "))
+          numIntersects = 0
 
-          val multiplier = if (experiment) {
-            numIntersects = 0
-            topics.foreach { t =>
-              if (bitSet.get(t.index)) numIntersects += 1
-            }
-            val multiplier = if (numIntersects >= 1) 1f else 0f
-            multiplier
-          } else 1f
+          topics.foreach { t =>
+            if (bitSet.get(t.index)) numIntersects += 1
+          }
+          val multiplier = if (numIntersects >= 1) 1f else 0f
 
           (kid, score * multiplier)
       }
