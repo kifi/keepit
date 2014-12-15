@@ -1,4 +1,4 @@
-package com.keepit.search.sharding
+package com.keepit.search.index.sharding
 
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id

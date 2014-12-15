@@ -100,3 +100,12 @@ object LimitedAugmentationInfo {
 
   val empty = LimitedAugmentationInfo(Seq.empty, 0, 0, Seq.empty, 0, 0, Seq.empty, 0)
 }
+
+case class SharingUserInfo(
+  sharingUserIds: Set[Id[User]],
+  keepersEdgeSetSize: Int)
+
+object SharingUserInfo {
+  private implicit val userIdFormat = Id.format[User]
+  implicit val sharingUserInfoFormat = Json.format[SharingUserInfo]
+}

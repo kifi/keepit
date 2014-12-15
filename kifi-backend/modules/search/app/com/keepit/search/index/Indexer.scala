@@ -12,7 +12,7 @@ import org.apache.lucene.util.Version
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.search.{ Similarity, IndexInfo, Searcher }
+import com.keepit.search.{ Similarity, Searcher }
 import org.apache.commons.io.FileUtils
 import org.apache.lucene.store.IOContext
 import scala.collection.JavaConversions._

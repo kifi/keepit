@@ -11,7 +11,7 @@ import scala.collection.JavaConversions._
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.index.graph.library.LibraryFields.Visibility.{ SECRET, DISCOVERABLE, PUBLISHED }
 import scala.collection.mutable.{ ListBuffer, Map => MutableMap, Set => MutableSet }
-import com.keepit.search.sharding.{ ActiveShards, Sharding, Shard }
+import com.keepit.search.index.sharding.{ ActiveShards, Sharding, Shard }
 import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

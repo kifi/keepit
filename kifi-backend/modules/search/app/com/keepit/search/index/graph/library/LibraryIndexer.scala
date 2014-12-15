@@ -2,7 +2,7 @@ package com.keepit.search.index.graph.library
 
 import com.keepit.model.{ LibraryAndMemberships, Library }
 import com.keepit.common.db.{ Id, SequenceNumber }
-import com.keepit.search.IndexInfo
+import com.keepit.search.index.IndexInfo
 import com.keepit.search.index._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.Future

@@ -1,4 +1,4 @@
-package com.keepit.search.sharding
+package com.keepit.search.index.sharding
 
 import org.specs2.mutable._
 import com.keepit.common.db.Id

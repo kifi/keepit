@@ -1,10 +1,10 @@
-package com.keepit.search.sharding
+package com.keepit.search.index.sharding
 
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.IndexManager
 import com.keepit.search.index.Indexer
-import com.keepit.search.IndexInfo
+import com.keepit.search.index.IndexInfo
 import com.keepit.common.logging.Logging
 
 trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] with Logging {

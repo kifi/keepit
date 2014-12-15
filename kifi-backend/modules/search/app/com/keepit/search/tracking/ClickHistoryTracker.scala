@@ -12,7 +12,6 @@ import com.keepit.common.cache.{ BinaryCacheImpl, FortyTwoCachePlugin, CacheStat
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration._
-import com.keepit.search.MultiHashFilter
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 case class ClickedURI(id: Id[NormalizedURI])

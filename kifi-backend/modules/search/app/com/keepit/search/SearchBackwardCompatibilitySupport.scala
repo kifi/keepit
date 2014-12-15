@@ -10,7 +10,7 @@ import com.keepit.search.engine.uri.{ UriShardHit, UriShardResult }
 import com.keepit.search.index.graph.collection.{ CollectionSearcher, CollectionSearcherWithUser }
 import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.result._
-import com.keepit.search.sharding.{ ShardedCollectionIndexer, Shard }
+import com.keepit.search.index.sharding.{ ShardedCollectionIndexer, Shard }
 import com.google.inject.{ Singleton, Inject }
 import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._

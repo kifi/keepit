@@ -12,8 +12,8 @@ import com.keepit.search.index.graph.URIList
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Await }
-import com.keepit.search.IndexInfo
-import com.keepit.search.sharding.Shard
+import com.keepit.search.index.IndexInfo
+import com.keepit.search.index.sharding.Shard
 
 object CollectionFields {
   val userField = "coll_usr"
