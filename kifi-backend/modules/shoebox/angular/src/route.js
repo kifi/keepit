@@ -43,7 +43,7 @@ angular.module('kifi')
           }
         })
         .state('userProfile.libraries.following', {
-          url: '/following',
+          url: '/libraries/following',
           templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
           controller: 'UserProfileLibrariesListCtrl',
           data: {
@@ -51,7 +51,7 @@ angular.module('kifi')
           }
         })
         .state('userProfile.libraries.invited', {
-          url: '/invited',
+          url: '/libraries/invited',
           templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
           controller: 'UserProfileLibrariesListCtrl',
           data: {
