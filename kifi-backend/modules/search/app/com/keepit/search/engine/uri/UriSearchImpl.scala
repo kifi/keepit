@@ -9,7 +9,8 @@ import com.keepit.search.engine.explain.{ Explanation, ScoreDetailCollector }
 import UriResultCollector._
 import com.keepit.search.engine.result._
 import com.keepit.search.engine.{ QueryEngineBuilder, SearchTimeLogs, Visibility }
-import com.keepit.search.tracking.{ ClickedURI, ResultClickBoosts }
+import com.keepit.search.index.Searcher
+import com.keepit.search.tracking.{ MultiHashFilter, ClickedURI, ResultClickBoosts }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }

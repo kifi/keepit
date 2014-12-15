@@ -13,7 +13,7 @@ import scala.collection.mutable.{ Map => MutableMap }
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.Future
-import com.keepit.search.IndexInfo
+import com.keepit.search.index.IndexInfo
 
 object SearchFriendFields {
   val unfriendedList = "unfriended"

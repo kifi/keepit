@@ -25,7 +25,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.tracking.ClickHistoryTracker
 import com.keepit.search.tracking.ResultClickTracker
 import com.keepit.search.index.graph.user.UserGraphsSearcherFactory
-import com.keepit.search.sharding._
+import com.keepit.search.index.sharding._
 
 @Singleton
 class SearchFactory @Inject() (

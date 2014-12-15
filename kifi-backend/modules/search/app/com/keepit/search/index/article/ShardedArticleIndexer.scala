@@ -1,4 +1,4 @@
-package com.keepit.search.sharding
+package com.keepit.search.index.sharding
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.NormalizedURI
@@ -8,7 +8,6 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.common.db.SequenceNumber
-import com.keepit.model.NormalizedURIStates
 import com.keepit.common.logging.Logging
 
 class ShardedArticleIndexer(

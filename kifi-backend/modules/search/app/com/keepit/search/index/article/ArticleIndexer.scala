@@ -13,8 +13,8 @@ import com.keepit.search.index.IndexDirectory
 import com.keepit.search.index.Indexer
 import com.keepit.search.index.Indexable
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.IndexInfo
-import com.keepit.search.sharding.Shard
+import com.keepit.search.index.IndexInfo
+import com.keepit.search.index.sharding.Shard
 import com.keepit.search.util.MultiStringReader
 
 object ArticleFields {

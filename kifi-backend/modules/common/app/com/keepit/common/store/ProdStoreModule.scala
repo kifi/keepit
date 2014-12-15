@@ -1,6 +1,7 @@
 package com.keepit.common.store
 
 import com.amazonaws.services.s3.transfer.TransferManager
+import com.keepit.search.tracking.{ InMemoryProbablisticLRUStoreImpl, S3ProbablisticLRUStoreImpl, ProbablisticLRUStore }
 import play.api.Play.current
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{ Provider, Provides, Singleton }

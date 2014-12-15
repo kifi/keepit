@@ -1,17 +1,11 @@
-package com.keepit.search
+package com.keepit.search.index
 
 import com.keepit.search.util.LongArrayBuilder
 import org.apache.lucene.index._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.search.Explanation
-import org.apache.lucene.search.IndexSearcher
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.Scorer
-import org.apache.lucene.util.BytesRef
-import com.keepit.search.index._
+import org.apache.lucene.search.{ Explanation, IndexSearcher, Query, Scorer, Weight }
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
-import org.apache.lucene.search.Weight
 
 object Searcher {
   def apply(indexReader: DirectoryReader) = new Searcher(WrappedIndexReader(indexReader))
@@ -29,7 +23,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
       val idMapper = reader.getIdMapper
       var doc = scorer.nextDoc()
       while (doc != NO_MORE_DOCS) {
-        var score = scorer.score()
+        val score = scorer.score()
         hitBuf += SearcherHit(idMapper.getId(doc), score)
         doc = scorer.nextDoc()
       }
@@ -77,7 +71,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     foreachReader { reader =>
       val td = reader.termDocsEnum(term)
       if (td != null) {
-        var doc = td.nextDoc()
+        val doc = td.nextDoc()
         if (doc != NO_MORE_DOCS) return true
       }
     }

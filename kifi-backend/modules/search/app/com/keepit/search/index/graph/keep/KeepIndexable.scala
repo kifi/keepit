@@ -4,7 +4,7 @@ import com.keepit.common.strings._
 import com.keepit.model.{ Hashtag, LibraryVisibility, NormalizedURI, Keep }
 import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
 import com.keepit.search.LangDetector
-import com.keepit.search.sharding.Shard
+import com.keepit.search.index.sharding.Shard
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.MultiStringReader
 import org.apache.lucene.index.Term

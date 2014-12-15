@@ -7,9 +7,9 @@ import com.keepit.search.engine.explain.DirectExplainContext
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.engine.query.IdSetFilter
-import com.keepit.search.{ SearchConfig, SearchFilter, Searcher }
+import com.keepit.search.{ SearchConfig, SearchFilter }
 import com.keepit.search.index.graph.keep.KeepFields
-import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.util.join.{ DataBufferReader, DataBuffer, DataBufferWriter }
 import org.apache.lucene.index.{ AtomicReaderContext, Term }

@@ -11,7 +11,7 @@ import com.keepit.model.User
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import play.api.libs.json._
-import com.keepit.search.sharding.ShardSpecParser
+import com.keepit.search.index.sharding.ShardSpecParser
 import com.keepit.search.index.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

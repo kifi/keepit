@@ -2,17 +2,14 @@ package com.keepit.search.index.article
 
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.model.NormalizedURI
 import com.keepit.search.index.BasicIndexerActor
-import com.keepit.search.index.IndexerPlugin
-import com.keepit.search.index.IndexManager
-import com.keepit.search.sharding.ShardedArticleIndexer
-import com.keepit.search.sharding.ShardedIndexerPlugin
-import com.keepit.search.sharding.ShardedIndexerPluginImpl
+import com.keepit.search.index.sharding.ShardedArticleIndexer
+import com.keepit.search.index.sharding.ShardedIndexerPlugin
+import com.keepit.search.index.sharding.ShardedIndexerPluginImpl
 
 trait ArticleIndexerPlugin extends ShardedIndexerPlugin[NormalizedURI, NormalizedURI, ArticleIndexer]
 

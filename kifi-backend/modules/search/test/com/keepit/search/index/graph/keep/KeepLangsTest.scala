@@ -1,9 +1,8 @@
 package com.keepit.search.index.graph.keep
 
 import com.keepit.common.strings._
-import com.keepit.search.Searcher
 import com.keepit.search.index.Indexable.DataPayloadTokenStream
-import com.keepit.search.index.{ Indexer, Indexable, DefaultAnalyzer }
+import com.keepit.search.index.{ Searcher, Indexer, Indexable, DefaultAnalyzer }
 import org.apache.lucene.document.{ NumericDocValuesField, Field, Document }
 import org.apache.lucene.index._
 import org.apache.lucene.store.RAMDirectory
