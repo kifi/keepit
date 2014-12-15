@@ -1145,17 +1145,22 @@ class LibraryCommander @Inject() (
   }
 
   private def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User]): Int = {
-    -1
+    db.readOnlyReplica { implicit s =>
+      val showFollowLibraries = true
+      libraryMembershipRepo.countLibrariesForOtherUser(userId, friendId, countFollowLibraries = showFollowLibraries)
+    }
   }
 
   private def countLibrariesForSelf(userId: Id[User]): Int = {
-    -1
+    db.readOnlyReplica { implicit s =>
+      libraryMembershipRepo.countLibrariesToSelf(userId)
+    }
   }
 
   private def countLibrariesForAnonymous(userId: Id[User]): Int = {
-    //todo(eishay): get countFollowLibraries
     db.readOnlyReplica { implicit s =>
-      libraryMembershipRepo.countLibrariesOfUserFromAnonymos(userId, countFollowLibraries = true)
+      val showFollowLibraries = true
+      libraryMembershipRepo.countLibrariesOfUserFromAnonymos(userId, countFollowLibraries = showFollowLibraries)
     }
   }
 }
