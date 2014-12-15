@@ -44,8 +44,9 @@ class MobileLibraryController @Inject() (
     val name = (jsonBody \ "name").as[String]
     val description = (jsonBody \ "description").asOpt[String]
     val visibility = (jsonBody \ "visibility").as[LibraryVisibility]
+    val color = (jsonBody \ "color").asOpt[HexColor]
     val slug = LibrarySlug.generateFromName(name)
-    val addRequest = LibraryAddRequest(name, visibility, description, slug)
+    val addRequest = LibraryAddRequest(name, visibility, description, slug, color)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
@@ -63,7 +64,8 @@ class MobileLibraryController @Inject() (
     val newDescription = (json \ "newDescription").asOpt[String]
     val newVisibility = (json \ "newVisibility").asOpt[LibraryVisibility]
     val newSlug = (json \ "newSlug").asOpt[String]
-    val res = libraryCommander.modifyLibrary(libId, request.userId, newName, newDescription, newSlug, newVisibility)
+    val newColor = (json \ "color").asOpt[HexColor]
+    val res = libraryCommander.modifyLibrary(libId, request.userId, newName, newDescription, newSlug, newVisibility, newColor)
     res match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))

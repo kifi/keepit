@@ -8,6 +8,7 @@ import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.keepit.model.view.LibraryMembershipView
+import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -26,6 +27,7 @@ case class Library(
     visibility: LibraryVisibility,
     description: Option[String] = None,
     slug: LibrarySlug,
+    color: Option[HexColor] = None,
     state: State[Library] = LibraryStates.ACTIVE,
     seq: SequenceNumber[Library] = SequenceNumber.ZERO,
     kind: LibraryKind = LibraryKind.USER_CREATED,
@@ -60,8 +62,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
   }
 
   // is_primary: trueOrNull in db
-  def applyFromDbRow(id: Option[Id[Library]], createdAt: DateTime, updatedAt: DateTime, name: String, ownerId: Id[User], visibility: LibraryVisibility, description: Option[String], slug: LibrarySlug, state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind, universalLink: String, memberCount: Int, lastKept: Option[DateTime]) = {
-    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, state, seq, kind, universalLink, memberCount, lastKept)
+  def applyFromDbRow(id: Option[Id[Library]], createdAt: DateTime, updatedAt: DateTime, name: String, ownerId: Id[User], visibility: LibraryVisibility, description: Option[String], slug: LibrarySlug, color: Option[HexColor], state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind, universalLink: String, memberCount: Int, lastKept: Option[DateTime]) = {
+    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept)
   }
 
   protected[this] val publicIdPrefix = "l"
@@ -76,6 +78,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'description).format[Option[String]] and
     (__ \ 'slug).format[LibrarySlug] and
+    (__ \ 'color).formatNullable[HexColor] and
     (__ \ 'state).format(State.format[Library]) and
     (__ \ 'seq).format(SequenceNumber.format[Library]) and
     (__ \ 'kind).format[LibraryKind] and
@@ -208,4 +211,15 @@ object BasicLibrary {
 case class BasicLibraryStatistics(memberCount: Int, keepCount: Int)
 object BasicLibraryStatistics {
   implicit val format = Json.format[BasicLibraryStatistics]
+}
+
+class HexColor private (val hex: String) {
+  require(hex.matches(HexColor.regexStr), "hex color must be in format '#aaaaaa'")
+}
+object HexColor {
+  implicit def format[T]: Format[HexColor] =
+    Format(__.read[String].map(HexColor(_)), new Writes[HexColor] { def writes(o: HexColor) = JsString(o.hex) })
+
+  val regexStr = "^#[0-9a-f]{6}"
+  def apply(hex: String): HexColor = new HexColor(hex.toLowerCase)
 }

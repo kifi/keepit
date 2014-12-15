@@ -249,6 +249,7 @@ class LibraryCommander @Inject() (
           description = lib.description,
           slug = lib.slug,
           url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
+          color = lib.color,
           kind = lib.kind,
           visibility = lib.visibility,
           image = libImageOpt.map(LibraryImageInfo.createInfo(_)),
@@ -405,7 +406,7 @@ class LibraryCommander @Inject() (
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                    visibility = libAddReq.visibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
+                    visibility = libAddReq.visibility, slug = validSlug, color = libAddReq.color, kind = LibraryKind.USER_CREATED, memberCount = 1))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
                   lib
                 case Some(lib) =>
@@ -435,7 +436,8 @@ class LibraryCommander @Inject() (
     name: Option[String] = None,
     description: Option[String] = None,
     slug: Option[String] = None,
-    visibility: Option[LibraryVisibility] = None): Either[LibraryFail, Library] = {
+    visibility: Option[LibraryVisibility] = None,
+    color: Option[HexColor] = None): Either[LibraryFail, Library] = {
 
     val targetLib = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
     if (targetLib.ownerId != userId) {
@@ -481,6 +483,7 @@ class LibraryCommander @Inject() (
       } yield {
         val newDescription: Option[String] = description.orElse(targetLib.description)
         val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
+        val newColor: Option[HexColor] = color.orElse(targetLib.color)
         future {
           val keeps = db.readOnlyMaster { implicit s =>
             keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, None)
@@ -498,7 +501,7 @@ class LibraryCommander @Inject() (
             libraryAliasRepo.reclaim(ownerId, newSlug)
             libraryAliasRepo.alias(ownerId, targetLib.slug, targetLib.id.get)
           }
-          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, state = LibraryStates.ACTIVE))
+          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, state = LibraryStates.ACTIVE))
         }
       }
       searchClient.updateLibraryIndex()
@@ -1189,7 +1192,8 @@ case class LibraryFail(status: Int, message: String)
   name: String,
   visibility: LibraryVisibility,
   description: Option[String] = None,
-  slug: String)
+  slug: String,
+  color: Option[HexColor] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],
@@ -1197,6 +1201,7 @@ case class LibraryInfo(
   visibility: LibraryVisibility,
   shortDescription: Option[String],
   url: String,
+  color: Option[HexColor] = None,
   owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
@@ -1212,6 +1217,7 @@ object LibraryInfo {
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'url).format[String] and
+    (__ \ 'color).formatNullable[HexColor] and
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
@@ -1227,6 +1233,7 @@ object LibraryInfo {
       visibility = lib.visibility,
       shortDescription = lib.description,
       url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
+      color = lib.color,
       owner = owner,
       numKeeps = keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
@@ -1261,6 +1268,7 @@ case class FullLibraryInfo(
   description: Option[String],
   slug: LibrarySlug,
   url: String,
+  color: Option[HexColor] = None,
   image: Option[LibraryImageInfo] = None,
   kind: LibraryKind,
   lastKept: Option[DateTime],
