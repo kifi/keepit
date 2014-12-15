@@ -108,4 +108,36 @@ angular.module('kifi')
     // Initialize controller.
     init();
   }
+])
+
+
+.controller('UserProfileLibrariesCtrl', [
+  '$scope',
+  function (/* $scope */) {
+    // Noop for now.
+  }
+])
+
+
+.controller('UserProfileLibrariesListCtrl', [
+  '$scope', 'libraryType',
+  function ($scope, libraryType) {
+    $scope.libraryType = libraryType;
+  }
+])
+
+
+.controller('UserProfilePeopleCtrl', [
+  '$scope', 'peopleType',
+  function ($scope, peopleType) {
+    $scope.peopleType = peopleType;
+  }
+])
+
+
+.controller('UserProfileKeepsCtrl', [
+  '$scope',
+  function ($scope) {
+    $scope.keepType = 'Helped Rekeep';
+  }
 ]);

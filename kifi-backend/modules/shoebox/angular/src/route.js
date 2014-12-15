@@ -9,97 +9,66 @@ angular.module('kifi')
 
   $httpProvider.defaults.withCredentials = true;
 
-  // For any unmatched url, redirect to '/'
+  // For any unmatched url, redirect to '/'.
   $urlRouterProvider.otherwise('/');
 
-  // Now set up the states
+  // Now set up the states.
   $stateProvider
-    // Home page.
-    .state('/', {
+    .state('/', {  // Home page.
       url: '/',
       templateUrl: 'recos/recosView.tpl.html'
     })
-
-    // Flat top-level routes.
     .state('friends', {
       url: '/friends',
       templateUrl: 'friends/friends.tpl.html'
     })
-
-    // Routes with nesting.
     .state('userProfile', {
       url: '/:username',
       templateUrl: 'userProfile/userProfile.tpl.html',
       controller: 'UserProfileCtrl',
       'abstract': true
     })
-
       .state('userProfile.libraries', {
         url: '',
         templateUrl: 'userProfile/userProfileLibraries.tpl.html',
+        controller: 'UserProfileLibrariesCtrl',
         'abstract': true
       })
-
         .state('userProfile.libraries.my', {
           url: '',
-          templateUrl: 'userProfile/test1.tpl.html'
+          templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
+          controller: 'UserProfileLibrariesListCtrl',
+          resolve: { libraryType: function () { return 'My'; } }
         })
         .state('userProfile.libraries.following', {
           url: '/following',
-          templateUrl: 'userProfile/test2.tpl.html'
+          templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
+          controller: 'UserProfileLibrariesListCtrl',
+          resolve: { libraryType: function () { return 'Following'; } }
         })
         .state('userProfile.libraries.invited', {
           url: '/invited',
-          templateUrl: 'userProfile/test3.tpl.html'
+          templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
+          controller: 'UserProfileLibrariesListCtrl',
+          resolve: { libraryType: function () { return 'Invited'; } }
         })
-
       .state('userProfile.friends', {
         url: '/friends',
         templateUrl: 'userProfile/userProfilePeople.tpl.html',
-        controller: function ($scope) {
-          $scope.peopleType = 'Friends';
-        }
+        controller: 'UserProfilePeopleCtrl',
+        resolve: { peopleType: function () { return 'Friends'; } }
       })
-
       .state('userProfile.followers', {
         url: '/followers',
         templateUrl: 'userProfile/userProfilePeople.tpl.html',
-        controller: function ($scope) {
-          $scope.peopleType = 'Followers';
-        }
+        controller: 'UserProfilePeopleCtrl',
+        resolve: { peopleType: function () { return 'Followers'; } }
       })
-
       .state('userProfile.helped', {
         url: '/helped',
         templateUrl: 'userProfile/userProfileKeeps.tpl.html',
-        controller: function ($scope) {
-          $scope.keepType = 'Helped Rekeep';
-        }
-      })
-
-    // For testing only.
-    .state('state1', {
-      url: '/state1',
-      templateUrl: 'partials/state1.html'
-    })
-    .state('state1.list', {
-      url: '/list',
-      templateUrl: 'partials/state1.list.html',
-      controller: function($scope) {
-        $scope.items = ['A', 'List', 'Of', 'Items'];
-      }
-    })
-    .state('state2', {
-      url: '/state2',
-      templateUrl: 'partials/state2.html'
-    })
-    .state('state2.list', {
-      url: '/list',
-      templateUrl: 'partials/state2.list.html',
-      controller: function($scope) {
-        $scope.things = ['A', 'Set', 'Of', 'Things'];
-      }
-    });
+        controller: 'UserProfileKeepsCtrl'
+      });
 });
 
 // .config([
