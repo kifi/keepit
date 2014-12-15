@@ -1,5 +1,7 @@
 package com.keepit.controllers.website
 
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.KeepFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserConnectionFactoryHelper._
@@ -307,16 +309,20 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
             user4 -> user1,
             user2 -> user3).saved
 
-          libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2)
+          val user1secretLib = libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2)
 
-          val lib1 = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
-          lib1.visibility === LibraryVisibility.PUBLISHED
+          val user1lib = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
+          user1lib.visibility === LibraryVisibility.PUBLISHED
 
-          library().withUser(user3).published().saved
-          library().withUser(user5).published().saved.savedFollowerMembership(user1)
+          val user3lib = library().withUser(user3).published().saved
+          val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
           membership().withLibraryFollower(library().withUser(user5).published().saved, user1).invisible().saved
 
-          (user1, user2, user3, user4, user5, lib1)
+          keeps(2).map(_.withLibrary(user1secretLib)).saved
+          keeps(3).map(_.withLibrary(user1lib)).saved
+          keep().withLibrary(user3lib).saved
+
+          (user1, user2, user3, user4, user5, user1lib)
         }
         db.readOnlyMaster { implicit s =>
           val libMem = libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user4.id.get).get
@@ -380,18 +386,55 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         }
         //non existing username
         status(call(Some(user1), Username("foo"))) must equalTo(NOT_FOUND)
+
         //seeing a profile from an anonymos user
-        val result1 = call(None, user1.username)
-        status(result1) must equalTo(OK)
-        contentType(result1) must beSome("application/json")
-        val res = contentAsJson(result1)
-        res === Json.parse(
+        val anonViewer = call(None, user1.username)
+        status(anonViewer) must equalTo(OK)
+        contentType(anonViewer) must beSome("application/json")
+        val res1 = contentAsJson(anonViewer)
+        res1 === Json.parse(
           """
             {
               "firstName":"George",
               "lastName":"Washington",
               "pictureName":"pic1",
-              "numLibraries":2
+              "numLibraries":2,
+              "friendsWith": null,
+              "numKeeps": 5
+            }
+          """)
+
+        //seeing a profile of my own
+        val selfViewer = call(Some(user1), user1.username)
+        status(selfViewer) must equalTo(OK)
+        contentType(selfViewer) must beSome("application/json")
+        val res2 = contentAsJson(selfViewer)
+        res2 === Json.parse(
+          """
+            {
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1",
+              "numLibraries":6,
+              "friendsWith": null,
+              "numKeeps": 5
+            }
+          """)
+
+        //seeing a profile from another user (friend)
+        val friendViewer = call(Some(user2), user1.username)
+        status(friendViewer) must equalTo(OK)
+        contentType(friendViewer) must beSome("application/json")
+        val res3 = contentAsJson(friendViewer)
+        res3 === Json.parse(
+          """
+            {
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1",
+              "numLibraries":3,
+              "friendsWith": true,
+              "numKeeps": 5
             }
           """)
       }
