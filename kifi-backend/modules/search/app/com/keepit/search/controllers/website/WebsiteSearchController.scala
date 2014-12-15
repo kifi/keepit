@@ -27,7 +27,7 @@ class WebsiteSearchController @Inject() (
     val shoeboxClient: ShoeboxServiceClient,
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
-    searchCommander: SearchCommander,
+    searchCommander: UriSearchCommander,
     librarySearchCommander: LibrarySearchCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 

@@ -1,14 +1,14 @@
 package com.keepit.search.controllers.website
 
+import com.keepit.search.engine.uri.{ UriShardHit, UriShardResult, UriSearchResult }
 import org.specs2.mutable.SpecificationLike
 import com.keepit.search.test.SearchTestInjector
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.search._
-import com.keepit.search.engine.result.{ KifiShardHit, KifiShardResult, KifiPlainResult }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.util.PlayAppConfigurationModule
-import com.keepit.search.controllers.{ FixedResultSearchCommander, FixedResultIndexModule }
+import com.keepit.search.controllers.{ FixedResultUriSearchCommander, FixedResultIndexModule }
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.model._
@@ -37,7 +37,7 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
         val path = routes.WebsiteSearchController.search2("test", None, None, 2, None, None, None, None).url
         path === "/site/search2?q=test&maxHits=2"
 
-        inject[SearchCommander].asInstanceOf[FixedResultSearchCommander].setPlainResults(ExtSearchControllerTest.plainTestResults)
+        inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setPlainResults(ExtSearchControllerTest.plainTestResults)
         inject[FakeShoeboxServiceClientImpl].saveURISummary(Id(234), URISummary())
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
         inject[FakeUserActionsHelper].setUser(user)
@@ -81,14 +81,14 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
 object ExtSearchControllerTest {
 
   val plainTestResults = Map(
-    "test" -> new KifiPlainResult(
+    "test" -> new UriSearchResult(
       uuid = ExternalId[ArticleSearchResult]("98765432-1234-5678-9abc-fedcba987654"),
       query = "test",
       searchFilter = SearchFilter.default(),
       firstLang = Lang("en"),
-      result = KifiShardResult(
+      result = UriShardResult(
         hits = Seq(
-          KifiShardHit(
+          UriShardHit(
             id = 234,
             score = .999f,
             visibility = 0,

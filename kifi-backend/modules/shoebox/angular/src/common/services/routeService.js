@@ -194,6 +194,9 @@ angular.module('kifi')
       },
       getMoreLibraryMembers: function(libraryId, pageSize, offset) {
         return route('/libraries/' + libraryId + '/members?limit=' + pageSize + '&offset=' + (offset * pageSize));
+      },
+      getRelatedLibraries: function (libraryId) {
+        return route('/libraries/' + libraryId + '/related');
       }
     };
   }

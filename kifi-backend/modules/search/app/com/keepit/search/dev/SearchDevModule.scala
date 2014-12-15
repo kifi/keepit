@@ -9,7 +9,7 @@ import com.keepit.search.common.cache.SearchCacheModule
 import com.keepit.search.common.store.SearchDevStoreModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.inject.CommonDevModule
-import com.keepit.search.tracker.DevTrackingModule
+import com.keepit.search.tracking.DevTrackingModule
 import com.keepit.search.index.DevIndexModule
 import com.keepit.common.util.PlayAppConfigurationModule
 

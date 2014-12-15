@@ -7,7 +7,7 @@ import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.search.common.cache.SearchCacheModule
 import com.keepit.search.common.store.SearchProdStoreModule
-import com.keepit.search.tracker.ProdTrackingModule
+import com.keepit.search.tracking.ProdTrackingModule
 import com.keepit.search.index.ProdIndexModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.common.util.PlayAppConfigurationModule

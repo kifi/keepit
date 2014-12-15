@@ -6,7 +6,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.search.controllers.util.SearchControllerUtil._
 import com.keepit.model._
-import com.keepit.search.engine.result.KifiPlainResult
+import com.keepit.search.engine.uri.UriSearchResult
 import com.keepit.search.result.{ ResultUtil, KifiSearchResult }
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -38,7 +38,7 @@ trait SearchControllerUtil {
 
   @inline def safelyFlatten[E](eventuallyEnum: Future[Enumerator[E]]): Enumerator[E] = Enumerator.flatten(new SafeFuture(eventuallyEnum))
 
-  def uriSummaryInfoFuture(plainResultFuture: Future[KifiPlainResult]): Future[String] = {
+  def uriSummaryInfoFuture(plainResultFuture: Future[UriSearchResult]): Future[String] = {
     plainResultFuture.flatMap { r =>
       val uriIds = r.hits.map(h => Id[NormalizedURI](h.id))
       if (uriIds.nonEmpty) {
@@ -51,7 +51,7 @@ trait SearchControllerUtil {
     }
   }
 
-  def toKifiSearchResultV2(kifiPlainResult: KifiPlainResult): JsObject = {
+  def toKifiSearchResultV2(kifiPlainResult: UriSearchResult): JsObject = {
     KifiSearchResult.v2(
       kifiPlainResult.uuid,
       kifiPlainResult.query,
@@ -81,7 +81,7 @@ trait SearchControllerUtil {
       Nil).json
   }
 
-  def getAugmentedItems(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[Seq[AugmentedItem]] = {
+  def getAugmentedItems(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: UriSearchResult): Future[Seq[AugmentedItem]] = {
     val items = kifiPlainResult.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
     val context = AugmentationContext.uniform(userId, previousItems ++ items)

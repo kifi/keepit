@@ -7,7 +7,7 @@ import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ DevStoreModule, ProdStoreModule, S3Bucket }
 import com.keepit.search.index.{ InMemoryIndexStoreImpl, IndexStore, IndexStoreInbox, S3IndexStoreImpl }
-import com.keepit.search.tracker.{ ClickHistoryBuilder, ClickHistoryStore, ClickHistoryUserIdCache, InMemoryClickHistoryStoreImpl, S3ClickHistoryStoreImpl }
+import com.keepit.search.tracking.{ ClickHistoryBuilder, ClickHistoryStore, ClickHistoryUserIdCache, InMemoryClickHistoryStoreImpl, S3ClickHistoryStoreImpl }
 import org.apache.commons.io.FileUtils
 import play.api.Play._
 

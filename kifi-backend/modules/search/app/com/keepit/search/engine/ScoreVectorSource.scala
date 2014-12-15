@@ -3,7 +3,7 @@ package com.keepit.search.engine
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.explain.{ TargetedScorer, DirectExplainContext }
 import com.keepit.search.Searcher
-import com.keepit.search.engine.query.KWeight
+import com.keepit.search.engine.query.core.KWeight
 import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.util.join.DataBuffer
 import org.apache.lucene.index.AtomicReaderContext

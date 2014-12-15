@@ -9,7 +9,7 @@ import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.index.graph.library.LibraryIndexer
-import com.keepit.search.{ SearchCommander }
+import com.keepit.search.{ UriSearchCommander }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
@@ -29,7 +29,7 @@ class ExtSearchController @Inject() (
     val shoeboxClient: ShoeboxServiceClient,
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
-    searchCommander: SearchCommander,
+    searchCommander: UriSearchCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
   import ExtSearchController._

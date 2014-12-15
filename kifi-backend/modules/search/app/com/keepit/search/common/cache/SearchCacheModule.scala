@@ -8,7 +8,7 @@ import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.model._
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.search._
-import com.keepit.search.tracker.{ ClickHistoryBuilder, ClickHistoryUserIdCache, ProbablisticLRUChunkCache }
+import com.keepit.search.tracking.{ ClickHistoryBuilder, ClickHistoryUserIdCache, ProbablisticLRUChunkCache }
 import com.keepit.social.BasicUserUserIdCache
 
 import scala.concurrent.duration._

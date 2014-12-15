@@ -1,18 +1,17 @@
 package com.keepit.search
 
-import scala.concurrent.Future
-import com.keepit.search.sharding.{ Sharding }
-import com.keepit.model._
 import com.google.inject.{ ImplementedBy, Inject }
-import com.keepit.common.logging.Logging
-import com.keepit.common.db.Id
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.search.engine.{ DebugOption, LibrarySearch, SearchFactory }
 import com.keepit.common.akka.SafeFuture
-import com.keepit.search.engine.result.{ LibraryShardHit, LibraryShardResult }
-import com.keepit.search.sharding.Shard
-import com.keepit.search.sharding.ActiveShards
+import com.keepit.common.db.Id
+import com.keepit.common.logging.Logging
+import com.keepit.model._
+import com.keepit.search.engine.library.{ LibrarySearch, LibraryShardHit, LibraryShardResult }
+import com.keepit.search.engine.{ DebugOption, SearchFactory }
+import com.keepit.search.sharding.{ ActiveShards, Shard, Sharding }
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
+
+import scala.concurrent.Future
 
 case class LibrarySearchRequest(
   userId: Id[User],

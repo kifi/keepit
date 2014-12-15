@@ -1,7 +1,7 @@
 package com.keepit.search.controllers.ext
 
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardHit, KifiShardResult }
+import com.keepit.search.engine.uri.{ UriShardHit, UriShardResult, UriSearchResult }
 import com.keepit.search.test.SearchTestInjector
 import org.specs2.mutable._
 import com.keepit.model._
@@ -16,7 +16,7 @@ import com.keepit.social.BasicUser
 import com.keepit.search.result._
 import com.keepit.search.result.DecoratedResult
 import com.keepit.common.util.PlayAppConfigurationModule
-import com.keepit.search.controllers.{ FixedResultSearchCommander, FixedResultIndexModule }
+import com.keepit.search.controllers.{ FixedResultUriSearchCommander, FixedResultIndexModule }
 
 class ExtSearchControllerTest extends Specification with SearchTestInjector {
 
@@ -37,7 +37,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         val path = routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None, None).url
         path === "/search?q=test&maxHits=7"
 
-        inject[SearchCommander].asInstanceOf[FixedResultSearchCommander].setDecoratedResults(ExtSearchControllerTest.decoratedTestResults)
+        inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setDecoratedResults(ExtSearchControllerTest.decoratedTestResults)
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
@@ -103,7 +103,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         val path = routes.ExtSearchController.search2("test", 2, None, None, None, None, None).url
         path === "/ext/search?q=test&n=2"
 
-        inject[SearchCommander].asInstanceOf[FixedResultSearchCommander].setPlainResults(ExtSearchControllerTest.plainTestResults)
+        inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setPlainResults(ExtSearchControllerTest.plainTestResults)
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
@@ -142,7 +142,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         val path = routes.ExtSearchController.search2("test", 2, None, None, None, None, None).url
         path === "/ext/search?q=test&n=2"
 
-        inject[SearchCommander].asInstanceOf[FixedResultSearchCommander].setPlainResults(ExtSearchControllerTest.plainTestResults)
+        inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setPlainResults(ExtSearchControllerTest.plainTestResults)
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path).withHeaders("Accept" -> "text/plain")
@@ -219,14 +219,14 @@ object ExtSearchControllerTest {
   )
 
   val plainTestResults = Map(
-    "test" -> new KifiPlainResult(
+    "test" -> new UriSearchResult(
       uuid = ExternalId[ArticleSearchResult]("98765432-1234-5678-9abc-fedcba987654"),
       query = "test",
       searchFilter = SearchFilter.default(),
       firstLang = Lang("en"),
-      result = KifiShardResult(
+      result = UriShardResult(
         hits = Seq(
-          KifiShardHit(
+          UriShardHit(
             id = 234,
             score = .999f,
             visibility = 0,

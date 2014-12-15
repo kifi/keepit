@@ -15,7 +15,7 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.search.common.cache.SearchCacheModule
 import com.keepit.search.index.{ DevIndexModule, FakeIndexModule }
-import com.keepit.search.tracker.{ DevTrackingModule, FakeTrackingModule }
+import com.keepit.search.tracking.{ DevTrackingModule, FakeTrackingModule }
 import com.keepit.common.store.SearchFakeStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.eliza.FakeElizaServiceClientModule
