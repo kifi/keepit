@@ -148,6 +148,10 @@ angular.module('kifi')
       }
     };
 
+    $scope.$on('relatedLibrariesChanged', function (evt, currentLibrary, relatedLibraries) {
+      $scope.relatedLibraries = relatedLibraries;
+    });
+
     $scope.$watch(function () {
       return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide);
     }, function (show) {
