@@ -70,7 +70,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         }
 
         // add new library
-        val jsBody1 = Json.obj("name" -> "Drones stuff", "visibility" -> "published", "color" -> "#bbbbbb")
+        val jsBody1 = Json.obj("name" -> "Drones stuff", "visibility" -> "published", "color" -> "#BBBbbb")
         val result1 = createLibrary(user, jsBody1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
@@ -105,7 +105,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         lib1.color must beEmpty
 
         // change fields (to something different)
-        val jsBody1 = Json.obj("newName" -> "Feed Gary", "newDescription" -> "qwer", "newVisibility" -> "secret", "newSlug" -> "feed-gary", "color" -> "#bbbbbb")
+        val jsBody1 = Json.obj("newName" -> "Feed Gary", "newDescription" -> "qwer", "newVisibility" -> "secret", "newSlug" -> "feed-gary", "color" -> "#BBbbbb")
         val result1 = modifyLibrary(user, pubLib1, jsBody1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")

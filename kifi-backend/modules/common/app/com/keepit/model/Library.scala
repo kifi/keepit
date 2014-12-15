@@ -213,9 +213,13 @@ object BasicLibraryStatistics {
   implicit val format = Json.format[BasicLibraryStatistics]
 }
 
-case class HexColor(hex: String)
+class HexColor private (val hex: String) {
+  require(hex.matches(HexColor.regexStr), "hex color must be in format '#aaaaaa'")
+}
 object HexColor {
   implicit def format[T]: Format[HexColor] =
     Format(__.read[String].map(HexColor(_)), new Writes[HexColor] { def writes(o: HexColor) = JsString(o.hex) })
-  //def apply(hex: String): HexColor = HexColor(hex.toLowerCase)
+
+  val regexStr = "^#[0-9a-f]{6}"
+  def apply(hex: String): HexColor = new HexColor(hex.toLowerCase)
 }
