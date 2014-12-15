@@ -126,7 +126,7 @@ class FacebookSocialGraph @Inject() (
         }
         None
     }
-    jsonsOpt.flatMap { jsons =>
+    val res = jsonsOpt.flatMap { jsons =>
       jsons.headOption.map { json =>
         SocialUserRawInfo(
           socialUserInfo.userId,
@@ -137,6 +137,8 @@ class FacebookSocialGraph @Inject() (
           jsons)
       }
     }
+    log.info(s"[fetchSocialUserRawInfo] socialUserInfo=$socialUserInfo rawInfo=$res")
+    res
   }
 
   def extractEmails(parentJson: JsValue): Seq[EmailAddress] = (parentJson \ "email").asOpt[EmailAddress].toSeq

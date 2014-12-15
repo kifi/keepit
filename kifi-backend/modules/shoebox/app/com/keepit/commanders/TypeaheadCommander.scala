@@ -164,7 +164,15 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  private val snMap: Map[SocialNetworkType, Int] = Map(SocialNetworks.FACEBOOK -> 0, SocialNetworks.LINKEDIN -> 1, SocialNetworks.FORTYTWO -> 2, SocialNetworks.EMAIL -> 3, SocialNetworks.FORTYTWO_NF -> 4)
+  private val snMap: Map[SocialNetworkType, Int] =
+    Map(
+      SocialNetworks.FACEBOOK -> 0,
+      SocialNetworks.TWITTER -> 1,
+      SocialNetworks.LINKEDIN -> 2,
+      SocialNetworks.FORTYTWO -> 3,
+      SocialNetworks.EMAIL -> 4,
+      SocialNetworks.FORTYTWO_NF -> 5
+    )
 
   private val snOrd = new Ordering[SocialNetworkType] {
     def compare(x: SocialNetworkType, y: SocialNetworkType) = if (x == y) 0 else snMap(x) compare snMap(y)
@@ -201,7 +209,7 @@ class TypeaheadCommander @Inject() (
 
   private def includeHit(hit: TypeaheadHit[SocialUserBasicInfo]): Boolean = {
     hit.info.networkType match {
-      case SocialNetworks.FACEBOOK | SocialNetworks.LINKEDIN => hit.info.userId.isEmpty
+      case SocialNetworks.FACEBOOK | SocialNetworks.LINKEDIN | SocialNetworks.TWITTER => hit.info.userId.isEmpty
       case SocialNetworks.FORTYTWO => false // see KifiUserTypeahead!
       case _ => true
     }
