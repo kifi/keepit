@@ -606,7 +606,9 @@ class UserController @Inject() (
         "firstName" -> profile.user.firstName,
         "lastName" -> profile.user.lastName,
         "pictureName" -> profile.user.pictureName,
-        "numLibraries" -> numLibraries
+        "numLibraries" -> numLibraries,
+        "friendsWith" -> profile.isConnected,
+        "numKeeps" -> profile.numKeeps
       ))
     } catch {
       case unfe: UserNotFoundException => NotFound(username)

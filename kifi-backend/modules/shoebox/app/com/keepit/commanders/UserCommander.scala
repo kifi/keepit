@@ -70,7 +70,7 @@ object UpdatableUserInfo {
 
 case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String])
 
-case class UserProfile(user: User, numFriends: Int, numFollowers: Int)
+case class UserProfile(user: User, viewer: Option[Id[User]], numKeeps: Int, isConnected: Option[Boolean])
 
 case class UserNotFoundException(username: Username) extends Exception(username.toString)
 
@@ -105,9 +105,15 @@ class UserCommander @Inject() (
 
   def profile(username: Username, viewer: Option[User]): UserProfile = db.readOnlyMaster { implicit session =>
     val user = userRepo.getByUsername(username).getOrElse(throw UserNotFoundException(username)) //cached
-    val friends = userConnectionRepo.getConnectionCount(user.id.get) //cached
-    val numFollowers = libraryMembershipRepo.countFollowersWithOwnerId(user.id.get) //cached
-    UserProfile(user, friends, numFollowers)
+    //not in v1
+    //    val friends = userConnectionRepo.getConnectionCount(user.id.get) //cached
+    //    val numFollowers = libraryMembershipRepo.countFollowersWithOwnerId(user.id.get) //cached
+    val numKeeps = keepRepo.getCountByUser(user.id.get)
+    val isConnected: Option[Boolean] = viewer flatMap {
+      case me if me.id.get == user.id.get => None //if i see my own profile, is connected is not relevant
+      case other => Some(userConnectionRepo.getConnectionOpt(user.id.get, other.id.get).isDefined)
+    }
+    UserProfile(user = user, viewer = viewer.map(_.id.get), numKeeps = numKeeps, isConnected = isConnected)
   }
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {
