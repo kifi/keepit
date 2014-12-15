@@ -212,6 +212,41 @@ angular.module('kifi')
   }
 ])
 
+.directive('kfTwitterConnectButton', [
+  'socialService',
+  function (socialService) {
+    return {
+      restrict: 'A',
+      link: function (scope) {
+        // todo (aaron): endpoint doesn't return profileUrl yet. Leave this out for now
+        //scope.isTwitterConnected = socialService.twitter && !!socialService.twitter.profileUrl;
+
+        // looks for 'network' field as temporary placedholder for checking connected with twitter
+        scope.isTwitterConnected = socialService.twitter && !!socialService.twitter.network;
+        scope.twitter = socialService.twitter;
+
+        scope.$watch(function () {
+          // todo (aaron): endpoint doesn't return profileUrl yet. Leave this out for now
+          //return socialService.twitter && socialService.twitter.profileUrl;
+          return socialService.twitter.network;
+        }, function () {
+          var twitter = socialService.twitter;
+          if (twitter && twitter.network) {
+            scope.isTwitterConnected = true;
+            scope.twProfileUrl = twitter.profileUrl; //expect undefined for now
+          } else {
+            scope.isTwitterConnected = false;
+            scope.twProfileUrl = '';
+          }
+        });
+
+        scope.connectTwitter = socialService.connectTwitter;
+        scope.disconnectTwitter = socialService.disconnectTwitter;
+      }
+    };
+  }
+])
+
 .directive('kfEmailImport', [
   'profileService', '$window', 'env', 'socialService',
   function (profileService, $window, env, socialService) {
