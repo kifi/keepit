@@ -3,8 +3,7 @@ package com.keepit.search.controllers.mobile
 import com.google.inject.Inject
 import com.keepit.common.controller.{ SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.search.{ KifiHitContext, SearchEngine, BasicSearchContext }
-import com.keepit.search.SearchEventCommander
+import com.keepit.search.tracking.{ SearchEventCommander, KifiHitContext, BasicSearchContext, SearchEngine }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._

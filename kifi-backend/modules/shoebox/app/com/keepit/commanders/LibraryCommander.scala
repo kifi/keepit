@@ -63,6 +63,7 @@ class LibraryCommander @Inject() (
     heimdal: HeimdalServiceClient,
     contextBuilderFactory: HeimdalContextBuilderFactory,
     keepImageCommander: KeepImageCommander,
+    libraryImageCommander: LibraryImageCommander,
     applicationConfig: FortyTwoConfig,
     uriSummaryCommander: URISummaryCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
@@ -148,9 +149,9 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library]): Future[(FullLibraryInfo, String)] = {
+  def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize): Future[(FullLibraryInfo, String)] = {
     val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-    createFullLibraryInfo(userIdOpt, showPublishedLibraries, lib).map { libInfo =>
+    createFullLibraryInfo(userIdOpt, showPublishedLibraries, lib, imageSize).map { libInfo =>
       val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
       (libInfo, accessStr)
     }
@@ -200,7 +201,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library]): Future[Seq[FullLibraryInfo]] = {
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize): Future[Seq[FullLibraryInfo]] = {
     val futureKeepInfosByLibraryId = libraries.map { library =>
       val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
       library.id.get -> keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize)
@@ -240,6 +241,7 @@ class LibraryCommander @Inject() (
         val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(lib.id.get)
         val owner = usersById(lib.ownerId)
         val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_))
+        val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, idealLibraryImageSize)
         FullLibraryInfo(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -249,6 +251,7 @@ class LibraryCommander @Inject() (
           url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
           kind = lib.kind,
           visibility = lib.visibility,
+          image = libImageOpt.map(LibraryImageInfo.createInfo(_)),
           followers = followers,
           keeps = keepInfos,
           numKeeps = keepCount,
@@ -261,8 +264,8 @@ class LibraryCommander @Inject() (
     Future.sequence(futureFullLibraryInfos)
   }
 
-  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library): Future[FullLibraryInfo] = {
-    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
+  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize): Future[FullLibraryInfo] = {
+    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
   }
 
   def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], Map[LibraryAccess, Int]) = {
@@ -1145,17 +1148,22 @@ class LibraryCommander @Inject() (
   }
 
   private def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User]): Int = {
-    -1
+    db.readOnlyReplica { implicit s =>
+      val showFollowLibraries = true
+      libraryMembershipRepo.countLibrariesForOtherUser(userId, friendId, countFollowLibraries = showFollowLibraries)
+    }
   }
 
   private def countLibrariesForSelf(userId: Id[User]): Int = {
-    -1
+    db.readOnlyReplica { implicit s =>
+      libraryMembershipRepo.countLibrariesToSelf(userId)
+    }
   }
 
   private def countLibrariesForAnonymous(userId: Id[User]): Int = {
-    //todo(eishay): get countFollowLibraries
     db.readOnlyReplica { implicit s =>
-      libraryMembershipRepo.countLibrariesOfUserFromAnonymos(userId, countFollowLibraries = true)
+      val showFollowLibraries = true
+      libraryMembershipRepo.countLibrariesOfUserFromAnonymos(userId, countFollowLibraries = showFollowLibraries)
     }
   }
 }
@@ -1253,6 +1261,7 @@ case class FullLibraryInfo(
   description: Option[String],
   slug: LibrarySlug,
   url: String,
+  image: Option[LibraryImageInfo] = None,
   kind: LibraryKind,
   lastKept: Option[DateTime],
   owner: BasicUser,

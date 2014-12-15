@@ -18,7 +18,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
 
 import scala.concurrent.Future
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 import com.keepit.common.store.ImageSize
 
 class MobileLibraryController @Inject() (
@@ -82,19 +82,21 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getLibraryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getLibraryById(pubId: PublicId[Library], imageSize: Option[String] = None) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val id = Library.decodePublicId(pubId).get
-    libraryCommander.getLibraryById(request.userIdOpt, false, id) map {
+    val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
+    libraryCommander.getLibraryById(request.userIdOpt, false, id, idealSize) map {
       case (libInfo, accessStr) => Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
     }
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String) = MaybeUserAction.async { request =>
+  def getLibraryByPath(userStr: String, slugStr: String, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), followRedirect = true) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library).map { libInfo =>
+          val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
+          libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
             val accessStr = request.userIdOpt.map { userId =>
               libraryCommander.getAccessStr(userId, library.id.get)
             }.flatten.getOrElse {
@@ -139,7 +141,7 @@ class MobileLibraryController @Inject() (
         val completeKeepData = db.readOnlyMaster { implicit s =>
           keepDataList.map { keepData =>
             val keep = keepRepo.get(keepData.id)
-            val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, MobileLibraryController.defaultImageSize).flatten.map(keepImageCommander.getUrl)
+            val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, MobileLibraryController.defaultKeepImageSize).flatten.map(keepImageCommander.getUrl)
             val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getTagsByKeepId(keep.id.get)))
             Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
           }
@@ -342,7 +344,8 @@ class MobileLibraryController @Inject() (
 }
 
 object MobileLibraryController {
-  val defaultImageSize = ImageSize(1024, 1024)
+  val defaultKeepImageSize = ImageSize(1024, 1024)
+  val defaultLibraryImageSize = ImageSize(1024, 1024)
 }
 
 private object ImplicitHelper {

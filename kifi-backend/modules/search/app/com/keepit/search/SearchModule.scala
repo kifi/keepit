@@ -7,7 +7,7 @@ import com.keepit.eliza.ElizaServiceClientModule
 import com.keepit.heimdal.HeimdalServiceClientModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.search.index.IndexModule
-import com.keepit.search.tracker.TrackingModule
+import com.keepit.search.tracking.TrackingModule
 import com.keepit.shoebox.ShoeboxServiceClientModule
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.common.zookeeper.ServiceTypeModule

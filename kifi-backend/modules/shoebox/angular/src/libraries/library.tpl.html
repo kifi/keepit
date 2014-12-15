@@ -14,7 +14,7 @@
     </div>
 
     <div class="kf-library-body">
-      <div ng-if="!librarySearch">
+      <div ng-if="!librarySearch" class="kf-library-results-wrapper">
         <div class="kf-empty-state" ng-if="keeps.length === 0 && userIsOwner()" ng-show="!loading">
           You don't have any keeps in this Library yet. You can:
           <ul>
@@ -45,7 +45,11 @@
         ></div>
       </div>
 
-      <div ng-if="librarySearch" ng-include="'search/search.tpl.html'" ng-controller="SearchCtrl"></div>
+      <div ng-if="librarySearch" ng-include="'search/search.tpl.html'" ng-controller="SearchCtrl" class="kf-library-results-wrapper"></div>
+
+      <div kf-related-libraries ng-if="!userLoggedIn && relatedLibraries"
+        related-libraries="relatedLibraries" parent-library="library">
+      </div>
     </div>
   </div>
 
@@ -80,7 +84,7 @@
     </div>
   </div>
 
-  <div class="kf-lib-info-footer" ng-if="!$root.userLoggedIn">
+  <div class="kf-lib-info-footer" ng-if="!$root.userLoggedIn && page=='library'">
     <div class="first-line">
       <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/how_it_works">How it works</a> &middot;
       <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/about">About</a> &middot;

@@ -26,7 +26,11 @@ object LibraryFactoryHelper {
   implicit class LibrarysPersister(partialLibrarys: Seq[PartialLibrary]) {
     def saved(implicit injector: Injector, session: RWSession): Seq[Library] = {
       val repo = injector.getInstance(classOf[LibraryRepo])
-      partialLibrarys.map(u => repo.save(u.get.copy(id = None)))
+      partialLibrarys.map { u =>
+        val library = repo.save(u.get.copy(id = None))
+        membership().withLibraryOwner(library).saved
+        library
+      }
     }
   }
 }

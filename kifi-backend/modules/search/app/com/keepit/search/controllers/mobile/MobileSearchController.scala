@@ -6,7 +6,7 @@ import com.keepit.common.controller.{ SearchServiceController, UserActions, User
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search.util.IdFilterCompressor
-import com.keepit.search.{ LibrarySearchCommander, SearchCommander }
+import com.keepit.search.{ LibrarySearchCommander, UriSearchCommander }
 import com.keepit.model.ExperimentType._
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsString
@@ -20,7 +20,7 @@ class MobileSearchController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration,
     val shoeboxClient: ShoeboxServiceClient,
-    searchCommander: SearchCommander,
+    searchCommander: UriSearchCommander,
     librarySearchCommander: LibrarySearchCommander,
     libraryIndexer: LibraryIndexer) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 

@@ -14,7 +14,7 @@ import com.keepit.search.index.article._
 import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.user._
 import com.keepit.search.index.message.{ MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl }
-import com.keepit.search.phrasedetector.{ PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer }
+import com.keepit.search.index.phrase.{ PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer }
 import com.keepit.search.sharding._
 import com.keepit.search.index.user._
 import com.keepit.shoebox.ShoeboxServiceClient

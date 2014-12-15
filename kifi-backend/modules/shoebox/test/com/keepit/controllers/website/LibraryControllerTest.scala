@@ -1,7 +1,9 @@
 package com.keepit.controllers.website
 
+import java.io.File
+
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ KeepData, RawBookmarkRepresentation, LibraryInfo, UsernameOps }
+import com.keepit.commanders._
 import com.keepit.common.controller.{ FakeUserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
@@ -17,12 +19,17 @@ import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScrapeSchedulerConfig
 import com.keepit.search.{ FakeSearchServiceClient, FakeSearchServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.ShoeboxTestInjector
+import org.apache.commons.io.FileUtils
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{ JsObject, JsValue, JsArray, Json }
 import play.api.test.Helpers._
 import play.api.test._
 import com.keepit.social.BasicUser
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
@@ -39,6 +46,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
     FakeScrapeSchedulerModule(),
     FakeShoeboxServiceModule()
   )
+
+  private def fakeImage1 = {
+    val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
+    tf.file.deleteOnExit()
+    FileUtils.copyFile(new File("test/data/image1.png"), tf.file)
+    tf
+  }
 
   "LibraryController" should {
 
@@ -231,6 +245,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val pubId1 = Library.publicId(lib1.id.get)
 
+        // upload an image
+        {
+          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload)
+          val saved = Await.result(savedF, Duration("10 seconds"))
+          saved === ImageProcessState.StoreSuccess
+        }
+
         val testPath = com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url
         inject[FakeUserActionsHelper].setUser(user1)
         val request1 = FakeRequest("GET", testPath)
@@ -247,6 +268,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"visibility":"secret",
              |"slug":"lib1",
              |"url":"/ahsu/lib1",
+             |"image":{
+             |     "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
+             |     "x":50,
+             |     "y":50
+             |   },
              |"kind":"user_created",
              |"owner":{
              |  "id":"${basicUser1.externalId}",
@@ -264,6 +290,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
            |"membership":"owner"
           }""".stripMargin))
 
+        // viewed by another user with an invite
         val user2 = db.readWrite { implicit s =>
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "Hsu", createdAt = t1, username = Username("bhsu"), normalizedUsername = "test"))
           libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusMinutes(3)))
@@ -282,6 +309,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"visibility":"secret",
              |"slug":"lib1",
              |"url":"/ahsu/lib1",
+             |"image":{
+             |     "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
+             |     "x":50,
+             |     "y":50
+             |   },
              |"kind":"user_created",
              |"owner":{
              |  "id":"${basicUser1.externalId}",

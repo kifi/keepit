@@ -1,7 +1,7 @@
 package com.keepit.common.store
 
 import com.google.inject.{ Singleton, Provides }
-import com.keepit.search.tracker._
+import com.keepit.search.tracking._
 import com.keepit.search.index.{ InMemoryIndexStoreImpl, IndexStore }
 
 case class SearchFakeStoreModule() extends FakeStoreModule {
