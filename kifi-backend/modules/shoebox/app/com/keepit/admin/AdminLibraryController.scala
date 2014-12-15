@@ -8,10 +8,12 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.RichRequestHeader
+import com.keepit.cortex.CortexServiceClient
 import com.keepit.model._
 import play.api.mvc.AnyContent
 import views.html
 import com.keepit.common.time._
+import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -42,6 +44,7 @@ class AdminLibraryController @Inject() (
     libraryInviteRepo: LibraryInviteRepo,
     libraryCommander: LibraryCommander,
     userRepo: UserRepo,
+    cortex: CortexServiceClient,
     db: Database,
     clock: Clock,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
@@ -58,7 +61,7 @@ class AdminLibraryController @Inject() (
       libraryMembershipRepo.save(currentOwnership.copy(access = LibraryAccess.READ_ONLY))
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, toUserId) match {
         case None =>
-          libraryMembershipRepo.save(LibraryMembership(userId = toUserId, libraryId = libraryId, access = LibraryAccess.OWNER, showInSearch = currentOwnership.showInSearch))
+          libraryMembershipRepo.save(LibraryMembership(userId = toUserId, libraryId = libraryId, access = LibraryAccess.OWNER, showInSearch = currentOwnership.showInSearch, visibility = currentOwnership.visibility))
         case Some(newOwnership) =>
           libraryMembershipRepo.save(newOwnership.copy(access = LibraryAccess.OWNER, showInSearch = currentOwnership.showInSearch))
       }
@@ -123,7 +126,12 @@ class AdminLibraryController @Inject() (
     Ok(html.admin.libraries(info))
   }
 
-  def libraryView(libraryId: Id[Library]) = AdminUserPage { implicit request =>
+  def libraryView(libraryId: Id[Library]) = AdminUserPage.async { implicit request =>
+    val simLibsFut = cortex.similarLibraries(libraryId, 5).map { libIds =>
+      db.readOnlyReplica { implicit s =>
+        libIds.map { libraryRepo.get(_) }
+      }
+    }
     val (library, owner, keepCount, contributors, followers) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(libraryId)
       val owner = userRepo.get(lib.ownerId)
@@ -132,10 +140,12 @@ class AdminLibraryController @Inject() (
 
       val contributors = members.filter(x => (x.access == LibraryAccess.READ_WRITE || x.access == LibraryAccess.READ_INSERT)).map { m => userRepo.get(m.userId) }
       val followers = members.filter(x => x.access == LibraryAccess.READ_ONLY).map { m => userRepo.get(m.userId) }
-
       (lib, owner, keepCount, contributors, followers)
     }
-    Ok(html.admin.library(library, owner, keepCount, contributors, followers, Library.publicId(libraryId)))
+
+    simLibsFut.map { relatedLibs =>
+      Ok(html.admin.library(library, owner, keepCount, contributors, followers, Library.publicId(libraryId), relatedLibs))
+    }
   }
 
   def libraryKeepsView(libraryId: Id[Library], page: Int = 0, showPrivates: Boolean = false) = AdminUserPage { implicit request =>

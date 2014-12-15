@@ -1,10 +1,9 @@
 package com.keepit.search.index
 
 import com.keepit.common.time._
-import com.keepit.search.graph.collection.CollectionIdList
-import com.keepit.search.graph.URIList
-import com.keepit.search.graph.Util
-import com.keepit.search.line.LineField
+import com.keepit.search.index.graph.collection.CollectionIdList
+import com.keepit.search.index.graph.URIList
+import com.keepit.search.index.graph.Util
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute

@@ -197,6 +197,7 @@ class AuthController @Inject() (
   def accessTokenLogin(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
     request.body.asOpt[OAuth2TokenInfo] match {
       case None =>
+        log.error(s"[accessTokenLogin] Failed to parse token. body=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
       case Some(oauth2Info) =>
         authHelper.doAccessTokenLogin(providerName, oauth2Info)
@@ -206,6 +207,7 @@ class AuthController @Inject() (
   def accessTokenSignup(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
     request.body.asOpt[OAuth2TokenInfo] match {
       case None =>
+        log.error(s"[accessTokenSignup] Failed to parse token. body=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
       case Some(oauth2Info) =>
         authHelper.doAccessTokenSignup(providerName, oauth2Info)
@@ -215,6 +217,7 @@ class AuthController @Inject() (
   def oauth1TokenSignup(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
     request.body.asOpt[OAuth1TokenInfo] match {
       case None =>
+        log.error(s"[oauth1TokenSignup] Failed to parse token. body=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
       case Some(oauth1Info) =>
         authHelper.doOAuth1TokenSignup(providerName, oauth1Info)
@@ -224,6 +227,7 @@ class AuthController @Inject() (
   def oauth1TokenLogin(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
     request.body.asOpt[OAuth1TokenInfo] match {
       case None =>
+        log.error(s"[oauth1TokenLogin] Failed to parse token. body=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
       case Some(oauth1Info) =>
         authHelper.doOAuth1TokenLogin(providerName, oauth1Info)
@@ -310,8 +314,7 @@ class AuthController @Inject() (
   }
 
   def signup(provider: String) = Action.async(parse.anyContent) { implicit request =>
-    val authRes = timing(s"[signup($provider)] authenticate") { ProviderController.authenticate(provider) }
-
+    val authRes = ProviderController.authenticate(provider)
     authRes(request).map { result =>
       authHelper.authHandler(request, result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?

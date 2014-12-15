@@ -63,6 +63,7 @@ class LibraryCommander @Inject() (
     heimdal: HeimdalServiceClient,
     contextBuilderFactory: HeimdalContextBuilderFactory,
     keepImageCommander: KeepImageCommander,
+    libraryImageCommander: LibraryImageCommander,
     applicationConfig: FortyTwoConfig,
     uriSummaryCommander: URISummaryCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
@@ -148,9 +149,9 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library]): Future[(FullLibraryInfo, String)] = {
+  def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize): Future[(FullLibraryInfo, String)] = {
     val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-    createFullLibraryInfo(userIdOpt, showPublishedLibraries, lib).map { libInfo =>
+    createFullLibraryInfo(userIdOpt, showPublishedLibraries, lib, imageSize).map { libInfo =>
       val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
       (libInfo, accessStr)
     }
@@ -200,7 +201,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library]): Future[Seq[FullLibraryInfo]] = {
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize): Future[Seq[FullLibraryInfo]] = {
     val futureKeepInfosByLibraryId = libraries.map { library =>
       val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
       library.id.get -> keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize)
@@ -240,6 +241,7 @@ class LibraryCommander @Inject() (
         val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(lib.id.get)
         val owner = usersById(lib.ownerId)
         val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_))
+        val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, idealLibraryImageSize)
         FullLibraryInfo(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -249,6 +251,7 @@ class LibraryCommander @Inject() (
           url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
           kind = lib.kind,
           visibility = lib.visibility,
+          image = libImageOpt.map(LibraryImageInfo.createInfo(_)),
           followers = followers,
           keeps = keepInfos,
           numKeeps = keepCount,
@@ -261,8 +264,8 @@ class LibraryCommander @Inject() (
     Future.sequence(futureFullLibraryInfos)
   }
 
-  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library): Future[FullLibraryInfo] = {
-    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
+  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize): Future[FullLibraryInfo] = {
+    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
   }
 
   def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], Map[LibraryAccess, Int]) = {
@@ -403,12 +406,12 @@ class LibraryCommander @Inject() (
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
                     visibility = libAddReq.visibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
-                  libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
+                  libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
                   lib
                 case Some(lib) =>
                   val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
                   libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId, None) match {
-                    case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
+                    case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
                     case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
                   }
                   newLib
@@ -673,14 +676,14 @@ class LibraryCommander @Inject() (
 
             val activeLib = libs.head._2.copy(state = LibraryStates.ACTIVE, slug = LibrarySlug(slug), name = name, visibility = visibility, memberCount = 1)
             val membership = libMem.find(m => m.libraryId == activeLib.id.get && m.access == LibraryAccess.OWNER)
-            if (membership.isEmpty) airbrake.notify(s"user $userId - non-existing ownership of library kind ${kind} (id: ${activeLib.id.get})")
-            val activeMembership = membership.getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true)).copy(state = LibraryMembershipStates.ACTIVE)
+            if (membership.isEmpty) airbrake.notify(s"user $userId - non-existing ownership of library kind $kind (id: ${activeLib.id.get})")
+            val activeMembership = membership.getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE)).copy(state = LibraryMembershipStates.ACTIVE)
             val active = (activeMembership, activeLib)
-            if (libs.tail.length > 0) airbrake.notify(s"user $userId - duplicate active ownership of library kind ${kind} (ids: ${libs.tail.map(_._2.id.get)})")
+            if (libs.tail.length > 0) airbrake.notify(s"user $userId - duplicate active ownership of library kind $kind (ids: ${libs.tail.map(_._2.id.get)})")
             val otherLibs = libs.tail.map {
               case (a, l) =>
                 val inactMem = libMem.find(_.libraryId == l.id.get)
-                  .getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
+                  .getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
                   .copy(state = LibraryMembershipStates.INACTIVE)
                 (inactMem, l.copy(state = LibraryStates.INACTIVE))
             }
@@ -697,9 +700,9 @@ class LibraryCommander @Inject() (
       // If user is missing a system lib, create it
       val mainOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_MAIN).isEmpty) {
         val mainLib = libraryRepo.save(Library(name = "Main Library", ownerId = userId, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN, memberCount = 1))
-        libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
+        libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
         if (!generateNew) {
-          airbrake.notify(s"${userId} missing main library")
+          airbrake.notify(s"$userId missing main library")
         }
         searchClient.updateLibraryIndex()
         Some(mainLib)
@@ -707,9 +710,9 @@ class LibraryCommander @Inject() (
 
       val secretOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_SECRET).isEmpty) {
         val secretLib = libraryRepo.save(Library(name = "Secret Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET, memberCount = 1))
-        libraryMembershipRepo.save(LibraryMembership(libraryId = secretLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
+        libraryMembershipRepo.save(LibraryMembership(libraryId = secretLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
         if (!generateNew) {
-          airbrake.notify(s"${userId} missing secret library")
+          airbrake.notify(s"$userId missing secret library")
         }
         searchClient.updateLibraryIndex()
         Some(secretLib)
@@ -830,7 +833,7 @@ class LibraryCommander @Inject() (
         val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
-            libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true))
+            libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
             notifyOwnerOfNewFollower(userId, lib)
           case Some(mem) =>
             val maxWithExisting = (maxAccess :: mem.access :: Nil).sorted.last
@@ -1133,6 +1136,36 @@ class LibraryCommander @Inject() (
     }
   }
 
+  /**
+   * 1. non user: number of public libraries that are “displayable on profile” (see library pref) plus libraries i follow that are public
+   * 2. my own profile view: total number of libraries I own and I follow, including main and secret, not including pending invites to libs
+   * 3. logged in user viewing another’s profile: Everything in 1 (above) + libraries user has access to (even if private)
+   */
+  def countLibraries(userId: Id[User], viewer: Option[Id[User]]): Int = viewer match {
+    case None => countLibrariesForAnonymous(userId)
+    case Some(id) if id == userId => countLibrariesForSelf(userId)
+    case Some(id) => countLibrariesForOtherUser(userId, id)
+  }
+
+  private def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User]): Int = {
+    db.readOnlyReplica { implicit s =>
+      val showFollowLibraries = true
+      libraryMembershipRepo.countLibrariesForOtherUser(userId, friendId, countFollowLibraries = showFollowLibraries)
+    }
+  }
+
+  private def countLibrariesForSelf(userId: Id[User]): Int = {
+    db.readOnlyReplica { implicit s =>
+      libraryMembershipRepo.countLibrariesToSelf(userId)
+    }
+  }
+
+  private def countLibrariesForAnonymous(userId: Id[User]): Int = {
+    db.readOnlyReplica { implicit s =>
+      val showFollowLibraries = true
+      libraryMembershipRepo.countLibrariesOfUserFromAnonymos(userId, countFollowLibraries = showFollowLibraries)
+    }
+  }
 }
 
 sealed abstract class LibraryError(val message: String)
@@ -1208,6 +1241,7 @@ object LibraryInfo {
     case Some(s) => { Some(s.dropRight(s.length - MaxDescriptionLength)) } // will change later!
     case _ => None
   }
+
 }
 
 case class MaybeLibraryMember(member: Either[BasicUser, BasicContact], access: Option[LibraryAccess], lastInvitedAt: Option[DateTime])
@@ -1227,6 +1261,7 @@ case class FullLibraryInfo(
   description: Option[String],
   slug: LibrarySlug,
   url: String,
+  image: Option[LibraryImageInfo] = None,
   kind: LibraryKind,
   lastKept: Option[DateTime],
   owner: BasicUser,

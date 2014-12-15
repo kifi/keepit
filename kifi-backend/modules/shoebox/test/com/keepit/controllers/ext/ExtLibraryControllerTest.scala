@@ -10,9 +10,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
-import com.keepit.model.{ Collection, FakeSliderHistoryTrackerModule, Hashtag, Keep, KeepSource, KeepToCollection }
-import com.keepit.model.{ Library, LibraryAccess, LibraryMembership, LibraryMembershipStates, LibrarySlug, LibraryStates, LibraryVisibility, LibraryInvite }
-import com.keepit.model.{ NormalizedURI, URLFactory, UrlHash, User, Username }
+import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.social.BasicUser
@@ -48,18 +46,18 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Morgan", lastName = "Freeman", username = Username("morgan"), normalizedUsername = "test"))
           val lib1 = libraryRepo.save(Library(name = "Million Dollar Baby", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("baby"), memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           val user2 = userRepo.save(User(firstName = "Michael", lastName = "Caine", username = Username("michael"), normalizedUsername = "test"))
           // Give READ_INSERT access to Freeman
           val lib2 = libraryRepo.save(Library(name = "Dark Knight", ownerId = user2.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("darkknight"), memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.READ_INSERT, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.READ_INSERT, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           // Give READ_ONLY access to Freeman
           val lib3 = libraryRepo.save(Library(name = "Now You See Me", ownerId = user2.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("magic"), memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           (user1, user2, lib1, lib2, lib3)
         }
@@ -127,8 +125,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
           val lib1 = libraryRepo.save(Library(name = "L1", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("l1"), memberCount = 1))
           val lib2 = libraryRepo.save(Library(name = "L2", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l2"), memberCount = 1))
-          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, state = LibraryMembershipStates.INACTIVE))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, state = LibraryMembershipStates.INACTIVE, visibility = LibraryMembershipVisibilityStates.VISIBLE))
           (user1, user2, lib1, lib2, mem1, mem2)
         }
         implicit val config = inject[PublicIdConfiguration]
@@ -162,8 +160,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
           val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
-          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
           libraryRepo.all.map { l => (l.id, l.state) } === Seq((lib.id, LibraryStates.ACTIVE))
           (user1, user2, lib, mem1, mem2)
         }
@@ -190,10 +188,10 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test2"), normalizedUsername = "test2"))
 
           val lib1 = libraryRepo.save(Library(name = "L1", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l1"), memberCount = 1))
-          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           val lib2 = libraryRepo.save(Library(name = "L2", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("l2"), memberCount = 1))
-          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           libraryMembershipRepo.countWithLibraryId(lib1.id.get) === 1
           libraryMembershipRepo.countWithLibraryId(lib2.id.get) === 1
@@ -244,11 +242,11 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test2"), normalizedUsername = "test2"))
 
           val lib1 = libraryRepo.save(Library(name = "L1", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l1"), memberCount = 1))
-          val mem11 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          val mem12 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          val mem11 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          val mem12 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           val lib2 = libraryRepo.save(Library(name = "L2", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l2"), memberCount = 1))
-          val mem21 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val mem21 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get, None).get.state === LibraryMembershipStates.ACTIVE
           libraryMembershipRepo.countWithLibraryId(lib1.id.get) === 2
@@ -285,17 +283,17 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Kanye", lastName = "West", username = Username("kanye"), normalizedUsername = "test"))
           val lib1 = libraryRepo.save(Library(name = "Genius", ownerId = user1.id.get, slug = LibrarySlug("genius"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           val user2 = userRepo.save(User(firstName = "Taylor", lastName = "Swift", username = Username("taylor"), normalizedUsername = "test"))
           val lib2 = libraryRepo.save(Library(name = "My VMA Award", ownerId = user2.id.get, slug = LibrarySlug("myvma"), visibility = LibraryVisibility.SECRET, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
           val lib3 = libraryRepo.save(Library(name = "New Album", ownerId = user2.id.get, slug = LibrarySlug("newalbum"), visibility = LibraryVisibility.SECRET, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           // Kayne West has membership to these libraries... for some reason
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
           (user1, user2, lib1, lib2, lib3)
         }
 
@@ -347,8 +345,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
           val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
-          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
           val keep = keepInLibrary(user1, lib, "http://foo.com", "Foo", Seq("Bar", "Baz"))
           (user1, user2, lib, mem1, mem2, keep)
         }
@@ -389,13 +387,13 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
           val user1 = userRepo.save(User(firstName = "Colin", lastName = "Kaepernick", username = Username("qb"), createdAt = t1, normalizedUsername = "test"))
           val lib1 = libraryRepo.save(Library(name = "49ers UberL33t Football Plays", ownerId = user1.id.get, slug = LibrarySlug("football"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1, visibility = LibraryMembershipVisibilityStates.VISIBLE))
           val lib2 = libraryRepo.save(Library(name = "shoes", ownerId = user1.id.get, slug = LibrarySlug("shoes"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           // coach has RW access to keep's football library
           val user2 = userRepo.save(User(firstName = "Jim", lastName = "Harbaugh", username = Username("coach"), createdAt = t1, normalizedUsername = "test2"))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true, createdAt = t1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true, createdAt = t1, visibility = LibraryMembershipVisibilityStates.VISIBLE))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash("www.runfast.com", Some("Run")))
           val uri2 = uriRepo.save(NormalizedURI.withHash("www.throwlong.com", Some("Throw")))
@@ -443,8 +441,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
           val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
-          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
           val keep = keepInLibrary(user1, lib, "http://foo.com", "Foo")
           (user1, user2, lib, mem1, mem2, keep)
         }
@@ -475,8 +473,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
           val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
-          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
           val keep1 = keepInLibrary(user1, lib, "http://foo.com", "Foo")
           val keep2 = keepInLibrary(user1, lib, "http://bar.com", "Bar", Seq("aa aa", "b b"))
           (user1, user2, lib, mem1, mem2, keep1, keep2)
@@ -525,8 +523,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
           val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
-          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
           val keep1 = keepInLibrary(user1, lib, "http://foo.com", "Foo")
           val keep2 = keepInLibrary(user1, lib, "http://bar.com", "Bar")
           (user1, user2, lib, mem1, mem2, keep1, keep2)

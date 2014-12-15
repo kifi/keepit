@@ -21,6 +21,8 @@ object UserFactory {
     def withId(id: String) = new PartialUser(user.copy(externalId = ExternalId[User](id)))
     def withName(first: String, last: String) = new PartialUser(user.copy(firstName = first, lastName = last))
     def withUsername(name: String) = new PartialUser(user.copy(username = Username(name)))
+    def withUsername(name: Username) = new PartialUser(user.copy(username = name))
+    def withPictureName(name: String) = new PartialUser(user.copy(pictureName = Some(name)))
     def withState(state: State[User]) = new PartialUser(user.copy(state = state))
     def get: User = user
   }

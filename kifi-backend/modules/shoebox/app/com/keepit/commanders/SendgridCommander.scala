@@ -1,17 +1,19 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.template.EmailTrackingParam
 import com.keepit.common.mail.template.EmailTip.toContextData
+import com.keepit.common.mail.template.EmailTrackingParam
 import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
-import com.keepit.heimdal.{ HeimdalContextBuilder, NonUserEventTypes, NonUserEvent, UserEventTypes, UserEvent, HeimdalContextBuilderFactory, HeimdalServiceClient }
-import com.keepit.model.{ EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates, ExperimentType }
+import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder, HeimdalContextBuilderFactory, HeimdalServiceClient, NonUserEvent, NonUserEventTypes, UserEvent, UserEventTypes }
+import com.keepit.model.{ EmailOptOutRepo, ExperimentType, NotificationCategory, User, UserEmailAddressRepo, UserEmailAddressStates }
 import com.keepit.social.NonUserKinds
 import org.joda.time.DateTime
+
 import scala.concurrent.ExecutionContext
 
 class SendgridCommander @Inject() (
@@ -27,7 +29,7 @@ class SendgridCommander @Inject() (
     implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  import SendgridEventTypes._
+  import com.keepit.commanders.SendgridEventTypes._
 
   val earliestAcceptableEventTime = new DateTime(2012, 7, 15, 0, 0)
   val alertEvents: Seq[SendgridEventType] = Seq(BOUNCE, SPAM_REPORT)
@@ -85,6 +87,14 @@ class SendgridCommander @Inject() (
         db.readOnlyReplica { implicit s => emailAddressRepo.getByAddress(address).map(_.userId).toSet }(captureLocation)
       } else Set.empty
 
+      // if the delivered event is over 3 minutes from when we submitted the email, consider this late and raise an alert
+      val isLateDelivery = event.event.exists(SendgridEventTypes.DELIVERED ==) &&
+        email.timeSubmitted.exists(_.isBefore(event.timestamp.minusMinutes(3)))
+
+      if (isLateDelivery) {
+        airbrake.notify(s"late delivery of email_id=${email.id.get}: submitted [${email.timeSubmitted.get}] delivered [${event.timestamp}]")
+      }
+
       def eventTime =
         if (event.timestamp.isBefore(earliestAcceptableEventTime)) {
           log.warn(s"Sendgrid event timestamp rejected! $event")
@@ -96,12 +106,48 @@ class SendgridCommander @Inject() (
           val builder = heimdalContextBuilder()
           builder.addExistingContext(context)
           builder += ("userStatus", ExperimentType.getUserStatus(experiments))
-          heimdalClient.trackEvent(UserEvent(userId, builder.build, UserEventTypes.WAS_NOTIFIED, eventTime))
+          val userEventContext = builder.build
+          heimdalClient.trackEvent(UserEvent(userId, userEventContext, UserEventTypes.WAS_NOTIFIED, eventTime))
+
+          sendUserUsedKifiEvent(userId, email, event, userEventContext)
         }
       }
       else if (NotificationCategory.NonUser.reportToAnalytics.contains(email.category)) {
         heimdalClient.trackEvent(NonUserEvent(address.address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, eventTime))
       }
+    }
+  }
+
+  private val userUsedKifiCategories = NotificationCategory.User.DIGEST :: NotificationCategory.User.MESSAGE :: Nil
+
+  /*
+   * Manually triggers user_used_kifi events for certain types of emails
+   */
+  private def sendUserUsedKifiEvent(userId: Id[User], email: ElectronicMail, event: SendgridEvent, context: HeimdalContext) = {
+    val notification = NotificationCategory.fromElectronicMailCategory(email.category)
+
+    if (userUsedKifiCategories.contains(notification) && event.event.exists(_ == SendgridEventTypes.CLICK)) {
+
+      // rename the `action` property based on what the subaction property is
+      val subaction = context.get[String]("subaction")
+
+      val newActionOpt = subaction match {
+        case Some(s) if s.startsWith("clicked") => Some(s)
+        case _ => None
+      }
+
+      newActionOpt foreach { action =>
+        val specialCtxBuilder = heimdalContextBuilder()
+
+        // initialize the context with the context passed in
+        specialCtxBuilder.data ++= (context.data - "subaction")
+        specialCtxBuilder += ("subsource", notification.category)
+        specialCtxBuilder += ("action", action)
+        val specialCtx = specialCtxBuilder.build
+
+        heimdalClient.trackEvent(UserEvent(userId, specialCtx, UserEventTypes.USED_KIFI))
+      }
+
     }
   }
 

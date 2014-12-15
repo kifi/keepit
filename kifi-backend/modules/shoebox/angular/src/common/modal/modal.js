@@ -9,7 +9,8 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
-        forceClose: '='
+        forceClose: '=',
+        disableScroll: '='
       },
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
@@ -67,7 +68,10 @@ angular.module('kifi')
         });
 
         var wrap = element.find('.dialog-body');
-        var verticalScrollbarCss = {'max-height': $window.innerHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'};
+        var verticalScrollbarCss = {'max-height': $window.innerHeight - 160 + 'px'};
+        if (!scope.disableScroll) {
+          _.merge(verticalScrollbarCss, {'overflow-y': 'auto', 'overflow-x': 'hidden'});
+        }
 
         var resizeWindow = _.debounce(function () {
           verticalScrollbarCss['max-height'] = $window.innerHeight - 160 + 'px';

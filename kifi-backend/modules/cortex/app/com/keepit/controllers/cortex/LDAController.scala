@@ -160,8 +160,9 @@ class LDAController @Inject() (
     val js = request.body
     val userId = (js \ "user").as[Id[User]]
     val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+    val experiment = (js \ "experiment").asOpt[Boolean].getOrElse(false)
     val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, Some(userId))
-    val explain = lda.explainFeed(userId, uris)(version)
+    val explain = lda.explainFeed(userId, uris, experiment)(version)
     Ok(Json.toJson(explain))
   }
 
@@ -190,6 +191,12 @@ class LDAController @Inject() (
     implicit val ver = toVersion(version)
     val uris = lda.getSimilarURIs(uriId)
     Ok(Json.toJson(uris))
+  }
+
+  def getSimilarLibraries(libId: Id[Library], limit: Int, version: Option[Int]) = Action { request =>
+    val ver = ModelVersion[DenseLDA](3) // just use this for now.
+    val libs = statsd.time("ldaController.getSimilarLibraries", 1.0) { _ => lda.getSimilarLibraries(libId, limit)(ver) }
+    Ok(Json.toJson(libs))
   }
 
 }

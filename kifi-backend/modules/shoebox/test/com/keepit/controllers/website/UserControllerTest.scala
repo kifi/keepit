@@ -1,32 +1,38 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.db.ExternalId
-import com.keepit.common.oauth.FakeOAuth2ConfigurationModule
-import com.keepit.curator.FakeCuratorServiceClientModule
-import org.specs2.mutable.Specification
-
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserConnectionFactoryHelper._
+import com.keepit.model.UserConnectionFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller._
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.oauth.FakeOAuth2ConfigurationModule
+import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
-import com.keepit.test.{ ShoeboxTestInjector }
-
-import play.api.libs.json.{ Json, JsNull }
+import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.test.ShoeboxTestInjector
+import org.specs2.mutable.Specification
+import play.api.libs.json.{ JsNull, Json }
 import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
-import com.keepit.shoebox.{ FakeShoeboxServiceModule }
-import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ FakeSocialGraphModule }
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.scraper.{ FakeScrapeSchedulerModule }
-
-import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.cortex.FakeCortexServiceClientModule
 
 import scala.concurrent.Future
+import scala.slick.jdbc.StaticQuery
 
 class UserControllerTest extends Specification with ShoeboxTestInjector {
 
@@ -50,7 +56,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     "get currentUser" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          val user = inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
           inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.ADMIN))
           user
         }
@@ -283,6 +289,111 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val resultJson = contentAsJson(result1)
         val resultIds = (resultJson \\ "id").map(_.as[ExternalId[User]])
         resultIds === List(userAL.externalId, userTJ.externalId, userJA.externalId)
+      }
+    }
+
+    "get profile for self" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val userConnectionRepo = inject[UserConnectionRepo]
+        val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
+          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
+          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          connect(user1 -> user2,
+            user1 -> user3,
+            user4 -> user1,
+            user2 -> user3).saved
+
+          libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2)
+
+          val lib1 = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
+          lib1.visibility === LibraryVisibility.PUBLISHED
+
+          library().withUser(user3).published().saved
+          library().withUser(user5).published().saved.savedFollowerMembership(user1)
+          membership().withLibraryFollower(library().withUser(user5).published().saved, user1).invisible().saved
+
+          (user1, user2, user3, user4, user5, lib1)
+        }
+        db.readOnlyMaster { implicit s =>
+          val libMem = libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user4.id.get).get
+          libMem.access === LibraryAccess.READ_ONLY
+          libMem.state.value === "active"
+          libMem.visibility.value === "visible"
+
+          import StaticQuery.interpolation
+          val ret1 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4".as[Int].firstOption.getOrElse(0)
+          ret1 === 1
+          val ret2 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4 and lib.state = 'active' and lm.state = 'active' and lm.visibility = 'visible' and lib.visibility = 'published'".as[Int].firstOption.getOrElse(0)
+          ret2 === 1
+
+          libraryMembershipRepo.countLibrariesToSelf(user1.id.get) === 6
+          libraryMembershipRepo.countLibrariesToSelf(user2.id.get) === 1
+          libraryMembershipRepo.countLibrariesToSelf(user3.id.get) === 1
+          libraryMembershipRepo.countLibrariesToSelf(user4.id.get) === 1
+          libraryMembershipRepo.countLibrariesToSelf(user5.id.get) === 3
+
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user1.id.get, countFollowLibraries = true) === 2
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user1.id.get, countFollowLibraries = false) === 1
+
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user2.id.get, countFollowLibraries = true) === 0
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user2.id.get, countFollowLibraries = false) === 0
+
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user3.id.get, countFollowLibraries = true) === 1
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user3.id.get, countFollowLibraries = false) === 1
+
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user4.id.get, countFollowLibraries = true) === 1
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user4.id.get, countFollowLibraries = false) === 0
+
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user5.id.get, countFollowLibraries = true) === 3
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user5.id.get, countFollowLibraries = false) === 2
+
+          libraryMembershipRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get, countFollowLibraries = true) === 2
+          libraryMembershipRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get, countFollowLibraries = false) === 1
+
+          libraryMembershipRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get, countFollowLibraries = true) === 3
+          libraryMembershipRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get, countFollowLibraries = false) === 2
+
+          libraryMembershipRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get, countFollowLibraries = true) === 0
+          libraryMembershipRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get, countFollowLibraries = false) === 0
+
+          libraryMembershipRepo.countLibrariesForOtherUser(user3.id.get, user5.id.get, countFollowLibraries = true) === 1
+          libraryMembershipRepo.countLibrariesForOtherUser(user3.id.get, user5.id.get, countFollowLibraries = false) === 1
+
+          libraryMembershipRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get, countFollowLibraries = true) === 1
+          libraryMembershipRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get, countFollowLibraries = false) === 0
+
+          libraryMembershipRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get, countFollowLibraries = true) === 3
+          libraryMembershipRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get, countFollowLibraries = false) === 2
+        }
+        val userController = inject[UserController]
+        def call(viewer: Option[User], viewing: Username) = {
+          viewer match {
+            case None => inject[FakeUserActionsHelper].unsetUser()
+            case Some(user) => inject[FakeUserActionsHelper].setUser(user)
+          }
+          val request = FakeRequest("GET", routes.UserController.profile(viewing.value).url)
+          userController.profile(viewing.value)(request)
+        }
+        //non existing username
+        status(call(Some(user1), Username("foo"))) must equalTo(NOT_FOUND)
+        //seeing a profile from an anonymos user
+        val result1 = call(None, user1.username)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        val res = contentAsJson(result1)
+        res === Json.parse(
+          """
+            {
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1",
+              "numLibraries":2
+            }
+          """)
       }
     }
 

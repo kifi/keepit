@@ -21,6 +21,7 @@ object LibraryMembershipFormatter {
     (__ \ 'state).format(State.format[LibraryMembership]) and
     (__ \ 'seq).format(SequenceNumber.format[LibraryMembership]) and
     (__ \ 'showInSearch).format[Boolean] and
+    (__ \ 'visibility).format[LibraryMembershipVisibility] and
     (__ \ 'lastViewed).formatNullable[DateTime] and
     (__ \ 'lastEmailSent).formatNullable[DateTime]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
@@ -45,4 +46,13 @@ case class LibraryMembershipCountKey(userId: Id[User], access: LibraryAccess) ex
 
 class LibraryMembershipCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[LibraryMembershipCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class FollowersCountKey(userId: Id[User]) extends Key[Int] {
+  override val version = 1
+  val namespace = "followers_count"
+  def toKey(): String = s"$userId"
+}
+
+class FollowersCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[FollowersCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

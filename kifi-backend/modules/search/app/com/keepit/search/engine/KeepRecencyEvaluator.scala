@@ -1,8 +1,8 @@
 package com.keepit.search.engine
 
 import com.keepit.search.{ Searcher, SearchConfig }
-import com.keepit.search.graph.keep.KeepFields
-import com.keepit.search.query.{ RecencyScorer, RecencyQuery }
+import com.keepit.search.index.graph.keep.KeepFields
+import com.keepit.search.engine.query.{ RecencyScorer, RecencyQuery }
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.{ Weight, MatchAllDocsQuery }
 import org.apache.lucene.util.Bits.MatchAllBits

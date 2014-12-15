@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfKeepWhoLibsAndPics', [
-  '$rootScope', 'friendService', 'keepWhoService', 'profileService', 'libraryService',
-  function ($rootScope, friendService, keepWhoService, profileService, libraryService) {
+  '$rootScope', 'friendService', 'keepWhoService', 'profileService', 'libraryService', 'env',
+  function ($rootScope, friendService, keepWhoService, profileService, libraryService, env) {
     return {
       restrict: 'A',
       replace: true,
@@ -18,6 +18,9 @@ angular.module('kifi')
         scope.getName = keepWhoService.getName;
         scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
         scope.visibleKeepLibraries = scope.keep.libraries;
+        scope.visibleKeepLibraries.forEach(function (lib) {
+          lib.absPath = env.origin + lib.path;
+        });
 
         scope.$emit('getCurrentLibrary', { callback: function (lib) {
           if (lib && lib.id) {
@@ -58,8 +61,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepWhoLib', ['$rootScope',
-  function ($rootScope) {
+.directive('kfKeepWhoLib', ['$rootScope', 'platformService',
+  function ($rootScope, platformService) {
     return {
       restrict: 'A',
       replace: true,
@@ -71,6 +74,7 @@ angular.module('kifi')
         scope.onLibraryAttributionClicked = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedLibraryAttribution' });
         };
+        scope.isBot = platformService.isBot();
       }
     };
   }

@@ -1,7 +1,7 @@
 package com.keepit.eliza.model
 
 import com.keepit.eliza.util.MessageFormatter
-import com.keepit.search.message.{ ThreadContent, FULL }
+import com.keepit.search.index.message.{ ThreadContent, FULL }
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.db.slick.Database
 import com.keepit.model.User

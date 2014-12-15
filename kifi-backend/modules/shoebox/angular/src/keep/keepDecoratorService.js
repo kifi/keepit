@@ -34,10 +34,6 @@ angular.module('kifi')
 
       processLibraries(item);
 
-      if (profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('libraries') < 0){
-        item.libraries = [];
-      }
-
       this.keeps = []; // default value in case `item` doesn't have it
       _.assign(this, item);
       this.itemType = itemType;

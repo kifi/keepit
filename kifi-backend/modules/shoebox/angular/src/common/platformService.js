@@ -15,6 +15,10 @@ angular.module('kifi')
       return (/iPhone|iPod/).test(navigator.userAgent);
     };
 
+    var isBot = function () {
+      return (/bot|googlebot|crawler|spider|robot|crawling/i).test($window.navigator.userAgent);
+    };
+
     var goToAppOrStore = function (url) {
       var safeUrl;
       if (isSupportedMobilePlatform()) {
@@ -96,7 +100,8 @@ angular.module('kifi')
 
     var api = {
       isSupportedMobilePlatform: isSupportedMobilePlatform,
-      goToAppOrStore: goToAppOrStore
+      goToAppOrStore: goToAppOrStore,
+      isBot: isBot
     };
 
     return api;

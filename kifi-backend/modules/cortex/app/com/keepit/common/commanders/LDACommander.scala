@@ -1,5 +1,7 @@
 package com.keepit.common.commanders
 
+import java.util.BitSet
+
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -8,7 +10,6 @@ import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
-import com.keepit.cortex.PublishingVersions
 import com.keepit.model.{ Library, Keep, NormalizedURI, User }
 import play.api.libs.json._
 import scala.math.exp
@@ -261,18 +262,34 @@ class LDACommander @Inject() (
     }
   }
 
-  def explainFeed(userId: Id[User], uris: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[Seq[Id[Keep]]] = {
+  def explainFeed(userId: Id[User], uris: Seq[Id[NormalizedURI]], experiment: Boolean)(implicit version: ModelVersion[DenseLDA]): Seq[Seq[Id[Keep]]] = {
 
     val MAX_KL_DIST = 0.5f // empirically this should be < 1.0
     val topK = 3
 
-    def bestMatch(userFeats: Seq[(Id[Keep], LDATopicFeature)], uriFeat: URILDATopic): Seq[Id[Keep]] = {
+    def bestMatch(userFeats: Seq[(Id[Keep], Seq[LDATopic], LDATopicFeature)], uriFeat: URILDATopic): Seq[Id[Keep]] = {
+
+      val bitSet = new BitSet(uriFeat.feature.get.value.size)
+      List(uriFeat.firstTopic.get, uriFeat.firstTopic.get, uriFeat.thirdTopic.get).foreach { t => bitSet.set(t.index) }
+      var numIntersects = 0
+
       val scored = userFeats.map {
-        case (kid, ufeat) =>
+        case (kid, topics, ufeat) =>
           val score = KL_divergence(ufeat.value, uriFeat.feature.get.value)
-          (kid, score)
+          log.info("uri has topics: " + topics.mkString(", "))
+
+          val multiplier = if (experiment) {
+            numIntersects = 0
+            topics.foreach { t =>
+              if (bitSet.get(t.index)) numIntersects += 1
+            }
+            val multiplier = if (numIntersects >= 1) 1f else 0f
+            multiplier
+          } else 1f
+
+          (kid, score * multiplier)
       }
-      scored.filter { _._2 < MAX_KL_DIST }.sortBy(_._2).take(topK).map { _._1 }
+      scored.filter { x => x._2 < MAX_KL_DIST && x._2 > 0 }.sortBy(_._2).take(topK).map { _._1 }
     }
 
     val userFeats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserRecentURIFeatures(userId, version, min_num_words = 50, limit = 200) }
@@ -345,6 +362,42 @@ class LDACommander @Inject() (
           uriTopicRepo.getURIsByTopics(first, second, third, version, limit = 50)
         case None => Seq()
       }
+    }
+  }
+
+  def getSimilarLibraries(libId: Id[Library], limit: Int)(implicit version: ModelVersion[DenseLDA]): Seq[Id[Library]] = {
+
+    def getCandidates(libId: Id[Library], feat: LibraryLDATopic): Seq[LibraryLDATopic] = {
+      val (first, second, third) = (feat.firstTopic.get, feat.secondTopic.get, feat.thirdTopic.get)
+      val candidates = db.readOnlyReplica { implicit s => libTopicRepo.getLibraryByTopics(firstTopic = first, version = version, limit = 50) }
+      candidates
+        .filter { x => x.secondTopic.get == second || (x.secondTopic.get == third && x.thirdTopic.get == second) }
+        .filter(_.libraryId != libId)
+    }
+
+    def rankCandidates(feat: LibraryLDATopic, candidates: Seq[LibraryLDATopic]): Seq[Id[Library]] = {
+      val idsAndScores = Seq.tabulate(candidates.size) { i =>
+        val candidate = candidates(i)
+        val id = candidate.libraryId
+        val score = 1.0 - KL_divergence(feat.topic.get.value, candidate.topic.get.value) // score is higher the better
+        val boost = if (candidate.secondTopic == feat.secondTopic) {
+          if (candidate.thirdTopic == feat.thirdTopic) 2.0 else 1.0
+        } else {
+          assert(candidate.secondTopic == feat.thirdTopic && candidate.thirdTopic == feat.secondTopic)
+          1.5
+        }
+        (id, score * boost)
+      }
+      idsAndScores.filter(_._2 > 0).sortBy(-_._2).map { _._1 }
+    }
+
+    val libFeatOpt = db.readOnlyReplica { implicit s => libTopicRepo.getActiveByLibraryId(libId, version) }
+    libFeatOpt match {
+      case None => Seq()
+      case Some(feat) =>
+        val candidates = getCandidates(libId, feat)
+        val ranked = rankCandidates(feat, candidates)
+        ranked.take(limit)
     }
   }
 

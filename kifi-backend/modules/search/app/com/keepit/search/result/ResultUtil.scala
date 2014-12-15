@@ -1,7 +1,7 @@
 package com.keepit.search.result
 
 import com.keepit.search.engine.Visibility
-import com.keepit.search.engine.result.{ KifiShardHit, KifiPlainResult }
+import com.keepit.search.engine.uri.{ UriShardHit, UriSearchResult }
 import play.api.libs.json._
 import com.keepit.common.db.{ Id, ExternalId }
 import org.joda.time.DateTime
@@ -73,7 +73,7 @@ object ResultUtil {
   }
 
   def toArticleSearchResult(
-    res: KifiPlainResult,
+    res: UriSearchResult,
     last: Option[String], // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
     millisPassed: Int,
     pageNumber: Int,
@@ -81,7 +81,7 @@ object ResultUtil {
     time: DateTime,
     lang: String): ArticleSearchResult = {
 
-    def toArticleHit(hit: KifiShardHit): ArticleHit = {
+    def toArticleHit(hit: UriShardHit): ArticleHit = {
       ArticleHit(
         Id[NormalizedURI](hit.id),
         hit.finalScore,

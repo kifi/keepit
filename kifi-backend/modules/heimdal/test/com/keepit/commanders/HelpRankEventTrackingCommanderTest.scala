@@ -2,14 +2,13 @@ package com.keepit.commanders
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.keepit.commander.{ HelpRankEventTrackingCommander, AttributionCommander, HelpRankCommander }
-import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
+import com.keepit.commander.{ HelpRankEventTrackingCommander }
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.helprank.KeepDiscoveryRepo
-import com.keepit.search.ArticleSearchResult
 import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule }
 import com.keepit.test._
 import net.codingwell.scalaguice.ScalaModule
@@ -113,9 +112,9 @@ class HelpRankEventTrackingCommanderTest extends Specification with HeimdalTestI
         val resF = commander.userClickedFeedItem(event)
         Await.result(resF, 5 seconds)
         db.readWrite { implicit session =>
-          val kifiHitCache = inject[KifiHitCache]
-          val cached = kifiHitCache.get(KifiHitKey(u1.id.get, uriBing.id.get))
-          cached.exists(k => k.context.keepers.length == 1) === true
+          val kifiHitCache = inject[SearchHitReportCache]
+          val cached = kifiHitCache.get(SearchHitReportKey(u1.id.get, uriBing.id.get))
+          cached.exists(k => k.keepers.length == 1) === true
           val kdRepo = inject[KeepDiscoveryRepo]
           val kd2 = kdRepo.getDiscoveriesByKeeper(u2.id.get)
           kd2.isEmpty === false

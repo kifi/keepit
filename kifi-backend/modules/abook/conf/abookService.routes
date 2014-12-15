@@ -1,0 +1,48 @@
+##########################################
+#INTERNAL ROUTES/ABook
+##########################################
+
+POST     /internal/abook/:userId/importContacts                 @com.keepit.abook.controllers.ABookController.importContacts(userId:Id[User])
+POST     /internal/abook/:origin/uploadContacts                 @com.keepit.abook.controllers.ABookController.uploadContacts(userId:Id[User], origin:ABookOriginType)
+POST     /internal/abook/:userId/formUpload                     @com.keepit.abook.controllers.ABookController.formUpload(userId:Id[User])
+
+GET      /internal/abooks                                       @com.keepit.abook.controllers.ABookController.getAllABookInfos()
+GET      /internal/abooks/page/:page                            @com.keepit.abook.controllers.ABookController.getPagedABookInfos(page:Int, size:Int ?= 50)
+GET      /internal/abooksCount/                                 @com.keepit.abook.controllers.ABookController.getABooksCount()
+GET      /internal/abook/:userId/getABookInfos                  @com.keepit.abook.controllers.ABookController.getABookInfos(userId:Id[User])
+GET      /internal/abook/:userId/getABookInfo                   @com.keepit.abook.controllers.ABookController.getABookInfo(userId:Id[User], id:Id[ABookInfo])
+GET      /internal/abook/getABookInfoByExternalId               @com.keepit.abook.controllers.ABookController.getABookInfoByExternalId(externalId:ExternalId[ABookInfo])
+GET      /internal/abook/:userId/getEContactCount               @com.keepit.abook.controllers.ABookController.getEContactCount(userId:Id[User])
+GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.controllers.ABookController.getABookRawInfos(userId:Id[User])
+POST     /internal/abook/:userId/getContactNameByEmail          @com.keepit.abook.controllers.ABookController.getContactNameByEmail(userId:Id[User])
+POST     /internal/abook/:userId/internKifiContacts              @com.keepit.abook.controllers.ABookController.internKifiContacts(userId:Id[User])
+GET      /internal/abook/:userId/getContacts                    @com.keepit.abook.controllers.ABookController.getContactsByUser(userId:Id[User], page: Int ?= 0, pageSize: Option[Int] ?= None)
+GET      /internal/abook/getUsersWithContact                    @com.keepit.abook.controllers.ABookController.getUsersWithContact(email: EmailAddress)
+GET      /internal/abook/:userId/prefixQuery                    @com.keepit.abook.controllers.ABookController.prefixQuery(userId: Id[User], q: String, maxHits: Option[Int])
+
+GET      /internal/abook/:userId/getOAuth2Token                 @com.keepit.abook.controllers.ABookController.getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo])
+
+GET      /internal/abook/:userId/refreshPrefixFilter            @com.keepit.abook.controllers.ABookController.refreshPrefixFilter(userId:Id[User])
+POST     /internal/abook/refreshPrefixFiltersByIds              @com.keepit.abook.controllers.ABookController.refreshPrefixFiltersByIds
+GET      /internal/abook/refreshAllPrefixFilters                @com.keepit.abook.controllers.ABookController.refreshAllPrefixFilters
+
+POST     /internal/abook/richConnectionUpdate                   @com.keepit.abook.controllers.ABookController.richConnectionUpdate()
+GET      /internal/abook/ripestFruit                            @com.keepit.abook.controllers.ABookWTIController.ripestFruit(userId: Long, howMany: Int)
+GET      /internal/abook/:userId/countInvitationsSent           @com.keepit.abook.controllers.ABookWTIController.countInvitationsSent(userId: Id[User], friendSocialId: Option[Long] ?= None, friendEmailAddress: Option[EmailAddress] ?= None)
+GET      /internal/abook/:userId/ripestFruits                   @com.keepit.abook.controllers.ABookWTIController.getRipestFruits(userId: Id[User], page: Int, pageSize: Int)
+GET      /internal/abook/:userId/getFriendRecommendations       @com.keepit.abook.controllers.ABookRecommendationController.getFriendRecommendations(userId: Id[User], offset: Int ?= 0, limit: Int ?= 5)
+POST     /internal/abook/:userId/hideFriendRecommendation       @com.keepit.abook.controllers.ABookRecommendationController.hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User])
+GET      /internal/abook/:userId/getInviteRecommendations       @com.keepit.abook.controllers.ABookRecommendationController.getInviteRecommendations(userId: Id[User], offset: Int ?= 0, limit: Int ?= 5, networks: String)
+POST     /internal/abook/:userId/hideInviteRecommendation       @com.keepit.abook.controllers.ABookRecommendationController.hideInviteRecommendation(userId: Id[User])
+GET      /internal/abook/:userId/getIrrelevantPeople    @com.keepit.abook.controllers.ABookRecommendationController.getIrrelevantPeople(userId: Id[User])
+
+POST     /internal/abook/:userId/hideEmailFromUser              @com.keepit.abook.controllers.ABookController.hideEmailFromUser(userId:Id[User], email: EmailAddress)
+
+GET      /internal/abook/database/getEmailAccountsChanged       @com.keepit.abook.controllers.ABookDataPipeController.getEmailAccountsChanged(seqNum: SequenceNumber[com.keepit.abook.model.EmailAccount], fetchSize: Int)
+GET      /internal/abook/database/getContactsChanged            @com.keepit.abook.controllers.ABookDataPipeController.getContactsChanged(seqNum: SequenceNumber[com.keepit.abook.model.EContact], fetchSize: Int)
+
+->  / commonService.Routes
+
+
+
+

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfTagList', [
-  '$document', '$sce', '$log', 'keyIndices', 'hashtagService', '$location', '$routeParams', '$analytics', '$rootScope',
-  function ($document, $sce, $log, keyIndices, hashtagService, $location, $routeParams, $analytics, $rootScope) {
+  '$document', '$sce', '$log', 'keyIndices', 'hashtagService', '$location', '$routeParams', '$analytics', '$rootScope', 'env',
+  function ($document, $sce, $log, keyIndices, hashtagService, $location, $routeParams, $analytics, $rootScope, env) {
     var dropdownSuggestionCount = 5;
 
     return {
@@ -42,7 +42,7 @@ angular.module('kifi')
           } else {
             // Perform library tag search for logged-out users if they are on a library page.
             if (scope.library && scope.library.url) {
-              return scope.library.url + '/find?q=tag:' + encodeURIComponent(tagPath);
+              return env.origin + scope.library.url + '/find?q=tag:' + encodeURIComponent(tagPath);
             }
             else {
               // If they are in library search, replace query with tag.

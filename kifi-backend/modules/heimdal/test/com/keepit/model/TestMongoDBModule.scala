@@ -17,5 +17,8 @@ case class FakeMongoModule() extends MongoModule {
   def anonymousEventLoggingRepo: AnonymousEventLoggingRepo = new FakeAnonymousEventLoggingRepo
 
   @Provides @Singleton
+  def visitorEventLoggingRepo: VisitorEventLoggingRepo = new FakeVisitorEventLoggingRepo
+
+  @Provides @Singleton
   def nonUserEventLoggingRepo: NonUserEventLoggingRepo = new FakeNonUserEventLoggingRepo
 }

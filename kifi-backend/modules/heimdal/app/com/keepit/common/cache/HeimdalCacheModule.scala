@@ -1,6 +1,7 @@
 package com.keepit.common.cache
 
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
+import com.keepit.heimdal.SearchHitReportCache
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.model.helprank.{ UriReKeepCountCache, UriDiscoveryCountCache }
 import com.keepit.model.{ AnonymousEventDescriptorNameCache, UserEventDescriptorNameCache, SystemEventDescriptorNameCache, NonUserEventDescriptorNameCache }
@@ -127,6 +128,11 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides
   @Singleton
+  def visitorEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new VisitorEventDescriptorNameCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+
+  @Provides
+  @Singleton
   def nonUserEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new NonUserEventDescriptorNameCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
@@ -170,7 +176,7 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def kifiHitCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new KifiHitCache(stats, accessLog, (outerRepo, 7 days))
+    new SearchHitReportCache(stats, accessLog, (outerRepo, 7 days))
 
   @Singleton
   @Provides

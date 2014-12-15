@@ -134,7 +134,7 @@ object MatrixUtils {
   @inline
   def log2(x: Double): Double = log(x) / log(2.0)
 
-  // KL(qs || ps), we don't check input. (ususally we fix ps, find the optimal qs)
+  // KL(qs || ps), we don't check input. (divergence of ps from qs)
   def KL_divergence(qs: Array[Double], ps: Array[Double]): Double = {
     assume(qs.size == ps.size)
     val n = qs.size
