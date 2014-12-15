@@ -16,8 +16,6 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import java.util.Random
 import com.google.inject.Inject
-import com.keepit.search.ProbablisticLRUStore
-import com.keepit.search.FullFilterChunkId
 import com.keepit.common.akka.SafeFuture
 
 case class ProbablisticLRUName(name: String)

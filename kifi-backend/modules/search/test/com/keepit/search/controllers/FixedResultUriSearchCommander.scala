@@ -10,7 +10,7 @@ import com.keepit.common.db.Id
 import com.keepit.model._
 import scala.concurrent.Future
 import com.keepit.search.result.DecoratedResult
-import com.keepit.search.sharding.Shard
+import com.keepit.search.index.sharding.Shard
 import com.keepit.search.engine.explain.Explanation
 
 case class FixedResultIndexModule() extends IndexModule {

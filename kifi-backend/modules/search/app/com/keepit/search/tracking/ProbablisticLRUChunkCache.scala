@@ -1,7 +1,6 @@
 package com.keepit.search.tracking
 
 import com.keepit.common.logging.AccessLog
-import com.keepit.search.{ FullFilterChunkId }
 import com.keepit.serializer.ArrayBinaryFormat
 import scala.concurrent.duration._
 import com.keepit.common.cache.BinaryCacheImpl

@@ -1,7 +1,7 @@
 package com.keepit.search.engine.query
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.Searcher
+import com.keepit.search.index.Searcher
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term

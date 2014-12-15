@@ -7,7 +7,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search.engine.library.{ LibrarySearch, LibraryShardHit, LibraryShardResult }
 import com.keepit.search.engine.{ DebugOption, SearchFactory }
-import com.keepit.search.sharding.{ ActiveShards, Shard, Sharding }
+import com.keepit.search.index.sharding.{ ActiveShards, Shard, Sharding }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 

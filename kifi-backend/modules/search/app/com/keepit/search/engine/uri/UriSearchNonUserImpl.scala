@@ -8,6 +8,7 @@ import com.keepit.search._
 import com.keepit.search.engine.explain.{ Explanation, ScoreDetailCollector }
 import com.keepit.search.engine.result._
 import com.keepit.search.engine.{ QueryEngineBuilder, SearchTimeLogs }
+import com.keepit.search.index.Searcher
 
 import scala.concurrent.{ Future, Promise }
 

@@ -4,10 +4,10 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.NormalizedURI
-import com.keepit.search.Searcher
 import com.keepit.search.engine.explain.Explanation
 import com.keepit.search.engine.result.{ Hit, HitQueue }
 import com.keepit.search.engine.{ DebugOption, SearchTimeLogs, Visibility }
+import com.keepit.search.index.Searcher
 import com.keepit.search.index.article.ArticleRecord
 import com.keepit.search.index.graph.keep.{ KeepFields, KeepRecord }
 import org.apache.lucene.index.Term

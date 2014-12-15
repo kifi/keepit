@@ -1,6 +1,6 @@
 package com.keepit.search.index.graph.user
 
-import com.keepit.search.Searcher
+import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.BaseGraphSearcher
 import com.keepit.search.index.graph.URIList
 import com.keepit.search.util.LongArraySet

@@ -12,7 +12,6 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.util.RecurringTaskManager
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulerPlugin
-import com.keepit.search.IndexInfo
 import scala.concurrent.duration._
 import java.util.Random
 import scala.concurrent.Future

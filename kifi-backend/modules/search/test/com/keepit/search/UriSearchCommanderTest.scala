@@ -6,8 +6,8 @@ import org.specs2.mutable._
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json.Json
-import com.keepit.search.sharding.ActiveShards
-import com.keepit.search.sharding.ShardSpecParser
+import com.keepit.search.index.sharding.ActiveShards
+import com.keepit.search.index.sharding.ShardSpecParser
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.search.augmentation.AugmentationCommanderImpl

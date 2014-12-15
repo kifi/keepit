@@ -1,8 +1,7 @@
 package com.keepit.search.index.graph
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.Searcher
-import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.BytesRef

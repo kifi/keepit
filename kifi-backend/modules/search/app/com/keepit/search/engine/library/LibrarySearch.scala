@@ -4,7 +4,8 @@ import com.keepit.common.db.Id
 import com.keepit.model.{ Keep, User }
 import com.keepit.search.engine._
 import com.keepit.search.engine.uri.UriSearch
-import com.keepit.search.{ Searcher, SearchConfig, SearchFilter }
+import com.keepit.search.index.Searcher
+import com.keepit.search.{ SearchConfig, SearchFilter }
 import com.keepit.search.engine.result.{ HitQueue }
 import com.keepit.common.logging.Logging
 import scala.concurrent.Future

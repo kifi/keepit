@@ -6,8 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import scala.Some
-import com.keepit.search.MultiHashFilter
+import com.keepit.search.tracking.MultiHashFilter
 
 @ImplementedBy(classOf[SliderHistoryRepoImpl])
 trait SliderHistoryRepo extends Repo[SliderHistory] {

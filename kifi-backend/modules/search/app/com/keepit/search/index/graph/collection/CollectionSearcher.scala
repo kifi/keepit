@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.model.{ Hashtag, NormalizedURI, User, Collection }
-import com.keepit.search.Searcher
+import com.keepit.search.index.Searcher
 import com.keepit.search.util.LongArraySet
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import scala.collection.mutable.ArrayBuffer

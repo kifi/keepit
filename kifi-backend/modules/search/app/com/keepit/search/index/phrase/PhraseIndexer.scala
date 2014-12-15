@@ -7,7 +7,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
 import scala.concurrent.Await
 import com.keepit.common.db.{ SequenceNumber, Id }
-import com.keepit.search.IndexInfo
+import com.keepit.search.index.IndexInfo
 import com.keepit.search.Lang
 import scala.concurrent.duration._
 

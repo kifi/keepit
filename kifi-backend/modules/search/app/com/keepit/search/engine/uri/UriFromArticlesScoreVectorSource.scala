@@ -2,9 +2,9 @@ package com.keepit.search.engine.uri
 
 import com.keepit.search.engine.{ DirectScoreContext, Visibility, DebugOption, ScoreVectorSourceLike }
 import com.keepit.search.engine.query.core.QueryProjector
-import com.keepit.search.{ SearchFilter, Searcher }
+import com.keepit.search.SearchFilter
 import com.keepit.search.index.article.{ ArticleFields, ArticleVisibility }
-import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ BloomFilter, DataBuffer, DataBufferWriter }
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS

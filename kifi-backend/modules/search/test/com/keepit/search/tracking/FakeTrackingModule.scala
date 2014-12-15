@@ -1,8 +1,6 @@
 package com.keepit.search.tracking
 
-import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{ Provides, Singleton }
-import java.io.File
 
 case class FakeTrackingModule() extends TrackingModule {
 

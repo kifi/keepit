@@ -1,4 +1,4 @@
-package com.keepit.search.sharding
+package com.keepit.search.index.sharding
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.Collection

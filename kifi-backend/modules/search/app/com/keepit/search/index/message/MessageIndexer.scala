@@ -1,7 +1,7 @@
 package com.keepit.search.index.message
 
 import com.keepit.search.{ Lang, LangDetector }
-import com.keepit.search.IndexInfo
+import com.keepit.search.index.IndexInfo
 import com.keepit.search.index.{ Indexer, Indexable, DefaultAnalyzer, IndexDirectory, LineFieldBuilder }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ Id, SequenceNumber }

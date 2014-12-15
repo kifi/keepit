@@ -4,9 +4,9 @@ import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.engine._
 import com.keepit.search.engine.explain.TargetedScorer
 import com.keepit.search.engine.query.core.QueryProjector
-import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
+import com.keepit.search.{ SearchFilter, SearchConfig }
 import com.keepit.search.index.graph.keep.KeepFields
-import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS

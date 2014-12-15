@@ -1,13 +1,13 @@
 package com.keepit.search.index.graph.keep
 
-import com.keepit.search.IndexInfo
+import com.keepit.search.index.IndexInfo
 import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.{ KeepAndTags, NormalizedURI, Keep }
 import scala.concurrent.Future
 import com.keepit.common.db.SequenceNumber
-import com.keepit.search.sharding.{ ShardedIndexer, Shard }
+import com.keepit.search.index.sharding.{ ShardedIndexer, Shard }
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
