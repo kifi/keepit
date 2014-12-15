@@ -217,5 +217,5 @@ case class HexColor(hex: String)
 object HexColor {
   implicit def format[T]: Format[HexColor] =
     Format(__.read[String].map(HexColor(_)), new Writes[HexColor] { def writes(o: HexColor) = JsString(o.hex) })
-  //def apply(hex: String): HexColor = HexColor(hex.toLowerCase)
+  def apply(hex: String): HexColor = HexColor(hex.toLowerCase)
 }
