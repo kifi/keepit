@@ -118,6 +118,17 @@ angular.module('kifi')
         templateUrl: 'userProfile/userProfileKeeps.tpl.html',
         controller: 'UserProfileKeepsCtrl'
       })
+
+    // ↓↓↓↓↓ Important: These need to be last! ↓↓↓↓↓
+    .state('librarySearch', {
+      url: '/:username/:librarySlug/find?q&f',
+      templateUrl: 'libraries/library.tpl.html',
+      controller: 'LibraryCtrl',
+      data: {
+        librarySearch: true
+      },
+      reloadOnSearch: false
+    })
     .state('library', {
       url: '/:username/:librarySlug',
       templateUrl: 'libraries/library.tpl.html',
@@ -126,22 +137,8 @@ angular.module('kifi')
         librarySearch: false
       }
     });
-    // ↑↑↑↑↑ Important: This needs to be last! ↑↑↑↑↑
+    // ↑↑↑↑↑ Important: These need to be last! ↑↑↑↑↑
 });
-
-// .config([
-//   '$routeProvider', '$locationProvider', '$httpProvider',
-//   function ($routeProvider, $locationProvider, $httpProvider) {
-//     ...
-//     // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
-//     .when('/:username/:librarySlug/find', {
-//       templateUrl: 'libraries/library.tpl.html',
-//       controller: 'LibraryCtrl',
-//       resolve: { librarySearch: function () { return true; } },
-//       reloadOnSearch: false
-//     })
-//   }
-// ]);
 
 //
 // After moving the routes to states, also:

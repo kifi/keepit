@@ -5,10 +5,10 @@ angular.module('kifi')
 .directive('kfLibraryCard', [
   '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
   'profileService', 'platformService', 'signupService', 'routeService', '$twitter', '$timeout', '$routeParams',
-  '$route', '$http', 'locationNoReload', 'util',
+  '$route', '$http', 'locationNoReload', 'util', '$state', '$stateParams',
   function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
       profileService, platformService, signupService, routeService, $twitter, $timeout, $routeParams,
-      $route, $http, locationNoReload, util) {
+      $route, $http, locationNoReload, util, $state, $stateParams) {
     return {
       restrict: 'A',
       replace: true,
@@ -51,7 +51,7 @@ angular.module('kifi')
         scope.editKeepsText = 'Edit Keeps';
         scope.librarySearchInProgress = scope.librarySearch;
         scope.librarySearchBarShown = false;
-        scope.search = { 'text': $routeParams.q || '' };
+        scope.search = { 'text': $stateParams.q || '' };
         scope.pageScrolled = false;
 
         //
@@ -869,8 +869,8 @@ angular.module('kifi')
             showKfColsOverflow();
             $timeout(hideKfColsOverflow);
           }
-          locationNoReload.skipReload().url(scope.library.url);
-          locationNoReload.reloadNextRouteChange();
+          // locationNoReload.skipReload().url(scope.library.url);
+          // locationNoReload.reloadNextRouteChange();
 
           scope.librarySearchInProgress = false;
           scope.librarySearchBarShown = false;
@@ -907,20 +907,20 @@ angular.module('kifi')
         scope.onSearchInputChange = _.debounce(function (query) {
           $timeout(function () {
             if (query) {
-              locationNoReload.cancelReloadNextRouteChange();
+              // locationNoReload.cancelReloadNextRouteChange();
 
               if (prevQuery) {
                 if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
                   showKfColsOverflow();
                 }
-                locationNoReload.skipReload().search('q', query).replace();
+                // locationNoReload.skipReload().search('q', query).replace();
 
                 // When we search using the input inside the library card header, we don't
                 // want to reload the page. One consequence of this is that we need to kick
                 // SearchController to initialize a search when the search query changes if
                 // we initially started with a url that is a library url that has no search
                 // parameters.
-                if (!$route.current.params.q) {
+                if (!$state.params.q) {
                   $timeout(function () {
                     $rootScope.$emit('librarySearched');
                   });
@@ -929,11 +929,11 @@ angular.module('kifi')
                 if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
                   showKfColsOverflow();
                 }
-                locationNoReload.skipReload().url(scope.library.url + '/find?q=' + query + '&f=a');
+                // locationNoReload.skipReload().url(scope.library.url + '/find?q=' + query + '&f=a');
               }
 
-              $routeParams.q = query;
-              $routeParams.f = 'a';
+              $stateParams.q = query;
+              $stateParams.f = 'a';
 
               $timeout(function () {
                 $rootScope.$emit('librarySearchChanged', true);
@@ -944,8 +944,8 @@ angular.module('kifi')
               if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
                 showKfColsOverflow();
               }
-              locationNoReload.skipReload().url(scope.library.url);
-              locationNoReload.reloadNextRouteChange();
+              // locationNoReload.skipReload().url(scope.library.url);
+              // locationNoReload.reloadNextRouteChange();
               prevQuery = '';
 
               $timeout(function () {
