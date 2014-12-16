@@ -64,6 +64,7 @@ object UserValueName {
   val SENT_EMAIL_CONFIRMATION = UserValueName("sent_email_confirmation")
   val LATEST_EMAIL_TIPS_SENT = UserValueName("latest_email_tips")
   val LIBRARY_SORTING_PREF = UserValueName("library_sorting_pref")
+  val SHOW_FOLLOWING_LIBRARY = UserValueName("show_following_library")
 
   // temp for library callouts for existing user. remove after users know about libraries (Oct 26 2014)
   // library_callout_shown tag_callout_shown guide_callout_shown
@@ -148,4 +149,5 @@ object UserValues {
 
   val tagOrdering = UserValueJsValueHandler(UserValueName.USER_COLLECTION_ORDERING, JsArray())
   val recentInteractions = UserValueJsValueHandler(UserValueName.RECENT_INTERACTION, JsArray())
+  val showFollowedLibraries = UserValueBooleanHandler(UserValueName.SHOW_FOLLOWING_LIBRARY, true)
 }

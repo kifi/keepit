@@ -68,6 +68,7 @@ class LibraryCommander @Inject() (
     uriSummaryCommander: URISummaryCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     experimentCommander: LocalUserExperimentCommander,
+    userValueRepo: UserValueRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -1152,7 +1153,8 @@ class LibraryCommander @Inject() (
 
   private def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User]): Int = {
     db.readOnlyReplica { implicit s =>
-      val showFollowLibraries = true
+      //val showFollowLibraries = true
+      val showFollowLibraries = userValueRepo.getValue(userId, UserValues.showFollowedLibraries)
       libraryMembershipRepo.countLibrariesForOtherUser(userId, friendId, countFollowLibraries = showFollowLibraries)
     }
   }
