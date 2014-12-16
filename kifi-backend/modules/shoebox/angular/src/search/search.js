@@ -151,7 +151,9 @@ angular.module('kifi')
         $scope.hasMore = !!result.mayHaveMore;
         lastResult = result;
         $scope.loading = false;
-        $rootScope.$emit('newSearchQuery', query);
+        $timeout(function () {
+          $window.document.body.scrollTop = 0;
+        });
       });
     };
 
@@ -264,11 +266,6 @@ angular.module('kifi')
       });
     });
     $scope.$on('$destroy', deregisterKeepAddedListener);
-
-    var deregisterUpdateLibrarySearch = $rootScope.$on('librarySearched', function () {
-      init();
-    });
-    $scope.$on('$destroy', deregisterUpdateLibrarySearch);
 
 
     init();

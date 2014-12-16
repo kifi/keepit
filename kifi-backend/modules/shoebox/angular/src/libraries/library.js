@@ -3,17 +3,16 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', '$rootScope', '$location', '$state', '$stateParams', 'keepDecoratorService', 'libraryService',
-  'modalService', 'profileService', 'util', '$window', '$analytics', 'platformService',
-  function ($scope, $rootScope, $location, $state, $stateParams, keepDecoratorService, libraryService,
-            modalService, profileService, util, $window, $analytics, platformService) {
+  '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
+  'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'util',
+  function ($scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
+    keepDecoratorService, libraryService, modalService, platformService, profileService, util) {
     //
     // Internal data.
     //
     var selectedCount = 0;
     var prePopulated = false;
     var authToken = $location.search().authToken || '';
-    var prevLibrarySearch = false;
 
 
     //
@@ -190,10 +189,10 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregisterTrackLibraryEvent);
 
-    var deregisterUpdateLibrarySearch = $rootScope.$on('librarySearchChanged', function (e, librarySearch) {
-      prevLibrarySearch = $scope.librarySearch;
-      $scope.librarySearch = librarySearch;
-      $scope.librarySearchFallingEdge = prevLibrarySearch && !$scope.librarySearch;
+    var deregisterUpdateLibrarySearch = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
+      $timeout(function () {
+        $scope.librarySearch = toState.data && toState.data.librarySearch;
+      });
     });
     $scope.$on('$destroy', deregisterUpdateLibrarySearch);
 

@@ -119,25 +119,29 @@ angular.module('kifi')
         controller: 'UserProfileKeepsCtrl'
       })
 
-    // ↓↓↓↓↓ Important: These need to be last! ↓↓↓↓↓
-    .state('librarySearch', {
-      url: '/:username/:librarySlug/find?q&f',
-      templateUrl: 'libraries/library.tpl.html',
-      controller: 'LibraryCtrl',
-      data: {
-        librarySearch: true
-      },
-      reloadOnSearch: false
-    })
+    // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
     .state('library', {
       url: '/:username/:librarySlug',
       templateUrl: 'libraries/library.tpl.html',
       controller: 'LibraryCtrl',
       data: {
         librarySearch: false
-      }
-    });
-    // ↑↑↑↑↑ Important: These need to be last! ↑↑↑↑↑
+      },
+      'abstract': true
+    })
+      .state('library.keeps', {
+        url: '',
+        templateUrl: 'libraries/libraryKeeps.tpl.html'
+      })
+      .state('library.search', {
+        url: '/find?q&f',
+        templateUrl: 'search/search.tpl.html',
+        controller: 'SearchCtrl',
+        data: {
+          librarySearch: true
+        }
+      });
+    // ↑↑↑↑↑ Important: This needs to be last! ↑↑↑↑↑
 });
 
 //

@@ -49,8 +49,7 @@ angular.module('kifi')
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
         scope.editKeepsText = 'Edit Keeps';
-        scope.librarySearchInProgress = scope.librarySearch;
-        scope.librarySearchBarShown = false;
+        scope.librarySearchInProgress = false;
         scope.search = { 'text': $stateParams.q || '' };
         scope.pageScrolled = false;
 
@@ -812,12 +811,11 @@ angular.module('kifi')
         }
 
         function showLibrarySearchBar() {
-          if (platformService.isSupportedMobilePlatform() || scope.librarySearchBarShown) {
+          if (platformService.isSupportedMobilePlatform()) {
             return;
           }
 
           scope.librarySearchInProgress = true;
-          scope.librarySearchBarShown = true;
 
           scrollToTop();
 
@@ -850,31 +848,20 @@ angular.module('kifi')
             libraryBodyElement.css({
               'margin-top': '90px'
             });
+
+            scope.search = { 'text': $stateParams.q || '' };
           }, 0);
         }
 
-        scope.onSearchInputFocus = function () {
-          // Track click/focus on search bar.
-          $rootScope.$emit('trackLibraryEvent', 'click', {
-            action: 'clickedSearchBody'
-          });
-
-          showLibrarySearchBar();
-        };
-
-        scope.onSearchExit = function () {
+        function hideLibrarySearchBar() {
           scrollToTop();
 
           if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
             showKfColsOverflow();
             $timeout(hideKfColsOverflow);
           }
-          // locationNoReload.skipReload().url(scope.library.url);
-          // locationNoReload.reloadNextRouteChange();
 
           scope.librarySearchInProgress = false;
-          scope.librarySearchBarShown = false;
-          $rootScope.$emit('librarySearchChanged', false);
           prevQuery = '';
 
           if (!searchFollowElement.length) {
@@ -901,57 +888,45 @@ angular.module('kifi')
 
           $timeout(function () {
             scope.search = { text: '' };
+            element.find('.kf-keep-lib-search-input').blur();
           });
+        }
+
+        scope.onSearchInputFocus = function () {
+          // Track click/focus on search bar.
+          $rootScope.$emit('trackLibraryEvent', 'click', {
+            action: 'clickedSearchBody'
+          });
+
+          if (!scope.librarySearchInProgress) {
+            showLibrarySearchBar();
+          }
+        };
+
+        scope.onSearchExit = function () {
+          hideLibrarySearchBar();
+          $state.go('library.keeps');
         };
 
         scope.onSearchInputChange = _.debounce(function (query) {
           $timeout(function () {
+            if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
+              showKfColsOverflow();
+            }
+
             if (query) {
-              // locationNoReload.cancelReloadNextRouteChange();
-
-              if (prevQuery) {
-                if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
-                  showKfColsOverflow();
-                }
-                // locationNoReload.skipReload().search('q', query).replace();
-
-                // When we search using the input inside the library card header, we don't
-                // want to reload the page. One consequence of this is that we need to kick
-                // SearchController to initialize a search when the search query changes if
-                // we initially started with a url that is a library url that has no search
-                // parameters.
-                if (!$state.params.q) {
-                  $timeout(function () {
-                    $rootScope.$emit('librarySearched');
-                  });
-                }
-              } else {
-                if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
-                  showKfColsOverflow();
-                }
-                // locationNoReload.skipReload().url(scope.library.url + '/find?q=' + query + '&f=a');
-              }
-
-              $stateParams.q = query;
-              $stateParams.f = 'a';
-
-              $timeout(function () {
-                $rootScope.$emit('librarySearchChanged', true);
-              });
+              // Replace last history record if we were previously already searching a query.
+              var location = prevQuery ? 'replace' : true;
 
               prevQuery = query;
+              $state.go('library.search', { q: query, f: 'a' }, { location: location });
             } else {
-              if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
-                showKfColsOverflow();
-              }
-              // locationNoReload.skipReload().url(scope.library.url);
-              // locationNoReload.reloadNextRouteChange();
               prevQuery = '';
-
               $timeout(function () {
-                $rootScope.$emit('librarySearchChanged', false);
                 scope.search = { 'text': '' };
               });
+
+              $state.go('library.keeps');
             }
           });
         }, 50, {
@@ -986,11 +961,29 @@ angular.module('kifi')
         });
         scope.$on('$destroy', deregisterLibraryUpdated);
 
+        // For back and forward on the browser history button, update the search input text accordingly.
+        var deregisterUpdateSearchInputText = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
+          if (toState.data && toState.data.librarySearch) {
+            scope.search = { 'text': toParams.q };
+          }
+
+          if (toState.data && !toState.data.librarySearch) {
+            prevQuery = '';
+            scope.search = { 'text': '' };
+          }
+        });
+        scope.$on('$destroy', deregisterUpdateSearchInputText);
+
+        // When a new search is conducted because the user clicks on a search url on the page,
+        // we need to update the search input text to reflect this.
         var deregisterNewSearchUrl = $rootScope.$on('newSearchUrl', function () {
           updateSearchText = true;
+          showLibrarySearchBar();
         });
         scope.$on('$destroy', deregisterNewSearchUrl);
 
+        // When SearchCtrl initiates a new search, if this new search was the result of a new
+        // search url, then update the search input text.
         var deregisterNewSearchQuery = $rootScope.$on('newSearchQuery', function (e, query) {
           if (updateSearchText) {
             scope.search = { 'text': query };
