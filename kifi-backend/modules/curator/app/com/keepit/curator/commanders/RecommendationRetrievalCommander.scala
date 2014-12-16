@@ -141,4 +141,18 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
     }
   }
 
+  def generalRecos(): Seq[RecoInfo] = {
+    db.readOnlyReplica { implicit session =>
+      uriRecoRepo.getGeneralRecommendationsBylUserEngagements(1000)
+    } map {
+      case (uriId, score) =>
+        RecoInfo(
+          userId = None,
+          uriId = uriId,
+          score = score,
+          explain = None,
+          attribution = None
+        )
+    }
+  }
 }
