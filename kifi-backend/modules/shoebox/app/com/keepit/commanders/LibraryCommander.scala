@@ -1139,7 +1139,9 @@ class LibraryCommander @Inject() (
         ids => ids
       )
 
-      val libIdsMap = db.readOnlyReplica { implicit s => libraryRepo.getLibraries(libIds) }
+      val libIdsMap = db.readOnlyReplica { implicit s => libraryRepo.getLibraries(libIds) } filter {
+        case (_, lib) => lib.visibility == LibraryVisibility.PUBLISHED
+      }
 
       val fullLibInfosF = createFullLibraryInfos(viewerUserIdOpt = None,
         showPublishedLibraries = true,
@@ -1318,6 +1320,7 @@ class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermost
   extends ImmutableJsonCacheImpl[LibraryInfoIdKey, LibraryInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 @json case class MarketingSuggestedLibraryInfo(
+  id: PublicId[Library],
   name: String,
   url: String,
   image: Option[LibraryImageInfo] = None,
@@ -1331,6 +1334,7 @@ object MarketingSuggestedLibraryInfo {
 
   def fromFullLibraryInfo(info: FullLibraryInfo) = {
     MarketingSuggestedLibraryInfo(
+      id = info.id,
       name = info.name,
       url = info.url,
       image = info.image,
