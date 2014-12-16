@@ -11,7 +11,7 @@
       </span>
     </div>
   </div>
-  <div class="kf-small-library-image-wrapper" ng-class="{'has-image': library.image.url}" ng-attr-style="background-color: {{library.color}}">
+  <div class="kf-small-library-image-wrapper" ng-class="{'has-image': library.image}" ng-attr-style="background-color: {{library.color}}">
     <div class="kf-small-library-owner">
       <div class="kf-small-library-owner-pic" ng-attr-style="background-image: url({{library.ownerPicUrl}})"></div>
       <div class="kf-small-library-owner-name">by <b>{{ library.ownerFullName }}</b></div>
@@ -24,7 +24,8 @@
         </span>
       </div>
     </div>
-    <div ng-if="library.image.url"  class="kf-small-library-image" ng-attr-style="background-image: url({{library.image.url}})"></div>
+    <div ng-if="library.image"  class="kf-small-library-image"
+      ng-attr-style="background-image: url({{library.imageUrl}});background-position:{{library.image.x + '% ' + library.image.y + '%'}};"></div>
   </div>
   <div class="kf-small-library-card-bottom card-1"></div>
   <div class="kf-small-library-card-bottom card-2"></div>
