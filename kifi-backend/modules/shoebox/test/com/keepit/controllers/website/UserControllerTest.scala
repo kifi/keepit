@@ -1,11 +1,15 @@
 package com.keepit.controllers.website
 
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.KeepFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserConnectionFactoryHelper._
 import com.keepit.model.UserConnectionFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
@@ -30,6 +34,7 @@ import play.api.test.Helpers._
 import play.api.test._
 
 import scala.concurrent.Future
+import scala.slick.jdbc.StaticQuery
 
 class UserControllerTest extends Specification with ShoeboxTestInjector {
 
@@ -292,48 +297,149 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     "get profile for self" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val userConnectionRepo = inject[UserConnectionRepo]
-        val (userGW, userAL, userTJ, userJA, userBF) = db.readWrite { implicit session =>
-          val userGW = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
-          val userAL = user().withName("Abe", "Lincoln").withUsername("abe").saved.savedConnection(userGW)
-          val userTJ = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
-          val userJA = user().withName("John", "Adams").withUsername("jayjayadams").saved
-          val userBF = user().withName("Ben", "Franklin").withUsername("Benji").saved
+        val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
+          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
+          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
 
-          connect(userGW -> userAL,
-            userGW -> userTJ,
-            userJA -> userGW,
-            userAL -> userTJ).saved
+          connect(user1 -> user2,
+            user1 -> user3,
+            user4 -> user1,
+            user2 -> user3).saved
 
-          libraries(3).map(_.withUser(userGW).secret()).saved.head.savedFollowerMembership(userAL)
+          val user1secretLib = libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2)
 
-          library().withUser(userGW).published().saved.savedOwnerMembership.savedFollowerMembership(userBF).savedFollowerMembership(userJA)
-          library().withUser(userTJ).published().saved.savedOwnerMembership
-          library().withUser(userBF).published().saved.savedOwnerMembership.savedFollowerMembership(userGW)
+          val user1lib = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
+          user1lib.visibility === LibraryVisibility.PUBLISHED
 
-          (userGW, userAL, userTJ, userJA, userBF)
+          val user3lib = library().withUser(user3).published().saved
+          val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
+          membership().withLibraryFollower(library().withUser(user5).published().saved, user1).invisible().saved
+
+          keeps(2).map(_.withLibrary(user1secretLib)).saved
+          keeps(3).map(_.withLibrary(user1lib)).saved
+          keep().withLibrary(user3lib).saved
+
+          (user1, user2, user3, user4, user5, user1lib)
+        }
+        db.readOnlyMaster { implicit s =>
+          val libMem = libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user4.id.get).get
+          libMem.access === LibraryAccess.READ_ONLY
+          libMem.state.value === "active"
+          libMem.visibility.value === "visible"
+
+          import StaticQuery.interpolation
+          val ret1 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4".as[Int].firstOption.getOrElse(0)
+          ret1 === 1
+          val ret2 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4 and lib.state = 'active' and lm.state = 'active' and lm.visibility = 'visible' and lib.visibility = 'published'".as[Int].firstOption.getOrElse(0)
+          ret2 === 1
+
+          libraryMembershipRepo.countLibrariesToSelf(user1.id.get) === 6
+          libraryMembershipRepo.countLibrariesToSelf(user2.id.get) === 1
+          libraryMembershipRepo.countLibrariesToSelf(user3.id.get) === 1
+          libraryMembershipRepo.countLibrariesToSelf(user4.id.get) === 1
+          libraryMembershipRepo.countLibrariesToSelf(user5.id.get) === 3
+
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user1.id.get, countFollowLibraries = true) === 2
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user1.id.get, countFollowLibraries = false) === 1
+
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user2.id.get, countFollowLibraries = true) === 0
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user2.id.get, countFollowLibraries = false) === 0
+
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user3.id.get, countFollowLibraries = true) === 1
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user3.id.get, countFollowLibraries = false) === 1
+
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user4.id.get, countFollowLibraries = true) === 1
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user4.id.get, countFollowLibraries = false) === 0
+
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user5.id.get, countFollowLibraries = true) === 3
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user5.id.get, countFollowLibraries = false) === 2
+
+          libraryMembershipRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get, countFollowLibraries = true) === 2
+          libraryMembershipRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get, countFollowLibraries = false) === 1
+
+          libraryMembershipRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get, countFollowLibraries = true) === 3
+          libraryMembershipRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get, countFollowLibraries = false) === 2
+
+          libraryMembershipRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get, countFollowLibraries = true) === 0
+          libraryMembershipRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get, countFollowLibraries = false) === 0
+
+          libraryMembershipRepo.countLibrariesForOtherUser(user3.id.get, user5.id.get, countFollowLibraries = true) === 1
+          libraryMembershipRepo.countLibrariesForOtherUser(user3.id.get, user5.id.get, countFollowLibraries = false) === 1
+
+          libraryMembershipRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get, countFollowLibraries = true) === 1
+          libraryMembershipRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get, countFollowLibraries = false) === 0
+
+          libraryMembershipRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get, countFollowLibraries = true) === 3
+          libraryMembershipRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get, countFollowLibraries = false) === 2
         }
         val userController = inject[UserController]
         def call(viewer: Option[User], viewing: Username) = {
-          viewer.foreach(v => inject[FakeUserActionsHelper].setUser(v))
+          viewer match {
+            case None => inject[FakeUserActionsHelper].unsetUser()
+            case Some(user) => inject[FakeUserActionsHelper].setUser(user)
+          }
           val request = FakeRequest("GET", routes.UserController.profile(viewing.value).url)
           userController.profile(viewing.value)(request)
         }
         //non existing username
-        status(call(Some(userGW), Username("foo"))) must equalTo(NOT_FOUND)
-        //seeing my own profile
-        val result1 = call(Some(userGW), userGW.username)
-        status(result1) must equalTo(OK)
-        contentType(result1) must beSome("application/json")
-        val res = contentAsJson(result1)
-        res === Json.parse(
-          """
-            |{
-            |  "firstName":"George",
-            |  "lastName":"Washington",
-            |  "pictureName":"pic1",
-            |  "numLibraries":0
-            |}
-          """.stripMargin)
+        status(call(Some(user1), Username("foo"))) must equalTo(NOT_FOUND)
+
+        //seeing a profile from an anonymos user
+        val anonViewer = call(None, user1.username)
+        status(anonViewer) must equalTo(OK)
+        contentType(anonViewer) must beSome("application/json")
+        val res1 = contentAsJson(anonViewer)
+        res1 === Json.parse(
+          s"""
+            {
+              "id":"${user1.externalId.id}",
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1.jpg",
+              "numLibraries":2,
+              "friendsWith": null,
+              "numKeeps": 5
+            }
+          """)
+
+        //seeing a profile of my own
+        val selfViewer = call(Some(user1), user1.username)
+        status(selfViewer) must equalTo(OK)
+        contentType(selfViewer) must beSome("application/json")
+        val res2 = contentAsJson(selfViewer)
+        res2 === Json.parse(
+          s"""
+            {
+              "id":"${user1.externalId.id}",
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1.jpg",
+              "numLibraries":6,
+              "friendsWith": null,
+              "numKeeps": 5
+            }
+          """)
+
+        //seeing a profile from another user (friend)
+        val friendViewer = call(Some(user2), user1.username)
+        status(friendViewer) must equalTo(OK)
+        contentType(friendViewer) must beSome("application/json")
+        val res3 = contentAsJson(friendViewer)
+        res3 === Json.parse(
+          s"""
+            {
+              "id":"${user1.externalId.id}",
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1.jpg",
+              "numLibraries":3,
+              "friendsWith": true,
+              "numKeeps": 5
+            }
+          """)
       }
     }
 

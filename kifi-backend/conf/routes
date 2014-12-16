@@ -1,21 +1,21 @@
 
-->  / common.Routes
+->  / commonService.Routes
 
-->  / eliza.Routes
+->  / elizaService.Routes
 
--> /  search.Routes
+-> /  searchService.Routes
 
--> /  heimdal.Routes
+-> /  heimdalService.Routes
 
--> /  abook.Routes
+-> /  abookService.Routes
 
--> /  scraper.Routes
+-> /  scraperService.Routes
 
--> /  cortex.Routes
+-> /  cortexService.Routes
 
--> /  curator.Routes
+-> /  curatorService.Routes
 
 -> /  graphService.Routes
 
 # This must be last, since it serves the site and has a wildcard.
-->  / shoebox.Routes
+->  / shoeboxService.Routes

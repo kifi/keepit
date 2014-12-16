@@ -3,13 +3,12 @@ package com.keepit.model
 import scala.concurrent.duration._
 import org.joda.time.DateTime
 import com.keepit.common.cache._
-import com.keepit.common.logging.{ Logging, AccessLog }
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.common.crypto.PublicId
 
 case class Keep(
@@ -210,15 +209,6 @@ case class LatestKeepUrlKey(url: String) extends Key[Keep] {
 
 class LatestKeepUrlCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LatestKeepUrlKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-case class KifiHitKey(userId: Id[User], uriId: Id[NormalizedURI]) extends Key[SanitizedKifiHit] {
-  override val version = 4
-  val namespace = "keep_hit"
-  def toKey(): String = userId.id + "#" + uriId.id
-}
-
-class KifiHitCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[KifiHitKey, SanitizedKifiHit](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 object KeepStates extends States[Keep] {
   val DUPLICATE = State[Keep]("duplicate")

@@ -125,7 +125,7 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def updateAllReKeepStats(): Future[Unit] = Future.successful[Unit]()
 
-  def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful[Unit]()
+  def processSearchHitAttribution(hit: SearchHitReport): Future[Unit] = Future.successful[Unit]()
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = Future.successful[Unit]()
 

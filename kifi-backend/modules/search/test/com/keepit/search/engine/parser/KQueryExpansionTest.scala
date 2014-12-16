@@ -1,10 +1,10 @@
 package com.keepit.search.engine.parser
 
 import com.keepit.search.Lang
-import com.keepit.search.engine.query.{ KBooleanQuery, KTextQuery }
+import com.keepit.search.engine.query.core.{ KTextQuery, KBooleanQuery }
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.query.parser.DefaultSyntax
-import com.keepit.search.query.parser.QueryParser
+import com.keepit.search.engine.parser.DefaultSyntax
+import com.keepit.search.engine.parser.QueryParser
 import org.specs2.specification.Scope
 import org.specs2.mutable._
 

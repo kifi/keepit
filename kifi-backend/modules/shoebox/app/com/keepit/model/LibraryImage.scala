@@ -1,9 +1,9 @@
 package com.keepit.model
 
 import com.keepit.common.db.{ States, Model, State, Id }
-import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import org.joda.time.DateTime
+import com.kifi.macros.json
 
 case class LibraryImage(
     id: Option[Id[LibraryImage]] = None,
@@ -21,9 +21,14 @@ case class LibraryImage(
     sourceFileHash: ImageHash,
     isOriginal: Boolean) extends BaseImage with Model[LibraryImage] {
 
-  val imagePosition = LibraryImagePosition(positionX, positionY)
+  def position = LibraryImagePosition(positionX, positionY)
   def withId(id: Id[LibraryImage]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
+}
+
+@json case class LibraryImageInfo(path: String, x: Int, y: Int)
+object LibraryImageInfo {
+  def createInfo(img: LibraryImage) = LibraryImageInfo(img.imagePath, img.positionX.getOrElse(50), img.positionY.getOrElse(50))
 }
 
 case class LibraryImagePosition(x: Option[Int], y: Option[Int])

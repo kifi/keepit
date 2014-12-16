@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.user._
+import com.keepit.search.index.user._
 import com.keepit.typeahead.PrefixFilter
 
 @ImplementedBy(classOf[UserSearchCommanderImpl])

@@ -5,14 +5,15 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.template.EmailTrackingParam
 import com.keepit.common.mail.template.EmailTip.toContextData
+import com.keepit.common.mail.template.EmailTrackingParam
 import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
-import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder, NonUserEventTypes, NonUserEvent, UserEventTypes, UserEvent, HeimdalContextBuilderFactory, HeimdalServiceClient }
-import com.keepit.model.{ User, EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates, ExperimentType }
+import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder, HeimdalContextBuilderFactory, HeimdalServiceClient, NonUserEvent, NonUserEventTypes, UserEvent, UserEventTypes }
+import com.keepit.model.{ EmailOptOutRepo, ExperimentType, NotificationCategory, User, UserEmailAddressRepo, UserEmailAddressStates }
 import com.keepit.social.NonUserKinds
 import org.joda.time.DateTime
+
 import scala.concurrent.ExecutionContext
 
 class SendgridCommander @Inject() (
@@ -28,7 +29,7 @@ class SendgridCommander @Inject() (
     implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  import SendgridEventTypes._
+  import com.keepit.commanders.SendgridEventTypes._
 
   val earliestAcceptableEventTime = new DateTime(2012, 7, 15, 0, 0)
   val alertEvents: Seq[SendgridEventType] = Seq(BOUNCE, SPAM_REPORT)
@@ -85,6 +86,14 @@ class SendgridCommander @Inject() (
       val relevantUsers = if (NotificationCategory.User.reportToAnalytics.contains(email.category)) {
         db.readOnlyReplica { implicit s => emailAddressRepo.getByAddress(address).map(_.userId).toSet }(captureLocation)
       } else Set.empty
+
+      // if the delivered event is over 3 minutes from when we submitted the email, consider this late and raise an alert
+      val isLateDelivery = event.event.exists(SendgridEventTypes.DELIVERED ==) &&
+        email.timeSubmitted.exists(_.isBefore(event.timestamp.minusMinutes(3)))
+
+      if (isLateDelivery) {
+        airbrake.notify(s"late delivery of email_id=${email.id.get}: submitted [${email.timeSubmitted.get}] delivered [${event.timestamp}]")
+      }
 
       def eventTime =
         if (event.timestamp.isBefore(earliestAcceptableEventTime)) {

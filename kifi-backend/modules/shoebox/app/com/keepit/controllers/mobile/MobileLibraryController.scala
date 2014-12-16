@@ -18,7 +18,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
 
 import scala.concurrent.Future
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 import com.keepit.common.store.ImageSize
 
 class MobileLibraryController @Inject() (
@@ -44,8 +44,9 @@ class MobileLibraryController @Inject() (
     val name = (jsonBody \ "name").as[String]
     val description = (jsonBody \ "description").asOpt[String]
     val visibility = (jsonBody \ "visibility").as[LibraryVisibility]
+    val color = (jsonBody \ "color").asOpt[HexColor]
     val slug = LibrarySlug.generateFromName(name)
-    val addRequest = LibraryAddRequest(name, visibility, description, slug)
+    val addRequest = LibraryAddRequest(name, visibility, description, slug, color)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
@@ -63,7 +64,8 @@ class MobileLibraryController @Inject() (
     val newDescription = (json \ "newDescription").asOpt[String]
     val newVisibility = (json \ "newVisibility").asOpt[LibraryVisibility]
     val newSlug = (json \ "newSlug").asOpt[String]
-    val res = libraryCommander.modifyLibrary(libId, request.userId, newName, newDescription, newSlug, newVisibility)
+    val newColor = (json \ "color").asOpt[HexColor]
+    val res = libraryCommander.modifyLibrary(libId, request.userId, newName, newDescription, newSlug, newVisibility, newColor)
     res match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
@@ -82,19 +84,21 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getLibraryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getLibraryById(pubId: PublicId[Library], imageSize: Option[String] = None) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val id = Library.decodePublicId(pubId).get
-    libraryCommander.getLibraryById(request.userIdOpt, false, id) map {
+    val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
+    libraryCommander.getLibraryById(request.userIdOpt, false, id, idealSize) map {
       case (libInfo, accessStr) => Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
     }
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String) = MaybeUserAction.async { request =>
+  def getLibraryByPath(userStr: String, slugStr: String, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), followRedirect = true) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library).map { libInfo =>
+          val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
+          libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
             val accessStr = request.userIdOpt.map { userId =>
               libraryCommander.getAccessStr(userId, library.id.get)
             }.flatten.getOrElse {
@@ -139,7 +143,7 @@ class MobileLibraryController @Inject() (
         val completeKeepData = db.readOnlyMaster { implicit s =>
           keepDataList.map { keepData =>
             val keep = keepRepo.get(keepData.id)
-            val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, MobileLibraryController.defaultImageSize).flatten.map(keepImageCommander.getUrl)
+            val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, MobileLibraryController.defaultKeepImageSize).flatten.map(keepImageCommander.getUrl)
             val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getTagsByKeepId(keep.id.get)))
             Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
           }
@@ -342,7 +346,8 @@ class MobileLibraryController @Inject() (
 }
 
 object MobileLibraryController {
-  val defaultImageSize = ImageSize(1024, 1024)
+  val defaultKeepImageSize = ImageSize(1024, 1024)
+  val defaultLibraryImageSize = ImageSize(1024, 1024)
 }
 
 private object ImplicitHelper {

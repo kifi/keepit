@@ -2,10 +2,10 @@ package com.keepit.search
 
 import com.keepit.common.service.{ ServiceUri, ServiceType, ServiceClient }
 import com.keepit.common.zookeeper.{ ServiceCluster, ServiceInstance }
-import com.keepit.search.sharding.{ DistributedSearchRouter, Shard }
+import com.keepit.search.engine.library.LibraryShardResult
+import com.keepit.search.index.sharding.{ DistributedSearchRouter, Shard }
 import com.keepit.model.{ User, NormalizedURI }
 import scala.concurrent.Future
-import com.keepit.search.engine.result.LibraryShardResult
 import com.keepit.common.db.Id
 import com.keepit.common.routes.{ Search, ServiceRoute }
 import com.keepit.common.net.{ HttpClient, ClientResponse }

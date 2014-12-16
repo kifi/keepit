@@ -3,15 +3,15 @@ package com.keepit.search.augmentation
 import com.keepit.model.{ Hashtag, Library, NormalizedURI, User }
 import com.keepit.common.db.Id
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.search.graph.keep.{ KeepRecord, ShardedKeepIndexer, KeepFields }
+import com.keepit.search.index.graph.keep.{ KeepRecord, ShardedKeepIndexer, KeepFields }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.index.Term
-import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import scala.collection.JavaConversions._
 import com.keepit.search.util.LongArraySet
-import com.keepit.search.graph.library.LibraryFields.Visibility.{ SECRET, DISCOVERABLE, PUBLISHED }
+import com.keepit.search.index.graph.library.LibraryFields.Visibility.{ SECRET, DISCOVERABLE, PUBLISHED }
 import scala.collection.mutable.{ ListBuffer, Map => MutableMap, Set => MutableSet }
-import com.keepit.search.sharding.{ ActiveShards, Sharding, Shard }
+import com.keepit.search.index.sharding.{ ActiveShards, Sharding, Shard }
 import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -19,9 +19,9 @@ import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.SearchFactory
 import com.keepit.common.core._
-import com.keepit.search.{ Searcher, LibraryContext, DistributedSearchServiceClient }
+import com.keepit.search.{ LibraryContext, DistributedSearchServiceClient }
 import com.keepit.search.augmentation.AugmentationCommander.DistributionPlan
-import com.keepit.search.graph.library.{ LibraryRecord, LibraryFields, LibraryIndexer }
+import com.keepit.search.index.graph.library.{ LibraryRecord, LibraryFields, LibraryIndexer }
 import com.keepit.common.strings.Profanity
 
 object AugmentationCommander {

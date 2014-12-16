@@ -7,10 +7,10 @@ import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceTy
 import com.keepit.common.db.Id
 import com.keepit.common.net.{ ClientResponse, HttpClient }
 import com.keepit.common.routes.{ ServiceRoute, Search, Common }
-import com.keepit.model.{ BasicLibrary, Collection, NormalizedURI, User }
-import com.keepit.search.user.UserSearchResult
-import com.keepit.search.user.UserSearchRequest
-import com.keepit.search.spellcheck.ScoredSuggest
+import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.search.index.{ IndexInfo }
+import com.keepit.search.index.user.UserSearchResult
+import com.keepit.search.index.user.UserSearchRequest
 import play.api.libs.json._
 import play.twirl.api.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -20,8 +20,7 @@ import com.keepit.typeahead.TypeaheadHit
 import com.keepit.social.{ BasicUser, TypeaheadUserHit }
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.PrefixFilter
-import scala.collection.mutable.ListBuffer
-import com.keepit.search.augmentation.{ LimitedAugmentationInfo, ItemAugmentationResponse, ItemAugmentationRequest, AugmentableItem }
+import com.keepit.search.augmentation._
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH

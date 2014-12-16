@@ -1,7 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.search.graph.library.LibraryFields
+import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.LongArraySet
 import org.apache.lucene.index.NumericDocValues
 import scala.concurrent.duration._

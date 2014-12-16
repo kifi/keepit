@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('libraryService', [
-  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService', '$analytics',
-  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService, $analytics) {
+  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService', '$analytics', '$location',
+  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService, $analytics, $location) {
     var librarySummaries = [],
         invitedSummaries = [];
 
@@ -100,6 +100,21 @@ angular.module('kifi')
                librarySummary.access === 'owner' &&
                !(oldName && name === oldName);
       });
+    }
+
+    function RelatedLibraryDecorator(library) {
+      this.ownerFullName = library.owner.firstName + ' ' + library.owner.lastName;
+      this.numFollowers = library.numFollowers;
+      this.numKeeps = library.numKeeps;
+      this.ownerPicUrl = routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 200);
+      this.name = library.name;
+      this.image = library.image;
+      this.libraryUrl = library.url;
+      this.followers = library.followers.map(function (user) {
+        return _.merge(user, { picUrl: routeService.formatPicUrl(user.id, user.pictureName, 200) });
+      });
+      // default color until we're passed colors from the backend
+      this.color = library.color || '#73c785';
     }
 
 
@@ -360,6 +375,27 @@ angular.module('kifi')
         return defaultAttributes;
       },
 
+      getRelatedLibraries: function (libraryId) {
+        var deferred = $q.defer();
+
+        // temporary - put ?grl=1 in URL to see related libraries
+        // using a query param so it's easy to test on mobile devices
+        if ($location.url().indexOf('grl=1') < 0) {
+          deferred.resolve([]);
+          return deferred.promise;
+        }
+
+        $http.get(routeService.getRelatedLibraries(libraryId)).then(function (resp) {
+          var decoratedLibs = resp.data.libs.map(function (lib) {
+            lib.image = lib.image || {};
+            return new RelatedLibraryDecorator(lib);
+          });
+          deferred.resolve(decoratedLibs);
+        });
+
+        return deferred.promise;
+      },
+
       trackEvent: function (eventName, library, attributes) {
         var defaultAttributes = api.getCommonTrackingAttributes(library);
         attributes = _.extend(defaultAttributes, attributes || {});
@@ -369,4 +405,6 @@ angular.module('kifi')
 
     return api;
   }
-]);
+])
+
+;

@@ -1,4 +1,4 @@
-package com.keepit.search.user
+package com.keepit.search.index.user
 
 import com.keepit.social.BasicUser
 import com.keepit.common.db.Id

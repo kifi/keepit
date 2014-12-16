@@ -3,10 +3,10 @@ package com.keepit.search.engine
 import com.keepit.common.db.Id
 import com.keepit.search.engine.parser.KQueryExpansion
 import com.keepit.search.engine.result.ResultCollector
-import com.keepit.search.query.parser.{ DefaultSyntax, QueryParser }
+import com.keepit.search.engine.parser.{ DefaultSyntax, QueryParser }
 import com.keepit.search.util.join.{ DataBufferWriter, DataBuffer }
-import com.keepit.search.{ Searcher, Lang, Tst, TstIndexer }
-import com.keepit.search.index.{ WrappedSubReader, DefaultAnalyzer, VolatileIndexDirectory }
+import com.keepit.search.{ Lang, Tst, TstIndexer }
+import com.keepit.search.index.{ Searcher, WrappedSubReader, DefaultAnalyzer, VolatileIndexDirectory }
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.{ DocIdSetIterator, Scorer }
 import org.specs2.mutable.Specification

@@ -2,10 +2,9 @@ package com.keepit.search.engine.parser
 
 import com.keepit.classify.Domain
 import com.keepit.search.Lang
-import com.keepit.search.engine.query._
+import com.keepit.search.engine.query.core._
 import com.keepit.search.index.Analyzer
-import com.keepit.search.query.QueryUtil._
-import com.keepit.search.query.parser.{ QueryParser, QueryParserException, QuerySpec }
+import com.keepit.search.engine.query.QueryUtil._
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur._
 import org.apache.lucene.search.{ BooleanClause, BooleanQuery, PhraseQuery, Query, TermQuery }

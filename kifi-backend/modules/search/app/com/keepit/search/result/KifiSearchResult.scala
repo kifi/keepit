@@ -4,7 +4,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URISanitizer
 import com.keepit.model._
-import com.keepit.search.engine.result.KifiShardHit
+import com.keepit.search.engine.uri.UriShardHit
 import com.keepit.search.{ Lang, ArticleSearchResult, Scoring, SearchConfigExperiment }
 import com.keepit.common.json.TraversableFormat
 import com.keepit.social.BasicUser
@@ -56,7 +56,7 @@ object KifiSearchResult extends Logging {
     uuid: ExternalId[ArticleSearchResult],
     query: String,
     lang: Lang,
-    hits: Seq[KifiShardHit],
+    hits: Seq[UriShardHit],
     myTotal: Int,
     friendsTotal: Int,
     mayHaveMoreHits: Boolean,
@@ -84,7 +84,7 @@ object KifiSearchResult extends Logging {
     }
   }
 
-  def toKifiSearchHitsV2(query: String, lang: Lang, hits: Seq[KifiShardHit]): JsArray = {
+  def toKifiSearchHitsV2(query: String, lang: Lang, hits: Seq[UriShardHit]): JsArray = {
     val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
     val terms = Highlighter.getQueryTerms(query, analyzer)
     val v2Hits = hits.map { h =>
@@ -109,7 +109,7 @@ object KifiSearchResult extends Logging {
     ))
   }
 
-  def getMatches(analyzer: Analyzer, terms: Set[String], hit: KifiShardHit): Option[JsObject] = {
+  def getMatches(analyzer: Analyzer, terms: Set[String], hit: UriShardHit): Option[JsObject] = {
     var matchesJson = Json.obj()
 
     def add(name: String, content: String) = {

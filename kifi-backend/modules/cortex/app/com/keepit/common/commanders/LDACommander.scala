@@ -1,5 +1,7 @@
 package com.keepit.common.commanders
 
+import java.util.BitSet
+
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -8,7 +10,6 @@ import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
-import com.keepit.cortex.PublishingVersions
 import com.keepit.model.{ Library, Keep, NormalizedURI, User }
 import play.api.libs.json._
 import scala.math.exp
@@ -266,13 +267,25 @@ class LDACommander @Inject() (
     val MAX_KL_DIST = 0.5f // empirically this should be < 1.0
     val topK = 3
 
-    def bestMatch(userFeats: Seq[(Id[Keep], LDATopicFeature)], uriFeat: URILDATopic): Seq[Id[Keep]] = {
+    def bestMatch(userFeats: Seq[(Id[Keep], Seq[LDATopic], LDATopicFeature)], uriFeat: URILDATopic): Seq[Id[Keep]] = {
+
+      val bitSet = new BitSet(uriFeat.feature.get.value.size)
+      List(uriFeat.firstTopic.get, uriFeat.secondTopic.get, uriFeat.thirdTopic.get).foreach { t => bitSet.set(t.index) }
+      var numIntersects = 0
+
       val scored = userFeats.map {
-        case (kid, ufeat) =>
+        case (kid, topics, ufeat) =>
           val score = KL_divergence(ufeat.value, uriFeat.feature.get.value)
-          (kid, score)
+          numIntersects = 0
+
+          topics.foreach { t =>
+            if (bitSet.get(t.index)) numIntersects += 1
+          }
+          val multiplier = if (numIntersects >= 1) 1f else 0f
+
+          (kid, score * multiplier)
       }
-      scored.filter { _._2 < MAX_KL_DIST }.sortBy(_._2).take(topK).map { _._1 }
+      scored.filter { x => x._2 < MAX_KL_DIST && x._2 > 0 }.sortBy(_._2).take(topK).map { _._1 }
     }
 
     val userFeats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserRecentURIFeatures(userId, version, min_num_words = 50, limit = 200) }
@@ -351,16 +364,31 @@ class LDACommander @Inject() (
   def getSimilarLibraries(libId: Id[Library], limit: Int)(implicit version: ModelVersion[DenseLDA]): Seq[Id[Library]] = {
 
     def getCandidates(libId: Id[Library], feat: LibraryLDATopic): Seq[LibraryLDATopic] = {
-      val (first, second) = (feat.firstTopic.get, feat.secondTopic.get)
-      val candidates = db.readOnlyReplica { implicit s => libTopicRepo.getLibraryByTopics(firstTopic = first, secondTopic = Some(second), version = version, limit = 25) }
+      val first = feat.firstTopic.get
+      val candidates = db.readOnlyReplica { implicit s => libTopicRepo.getLibraryByTopics(firstTopic = first, version = version, limit = 50) }
       candidates.filter(_.libraryId != libId)
     }
 
     def rankCandidates(feat: LibraryLDATopic, candidates: Seq[LibraryLDATopic]): Seq[Id[Library]] = {
+      val topicBitSet = new BitSet(feat.topic.get.value.size)
+      List(feat.firstTopic.get, feat.secondTopic.get, feat.thirdTopic.get).foreach { t => topicBitSet.set(t.index) }
+
       val idsAndScores = Seq.tabulate(candidates.size) { i =>
-        val id = candidates(i).libraryId
-        val score = 1.0 - KL_divergence(feat.topic.get.value, candidates(i).topic.get.value) // score is higher the better
-        val boost = if (feat.thirdTopic == candidates(i).thirdTopic) 2.0 else 1.0
+        val candidate = candidates(i)
+        val id = candidate.libraryId
+        val score = 1.0 - KL_divergence(feat.topic.get.value, candidate.topic.get.value) // score is higher the better
+        val (same2, same3) = (candidate.secondTopic == feat.secondTopic, candidate.thirdTopic == feat.thirdTopic)
+        val boost = (same2, same3) match {
+          case (true, true) => 2f // full match
+          case (true, false) | (false, true) => 1.5f // exact 1 match
+          case (false, false) =>
+            val interCnt = List(candidate.secondTopic.get.index, candidate.thirdTopic.get.index).count(topicBitSet.get(_))
+            interCnt match {
+              case 2 => 1.5f // permuted 2 matches
+              case 1 => 1f // permuted 1 match
+              case 0 => 0f // no match
+            }
+        }
         (id, score * boost)
       }
       idsAndScores.filter(_._2 > 0).sortBy(-_._2).map { _._1 }

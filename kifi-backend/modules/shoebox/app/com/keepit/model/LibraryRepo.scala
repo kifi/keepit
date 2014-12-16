@@ -28,6 +28,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library]
   def pagePublished(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[Library]
   def countPublished(implicit session: RSession): Int
+  def filterPublishedByMemberCount(minCount: Int, limit: Int = 100)(implicit session: RSession): Seq[Library]
 }
 
 @Singleton
@@ -49,12 +50,13 @@ class LibraryRepoImpl @Inject() (
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def description = column[Option[String]]("description", O.Nullable)
     def slug = column[LibrarySlug]("slug", O.NotNull)
+    def color = column[HexColor]("color", O.Nullable)
     def kind = column[LibraryKind]("kind", O.NotNull)
     def universalLink = column[String]("universal_link", O.NotNull)
     def memberCount = column[Int]("member_count", O.NotNull)
     def lastKept = column[Option[DateTime]]("last_kept", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind, universalLink, memberCount, lastKept) <> ((Library.applyFromDbRow _).tupled, Library.unapply)
+    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, color.?, state, seq, kind, universalLink, memberCount, lastKept) <> ((Library.applyFromDbRow _).tupled, Library.unapply)
   }
 
   def table(tag: Tag) = new LibraryTable(tag)
@@ -164,26 +166,31 @@ class LibraryRepoImpl @Inject() (
   }
 
   def getAllPublishedLibraries()(implicit session: RSession): Seq[Library] = {
-    (for (r <- rows if r.visibility === (LibraryVisibility("published"): LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).list
+    (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).list
   }
 
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library] = {
-    (for (r <- rows if r.visibility === (LibraryVisibility("published"): LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).sortBy(_.id.desc).take(size).list
+    (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).sortBy(_.id.desc).take(size).list
   }
 
   def pagePublished(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[Library] = {
     val q = for {
-      t <- rows if t.visibility === (LibraryVisibility("published"): LibraryVisibility) && t.state === LibraryStates.ACTIVE
+      t <- rows if t.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && t.state === LibraryStates.ACTIVE
     } yield t
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
   def countPublished(implicit session: RSession): Int = {
     Query(
-      (for { t <- rows if t.visibility === (LibraryVisibility("published"): LibraryVisibility) && t.state === LibraryStates.ACTIVE } yield t).length
+      (for { t <- rows if t.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && t.state === LibraryStates.ACTIVE } yield t).length
     ).first
   }
 
+  def filterPublishedByMemberCount(minCount: Int, limit: Int = 100)(implicit session: RSession): Seq[Library] = {
+    (for {
+      t <- rows if t.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && t.state === LibraryStates.ACTIVE && t.memberCount >= minCount
+    } yield t).sortBy(_.updatedAt.desc).take(limit).list
+  }
 }
 
 trait LibrarySequencingPlugin extends SequencingPlugin
