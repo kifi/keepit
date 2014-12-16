@@ -108,6 +108,7 @@ angular.module('kifi')
       this.numKeeps = library.numKeeps;
       this.ownerPicUrl = routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 200);
       this.name = library.name;
+      this.description = library.description;
       this.image = library.image;
       this.imageUrl = library.image ? routeService.libraryImageUrl(library.image.path) : null;
       this.libraryUrl = library.url;
