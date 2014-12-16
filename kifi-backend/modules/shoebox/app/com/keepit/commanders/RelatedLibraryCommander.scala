@@ -6,7 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.model.{ User, LibraryMembershipRepo, LibraryRepo, Library, LibraryVisibility }
+import com.keepit.model.{ LibraryImageInfo, HexColor, User, LibraryMembershipRepo, LibraryRepo, Library, LibraryVisibility }
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits._
@@ -84,18 +84,17 @@ case class RelatedLibraryInfo(
   owner: BasicUser,
   followers: Seq[BasicUser],
   numKeeps: Int,
-  numFollowers: Int)
+  numFollowers: Int,
+  color: Option[HexColor],
+  image: Option[LibraryImageInfo])
 
 object RelatedLibraryInfo {
   def fromFullLibraryInfo(info: FullLibraryInfo, isAuthenticatedRequest: Boolean): RelatedLibraryInfo = {
-    if (isAuthenticatedRequest) {
-      val showableFollowers = {
-        val goodLooking = info.followers.filter(_.pictureName != "0.jpg")
-        if (goodLooking.size < 8) goodLooking else goodLooking.take(3) // cannot show more than 8 avatars in frontend
-      }
-      RelatedLibraryInfo(info.id, info.name, info.url, info.owner, showableFollowers, info.numKeeps, info.numFollowers)
-    } else {
-      RelatedLibraryInfo(info.id, info.name, info.url, info.owner, Seq(), info.numKeeps, info.numFollowers)
-    }
+    val showableFollowers = if (isAuthenticatedRequest) {
+      val goodLooking = info.followers.filter(_.pictureName != "0.jpg")
+      if (goodLooking.size < 8) goodLooking else goodLooking.take(3) // cannot show more than 8 avatars in frontend
+    } else Seq.empty
+    RelatedLibraryInfo(info.id, info.name, info.url, info.owner, showableFollowers, info.numKeeps,
+      info.numFollowers, info.color, info.image)
   }
 }

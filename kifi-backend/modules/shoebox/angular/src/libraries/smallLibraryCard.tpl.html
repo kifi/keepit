@@ -1,4 +1,4 @@
-<div class="kf-small-library-card" ng-attr-style="background-color: {{library.cardColor}}">
+<div class="kf-small-library-card" ng-attr-style="background-color: {{library.color}}">
   <div class="kf-small-library-card-header">
     <a ng-href="{{library.libraryUrl}}" ng-click="clickLibraryReco($event)" class="kf-small-library-name">{{ library.name }}</a>
     <div class="kf-small-library-counts-row">
@@ -11,7 +11,7 @@
       </span>
     </div>
   </div>
-  <div class="kf-small-library-image-wrapper" ng-class="{'has-image': library.imageUrl}" ng-attr-style="background-color: {{library.cardColor}}">
+  <div class="kf-small-library-image-wrapper" ng-class="{'has-image': library.image.url}" ng-attr-style="background-color: {{library.color}}">
     <div class="kf-small-library-owner">
       <div class="kf-small-library-owner-pic" ng-attr-style="background-image: url({{library.ownerPicUrl}})"></div>
       <div class="kf-small-library-owner-name">by <b>{{ library.ownerFullName }}</b></div>
@@ -24,7 +24,7 @@
         </span>
       </div>
     </div>
-    <div ng-if="library.imageUrl"  class="kf-small-library-image" ng-attr-style="background-image: url({{library.imageUrl}})"></div>
+    <div ng-if="library.image.url"  class="kf-small-library-image" ng-attr-style="background-image: url({{library.image.url}})"></div>
   </div>
   <div class="kf-small-library-card-bottom card-1"></div>
   <div class="kf-small-library-card-bottom card-2"></div>

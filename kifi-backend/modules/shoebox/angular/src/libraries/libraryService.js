@@ -108,13 +108,13 @@ angular.module('kifi')
       this.numKeeps = library.numKeeps;
       this.ownerPicUrl = routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 200);
       this.name = library.name;
-      this.imageUrl = null; // TODO(josh) add when we get this image from the backend
+      this.image = library.image;
       this.libraryUrl = library.url;
       this.followers = library.followers.map(function (user) {
         return _.merge(user, { picUrl: routeService.formatPicUrl(user.id, user.pictureName, 200) });
       });
       // default color until we're passed colors from the backend
-      this.cardColor = '#73c785';
+      this.color = library.color || '#73c785';
     }
 
 
@@ -387,6 +387,7 @@ angular.module('kifi')
 
         $http.get(routeService.getRelatedLibraries(libraryId)).then(function (resp) {
           var decoratedLibs = resp.data.libs.map(function (lib) {
+            lib.image = lib.image || {};
             return new RelatedLibraryDecorator(lib);
           });
           deferred.resolve(decoratedLibs);
