@@ -5,7 +5,6 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.explain.{ Explanation }
 import UriResultCollector._
 import com.keepit.search.engine.result._
 import com.keepit.search.engine._
@@ -155,7 +154,7 @@ class UriSearchImpl(
     UriShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
   }
 
-  def explain(uriId: Id[NormalizedURI]): Explanation = {
+  def explain(uriId: Id[NormalizedURI]): UriSearchExplanation = {
     val engine = engineBuilder.build()
     val labels = engineBuilder.getQueryLabels()
     val query = engine.getQuery()
@@ -167,6 +166,6 @@ class UriSearchImpl(
 
     executeTextSearch(engine, collector)
 
-    Explanation(query, labels, collector.getMatchingValues(), collector.getBoostValues(), collector.getRawScore, collector.getBoostedScore, collector.getScoreComputation, collector.getDetails())
+    UriSearchExplanation(query, labels, collector.getMatchingValues(), collector.getBoostValues(), collector.getRawScore, collector.getBoostedScore, collector.getScoreComputation, collector.getDetails())
   }
 }

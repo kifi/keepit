@@ -1,7 +1,6 @@
 package com.keepit.search
 
-import com.keepit.search.engine.explain.Explanation
-import com.keepit.search.engine.uri.{ UriSearch, UriShardResultMerger, UriShardResult, UriSearchResult }
+import com.keepit.search.engine.uri.{ UriSearch, UriShardResultMerger, UriShardResult, UriSearchResult, UriSearchExplanation }
 import com.keepit.search.engine.{ DebugOption, SearchFactory }
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
@@ -10,7 +9,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext._
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -82,7 +81,7 @@ trait UriSearchCommander {
     lang: Option[String],
     experiments: Set[ExperimentType],
     query: String,
-    debug: Option[String]): Future[Option[Explanation]]
+    debug: Option[String]): Future[Option[UriSearchExplanation]]
 
   def warmUp(userId: Id[User]): Unit
 
@@ -396,7 +395,7 @@ class UriSearchCommanderImpl @Inject() (
 
   def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = shards.find(uriId)
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[Explanation]] = {
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[UriSearchExplanation]] = {
     val langs = lang match {
       case Some(str) => str.split(",").toSeq.map(Lang(_))
       case None => Seq(DefaultAnalyzer.defaultLang)
