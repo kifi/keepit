@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
-  'modalService', 'profileService', 'util', '$window', '$analytics', 'librarySearch', 'platformService',
-  function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
-            modalService, profileService, util, $window, $analytics, librarySearch, platformService) {
+  '$scope', '$rootScope', '$location', '$state', '$stateParams', 'keepDecoratorService', 'libraryService',
+  'modalService', 'profileService', 'util', '$window', '$analytics', 'platformService',
+  function ($scope, $rootScope, $location, $state, $stateParams, keepDecoratorService, libraryService,
+            modalService, profileService, util, $window, $analytics, platformService) {
     //
     // Internal data.
     //
@@ -45,9 +45,9 @@ angular.module('kifi')
     //
     // Scope data.
     //
-    $scope.librarySearch = librarySearch;
-    $scope.username = $routeParams.username;
-    $scope.librarySlug = $routeParams.librarySlug;
+    $scope.librarySearch = $state.current.data.librarySearch;
+    $scope.username = $stateParams.username;
+    $scope.librarySlug = $stateParams.librarySlug;
     $scope.keeps = [];
     $scope.library = {};
     $scope.scrollDistance = '100%';
