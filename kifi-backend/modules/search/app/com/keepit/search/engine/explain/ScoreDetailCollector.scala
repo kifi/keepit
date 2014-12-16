@@ -23,18 +23,19 @@ class ScoreDetailCollector(targetId: Long, val matchingThreshold: Float) extends
   )
 
   def collect(ctx: ScoreContext): Unit = {
-    require(ctx.id == targetId, "id mismatch")
-
-    // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
-    _matching = ctx.computeMatching(minMatchingThreshold)
-    _rawScore = ctx.score()
-    _scoreComputation = ctx.explainScoreExpr()
-    _details("aggregate") += ScoreDetail(ctx)
+    if (ctx.id == targetId) {
+      // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
+      _matching = ctx.computeMatching(minMatchingThreshold)
+      _rawScore = ctx.score()
+      _scoreComputation = ctx.explainScoreExpr()
+      _details("aggregate") += ScoreDetail(ctx)
+    }
   }
 
-  def collectDetail(primaryId: Long, secondaryId: Long, visibility: Int, scoreArray: Array[Float]): Unit = {
-    require(primaryId == targetId, "id mismatch")
-    _details(Visibility.name(visibility)) += ScoreDetail(primaryId, secondaryId, visibility, scoreArray.clone)
+  override def collectDetail(primaryId: Long, secondaryId: Long, visibility: Int, scoreArray: Array[Float]): Unit = {
+    if (primaryId == targetId) {
+      _details(Visibility.name(visibility)) += ScoreDetail(primaryId, secondaryId, visibility, scoreArray.clone)
+    }
   }
 
   def getMatchingValues(): (Float, Float, Float) = (_matching, matchingThreshold, minMatchingThreshold)

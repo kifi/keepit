@@ -1,7 +1,6 @@
 package com.keepit.search.engine
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.engine.explain.{ ScoreDetailCollector, DirectExplainContext, ExplainContext }
 import com.keepit.search.engine.result.ResultCollector
 import com.keepit.search.util.join.{ DataBufferReader, AggregationContextManager, DataBuffer, HashJoin }
 import org.apache.lucene.search.{ Query, Weight }
@@ -35,28 +34,6 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     }
   }
 
-  def explain(targetId: Long, collector: ScoreDetailCollector, sources: ScoreVectorSource*): Unit = {
-
-    // if NullExpr, no need to execute
-    if (scoreExpr.isNullExpr) {
-      debugLog("engine not executed: NullExpr")
-      return
-    }
-
-    sources.foreach(prepare(_))
-
-    matchWeightNormalizer.normalizeMatchWeight()
-    val directExplainContext = createDirectExplainContext(collector, targetId)
-
-    sources.foreach(explain(_, targetId, directExplainContext))
-
-    join(createExplainContextManager(collector, targetId))
-
-    if ((debugFlags & DebugOption.Log.flag) != 0) {
-      debugLog(s"engine executed (explain): pages=${dataBuffer.numPages} rows=${dataBuffer.size} bytes=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} direct=${directExplainContext.getCount}")
-    }
-  }
-
   private[this] def prepare(source: ScoreVectorSource): Unit = {
     val startTime = System.currentTimeMillis()
 
@@ -80,17 +57,6 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
       debugLog(s"source executed: class=${source.getClass.getSimpleName} rows=${newTotal - lastTotal} time=$elapsed")
     }
     newTotal
-  }
-
-  private[this] def explain(source: ScoreVectorSource, targetId: Long, directExplainContext: DirectExplainContext): Unit = {
-    val startTime = System.currentTimeMillis()
-
-    source.explain(targetId, coreSize, dataBuffer, directExplainContext)
-
-    val elapsed = System.currentTimeMillis() - startTime
-    if ((debugFlags & DebugOption.Log.flag) != 0) {
-      debugLog(s"source executed (explain): class=${source.getClass.getSimpleName} time=$elapsed")
-    }
   }
 
   private[this] def join(aggregationContextManager: AggregationContextManager): Unit = {
@@ -139,24 +105,6 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
           ctx.debug(debugOption)
           ctx
         }
-      }
-    }
-  }
-
-  private[this] def createDirectExplainContext(collector: ScoreDetailCollector, targetId: Long): DirectExplainContext = {
-    val debugOption = this
-    val ctx = new DirectExplainContext(targetId, scoreExpr, totalSize, matchWeightNormalizer.get, collector)
-    ctx.debug(debugOption)
-    ctx
-  }
-
-  private[this] def createExplainContextManager(collector: ScoreDetailCollector, targetId: Long): AggregationContextManager = {
-    val debugOption = this
-    new AggregationContextManager(1) {
-      def create() = {
-        val ctx = new ExplainContext(targetId, scoreExpr, totalSize, matchWeightNormalizer.get, collector)
-        ctx.debug(debugOption)
-        ctx
       }
     }
   }
