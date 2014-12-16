@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.explain.{ Explanation, ScoreDetailCollector }
+import com.keepit.search.engine.explain.{ Explanation }
 import com.keepit.search.engine.result._
 import com.keepit.search.engine.{ QueryEngineBuilder, SearchTimeLogs }
 import com.keepit.search.index.Searcher
@@ -35,7 +35,7 @@ class UriSearchNonUserImpl(
 
     val collector = new NonUserUriResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
     val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait)
-    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, false, config, monitoredAwait)
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
 
     if (debugFlags != 0) {
@@ -87,7 +87,7 @@ class UriSearchNonUserImpl(
     val engine = engineBuilder.build()
     val labels = engineBuilder.getQueryLabels()
     val query = engine.getQuery()
-    val collector = new ScoreDetailCollector(uriId.id, None, percentMatch / 100.0f, None)
+    val collector = new UriScoreDetailCollector(uriId.id, percentMatch / 100.0f, None, None)
 
     val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait)
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait)
@@ -102,6 +102,6 @@ class UriSearchNonUserImpl(
 
     engine.explain(uriId.id, collector, libraryScoreSource, keepScoreSource, articleScoreSource)
 
-    Explanation(query, labels, collector.getMatchingValues(), collector.getBoostValues(), collector.rawScore, collector.boostedScore, collector.scoreComputation, collector.getDetails())
+    Explanation(query, labels, collector.getMatchingValues(), collector.getBoostValues(), collector.getRawScore, collector.getBoostedScore, collector.getScoreComputation, collector.getDetails())
   }
 }

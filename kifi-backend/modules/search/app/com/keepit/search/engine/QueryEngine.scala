@@ -1,7 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.engine.explain.{ DirectExplainContext, ExplainContext, ScoreDetailCollector, ScoreDetail }
+import com.keepit.search.engine.explain.{ ScoreDetailCollector, DirectExplainContext, ExplainContext }
 import com.keepit.search.engine.result.ResultCollector
 import com.keepit.search.util.join.{ DataBufferReader, AggregationContextManager, DataBuffer, HashJoin }
 import org.apache.lucene.search.{ Query, Weight }

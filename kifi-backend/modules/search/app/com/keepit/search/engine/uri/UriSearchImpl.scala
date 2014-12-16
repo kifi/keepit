@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.explain.{ Explanation, ScoreDetailCollector }
+import com.keepit.search.engine.explain.{ Explanation }
 import UriResultCollector._
 import com.keepit.search.engine.result._
 import com.keepit.search.engine.{ QueryEngineBuilder, SearchTimeLogs, Visibility }
@@ -158,9 +158,9 @@ class UriSearchImpl(
     val labels = engineBuilder.getQueryLabels()
     val query = engine.getQuery()
     val collector = if (engine.recencyOnly) {
-      new ScoreDetailCollector(uriId.id, None, percentMatch / 100.0f, None)
+      new UriScoreDetailCollector(uriId.id, percentMatch / 100.0f, None, None)
     } else {
-      new ScoreDetailCollector(uriId.id, Some(clickBoostsProvider), percentMatch / 100.0f, Some(sharingBoostInNetwork))
+      new UriScoreDetailCollector(uriId.id, percentMatch / 100.0f, Some(clickBoostsProvider), Some(sharingBoostInNetwork))
     }
 
     val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait)
@@ -176,6 +176,6 @@ class UriSearchImpl(
 
     engine.explain(uriId.id, collector, libraryScoreSource, keepScoreSource, articleScoreSource)
 
-    Explanation(query, labels, collector.getMatchingValues(), collector.getBoostValues(), collector.rawScore, collector.boostedScore, collector.scoreComputation, collector.getDetails())
+    Explanation(query, labels, collector.getMatchingValues(), collector.getBoostValues(), collector.getRawScore, collector.getBoostedScore, collector.getScoreComputation, collector.getDetails())
   }
 }
