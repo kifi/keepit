@@ -147,5 +147,4 @@ angular.module('kifi')
 //
 // After moving the routes to states, also:
 //   (1) Do a global search for '$route' (which includes '$routeParams', and update as needed)
-//   (2) Redo the locationNoReload service for public library search
-//
+

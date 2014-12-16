@@ -31,7 +31,7 @@ angular.module('kifi')
         var prevQuery = '';
         var headerLinksShifted = false;
         var headerLinksWidth = '60px';
-        var updateSearchText = false;
+        var keepShowingSearchBar = false;
         var coverImageFile;
         var coverImagePos;
         var URL = $window.URL || $window.webkitURL;
@@ -848,8 +848,6 @@ angular.module('kifi')
             libraryBodyElement.css({
               'margin-top': '90px'
             });
-
-            scope.search = { 'text': $stateParams.q || '' };
           }, 0);
         }
 
@@ -926,6 +924,9 @@ angular.module('kifi')
                 scope.search = { 'text': '' };
               });
 
+              // Keep showing the search bar when the user clears the search input.
+              keepShowingSearchBar = true;
+
               $state.go('library.keeps');
             }
           });
@@ -964,33 +965,32 @@ angular.module('kifi')
         // For back and forward on the browser history button, update the search input text accordingly.
         var deregisterUpdateSearchInputText = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
           if (toState.data && toState.data.librarySearch) {
+            showLibrarySearchBar();
             scope.search = { 'text': toParams.q };
           }
 
           if (toState.data && !toState.data.librarySearch) {
             prevQuery = '';
-            scope.search = { 'text': '' };
+
+            if (keepShowingSearchBar) {
+              keepShowingSearchBar = false;
+            } else {
+              hideLibrarySearchBar();
+              scope.search = { 'text': '' };
+            }
           }
         });
         scope.$on('$destroy', deregisterUpdateSearchInputText);
 
         // When a new search is conducted because the user clicks on a search url on the page,
-        // we need to update the search input text to reflect this.
+        // show the library search bar.
         var deregisterNewSearchUrl = $rootScope.$on('newSearchUrl', function () {
-          updateSearchText = true;
           showLibrarySearchBar();
+          $timeout(function () {
+            scope.search = { 'text': $stateParams.q || '' };
+          });
         });
         scope.$on('$destroy', deregisterNewSearchUrl);
-
-        // When SearchCtrl initiates a new search, if this new search was the result of a new
-        // search url, then update the search input text.
-        var deregisterNewSearchQuery = $rootScope.$on('newSearchQuery', function (e, query) {
-          if (updateSearchText) {
-            scope.search = { 'text': query };
-            updateSearchText = false;
-          }
-        });
-        scope.$on('$destroy', deregisterNewSearchQuery);
 
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);
