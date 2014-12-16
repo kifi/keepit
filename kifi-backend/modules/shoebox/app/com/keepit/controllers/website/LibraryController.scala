@@ -20,6 +20,7 @@ import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
+import play.api.mvc.Action
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
@@ -525,6 +526,10 @@ class LibraryController @Inject() (
           val libs = fullInfos.map { info => RelatedLibraryInfo.fromFullLibraryInfo(info, isUserAction) }
           Ok(Json.obj("libs" -> libs, "related" -> isRelated))
       }
+  }
+
+  def marketingSiteSuggestedLibraries() = Action.async {
+    libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
   }
 }
 
