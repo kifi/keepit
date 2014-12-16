@@ -1339,7 +1339,8 @@ class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermost
   image: Option[LibraryImageInfo] = None,
   owner: BasicUser,
   numKeeps: Int,
-  numFollowers: Int)
+  numFollowers: Int,
+  color: Option[HexColor])
 
 object MarketingSuggestedLibraryInfo {
   // system value that persists the library IDs for the marketing site
@@ -1353,6 +1354,7 @@ object MarketingSuggestedLibraryInfo {
       image = info.image,
       owner = info.owner,
       numKeeps = info.numKeeps,
-      numFollowers = info.numFollowers)
+      numFollowers = info.numFollowers,
+      color = info.color)
   }
 }
