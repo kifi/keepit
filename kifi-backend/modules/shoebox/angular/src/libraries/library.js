@@ -290,7 +290,7 @@ angular.module('kifi')
       libraryService.authIntoLibrary($scope.username, $scope.librarySlug, authToken, $scope.passphrase.value.toLowerCase()).then(function () {
         init(true);
       })['catch'](function (err) {
-        $scope.$error.name = 'Oops, that didn\'t work. Try again? Check the email you recieved for the correct pass phrase.';
+        $scope.$error.name = 'Oops, that didn’t work. Try again? Check the email you received for the correct pass phrase.';
         return err;
       });
     };
