@@ -38,15 +38,23 @@ angular.module('kifi')
       url: '/invite',
       templateUrl: 'invite/invite.tpl.html'
     })
+    .state('manageTags', {
+      url: '/tags/manage',
+      templateUrl: 'tagManage/tagManage.tpl.html',
+      controller: 'ManageTagCtrl'
+    })
     .state('settings', {
       url: '/profile',
       templateUrl: 'profile/profile.tpl.html',
       controller: 'ProfileCtrl'
     })
-    .state('manageTags', {
-      url: '/tags/manage',
-      templateUrl: 'tagManage/tagManage.tpl.html',
-      controller: 'ManageTagCtrl'
+    .state('search', {
+      url: '/find?q&f',
+      templateUrl: 'search/search.tpl.html',
+      controller: 'SearchCtrl',
+
+      // SearchCtrl manually reloads search results on search input change in a debounced function.
+      reloadOnSearch: false
     })
     .state('userProfile', {
       url: '/:username',

@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('HeaderCtrl', [
   '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService',
-    '$location', 'util', 'keyIndices', 'modalService', '$timeout', 'searchActionService', '$routeParams',
+    '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state',
   function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService,
-    $location, util, keyIndices, modalService, $timeout, searchActionService, $routeParams) {
+    $location, util, keyIndices, modalService, $timeout, $state) {
 
     $scope.toggleMenu = function () {
       $rootElement.find('html').toggleClass('kf-sidebar-inactive');
@@ -54,7 +54,7 @@ angular.module('kifi')
         $scope.clearLibraryName();
       }
 
-      $scope.search.text = $routeParams.q || '';
+      $scope.search.text = $state.params.q || '';
     });
     $scope.$on('$destroy', deregisterLibraryChip);
 
@@ -83,7 +83,7 @@ angular.module('kifi')
       $scope.changeSearchInput();
     };
 
-    $scope.search.text = $routeParams.q || '';
+    $scope.search.text = $state.params.q || '';
     $scope.changeSearchInput = _.debounce(function () {
       $timeout(function() {
         // We are not already on the search page.
@@ -91,7 +91,7 @@ angular.module('kifi')
           if ($scope.library && $scope.library.url) {
             if ($scope.search.text) {
               /* jshint ignore:start */
-              if ($routeParams.q) {
+              if ($state.params.q) {
                 $location.search('q', $scope.search.text).replace();
               } else {
                 $location.url($scope.library.url + '/find?q=' + $scope.search.text + '&f=a');
