@@ -1224,8 +1224,14 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             membership().withLibraryFollower(lib2, user3).saved
 
             inject[SystemValueRepo].save(SystemValue(
-              name = MarketingSuggestedLibraryInfo.systemValueName,
-              value = s"[${lib1.id.get},${lib2.id.get},${lib3.id.get}]"))
+              name = MarketingSuggestedLibrarySystemValue.systemValueName,
+              value = s"""
+                   |[
+                   |  { "id": ${lib1.id.get}, "caption": "yo dawg" },
+                   |  { "id": ${lib2.id.get} },
+                   |  { "id": ${lib3.id.get} }
+                   |]
+                 """.stripMargin))
           }
 
           val call = com.keepit.controllers.website.routes.LibraryController.marketingSiteSuggestedLibraries()
@@ -1240,9 +1246,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libInfos(0).name === "Scala"
           libInfos(0).numFollowers === 2
           libInfos(0).owner.fullName === "John Doe"
+          libInfos(0).caption must beSome("yo dawg")
           libInfos(1).name === "Java"
           libInfos(1).numFollowers === 1
           libInfos(1).id.id must beMatching("^l.+") // tests public id
+          libInfos(1).caption must beNone
         }
       }
     }

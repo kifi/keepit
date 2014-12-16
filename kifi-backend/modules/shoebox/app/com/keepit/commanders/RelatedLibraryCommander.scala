@@ -80,6 +80,7 @@ class RelatedLibraryCommanderImpl @Inject() (
 case class RelatedLibraryInfo(
   id: PublicId[Library],
   name: String,
+  description: Option[String],
   url: String,
   owner: BasicUser,
   followers: Seq[BasicUser],
@@ -94,7 +95,7 @@ object RelatedLibraryInfo {
       val goodLooking = info.followers.filter(_.pictureName != "0.jpg")
       if (goodLooking.size < 8) goodLooking else goodLooking.take(3) // cannot show more than 8 avatars in frontend
     } else Seq.empty
-    RelatedLibraryInfo(info.id, info.name, info.url, info.owner, showableFollowers, info.numKeeps,
+    RelatedLibraryInfo(info.id, info.name, info.description, info.url, info.owner, showableFollowers, info.numKeeps,
       info.numFollowers, info.color, info.image)
   }
 }

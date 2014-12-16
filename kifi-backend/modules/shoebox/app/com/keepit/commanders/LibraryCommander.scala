@@ -36,6 +36,15 @@ import com.keepit.common.core._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 
+@json case class MarketingSuggestedLibrarySystemValue(
+  id: Id[Library],
+  caption: Option[String] = None)
+
+object MarketingSuggestedLibrarySystemValue {
+  // system value that persists the library IDs and additional library data for the marketing site
+  def systemValueName = Name[SystemValue]("marketing_site_libraries")
+}
+
 class LibraryCommander @Inject() (
     db: Database,
     libraryRepo: LibraryRepo,
@@ -1130,18 +1139,20 @@ class LibraryCommander @Inject() (
 
   def getMarketingSiteSuggestedLibraries(): Future[Seq[MarketingSuggestedLibraryInfo]] = {
     val valueOpt = db.readOnlyReplica { implicit s =>
-      systemValueRepo.getValue(MarketingSuggestedLibraryInfo.systemValueName)
+      systemValueRepo.getValue(MarketingSuggestedLibrarySystemValue.systemValueName)
     }
 
     valueOpt map { value =>
-      val libIds = Json.fromJson[Set[Id[Library]]](Json.parse(value)).fold(
+      val systemValueLibraries = Json.fromJson[Seq[MarketingSuggestedLibrarySystemValue]](Json.parse(value)).fold(
         err => {
-          airbrake.notify(s"Invalid JSON format for Seq[Id[Library]]: $err")
-          Set.empty[Id[Library]]
+          airbrake.notify(s"Invalid JSON format for Seq[MarketingSuggestedLibrarySystemValue]: $err")
+          Seq.empty[MarketingSuggestedLibrarySystemValue]
         },
-        ids => ids
-      )
+        identity
+      ).map(value => (value.id, value)).toMap
 
+      val libIds = systemValueLibraries.keySet
+      val libPublicIdsToIds = libIds.map { id => (Library.publicId(id), id) }.toMap
       val libIdsMap = db.readOnlyReplica { implicit s => libraryRepo.getLibraries(libIds) } filter {
         case (_, lib) => lib.visibility == LibraryVisibility.PUBLISHED
       }
@@ -1155,7 +1166,10 @@ class LibraryCommander @Inject() (
         idealLibraryImageSize = ProcessedImageSize.Medium.idealSize)
 
       fullLibInfosF map { libInfos =>
-        libInfos map MarketingSuggestedLibraryInfo.fromFullLibraryInfo
+        libInfos map { info =>
+          val extraInfo = systemValueLibraries.get(libPublicIdsToIds(info.id))
+          MarketingSuggestedLibraryInfo.fromFullLibraryInfo(info, extraInfo)
+        }
       }
     } getOrElse Future.successful(Seq.empty)
   }
@@ -1335,6 +1349,7 @@ class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermost
 @json case class MarketingSuggestedLibraryInfo(
   id: PublicId[Library],
   name: String,
+  caption: Option[String],
   url: String,
   image: Option[LibraryImageInfo] = None,
   owner: BasicUser,
@@ -1343,13 +1358,11 @@ class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermost
   color: Option[HexColor])
 
 object MarketingSuggestedLibraryInfo {
-  // system value that persists the library IDs for the marketing site
-  def systemValueName = Name[SystemValue]("marketing_site_libraries")
-
-  def fromFullLibraryInfo(info: FullLibraryInfo) = {
+  def fromFullLibraryInfo(info: FullLibraryInfo, extra: Option[MarketingSuggestedLibrarySystemValue] = None) = {
     MarketingSuggestedLibraryInfo(
       id = info.id,
       name = info.name,
+      caption = extra flatMap (_.caption),
       url = info.url,
       image = info.image,
       owner = info.owner,
@@ -1358,3 +1371,4 @@ object MarketingSuggestedLibraryInfo {
       color = info.color)
   }
 }
+
