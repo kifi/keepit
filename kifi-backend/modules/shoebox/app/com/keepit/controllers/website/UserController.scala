@@ -603,9 +603,10 @@ class UserController @Inject() (
       val profile = userCommander.profile(Username(username), viewer)
       val numLibraries = libraryCommander.countLibraries(profile.user.id.get, viewer.map(_.id.get))
       Ok(Json.obj(
+        "id" -> profile.user.externalId,
         "firstName" -> profile.user.firstName,
         "lastName" -> profile.user.lastName,
-        "pictureName" -> profile.user.pictureName,
+        "pictureName" -> profile.user.pictureName.map(p => s"$p.jpg"),
         "numLibraries" -> numLibraries,
         "friendsWith" -> profile.isConnected,
         "numKeeps" -> profile.numKeeps

@@ -393,11 +393,12 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         contentType(anonViewer) must beSome("application/json")
         val res1 = contentAsJson(anonViewer)
         res1 === Json.parse(
-          """
+          s"""
             {
+              "id":"${user1.externalId.id}",
               "firstName":"George",
               "lastName":"Washington",
-              "pictureName":"pic1",
+              "pictureName":"pic1.jpg",
               "numLibraries":2,
               "friendsWith": null,
               "numKeeps": 5
@@ -410,11 +411,12 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         contentType(selfViewer) must beSome("application/json")
         val res2 = contentAsJson(selfViewer)
         res2 === Json.parse(
-          """
+          s"""
             {
+              "id":"${user1.externalId.id}",
               "firstName":"George",
               "lastName":"Washington",
-              "pictureName":"pic1",
+              "pictureName":"pic1.jpg",
               "numLibraries":6,
               "friendsWith": null,
               "numKeeps": 5
@@ -427,11 +429,12 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         contentType(friendViewer) must beSome("application/json")
         val res3 = contentAsJson(friendViewer)
         res3 === Json.parse(
-          """
+          s"""
             {
+              "id":"${user1.externalId.id}",
               "firstName":"George",
               "lastName":"Washington",
-              "pictureName":"pic1",
+              "pictureName":"pic1.jpg",
               "numLibraries":3,
               "friendsWith": true,
               "numKeeps": 5
