@@ -16,11 +16,7 @@ angular.module('kifi')
       link: function (scope/*, element, attrs*/) {
         var friend = scope.friend();
         scope.name = friend.firstName + ' ' + friend.lastName;
-        if (friend.firstName[friend.firstName.length - 1] === 's') {
-          scope.possesive = friend.firstName + '\'';
-        } else {
-          scope.possesive = friend.firstName + 's';
-        }
+        scope.firstName = friend.firstName;
         scope.mainImage = friendService.getPictureUrlForUser(friend);
         scope.friendCount = friend.friendCount;
         scope.unfriended = friend.unfriended;
