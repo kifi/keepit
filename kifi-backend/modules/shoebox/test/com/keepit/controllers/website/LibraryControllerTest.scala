@@ -4,8 +4,8 @@ import java.io.File
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders._
-import com.keepit.common.controller.{ FakeUserActionsHelper }
-import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.controller.FakeUserActionsHelper
+import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
@@ -14,25 +14,25 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScrapeSchedulerConfigModule }
+import com.keepit.scraper.{ FakeScrapeSchedulerConfigModule, FakeScrapeSchedulerModule }
 import com.keepit.search.{ FakeSearchServiceClient, FakeSearchServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
+import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.{ JsObject, JsValue, JsArray, Json }
+import play.api.libs.json.{ JsArray, JsObject, JsValue, Json }
 import play.api.test.Helpers._
 import play.api.test._
-import com.keepit.social.BasicUser
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.UserFactory._
-import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.LibraryMembershipFactoryHelper._
-import com.keepit.model.LibraryMembershipFactory._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -1212,6 +1212,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             val lib1 = library().withName("Scala").withUser(user1).published().saved
             val lib2 = library().withName("Java").withUser(user1).published().saved
 
+            // test that private libraries are not returned in the response
+            val lib3 = library().withName("Private").withUser(user1).saved
+
             inject[KeepRepo].all() // force slick to create the table
 
             membership().withLibraryOwner(lib1).saved
@@ -1222,7 +1225,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
             inject[SystemValueRepo].save(SystemValue(
               name = MarketingSuggestedLibraryInfo.systemValueName,
-              value = s"[${lib1.id.get},${lib2.id.get}]"))
+              value = s"[${lib1.id.get},${lib2.id.get},${lib3.id.get}]"))
           }
 
           val call = com.keepit.controllers.website.routes.LibraryController.marketingSiteSuggestedLibraries()
@@ -1239,6 +1242,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libInfos(0).owner.fullName === "John Doe"
           libInfos(1).name === "Java"
           libInfos(1).numFollowers === 1
+          libInfos(1).id.id must beMatching("^l.+") // tests public id
         }
       }
     }
