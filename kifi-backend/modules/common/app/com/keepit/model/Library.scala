@@ -214,12 +214,12 @@ object BasicLibraryStatistics {
 }
 
 class HexColor private (val hex: String) {
-  require(hex.matches(HexColor.regexStr), "hex color must be in format '#aaaaaa'")
+  require(HexColor.regex.findFirstIn(hex).isDefined, "hex color must be in format '#aaaaaa'")
 }
 object HexColor {
   implicit def format[T]: Format[HexColor] =
     Format(__.read[String].map(HexColor(_)), new Writes[HexColor] { def writes(o: HexColor) = JsString(o.hex) })
 
-  val regexStr = "^#[0-9a-f]{6}"
+  val regex = "^#[0-9a-f]{6}$".r
   def apply(hex: String): HexColor = new HexColor(hex.toLowerCase)
 }

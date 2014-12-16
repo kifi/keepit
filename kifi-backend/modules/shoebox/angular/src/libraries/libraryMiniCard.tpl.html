@@ -17,7 +17,7 @@
   </div>
 
   <div class="kf-library-mini-card-body">
-    <div class="kf-library-mini-card-name" ng-click="view()">{{library.name}}</div>
+    <div kf-ellipsis full-text="library.name" max-num-lines=1 class="kf-library-mini-card-name" ng-click="view()"></div>
 
     <div class="kf-library-mini-card-stats-container">
       <span class="kf-library-mini-card-stat">
