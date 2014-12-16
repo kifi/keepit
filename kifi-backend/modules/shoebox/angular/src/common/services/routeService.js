@@ -183,6 +183,15 @@ angular.module('kifi')
       deleteLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/delete');
       },
+      uploadLibraryCoverImage: function (libraryId, x, y, idealSize) {
+        return route('/libraries/' + libraryId + '/image/upload?x=' + x + '&y=' + y + '&is=' + idealSize);
+      },
+      positionLibraryCoverImage: function (libraryId) {
+        return route('/libraries/' + libraryId + '/image/position');
+      },
+      removeLibraryCoverImage: function (libraryId) {
+        return route('/libraries/' + libraryId + '/image');
+      },
       authIntoLibrary: function (username, slug, authToken) {
         return route('/users/' + username + '/libraries/' + slug + '/auth?authToken=' + authToken || '');
       },
