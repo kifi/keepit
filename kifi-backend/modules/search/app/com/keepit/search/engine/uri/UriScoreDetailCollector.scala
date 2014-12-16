@@ -11,37 +11,37 @@ class UriScoreDetailCollector(targetId: Long, matchingThreshold: Float, clickBoo
   private[this] var _sharingBoostValue: Float = -1f
 
   override def collect(ctx: ScoreContext): Unit = {
-    require(ctx.id == targetId, "id mismatch")
+    if (ctx.id == targetId) {
+      super.collect(ctx)
 
-    super.collect(ctx)
+      val (matching, _, _) = getMatchingValues()
+      val rawScore = getRawScore()
 
-    val (matching, _, _) = getMatchingValues()
-    val rawScore = getRawScore()
-
-    clickBoostsProvider.foreach { f =>
-      val clickBoosts = f()
-      _clickBoostValue = clickBoosts(targetId)
-    }
-
-    if (matching > 0.0f) {
-      if (matching >= matchingThreshold) {
-        _boostedScore = rawScore * matching * _clickBoostValue
-      } else {
-        // below the threshold (and above minMatchingThreshold), we save this hit if this is a clicked hit (clickBoost > 1.0f)
-        if (_clickBoostValue > 1.0f) _boostedScore = ctx.score() * matching * _clickBoostValue // else score remains 0.0f
+      clickBoostsProvider.foreach { f =>
+        val clickBoosts = f()
+        _clickBoostValue = clickBoosts(targetId)
       }
 
-      sharingBoost.map { sharingBoost =>
-        val visibility = ctx.visibility
-        if ((visibility & Visibility.OWNER) != 0) {
-          _sharingBoostValue = (1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat)
-        } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
-          _sharingBoostValue = (1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat)
+      if (matching > 0.0f) {
+        if (matching >= matchingThreshold) {
+          _boostedScore = rawScore * matching * _clickBoostValue
         } else {
-          _sharingBoostValue = 1.0f
+          // below the threshold (and above minMatchingThreshold), we save this hit if this is a clicked hit (clickBoost > 1.0f)
+          if (_clickBoostValue > 1.0f) _boostedScore = ctx.score() * matching * _clickBoostValue // else score remains 0.0f
         }
 
-        _boostedScore *= _sharingBoostValue
+        sharingBoost.map { sharingBoost =>
+          val visibility = ctx.visibility
+          if ((visibility & Visibility.OWNER) != 0) {
+            _sharingBoostValue = (1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat)
+          } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
+            _sharingBoostValue = (1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat)
+          } else {
+            _sharingBoostValue = 1.0f
+          }
+
+          _boostedScore *= _sharingBoostValue
+        }
       }
     }
   }
