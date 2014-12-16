@@ -27,6 +27,12 @@ import play.api.libs.json.{ JsObject, JsValue, JsArray, Json }
 import play.api.test.Helpers._
 import play.api.test._
 import com.keepit.social.BasicUser
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.LibraryMembershipFactory._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -1192,6 +1198,47 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit s =>
           keepRepo.getByLibrary(lib1.id.get, 0, 5).map(_.title) === Seq(Some("thwip!"))
+        }
+      }
+    }
+
+    "marketingSiteSuggestedLibraries" should {
+      "return json array of library info" in {
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit rw =>
+            val user1 = user().withName("John", "Doe").saved
+            val user2 = user().withName("Joe", "Blow").saved
+            val user3 = user().withName("Jack", "Black").saved
+            val lib1 = library().withName("Scala").withUser(user1).published().saved
+            val lib2 = library().withName("Java").withUser(user1).published().saved
+
+            inject[KeepRepo].all() // force slick to create the table
+
+            membership().withLibraryOwner(lib1).saved
+            membership().withLibraryFollower(lib1, user2).saved
+            membership().withLibraryFollower(lib1, user3).saved
+            membership().withLibraryOwner(lib2).saved
+            membership().withLibraryFollower(lib2, user3).saved
+
+            inject[SystemValueRepo].save(SystemValue(
+              name = MarketingSuggestedLibraryInfo.systemValueName,
+              value = s"[${lib1.id.get},${lib2.id.get}]"))
+          }
+
+          val call = com.keepit.controllers.website.routes.LibraryController.marketingSiteSuggestedLibraries()
+          call.url === "/site/libraries/marketing-suggestions"
+          call.method === "GET"
+
+          val result = inject[LibraryController].marketingSiteSuggestedLibraries()(FakeRequest())
+          status(result) === OK
+
+          val libInfos = contentAsJson(result).as[Seq[MarketingSuggestedLibraryInfo]]
+          libInfos.size === 2
+          libInfos(0).name === "Scala"
+          libInfos(0).numFollowers === 2
+          libInfos(0).owner.fullName === "John Doe"
+          libInfos(1).name === "Java"
+          libInfos(1).numFollowers === 1
         }
       }
     }
