@@ -14,6 +14,8 @@ angular.module('kifi')
     $scope.me = profileService.me;
     profileService.getMe();
 
+    $scope.onProfileExperiment = profileService.me.experiments && profileService.me.experiments.indexOf('profiles_beta') !== -1;
+
     $scope.descInput = {};
     $scope.$watch('me.description', function (val) {
       $scope.descInput.value = val || '';
