@@ -125,10 +125,9 @@ class UserCommander @Inject() (
   def setSettings(userId: Id[User], newSettings: Map[UserValueName, JsValue]) = {
     db.readWrite { implicit s =>
       var settings = userValueRepo.getValue(userId, UserValues.userProfileSettings).as[JsObject]
-      newSettings.map {
+      newSettings.collect {
         case (UserValueName(name), valueToSet) =>
           settings = settings ++ Json.obj(name -> valueToSet)
-        case _ =>
       }
       userValueRepo.setValue(userId, UserValueName.USER_PROFILE_SETTINGS, settings)
     }

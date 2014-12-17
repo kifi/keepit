@@ -263,7 +263,7 @@ class MobileUserController @Inject() (
     val showFollowLibrariesOpt = (request.body \ UserValueName.SHOW_FOLLOWED_LIBRARIES.name).asOpt[Boolean]
     val settingsList = Map(UserValueName.SHOW_FOLLOWED_LIBRARIES -> showFollowLibrariesOpt)
 
-    val newMapping = settingsList.map {
+    val newMapping = settingsList.collect {
       case (userVal, Some(optionVal)) => userVal -> Json.toJson(optionVal)
     }
     Ok(userCommander.setSettings(request.userId, newMapping))
