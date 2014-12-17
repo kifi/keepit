@@ -221,7 +221,6 @@ angular.module('kifi')
         // todo (aaron): endpoint doesn't return profileUrl yet. Leave this out for now
         //scope.isTwitterConnected = socialService.twitter && !!socialService.twitter.profileUrl;
 
-        // looks for 'network' field as temporary placedholder for checking connected with twitter
         scope.isTwitterConnected = socialService.twitter && !!socialService.twitter.network;
         scope.twitter = socialService.twitter;
         scope.twitterExperiment = profileService.me.experiments && profileService.me.experiments.indexOf('twitter_beta') !== -1;
