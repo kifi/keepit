@@ -1227,8 +1227,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               name = MarketingSuggestedLibrarySystemValue.systemValueName,
               value = s"""
                    |[
-                   |  { "id": ${lib1.id.get}, "caption": "yo dawg" },
+                   |  { "id": 424242, "caption": "does not exist" },
                    |  { "id": ${lib2.id.get} },
+                   |  { "id": ${lib1.id.get}, "caption": "yo dawg" },
                    |  { "id": ${lib3.id.get} }
                    |]
                  """.stripMargin))
@@ -1243,14 +1244,14 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
           val libInfos = contentAsJson(result).as[Seq[MarketingSuggestedLibraryInfo]]
           libInfos.size === 2
-          libInfos(0).name === "Scala"
-          libInfos(0).numFollowers === 2
-          libInfos(0).owner.fullName === "John Doe"
-          libInfos(0).caption must beSome("yo dawg")
-          libInfos(1).name === "Java"
-          libInfos(1).numFollowers === 1
-          libInfos(1).id.id must beMatching("^l.+") // tests public id
-          libInfos(1).caption must beNone
+          libInfos(0).name === "Java"
+          libInfos(0).numFollowers === 1
+          libInfos(0).id.id must beMatching("^l.+") // tests public id
+          libInfos(0).caption must beNone
+          libInfos(1).name === "Scala"
+          libInfos(1).numFollowers === 2
+          libInfos(1).owner.fullName === "John Doe"
+          libInfos(1).caption must beSome("yo dawg")
         }
       }
     }
