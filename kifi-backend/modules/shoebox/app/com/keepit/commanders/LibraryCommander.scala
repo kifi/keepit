@@ -1243,7 +1243,7 @@ class LibraryCommander @Inject() (
     UserValueSettings.retrieveSetting(userVal, settingsJs)
   }
 
-  def libraries(user: User, viewer: Option[User], page: Paginator): Seq[ProfileLibraryView] = db.readOnlyMaster { implicit session =>
+  def ownerLibraries(user: User, viewer: Option[User], page: Paginator): Seq[ProfileLibraryView] = db.readOnlyMaster { implicit session =>
     val libs = viewer match {
       case None => libraryRepo.getLibrariesOfUserFromAnonymos(user.id.get, page)
       case Some(other) if other.id.get == user.id.get => libraryRepo.getLibrariesOfSelf(user.id.get, page)
