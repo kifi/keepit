@@ -1,5 +1,6 @@
 package com.keepit.common.social
 
+import com.keepit.common.strings.UTF8
 import java.io.File
 import java.nio.charset.StandardCharsets._
 import javax.crypto.Mac
@@ -31,7 +32,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
     "find pagination url" in {
       withDb() { implicit injector =>
         val graph = new FacebookSocialGraph(new FakeHttpClient(), db, null, null, socialUserInfoRepo, null)
-        val eishay1Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min_page1.json")).mkString)
+        val eishay1Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min_page1.json"), UTF8).mkString)
         graph.nextPageUrl(eishay1Json) === Some("https://graph.facebook.com/646386018/friends?fields=name,gender,username,email,picture&access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&limit=5000&offset=5000&__after_id=100004067535411")
       }
     }
@@ -39,7 +40,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
     "not find pagination url" in {
       withDb() { implicit injector =>
         val graph = new FacebookSocialGraph(new FakeHttpClient(), db, null, null, socialUserInfoRepo, null)
-        val eishay2Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min_page2.json")).mkString)
+        val eishay2Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min_page2.json"), UTF8).mkString)
         graph.nextPageUrl(eishay2Json) === None
       }
     }
@@ -47,7 +48,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
     "fetch from facebook" in {
       withDb() { implicit injector =>
         val expectedUrl = DirectUrl("https://graph.facebook.com/eishay?access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&fields=name,first_name,middle_name,last_name,gender,username,email,picture,friends.fields(name).limit(500)")
-        val json = io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_super_min.json")).mkString
+        val json = io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_super_min.json"), UTF8).mkString
         val httpClient = new FakeHttpClient(Some(Map(expectedUrl -> json)))
 
         val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
@@ -79,7 +80,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
 
     "fetch from facebook using jennifer_hirsch" in {
       withDb() { implicit injector =>
-        val data = io.Source.fromFile(new File("test/com/keepit/common/social/data/jennifer_hirsch.min.json")).mkString
+        val data = io.Source.fromFile(new File("test/com/keepit/common/social/data/jennifer_hirsch.min.json"), UTF8).mkString
         val httpClient = new FakeHttpClient(Some({ case _ => data }))
         val info = SocialUserInfo(userId = None, fullName = "", socialId = SocialId(""), networkType = SocialNetworks.FACEBOOK, credentials = None)
 
@@ -95,7 +96,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
     "fetch from facebook using grimland" in {
       skipped("json is very large, stress test only")
       withDb() { implicit injector =>
-        val data = io.Source.fromFile(new File("test/com/keepit/common/social/data/large.json")).mkString
+        val data = io.Source.fromFile(new File("test/com/keepit/common/social/data/large.json"), UTF8).mkString
         val httpClient = new FakeHttpClient(Some({ case _ => data }))
         val info = SocialUserInfo(userId = None, fullName = "", socialId = SocialId(""), networkType = SocialNetworks.FACEBOOK, credentials = None)
 
