@@ -66,7 +66,7 @@ object UserValueName {
   val LATEST_EMAIL_TIPS_SENT = UserValueName("latest_email_tips")
   val LIBRARY_SORTING_PREF = UserValueName("library_sorting_pref")
 
-  // User Profile Settings
+  // User Profile Settings (be sure to add to UserValueSettings.defaultSettings for default values)
   val USER_PROFILE_SETTINGS = UserValueName("user_profile_settings")
   val SHOW_FOLLOWED_LIBRARIES = UserValueName("show_followed_libraries") // show libraries I follow
 
