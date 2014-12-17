@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', 'keepWhoService', 'profileService', 'userProfileStubService',
-  function ($scope, $rootScope, $state, $stateParams, keepWhoService, profileService, userProfileStubService) {
+  '$scope', '$rootScope', '$state', '$stateParams', 'keepWhoService', 'profileService', 'userProfileActionService',
+  function ($scope, $rootScope, $state, $stateParams, keepWhoService, profileService, userProfileActionService) {
     //
     // Configs.
     //
@@ -48,23 +48,19 @@ angular.module('kifi')
       // redirect to home page.
       if (!$stateParams.upb &&   // upb = User Profiles Beta
           !(profileService.me.experiments && profileService.me.experiments.indexOf('profiles_beta') > -1)) {
-        $state.go('recos');
+        $state.go('home');
       }
 
       var username = $stateParams.username;
 
-      userProfileStubService.getProfile(username).then(function (profile) {
+      userProfileActionService.getProfile(username).then(function (profile) {
         initProfile(profile);
         initViewingUserStatus();
         initUserNavLinks();
-
-        // Need to add in a check for whether we're on the libraries tab.
-        var libraryType = 'my';  // hard-coded for now.
-        userProfileStubService.getLibraries($scope.profile.id, libraryType).then(function (libraries) {
-          initLibraries(libraries);
-        });
       });
 
+      // Need to add in a check for whether we're on libraries tab before we do this.
+      initLibraries([]);
       initLibraryNavLinks();
     }
 

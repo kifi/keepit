@@ -21,7 +21,7 @@ angular.module('kifi')
 
   // Set up the states.
   $stateProvider
-    .state('recos', {  // Home page.
+    .state('home', {  // Home page.
       url: '/',
       templateUrl: 'recos/recosView.tpl.html'
     })

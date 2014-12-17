@@ -190,9 +190,7 @@ angular.module('kifi')
     $scope.$on('$destroy', deregisterTrackLibraryEvent);
 
     var deregisterUpdateLibrarySearch = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
-      $timeout(function () {
-        $scope.librarySearch = toState.data && toState.data.librarySearch;
-      });
+      $scope.librarySearch = toState.data && toState.data.librarySearch;
     });
     $scope.$on('$destroy', deregisterUpdateLibrarySearch);
 
