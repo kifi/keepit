@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.google.inject.Inject
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, Key, StringCacheImpl }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
@@ -64,7 +65,10 @@ object UserValueName {
   val SENT_EMAIL_CONFIRMATION = UserValueName("sent_email_confirmation")
   val LATEST_EMAIL_TIPS_SENT = UserValueName("latest_email_tips")
   val LIBRARY_SORTING_PREF = UserValueName("library_sorting_pref")
-  val SHOW_FOLLOWING_LIBRARY = UserValueName("show_following_library")
+
+  // User Profile Settings
+  val USER_PROFILE_SETTINGS = UserValueName("user_profile_settings")
+  val SHOW_FOLLOWED_LIBRARIES = UserValueName("show_followed_libraries") // show libraries I follow
 
   // temp for library callouts for existing user. remove after users know about libraries (Oct 26 2014)
   // library_callout_shown tag_callout_shown guide_callout_shown
@@ -149,5 +153,22 @@ object UserValues {
 
   val tagOrdering = UserValueJsValueHandler(UserValueName.USER_COLLECTION_ORDERING, JsArray())
   val recentInteractions = UserValueJsValueHandler(UserValueName.RECENT_INTERACTION, JsArray())
-  val showFollowedLibraries = UserValueBooleanHandler(UserValueName.SHOW_FOLLOWING_LIBRARY, true)
+
+  val userProfileSettings = UserValueJsValueHandler(UserValueName.USER_PROFILE_SETTINGS, Json.obj())
+}
+
+object UserValueSettings {
+  val defaultSettings: Map[UserValueName, Boolean] = Map(
+    UserValueName.SHOW_FOLLOWED_LIBRARIES -> true
+  )
+
+  def retrieveSetting(targetVal: UserValueName, userVals: JsValue): Boolean = {
+    retrieveSettings(Set(targetVal), userVals)(targetVal)
+  }
+
+  def retrieveSettings(targetVals: Set[UserValueName], userVals: JsValue): Map[UserValueName, Boolean] = {
+    targetVals.map { userVal =>
+      userVal -> (userVals \ userVal.name).asOpt[Boolean].getOrElse(defaultSettings(userVal))
+    }.toMap
+  }
 }

@@ -443,6 +443,50 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "set user profile settings" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val user = db.readWrite { implicit session =>
+          userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GDubs"), normalizedUsername = "gdubs"))
+        }
+
+        inject[FakeUserActionsHelper].setUser(user)
+        val userController = inject[UserController]
+        val getPath = routes.UserController.getSettings().url
+        val setPath = routes.UserController.setSettings().url
+
+        // initial getSettings
+        val request1 = FakeRequest("GET", getPath)
+        val result1: Future[Result] = userController.getSettings()(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        contentAsString(result1) === s"""{"show_followed_libraries":true}"""
+
+        // set settings (show_followed_libraries to false)
+        val request2 = FakeRequest("POST", setPath).withBody(Json.obj("show_followed_libraries" -> false))
+        val result2: Future[Result] = userController.setSettings()(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        contentAsString(result2) === s"""{"show_followed_libraries":false}"""
+
+        db.readOnlyMaster { implicit s =>
+          inject[UserValueRepo].getValueStringOpt(user.id.get, UserValueName.USER_PROFILE_SETTINGS).get === s"""{"show_followed_libraries":false}"""
+        }
+
+        // get settings
+        val request3 = FakeRequest("GET", getPath)
+        val result3: Future[Result] = userController.getSettings()(request3)
+        status(result3) must equalTo(OK)
+        contentAsString(result3) === s"""{"show_followed_libraries":false}"""
+
+        // reset settings (show_followed_libraries to true)
+        val request4 = FakeRequest("POST", setPath).withBody(Json.obj("show_followed_libraries" -> true))
+        val result4: Future[Result] = userController.setSettings()(request4)
+        status(result4) must equalTo(OK)
+        contentType(result4) must beSome("application/json")
+        contentAsString(result4) === s"""{"show_followed_libraries":true}"""
+      }
+    }
+
     "basicUserInfo" should {
       "return user info when found" in {
         withDb(controllerTestModules: _*) { implicit injector =>
