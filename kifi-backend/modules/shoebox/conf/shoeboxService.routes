@@ -275,6 +275,7 @@ GET     /terms                      @com.keepit.controllers.website.HomeControll
 GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
+GET     /libraries/featured         @com.keepit.controllers.website.HomeController.route(path = "libraries/featured")
 
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
@@ -296,7 +297,8 @@ GET     /users/:id/pics/:size/:name @com.keepit.controllers.assets.UserPictureCo
 POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureController.update()
 
 # Profile pages
-GET     /site/user/profile/:username @com.keepit.controllers.website.UserController.profile(username)
+GET     /site/user/:username/profile @com.keepit.controllers.website.UserController.profile(username)
+GET     /site/user/:username/libraries @com.keepit.controllers.website.LibraryController.libraries(username: Username, page: Int ?= 0, pageSize: Int ?= 1000)
 
 ##########################################
 # Feeds (RSS)

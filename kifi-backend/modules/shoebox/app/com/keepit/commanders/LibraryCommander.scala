@@ -15,6 +15,7 @@ import com.keepit.common.mail.{ BasicContact, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time.Clock
+import com.keepit.common.util.Paginator
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient, HeimdalContextBuilderFactory, UserEvent, UserEventTypes }
 import com.keepit.inject.FortyTwoConfig
@@ -38,7 +39,8 @@ import com.keepit.abook.model.RichContact
 
 @json case class MarketingSuggestedLibrarySystemValue(
   id: Id[Library],
-  caption: Option[String] = None)
+  caption: Option[String] = None,
+  color: Option[HexColor] = None)
 
 object MarketingSuggestedLibrarySystemValue {
   // system value that persists the library IDs and additional library data for the marketing site
@@ -269,7 +271,7 @@ class LibraryCommander @Inject() (
           color = lib.color,
           kind = lib.kind,
           visibility = lib.visibility,
-          image = libImageOpt.map(LibraryImageInfo.createInfo(_)),
+          image = libImageOpt.map(LibraryImageInfo.createInfo),
           followers = followers,
           keeps = keepInfos,
           numKeeps = keepCount,
@@ -1230,7 +1232,36 @@ class LibraryCommander @Inject() (
     val settingsJs = userValueRepo.getValue(userId, UserValues.userProfileSettings)
     UserValueSettings.retrieveSetting(userVal, settingsJs)
   }
+
+  def libraries(user: User, viewer: Option[User], page: Paginator): Seq[ProfileLibraryView] = db.readOnlyMaster { implicit session =>
+    val libs = viewer match {
+      case None => libraryRepo.getLibrariesOfUserFromAnonymos(user.id.get, page)
+      case Some(other) if other.id.get == user.id.get => libraryRepo.getLibrariesOfSelf(user.id.get, page)
+      case Some(other) =>
+        libraryMembershipRepo.getOwnedLibrariesForOtherUser(user.id.get, other.id.get, page) map { id =>
+          libraryRepo.get(id) //cached
+        }
+    }
+    libs map profilelibraryView
+  }
+
+  private def profilelibraryView(library: Library)(implicit session: RSession) = {
+    val numKeeps = keepRepo.getCountByLibrary(library.id.get)
+    val numFollowers = libraryMembershipRepo.count
+    val followersSample: Seq[BasicUser] = if (numFollowers > 1) {
+      libraryMembershipRepo.pageWithLibraryIdAndAccess(library.id.get, 0, 2, Set(LibraryAccess.READ_ONLY)) map { im =>
+        basicUserRepo.load(im.userId)
+      }
+    } else Seq.empty
+    ProfileLibraryView(
+      library = library,
+      numKeeps = numKeeps,
+      numFollowers = library.memberCount - 1, //not including the creator
+      followersSample)
+  }
 }
+
+case class ProfileLibraryView(library: Library, numKeeps: Int, numFollowers: Int, followersSample: Seq[BasicUser])
 
 sealed abstract class LibraryError(val message: String)
 object LibraryError {
@@ -1375,7 +1406,7 @@ object MarketingSuggestedLibraryInfo {
       owner = info.owner,
       numKeeps = info.numKeeps,
       numFollowers = info.numFollowers,
-      color = info.color)
+      color = extra flatMap (_.color))
   }
 }
 

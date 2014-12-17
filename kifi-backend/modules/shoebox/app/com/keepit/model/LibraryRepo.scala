@@ -9,6 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time._
+import com.keepit.common.util.Paginator
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
@@ -24,9 +25,11 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
+  def getLibrariesOfUserFromAnonymos(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
+  def getLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getAllPublishedLibraries()(implicit session: RSession): Seq[Library]
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library]
-  def pagePublished(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[Library]
+  def pagePublished(page: Paginator)(implicit session: RSession): Seq[Library]
   def countPublished(implicit session: RSession): Int
   def filterPublishedByMemberCount(minCount: Int, limit: Int = 100)(implicit session: RSession): Seq[Library]
 }
@@ -165,6 +168,14 @@ class LibraryRepoImpl @Inject() (
     }
   }
 
+  def getLibrariesOfUserFromAnonymos(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+    (for (r <- rows if r.ownerId === userId && r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).sortBy(_.id.desc).drop(page.itemsToDrop).take(page.size).list
+  }
+
+  def getLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+    (for (r <- rows if r.ownerId === userId && r.state === LibraryStates.ACTIVE) yield r).sortBy(_.id.desc).drop(page.itemsToDrop).take(page.size).list
+  }
+
   def getAllPublishedLibraries()(implicit session: RSession): Seq[Library] = {
     (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).list
   }
@@ -173,11 +184,11 @@ class LibraryRepoImpl @Inject() (
     (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).sortBy(_.id.desc).take(size).list
   }
 
-  def pagePublished(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[Library] = {
+  def pagePublished(page: Paginator = Paginator.fromStart(20))(implicit session: RSession): Seq[Library] = {
     val q = for {
       t <- rows if t.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && t.state === LibraryStates.ACTIVE
     } yield t
-    q.sortBy(_.id desc).drop(page * size).take(size).list
+    q.sortBy(_.id desc).drop(page.itemsToDrop).take(page.size).list
   }
 
   def countPublished(implicit session: RSession): Int = {
