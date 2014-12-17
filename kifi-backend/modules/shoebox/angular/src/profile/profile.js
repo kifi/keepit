@@ -227,8 +227,6 @@ angular.module('kifi')
         scope.twitterExperiment = profileService.me.experiments && profileService.me.experiments.indexOf('twitter_beta') !== -1;
 
         scope.$watch(function () {
-          // todo (aaron): endpoint doesn't return profileUrl yet. Leave this out for now
-          //return socialService.twitter && socialService.twitter.profileUrl;
           return socialService.twitter.network;
         }, function () {
           var twitter = socialService.twitter;
