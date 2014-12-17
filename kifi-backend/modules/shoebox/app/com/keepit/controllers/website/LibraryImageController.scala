@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryCommander, LibraryImageCommander }
+import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, LibraryImageCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
@@ -83,6 +83,6 @@ class LibraryImageController @Inject() (
 }
 
 object LibraryImageController {
-  val defaultImageSize = ImageSize(800, 600)
+  val defaultImageSize = ProcessedImageSize.XLarge.idealSize
   val pathHashRe = "library/([^_]+)_.*".r
 }

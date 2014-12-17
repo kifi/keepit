@@ -534,7 +534,7 @@ class LibraryController @Inject() (
 }
 
 object LibraryController {
-  val defaultLibraryImageSize = ImageSize(640, 480)
+  val defaultLibraryImageSize = ProcessedImageSize.XLarge.idealSize
 }
 
 private object ImplicitHelper {
