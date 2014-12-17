@@ -1,5 +1,6 @@
 package com.keepit.shoebox
 
+import com.keepit.common.strings.UTF8
 import java.io._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
@@ -68,7 +69,7 @@ private class PhraseImporterActor @Inject() (
     val (source, lang) = fileName match {
       case Array(source, lang) => (source, Lang(lang))
     }
-    for (lineGroup <- io.Source.fromFile(file).getLines.grouped(GROUP_SIZE)) {
+    for (lineGroup <- io.Source.fromFile(file, UTF8).getLines.grouped(GROUP_SIZE)) {
       val phrases = lineGroup.map { line =>
         PhraseModel(phrase = line.trim, source = source, lang = lang)
       }
@@ -113,7 +114,7 @@ class WikipediaFileImport {
     val writer = new PrintWriter(new File(infile + "-clean"))
     val formatter = new WikipediaFormatter
     val sqlline = """INSERT INTO phrase (created_at, updated_at, phrase, source, lang, state) VALUES (NOW(), NOW(), '%s', 'wikipedia', 'en', 'active');"""
-    Source.fromFile(infile).getLines.foreach { line =>
+    Source.fromFile(infile, UTF8).getLines.foreach { line =>
       val r = formatter.format(line)
       if (r.isDefined) {
         try {

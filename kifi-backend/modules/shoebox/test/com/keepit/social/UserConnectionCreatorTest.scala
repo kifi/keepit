@@ -4,6 +4,7 @@ import java.io.File
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.strings.UTF8
 import com.keepit.common.concurrent.ExecutionContextModule
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule, FakeOutbox }
@@ -47,7 +48,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
      * using json and one socialuserinfo, create connections
      *
      */
-    val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
+    val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json"), UTF8).mkString)
 
     def setup(db: Database, network: SocialNetworkType)(implicit injector: Injector) = {
       val emailAddressRepo: UserEmailAddressRepo = inject[UserEmailAddressRepo]
@@ -153,7 +154,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
     "disable non existing connections for social users but not kifi users" in {
       withDb(modules: _*) { implicit injector =>
 
-        val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
+        val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json"), UTF8).mkString)
 
         val sui1 = inject[Database].readWrite { implicit s =>
           val u1 = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
@@ -194,7 +195,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
         connections.size === 12
 
-        val json2 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_super_min.json")).mkString)
+        val json2 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_super_min.json"), UTF8).mkString)
 
         val extractedFriends2 = inject[FacebookSocialGraph].extractFriends(json2)
 
