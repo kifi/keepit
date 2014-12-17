@@ -141,8 +141,8 @@ class TwitterSocialGraph @Inject() (
 
   protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = {
     val endpoint = "https://api.twitter.com/1.1/users/lookup.json"
-    val params = Map("user_id" -> mutualFollows.mkString(","), "include_entities" -> false.toString)
     val accF = FutureHelpers.foldLeft[Set[Long], JsArray](mutualFollows.grouped(100).toIterable)(JsArray()) { (a, c) =>
+      val params = Map("user_id" -> c.mkString(","), "include_entities" -> false.toString)
       val chunkF = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
         .post(params.map(kv => (kv._1, Seq(kv._2))))
