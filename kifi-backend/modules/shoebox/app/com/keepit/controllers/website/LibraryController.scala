@@ -20,7 +20,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
+import play.api.libs.json._
 import play.api.mvc.Action
 
 import scala.concurrent.Future
@@ -530,12 +530,21 @@ class LibraryController @Inject() (
       }
   }
 
-  //todo(eishay): compleate json structure and test
+  /**
+   *
+   */
   def libraries(username: Username, page: Int, pageSize: Int) = MaybeUserAction { request =>
     val user = userCommander.userFromUsername(username)
     val viewer = request.userOpt
     val libs = libraryCommander.libraries(user, viewer, Paginator(page, pageSize))
-    Ok(Json.obj("libraries" -> Json.arr(libs map { lib => Json.obj("id" -> lib.library.id.get) })))
+    Ok(Json.obj("libraries" -> Json.arr(libs map profileLibraryViewJson)))
+  }
+
+  private def profileLibraryViewJson(libView: ProfileLibraryView): JsValue = {
+    Json.obj {
+      "id" -> libView.library.id.get,
+      "name" -> libView.library.name
+    }
   }
 
   def marketingSiteSuggestedLibraries() = Action.async {
