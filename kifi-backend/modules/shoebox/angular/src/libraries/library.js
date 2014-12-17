@@ -29,11 +29,6 @@ angular.module('kifi')
         trackLibraryAttributes.owner = $scope.userIsOwner() ? 'Yes' : 'No';
       }
 
-      // o=lr shorthand for origin=libraryRec
-      if ($location.url().indexOf('o=lr') > -1) {
-        trackLibraryAttributes.origin = 'libraryRec';
-      }
-
       $analytics.pageTrack(url, trackLibraryAttributes);
     }
 
