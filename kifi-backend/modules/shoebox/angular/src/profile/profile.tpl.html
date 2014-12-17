@@ -55,7 +55,7 @@
             </span>
           </li>
 
-          <li kf-twitter-connect-button data-network="twitter" ng-class="{ 'connected': isTwitterConnected }">
+          <li kf-twitter-connect-button data-network="twitter" ng-class="{ 'connected': isTwitterConnected }" ng-show="twitterExperiment">
             <a class="profile-nw nw-twitter" href="https://www.kifi.com/link/twitter" target="_self" ng-click="connectTwitter()" ng-show="!isTwitterConnected">Twitter</a>
             <a class="profile-nw nw-twitter" ng-href="{{twProfileUrl}}" target="_blank" ng-show="isTwitterConnected">Twitter</a>
             <span class="profile-nw-connected">

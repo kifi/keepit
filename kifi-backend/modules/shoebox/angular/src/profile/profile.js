@@ -213,8 +213,8 @@ angular.module('kifi')
 ])
 
 .directive('kfTwitterConnectButton', [
-  'socialService',
-  function (socialService) {
+  'socialService', 'profileService',
+  function (socialService, profileService) {
     return {
       restrict: 'A',
       link: function (scope) {
@@ -224,6 +224,7 @@ angular.module('kifi')
         // looks for 'network' field as temporary placedholder for checking connected with twitter
         scope.isTwitterConnected = socialService.twitter && !!socialService.twitter.network;
         scope.twitter = socialService.twitter;
+        scope.twitterExperiment = profileService.me.experiments && profileService.me.experiments.indexOf('twitter_beta') !== -1;
 
         scope.$watch(function () {
           // todo (aaron): endpoint doesn't return profileUrl yet. Leave this out for now
