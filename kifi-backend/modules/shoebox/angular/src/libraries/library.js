@@ -171,6 +171,7 @@ angular.module('kifi')
     $scope.$on('$destroy', deregisterCurrentLibrary);
 
     var deregisterTrackLibraryEvent = $rootScope.$on('trackLibraryEvent', function (e, eventType, attributes) {
+      attributes.libraryRecCount = $scope.relatedLibraries ? $scope.relatedLibraries.length : 0;
       if (eventType === 'click') {
         if (!$rootScope.userLoggedIn) {
           attributes.type = attributes.type || 'libraryLanding';
