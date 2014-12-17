@@ -3,13 +3,14 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$rootScope', '$stateParams', 'keepWhoService', 'profileService', 'userProfileStubService',
-  function ($scope, $rootScope, $stateParams, keepWhoService, profileService, userProfileStubService) {
+  '$scope', '$rootScope', '$state', '$stateParams', 'keepWhoService', 'profileService', 'userProfileStubService',
+  function ($scope, $rootScope, $state, $stateParams, keepWhoService, profileService, userProfileStubService) {
     //
     // Configs.
     //
     var userNavLinksConfig = [
       { name: 'Libraries', routeState: 'userProfile.libraries.my', countFieldName: 'numLibraries' },
+      // For V1 only.
       // { name: 'Keeps', routeState: '/keeps'/* for testing only */, countFieldName: 'numKeeps' }
 
       /*
@@ -43,6 +44,13 @@ angular.module('kifi')
     // Internal functions.
     //
     function init() {
+      // If user is not in experiment or the url doesn't include the experiement query parameter,
+      // redirect to home page.
+      if (!$stateParams.upb &&   // upb = User Profiles Beta
+          !(profileService.me.experiments && profileService.me.experiments.indexOf('profiles_beta') > -1)) {
+        $state.go('recos');
+      }
+
       var username = $stateParams.username;
 
       userProfileStubService.getProfile(username).then(function (profile) {

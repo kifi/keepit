@@ -21,7 +21,7 @@ angular.module('kifi')
 
   // Set up the states.
   $stateProvider
-    .state('/', {  // Home page.
+    .state('recos', {  // Home page.
       url: '/',
       templateUrl: 'recos/recosView.tpl.html'
     })
@@ -62,7 +62,7 @@ angular.module('kifi')
       reloadOnSearch: false
     })
     .state('userProfile', {
-      url: '/:username',
+      url: '/:username?upb',
       templateUrl: 'userProfile/userProfile.tpl.html',
       controller: 'UserProfileCtrl',
       'abstract': true
@@ -143,8 +143,3 @@ angular.module('kifi')
       });
     // ↑↑↑↑↑ Important: This needs to be last! ↑↑↑↑↑
 });
-
-//
-// After moving the routes to states, also:
-//   (1) Do a global search for '$route' (which includes '$routeParams', and update as needed)
-
