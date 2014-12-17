@@ -9,6 +9,7 @@ angular.module('kifi')
     var networks = [],
         facebook = {},
         linkedin = {},
+        twitter = {},
         gmail = [],
         addressBooks = [],
         expiredTokens = {},
@@ -83,6 +84,9 @@ angular.module('kifi')
         util.replaceObjectInPlace(linkedin, _.find(networks, function (n) {
           return n.network === 'linkedin';
         }));
+        util.replaceObjectInPlace(twitter, _.find(networks, function (n) {
+          return n.network === 'twitter';
+        }));
 
         return res.data;
       });
@@ -107,6 +111,7 @@ angular.module('kifi')
       },
       facebook: facebook,
       linkedin: linkedin,
+      twitter: twitter,
       gmail: gmail,
 
       refreshSocialGraph: function () {
@@ -139,6 +144,14 @@ angular.module('kifi')
         $window.location.href = routeService.linkNetwork('linkedin');
       },
 
+      connectTwitter: function () {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'connectTwitter',
+          'path': $location.path()
+        });
+        $window.location.href = routeService.linkNetwork('twitter');
+      },
+
       importGmail: function () {
         $analytics.eventTrack('user_clicked_page', {
           'action': 'importGmail',
@@ -163,6 +176,17 @@ angular.module('kifi')
           util.replaceObjectInPlace(linkedin, {});
           $analytics.eventTrack('user_clicked_page', {
             'action': 'disconnectLinkedin',
+            'path': $location.path()
+          });
+          return res;
+        });
+      },
+
+      disconnectTwitter: function () {
+        return $http.post(routeService.disconnectNetwork('twitter')).then(function (res) {
+          util.replaceObjectInPlace(twitter, {});
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'disconnectTwitter',
             'path': $location.path()
           });
           return res;
