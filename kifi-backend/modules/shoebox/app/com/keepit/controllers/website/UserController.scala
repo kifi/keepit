@@ -28,9 +28,10 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent.{ Promise => PlayPromise }
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json.toJson
-import play.api.libs.json.{ JsBoolean, JsNumber, JsObject, JsString, _ }
+import play.api.libs.json.{ JsBoolean, JsNumber, _ }
 import play.api.mvc.{ MaxSizeExceeded, Request }
 import play.twirl.api.Html
+import play.api.libs.json._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -615,6 +616,32 @@ class UserController @Inject() (
       case unfe: UserNotFoundException => NotFound(username)
       case e: Throwable => throw e
     }
+  }
+
+  def getSettings() = UserAction { request =>
+    val userSettings = db.readOnlyMaster { implicit s =>
+      userValueRepo.getValue(request.userId, UserValues.userProfileSettings)
+    }.as[JsObject].value
+    val defaultMapping = UserValueSettings.defaultSettings
+    val returnSettings = defaultMapping.map {
+      case (userVal, value) =>
+        if (userSettings.contains(userVal.name)) {
+          userVal.name -> Json.toJson(userSettings(userVal.name))
+        } else {
+          userVal.name -> Json.toJson(value)
+        }
+    }
+    Ok(Json.toJson(returnSettings))
+  }
+
+  def setSettings() = UserAction(parse.tolerantJson) { request =>
+    val showFollowLibrariesOpt = (request.body \ UserValueName.SHOW_FOLLOWED_LIBRARIES.name).asOpt[Boolean]
+    val settingsList = Map(UserValueName.SHOW_FOLLOWED_LIBRARIES -> showFollowLibrariesOpt)
+
+    val newMapping = settingsList.collect {
+      case (userVal, Some(optionVal)) => userVal -> Json.toJson(optionVal)
+    }
+    Ok(userCommander.setSettings(request.userId, newMapping))
   }
 
 }

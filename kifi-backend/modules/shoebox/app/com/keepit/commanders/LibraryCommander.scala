@@ -79,6 +79,7 @@ class LibraryCommander @Inject() (
     uriSummaryCommander: URISummaryCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     experimentCommander: LocalUserExperimentCommander,
+    userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
@@ -1209,7 +1210,7 @@ class LibraryCommander @Inject() (
 
   private def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User]): Int = {
     db.readOnlyReplica { implicit s =>
-      val showFollowLibraries = true
+      val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
       libraryMembershipRepo.countLibrariesForOtherUser(userId, friendId, countFollowLibraries = showFollowLibraries)
     }
   }
@@ -1222,9 +1223,14 @@ class LibraryCommander @Inject() (
 
   private def countLibrariesForAnonymous(userId: Id[User]): Int = {
     db.readOnlyReplica { implicit s =>
-      val showFollowLibraries = true
+      val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
       libraryMembershipRepo.countLibrariesOfUserFromAnonymos(userId, countFollowLibraries = showFollowLibraries)
     }
+  }
+
+  private def getUserValueSetting(userId: Id[User], userVal: UserValueName)(implicit rs: RSession): Boolean = {
+    val settingsJs = userValueRepo.getValue(userId, UserValues.userProfileSettings)
+    UserValueSettings.retrieveSetting(userVal, settingsJs)
   }
 
   def libraries(user: User, viewer: Option[User], page: Paginator): Seq[ProfileLibraryView] = db.readOnlyMaster { implicit session =>

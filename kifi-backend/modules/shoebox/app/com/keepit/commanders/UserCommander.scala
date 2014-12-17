@@ -122,6 +122,17 @@ class UserCommander @Inject() (
     }
   }
 
+  def setSettings(userId: Id[User], newSettings: Map[UserValueName, JsValue]) = {
+    db.readWrite { implicit s =>
+      var settings = userValueRepo.getValue(userId, UserValues.userProfileSettings).as[JsObject]
+      newSettings.collect {
+        case (UserValueName(name), valueToSet) =>
+          settings = settings ++ Json.obj(name -> valueToSet)
+      }
+      userValueRepo.setValue(userId, UserValueName.USER_PROFILE_SETTINGS, settings)
+    }
+  }
+
   def updateUserDescription(userId: Id[User], description: String): Unit = {
     db.readWrite { implicit session =>
       val trimmed = description.trim
