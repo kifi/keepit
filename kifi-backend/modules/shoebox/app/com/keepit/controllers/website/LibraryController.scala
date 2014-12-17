@@ -14,6 +14,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time.Clock
+import com.keepit.common.util.Paginator
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
@@ -33,6 +34,7 @@ class LibraryController @Inject() (
   keepRepo: KeepRepo,
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
+  userCommander: UserCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   collectionRepo: CollectionRepo,
   fortyTwoConfig: FortyTwoConfig,
@@ -525,6 +527,14 @@ class LibraryController @Inject() (
           val libs = fullInfos.map { info => RelatedLibraryInfo.fromFullLibraryInfo(info, isUserAction) }
           Ok(Json.obj("libs" -> libs, "related" -> isRelated))
       }
+  }
+
+  //todo(eishay): compleate json structure and test
+  def libraries(username: Username, page: Int, pageSize: Int) = MaybeUserAction { request =>
+    val user = userCommander.userFromUsername(username)
+    val viewer = request.userOpt
+    val libs = libraryCommander.libraries(user, viewer, Paginator(page, pageSize))
+    Ok(Json.obj("libraries" -> Json.arr(libs map { lib => Json.obj("id" -> lib.library.id.get) })))
   }
 }
 

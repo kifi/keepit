@@ -1158,6 +1158,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    //    testing lib getters
+
     "update keep in library" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]

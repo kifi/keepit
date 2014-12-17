@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.util.Paginator
 import com.keepit.model.UserFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryFactory._
@@ -1080,7 +1081,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           memberCounts(LibraryAccess.READ_WRITE) === 0
         }
         val libraryCommander = inject[LibraryCommander]
-        val members = libraryCommander.getLibraryMembers(libMurica.id.get, 0, 10, true)
+        val members = libraryCommander.getLibraryMembers(libMurica.id.get, Paginator(0, 10), true)
         // collaborators
         members._1.map(_.userId) === Seq()
         // followers
