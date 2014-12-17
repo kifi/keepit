@@ -3,12 +3,12 @@
 angular.module('kifi')
 
 .directive('kfLibraryCard', [
-  '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'platformService', 'signupService', 'routeService', '$twitter', '$timeout', '$routeParams',
-  '$route', '$http', 'locationNoReload', 'util', '$state', '$stateParams',
-  function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
-      profileService, platformService, signupService, routeService, $twitter, $timeout, $routeParams,
-      $route, $http, locationNoReload, util, $state, $stateParams) {
+  '$FB', '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$twitter', '$window',
+  'env', 'friendService', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
+  'routeService', 'util',
+  function ($FB, $http, $location, $q, $rootScope, $state, $stateParams, $timeout, $twitter, $window,
+            env, friendService, libraryService, modalService, profileService, platformService, signupService,
+            routeService, util) {
     return {
       restrict: 'A',
       replace: true,

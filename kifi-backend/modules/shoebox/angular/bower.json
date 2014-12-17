@@ -23,7 +23,6 @@
     "angular-cookies": "1.2.21",
     "angular-moment": "0.8.0",
     "angular-resource": "1.2.21",
-    "angular-route": "1.2.21",
     "angular-sanitize": "1.2.21",
     "angular-ui-router": "0.2.13",
     "angulartics": "0.14.17",

@@ -3,7 +3,6 @@
 angular.module('kifi', [
   'ngCookies',
   'ngResource',
-  'ngRoute',
   'ngSanitize',
   'ngAnimate',
   'ui.router',
