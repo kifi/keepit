@@ -70,6 +70,10 @@ class CuratorController @Inject() (
     Ok(Json.toJson(recoRetrievalCommander.topPublicRecos()))
   }
 
+  def generalRecos() = Action { request =>
+    Ok(Json.toJson(recoRetrievalCommander.generalRecos()))
+  }
+
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = Action.async { request =>
     val json = request.body.asJson.get
     val feedback = json.as[UriRecommendationFeedback]

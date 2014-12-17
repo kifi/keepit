@@ -13,6 +13,7 @@ import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ Library, Keep, NormalizedURI, User }
 import play.api.libs.json._
 import scala.math.exp
+import scala.util.Random
 
 @Singleton
 class LDACommander @Inject() (
@@ -281,11 +282,12 @@ class LDACommander @Inject() (
           topics.foreach { t =>
             if (bitSet.get(t.index)) numIntersects += 1
           }
-          val multiplier = if (numIntersects >= 1) 1f else 0f
+          val multiplier = if (numIntersects >= 2) 1f else 0f
 
           (kid, score * multiplier)
       }
-      scored.filter { x => x._2 < MAX_KL_DIST && x._2 > 0 }.sortBy(_._2).take(topK).map { _._1 }
+      val good = scored.filter { x => x._2 < MAX_KL_DIST && x._2 > 0 }.sortBy(_._2).take(10)
+      Random.shuffle(good).take(topK).map { _._1 }
     }
 
     val userFeats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserRecentURIFeatures(userId, version, min_num_words = 50, limit = 200) }
@@ -364,23 +366,30 @@ class LDACommander @Inject() (
   def getSimilarLibraries(libId: Id[Library], limit: Int)(implicit version: ModelVersion[DenseLDA]): Seq[Id[Library]] = {
 
     def getCandidates(libId: Id[Library], feat: LibraryLDATopic): Seq[LibraryLDATopic] = {
-      val (first, second, third) = (feat.firstTopic.get, feat.secondTopic.get, feat.thirdTopic.get)
+      val first = feat.firstTopic.get
       val candidates = db.readOnlyReplica { implicit s => libTopicRepo.getLibraryByTopics(firstTopic = first, version = version, limit = 50) }
-      candidates
-        .filter { x => x.secondTopic.get == second || (x.secondTopic.get == third && x.thirdTopic.get == second) }
-        .filter(_.libraryId != libId)
+      candidates.filter(_.libraryId != libId)
     }
 
     def rankCandidates(feat: LibraryLDATopic, candidates: Seq[LibraryLDATopic]): Seq[Id[Library]] = {
+      val topicBitSet = new BitSet(feat.topic.get.value.size)
+      List(feat.firstTopic.get, feat.secondTopic.get, feat.thirdTopic.get).foreach { t => topicBitSet.set(t.index) }
+
       val idsAndScores = Seq.tabulate(candidates.size) { i =>
         val candidate = candidates(i)
         val id = candidate.libraryId
         val score = 1.0 - KL_divergence(feat.topic.get.value, candidate.topic.get.value) // score is higher the better
-        val boost = if (candidate.secondTopic == feat.secondTopic) {
-          if (candidate.thirdTopic == feat.thirdTopic) 2.0 else 1.0
-        } else {
-          assert(candidate.secondTopic == feat.thirdTopic && candidate.thirdTopic == feat.secondTopic)
-          1.5
+        val (same2, same3) = (candidate.secondTopic == feat.secondTopic, candidate.thirdTopic == feat.thirdTopic)
+        val boost = (same2, same3) match {
+          case (true, true) => 2f // full match
+          case (true, false) | (false, true) => 1.5f // exact 1 match
+          case (false, false) =>
+            val interCnt = List(candidate.secondTopic.get.index, candidate.thirdTopic.get.index).count(topicBitSet.get(_))
+            interCnt match {
+              case 2 => 1.5f // permuted 2 matches
+              case 1 => 1f // permuted 1 match
+              case 0 => 0f // no match
+            }
         }
         (id, score * boost)
       }
