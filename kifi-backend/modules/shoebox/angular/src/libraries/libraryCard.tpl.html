@@ -52,7 +52,7 @@
           <div class="kf-keep-lib-curator">Curator:</div>
           <div class="kf-keep-lib-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
         </div>
-        <a ng-if="!recommendation && isMyLibrary() && isUserCreatedLibrary() && !library.image" class="kf-keep-lib-add-pic animate-if" href="javascript:" onclick="angular.element(this).scope().onClickAddCoverImage(event)">
+        <a ng-if="!recommendation && isMyLibrary() && isUserCreatedLibrary() && !coverImageUrl" class="kf-keep-lib-add-pic animate-if" href="javascript:" onclick="angular.element(this).scope().onClickAddCoverImage(event)">
           Add a cover photo
         </a>
         <div ng-if="!recommendation && isUserLoggedOut" class="kf-keep-lib-search">
