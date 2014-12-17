@@ -79,9 +79,16 @@ class LibraryCommander @Inject() (
     uriSummaryCommander: URISummaryCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     experimentCommander: LocalUserExperimentCommander,
+    userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
+
+  private def imageUrl(image: LibraryImage): String = addProtocol(libraryImageCommander.getUrl(image))
+
+  private def imageUrl(image: KeepImage): String = addProtocol(keepImageCommander.getUrl(image))
+
+  private def addProtocol(url: String): String = if (url.startsWith("http:") || url.startsWith("https:")) url else s"http:$url"
 
   def libraryMetaTags(library: Library): Future[PublicPageMetaTags] = {
     db.readOnlyMasterAsync { implicit s =>
@@ -97,17 +104,21 @@ class LibraryCommander @Inject() (
         //facebook OG recommends:
         //We suggest that you use an image of at least 1200x630 pixels.
         val imageUrls: Seq[String] = {
-          val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, ProcessedImageSize.XLarge.idealSize).values.flatten.toSeq
-          val sorted: Seq[KeepImage] = images.sortWith {
-            case (image1, image2) =>
-              (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)
+          libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.XLarge.idealSize) match {
+            case Some(image) =>
+              Seq(imageUrl(image))
+            case None =>
+              val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, ProcessedImageSize.XLarge.idealSize).values.flatten.toSeq
+              val sorted: Seq[KeepImage] = images.sortWith {
+                case (image1, image2) =>
+                  (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)
+              }
+              val urls: Seq[String] = sorted.take(10) map { image =>
+                imageUrl(image)
+              }
+              //last image is the kifi image we want to append to all image lists
+              if (urls.isEmpty) Seq("https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png") else urls
           }
-          val urls: Seq[String] = sorted.take(10) map { image =>
-            val url = keepImageCommander.getUrl(image)
-            if (url.startsWith("http:") || url.startsWith("https:")) url else s"http:$url"
-          }
-          //last image is the kifi image we want to append to all image lists
-          if (urls.isEmpty) Seq("https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png") else urls
         }
 
         val url = {
@@ -1209,7 +1220,7 @@ class LibraryCommander @Inject() (
 
   private def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User]): Int = {
     db.readOnlyReplica { implicit s =>
-      val showFollowLibraries = true
+      val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
       libraryMembershipRepo.countLibrariesForOtherUser(userId, friendId, countFollowLibraries = showFollowLibraries)
     }
   }
@@ -1222,9 +1233,14 @@ class LibraryCommander @Inject() (
 
   private def countLibrariesForAnonymous(userId: Id[User]): Int = {
     db.readOnlyReplica { implicit s =>
-      val showFollowLibraries = true
+      val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
       libraryMembershipRepo.countLibrariesOfUserFromAnonymos(userId, countFollowLibraries = showFollowLibraries)
     }
+  }
+
+  private def getUserValueSetting(userId: Id[User], userVal: UserValueName)(implicit rs: RSession): Boolean = {
+    val settingsJs = userValueRepo.getValue(userId, UserValues.userProfileSettings)
+    UserValueSettings.retrieveSetting(userVal, settingsJs)
   }
 
   def libraries(user: User, viewer: Option[User], page: Paginator): Seq[ProfileLibraryView] = db.readOnlyMaster { implicit session =>

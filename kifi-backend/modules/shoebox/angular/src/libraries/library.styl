@@ -31,14 +31,14 @@ cover-image-dur = .6s
   position: relative
   cursor: default
 
-  &.ng-enter
-  &.ng-leave
+  .kf-loaded &.ng-enter
+  .kf-loaded &.ng-leave
     overflow: hidden
     transition: height, margin-top, margin-bottom, opacity
     transition-duration: cover-image-dur
 
-  &.ng-enter:not(.ng-enter-active)
-  &.ng-leave.ng-leave-active
+  .kf-loaded &.ng-enter:not(.ng-enter-active)
+  .kf-loaded &.ng-leave.ng-leave-active
     height: 0
     margin-top: 0
     margin-bottom: 0
@@ -534,12 +534,12 @@ html:not(.kf-mobile)
     &:focus
       color: #006bb2
 
-    &.ng-enter
-    &.ng-leave
+    .kf-loaded &.ng-enter
+    .kf-loaded &.ng-leave
       transition: opacity cover-image-dur, transform cover-image-dur
 
-    &.ng-enter:not(.ng-enter-active)
-    &.ng-leave.ng-leave-active
+    .kf-loaded &.ng-enter:not(.ng-enter-active)
+    .kf-loaded &.ng-leave.ng-leave-active
       transform: scale(.4)
       opacity: 0
 

@@ -14,7 +14,7 @@ import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.controllers.website.RecommendationsController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.curator.model.{ FullRecoInfo, RecoAttributionInfo, RecoAttributionKind, RecoKind, RecoMetaData, UriRecoItemInfo }
+import com.keepit.curator.model.{ FullRecoInfo, FullUriRecoInfo, RecoAttributionInfo, RecoAttributionKind, RecoKind, RecoMetaData, UriRecoItemInfo }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ NormalizedURI, URISummary, User, Username }
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
@@ -75,7 +75,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
         val json = Json.parse(contentAsString(result))
         json === Json.parse("[]")
 
-        val recoInfos = Seq(FullRecoInfo(
+        val recoInfos = Seq(FullUriRecoInfo(
           kind = RecoKind.Keep,
           metaData = Some(RecoMetaData(attribution = Seq(RecoAttributionInfo(
             kind = RecoAttributionKind.Keep,
@@ -141,7 +141,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
         val json = Json.parse(contentAsString(result))
         json === Json.parse("[]")
 
-        val recoInfos = Seq(FullRecoInfo(
+        val recoInfos = Seq(FullUriRecoInfo(
           kind = RecoKind.Keep,
           metaData = Some(RecoMetaData(attribution = Seq(RecoAttributionInfo(
             kind = RecoAttributionKind.Keep,

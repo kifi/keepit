@@ -969,11 +969,12 @@ angular.module('kifi')
             augmentData();
             adjustFollowerPicsSize();
 
-            if (scope.librarySearch) {
-              $timeout(function () {
+            $timeout(function () {
+              element.addClass('kf-loaded');
+              if (scope.librarySearch) {
                 showLibrarySearchBar();
-              });
-            }
+              }
+            });
           }
         });
 

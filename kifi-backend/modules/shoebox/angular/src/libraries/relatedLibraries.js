@@ -17,17 +17,17 @@ angular.module('kifi')
         var parentLibrary = scope.parentLibrary();
         scope.join = function ($event) {
           $event.preventDefault();
-
-          libraryService.trackEvent('visitor_clicked_page', parentLibrary, {
-            type: 'libraryLanding',
-            action: 'clickedCreatedYourOwnJoinButton'
-          });
+          scope.$emit('trackLibraryEvent', 'click', { action: 'clickedLibraryRecJoinNow' });
 
           if (platformService.isSupportedMobilePlatform()) {
             platformService.goToAppOrStore();
           } else {
             signupService.register({ libraryId: parentLibrary.id });
           }
+        };
+
+        scope.clickSeeMore = function () {
+          scope.$emit('trackLibraryEvent', 'click', { action: 'clickedLibraryRecSeeMore' });
         };
       }
     };

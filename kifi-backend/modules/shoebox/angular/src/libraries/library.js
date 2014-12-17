@@ -29,11 +29,6 @@ angular.module('kifi')
         trackLibraryAttributes.owner = $scope.userIsOwner() ? 'Yes' : 'No';
       }
 
-      // o=lr shorthand for origin=libraryRec
-      if ($location.url().indexOf('o=lr') > -1) {
-        trackLibraryAttributes.origin = 'libraryRec';
-      }
-
       $analytics.pageTrack(url, trackLibraryAttributes);
     }
 
@@ -176,6 +171,7 @@ angular.module('kifi')
     $scope.$on('$destroy', deregisterCurrentLibrary);
 
     var deregisterTrackLibraryEvent = $rootScope.$on('trackLibraryEvent', function (e, eventType, attributes) {
+      attributes.libraryRecCount = $scope.relatedLibraries ? $scope.relatedLibraries.length : 0;
       if (eventType === 'click') {
         if (!$rootScope.userLoggedIn) {
           attributes.type = attributes.type || 'libraryLanding';
