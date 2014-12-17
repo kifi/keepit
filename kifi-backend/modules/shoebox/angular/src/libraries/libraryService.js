@@ -365,6 +365,7 @@ angular.module('kifi')
           libraryOwnerUserName: library.owner.username,
           owner: this.isMyLibrary(library),
           privacySetting: library.visibility,
+          hasCoverImage: !!library.image,
           source: 'site'
         };
 
