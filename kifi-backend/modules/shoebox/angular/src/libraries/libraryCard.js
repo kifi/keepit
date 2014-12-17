@@ -235,6 +235,94 @@ angular.module('kifi')
           scope.pageScrolled = false;
         }
 
+        function positionSearchFollow() {
+          $timeout(function () {
+            searchFollowElement.css({
+              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
+            });
+          }, 200);
+        }
+
+        function showLibrarySearchBar() {
+          if (platformService.isSupportedMobilePlatform()) {
+            return;
+          }
+
+          scope.librarySearchInProgress = true;
+
+          scrollToTop();
+
+          if (!searchFollowElement.length) {
+            searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
+          }
+
+          // Reset any previous shifts of the right header.
+          headerLinksElement.css({ 'margin-right': headerLinksWidth });
+
+          // Shift header to the left and drop down follow button.
+          $timeout(function () {
+            if (!headerLinksShifted) {
+              headerLinksElement.css({
+                'margin-right': '150px'
+              });
+
+              headerLinksShifted = true;
+            }
+
+            searchFollowElement.css({
+              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
+            });
+
+            searchFollowElement.css({
+              'transition': 'top 0.5s ease 0.3s',
+              'top': '15px'
+            });
+
+            libraryBodyElement.css({
+              'margin-top': '90px'
+            });
+          }, 0);
+        }
+
+        function hideLibrarySearchBar() {
+          scrollToTop();
+
+          if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
+            showKfColsOverflow();
+            $timeout(hideKfColsOverflow);
+          }
+
+          scope.librarySearchInProgress = false;
+          prevQuery = '';
+
+          if (!searchFollowElement.length) {
+            searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
+          }
+
+          searchFollowElement.css({
+            'transition': 'top 0.2s ease',
+            'top': '-100px'
+          });
+
+          if (headerLinksShifted) {
+            headerLinksElement.css({
+              'margin-right': headerLinksWidth
+            });
+
+            headerLinksShifted = false;
+          }
+
+          libraryBodyElement.css({
+            'transition': 'margin-top 0.1s ease',
+            'margin-top': '0px'
+          });
+
+          $timeout(function () {
+            scope.search = { text: '' };
+            element.find('.kf-keep-lib-search-input').blur();
+          });
+        }
+
 
         //
         // Scope methods.
@@ -802,94 +890,6 @@ angular.module('kifi')
           }
         };
 
-        function positionSearchFollow() {
-          $timeout(function () {
-            searchFollowElement.css({
-              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
-            });
-          }, 200);
-        }
-
-        function showLibrarySearchBar() {
-          if (platformService.isSupportedMobilePlatform()) {
-            return;
-          }
-
-          scope.librarySearchInProgress = true;
-
-          scrollToTop();
-
-          if (!searchFollowElement.length) {
-            searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
-          }
-
-          // Reset any previous shifts of the right header.
-          headerLinksElement.css({ 'margin-right': headerLinksWidth });
-
-          // Shift header to the left and drop down follow button.
-          $timeout(function () {
-            if (!headerLinksShifted) {
-              headerLinksElement.css({
-                'margin-right': '150px'
-              });
-
-              headerLinksShifted = true;
-            }
-
-            searchFollowElement.css({
-              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
-            });
-
-            searchFollowElement.css({
-              'transition': 'top 0.5s ease 0.3s',
-              'top': '15px'
-            });
-
-            libraryBodyElement.css({
-              'margin-top': '90px'
-            });
-          }, 0);
-        }
-
-        function hideLibrarySearchBar() {
-          scrollToTop();
-
-          if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
-            showKfColsOverflow();
-            $timeout(hideKfColsOverflow);
-          }
-
-          scope.librarySearchInProgress = false;
-          prevQuery = '';
-
-          if (!searchFollowElement.length) {
-            searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
-          }
-
-          searchFollowElement.css({
-            'transition': 'top 0.2s ease',
-            'top': '-100px'
-          });
-
-          if (headerLinksShifted) {
-            headerLinksElement.css({
-              'margin-right': headerLinksWidth
-            });
-
-            headerLinksShifted = false;
-          }
-
-          libraryBodyElement.css({
-            'transition': 'margin-top 0.1s ease',
-            'margin-top': '0px'
-          });
-
-          $timeout(function () {
-            scope.search = { text: '' };
-            element.find('.kf-keep-lib-search-input').blur();
-          });
-        }
-
         scope.onSearchInputFocus = function () {
           // Track click/focus on search bar.
           $rootScope.$emit('trackLibraryEvent', 'click', {
@@ -962,14 +962,14 @@ angular.module('kifi')
         });
         scope.$on('$destroy', deregisterLibraryUpdated);
 
-        // For back and forward on the browser history button, update the search input text accordingly.
-        var deregisterUpdateSearchInputText = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
-          if (toState.data && toState.data.librarySearch) {
+        // Update the search bar and search input text to be consistent with the current state.
+        var deregisterUpdateSearchBarAndInput = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
+          if (toState.name === 'library.search') {
             showLibrarySearchBar();
             scope.search = { 'text': toParams.q };
           }
 
-          if (toState.data && !toState.data.librarySearch) {
+          if (toState.name === 'library.keeps') {
             prevQuery = '';
 
             if (keepShowingSearchBar) {
@@ -980,17 +980,7 @@ angular.module('kifi')
             }
           }
         });
-        scope.$on('$destroy', deregisterUpdateSearchInputText);
-
-        // When a new search is conducted because the user clicks on a search url on the page,
-        // show the library search bar.
-        var deregisterNewSearchUrl = $rootScope.$on('newSearchUrl', function () {
-          showLibrarySearchBar();
-          $timeout(function () {
-            scope.search = { 'text': $stateParams.q || '' };
-          });
-        });
-        scope.$on('$destroy', deregisterNewSearchUrl);
+        scope.$on('$destroy', deregisterUpdateSearchBarAndInput);
 
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);
