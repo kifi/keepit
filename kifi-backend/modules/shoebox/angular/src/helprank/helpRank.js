@@ -3,12 +3,12 @@
 angular.module('kifi')
 
 .controller('HelpRankCtrl', [
-  '$scope', 'keepActionService', 'keepDecoratorService', '$routeParams', '$rootScope',
-  function ($scope, keepActionService, keepDecoratorService, $routeParams, $rootScope) {
+  '$scope', 'keepActionService', 'keepDecoratorService', '$stateParams', '$rootScope',
+  function ($scope, keepActionService, keepDecoratorService, $stateParams, $rootScope) {
     //
     // Internal data.
     //
-    var helprank = $routeParams.helprank || '';
+    var helprank = $stateParams.helprank || '';
     var selectedCount = 0;
 
 

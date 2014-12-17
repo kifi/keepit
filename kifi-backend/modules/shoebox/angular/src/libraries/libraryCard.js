@@ -3,12 +3,12 @@
 angular.module('kifi')
 
 .directive('kfLibraryCard', [
-  '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'platformService', 'signupService', 'routeService', '$twitter', '$timeout', '$routeParams',
-  '$route', '$http', 'locationNoReload', 'util',
-  function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
-      profileService, platformService, signupService, routeService, $twitter, $timeout, $routeParams,
-      $route, $http, locationNoReload, util) {
+  '$FB', '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$twitter', '$window',
+  'env', 'friendService', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
+  'routeService', 'util',
+  function ($FB, $http, $location, $q, $rootScope, $state, $stateParams, $timeout, $twitter, $window,
+            env, friendService, libraryService, modalService, profileService, platformService, signupService,
+            routeService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -31,7 +31,7 @@ angular.module('kifi')
         var prevQuery = '';
         var headerLinksShifted = false;
         var headerLinksWidth = '60px';
-        var updateSearchText = false;
+        var keepShowingSearchBar = false;
         var coverImageFile;
         var coverImagePos;
         var URL = $window.URL || $window.webkitURL;
@@ -49,9 +49,8 @@ angular.module('kifi')
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
         scope.editKeepsText = 'Edit Keeps';
-        scope.librarySearchInProgress = scope.librarySearch;
-        scope.librarySearchBarShown = false;
-        scope.search = { 'text': $routeParams.q || '' };
+        scope.librarySearchInProgress = false;
+        scope.search = { 'text': $stateParams.q || '' };
         scope.pageScrolled = false;
 
         //
@@ -234,6 +233,94 @@ angular.module('kifi')
         function scrollToTop() {
           $window.document.body.scrollTop = 0;
           scope.pageScrolled = false;
+        }
+
+        function positionSearchFollow() {
+          $timeout(function () {
+            searchFollowElement.css({
+              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
+            });
+          }, 200);
+        }
+
+        function showLibrarySearchBar() {
+          if (platformService.isSupportedMobilePlatform()) {
+            return;
+          }
+
+          scope.librarySearchInProgress = true;
+
+          scrollToTop();
+
+          if (!searchFollowElement.length) {
+            searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
+          }
+
+          // Reset any previous shifts of the right header.
+          headerLinksElement.css({ 'margin-right': headerLinksWidth });
+
+          // Shift header to the left and drop down follow button.
+          $timeout(function () {
+            if (!headerLinksShifted) {
+              headerLinksElement.css({
+                'margin-right': '150px'
+              });
+
+              headerLinksShifted = true;
+            }
+
+            searchFollowElement.css({
+              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
+            });
+
+            searchFollowElement.css({
+              'transition': 'top 0.5s ease 0.3s',
+              'top': '15px'
+            });
+
+            libraryBodyElement.css({
+              'margin-top': '90px'
+            });
+          }, 0);
+        }
+
+        function hideLibrarySearchBar() {
+          scrollToTop();
+
+          if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
+            showKfColsOverflow();
+            $timeout(hideKfColsOverflow);
+          }
+
+          scope.librarySearchInProgress = false;
+          prevQuery = '';
+
+          if (!searchFollowElement.length) {
+            searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
+          }
+
+          searchFollowElement.css({
+            'transition': 'top 0.2s ease',
+            'top': '-100px'
+          });
+
+          if (headerLinksShifted) {
+            headerLinksElement.css({
+              'margin-right': headerLinksWidth
+            });
+
+            headerLinksShifted = false;
+          }
+
+          libraryBodyElement.css({
+            'transition': 'margin-top 0.1s ease',
+            'margin-top': '0px'
+          });
+
+          $timeout(function () {
+            scope.search = { text: '' };
+            element.find('.kf-keep-lib-search-input').blur();
+          });
         }
 
 
@@ -803,155 +890,44 @@ angular.module('kifi')
           }
         };
 
-        function positionSearchFollow() {
-          $timeout(function () {
-            searchFollowElement.css({
-              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
-            });
-          }, 200);
-        }
-
-        function showLibrarySearchBar() {
-          if (platformService.isSupportedMobilePlatform() || scope.librarySearchBarShown) {
-            return;
-          }
-
-          scope.librarySearchInProgress = true;
-          scope.librarySearchBarShown = true;
-
-          scrollToTop();
-
-          if (!searchFollowElement.length) {
-            searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
-          }
-
-          // Reset any previous shifts of the right header.
-          headerLinksElement.css({ 'margin-right': headerLinksWidth });
-
-          // Shift header to the left and drop down follow button.
-          $timeout(function () {
-            if (!headerLinksShifted) {
-              headerLinksElement.css({
-                'margin-right': '150px'
-              });
-
-              headerLinksShifted = true;
-            }
-
-            searchFollowElement.css({
-              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
-            });
-
-            searchFollowElement.css({
-              'transition': 'top 0.5s ease 0.3s',
-              'top': '15px'
-            });
-
-            libraryBodyElement.css({
-              'margin-top': '90px'
-            });
-          }, 0);
-        }
-
         scope.onSearchInputFocus = function () {
           // Track click/focus on search bar.
           $rootScope.$emit('trackLibraryEvent', 'click', {
             action: 'clickedSearchBody'
           });
 
-          showLibrarySearchBar();
+          if (!scope.librarySearchInProgress) {
+            showLibrarySearchBar();
+          }
         };
 
         scope.onSearchExit = function () {
-          scrollToTop();
-
-          if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
-            showKfColsOverflow();
-            $timeout(hideKfColsOverflow);
-          }
-          locationNoReload.skipReload().url(scope.library.url);
-          locationNoReload.reloadNextRouteChange();
-
-          scope.librarySearchInProgress = false;
-          scope.librarySearchBarShown = false;
-          $rootScope.$emit('librarySearchChanged', false);
-          prevQuery = '';
-
-          if (!searchFollowElement.length) {
-            searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
-          }
-
-          searchFollowElement.css({
-            'transition': 'top 0.2s ease',
-            'top': '-100px'
-          });
-
-          if (headerLinksShifted) {
-            headerLinksElement.css({
-              'margin-right': headerLinksWidth
-            });
-
-            headerLinksShifted = false;
-          }
-
-          libraryBodyElement.css({
-            'transition': 'margin-top 0.1s ease',
-            'margin-top': '0px'
-          });
-
-          $timeout(function () {
-            scope.search = { text: '' };
-          });
+          hideLibrarySearchBar();
+          $state.go('library.keeps');
         };
 
         scope.onSearchInputChange = _.debounce(function (query) {
           $timeout(function () {
+            if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
+              showKfColsOverflow();
+            }
+
             if (query) {
-              locationNoReload.cancelReloadNextRouteChange();
-
-              if (prevQuery) {
-                if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
-                  showKfColsOverflow();
-                }
-                locationNoReload.skipReload().search('q', query).replace();
-
-                // When we search using the input inside the library card header, we don't
-                // want to reload the page. One consequence of this is that we need to kick
-                // SearchController to initialize a search when the search query changes if
-                // we initially started with a url that is a library url that has no search
-                // parameters.
-                if (!$route.current.params.q) {
-                  $timeout(function () {
-                    $rootScope.$emit('librarySearched');
-                  });
-                }
-              } else {
-                if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
-                  showKfColsOverflow();
-                }
-                locationNoReload.skipReload().url(scope.library.url + '/find?q=' + query + '&f=a');
-              }
-
-              $routeParams.q = query;
-              $routeParams.f = 'a';
-
-              $timeout(function () {
-                $rootScope.$emit('librarySearchChanged', true);
-              });
+              // Replace last history record if we were previously already searching a query.
+              var location = prevQuery ? 'replace' : true;
 
               prevQuery = query;
+              $state.go('library.search', { q: query, f: 'a' }, { location: location });
             } else {
-              if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
-                showKfColsOverflow();
-              }
-              locationNoReload.skipReload().url(scope.library.url);
-              locationNoReload.reloadNextRouteChange();
               prevQuery = '';
-
               $timeout(function () {
-                $rootScope.$emit('librarySearchChanged', false);
                 scope.search = { 'text': '' };
               });
+
+              // Keep showing the search bar when the user clears the search input.
+              keepShowingSearchBar = true;
+
+              $state.go('library.keeps');
             }
           });
         }, 50, {
@@ -987,18 +963,28 @@ angular.module('kifi')
         });
         scope.$on('$destroy', deregisterLibraryUpdated);
 
-        var deregisterNewSearchUrl = $rootScope.$on('newSearchUrl', function () {
-          updateSearchText = true;
-        });
-        scope.$on('$destroy', deregisterNewSearchUrl);
+        // Update the search bar and search input text to be consistent with the current state.
+        if (scope.isUserLoggedOut) {
+          var deregisterUpdateSearchBarAndInput = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
+            if (toState.name === 'library.search') {
+              showLibrarySearchBar();
+              scope.search = { 'text': toParams.q };
+            }
 
-        var deregisterNewSearchQuery = $rootScope.$on('newSearchQuery', function (e, query) {
-          if (updateSearchText) {
-            scope.search = { 'text': query };
-            updateSearchText = false;
-          }
-        });
-        scope.$on('$destroy', deregisterNewSearchQuery);
+            if (toState.name === 'library.keeps') {
+              prevQuery = '';
+
+              if (keepShowingSearchBar) {
+                keepShowingSearchBar = false;
+              } else {
+                hideLibrarySearchBar();
+                scope.search = { 'text': '' };
+              }
+            }
+          });
+          scope.$on('$destroy', deregisterUpdateSearchBarAndInput);
+        }
+
 
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);
