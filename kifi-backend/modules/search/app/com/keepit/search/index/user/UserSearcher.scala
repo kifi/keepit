@@ -1,5 +1,6 @@
 package com.keepit.search.index.user
 
+import com.keepit.search.index.Searcher
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.util.BytesRef
@@ -7,7 +8,6 @@ import org.apache.lucene.util.PriorityQueue
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.search.util.IdFilterCompressor
-import com.keepit.search.Searcher
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.PrefixFilter
 

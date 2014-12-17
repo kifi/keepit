@@ -4,8 +4,8 @@ import java.io.File
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders._
-import com.keepit.common.controller.{ FakeUserActionsHelper }
-import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.controller.FakeUserActionsHelper
+import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
@@ -14,19 +14,25 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScrapeSchedulerConfigModule }
+import com.keepit.scraper.{ FakeScrapeSchedulerConfigModule, FakeScrapeSchedulerModule }
 import com.keepit.search.{ FakeSearchServiceClient, FakeSearchServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
+import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.{ JsObject, JsValue, JsArray, Json }
+import play.api.libs.json.{ JsArray, JsObject, JsValue, Json }
 import play.api.test.Helpers._
 import play.api.test._
-import com.keepit.social.BasicUser
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -1194,6 +1200,62 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit s =>
           keepRepo.getByLibrary(lib1.id.get, 0, 5).map(_.title) === Seq(Some("thwip!"))
+        }
+      }
+    }
+
+    "marketingSiteSuggestedLibraries" should {
+      "return json array of library info" in {
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit rw =>
+            val user1 = user().withName("John", "Doe").saved
+            val user2 = user().withName("Joe", "Blow").saved
+            val user3 = user().withName("Jack", "Black").saved
+            val lib1 = library().withName("Scala").withUser(user1).published().saved
+            val lib2 = library().withName("Java").withUser(user1).published().saved
+
+            // test that private libraries are not returned in the response
+            val lib3 = library().withName("Private").withUser(user1).saved
+
+            inject[KeepRepo].all() // force slick to create the table
+
+            membership().withLibraryOwner(lib1).saved
+            membership().withLibraryFollower(lib1, user2).saved
+            membership().withLibraryFollower(lib1, user3).saved
+            membership().withLibraryOwner(lib2).saved
+            membership().withLibraryFollower(lib2, user3).saved
+
+            inject[SystemValueRepo].save(SystemValue(
+              name = MarketingSuggestedLibrarySystemValue.systemValueName,
+              value = s"""
+                   |[
+                   |  { "id": 424242, "caption": "does not exist" },
+                   |  { "id": ${lib2.id.get}, "color": "#abcdef" },
+                   |  { "id": ${lib1.id.get}, "caption": "yo dawg", "color": "#ffffff" },
+                   |  { "id": ${lib3.id.get} }
+                   |]
+                 """.stripMargin))
+          }
+
+          val call = com.keepit.controllers.website.routes.LibraryController.marketingSiteSuggestedLibraries()
+          call.url === "/site/libraries/marketing-suggestions"
+          call.method === "GET"
+
+          val result = inject[LibraryController].marketingSiteSuggestedLibraries()(FakeRequest())
+          status(result) === OK
+
+          val libInfos = contentAsJson(result).as[Seq[MarketingSuggestedLibraryInfo]]
+          libInfos.size === 2
+          libInfos(0).name === "Java"
+          libInfos(0).numFollowers === 1
+          libInfos(0).id.id must beMatching("^l.+") // tests public id
+          libInfos(0).caption must beNone
+          libInfos(0).color.get.hex === "#abcdef"
+          libInfos(1).name === "Scala"
+          libInfos(1).numFollowers === 2
+          libInfos(1).owner.fullName === "John Doe"
+          libInfos(1).caption must beSome("yo dawg")
+          libInfos(1).color.get.hex === "#ffffff"
         }
       }
     }

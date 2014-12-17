@@ -64,12 +64,12 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
           libImages.length === 1
-          libImages.map(_.imagePosition === LibraryImagePosition(Some(40), Some(50)))
+          libImages.map(_.position === LibraryImagePosition(Some(40), None))
         }
 
         // upload same image
         {
-          val position = LibraryImagePosition(Some(40), None)
+          val position = LibraryImagePosition(Some(0), Some(100))
           val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
@@ -78,12 +78,12 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
           libImages.length === 1
-          libImages.map(_.imagePosition === LibraryImagePosition(Some(40), Some(50)))
+          libImages.map(_.position === LibraryImagePosition(Some(0), Some(100)))
         }
 
         // upload another image
         {
-          val position = LibraryImagePosition(Some(40), None)
+          val position = LibraryImagePosition(None, Some(77))
           val savedF = commander.uploadLibraryImageFromFile(fakeFile2, lib.id.get, position, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
@@ -93,7 +93,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
           libImages.length === 3
-          libImages.map(_.imagePosition === LibraryImagePosition(Some(40), Some(50)))
+          libImages.map(_.position === LibraryImagePosition(None, Some(77)))
           libraryImageRepo.getForLibraryId(lib.id.get, None).length === 4
         }
 
@@ -106,7 +106,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         val libraryImageRepo = inject[LibraryImageRepo]
         val (user, lib) = setup()
 
-        // first upload should have null positions (should default)
+        // upload may not specify a position
         val position = LibraryImagePosition(None, None)
         val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload)
         val saved = Await.result(savedF, Duration("10 seconds"))
@@ -115,19 +115,15 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
           libImages.length === 1
-          libImages.map { libImage =>
-            libImage.imagePosition === LibraryImagePosition(Some(50), Some(50))
-          }
+          libImages.map(_.position === LibraryImagePosition(None, None))
         }
 
-        // re-position one dimension
-        commander.positionLibraryImage(lib.id.get, LibraryImagePosition(Some(30), Some(50)))
+        // position one dimension
+        commander.positionLibraryImage(lib.id.get, LibraryImagePosition(Some(30), None))
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
           libImages.length === 1
-          libImages.map { libImage =>
-            libImage.imagePosition === LibraryImagePosition(Some(30), Some(50))
-          }
+          libImages.map(_.position === LibraryImagePosition(Some(30), None))
         }
 
         // position both dimensions
@@ -135,9 +131,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
           libImages.length === 1
-          libImages.map { libImage =>
-            libImage.imagePosition === LibraryImagePosition(Some(35), Some(45))
-          }
+          libImages.map(_.position === LibraryImagePosition(Some(35), Some(45)))
         }
 
         // remove image

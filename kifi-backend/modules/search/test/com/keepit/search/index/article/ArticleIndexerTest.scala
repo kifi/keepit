@@ -16,8 +16,7 @@ import org.specs2.mutable._
 import org.specs2.specification.Scope
 import scala.collection.JavaConversions._
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient }
-import com.keepit.search.SearcherHit
-import com.keepit.search.index.{ Analyzer, DefaultAnalyzer, VolatileIndexDirectory }
+import com.keepit.search.index.{ SearcherHit, Analyzer, DefaultAnalyzer, VolatileIndexDirectory }
 import com.keepit.common.util.PlayAppConfigurationModule
 
 class ArticleIndexerTest extends Specification with SearchTestInjector {

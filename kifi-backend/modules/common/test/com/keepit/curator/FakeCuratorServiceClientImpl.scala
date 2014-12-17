@@ -25,6 +25,8 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def topPublicRecos(): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)
 
+  def generalRecos(): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)
+
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
     updatedUriRecommendationFeedback.append((userId, uriId, feedback))
     Future.successful(true)

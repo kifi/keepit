@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.index
 
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model.User
@@ -32,13 +32,4 @@ object IndexInfo {
     val indexSize = info.indexSize.map { toReadableSize(_) }
     ReadableIndexInfo(info.name, info.sequenceNumber, info.numDocs, info.committedAt, indexSize)
   }
-}
-
-case class SharingUserInfo(
-  sharingUserIds: Set[Id[User]],
-  keepersEdgeSetSize: Int)
-
-object SharingUserInfo {
-  private implicit val userIdFormat = Id.format[User]
-  implicit val sharingUserInfoFormat = Json.format[SharingUserInfo]
 }

@@ -274,6 +274,7 @@ GET     /terms                      @com.keepit.controllers.website.HomeControll
 GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
+GET     /libraries/featured         @com.keepit.controllers.website.HomeController.route(path = "libraries/featured")
 
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
@@ -344,6 +345,8 @@ GET     /site/libraries             @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
 POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryController.copyKeeps()
 POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
+
+GET     /site/libraries/marketing-suggestions   @com.keepit.controllers.website.LibraryController.marketingSiteSuggestedLibraries()
 
 GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibraryById(id: PublicId[Library], showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None)
 GET     /site/libraries/:id/summary         @com.keepit.controllers.website.LibraryController.getLibrarySummaryById(id: PublicId[Library])
@@ -688,6 +691,7 @@ POST    /admin/learning/pornDetect/whitelist               @com.keepit.controlle
 
 GET     /admin/curator/librecos                            @com.keepit.controllers.admin.AdminLibraryRecommendationsController.index
 GET     /admin/curator/librecos/view                       @com.keepit.controllers.admin.AdminLibraryRecommendationsController.view
+GET     /admin/curator/generalRecos                        @com.keepit.controllers.admin.AdminGeneralRecommendationsController.view
 
 GET     /adimin/cortex/word2vec                            @com.keepit.controllers.admin.AdminWord2VecController.index
 POST    /admin/cortex/word2vec/wordSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.wordSimilarity

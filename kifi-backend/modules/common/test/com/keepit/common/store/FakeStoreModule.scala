@@ -1,13 +1,11 @@
 package com.keepit.common.store
 
-import scala.collection.mutable.HashMap
+import com.keepit.search.tracking.{ FullFilterChunkId, ProbablisticLRUStore }
 
-import com.amazonaws.services.s3.model._
-import scala.concurrent.Future
+import scala.collection.mutable.HashMap
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.common.db.Id
 import com.keepit.model._
-import com.keepit.common.db._
 import com.keepit.search._
 import com.keepit.social._
 

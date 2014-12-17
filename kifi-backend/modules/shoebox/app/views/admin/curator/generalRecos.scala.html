@@ -1,0 +1,27 @@
+@(uris: Seq[com.keepit.model.NormalizedURI])(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin.admin("General Recommendations") {
+
+    <h2>Showing @uris.length General Recommendations</h2>
+    <ul>
+        <li>The following shows a <i>global</i> list of general recommendations (neutral to user interest profiles)</li>
+        <li>The list is generated from the user engagements (clicks) with recommendations</li>
+        <ul>
+            <li>recommendations that three or more people clicked</li>
+            <li>scored by <i>root mean square</i> of the inverse of master_score to find recommendations generally interesting URIs regardless of users' interest profiles</li>
+        </ul>
+    </ul>
+
+    <table class="table table-striped">
+        <th><tr>
+            <td>uriId</td>
+            <td>title</td>
+        </tr></th>
+        @for(uri <- uris){
+        <tr>
+            <td>@uri.id.get</td>
+            <td><a href="@uri.url">@if(uri.title.getOrElse("").trim.nonEmpty){ @uri.title } else { @uri.url }</a></td>
+        </tr>
+        }
+    </table>
+}

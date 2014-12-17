@@ -89,10 +89,10 @@ angular.module('kifi')
             var error = err.data && err.data.error;
             switch (error) {
               case 'invalid_name':
-                scope.$error.general = 'The name you picked isn\'t valid. Try using only letters and numbers.';
+                scope.$error.general = 'The name you picked isn’t valid. Try using only letters and numbers.';
                 break;
               case 'invalid_slug':
-                scope.$error.general = 'The URL you picked isn\'t valid. Try using only letters and numbers.';
+                scope.$error.general = 'The URL you picked isn’t valid. Try using only letters and numbers.';
                 break;
               case 'library_name_exists':
                 scope.$error.general = 'You already have a library with this name. Pick another.';

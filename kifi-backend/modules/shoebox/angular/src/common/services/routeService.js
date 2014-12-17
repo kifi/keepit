@@ -48,6 +48,9 @@ angular.module('kifi')
       resendVerificationUrl: route('/user/resend-verification'),
       userPasswordUrl: route('/user/password'),
       formatPicUrl: formatPicUrl,
+      libraryImageUrl: function (path) {
+        return env.picBase + '/' + path;
+      },
       getKeep: function (keepId) {
         return route('/keeps/' + keepId);
       },

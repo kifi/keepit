@@ -2,7 +2,7 @@ package com.keepit.search.tracking
 
 import org.specs2.mutable._
 import scala.util.Random
-import com.keepit.search.MultiHashFilter
+import com.keepit.search.tracking.MultiHashFilter
 
 class MultiHashFilterBuilderTest extends Specification {
 

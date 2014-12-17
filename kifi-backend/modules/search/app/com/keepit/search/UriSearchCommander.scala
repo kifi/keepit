@@ -16,7 +16,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.search.sharding.{ Sharding, Shard, ActiveShards }
+import com.keepit.search.index.sharding.{ Sharding, Shard, ActiveShards }
 import com.keepit.search.result._
 import com.keepit.search.index.DefaultAnalyzer
 import scala.collection.mutable.ListBuffer

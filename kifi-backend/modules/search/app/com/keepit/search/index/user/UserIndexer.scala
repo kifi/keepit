@@ -12,7 +12,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import com.keepit.model.UserStates._
-import com.keepit.search.IndexInfo
+import com.keepit.search.index.IndexInfo
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.common.mail.EmailAddress
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }

@@ -1,8 +1,4 @@
-package com.keepit.search
-
-import java.util.Random
-import com.keepit.inject._
-import play.api.Play.current
+package com.keepit.search.tracking
 
 object MultiHashFilter {
   def apply[T](tableSize: Int, numHashFuncs: Int, minHits: Int) = {

@@ -21,6 +21,7 @@ import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
+import play.api.mvc.Action
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
@@ -67,7 +68,7 @@ class LibraryController @Inject() (
     val newDescription = (json \ "description").asOpt[String]
     val newSlug = (json \ "slug").asOpt[String]
     val newVisibility = (json \ "visibility").asOpt[LibraryVisibility]
-    val res = libraryCommander.modifyLibrary(id, request.userId, newName, newDescription, newSlug, newVisibility)
+    val res = libraryCommander.modifyLibrary(id, request.userId, newName, newDescription, newSlug, newVisibility, None)
     res match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
@@ -536,10 +537,14 @@ class LibraryController @Inject() (
     val libs = libraryCommander.libraries(user, viewer, Paginator(page, pageSize))
     Ok(Json.obj("libraries" -> Json.arr(libs map { lib => Json.obj("id" -> lib.library.id.get) })))
   }
+
+  def marketingSiteSuggestedLibraries() = Action.async {
+    libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
+  }
 }
 
 object LibraryController {
-  val defaultLibraryImageSize = ImageSize(640, 480)
+  val defaultLibraryImageSize = ProcessedImageSize.XLarge.idealSize
 }
 
 private object ImplicitHelper {

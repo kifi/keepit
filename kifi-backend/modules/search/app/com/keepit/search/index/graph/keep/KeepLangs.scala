@@ -1,7 +1,7 @@
 package com.keepit.search.index.graph.keep
 
 import com.keepit.common.strings._
-import com.keepit.search.Searcher
+import com.keepit.search.index.Searcher
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.BytesRef

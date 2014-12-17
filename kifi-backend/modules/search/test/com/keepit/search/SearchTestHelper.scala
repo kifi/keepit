@@ -26,7 +26,7 @@ import com.keepit.search.tracking.ClickHistoryTracker
 import com.keepit.search.tracking.ResultClickTracker
 import com.keepit.search.tracking.ProbablisticLRU
 import com.keepit.search.tracking.InMemoryResultClickTrackerBuffer
-import com.keepit.search.sharding._
+import com.keepit.search.index.sharding._
 import com.keepit.common.aws.AwsModule
 import com.keepit.search.index.graph.user._
 import com.google.inject.Injector

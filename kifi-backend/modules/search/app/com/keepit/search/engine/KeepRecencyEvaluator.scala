@@ -1,6 +1,7 @@
 package com.keepit.search.engine
 
-import com.keepit.search.{ Searcher, SearchConfig }
+import com.keepit.search.SearchConfig
+import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.engine.query.{ RecencyScorer, RecencyQuery }
 import org.apache.lucene.index.AtomicReaderContext

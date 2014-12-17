@@ -1,7 +1,8 @@
-package com.keepit.search
+package com.keepit.search.tracking
 
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.search.{ SearchConfigExperiment, ArticleSearchResult }
 import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.time.DateTimeJsonFormat

@@ -2,11 +2,10 @@ package com.keepit.search.engine.library
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.engine._
-import com.keepit.search.engine.explain.TargetedScorer
 import com.keepit.search.engine.query.core.QueryProjector
-import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
+import com.keepit.search.{ SearchFilter, SearchConfig }
 import com.keepit.search.index.graph.keep.KeepFields
-import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
@@ -21,10 +20,6 @@ class LibraryFromKeepsScoreVectorSource(
     filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
-
-  override protected def idResolver(readerContext: AtomicReaderContext): TargetedScorer.Resolver = {
-    docValueBasedIdResolver(readerContext, KeepFields.libraryIdField)
-  }
 
   override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.textSearchFields)
 
