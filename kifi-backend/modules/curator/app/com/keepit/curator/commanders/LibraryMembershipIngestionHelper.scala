@@ -5,9 +5,9 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ SequenceNumber, State }
 import com.keepit.common.logging.Logging
-import com.keepit.curator.model.{ CuratorLibraryMembershipInfo, CuratorLibraryMembershipInfoRepo }
+import com.keepit.curator.model.{ CuratorLibraryMembershipInfoStates, LibraryRecommendationRepo, CuratorLibraryMembershipInfo, CuratorLibraryMembershipInfoRepo }
 import com.keepit.model.view.LibraryMembershipView
-import com.keepit.model.{ LibraryMembership, Name, SystemValueRepo }
+import com.keepit.model.{ LibraryMembershipStates, LibraryMembership, Name, SystemValueRepo }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -16,13 +16,14 @@ import scala.concurrent.Future
 class LibraryMembershipIngestionHelper @Inject() (
     systemValueRepo: SystemValueRepo,
     libInfoRepo: CuratorLibraryMembershipInfoRepo,
+    libRecoRepo: LibraryRecommendationRepo,
     db: Database,
     shoebox: ShoeboxServiceClient) extends GlobalSeedIngestionHelper with Logging {
 
   private val SEQ_NUM_NAME: Name[SequenceNumber[LibraryMembership]] = Name("library_membership_seq_num")
 
   private def processLibraryMemberships(libMembership: LibraryMembershipView)(implicit session: RWSession): Unit = {
-    libInfoRepo.getByUserAndLibraryId(libMembership.userId, libMembership.libraryId).map { libMembershipInfo =>
+    val membershipInfo = libInfoRepo.getByUserAndLibraryId(libMembership.userId, libMembership.libraryId).map { libMembershipInfo =>
       libInfoRepo.save(libMembershipInfo.copy(
         userId = libMembership.userId,
         access = libMembership.access,
@@ -34,6 +35,10 @@ class LibraryMembershipIngestionHelper @Inject() (
         libraryId = libMembership.libraryId,
         access = libMembership.access,
         state = State[CuratorLibraryMembershipInfo](libMembership.state.value)))
+    }
+
+    libRecoRepo.getByLibraryAndUserId(libMembership.libraryId, libMembership.userId).map { reco =>
+      libRecoRepo.save(reco.copy(followed = membershipInfo.state == CuratorLibraryMembershipInfoStates.ACTIVE))
     }
   }
 
