@@ -274,6 +274,7 @@ GET     /terms                      @com.keepit.controllers.website.HomeControll
 GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
+GET     /libraries/featured         @com.keepit.controllers.website.HomeController.route(path = "libraries/featured")
 
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
