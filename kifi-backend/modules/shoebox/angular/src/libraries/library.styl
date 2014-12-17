@@ -61,34 +61,36 @@ cover-image-dur = .6s
     cursor: -moz-grabbing
     cursor: grabbing
 
-cover-image-adjust-width = 34px
+cover-image-adjust-width = 35px
 cover-image-adjust-right = 24px
 .kf-keep-lib-cover-image-adjust
   position: absolute
   bottom: 12px
   right: cover-image-adjust-right
-  height: 30px
+  height: 31px
   width: cover-image-adjust-width
   background: url(/img/camera-over.svg) center no-repeat
-  background-size: 32px 28px
-  opacity: .8
+  background-size: 33px 29px
   outline: none
-  transition: opacity .2s, transform .2s
+  transform: scale(.8)
+  transition: opacity, transform
+  transition-duration: .2s
 
   :hover>&
-    transition-duration: .1s
+    transition-duration: 20ms
 
   &:not(:hover):not(:focus):not(.kf-active)
-    transform: scale(.9)
+    opacity: .8
 
-  :not(:hover)>&:not(:focus):not(.kf-active)
+  :not(:hover):not(.kf-fake-hover)>&:not(:focus):not(.kf-active)
     transform: scale(.3)
     opacity: 0
 
   &.ng-enter
-    transition-duration: .25s
+    transition-duration: .16s
+    transform-origin: center bottom
     &:not(.ng-enter-active)
-      transform: scale(.3) translate(0, 150%) !important
+      transform: scale(.3) translate(0, 40%) !important
 
   &:hover:active
   &.kf-active
@@ -155,25 +157,26 @@ cover-image-adjust-right = 24px
     transform: rotate(45deg)
 
 .kf-keep-lib-cover-image-preview
+  height = 44px
   position: absolute
   bottom: 0
   left: 0
   right: 0
-  overflow: hidden
-
-.kf-keep-lib-cover-image-preview-shade
-  height = 44px
+  height: height
   line-height: height
+  overflow: hidden
   padding: 0 16px
   background-color: rgba(0,0,0,.25)
   color: #fff
   text-align: right
   font-size: 14px
   user-select: none
-  transition: transform .2s, opacity .2s
+  transition: height, opacity
+  transition-duration: .2s
 
-  &.kf-hidden
-    transform: translate(0, height)
+  &.ng-enter:not(.ng-enter-active)
+  &.ng-leave.ng-leave-active
+    height: 0
     opacity: 0
 
 .kf-keep-lib-cover-image-apply
@@ -527,7 +530,6 @@ html:not(.kf-mobile)
     font-size: 14px
     outline: none
     position: relative
-    transition: color .2s
     &:hover
     &:focus
       color: #006bb2
@@ -544,17 +546,15 @@ html:not(.kf-mobile)
     &::before
       content: ''
       position: absolute
-      height: 30px
-      width: 34px
+      height: 31px
+      width: 35px
       top: 2px
       left: 2px
       background: url(/img/camera-line.svg) center no-repeat
-      background-size: 32px 28px
-      transform: scale(.9)
-      transition: opacity 60ms, transform 60ms
+      background-size: 33px 29px
+      transform: scale(.8)
 
     &:not(:hover):not(:focus)::before
-      transform: scale(.8)
       opacity: .8
 
   .kf-keep-lib-pic-file-input

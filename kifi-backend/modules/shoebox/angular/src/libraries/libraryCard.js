@@ -1,5 +1,4 @@
 'use strict';
-/*jshint scripturl:true*/
 
 angular.module('kifi')
 
@@ -430,17 +429,15 @@ angular.module('kifi')
             }
           } else {
             $image.css('background-position', formatCoverImagePos(scope.library.image));
-            $image.find('.kf-keep-lib-cover-image-preview-shade').addClass('kf-hidden');
           }
         };
 
         scope.applyCoverImageChange = function () {
           var $image = angular.element('.kf-keep-lib-cover-image');
-          var $shade = $image.find('.kf-keep-lib-cover-image-preview-shade');
+          var $shade = $image.find('.kf-keep-lib-cover-image-preview');
           var $progress = angular.element();
           var pos = coverImagePos;
           leaveCoverImagePosMode($image);
-          $shade.addClass('kf-hidden');
           $shade.find('a').removeAttr('href');
           scope.coverImageProgress = true;
           $timeout(function () {
@@ -464,6 +461,7 @@ angular.module('kifi')
                 scope.coverImageUrl = url;
                 scope.coverImagePreview = false;
                 scope.coverImageProgress = false;
+                fakeHover($image);
               }, 500); // allowing progress bar transition to complete and register in user's mind
             }) :
             fakeProgress(
@@ -478,6 +476,7 @@ angular.module('kifi')
               $timeout(function () {
                 scope.coverImagePreview = false;
                 scope.coverImageProgress = false;
+                fakeHover($image);
               }, 500); // allowing progress bar transition to complete and register in user's mind
             });
 
@@ -486,8 +485,7 @@ angular.module('kifi')
           }, function fail() {
             $progress.on('transitionend', function () {
               scope.coverImageProgress = false;
-              $shade.removeClass('kf-hidden');
-              $shade.find('a').prop('href', 'javascript:');
+              $shade.find('a').prop('href', 'javascript:'); // jshint ignore:line
               enterCoverImagePosMode($image, pos);
             }).addClass('kf-fail');
           }, function progress(fraction) {
@@ -496,8 +494,7 @@ angular.module('kifi')
         };
 
         function uploadCoverImage(file, pos) {
-          var idealSize = '800x800'; // TODO: utilize screen pixel ratio
-          var url = routeService.uploadLibraryCoverImage(scope.library.id, Math.round(pos.x), Math.round(pos.y), idealSize);
+          var url = routeService.uploadLibraryCoverImage(scope.library.id, Math.round(pos.x), Math.round(pos.y));
           var xhr = new $window.XMLHttpRequest();
           xhr.withCredentials = true;
           var deferred = $q.defer(), fraction = 0, timeout, tickMs = 200;
@@ -565,6 +562,12 @@ angular.module('kifi')
           timeout = $timeout(tick, 0, false);
 
           return deferred.promise;
+        }
+
+        function fakeHover($image) {
+          $image.not(':hover').addClass('kf-fake-hover').one('mouseover', function () {
+            $image.removeClass('kf-fake-hover');
+          });
         }
 
         scope.onCoverImageAdjustEngage = function (event) {
@@ -635,14 +638,9 @@ angular.module('kifi')
             var url = scope.coverImageUrl;
             loadImage(url).then(function (img) {
               var $image = angular.element('.kf-keep-lib-cover-image')
-                .data({naturalSize: [img.naturalWidth, img.naturalHeight]});
+                .data('naturalSize', [img.naturalWidth, img.naturalHeight]);
               scope.coverImagePreview = true;
-              scope.coverImageMove = true;
               enterCoverImagePosMode($image, {x: scope.library.image.x, y: scope.library.image.y});
-              $timeout(function () {
-                $image.find('.kf-keep-lib-cover-image-preview-shade').removeClass('kf-hidden');
-                scope.coverImageMove = false;
-              });
             });
           }
         };

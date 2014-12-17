@@ -187,7 +187,7 @@ angular.module('kifi')
         return route('/libraries/' + libraryId + '/delete');
       },
       uploadLibraryCoverImage: function (libraryId, x, y, idealSize) {
-        return route('/libraries/' + libraryId + '/image/upload?x=' + x + '&y=' + y + '&is=' + idealSize);
+        return route('/libraries/' + libraryId + '/image/upload?x=' + x + '&y=' + y + (idealSize ? '&is=' + idealSize : ''));
       },
       positionLibraryCoverImage: function (libraryId) {
         return route('/libraries/' + libraryId + '/image/position');
