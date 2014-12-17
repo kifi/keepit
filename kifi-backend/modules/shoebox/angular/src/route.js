@@ -14,7 +14,7 @@ angular.module('kifi')
     $urlRouterProvider
       .when('/friends/invite', '/invite')
       .when('/friends/requests', '/friends')
-      .when('/friends/requests/:network', 'friends')
+      .when('/friends/requests/:network', '/friends')
       .when('/recommendations', '/')
 
       // For any unmatched url, redirect to '/'.
