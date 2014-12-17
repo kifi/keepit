@@ -1149,7 +1149,7 @@ class LibraryCommander @Inject() (
           Seq.empty[MarketingSuggestedLibrarySystemValue]
         },
         identity
-      ).map(value => (value.id, value)).toMap
+      ).zipWithIndex.map { case (value, idx) => value.id -> (value, idx) }.toMap
 
       val libIds = systemValueLibraries.keySet
       val libPublicIdsToIds = libIds.map { id => (Library.publicId(id), id) }.toMap
@@ -1167,9 +1167,10 @@ class LibraryCommander @Inject() (
 
       fullLibInfosF map { libInfos =>
         libInfos map { info =>
-          val extraInfo = systemValueLibraries.get(libPublicIdsToIds(info.id))
-          MarketingSuggestedLibraryInfo.fromFullLibraryInfo(info, extraInfo)
-        }
+          val libId = libPublicIdsToIds(info.id)
+          val (extraInfo, idx) = systemValueLibraries(libId)
+          MarketingSuggestedLibraryInfo.fromFullLibraryInfo(info, Some(extraInfo)) -> idx
+        } sortBy (_._2) map (_._1)
       }
     } getOrElse Future.successful(Seq.empty)
   }
