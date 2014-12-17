@@ -12,7 +12,7 @@ object KeepFactoryHelper {
       val keep = {
         val candidate = partialKeep.get
         if (candidate.urlId.id < 0 && candidate.uriId.id < 0) {
-          val uri = injector.getInstance(classOf[NormalizedURIRepo]).save(NormalizedURI.withHash(candidate.url, Some("${random(5)}")))
+          val uri = injector.getInstance(classOf[NormalizedURIRepo]).save(NormalizedURI.withHash(candidate.url, Some(s"${random(5)}")))
           val url = injector.getInstance(classOf[URLRepo]).save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
           candidate.copy(uriId = uri.id.get, urlId = url.id.get)
         } else candidate
