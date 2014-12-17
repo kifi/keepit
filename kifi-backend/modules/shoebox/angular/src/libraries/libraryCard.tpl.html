@@ -27,22 +27,22 @@
     </div>
 
     <div ng-if="recommendation && coverImageUrl" class="kf-keep-lib-cover-image" style="background-image:url({{coverImageUrl}});background-position:{{coverImagePos}}"></div>
-    <div ng-if="!recommendation && (coverImageUrl || coverImagePreview)" class="kf-keep-lib-cover-image" ng-class="{'animate-if':coverImagePreview}" ng-style="{'background-image':'{{coverImageUrl ? 'url(' + coverImageUrl + ')' : ''}}','background-position':'{{coverImagePos}}'}">
-      <a ng-if="isMyLibrary() && !coverImagePreview" class="kf-keep-lib-cover-image-adjust animate-if" href="javascript:" ng-mousedown="onCoverImageAdjustEngage($event)" ng-click="onCoverImageAdjustEngage($event)"></a>
-      <div ng-if="coverImageMenuShowing" class="kf-keep-lib-cover-image-menu animate-if">
+    <div ng-if="!recommendation && (coverImageUrl || coverImagePreview)" class="kf-keep-lib-cover-image" ng-style="{'background-image':'{{coverImageUrl ? 'url(' + coverImageUrl + ')' : ''}}','background-position':'{{coverImagePos}}'}">
+      <a ng-if="isMyLibrary() && !coverImagePreview" class="kf-keep-lib-cover-image-adjust" href="javascript:" ng-mousedown="onCoverImageAdjustEngage($event)" ng-click="onCoverImageAdjustEngage($event)"></a>
+      <div ng-if="coverImageMenuShowing" class="kf-keep-lib-cover-image-menu">
         <a class="kf-keep-lib-cover-image-menu-opt kf-keep-lib-cover-image-remove" href="javascript:" kf-hover ng-mouseup="onRemoveCoverImageMouseUp($event)">Remove</a>
         <a class="kf-keep-lib-cover-image-menu-opt kf-keep-lib-cover-image-change" href="javascript:" kf-hover onmouseup="angular.element(this).scope().onChangeCoverImageMouseUp(event)">Change</a>
         <a class="kf-keep-lib-cover-image-menu-opt kf-keep-lib-cover-image-move" href="javascript:" kf-hover ng-mouseup="onMoveCoverImageMouseUp($event)">Move</a>
         <div class="kf-keep-lib-cover-image-menu-tri"></div>
       </div>
-      <div ng-if="coverImagePreview && !coverImageProgress" class="kf-keep-lib-cover-image-preview animate-if">
+      <div ng-if="coverImagePreview && !coverImageProgress" class="kf-keep-lib-cover-image-preview">
         Drag to position image
         <a class="kf-keep-lib-cover-image-apply" href="javascript:" ng-click="applyCoverImageChange()">Apply</a>
         <a class="kf-keep-lib-cover-image-cancel" href="javascript:" ng-click="cancelCoverImageChange()">Cancel</a>
       </div>
-      <div ng-if="coverImageProgress" class="kf-keep-lib-cover-image-progress animate-if"></div>
+      <div ng-if="coverImageProgress" class="kf-keep-lib-cover-image-progress"></div>
     </div>
-    <div ng-if="coverImageError" class="kf-keep-lib-cover-image-error animate-if">{{coverImageError}}</div>
+    <div ng-if="coverImageError" class="kf-keep-lib-cover-image-error">{{coverImageError}}</div>
     <input ng-if="!recommendation && isMyLibrary() && isUserCreatedLibrary()" type="file" class="kf-keep-lib-pic-file-input" accept="image/jpeg,image/png,image/gif" onchange="angular.element(this).scope().onCoverImageFileChosen(this.files[0]);this.value=null">
 
     <div class="kf-keep-lib-info">
@@ -52,7 +52,7 @@
           <div class="kf-keep-lib-curator">Curator:</div>
           <div class="kf-keep-lib-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
         </div>
-        <a ng-if="!recommendation && isMyLibrary() && isUserCreatedLibrary() && !coverImageUrl" class="kf-keep-lib-add-pic animate-if" href="javascript:" onclick="angular.element(this).scope().onClickAddCoverImage(event)">
+        <a ng-if="!recommendation && isMyLibrary() && isUserCreatedLibrary() && !coverImageUrl" class="kf-keep-lib-add-pic" href="javascript:" onclick="angular.element(this).scope().onClickAddCoverImage(event)">
           Add a cover photo
         </a>
         <div ng-if="!recommendation && isUserLoggedOut" class="kf-keep-lib-search">
