@@ -1,4 +1,5 @@
 'use strict';
+/* global jQuery: false */
 
 angular.module('kifi')
 
@@ -18,7 +19,7 @@ angular.module('kifi')
       })
       .on('mouseout', function (e) {
         var toEl = e.relatedTarget;
-        if (hovering && (!toEl || (this !== toEl && !$.contains(this, toEl)))) {
+        if (hovering && (!toEl || (this !== toEl && !jQuery.contains(this, toEl)))) {
           element.removeClass('kf-hover');
         }
       });
