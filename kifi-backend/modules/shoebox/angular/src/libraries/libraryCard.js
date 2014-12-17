@@ -963,24 +963,27 @@ angular.module('kifi')
         scope.$on('$destroy', deregisterLibraryUpdated);
 
         // Update the search bar and search input text to be consistent with the current state.
-        var deregisterUpdateSearchBarAndInput = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
-          if (toState.name === 'library.search') {
-            showLibrarySearchBar();
-            scope.search = { 'text': toParams.q };
-          }
-
-          if (toState.name === 'library.keeps') {
-            prevQuery = '';
-
-            if (keepShowingSearchBar) {
-              keepShowingSearchBar = false;
-            } else {
-              hideLibrarySearchBar();
-              scope.search = { 'text': '' };
+        if (scope.isUserLoggedOut) {
+          var deregisterUpdateSearchBarAndInput = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
+            if (toState.name === 'library.search') {
+              showLibrarySearchBar();
+              scope.search = { 'text': toParams.q };
             }
-          }
-        });
-        scope.$on('$destroy', deregisterUpdateSearchBarAndInput);
+
+            if (toState.name === 'library.keeps') {
+              prevQuery = '';
+
+              if (keepShowingSearchBar) {
+                keepShowingSearchBar = false;
+              } else {
+                hideLibrarySearchBar();
+                scope.search = { 'text': '' };
+              }
+            }
+          });
+          scope.$on('$destroy', deregisterUpdateSearchBarAndInput);
+        }
+
 
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);

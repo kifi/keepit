@@ -53,17 +53,17 @@ angular.module('kifi')
       } else {
         $scope.clearLibraryName();
       }
-
-      $scope.search.text = $state.params.q || '';
     });
     $scope.$on('$destroy', deregisterLibraryChip);
 
-    $scope.$on('$routeUpdate', function (event, current) {
-      if (current.params.q) {
-        $scope.search.text = current.params.q;
+    var deregisterUpdateSearchText = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
+      if ((toState.name === 'library.search') || (toState.name === 'search')) {
+        $scope.search.text = toParams.q;
+      } else {
+        $scope.search.text = '';
       }
     });
-
+    $scope.$on('$destroy', deregisterUpdateSearchText);
 
     var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function (e, library) {
       $scope.addKeeps(library);
