@@ -153,6 +153,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           val su3b = suiRepo.save(SocialUserInfo(fullName = "陳家洛 先生", socialId = SocialId("chan2"), networkType = SocialNetworks.LINKEDIN, userId = None))
 
           val su4 = suiRepo.save(SocialUserInfo(fullName = "郭靖 先生", socialId = SocialId("kwok"), networkType = SocialNetworks.LINKEDIN, userId = None))
+          val su5 = suiRepo.save(SocialUserInfo(fullName = "郭靖 tweets", socialId = SocialId("kwok"), networkType = SocialNetworks.TWITTER, userId = None)) // should not show up
 
           socialConnRepo.save(SocialConnection(socialUser1 = su1a.id.get, socialUser2 = su3a.id.get))
           socialConnRepo.save(SocialConnection(socialUser1 = su1b.id.get, socialUser2 = su3b.id.get))
@@ -219,6 +220,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           val su3b = suiRepo.save(SocialUserInfo(fullName = "陳家洛 先生", socialId = SocialId("chan2"), networkType = SocialNetworks.LINKEDIN, userId = None))
 
           val su4 = suiRepo.save(SocialUserInfo(fullName = "郭靖 先生", socialId = SocialId("kwok"), networkType = SocialNetworks.LINKEDIN, userId = None))
+          val su5 = suiRepo.save(SocialUserInfo(fullName = "郭靖 tweets", socialId = SocialId("kwok"), networkType = SocialNetworks.TWITTER, userId = None)) // should not show up
 
           socialConnRepo.save(SocialConnection(socialUser1 = su1a.id.get, socialUser2 = su3a.id.get))
           socialConnRepo.save(SocialConnection(socialUser1 = su1b.id.get, socialUser2 = su3b.id.get))

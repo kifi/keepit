@@ -35,6 +35,7 @@ class TypeaheadCommander @Inject() (
     invitationRepo: InvitationRepo,
     emailAddressRepo: UserEmailAddressRepo,
     userRepo: UserRepo,
+    userExpRepo: UserExperimentRepo,
     basicUserRepo: BasicUserRepo,
     friendRequestRepo: FriendRequestRepo,
     abookServiceClient: ABookServiceClient,
@@ -167,8 +168,8 @@ class TypeaheadCommander @Inject() (
   private val snMap: Map[SocialNetworkType, Int] =
     Map(
       SocialNetworks.FACEBOOK -> 0,
-      SocialNetworks.TWITTER -> 1,
-      SocialNetworks.LINKEDIN -> 2,
+      SocialNetworks.LINKEDIN -> 1,
+      SocialNetworks.TWITTER -> 2,
       SocialNetworks.FORTYTWO -> 3,
       SocialNetworks.EMAIL -> 4,
       SocialNetworks.FORTYTWO_NF -> 5
@@ -257,9 +258,13 @@ class TypeaheadCommander @Inject() (
       case None => fetchAll(socialF, kifiF, abookF, nfUsersF)
       case Some(limit) =>
         val social: Future[Seq[NetworkTypeAndHit]] = socialF.map { hits =>
-          val (fb, lnkd) = hits.map(hit => (hit.info.networkType, hit)).partition(_._1 == SocialNetworks.FACEBOOK)
-          log.infoP(s"fb=${fb.mkString(",")} lnkd=${lnkd.mkString(",")}")
-          fb ++ lnkd
+          val hitsMap = hits.groupBy(_.info.networkType)
+          val fb = hitsMap.get(SocialNetworks.FACEBOOK) getOrElse Seq.empty
+          val lnkd = hitsMap.get(SocialNetworks.LINKEDIN) getOrElse Seq.empty
+          // twtr is protected by experiment; once this goes away we can make this generic
+          val hasTwtrExp = db.readOnlyMaster { implicit ro => userExpRepo.hasExperiment(userId, ExperimentType.TWITTER_BETA) }
+          val twtr = if (!hasTwtrExp) Seq.empty else hitsMap.get(SocialNetworks.TWITTER) getOrElse Seq.empty
+          (fb ++ lnkd ++ twtr).map(hit => (hit.info.networkType, hit))
         }
         val kifi: Future[Seq[NetworkTypeAndHit]] = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
         val abook: Future[Seq[NetworkTypeAndHit]] = abookF.map { hits =>
