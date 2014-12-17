@@ -15,6 +15,7 @@ import com.keepit.common.mail.{ BasicContact, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time.Clock
+import com.keepit.common.util.Paginator
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient, HeimdalContextBuilderFactory, UserEvent, UserEventTypes }
 import com.keepit.inject.FortyTwoConfig
@@ -35,6 +36,16 @@ import com.keepit.common.json
 import com.keepit.common.core._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
+
+@json case class MarketingSuggestedLibrarySystemValue(
+  id: Id[Library],
+  caption: Option[String] = None,
+  color: Option[HexColor] = None)
+
+object MarketingSuggestedLibrarySystemValue {
+  // system value that persists the library IDs and additional library data for the marketing site
+  def systemValueName = Name[SystemValue]("marketing_site_libraries")
+}
 
 class LibraryCommander @Inject() (
     db: Database,
@@ -68,6 +79,8 @@ class LibraryCommander @Inject() (
     uriSummaryCommander: URISummaryCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     experimentCommander: LocalUserExperimentCommander,
+    userValueRepo: UserValueRepo,
+    systemValueRepo: SystemValueRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -203,8 +216,12 @@ class LibraryCommander @Inject() (
 
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize): Future[Seq[FullLibraryInfo]] = {
     val futureKeepInfosByLibraryId = libraries.map { library =>
-      val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
-      library.id.get -> keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize)
+      library.id.get -> {
+        if (maxKeepsShown > 0) {
+          val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
+          keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize)
+        } else Future.successful(Seq.empty)
+      }
     }.toMap
 
     val followerInfosByLibraryId = libraries.map { library =>
@@ -226,14 +243,16 @@ class LibraryCommander @Inject() (
       db.readOnlyReplica { implicit s => basicUserRepo.loadAll(allUsersShown) }
     }
 
-    val countsByLibraryId = db.readOnlyReplica { implicit s =>
-      libraries.map { library =>
-        val counts = followerInfosByLibraryId(library.id.get)._2
-        val collaboratorCount = counts(LibraryAccess.READ_WRITE)
-        val followerCount = counts(LibraryAccess.READ_INSERT) + counts(LibraryAccess.READ_ONLY)
-        val keepCount = keepRepo.getCountByLibrary(library.id.get)
-        library.id.get -> (collaboratorCount, followerCount, keepCount)
-      }
+    val keepCountsByLibraries = db.readOnlyReplica { implicit s =>
+      keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet)
+    }
+
+    val countsByLibraryId = libraries.map { library =>
+      val counts = followerInfosByLibraryId(library.id.get)._2
+      val collaboratorCount = counts(LibraryAccess.READ_WRITE)
+      val followerCount = counts(LibraryAccess.READ_INSERT) + counts(LibraryAccess.READ_ONLY)
+      val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0)
+      library.id.get -> (collaboratorCount, followerCount, keepCount)
     }.toMap
 
     val futureFullLibraryInfos = libraries.map { lib =>
@@ -249,9 +268,10 @@ class LibraryCommander @Inject() (
           description = lib.description,
           slug = lib.slug,
           url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
+          color = lib.color,
           kind = lib.kind,
           visibility = lib.visibility,
-          image = libImageOpt.map(LibraryImageInfo.createInfo(_)),
+          image = libImageOpt.map(LibraryImageInfo.createInfo),
           followers = followers,
           keeps = keepInfos,
           numKeeps = keepCount,
@@ -273,12 +293,13 @@ class LibraryCommander @Inject() (
     val followersAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_ONLY)
     val relevantInviteStates = Set(LibraryInviteStates.ACTIVE)
 
+    val memberCount = db.readOnlyMaster { implicit s => libraryMembershipRepo.countWithLibraryIdByAccess(libraryId) }
+
     if (limit > 0) db.readOnlyMaster { implicit session =>
       // Get Collaborators
       val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, offset, limit, collaboratorsAccess)
       val collaboratorsShown = collaborators.length
 
-      val memberCount = libraryMembershipRepo.countWithLibraryIdByAccess(libraryId)
       val numCollaborators = memberCount(LibraryAccess.READ_INSERT) + memberCount(LibraryAccess.READ_WRITE)
       val numMembers = numCollaborators + memberCount(LibraryAccess.READ_ONLY)
 
@@ -304,7 +325,7 @@ class LibraryCommander @Inject() (
       }
       (collaborators, followers, inviteesWithInvites, memberCount)
     }
-    else (Seq.empty, Seq.empty, Seq.empty, Map.empty)
+    else (Seq.empty, Seq.empty, Seq.empty, memberCount)
   }
 
   def buildMaybeLibraryMembers(collaborators: Seq[LibraryMembership], followers: Seq[LibraryMembership], inviteesWithInvites: Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]): Seq[MaybeLibraryMember] = {
@@ -405,7 +426,7 @@ class LibraryCommander @Inject() (
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                    visibility = libAddReq.visibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
+                    visibility = libAddReq.visibility, slug = validSlug, color = libAddReq.color, kind = LibraryKind.USER_CREATED, memberCount = 1))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
                   lib
                 case Some(lib) =>
@@ -435,7 +456,8 @@ class LibraryCommander @Inject() (
     name: Option[String] = None,
     description: Option[String] = None,
     slug: Option[String] = None,
-    visibility: Option[LibraryVisibility] = None): Either[LibraryFail, Library] = {
+    visibility: Option[LibraryVisibility] = None,
+    color: Option[HexColor] = None): Either[LibraryFail, Library] = {
 
     val targetLib = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
     if (targetLib.ownerId != userId) {
@@ -481,6 +503,7 @@ class LibraryCommander @Inject() (
       } yield {
         val newDescription: Option[String] = description.orElse(targetLib.description)
         val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
+        val newColor: Option[HexColor] = color.orElse(targetLib.color)
         future {
           val keeps = db.readOnlyMaster { implicit s =>
             keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, None)
@@ -498,7 +521,7 @@ class LibraryCommander @Inject() (
             libraryAliasRepo.reclaim(ownerId, newSlug)
             libraryAliasRepo.alias(ownerId, targetLib.slug, targetLib.id.get)
           }
-          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, state = LibraryStates.ACTIVE))
+          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, state = LibraryStates.ACTIVE))
         }
       }
       searchClient.updateLibraryIndex()
@@ -1117,6 +1140,44 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def getMarketingSiteSuggestedLibraries(): Future[Seq[MarketingSuggestedLibraryInfo]] = {
+    val valueOpt = db.readOnlyReplica { implicit s =>
+      systemValueRepo.getValue(MarketingSuggestedLibrarySystemValue.systemValueName)
+    }
+
+    valueOpt map { value =>
+      val systemValueLibraries = Json.fromJson[Seq[MarketingSuggestedLibrarySystemValue]](Json.parse(value)).fold(
+        err => {
+          airbrake.notify(s"Invalid JSON format for Seq[MarketingSuggestedLibrarySystemValue]: $err")
+          Seq.empty[MarketingSuggestedLibrarySystemValue]
+        },
+        identity
+      ).zipWithIndex.map { case (value, idx) => value.id -> (value, idx) }.toMap
+
+      val libIds = systemValueLibraries.keySet
+      val libPublicIdsToIds = libIds.map { id => (Library.publicId(id), id) }.toMap
+      val libIdsMap = db.readOnlyReplica { implicit s => libraryRepo.getLibraries(libIds) } filter {
+        case (_, lib) => lib.visibility == LibraryVisibility.PUBLISHED
+      }
+
+      val fullLibInfosF = createFullLibraryInfos(viewerUserIdOpt = None,
+        showPublishedLibraries = true,
+        maxMembersShown = 0,
+        maxKeepsShown = 0,
+        idealKeepImageSize = ProcessedImageSize.Medium.idealSize,
+        libraries = libIdsMap.values.toSeq,
+        idealLibraryImageSize = ProcessedImageSize.Medium.idealSize)
+
+      fullLibInfosF map { libInfos =>
+        libInfos map { info =>
+          val libId = libPublicIdsToIds(info.id)
+          val (extraInfo, idx) = systemValueLibraries(libId)
+          MarketingSuggestedLibraryInfo.fromFullLibraryInfo(info, Some(extraInfo)) -> idx
+        } sortBy (_._2) map (_._1)
+      }
+    } getOrElse Future.successful(Seq.empty)
+  }
+
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]) = {
     db.readWrite { implicit s =>
       libraryInviteRepo.getByEmailAddress(emailAddress, Set.empty) foreach { libInv =>
@@ -1148,20 +1209,59 @@ class LibraryCommander @Inject() (
   }
 
   private def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User]): Int = {
-    -1
+    db.readOnlyReplica { implicit s =>
+      val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
+      libraryMembershipRepo.countLibrariesForOtherUser(userId, friendId, countFollowLibraries = showFollowLibraries)
+    }
   }
 
   private def countLibrariesForSelf(userId: Id[User]): Int = {
-    -1
+    db.readOnlyReplica { implicit s =>
+      libraryMembershipRepo.countLibrariesToSelf(userId)
+    }
   }
 
   private def countLibrariesForAnonymous(userId: Id[User]): Int = {
-    //todo(eishay): get countFollowLibraries
     db.readOnlyReplica { implicit s =>
-      libraryMembershipRepo.countLibrariesOfUserFromAnonymos(userId, countFollowLibraries = true)
+      val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
+      libraryMembershipRepo.countLibrariesOfUserFromAnonymos(userId, countFollowLibraries = showFollowLibraries)
     }
   }
+
+  private def getUserValueSetting(userId: Id[User], userVal: UserValueName)(implicit rs: RSession): Boolean = {
+    val settingsJs = userValueRepo.getValue(userId, UserValues.userProfileSettings)
+    UserValueSettings.retrieveSetting(userVal, settingsJs)
+  }
+
+  def libraries(user: User, viewer: Option[User], page: Paginator): Seq[ProfileLibraryView] = db.readOnlyMaster { implicit session =>
+    val libs = viewer match {
+      case None => libraryRepo.getLibrariesOfUserFromAnonymos(user.id.get, page)
+      case Some(other) if other.id.get == user.id.get => libraryRepo.getLibrariesOfSelf(user.id.get, page)
+      case Some(other) =>
+        libraryMembershipRepo.getOwnedLibrariesForOtherUser(user.id.get, other.id.get, page) map { id =>
+          libraryRepo.get(id) //cached
+        }
+    }
+    libs map profilelibraryView
+  }
+
+  private def profilelibraryView(library: Library)(implicit session: RSession) = {
+    val numKeeps = keepRepo.getCountByLibrary(library.id.get)
+    val numFollowers = libraryMembershipRepo.count
+    val followersSample: Seq[BasicUser] = if (numFollowers > 1) {
+      libraryMembershipRepo.pageWithLibraryIdAndAccess(library.id.get, 0, 2, Set(LibraryAccess.READ_ONLY)) map { im =>
+        basicUserRepo.load(im.userId)
+      }
+    } else Seq.empty
+    ProfileLibraryView(
+      library = library,
+      numKeeps = numKeeps,
+      numFollowers = library.memberCount - 1, //not including the creator
+      followersSample)
+  }
 }
+
+case class ProfileLibraryView(library: Library, numKeeps: Int, numFollowers: Int, followersSample: Seq[BasicUser])
 
 sealed abstract class LibraryError(val message: String)
 object LibraryError {
@@ -1184,7 +1284,8 @@ case class LibraryFail(status: Int, message: String)
   name: String,
   visibility: LibraryVisibility,
   description: Option[String] = None,
-  slug: String)
+  slug: String,
+  color: Option[HexColor] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],
@@ -1192,6 +1293,7 @@ case class LibraryInfo(
   visibility: LibraryVisibility,
   shortDescription: Option[String],
   url: String,
+  color: Option[HexColor] = None,
   owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
@@ -1207,6 +1309,7 @@ object LibraryInfo {
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'url).format[String] and
+    (__ \ 'color).formatNullable[HexColor] and
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
@@ -1222,6 +1325,7 @@ object LibraryInfo {
       visibility = lib.visibility,
       shortDescription = lib.description,
       url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
+      color = lib.color,
       owner = owner,
       numKeeps = keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
@@ -1256,6 +1360,7 @@ case class FullLibraryInfo(
   description: Option[String],
   slug: LibrarySlug,
   url: String,
+  color: Option[HexColor] = None,
   image: Option[LibraryImageInfo] = None,
   kind: LibraryKind,
   lastKept: Option[DateTime],
@@ -1278,3 +1383,30 @@ case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
 
 class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends ImmutableJsonCacheImpl[LibraryInfoIdKey, LibraryInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+@json case class MarketingSuggestedLibraryInfo(
+  id: PublicId[Library],
+  name: String,
+  caption: Option[String],
+  url: String,
+  image: Option[LibraryImageInfo] = None,
+  owner: BasicUser,
+  numKeeps: Int,
+  numFollowers: Int,
+  color: Option[HexColor])
+
+object MarketingSuggestedLibraryInfo {
+  def fromFullLibraryInfo(info: FullLibraryInfo, extra: Option[MarketingSuggestedLibrarySystemValue] = None) = {
+    MarketingSuggestedLibraryInfo(
+      id = info.id,
+      name = info.name,
+      caption = extra flatMap (_.caption),
+      url = info.url,
+      image = info.image,
+      owner = info.owner,
+      numKeeps = info.numKeeps,
+      numFollowers = info.numFollowers,
+      color = extra flatMap (_.color))
+  }
+}
+

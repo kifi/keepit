@@ -213,10 +213,11 @@ GET     /m/1/user/outgoingFriendRequests        @com.keepit.controllers.mobile.M
 GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.incomingFriendRequests
 POST    /m/1/user/delighted/answer              @com.keepit.controllers.mobile.MobileUserController.postDelightedAnswer()
 POST    /m/1/user/delighted/cancel              @com.keepit.controllers.mobile.MobileUserController.cancelDelightedSurvey()
-GET     /m/1/user/$id<[0-9a-f-]{36}> 			      @com.keepit.controllers.mobile.MobileUserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
+GET     /m/1/user/$id<[0-9a-f-]{36}> 			@com.keepit.controllers.mobile.MobileUserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
 POST    /m/1/user/:id/include                   @com.keepit.controllers.mobile.MobileUserController.includeFriend(id: ExternalId[User])
 POST    /m/1/user/:id/exclude                   @com.keepit.controllers.mobile.MobileUserController.excludeFriend(id: ExternalId[User])
-
+GET     /m/1/user/settings                      @com.keepit.controllers.mobile.MobileUserController.getSettings()
+POST    /m/1/user/settings                      @com.keepit.controllers.mobile.MobileUserController.setSettings()
 
 POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.MobileUserController.setAppsflyerAttribution()
 
@@ -274,6 +275,7 @@ GET     /terms                      @com.keepit.controllers.website.HomeControll
 GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
+GET     /libraries/featured         @com.keepit.controllers.website.HomeController.route(path = "libraries/featured")
 
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
@@ -295,7 +297,8 @@ GET     /users/:id/pics/:size/:name @com.keepit.controllers.assets.UserPictureCo
 POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureController.update()
 
 # Profile pages
-GET     /site/user/profile/:username @com.keepit.controllers.website.UserController.profile(username)
+GET     /site/user/:username/profile @com.keepit.controllers.website.UserController.profile(username)
+GET     /site/user/:username/libraries @com.keepit.controllers.website.LibraryController.libraries(username: Username, page: Int ?= 0, pageSize: Int ?= 1000)
 
 ##########################################
 # Feeds (RSS)
@@ -343,6 +346,8 @@ GET     /site/libraries             @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
 POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryController.copyKeeps()
 POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
+
+GET     /site/libraries/marketing-suggestions   @com.keepit.controllers.website.LibraryController.marketingSiteSuggestedLibraries()
 
 GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibraryById(id: PublicId[Library], showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None)
 GET     /site/libraries/:id/summary         @com.keepit.controllers.website.LibraryController.getLibrarySummaryById(id: PublicId[Library])
@@ -394,6 +399,9 @@ GET     /site/user/import-status    @com.keepit.controllers.website.UserControll
 GET     /site/user/import-check/:network  @com.keepit.controllers.website.UserController.checkIfImporting(network: String, callback: String)
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
+GET     /site/user/settings         @com.keepit.controllers.website.UserController.getSettings()
+POST    /site/user/settings         @com.keepit.controllers.website.UserController.setSettings()
+
 # regex below prevents route from usurping requests intended for other routes, like /site/user/friends
 GET     /site/user/$id<[0-9a-f-]{36}> @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
 GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
@@ -687,6 +695,7 @@ POST    /admin/learning/pornDetect/whitelist               @com.keepit.controlle
 
 GET     /admin/curator/librecos                            @com.keepit.controllers.admin.AdminLibraryRecommendationsController.index
 GET     /admin/curator/librecos/view                       @com.keepit.controllers.admin.AdminLibraryRecommendationsController.view
+GET     /admin/curator/generalRecos                        @com.keepit.controllers.admin.AdminGeneralRecommendationsController.view
 
 GET     /adimin/cortex/word2vec                            @com.keepit.controllers.admin.AdminWord2VecController.index
 POST    /admin/cortex/word2vec/wordSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.wordSimilarity

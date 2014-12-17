@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryCommander, LibraryImageCommander }
+import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, LibraryImageCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
@@ -10,7 +10,7 @@ import com.keepit.common.time.Clock
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
-import play.api.libs.json.{ Json }
+import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -45,8 +45,8 @@ class LibraryImageController @Inject() (
       case success: ImageProcessSuccess =>
         val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryImageController.defaultImageSize)
         libraryImageCommander.getBestImageForLibrary(libraryId, idealSize) match {
-          case Some(img) =>
-            Ok(Json.obj("imagePath" -> img.imagePath))
+          case Some(img: LibraryImage) =>
+            Ok(Json.toJson(LibraryImageInfo.createInfo(img)))
           case None =>
             NotFound(Json.obj("error" -> "image_not_found"))
         }
@@ -55,12 +55,12 @@ class LibraryImageController @Inject() (
 
   def positionLibraryImage(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    val imagePath = (request.body \ "imagePath").as[String]
+    val imagePath = (request.body \ "path").as[String]
     val posX = (request.body \ "x").asOpt[Int]
     val posY = (request.body \ "y").asOpt[Int]
 
     imagePath match {
-      case LibraryImageController.pathRegex(hashStr) =>
+      case LibraryImageController.pathHashRe(hashStr) =>
         val currentHash = db.readOnlyMaster { implicit s =>
           libraryImageRepo.getForLibraryId(libraryId)
         }.map(_.sourceFileHash).toSet
@@ -83,6 +83,6 @@ class LibraryImageController @Inject() (
 }
 
 object LibraryImageController {
-  val defaultImageSize = ImageSize(600, 480)
-  val pathRegex = """^library/(.*?)_\d+x\d+.+""".r
+  val defaultImageSize = ProcessedImageSize.XLarge.idealSize
+  val pathHashRe = "library/([^_]+)_.*".r
 }

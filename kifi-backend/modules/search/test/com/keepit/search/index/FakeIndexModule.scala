@@ -1,6 +1,6 @@
 package com.keepit.search.index
 
-import com.keepit.search.sharding._
+import com.keepit.search.index.sharding._
 import com.keepit.common.util.Configuration
 
 case class FakeIndexModule() extends IndexModule {

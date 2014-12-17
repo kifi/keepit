@@ -70,7 +70,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         }
 
         // add new library
-        val jsBody1 = Json.obj("name" -> "Drones stuff", "visibility" -> "published")
+        val jsBody1 = Json.obj("name" -> "Drones stuff", "visibility" -> "published", "color" -> "#BBBbbb")
         val result1 = createLibrary(user, jsBody1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
@@ -79,6 +79,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         (resultJson \ "visibility").as[LibraryVisibility] === LibraryVisibility.PUBLISHED
         (resultJson \ "owner").as[BasicUser].firstName === "R2"
         (resultJson \ "url").as[String] === "/r2d2/drones-stuff"
+        (resultJson \ "color").asOpt[HexColor].get.hex === "#bbbbbb"
 
         // add library with same title
         val jsBody2 = Json.obj("name" -> "Drones stuff", "visibility" -> "secret")
@@ -98,12 +99,13 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val pubLib2 = Library.publicId(lib2.id.get)(inject[PublicIdConfiguration])
 
         lib1.name === "Krabby Patty"
-        lib1.description.isEmpty === true
+        lib1.description must beEmpty
         lib1.visibility === LibraryVisibility.SECRET
         lib1.slug.value === "krabby-patty"
+        lib1.color must beEmpty
 
         // change fields (to something different)
-        val jsBody1 = Json.obj("newName" -> "Feed Gary", "newDescription" -> "qwer", "newVisibility" -> "secret", "newSlug" -> "feed-gary")
+        val jsBody1 = Json.obj("newName" -> "Feed Gary", "newDescription" -> "qwer", "newVisibility" -> "secret", "newSlug" -> "feed-gary", "color" -> "#BBbbbb")
         val result1 = modifyLibrary(user, pubLib1, jsBody1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
@@ -112,6 +114,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         (resultJson \ "shortDescription").asOpt[String] === Some("qwer")
         (resultJson \ "visibility").as[LibraryVisibility] === LibraryVisibility.SECRET
         (resultJson \ "url").as[String] === "/spongebob/feed-gary"
+        (resultJson \ "color").asOpt[HexColor].get.hex === "#bbbbbb"
 
         // change a library title to an existing library's title
         val result2 = modifyLibrary(user, pubLib1, Json.obj("newName" -> lib2.name))

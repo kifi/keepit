@@ -6,7 +6,7 @@ import com.keepit.search.SearchServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import scala.concurrent.Future
-import com.keepit.search.IndexInfo
+import com.keepit.search.index.IndexInfo
 
 class AdminIndexInfoController @Inject() (
     val userActionsHelper: UserActionsHelper,

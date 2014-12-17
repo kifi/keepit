@@ -3,6 +3,7 @@ package com.keepit.common.oauth
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
+import play.api.libs.json.JsValue
 import play.api.libs.oauth.ConsumerKey
 import play.api.libs.ws.WSResponse
 

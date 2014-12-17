@@ -13,6 +13,7 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social._
 import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.controllers.website.{ routes, UserController }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model.{ UserConnection, _ }
@@ -25,10 +26,13 @@ import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector, Shoebox
 import org.specs2.mutable.Specification
 import play.api.Play
 import play.api.libs.json._
+import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core.providers.utils.{ BCryptPasswordHasher, PasswordHasher }
 import securesocial.core.{ IdentityId, _ }
+
+import scala.concurrent.Future
 
 class MobileUserControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -288,6 +292,51 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
             {"network":"linkedin","profileUrl":"http://www.linkedin.com/in/rf","pictureUrl":"http://my.pic.com/pic.jpg"}
           ]""")
         Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
+    "set user profile settings" in {
+      withDb(modules: _*) { implicit injector =>
+        val mobileController = inject[MobileUserController]
+        val user = db.readWrite { implicit session =>
+          userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GDubs"), normalizedUsername = "gdubs"))
+        }
+
+        inject[FakeUserActionsHelper].setUser(user)
+        val userController = inject[UserController]
+        val getPath = routes.MobileUserController.getSettings().url
+        val setPath = routes.MobileUserController.setSettings().url
+
+        // initial getSettings
+        val request1 = FakeRequest("GET", getPath)
+        val result1: Future[Result] = mobileController.getSettings()(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        contentAsString(result1) === s"""{"show_followed_libraries":true}"""
+
+        // set settings (show_followed_libraries to false)
+        val request2 = FakeRequest("POST", setPath).withBody(Json.obj("show_followed_libraries" -> false))
+        val result2: Future[Result] = mobileController.setSettings()(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        contentAsString(result2) === s"""{"show_followed_libraries":false}"""
+
+        db.readOnlyMaster { implicit s =>
+          inject[UserValueRepo].getValueStringOpt(user.id.get, UserValueName.USER_PROFILE_SETTINGS).get === s"""{"show_followed_libraries":false}"""
+        }
+
+        // get settings
+        val request3 = FakeRequest("GET", getPath)
+        val result3: Future[Result] = mobileController.getSettings()(request3)
+        status(result3) must equalTo(OK)
+        contentAsString(result3) === s"""{"show_followed_libraries":false}"""
+
+        // reset settings (show_followed_libraries to true)
+        val request4 = FakeRequest("POST", setPath).withBody(Json.obj("show_followed_libraries" -> true))
+        val result4: Future[Result] = mobileController.setSettings()(request4)
+        status(result4) must equalTo(OK)
+        contentType(result4) must beSome("application/json")
+        contentAsString(result4) === s"""{"show_followed_libraries":true}"""
       }
     }
   }

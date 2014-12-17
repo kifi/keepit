@@ -2,11 +2,10 @@ package com.keepit.search.engine.uri
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.engine._
-import com.keepit.search.engine.explain.TargetedScorer
 import com.keepit.search.engine.query.core.QueryProjector
-import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
+import com.keepit.search.{ SearchFilter, SearchConfig }
 import com.keepit.search.index.graph.keep.KeepFields
-import com.keepit.search.index.{ IdMapper, WrappedSubReader }
+import com.keepit.search.index.{ Searcher, IdMapper, WrappedSubReader }
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
 import org.apache.lucene.index.{ NumericDocValues, Term, AtomicReaderContext }
@@ -25,10 +24,6 @@ class UriFromKeepsScoreVectorSource(
     protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
   private[this] var discoverableKeepCount = 0
-
-  override protected def idResolver(readerContext: AtomicReaderContext): TargetedScorer.Resolver = {
-    docValueBasedIdResolver(readerContext, KeepFields.uriIdField)
-  }
 
   override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.textSearchFields)
 

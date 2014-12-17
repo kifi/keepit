@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.search.sharding.Shard
+import com.keepit.search.index.sharding.Shard
 import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.common.db.Id
 import com.keepit.common.zookeeper.ServiceInstance

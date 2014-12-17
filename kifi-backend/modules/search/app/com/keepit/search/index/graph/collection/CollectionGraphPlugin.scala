@@ -10,9 +10,9 @@ import com.keepit.model.{ Collection, NormalizedURI }
 import com.keepit.search.index.BasicIndexerActor
 import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexManager
-import com.keepit.search.sharding.ShardedCollectionIndexer
-import com.keepit.search.sharding.ShardedIndexerPlugin
-import com.keepit.search.sharding.ShardedIndexerPluginImpl
+import com.keepit.search.index.sharding.ShardedCollectionIndexer
+import com.keepit.search.index.sharding.ShardedIndexerPlugin
+import com.keepit.search.index.sharding.ShardedIndexerPluginImpl
 
 trait CollectionGraphPlugin extends ShardedIndexerPlugin[NormalizedURI, Collection, CollectionIndexer]
 

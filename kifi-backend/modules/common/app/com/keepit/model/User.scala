@@ -1,5 +1,9 @@
 package com.keepit.model
 
+import java.util.UUID
+
+import play.api.mvc.{ PathBindable, QueryStringBindable }
+
 import scala.concurrent.duration._
 
 import org.joda.time.DateTime
@@ -64,6 +68,28 @@ object User {
 
 @json
 case class Username(value: String)
+
+object Username {
+
+  implicit def queryStringBinder(implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[Username] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, Username]] = {
+      stringBinder.bind(key, params) map {
+        case Right(username) => Right(Username(username))
+        case _ => Left("Unable to bind an Username")
+      }
+    }
+
+    override def unbind(key: String, id: Username): String = {
+      stringBinder.unbind(key, id.value)
+    }
+  }
+
+  implicit def pathBinder[T] = new PathBindable[Username] {
+    override def bind(key: String, value: String): Either[String, Username] = Right(Username(value))
+
+    override def unbind(key: String, username: Username): String = username.value
+  }
+}
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
   override val version = 8

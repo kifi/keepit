@@ -9,6 +9,7 @@ POST   /internal/curator/adHocRecos  @com.keepit.curator.controllers.internal.Cu
 
 POST   /internal/curator/topRecos  @com.keepit.curator.controllers.internal.CuratorController.topRecos(userId: Id[User])
 GET   /internal/curator/topPublicRecos  @com.keepit.curator.controllers.internal.CuratorController.topPublicRecos()
+GET   /internal/curator/generalRecos  @com.keepit.curator.controllers.internal.CuratorController.generalRecos()
 
 POST   /internal/curator/updateUriRecommendationFeedback @com.keepit.curator.controllers.internal.CuratorController.updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI])
 POST   /internal/curator/triggerEmailToUser 	@com.keepit.curator.controllers.internal.CuratorController.triggerEmailToUser(code: String, userId: Id[User])

@@ -3,13 +3,12 @@ package com.keepit.search.engine.uri
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine._
-import com.keepit.search.engine.explain.DirectExplainContext
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.engine.query.IdSetFilter
-import com.keepit.search.{ SearchConfig, SearchFilter, Searcher }
+import com.keepit.search.{ SearchConfig, SearchFilter }
 import com.keepit.search.index.graph.keep.KeepFields
-import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.util.join.{ DataBufferReader, DataBuffer, DataBufferWriter }
 import org.apache.lucene.index.{ AtomicReaderContext, Term }
@@ -48,10 +47,6 @@ class UriFromLibraryScoreVectorSource(
   }
 
   override def execute(coreSize: Int, dataBuffer: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
-    execute(coreSize, dataBuffer)
-  }
-
-  override def explain(targetId: Long, coreSize: Int, dataBuffer: DataBuffer, directExplainContext: DirectExplainContext): Unit = {
     execute(coreSize, dataBuffer)
   }
 

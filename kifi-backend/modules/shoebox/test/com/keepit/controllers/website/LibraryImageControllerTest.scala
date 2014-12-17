@@ -65,27 +65,23 @@ class LibraryImageControllerTest extends Specification with ShoeboxTestInjector 
         // Invalid Access to Library (wrong user)
         status(uploadFile(user2, libPubId1, fakeFile, None, None, None)) === FORBIDDEN
 
-        // Correct Upload
+        // Correct Upload, no position specified
         val uploadResp1 = uploadFile(user1, libPubId1, fakeFile, None, None, None)
         status(uploadResp1) === OK
         Json.parse(contentAsString(uploadResp1)) === Json.parse(
-          s""" { "imagePath" : "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png" }"""
-        )
+          """{"path": "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x": 50, "y": 50}""")
 
-        // Upload again to same library - same image path
-        val uploadResp2 = uploadFile(user1, libPubId1, fakeFile, None, None, None)
+        // Upload again to same library - same image path, one position dimension specified
+        val uploadResp2 = uploadFile(user1, libPubId1, fakeFile, None, Some(20), None)
         status(uploadResp2) === OK
         Json.parse(contentAsString(uploadResp2)) === Json.parse(
-          s""" { "imagePath" : "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png" }"""
-        )
+          """{"path" : "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x": 20, "y": 50}""")
 
-        // Upload again to different library - same image path
-        val uploadResp3 = uploadFile(user1, libPubId2, fakeFile, None, None, None)
+        // Upload again to different library - same image path, a different position dimension specified
+        val uploadResp3 = uploadFile(user1, libPubId2, fakeFile, None, None, Some(100))
         status(uploadResp3) === OK
         Json.parse(contentAsString(uploadResp3)) === Json.parse(
-          s""" { "imagePath" : "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png" }"""
-        )
-
+          """{"path" : "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x": 50, "y": 100}""")
       }
     }
 
@@ -98,22 +94,21 @@ class LibraryImageControllerTest extends Specification with ShoeboxTestInjector 
         // Correct Upload
         val uploadResp = uploadFile(user1, libPubId1, fakeFile, None, None, None)
         status(uploadResp) === OK
-        val imagePath1 = (contentAsJson(uploadResp) \ "imagePath").as[String]
+        val imagePath1 = (contentAsJson(uploadResp) \ "path").as[String]
 
         // apply positioning to bad imageUrl
-        status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x" -> 20))) === BAD_REQUEST // wrong path
-        status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "library/asdf_30x20.jpg", "x" -> 20))) === BAD_REQUEST // bad image hash
-        status(positionImage(user1, libPubId1, Json.obj("imagePath" -> "library/26dbdc56d54dbc94830f7cfc85031481_30xa.jpg", "x" -> 20))) === BAD_REQUEST // bad width or height
+        status(positionImage(user1, libPubId1, Json.obj("path" -> "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x" -> 20))) === BAD_REQUEST // wrong path
+        status(positionImage(user1, libPubId1, Json.obj("path" -> "library/asdf_30x20.jpg", "x" -> 20))) === BAD_REQUEST // bad image hash
 
         // Invalid Access to Library (wrong user)
-        status(positionImage(user2, libPubId1, Json.obj("imagePath" -> imagePath1, "x" -> 5))) === FORBIDDEN
+        status(positionImage(user2, libPubId1, Json.obj("path" -> imagePath1, "x" -> 5))) === FORBIDDEN
 
         // apply positioning with one dimension specified
-        val position1 = Json.obj("imagePath" -> imagePath1, "x" -> 20)
+        val position1 = Json.obj("path" -> imagePath1, "x" -> 20)
         status(positionImage(user1, libPubId1, position1)) === NO_CONTENT
 
         // apply positioning with both dimensions specified
-        val position2 = Json.obj("imagePath" -> imagePath1, "x" -> 21, "y" -> 51)
+        val position2 = Json.obj("path" -> imagePath1, "x" -> 21, "y" -> 51)
         status(positionImage(user1, libPubId1, position2)) === NO_CONTENT
       }
     }

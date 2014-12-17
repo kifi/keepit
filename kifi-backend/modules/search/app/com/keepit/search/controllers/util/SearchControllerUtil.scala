@@ -7,6 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.search.controllers.util.SearchControllerUtil._
 import com.keepit.model._
 import com.keepit.search.engine.uri.UriSearchResult
+import com.keepit.search.index.Searcher
 import com.keepit.search.result.{ ResultUtil, KifiSearchResult }
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient

@@ -14,12 +14,14 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time.Clock
+import com.keepit.common.util.Paginator
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
+import play.api.mvc.Action
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
@@ -33,6 +35,7 @@ class LibraryController @Inject() (
   keepRepo: KeepRepo,
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
+  userCommander: UserCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   collectionRepo: CollectionRepo,
   fortyTwoConfig: FortyTwoConfig,
@@ -65,7 +68,7 @@ class LibraryController @Inject() (
     val newDescription = (json \ "description").asOpt[String]
     val newSlug = (json \ "slug").asOpt[String]
     val newVisibility = (json \ "visibility").asOpt[LibraryVisibility]
-    val res = libraryCommander.modifyLibrary(id, request.userId, newName, newDescription, newSlug, newVisibility)
+    val res = libraryCommander.modifyLibrary(id, request.userId, newName, newDescription, newSlug, newVisibility, None)
     res match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
@@ -526,10 +529,22 @@ class LibraryController @Inject() (
           Ok(Json.obj("libs" -> libs, "related" -> isRelated))
       }
   }
+
+  //todo(eishay): compleate json structure and test
+  def libraries(username: Username, page: Int, pageSize: Int) = MaybeUserAction { request =>
+    val user = userCommander.userFromUsername(username)
+    val viewer = request.userOpt
+    val libs = libraryCommander.libraries(user, viewer, Paginator(page, pageSize))
+    Ok(Json.obj("libraries" -> Json.arr(libs map { lib => Json.obj("id" -> lib.library.id.get) })))
+  }
+
+  def marketingSiteSuggestedLibraries() = Action.async {
+    libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
+  }
 }
 
 object LibraryController {
-  val defaultLibraryImageSize = ImageSize(640, 480)
+  val defaultLibraryImageSize = ProcessedImageSize.XLarge.idealSize
 }
 
 private object ImplicitHelper {
