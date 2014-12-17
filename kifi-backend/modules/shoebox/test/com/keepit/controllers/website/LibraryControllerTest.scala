@@ -1228,8 +1228,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               value = s"""
                    |[
                    |  { "id": 424242, "caption": "does not exist" },
-                   |  { "id": ${lib2.id.get} },
-                   |  { "id": ${lib1.id.get}, "caption": "yo dawg" },
+                   |  { "id": ${lib2.id.get}, "color": "#abcdef" },
+                   |  { "id": ${lib1.id.get}, "caption": "yo dawg", "color": "#ffffff" },
                    |  { "id": ${lib3.id.get} }
                    |]
                  """.stripMargin))
@@ -1248,10 +1248,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libInfos(0).numFollowers === 1
           libInfos(0).id.id must beMatching("^l.+") // tests public id
           libInfos(0).caption must beNone
+          libInfos(0).color.get.hex === "#abcdef"
           libInfos(1).name === "Scala"
           libInfos(1).numFollowers === 2
           libInfos(1).owner.fullName === "John Doe"
           libInfos(1).caption must beSome("yo dawg")
+          libInfos(1).color.get.hex === "#ffffff"
         }
       }
     }
