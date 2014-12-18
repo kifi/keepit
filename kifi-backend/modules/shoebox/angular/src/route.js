@@ -11,14 +11,19 @@ angular.module('kifi')
     $httpProvider.defaults.withCredentials = true;
 
     // URL redirects.
+    var trailingSlashRe = /^([^?#]+)\/([?#].*|$)/;
     $urlRouterProvider
+      .rule(function ($injector, $location) {
+        var match = $location.url().match(trailingSlashRe);
+        if (match) {
+          return match[1] + match[2]; // remove trailing slash
+        }
+      })
       .when('/friends/invite', '/invite')
       .when('/friends/requests', '/friends')
       .when('/friends/requests/:network', '/friends')
       .when('/recommendations', '/')
-
-      // For any unmatched url, redirect to '/'.
-      .otherwise('/');
+      .otherwise('/');  // last resort
 
     // Set up the states.
     $stateProvider
