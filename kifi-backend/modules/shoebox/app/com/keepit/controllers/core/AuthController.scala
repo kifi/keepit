@@ -18,6 +18,7 @@ import play.api.Play._
 import play.api.i18n.Messages
 import play.api.libs.json.{ JsValue, JsNumber, Json }
 import play.api.mvc._
+import play.twirl.api.Html
 import securesocial.core._
 import play.api.libs.iteratee.Enumerator
 import play.api.Play
@@ -346,7 +347,7 @@ class AuthController @Inject() (
   def popupAfterLinkSocial(provider: String) = UserAction { implicit request =>
     def esc(s: String) = s.replaceAll("'", """\\'""")
     val identity = request.identityOpt.get
-    Ok(s"<script>try{window.opener.afterSocialLink('${esc(identity.firstName)}','${esc(identity.lastName)}','${esc(identityPicture(identity))}')}finally{window.close()}</script>")
+    Ok(Html(s"<script>try{window.opener.afterSocialLink('${esc(identity.firstName)}','${esc(identity.lastName)}','${esc(identityPicture(identity))}')}finally{window.close()}</script>"))
       .withSession(request.session - PopupKey)
   }
 

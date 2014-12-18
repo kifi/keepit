@@ -576,8 +576,8 @@ class UserController @Inject() (
         }
         if ((System.currentTimeMillis - ts) > abookUploadConf.timeoutThreshold * 1000) {
           done.set(true)
-          Some(s"<script>$callback($id,'timeout',${numContacts},${numProcessed})</script>")
-        } else Some(s"<script>$callback($id,'${state}',${numContacts},${numProcessed})</script>")
+          Some(Html(s"<script>$callback($id,'timeout',${numContacts},${numProcessed})</script>"))
+        } else Some(Html(s"<script>$callback($id,'${state}',${numContacts},${numProcessed})</script>"))
       }
     }
     val returnEnumerator = Enumerator.generateM {
