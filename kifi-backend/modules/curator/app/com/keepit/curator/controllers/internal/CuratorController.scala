@@ -30,6 +30,7 @@ class CuratorController @Inject() (
     seedCommander: SeedIngestionCommander,
     recoFeedbackCommander: RecommendationFeedbackCommander,
     recoRetrievalCommander: RecommendationRetrievalCommander,
+    publicFeedGenCommander: PublicFeedGenerationCommander,
     feedDigestActor: ActorInstance[EngagementEmailActor],
     scheduler: Scheduler,
     feedEmailSender: FeedDigestEmailSender,
@@ -159,5 +160,10 @@ class CuratorController @Inject() (
         }
       }
     }
+  }
+
+  def publicFeedStartInitialLoading = Action { request =>
+    publicFeedGenCommander.startInitialLoading()
+    Ok
   }
 }

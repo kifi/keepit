@@ -26,11 +26,4 @@ class RecommendationCleanupCommander @Inject() (
         }
     }
   }
-
-  private val defaultLimitNumFeeds = 5000
-  def cleanupLowMasterScoreFeeds(limitNumFeeds: Option[Int] = Some(defaultLimitNumFeeds), before: Option[DateTime] = Some(currentDateTime.minusDays(14))): Boolean = {
-    db.readWrite { implicit session =>
-      feedsRepo.cleanupLowMasterScoreFeeds(limitNumFeeds.getOrElse(defaultLimitNumFeeds), before.getOrElse(currentDateTime.minusDays(14)))
-    }
-  }
 }

@@ -70,28 +70,5 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
         }
       }
     }
-
-    "mark low master score feeds to inactive" in {
-      withDb(modules: _*) { implicit injector =>
-        val repo = inject[PublicFeedRepo]
-        db.readWrite { implicit s =>
-          val feeds = setupPublicFeeds()
-          repo.save(feeds(0))
-          repo.save(feeds(1))
-          repo.save(feeds(2))
-          repo.save(feeds(3))
-          repo.save(feeds(4))
-        }
-
-        val commander = inject[RecommendationCleanupCommander]
-        val update = commander.cleanupLowMasterScoreFeeds(Some(4), Some(currentDateTime.minusMillis(1)))
-        update === true
-
-        db.readOnlyMaster { implicit s =>
-          val recos = repo.getByTopMasterScore(3)
-          recos.size === 3
-        }
-      }
-    }
   }
 }

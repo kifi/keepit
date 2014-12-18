@@ -26,7 +26,8 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def cleanupLowMasterScoreRecos(userId: Id[User], limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Unit
   def getUriIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[NormalizedURI]]
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]]
-  def getGeneralRecommendationsBylUserEngagements(limit: Int)(implicit session: RSession): Seq[(Id[NormalizedURI], Float)]
+  def getGeneralRecommendationScore(uriId: Id[NormalizedURI], minClickedUsers: Int = 3)(implicit session: RSession): Option[Float]
+  def getGeneralRecommendationCandidates(limit: Int, minClickedUsers: Int = 3)(implicit session: RSession): Seq[Id[NormalizedURI]]
 }
 
 @Singleton
@@ -153,19 +154,26 @@ class UriRecommendationRepoImpl @Inject() (
     sql"SELECT DISTINCT user_id FROM uri_recommendation".as[Id[User]].list.toSet
   }
 
-  def getGeneralRecommendationsBylUserEngagements(limit: Int)(implicit session: RSession): Seq[(Id[NormalizedURI], Float)] = {
+  def getGeneralRecommendationScore(uriId: Id[NormalizedURI], minClickedUsers: Int = 3)(implicit session: RSession): Option[Float] = {
     import StaticQuery.interpolation
 
-    // take recos clicked by three or more users
+    // take recos clicked by many users (minClickUsers)
     // compute scores (the root-mean-square of the inverse of master_scores) for each URI
     sql"""
-      select uri_id, sqrt(sum(score * score)/count(*))
-      from (select uri_id, 1/master_score score from uri_recommendation where clicked > 0) x
-      group by uri_id
-      having count(*) > 2
-      order by sum(score * score)/count(*) desc
-      limit $limit
-    """.as[(Id[NormalizedURI], Float)].list
+      select sqrt(sum(score * score)/count(*))
+      from (select uri_id, 1/master_score score from uri_recommendation where where uriId = $uriId and clicked > 0) x
+      having count(*) >= $minClickedUsers
+    """.as[Float].firstOption
+  }
+
+  def getGeneralRecommendationCandidates(limit: Int, minClickedUsers: Int = 3)(implicit session: RSession): Seq[Id[NormalizedURI]] = {
+    import StaticQuery.interpolation
+
+    // take recos clicked by many users (minClickUsers)
+    sql"""
+      select uri_id from uri_recommendation where uri_id >= 0 and clicked > 0
+      group by uri_id having count(*) >= $minClickedUsers limit $limit
+    """.as[Id[NormalizedURI]].list
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
