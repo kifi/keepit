@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('UserProfileCtrl', [
   '$scope', '$rootScope', '$state', '$stateParams', '$window',
-  'env', 'keepWhoService', 'profileService', 'userProfileActionService', 'util',
+  'env', 'keepWhoService', 'profileService', 'userProfileActionService',
   function ($scope, $rootScope, $state, $stateParams, $window,
-            env, keepWhoService, profileService, userProfileActionService, util) {
+            env, keepWhoService, profileService, userProfileActionService) {
     //
     // Configs.
     //
@@ -23,12 +23,6 @@ angular.module('kifi')
       // { name: 'HELPED', routeState: 'userProfile.helped', countFieldName: 'helpedRekeep' }
     ];
 
-    var libraryNavLinksConfig = [
-      { name: 'my', routeState: 'userProfile.libraries.my' },
-      { name: 'following', routeState: 'userProfile.libraries.following' },
-      { name: 'invited', routeState: 'userProfile.libraries.invited' }
-    ];
-
 
     //
     // Scope data.
@@ -38,7 +32,6 @@ angular.module('kifi')
     $scope.viewingOwnProfile = false;
     $scope.canConnectToUser = false;
     $scope.userNavLinks = [];
-    $scope.libraryNavLinks = [];
     $scope.optionalAction = null;
 
 
@@ -65,10 +58,6 @@ angular.module('kifi')
         initViewingUserStatus();
         initUserNavLinks();
       });
-
-      // Need to add in a check for whether we're on libraries tab before we do this.
-      initLibraries([]);
-      initLibraryNavLinks();
     }
 
     function initProfile(profile) {
@@ -99,27 +88,54 @@ angular.module('kifi')
       });
     }
 
+
+    // Initialize controller.
+    init();
+  }
+])
+
+
+.controller('UserProfileLibrariesCtrl', [
+  '$scope', '$rootScope', '$state', 'util',
+  function ($scope, $rootScope, $state, util) {
+    //
+    // Configs.
+    //
+    var libraryNavLinksConfig = [
+      { type: 'my', label: 'MY', routeState: 'userProfile.libraries.my' },
+      { type: 'following', label: 'FOLLOWING', routeState: 'userProfile.libraries.following' },
+      { type: 'invited', label: 'INVITED', routeState: 'userProfile.libraries.invited' }
+    ];
+
+
+    //
+    // Scope data.
+    //
+    $scope.libraryNavLinks = [];
+
+
+    //
+    // Internal functions.
+    //
+    function init() {
+      initLibraryNavLinks();
+    }
+
     function updateSelectedLibraryNavLink() {
       _.forEach($scope.libraryNavLinks, function (navLink) {
-        navLink.selected = navLink.name === $state.current.data.libraryType;
+        navLink.selected = navLink.type === $state.current.data.libraryType;
       });
     }
 
     function initLibraryNavLinks() {
-      $scope.libraryNavLinks = _.map(libraryNavLinksConfig, function (config) {
-        return {
-          name: config.name,
-          routeState: config.routeState
-        };
-      });
-
+      $scope.libraryNavLinks = libraryNavLinksConfig;
       updateSelectedLibraryNavLink();
     }
 
-    function initLibraries(libraries) {
-      $scope.libraries = libraries;
-    }
 
+    //
+    // Watches and listeners.
+    //
     var deregisterUpdateSelectedLibraryNavLink = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
       if (util.startsWith(toState.name, 'userProfile.libraries')) {
         updateSelectedLibraryNavLink();
@@ -130,14 +146,6 @@ angular.module('kifi')
 
     // Initialize controller.
     init();
-  }
-])
-
-
-.controller('UserProfileLibrariesCtrl', [
-  '$scope',
-  function (/* $scope */) {
-    // Noop for now.
   }
 ])
 
