@@ -54,6 +54,7 @@ angular.module('kifi')
         $state.go('home');
       }
       if (!$rootScope.userLoggedIn && !$stateParams.upb) {
+        $state.go('home');
         $window.location = env.navBase;
       }
 
