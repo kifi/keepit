@@ -20,6 +20,7 @@ case class KeepImage(
     sourceImageUrl: Option[String],
     isOriginal: Boolean) extends BaseImage with Model[KeepImage] {
 
+  def dimensions = ImageSize(width, height)
   def withId(id: Id[KeepImage]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }

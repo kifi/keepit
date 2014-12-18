@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfTagList', [
-  '$document', '$sce', '$log', 'keyIndices', 'hashtagService', '$location', '$routeParams', '$analytics', '$rootScope', 'env',
-  function ($document, $sce, $log, keyIndices, hashtagService, $location, $routeParams, $analytics, $rootScope, env) {
+  '$document', '$sce', '$log', 'keyIndices', 'hashtagService', '$location', '$stateParams', '$analytics', '$rootScope', 'env',
+  function ($document, $sce, $log, keyIndices, hashtagService, $location, $stateParams, $analytics, $rootScope, env) {
     var dropdownSuggestionCount = 5;
 
     return {
@@ -46,8 +46,8 @@ angular.module('kifi')
             }
             else {
               // If they are in library search, replace query with tag.
-              if ($routeParams.username && $routeParams.librarySlug) {
-                return '/' + $routeParams.username + '/' + $routeParams.librarySlug + '/find?q=tag:' + encodeURIComponent(tagPath);
+              if ($stateParams.username && $stateParams.librarySlug) {
+                return '/' + $stateParams.username + '/' + $stateParams.librarySlug + '/find?q=tag:' + encodeURIComponent(tagPath);
               }
               // Nothing we can do; just stay put.
               else {
@@ -347,7 +347,6 @@ angular.module('kifi')
 
         scope.onTagClick = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedTag' });
-          $rootScope.$emit('newSearchUrl');
         };
 
         scope.highlightTag(null);

@@ -244,29 +244,23 @@ class MobileUserController @Inject() (
   }
 
   def getSettings() = UserAction { request =>
-    val userSettings = db.readOnlyMaster { implicit s =>
+    val storedBody = db.readOnlyMaster { implicit s =>
       userValueRepo.getValue(request.userId, UserValues.userProfileSettings)
-    }.as[JsObject].value
-    val defaultMapping = UserValueSettings.defaultSettings
-    val returnSettings = defaultMapping.map {
-      case (userVal, value) =>
-        if (userSettings.contains(userVal.name)) {
-          userVal.name -> Json.toJson(userSettings(userVal.name))
-        } else {
-          userVal.name -> Json.toJson(value)
-        }
     }
-    Ok(Json.toJson(returnSettings))
+    val userSettings = UserValueSettings.readFromJsValue(storedBody)
+    //Ok(Json.toJson(userSettings)) // todo (aaron): use this when multiple fields to settings. With only one field @json macro doesn't describe field name
+    Ok(Json.obj("showFollowedLibraries" -> userSettings.showFollowedLibraries))
   }
 
   def setSettings() = UserAction(parse.tolerantJson) { request =>
-    val showFollowLibrariesOpt = (request.body \ UserValueName.SHOW_FOLLOWED_LIBRARIES.name).asOpt[Boolean]
+    val showFollowLibrariesOpt = (request.body \ "showFollowedLibraries").asOpt[Boolean]
     val settingsList = Map(UserValueName.SHOW_FOLLOWED_LIBRARIES -> showFollowLibrariesOpt)
 
     val newMapping = settingsList.collect {
       case (userVal, Some(optionVal)) => userVal -> Json.toJson(optionVal)
     }
-    Ok(userCommander.setSettings(request.userId, newMapping))
+    userCommander.setSettings(request.userId, newMapping)
+    NoContent
   }
 
   //this takes appsflyer attribution data and converts it into a kcid for the user

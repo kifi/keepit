@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$rootScope', '$location', '$q', '$routeParams', '$window', 'keepDecoratorService', 'searchActionService', 'libraryService',
-  function ($scope, $rootScope, $location, $q, $routeParams, $window, keepDecoratorService, searchActionService, libraryService) {
+  '$scope', '$rootScope', '$location', '$q', '$state', '$timeout', '$window', 'keepDecoratorService', 'searchActionService', 'libraryService',
+  function ($scope, $rootScope, $location, $q, $state, $timeout, $window, keepDecoratorService, searchActionService, libraryService) {
     //
     // Internal data.
     //
@@ -44,10 +44,10 @@ angular.module('kifi')
     }
 
     function init() {
-      query = $routeParams.q || '';
-      filter = $routeParams.f || 'a';
-      userName = $routeParams.username || '';
-      librarySlug = $routeParams.librarySlug || '';
+      query = $state.params.q || '';
+      filter = $state.params.f || 'a';
+      userName = $state.params.username || '';
+      librarySlug = $state.params.librarySlug || '';
 
       var libraryIdPromise = null;
 
@@ -151,7 +151,9 @@ angular.module('kifi')
         $scope.hasMore = !!result.mayHaveMore;
         lastResult = result;
         $scope.loading = false;
-        $rootScope.$emit('newSearchQuery', query);
+        $timeout(function () {
+          $window.document.body.scrollTop = 0;
+        });
       });
     };
 
@@ -218,10 +220,18 @@ angular.module('kifi')
     //
     // Watches and event listeners.
     //
-    var newSearch = _.debounce(init, 250, {
-      'leading': true
-    });
-    $scope.$on('$routeUpdate', newSearch);
+    var newSearch = _.debounce(function () {
+        // Use $state.params instead of $stateParams because changes to $stateParams
+        // does not propagate to HeaderCtrl when it is injected there.
+        // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
+        _.assign($state.params, $location.search());
+        init();
+      },
+      250,
+      { 'leading': true }
+    );
+    $scope.$on('$locationChangeSuccess', newSearch);
+
 
     // Report search analytics on unload.
     var onUnload = function () {
@@ -256,11 +266,6 @@ angular.module('kifi')
       });
     });
     $scope.$on('$destroy', deregisterKeepAddedListener);
-
-    var deregisterUpdateLibrarySearch = $rootScope.$on('librarySearched', function () {
-      init();
-    });
-    $scope.$on('$destroy', deregisterUpdateLibrarySearch);
 
 
     init();

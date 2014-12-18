@@ -42,6 +42,7 @@ angular.module('kifi')
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
+      profileSettings: route('/user/settings'),
       logout: '/logout',
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
@@ -209,6 +210,13 @@ angular.module('kifi')
       },
       getRelatedLibraries: function (libraryId) {
         return route('/libraries/' + libraryId + '/related');
+      },
+
+      ////////////////////////////
+      // User Profile           //
+      ////////////////////////////
+      getUserProfile: function (username) {
+        return route('/user/' + username + '/profile');
       }
     };
   }

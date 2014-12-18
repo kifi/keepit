@@ -1,0 +1,29 @@
+<div class="profile-manage-settings">
+  <a class="profile-manage-settings-title-wrapper" href="javascript:" ng-click="toggleOpen()">
+    <div class="profile-setting-arrow" ng-class="{'active':isOpen}"></div>
+    <div class="profile-manage-settings-title" ng-class="{'active':isOpen}">Manage your Profile</div>
+  </a>
+
+  <div class="profile-manage-settings-change" ng-show="isOpen">
+
+    <div class="profile-manage-settings-group">
+
+      <div class="profile-manage-settings-option" ng-click="userProfileSettings.showFollowedLibraries=true">
+        <div class="profile-manage-settings-option-button">
+          <div class="checked" ng-show="userProfileSettings.showFollowedLibraries==true"></div>
+        </div>
+        <span class="profile-manage-settings-option-text">Show Libraries you are following on your Profile</span>
+      </div>
+
+      <div class="profile-manage-settings-option" ng-click="userProfileSettings.showFollowedLibraries=false">
+        <div class="profile-manage-settings-option-button">
+          <div class="checked" ng-show="userProfileSettings.showFollowedLibraries==false"></div>
+        </div>
+        <span class="profile-manage-settings-option-text">Hide Libraries you are following on your Profile</span>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

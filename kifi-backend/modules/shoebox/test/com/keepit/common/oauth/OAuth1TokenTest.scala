@@ -97,6 +97,9 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
         val suiOpt = db.readOnlyMaster { implicit ro => socialUserInfoRepo.getOpt(SocialId(profile.userId.id), SocialNetworks.TWITTER) }
         suiOpt.isDefined === true
         suiOpt.exists { sui => sui.userId.isEmpty } === true // userId must not be set in this case
+
+        val socialUser = suiOpt.get.credentials.get
+        socialUser.oAuth1Info.isDefined === true
       }
     }
     "(signup) report invalid token when twtr reports error" in {

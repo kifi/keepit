@@ -68,7 +68,9 @@ class FacebookOAuthProviderImpl @Inject() (
             emailOpt = email.map(EmailAddress(_)),
             firstNameOpt = firstName,
             lastNameOpt = lastName,
-            pictureUrl = avatarUrl.map(new java.net.URL(_))
+            handle = None,
+            pictureUrl = avatarUrl.map(new java.net.URL(_)),
+            profileUrl = Some(new java.net.URL(s"http://facebook.com/$userId"))
           )
       }
     }

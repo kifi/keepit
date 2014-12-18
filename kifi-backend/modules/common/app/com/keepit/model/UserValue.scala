@@ -1,13 +1,12 @@
 package com.keepit.model
 
-import com.google.inject.Inject
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, Key, StringCacheImpl }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.kifi.macros.json
 import org.joda.time.DateTime
-import play.api.libs.json.{ JsArray, JsValue, Json }
+import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
 
 import scala.concurrent.duration.Duration
@@ -157,10 +156,21 @@ object UserValues {
   val userProfileSettings = UserValueJsValueHandler(UserValueName.USER_PROFILE_SETTINGS, Json.obj())
 }
 
+@json case class UserValueSettings(showFollowedLibraries: Boolean)
+
 object UserValueSettings {
+
   val defaultSettings: Map[UserValueName, Boolean] = Map(
     UserValueName.SHOW_FOLLOWED_LIBRARIES -> true
   )
+
+  def readFromJsValue(body: JsValue): UserValueSettings = {
+    val showFollowedLibrariesOpt = (body \ UserValueName.SHOW_FOLLOWED_LIBRARIES.name).asOpt[Boolean]
+
+    UserValueSettings(
+      showFollowedLibraries = showFollowedLibrariesOpt.getOrElse(UserValueSettings.defaultSettings(UserValueName.SHOW_FOLLOWED_LIBRARIES))
+    )
+  }
 
   def retrieveSetting(targetVal: UserValueName, userVals: JsValue): Boolean = {
     retrieveSettings(Set(targetVal), userVals)(targetVal)
