@@ -6,6 +6,7 @@ import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.common.images.Photoshop
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
@@ -21,9 +22,9 @@ trait LibraryImageCommander {
 
   def getUrl(libraryImage: LibraryImage): String
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage]
-  def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, requestId: Option[Id[LibraryImageRequest]] = None): Future[ImageProcessDone]
+  def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, userId: Id[User], requestId: Option[Id[LibraryImageRequest]] = None)(implicit content: HeimdalContext): Future[ImageProcessDone]
   def positionLibraryImage(libraryId: Id[Library], position: LibraryImagePosition): Seq[LibraryImage]
-  def removeImageForLibrary(libraryId: Id[Library]): Boolean // Returns true if images were removed, false otherwise
+  def removeImageForLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Boolean // Returns true if images were removed, false otherwise
 }
 
 @Singleton
@@ -33,6 +34,7 @@ class LibraryImageCommanderImpl @Inject() (
     libraryImageRepo: LibraryImageRepo,
     libraryImageRequestRepo: LibraryImageRequestRepo,
     libraryImageStore: LibraryImageStore,
+    libraryAnalytics: LibraryAnalytics,
     imageInfoRepo: ImageInfoRepo,
     s3ImageConfig: S3ImageConfig,
     normalizedUriRepo: NormalizedURIRepo,
@@ -50,9 +52,14 @@ class LibraryImageCommanderImpl @Inject() (
     ProcessedImageSize.pickBestImage(idealSize, targetLibraryImages)
   }
 
-  def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
+  def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, userId: Id[User], requestId: Option[Id[LibraryImageRequest]])(implicit context: HeimdalContext): Future[ImageProcessDone] = {
     fetchAndSet(image, libraryId, position, source)(requestId).map { done =>
       finalizeImageRequestState(libraryId, requestId, done)
+      done match {
+        case ImageProcessState.StoreSuccess(format, size, bytes) =>
+          libraryAnalytics.updatedCoverImage(userId, libraryId, context, format, size, bytes)
+        case _ =>
+      }
       done
     }
   }
@@ -71,14 +78,21 @@ class LibraryImageCommanderImpl @Inject() (
     }
   }
 
-  def removeImageForLibrary(libraryId: Id[Library]): Boolean = {
+  def removeImageForLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Boolean = {
     val images = db.readWrite { implicit session =>
       libraryImageRepo.getForLibraryId(libraryId).map { libImage =>
         libraryImageRepo.save(libImage.copy(state = LibraryImageStates.INACTIVE))
       }
     }
     log.info("[lic] Removing: " + images.map(_.imagePath))
-    images.nonEmpty
+    if (images.nonEmpty) {
+      images.filter(_.isOriginal) foreach { orig =>
+        libraryAnalytics.removedCoverImage(userId, libraryId, context, orig.format, orig.dimensions)
+      }
+      true
+    } else {
+      false
+    }
   }
 
   //
@@ -129,7 +143,7 @@ class LibraryImageCommanderImpl @Inject() (
         val existingImages = libraryImageRepo.getForLibraryId(libraryId, None).toSet
         replaceOldLibraryImagesWithNew(existingImages, libraryImages, position)
       }
-      ImageProcessState.StoreSuccess
+      ImageProcessState.StoreSuccess(originalImage.format, libraryImages.filter(_.isOriginal).head.dimensions, originalImage.file.file.length.toInt)
     }.recover {
       case ex: SQLException =>
         log.error("Could not persist library image", ex)
