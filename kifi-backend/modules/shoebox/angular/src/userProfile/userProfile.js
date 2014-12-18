@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$location', '$rootScope', '$state', '$stateParams',
+  '$scope', '$rootScope', '$state', '$stateParams', '$window',
   'env', 'keepWhoService', 'profileService', 'userProfileActionService',
-  function ($scope, $location, $rootScope, $state, $stateParams,
+  function ($scope, $rootScope, $state, $stateParams, $window,
             env, keepWhoService, profileService, userProfileActionService) {
     //
     // Configs.
@@ -54,7 +54,7 @@ angular.module('kifi')
         $state.go('home');
       }
       if (!$rootScope.userLoggedIn && !$stateParams.upb) {
-        $location.url(env.navBase);
+        $window.location = env.navBase;
       }
 
       var username = $stateParams.username;
