@@ -716,6 +716,7 @@ class KeepsCommander @Inject() (
   }
 
   //todo(hopefully not Léo): this method does not report to analytics, let's fix this after we get rid of Collection
+
   def clearTags(url: String, userId: Id[User]): Unit = {
     val keeps = db.readWrite { implicit s =>
       for {

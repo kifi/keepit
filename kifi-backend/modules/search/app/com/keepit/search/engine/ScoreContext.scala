@@ -69,8 +69,6 @@ class ScoreContext(
       scoreArray(idx) = scr
     }
 
-    collector.collectDetail(id, id2, theVisibility, scoreArray)
-
     if (id2 >= 0L && localSum > secondaryIdScore) {
       secondaryId = id2
       secondaryIdScore = localSum
@@ -167,7 +165,6 @@ class DirectScoreContext(
     degree = 1
     Arrays.fill(scoreArray, 0.0f)
     docId = pq.addCoreScores(this)
-    collector.collectDetail(id, -1, visibility, scoreArray)
     collector.collect(this)
     count += 1
   }

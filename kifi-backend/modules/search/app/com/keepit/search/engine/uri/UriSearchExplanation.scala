@@ -1,16 +1,14 @@
 package com.keepit.search.engine.uri
 
+import com.keepit.common.db.Id
+import com.keepit.model.NormalizedURI
 import com.keepit.search.engine.Visibility
-import com.keepit.search.engine.explain.{ SearchExplanation, ScoreDetail }
+import com.keepit.search.engine.explain.{ SearchExplanationBuilder, SearchExplanation, ScoreDetail }
+import com.keepit.search.tracking.ResultClickBoosts
 import org.apache.lucene.search.Query
 
-object UriSearchExplanation {
-  def apply(query: Query, labels: Array[String], matching: (Float, Float, Float), boostValues: (Float, Float), rawScore: Float, boostedScore: Float, scoreComputation: String, details: Map[String, Seq[ScoreDetail]]): UriSearchExplanation = {
-    UriSearchExplanation(query, labels, matching._1, matching._2, matching._3, boostValues._1, boostValues._2, rawScore, boostedScore, scoreComputation, details)
-  }
-}
-
 case class UriSearchExplanation(
+    id: Id[NormalizedURI],
     query: Query,
     labels: Array[String],
     matching: Float,
@@ -21,7 +19,7 @@ case class UriSearchExplanation(
     rawScore: Float,
     boostedScore: Float,
     scoreComputation: String,
-    details: Map[String, Seq[ScoreDetail]]) extends SearchExplanation {
+    details: Map[String, Seq[ScoreDetail]]) extends SearchExplanation[NormalizedURI] {
 
   def boostValuesHtml(title: String): String = {
     val sb = new StringBuilder
@@ -77,3 +75,37 @@ case class UriSearchExplanation(
     sb.toString
   }
 }
+
+class UriSearchExplanationBuilder(uriId: Id[NormalizedURI], query: Query, labels: Array[String]) extends SearchExplanationBuilder[NormalizedURI](uriId, query, labels) {
+
+  private[this] var _boostedScore: Float = -1f
+  private[this] var _clickBoostValue: Float = -1f
+  private[this] var _sharingBoostValue: Float = -1f
+
+  def build() = {
+    UriSearchExplanation(
+      uriId,
+      query,
+      labels,
+      matching,
+      matchingThreshold,
+      minMatchingThreshold,
+      _clickBoostValue,
+      _sharingBoostValue,
+      rawScore,
+      _boostedScore,
+      scoreComputation,
+      details
+    )
+  }
+
+  def collectBoostedScore(id: Long, boostedScore: Float, clickBoostValue: Option[Float], sharingBoostValue: Option[Float]): Unit = {
+    if (id == uriId.id) {
+      _boostedScore = boostedScore
+      clickBoostValue.foreach(_clickBoostValue = _)
+      sharingBoostValue.foreach(_sharingBoostValue = _)
+    }
+  }
+
+}
+

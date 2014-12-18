@@ -1,12 +1,12 @@
 package com.keepit.search.engine.library
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ Keep, User }
+import com.keepit.model.{ Library, Keep, User }
 import com.keepit.search.engine._
 import com.keepit.search.engine.uri.UriSearch
 import com.keepit.search.index.Searcher
 import com.keepit.search.{ SearchConfig, SearchFilter }
-import com.keepit.search.engine.result.{ HitQueue }
+import com.keepit.search.engine.result.{ ResultCollector, HitQueue }
 import com.keepit.common.logging.Logging
 import scala.concurrent.Future
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
@@ -30,10 +30,15 @@ class LibrarySearch(
   private[this] val myLibraryBoost = config.asFloat("myLibraryBoost")
 
   def execute(): LibraryShardResult = {
-    val (myHits, friendsHits, othersHits) = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn * 5)
+
+    val engine = engineBuilder.build()
+    debugLog("library search engine created")
+
+    val (myHits, friendsHits, othersHits) = executeTextSearch(engine)
     debugLog(s"myHits: ${myHits.totalHits}")
     debugLog(s"friendsHits: ${friendsHits.totalHits}")
     debugLog(s"othersHits: ${othersHits.totalHits}")
+
     val libraryShardResult = LibrarySearch.merge(myHits, friendsHits, othersHits, numHitsToReturn, filter, config)(keepId => KeepRecord.retrieve(keepSearcher, keepId).get)
     debugLog(s"libraryShardResult: ${libraryShardResult.hits.map(_.id).mkString(",")}")
     timeLogs.processHits()
@@ -45,11 +50,19 @@ class LibrarySearch(
     libraryShardResult
   }
 
-  private def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
+  def explain(libraryId: Id[Library]): LibrarySearchExplanation = {
     val engine = engineBuilder.build()
-    debugLog("library search engine created")
+    val labels = engineBuilder.getQueryLabels()
+    val query = engine.getQuery()
+    val explanation = new LibrarySearchExplanationBuilder(libraryId, query, labels)
+    executeTextSearch(engine, Some(explanation))
+    explanation.build()
+  }
 
-    val collector = new LibraryResultCollector(maxTextHitsPerCategory, myLibraryBoost, percentMatch / 100.0f)
+  private def executeTextSearch(engine: QueryEngine, explanation: Option[LibrarySearchExplanationBuilder] = None): (HitQueue, HitQueue, HitQueue) = {
+
+    val collector = new LibraryResultCollector(numHitsToReturn * 5, myLibraryBoost, percentMatch / 100.0f, explanation)
+
     val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
 
@@ -76,10 +89,6 @@ object LibrarySearch extends Logging {
     val minMyLibraries = config.asInt("minMyLibraries")
 
     val isInitialSearch = filter.idFilter.isEmpty
-
-    val myTotal = myHits.totalHits
-    val friendsTotal = friendsHits.totalHits
-    val othersTotal = othersHits.totalHits
 
     val hits = UriSearch.createQueue(maxHits)
 

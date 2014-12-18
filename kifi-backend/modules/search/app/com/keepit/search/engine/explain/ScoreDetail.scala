@@ -1,6 +1,6 @@
 package com.keepit.search.engine.explain
 
-import com.keepit.search.engine.{ Visibility, ScoreContext }
+import com.keepit.search.engine.ScoreContext
 
 object ScoreDetail {
   def apply(primaryId: Long, secondaryId: Long, visibility: Int, scoreArray: Array[Float]) = {

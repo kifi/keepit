@@ -6,7 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.search.engine.result._
-import com.keepit.search.engine.{ ScoreContext, QueryEngine, QueryEngineBuilder, SearchTimeLogs }
+import com.keepit.search.engine.{ QueryEngine, QueryEngineBuilder, SearchTimeLogs }
 import com.keepit.search.index.Searcher
 
 import scala.concurrent.Future
@@ -27,7 +27,9 @@ class UriSearchNonUserImpl(
   // get config params
   private[this] val percentMatch = config.asFloat("percentMatch")
 
-  private def executeTextSearch(engine: QueryEngine, collector: ResultCollector[ScoreContext]): Unit = {
+  private def executeTextSearch(engine: QueryEngine, explanation: Option[UriSearchExplanationBuilder] = None): HitQueue = {
+
+    val collector = new NonUserUriResultCollector(numHitsToReturn, percentMatch / 100.0f, explanation)
 
     val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait)
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait)
@@ -41,17 +43,16 @@ class UriSearchNonUserImpl(
     engine.execute(collector, libraryScoreSource, keepScoreSource, articleScoreSource)
 
     timeLogs.search()
+
+    collector.getResults()
   }
 
   def execute(): UriShardResult = {
 
     val engine = engineBuilder.build()
     debugLog("engine created")
-    val collector = new NonUserUriResultCollector(numHitsToReturn, percentMatch / 100.0f)
 
-    executeTextSearch(engine, collector)
-
-    val textHits = collector.getResults()
+    val textHits = executeTextSearch(engine)
 
     val total = textHits.totalHits
     val hits = UriSearch.createQueue(numHitsToReturn)
@@ -87,10 +88,8 @@ class UriSearchNonUserImpl(
     val engine = engineBuilder.build()
     val labels = engineBuilder.getQueryLabels()
     val query = engine.getQuery()
-    val collector = new UriScoreDetailCollector(uriId.id, percentMatch / 100.0f, None, None)
-
-    executeTextSearch(engine, collector)
-
-    UriSearchExplanation(query, labels, collector.getMatchingValues(), collector.getBoostValues(), collector.getRawScore, collector.getBoostedScore, collector.getScoreComputation, collector.getDetails())
+    val explanation = new UriSearchExplanationBuilder(uriId, query, labels)
+    executeTextSearch(engine, Some(explanation))
+    explanation.build()
   }
 }

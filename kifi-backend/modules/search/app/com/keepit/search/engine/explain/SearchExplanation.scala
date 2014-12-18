@@ -1,19 +1,23 @@
 package com.keepit.search.engine.explain
 
-import com.keepit.search.engine.Visibility
+import com.keepit.common.db.Id
+import com.keepit.search.engine.{ ScoreContext, Visibility }
 import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.lucene.search.Query
 
-trait SearchExplanation {
-  val query: Query
-  val labels: Array[String]
-  val matching: Float
-  val matchingThreshold: Float
-  val minMatchingThreshold: Float
-  val rawScore: Float
-  val boostedScore: Float
-  val scoreComputation: String
-  val details: Map[String, Seq[ScoreDetail]]
+import scala.collection.mutable.ListBuffer
+
+trait SearchExplanation[T] {
+  def id: Id[T]
+  def query: Query
+  def labels: Array[String]
+  def matching: Float
+  def matchingThreshold: Float
+  def minMatchingThreshold: Float
+  def rawScore: Float
+  def boostedScore: Float
+  def scoreComputation: String
+  def details: Map[String, Seq[ScoreDetail]]
 
   def queryHtml(title: String): String = {
     val sb = new StringBuilder
@@ -122,4 +126,49 @@ trait SearchExplanation {
 
     sb.toString
   }
+}
+
+abstract class SearchExplanationBuilder[T](val resultId: Id[T], val query: Query, val labels: Array[String]) {
+
+  def build(): SearchExplanation[T]
+
+  private[this] var _matchingThreshold: Float = -1f
+  private[this] var _minMatchingThreshold: Float = -1f
+  private[this] var _matching: Float = -1f
+  private[this] var _rawScore: Float = -1f
+  private[this] var _scoreComputation: String = ""
+
+  private[this] val _details: Map[String, ListBuffer[ScoreDetail]] = Map(
+    "aggregate" -> new ListBuffer[ScoreDetail](),
+    Visibility.name(Visibility.OWNER) -> new ListBuffer[ScoreDetail](),
+    Visibility.name(Visibility.MEMBER) -> new ListBuffer[ScoreDetail](),
+    Visibility.name(Visibility.NETWORK) -> new ListBuffer[ScoreDetail](),
+    Visibility.name(Visibility.OTHERS) -> new ListBuffer[ScoreDetail](),
+    Visibility.name(Visibility.RESTRICTED) -> new ListBuffer[ScoreDetail]()
+  )
+
+  def collectScoreContribution(primaryId: Long, secondaryId: Long, visibility: Int, scoreArray: Array[Float]): Unit = {
+    if (primaryId == resultId.id) {
+      _details(Visibility.name(visibility)) += ScoreDetail(primaryId, secondaryId, visibility, scoreArray.clone)
+    }
+  }
+
+  def collectRawScore(ctx: ScoreContext, matchingThreshold: Float, minMatchingThreshold: Float): Unit = {
+    if (ctx.id == resultId.id) {
+      // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
+      _matchingThreshold = matchingThreshold
+      _minMatchingThreshold = minMatchingThreshold
+      _matching = ctx.computeMatching(minMatchingThreshold)
+      _rawScore = ctx.score()
+      _scoreComputation = ctx.explainScoreExpr()
+      _details("aggregate") += ScoreDetail(ctx)
+    }
+  }
+
+  def matching: Float = _matching
+  def matchingThreshold: Float = _matchingThreshold
+  def minMatchingThreshold = _minMatchingThreshold
+  def rawScore: Float = _rawScore
+  def scoreComputation: String = _scoreComputation
+  def details: Map[String, Seq[ScoreDetail]] = _details.mapValues(_.toSeq)
 }
