@@ -34,6 +34,7 @@ angular.module('kifi')
         var keepShowingSearchBar = false;
         var coverImageFile;
         var coverImagePos;
+        var coverImageMoveTracked;
         var URL = $window.URL || $window.webkitURL;
 
         var kfColsElement = angular.element('.kf-cols');
@@ -342,6 +343,7 @@ angular.module('kifi')
         scope.onClickAddCoverImage = function (event) {
           if (event.which === 1) {
             angular.element('.kf-keep-lib-pic-file-input').click();
+            libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedAddCoverImage' });
           }
         };
 
@@ -350,6 +352,7 @@ angular.module('kifi')
             if (/^image\/(?:jpeg|png|gif)$/.test(file.type)) {
               coverImageFile = file;
               $timeout(readCoverImageFile);
+              libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCoverImageFile' });
             } else {
               scope.coverImageError = 'Please choose a .jpg, .png or .gif file.';
               $timeout(function () {
@@ -449,6 +452,10 @@ angular.module('kifi')
             if (sel && sel.rangeCount) {
               sel.collapseToEnd();
             }
+            if (!coverImageMoveTracked) {
+              libraryService.trackEvent('user_clicked_page', scope.library, { action: 'positionedCoverImage' });
+              coverImageMoveTracked = true;
+            }
           }
         }
 
@@ -489,16 +496,16 @@ angular.module('kifi')
 
         scope.cancelCoverImageChange = function () {
           scope.coverImagePreview = false;
+          var image = scope.library.image;
           var $image = angular.element('.kf-keep-lib-cover-image');
           leaveCoverImagePosMode($image);
           if (coverImageFile) {
-            coverImageFile = null;
-            var url = scope.library.image ? env.picBase + '/' + scope.library.image.path : null;
+            var url = image ? env.picBase + '/' + image.path : null;
             scope.coverImageUrl = url;
             if (url) {
               $image.css({
                 'background-image': 'url(' + url + ')',
-                'background-position': formatCoverImagePos(scope.library.image)
+                'background-position': formatCoverImagePos(image)
               });
             }
             var objectUrl = $image.data('objectUrl');
@@ -515,8 +522,12 @@ angular.module('kifi')
               }
             }
           } else {
-            $image.css('background-position', formatCoverImagePos(scope.library.image));
+            $image.css('background-position', formatCoverImagePos(image));
           }
+          libraryService.trackEvent('user_clicked_page', scope.library, {
+            action: coverImageFile ? 'clickedCancelCoverImage' : 'clickedCancelCoverImageMove'
+          });
+          coverImageFile = null;
         };
 
         scope.applyCoverImageChange = function () {
@@ -577,6 +588,10 @@ angular.module('kifi')
             }).addClass('kf-fail');
           }, function progress(fraction) {
             $progress.css('width', fraction * 100 + '%');
+          });
+
+          libraryService.trackEvent('user_clicked_page', scope.library, {
+            action: coverImageFile ? 'clickedApplyCoverImage' : 'clickedApplyCoverImageMove'
           });
         };
 
@@ -709,6 +724,8 @@ angular.module('kifi')
             }, function progress(fraction) {
               $progress.css('width', fraction * 100 + '%');
             });
+
+            libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedRemoveCoverImage' });
           }
         };
 
@@ -716,6 +733,7 @@ angular.module('kifi')
           if (event.which === 1) {
             $timeout(hideCoverImageMenu);
             angular.element('.kf-keep-lib-pic-file-input').click();
+            libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedChangeCoverImage' });
           }
         };
 
@@ -729,6 +747,7 @@ angular.module('kifi')
               scope.coverImagePreview = true;
               enterCoverImagePosMode($image, {x: scope.library.image.x, y: scope.library.image.y});
             });
+            libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedMoveCoverImage' });
           }
         };
 
