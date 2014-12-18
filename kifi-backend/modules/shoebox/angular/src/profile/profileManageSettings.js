@@ -17,21 +17,13 @@ angular.module('kifi')
           scope.isOpen = !scope.isOpen;
         };
 
-        function init() {
-          profileService.getSettings().then(function (res) {
-            scope.userProfileSettings = res.data;
-            return;
-          });
-        }
+        scope.saveSettings = function () {
+          profileService.setSettings(scope.userProfileSettings);
+        };
 
-        scope.$watch('userProfileSettings.showFollowedLibraries', function(newVal, oldVal) {
-          if (_.isBoolean(newVal) && _.isBoolean(oldVal)) {
-            profileService.setSettings(scope.userProfileSettings);
-          }
+        profileService.getSettings().then(function (res) {
+          scope.userProfileSettings = res.data;
         });
-
-        init();
-
       }
     };
   }
