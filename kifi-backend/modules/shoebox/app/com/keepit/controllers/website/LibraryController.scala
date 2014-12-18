@@ -531,10 +531,15 @@ class LibraryController @Inject() (
   }
 
   def ownerLibraries(username: Username, page: Int, pageSize: Int) = MaybeUserAction { request =>
-    val user = userCommander.userFromUsername(username)
-    val viewer = request.userOpt
-    val libs = libraryCommander.ownerLibraries(user, viewer, Paginator(page, pageSize))
-    Ok(Json.obj("libraries" -> (libs map profileLibraryViewJson)))
+    userCommander.userFromUsername(username) match {
+      case None =>
+        log.warn(s"user asked for unknown username $username")
+        NotFound(username.value)
+      case Some(user) =>
+        val viewer = request.userOpt
+        val libs = libraryCommander.ownerLibraries(user, viewer, Paginator(page, pageSize))
+        Ok(Json.obj("libraries" -> (libs map profileLibraryViewJson)))
+    }
   }
 
   private def profileLibraryViewJson(libView: ProfileLibraryView): JsValue = {
