@@ -65,12 +65,6 @@ angular.module('kifi')
 
     $scope.onChange = _.debounce(performSearch, 350);
 
-    $scope.$on('$routeChangeSuccess', function (event, current, previous) {
-      if (previous && current && previous.controller === 'SearchCtrl' && current.controller !== 'SearchCtrl') {
-        $scope.search.text = '';
-      }
-    });
-
     $scope.undo = undoService;
 
     var messages = {

@@ -3,12 +3,12 @@
 angular.module('kifi')
 
 .controller('KeepViewCtrl', [
-  '$scope', '$routeParams', '$rootScope', 'keepActionService', 'keepDecoratorService',
-  function ($scope, $routeParams, $rootScope, keepActionService, keepDecoratorService) {
+  '$scope', '$stateParams', '$rootScope', 'keepActionService', 'keepDecoratorService',
+  function ($scope, $stateParams, $rootScope, keepActionService, keepDecoratorService) {
     //
     // Internal data.
     //
-    var keepId = $routeParams.keepId || '';
+    var keepId = $stateParams.keepId || '';
 
 
     //
@@ -29,7 +29,7 @@ angular.module('kifi')
       }
     };
 
-    
+
     //
     // On KeepViewCtrl initialization.
     //

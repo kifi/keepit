@@ -289,7 +289,7 @@ class KeepImageCommanderImpl @Inject() (
         val existingImagesForKeep = keepImageRepo.getAllForKeepId(keepId).toSet
         replaceOldKeepImagesWithNew(existingImagesForKeep, keepImages)
       }
-      ImageProcessState.StoreSuccess
+      ImageProcessState.StoreSuccess(originalImage.format, keepImages.filter(_.isOriginal).head.dimensions, originalImage.file.file.length.toInt)
     }.recover {
       case ex: SQLException =>
         log.error("Could not persist keepimage", ex)
@@ -340,7 +340,8 @@ class KeepImageCommanderImpl @Inject() (
             val existingForHash = keepImageRepo.getBySourceHash(ImageHash(hash))
             if (existingForHash.nonEmpty) {
               copyExistingImagesAndReplace(keepId, ImageSource.UserPicked, existingForHash)
-              Some(ImageProcessState.StoreSuccess)
+              val orig = existingForHash.filter(_.isOriginal).head
+              Some(ImageProcessState.StoreSuccess(orig.format, orig.dimensions, 0))
             } else {
               None
             }

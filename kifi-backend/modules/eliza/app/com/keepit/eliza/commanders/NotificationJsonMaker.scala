@@ -19,7 +19,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
-private[commanders] case class NotificationJson(obj: JsObject) extends AnyVal
+case class NotificationJson(obj: JsObject) extends AnyVal
 
 /** Makes `NotificationJson` from `RawNotification` */
 @Singleton

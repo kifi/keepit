@@ -4,7 +4,8 @@ import java.io.File
 import com.keepit.model.LibraryFactoryHelper._
 import com.google.inject.Injector
 import com.keepit.common.logging.Logging
-import com.keepit.common.store.{ LibraryImageStore, FakeLibraryImageStore }
+import com.keepit.common.store.{ FakeLibraryImageStore, LibraryImageStore, ImageSize }
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibraryFactory._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
@@ -54,9 +55,10 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         // upload an image
         {
           val position = LibraryImagePosition(Some(40), None)
-          val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload)
+          val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload, user.id.get)(HeimdalContext.empty)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === ImageProcessState.StoreSuccess // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
+          saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
+          // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
         }
         // If this complains about not having an `all`, then it's not using FakeKeepImageStore
         inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 1
@@ -70,9 +72,9 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         // upload same image
         {
           val position = LibraryImagePosition(Some(0), Some(100))
-          val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload)
+          val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload, user.id.get)(HeimdalContext.empty)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === ImageProcessState.StoreSuccess
+          saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
         }
         inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 1
         db.readOnlyMaster { implicit s =>
@@ -84,9 +86,9 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         // upload another image
         {
           val position = LibraryImagePosition(None, Some(77))
-          val savedF = commander.uploadLibraryImageFromFile(fakeFile2, lib.id.get, position, ImageSource.UserUpload)
+          val savedF = commander.uploadLibraryImageFromFile(fakeFile2, lib.id.get, position, ImageSource.UserUpload, user.id.get)(HeimdalContext.empty)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === ImageProcessState.StoreSuccess
+          saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(400, 482), 73259)
         }
         inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 4
 
@@ -108,9 +110,9 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
 
         // upload may not specify a position
         val position = LibraryImagePosition(None, None)
-        val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload)
+        val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload, user.id.get)(HeimdalContext.empty)
         val saved = Await.result(savedF, Duration("10 seconds"))
-        saved === ImageProcessState.StoreSuccess
+        saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
 
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
@@ -135,7 +137,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         }
 
         // remove image
-        commander.removeImageForLibrary(lib.id.get) === true
+        commander.removeImageForLibrary(lib.id.get, user.id.get)(HeimdalContext.empty) === true
         db.readOnlyMaster { implicit s =>
           libraryImageRepo.getForLibraryId(lib.id.get).length === 0
           libraryImageRepo.getForLibraryId(lib.id.get, None).length === 1

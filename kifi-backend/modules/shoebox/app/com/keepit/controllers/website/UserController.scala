@@ -600,21 +600,19 @@ class UserController @Inject() (
    */
   def profile(username: String) = MaybeUserAction { request =>
     val viewer = request.userOpt
-    try {
-      val profile = userCommander.profile(Username(username), viewer)
-      val numLibraries = libraryCommander.countLibraries(profile.user.id.get, viewer.map(_.id.get))
-      Ok(Json.obj(
-        "id" -> profile.user.externalId,
-        "firstName" -> profile.user.firstName,
-        "lastName" -> profile.user.lastName,
-        "pictureName" -> profile.user.pictureName.map(p => s"$p.jpg"),
-        "numLibraries" -> numLibraries,
-        "friendsWith" -> profile.isConnected,
-        "numKeeps" -> profile.numKeeps
-      ))
-    } catch {
-      case unfe: UserNotFoundException => NotFound(username)
-      case e: Throwable => throw e
+    userCommander.profile(Username(username), viewer) match {
+      case None => NotFound(s"can't find username $username")
+      case Some(profile) =>
+        val numLibraries = libraryCommander.countLibraries(profile.user.id.get, viewer.map(_.id.get))
+        Ok(Json.obj(
+          "id" -> profile.user.externalId,
+          "firstName" -> profile.user.firstName,
+          "lastName" -> profile.user.lastName,
+          "pictureName" -> profile.user.pictureName.map(p => s"$p.jpg"),
+          "numLibraries" -> numLibraries,
+          "friendsWith" -> profile.isConnected,
+          "numKeeps" -> profile.numKeeps
+        ))
     }
   }
 

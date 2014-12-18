@@ -1,0 +1,79 @@
+.kf-user-profile
+  margin: 0 auto
+  text-align: center
+
+.kf-user-profile-header
+  color: #fff
+  background: #3e4954
+
+.kf-user-profile-header-content
+  position: relative
+  padding: 50px 0 25px
+
+.kf-user-profile-optional-action
+  position: absolute
+  top: 85px
+  right: 30px
+
+.kf-user-profile-picture
+  border-radius: 100%
+
+.kf-user-profile-name
+  font-size: 1.3em
+  line-height: 2em
+
+.kf-user-profile-user-nav-link
+  display: inline-block
+  color: #9fa3aa
+
+  &:first-child
+    margin-right: 5px
+
+    &::after
+      margin-left: 5px
+      content: '·'
+
+.kf-user-profile-libraries-nav-container
+  height: 68px
+  background: #e8e8e8
+
+.kf-user-profile-libraries-nav
+  position: relative
+  top: 15px
+  height: 38px
+
+a.kf-user-profile-libraries-nav-link
+  display: inline-block
+  box-sizing: border-box
+  width: 25%
+  max-width: 180px
+  min-width: 100px
+  height: 38px
+  font-size: 0.8em
+  color: #333539
+  background: #cbcbcb
+
+  &:first-child
+    border-top-left-radius: 6px
+    border-bottom-left-radius: 6px
+
+  &:last-child
+    border-top-right-radius: 6px
+    border-bottom-right-radius: 6px
+
+  &.selected
+    position: relative
+
+    &::before
+      position: absolute
+      top: 0
+      left: 0
+      border-radius: 6px
+      width: 100%
+      height: 38px
+      background: #fff
+      content: ''
+
+.kf-user-profile-libraries-nav-link-text
+  position: relative
+  top: 10px

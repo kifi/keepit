@@ -20,7 +20,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
+import play.api.libs.json._
 import play.api.mvc.Action
 
 import scala.concurrent.Future
@@ -530,12 +530,35 @@ class LibraryController @Inject() (
       }
   }
 
-  //todo(eishay): compleate json structure and test
-  def libraries(username: Username, page: Int, pageSize: Int) = MaybeUserAction { request =>
-    val user = userCommander.userFromUsername(username)
-    val viewer = request.userOpt
-    val libs = libraryCommander.libraries(user, viewer, Paginator(page, pageSize))
-    Ok(Json.obj("libraries" -> Json.arr(libs map { lib => Json.obj("id" -> lib.library.id.get) })))
+  def ownerLibraries(username: Username, page: Int, pageSize: Int) = MaybeUserAction { request =>
+    userCommander.userFromUsername(username) match {
+      case None =>
+        log.warn(s"user asked for unknown username $username")
+        NotFound(username.value)
+      case Some(user) =>
+        val viewer = request.userOpt
+        val libs = libraryCommander.ownerLibraries(user, viewer, Paginator(page, pageSize))
+        Ok(Json.obj("libraries" -> (libs map profileLibraryViewJson)))
+    }
+  }
+
+  private def profileLibraryViewJson(libView: ProfileLibraryView): JsValue = {
+    Json.obj(
+      "id" -> Library.publicId(libView.library.id.get).id,
+      "name" -> libView.library.name,
+      "slug" -> libView.library.slug,
+      "numFollowers" -> libView.numFollowers,
+      "numKeeps" -> libView.numKeeps,
+      "followersToDisplay" ->
+        (libView.followersSample map { user =>
+          Json.obj(
+            "firstName" -> user.firstName,
+            "lastName" -> user.lastName,
+            "pictureName" -> user.pictureName,
+            "username" -> user.username.value
+          )
+        })
+    )
   }
 
   def marketingSiteSuggestedLibraries() = Action.async {

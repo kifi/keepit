@@ -63,7 +63,9 @@ object TwitterUserInfo {
       emailOpt = None,
       firstNameOpt = Some(tui.firstName),
       lastNameOpt = if (tui.lastName.isEmpty) None else Some(tui.lastName),
-      pictureUrl = tui.pictureUrl
+      handle = Some(UserHandle(tui.screenName)),
+      pictureUrl = tui.pictureUrl,
+      profileUrl = Some(tui.profileUrl)
     )
   }
 

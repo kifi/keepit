@@ -18,7 +18,7 @@ import scala.slick.jdbc.StaticQuery
 trait PublicFeedRepo extends DbRepo[PublicFeed] {
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Option[PublicFeed]
   def getByTopMasterScore(maxBatchSize: Int, publicFeedState: Option[State[PublicFeed]] = Some(PublicFeedStates.ACTIVE))(implicit session: RSession): Seq[PublicFeed]
-  def cleanupLowMasterScoreFeeds(limitNumFeeds: Int, before: DateTime)(implicit session: RWSession): Boolean
+  def cleanupOldFeeds(limitNumFeeds: Int)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -59,21 +59,13 @@ class PublicFeedRepoImpl @Inject() (
       sortBy(_.publicMasterScore.desc).take(maxBatchSize).list
   }
 
-  def cleanupLowMasterScoreFeeds(limitNumFeeds: Int, before: DateTime)(implicit session: RWSession): Boolean = {
+  def cleanupOldFeeds(limitNumFeeds: Int)(implicit session: RWSession): Unit = {
     import StaticQuery.interpolation
-    val limitScore =
-      sql"""SELECT MIN(master_score)
-              FROM (
-	              SELECT master_score
-	              FROM public_feed
-	              WHERE state=${PublicFeedStates.ACTIVE}
-	              ORDER BY master_score DESC LIMIT $limitNumFeeds
-              ) AS mScoreTable""".as[Float].first
-    (for (
-      row <- rows if row.updatedAt < before && row.publicMasterScore < limitScore &&
-        row.state === PublicFeedStates.ACTIVE
-    ) yield (row.state, row.updatedAt)).
-      update((PublicFeedStates.INACTIVE, currentDateTime)) > 0
+
+    val cutoff = sql"""SELECT MIN(updated_at) FROM (SELECT updated_at FROM public_feed ORDER BY updated_at DESC LIMIT $limitNumFeeds) x""".as[DateTime].firstOption()
+    cutoff.map { cutoff =>
+      sqlu"""DELETE FROM public_feed WHERE updated_at < $cutoff""".first()
+    }
   }
 
 }

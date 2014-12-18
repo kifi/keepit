@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('HeaderCtrl', [
   '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService',
-    '$location', 'util', 'keyIndices', 'modalService', '$timeout', 'searchActionService', '$routeParams',
+    '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state',
   function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService,
-    $location, util, keyIndices, modalService, $timeout, searchActionService, $routeParams) {
+    $location, util, keyIndices, modalService, $timeout, $state) {
 
     $scope.toggleMenu = function () {
       $rootElement.find('html').toggleClass('kf-sidebar-inactive');
@@ -53,17 +53,17 @@ angular.module('kifi')
       } else {
         $scope.clearLibraryName();
       }
-
-      $scope.search.text = $routeParams.q || '';
     });
     $scope.$on('$destroy', deregisterLibraryChip);
 
-    $scope.$on('$routeUpdate', function (event, current) {
-      if (current.params.q) {
-        $scope.search.text = current.params.q;
+    var deregisterUpdateSearchText = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
+      if ((toState.name === 'library.search') || (toState.name === 'search')) {
+        $scope.search.text = toParams.q;
+      } else {
+        $scope.search.text = '';
       }
     });
-
+    $scope.$on('$destroy', deregisterUpdateSearchText);
 
     var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function (e, library) {
       $scope.addKeeps(library);
@@ -83,7 +83,7 @@ angular.module('kifi')
       $scope.changeSearchInput();
     };
 
-    $scope.search.text = $routeParams.q || '';
+    $scope.search.text = $state.params.q || '';
     $scope.changeSearchInput = _.debounce(function () {
       $timeout(function() {
         // We are not already on the search page.
@@ -91,7 +91,7 @@ angular.module('kifi')
           if ($scope.library && $scope.library.url) {
             if ($scope.search.text) {
               /* jshint ignore:start */
-              if ($routeParams.q) {
+              if ($state.params.q) {
                 $location.search('q', $scope.search.text).replace();
               } else {
                 $location.url($scope.library.url + '/find?q=' + $scope.search.text + '&f=a');
