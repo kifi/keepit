@@ -93,8 +93,6 @@ class PublicFeedGenerationCommander @Inject() (
     }
     log.info(s"public feed: got ${candidates.size} initial candidates")
 
-    candidates.foreach { uriId =>
-      pubicFeedsGenerationLock.withLockFuture { score(uriId, "initial loading") }
-    }
+    candidates.foreach { uriId => score(uriId, "initial loading") }
   }
 }
