@@ -288,17 +288,41 @@ a.profile-email-pending-cancel
 .profile-manage-settings
   margin-top: 25px
 
+  .profile-manage-settings-option:first-child
+    margin-top: 10px
+
   .profile-manage-settings-option
     margin-left: 20px
     margin-bottom: 5px
-    color: #777c87
-    font-weight: 200
 
-  input[type="radio"]
-    margin-right: 10px
+    .profile-manage-settings-option-button
+      display: inline-block
+      position: relative
+      top: 1px
+      width: 10px
+      height: 10px
+      margin-right: 10px
+      background-color: #fff
+      border-radius: 50%
+      border: 1px solid textLightGrey
 
-  input[type="radio"]:first-child
-    margin-top: 10px
+      &:hover
+        background-color: #eee
+
+      .checked
+        position: relative
+        top: 2px
+        left: 2px
+        width: 6px
+        height: 6px
+        border-radius: 50%
+        background-color: darkBlueColor
+
+
+    .profile-manage-settings-option-text
+      cursor: pointer
+    .profile-manage-settings-option-text:hover
+      color: darkBlueColor
 
 .profile-setting-arrow
   position: relative
