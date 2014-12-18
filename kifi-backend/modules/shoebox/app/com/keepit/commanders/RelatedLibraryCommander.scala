@@ -16,10 +16,10 @@ import scala.concurrent.Future
 
 @ImplementedBy(classOf[RelatedLibraryCommanderImpl])
 trait RelatedLibraryCommander {
-  def suggestedLibrariesInfo(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[FullLibraryInfo], Boolean)] // boolean flag: true if related libraries
-  def suggestedLibraries(libId: Id[Library]): Future[(Seq[Library], Boolean)]
-  def relatedLibraries(libId: Id[Library]): Future[Seq[Library]]
-  def topFollowedLibraries(minFollow: Int = 5, topK: Int = 5): Future[Seq[Library]]
+  def suggestedLibrariesInfo(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[FullLibraryInfo], Seq[RelatedLibraryKind])]
+  def suggestedLibraries(libId: Id[Library]): Future[(Seq[RelatedLibrary])]
+  def topicRelatedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]]
+  def topFollowedLibraries(minFollow: Int, topK: Int): Future[Seq[RelatedLibrary]]
 }
 
 @Singleton
@@ -30,51 +30,77 @@ class RelatedLibraryCommanderImpl @Inject() (
     libCommander: LibraryCommander,
     cortex: CortexServiceClient) extends RelatedLibraryCommander {
 
-  private val consolidater = new RequestConsolidator[Id[Library], (Seq[Library], Boolean)](FiniteDuration(10, MINUTES))
+  private val DEFAULT_MIN_FOLLOW = 5
+  private val RETURN_SIZE = 5
 
-  def suggestedLibrariesInfo(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[FullLibraryInfo], Boolean)] = {
+  private val consolidater = new RequestConsolidator[Id[Library], Seq[RelatedLibrary]](FiniteDuration(10, MINUTES))
+
+  // main method
+  def suggestedLibrariesInfo(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[FullLibraryInfo], Seq[RelatedLibraryKind])] = {
     val suggestedLibsFut = suggestedLibraries(libId)
     val userLibs: Set[Id[Library]] = userIdOpt match {
       case Some(userId) => db.readOnlyReplica { implicit s => libMemRepo.getWithUserId(userId) }.map { _.libraryId }.toSet
       case None => Set()
     }
-    val infoFut = suggestedLibsFut
-      .map { case (libs, _) => libs }
-      .map { libs => libs.filter { x => !userLibs.contains(x.id.get) }.take(5) }
-      .flatMap { libs => libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize) }
+    suggestedLibsFut
+      .map { libs => libs.filter { case RelatedLibrary(lib, kind) => !userLibs.contains(lib.id.get) }.take(RETURN_SIZE) }
+      .flatMap { relatedLibs =>
+        val libs = relatedLibs.map { _.library }
+        val kinds = relatedLibs.map { _.kind }
+        val fullInfosFut = libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize)
+        fullInfosFut.map { info =>
+          assert(info.size == kinds.size)
+          (info, kinds)
+        }
+      }
 
-    for {
-      info <- infoFut
-      suggestedLibs <- suggestedLibsFut
-    } yield (info, suggestedLibs._2)
   }
 
-  def suggestedLibraries(libId: Id[Library]): Future[(Seq[Library], Boolean)] = consolidater(libId) { libId =>
+  def suggestedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]] = consolidater(libId) { libId =>
     for {
-      related <- relatedLibraries(libId)
+      topicRelated <- topicRelatedLibraries(libId)
+      ownerLibs <- librariesFromSameOwner(libId)
       popular <- topFollowedLibraries()
     } yield {
-      if (related.isEmpty) {
-        (util.Random.shuffle(popular.filter(_.id.get != libId)), false)
-      } else (related, true)
+      topicRelated ++ ownerLibs.sortBy(-_.library.memberCount) ++ util.Random.shuffle(popular.filter(_.library.id.get != libId))
     }
   }
 
-  def relatedLibraries(libId: Id[Library]): Future[Seq[Library]] = {
+  def topicRelatedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]] = {
     cortex.similarLibraries(libId, limit = 20).map { ids =>
       db.readOnlyReplica { implicit s =>
         ids.map { id => libRepo.get(id) }
       }.filter(_.visibility == LibraryVisibility.PUBLISHED)
+        .map { lib => RelatedLibrary(lib, RelatedLibraryKind.TOPIC) }
     }
   }
 
-  def topFollowedLibraries(minFollow: Int = 5, topK: Int = 100): Future[Seq[Library]] = {
+  def librariesFromSameOwner(libId: Id[Library], minFollow: Int = DEFAULT_MIN_FOLLOW): Future[Seq[RelatedLibrary]] = {
     db.readOnlyReplicaAsync { implicit s =>
-      libRepo.filterPublishedByMemberCount(minFollow + 1, limit = topK)
+      val owner = libRepo.get(libId).ownerId
+      libRepo.getAllByOwner(owner)
+        .filter { x => x.id.get != libId && x.visibility == LibraryVisibility.PUBLISHED && x.memberCount >= (minFollow + 1) }
+        .map { lib => RelatedLibrary(lib, RelatedLibraryKind.OWNER) }
+    }
+  }
+
+  def topFollowedLibraries(minFollow: Int = DEFAULT_MIN_FOLLOW, topK: Int = 100): Future[Seq[RelatedLibrary]] = {
+    db.readOnlyReplicaAsync { implicit s =>
+      libRepo.filterPublishedByMemberCount(minFollow + 1, limit = topK).map { lib => RelatedLibrary(lib, RelatedLibraryKind.POPULAR) }
     }
   }
 
 }
+
+@json case class RelatedLibraryKind(value: String)
+
+object RelatedLibraryKind {
+  val TOPIC = RelatedLibraryKind("topic")
+  val OWNER = RelatedLibraryKind("owner")
+  val POPULAR = RelatedLibraryKind("popular")
+}
+
+case class RelatedLibrary(library: Library, kind: RelatedLibraryKind)
 
 @json
 case class RelatedLibraryInfo(

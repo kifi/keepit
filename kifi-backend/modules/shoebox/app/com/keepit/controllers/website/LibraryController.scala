@@ -522,9 +522,9 @@ class LibraryController @Inject() (
     val isUserAction = userIdOpt.isDefined
     relatedLibraryCommander.suggestedLibrariesInfo(id, userIdOpt)
       .map {
-        case (fullInfos, isRelated) =>
+        case (fullInfos, relatedKinds) =>
           val libs = fullInfos.map { info => RelatedLibraryInfo.fromFullLibraryInfo(info, isUserAction) }
-          Ok(Json.obj("libs" -> libs, "related" -> isRelated))
+          Ok(Json.obj("libs" -> libs, "kinds" -> relatedKinds))
       }
   }
 
