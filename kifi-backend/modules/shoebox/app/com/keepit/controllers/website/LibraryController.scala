@@ -534,27 +534,26 @@ class LibraryController @Inject() (
     val user = userCommander.userFromUsername(username)
     val viewer = request.userOpt
     val libs = libraryCommander.ownerLibraries(user, viewer, Paginator(page, pageSize))
-    Ok(Json.obj("libraries" -> Json.arr(libs map profileLibraryViewJson)))
+    Ok(Json.obj("libraries" -> (libs map profileLibraryViewJson)))
   }
 
   private def profileLibraryViewJson(libView: ProfileLibraryView): JsValue = {
-    Json.obj {
-      "id" -> libView.library.id.get,
+    Json.obj(
+      "id" -> Library.publicId(libView.library.id.get).id,
       "name" -> libView.library.name,
       "slug" -> libView.library.slug,
       "numFollowers" -> libView.numFollowers,
       "numKeeps" -> libView.numKeeps,
-      "followersToDisplay" -> Json.arr {
-        libView.followersSample map { user =>
-          Json.obj {
+      "followersToDisplay" ->
+        (libView.followersSample map { user =>
+          Json.obj(
             "firstName" -> user.firstName,
             "lastName" -> user.lastName,
             "pictureName" -> user.pictureName,
             "username" -> user.username.value
-          }
-        }
-      }
-    }
+          )
+        })
+    )
   }
 
   def marketingSiteSuggestedLibraries() = Action.async {

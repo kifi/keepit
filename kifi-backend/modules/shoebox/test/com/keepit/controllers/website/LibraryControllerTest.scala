@@ -14,6 +14,8 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
@@ -428,26 +430,26 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val libraryController = inject[LibraryController]
 
         val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
-          val user1 = user().withName("first", "user").saved
-          val user2 = user().withName("second", "user").saved
-          val library1 = library().withUser(user1).published.withSlug("lib1").withMemberCount(11).saved
-          val library2 = library().withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
-          val library3 = library().withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
-
-          // send invites to same library with different access levels (only want highest access level)
-          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_ONLY))
-          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_INSERT))
-          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_WRITE, state = LibraryInviteStates.DECLINED))
+          val user1 = user().withName("first", "user").withUsername("firstuser").saved
+          val user2 = user().withName("second", "user").withUsername("seconduser").saved
+          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).saved.savedFollowerMembership(user2)
+          val library2 = library().withName("lib2").withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
+          val library3 = library().withName("lib3").withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
+          keep().withLibrary(library1).saved
           (user1, user2, library1, library2, library3)
         }
 
         val pubId1 = Library.publicId(lib1.id.get)
         val pubId2 = Library.publicId(lib2.id.get)
         val pubId3 = Library.publicId(lib3.id.get)
-        val testPath = com.keepit.controllers.website.routes.LibraryController.getLibrarySummariesByUser.url
+        db.readOnlyMaster { implicit s =>
+          keepRepo.count === 1
+        }
+        val testPath = com.keepit.controllers.website.routes.LibraryController.ownerLibraries(user1.username, 0, 10).url
+        testPath === "/site/user/firstuser/libraries?pageSize=10"
         inject[FakeUserActionsHelper].setUser(user1)
         val request1 = FakeRequest("GET", testPath)
-        val result1 = libraryController.getLibrarySummariesByUser()(request1)
+        val result1 = libraryController.ownerLibraries(user1.username, 0, 10)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -455,71 +457,24 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val expected = Json.parse(
           s"""
-            |{"libraries":
-              |[
-                |{
-                  |"id":"${pubId1.id}",
-                  |"name":"Library1",
-                  |"visibility":"secret",
-                  |"url":"/ahsu/lib1",
-                  |"owner":{
-                  |  "id":"${basicUser1.externalId}",
-                  |  "firstName":"${basicUser1.firstName}",
-                  |  "lastName":"${basicUser1.lastName}",
-                  |  "pictureName":"${basicUser1.pictureName}",
-                  |  "username":"${basicUser1.username.value}"
-                  |  },
-                  |"numKeeps":0,
-                  |"numFollowers":0,
-                  |"kind":"user_created",
-                  |"access":"owner",
-                  |"lastViewed":${Json.toJson(t2)(DateTimeJsonLongFormat)}
-                },
-                |{
-                  |"id":"${pubId3.id}",
-                  |"name":"Library3",
-                  |"visibility":"discoverable",
-                  |"url":"/bhsu/lib3",
-                  |"owner":{
-                  |  "id":"${basicUser2.externalId}",
-                  |  "firstName":"${basicUser2.firstName}",
-                  |  "lastName":"${basicUser2.lastName}",
-                  |  "pictureName":"${basicUser2.pictureName}",
-                  |  "username":"${basicUser2.username.value}"
-                  |  },
-                  |"numKeeps":0,
-                  |"numFollowers":1,
-                  |"kind":"user_created",
-                  |"access":"read_only"
-                |}
-              |],
-              |"invited":
-              | [
-                | {
-                    |"id":"${pubId2.id}",
-                    |"name":"Library2",
-                    |"visibility":"published",
-                    |"url":"/bhsu/lib2",
-                    |"owner":{
-                    |  "id":"${basicUser2.externalId}",
-                    |  "firstName":"${basicUser2.firstName}",
-                    |  "lastName":"${basicUser2.lastName}",
-                    |  "pictureName":"${basicUser2.pictureName}",
-                    |  "username":"${basicUser2.username.value}"
-                    |  },
-                    |"numKeeps":0,
-                    |"numFollowers":0,
-                    |"kind":"user_created",
-                    |"inviter":{"id":"${user2.externalId}","firstName":"Baron","lastName":"B","pictureName":"0.jpg","username":"bhsu"},
-                    |"access":"read_insert"
-                  |}
-              | ]
-            |}
+            {
+              "libraries":[
+                {
+                  "id":"${pubId1.id}",
+                  "name":"lib1",
+                  "slug":"lib1",
+                  "numFollowers":10,
+                  "numKeeps":1,
+                  "followersToDisplay":[
+                    {"firstName":"second","lastName":"user","pictureName":"0.jpg","username":"seconduser"}
+                  ]
+                }
+               ]
+            }
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
       }
     }
-
 
     "get libraries of user" in {
       withDb(modules: _*) { implicit injector =>
