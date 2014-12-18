@@ -489,7 +489,7 @@ class AuthHelper @Inject() (
       case Some(provider) =>
         provider.getUserProfileInfo(oauth1Info) map { info =>
           val filledUser = SecureSocialAdaptor.toSocialUser(info, AuthenticationMethod.OAuth1)
-          authCommander.signupWithTrustedSocialUser(providerName, filledUser, signUpUrl)
+          authCommander.signupWithTrustedSocialUser(providerName, filledUser.copy(oAuth1Info = Some(oauth1Info)), signUpUrl)
         } recover {
           case t: Throwable =>
             airbrakeNotifier.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth1Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
