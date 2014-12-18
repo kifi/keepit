@@ -11,7 +11,7 @@ import scala.concurrent.Future
 
 trait FakeOAuthProvider extends OAuthProvider {
 
-  var profileInfo = UserProfileInfo(providerId, ProviderUserId("asdf"), "Foo Bar", Some(EmailAddress("bar@foo.com")), Some("Foo"), Some("Bar"), Some(new java.net.URL("http://www.picture.com/foobar")))
+  var profileInfo = UserProfileInfo(providerId, ProviderUserId("asdf"), "Foo Bar", Some(EmailAddress("bar@foo.com")), Some("Foo"), Some("Bar"), None, Some(new java.net.URL("http://www.picture.com/foobar")), Some(new java.net.URL("http://www.profile.com/foobar")))
   def setProfileInfo(info: UserProfileInfo) { profileInfo = info }
 
   var profileInfoF = () => Future.successful(profileInfo)

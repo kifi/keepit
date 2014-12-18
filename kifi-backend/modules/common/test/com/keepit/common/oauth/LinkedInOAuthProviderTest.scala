@@ -9,7 +9,7 @@ class LinkedInOAuthProviderTest extends Specification with CommonTestInjector {
 
     "parse api" in {
       val token = OAuth2AccessToken("asdfasdf")
-      LinkedInOAuthProvider.api(token) === "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,email-address,formatted-name,picture-urls::(original);secure=true)?format=json&oauth2_access_token=asdfasdf"
+      LinkedInOAuthProvider.api(token) === "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,email-address,formatted-name,public-profile-url,picture-urls::(original);secure=true)?format=json&oauth2_access_token=asdfasdf"
     }
   }
 
