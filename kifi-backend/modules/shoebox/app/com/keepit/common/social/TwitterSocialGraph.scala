@@ -57,7 +57,6 @@ object PagedTwitterUserInfos {
 class TwitterSocialGraph @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
-    suiRepo: SocialUserInfoRepo,
     oauth1Config: OAuth1Configuration,
     twtrOAuthProvider: TwitterOAuthProvider,
     socialRepo: SocialUserInfoRepo) extends SocialGraph with Logging {
