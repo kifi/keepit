@@ -14,6 +14,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
@@ -253,7 +254,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         // upload an image
         {
-          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload)
+          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload, user1.id.get)(HeimdalContext.empty)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
