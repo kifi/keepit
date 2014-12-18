@@ -8,18 +8,22 @@
 
     <div class="profile-manage-settings-group">
 
-      <div class="profile-manage-settings-option" ng-click="userProfileSettings.showFollowedLibraries=true">
-        <div class="profile-manage-settings-option-button">
-          <div class="checked" ng-show="userProfileSettings.showFollowedLibraries==true"></div>
-        </div>
-        <span class="profile-manage-settings-option-text">Show Libraries you are following on your Profile</span>
+      <div class="profile-manage-settings-option">
+
+        <label class="profile-manage-label">
+          <input type="radio" class="profile-manage-input" ng-model="userProfileSettings.showFollowedLibraries" ng-value="true">
+          <span class="profile-manage-radio-check"></span>
+          <span class="profile-settings-option-text">Show Libraries you are following on your Profile</span>
+        </label>
+
       </div>
 
-      <div class="profile-manage-settings-option" ng-click="userProfileSettings.showFollowedLibraries=false">
-        <div class="profile-manage-settings-option-button">
-          <div class="checked" ng-show="userProfileSettings.showFollowedLibraries==false"></div>
-        </div>
-        <span class="profile-manage-settings-option-text">Hide Libraries you are following on your Profile</span>
+      <div class="profile-manage-settings-option">
+        <label class="profile-manage-label">
+          <input type="radio" class="profile-manage-input" ng-model="userProfileSettings.showFollowedLibraries" ng-value="false">
+          <span class="profile-manage-radio-check"></span>
+          <span class="profile-settings-option-text">Hide Libraries you are following on your Profile</span>
+        </label>
       </div>
 
     </div>
