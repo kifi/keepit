@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryMiniCard', [
-  '$rootScope', '$route', 'libraryService', 'profileService', 'friendService', 'modalService', '$location',
-  function ($rootScope, $route, libraryService, profileService, friendService, modalService, $location) {
+  '$rootScope', '$state', 'libraryService', 'profileService', 'friendService', 'modalService', '$location',
+  function ($rootScope, $state, libraryService, profileService, friendService, modalService, $location) {
     return {
       restrict: 'A',
       replace: true,
@@ -33,7 +33,7 @@ angular.module('kifi')
               return;
             } else {
               if ($location.path() === scope.library.url) {
-                $route.reload();
+                $state.reload();
               } else {
                 $location.path(scope.library.url);
               }
