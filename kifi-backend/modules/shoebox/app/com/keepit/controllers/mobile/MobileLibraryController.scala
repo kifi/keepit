@@ -64,8 +64,9 @@ class MobileLibraryController @Inject() (
     val newDescription = (json \ "newDescription").asOpt[String]
     val newVisibility = (json \ "newVisibility").asOpt[LibraryVisibility]
     val newSlug = (json \ "newSlug").asOpt[String]
-    val newColor = (json \ "color").asOpt[HexColor]
-    val res = libraryCommander.modifyLibrary(libId, request.userId, newName, newDescription, newSlug, newVisibility, newColor)
+    val newColor = (json \ "newColor").asOpt[HexColor]
+
+    val res = libraryCommander.modifyLibrary(libId, request.userId, newName, newDescription, newSlug, newVisibility, newColor, None)
     res match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
