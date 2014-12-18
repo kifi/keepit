@@ -1,15 +1,17 @@
 package com.keepit.common.social
 
 import com.keepit.model.SocialUserInfo
+import net.codingwell.scalaguice.ScalaMultibinder
 import scala.concurrent._
 import com.keepit.model.SocialConnection
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.social.{ SocialGraphPlugin, SocialGraphModule }
+import com.keepit.social.{ FakeTwitterSocialGraph, SocialGraph, SocialGraphPlugin, SocialGraphModule }
 
 case class FakeSocialGraphModule() extends SocialGraphModule {
 
   def configure() {
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
+    bind[TwitterSocialGraph].to[FakeTwitterSocialGraph]
   }
 
 }

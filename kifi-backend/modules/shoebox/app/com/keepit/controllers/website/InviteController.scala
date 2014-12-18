@@ -69,12 +69,14 @@ class InviteController @Inject() (db: Database,
   //At which point we can also remove the two step facebook invitation process
   def inviteV2() = UserAction.async(parse.tolerantJson) { request =>
     val fullSocialIdOption = (request.body \ "id").asOpt[FullSocialId]
+    log.info(s"[inviteV2] body=${request.body} fullSocialIdOption=$fullSocialIdOption")
     fullSocialIdOption match {
       case None => Future.successful(BadRequest("0"))
       case Some(fullSocialId) => {
+        log.info(s"[inviteV2] $fullSocialId")
         inviteCommander.invite(request, request.userId, fullSocialId, None, None, "site").map {
           case inviteStatus if inviteStatus.sent => {
-            log.info(s"[invite] Invite sent: $inviteStatus")
+            log.info(s"[inviteV2] Invite sent: $inviteStatus")
             Ok(Json.obj("sent" -> true))
           }
           case InviteStatus(false, Some(facebookInvite), "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
