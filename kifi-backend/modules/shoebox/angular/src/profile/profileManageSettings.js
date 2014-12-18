@@ -11,24 +11,22 @@ angular.module('kifi')
       templateUrl: 'profile/profileManageSettings.tpl.html',
       link: function (scope) {
         scope.isOpen = false;
-        scope.settings = {};
+        scope.userProfileSettings = {};
 
-        scope.toggle = function () {
+        scope.toggleOpen = function () {
           scope.isOpen = !scope.isOpen;
         };
 
         function init() {
-          profileService.getSettings().then(function (val) {
-            scope.settings = val;
-            return scope.settings;
+          profileService.getSettings().then(function (res) {
+            scope.userProfileSettings = res.data;
+            return;
           });
         }
 
-        scope.$watch(function() {
-          return scope.settings.showFollowedLibraries;
-        }, function(newVal, oldVal) {
+        scope.$watch('userProfileSettings.showFollowedLibraries', function(newVal, oldVal) {
           if (_.isBoolean(newVal) && _.isBoolean(oldVal)) {
-            profileService.setSettings(scope.settings);
+            profileService.setSettings(scope.userProfileSettings);
           }
         });
 

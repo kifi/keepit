@@ -287,15 +287,11 @@ angular.module('kifi')
     }
 
     function getSettings() {
-      return $http.get(routeService.profileSettings).then(function (res) {
-        return res.data;
-      });
+      return $http.get(routeService.profileSettings);
     }
 
     function setSettings(changedSettings) {
-      return $http.post(routeService.profileSettings, changedSettings).then(function (res) {
-        return res.data;
-      });
+      return $http.post(routeService.profileSettings, changedSettings);
     }
 
     return {
