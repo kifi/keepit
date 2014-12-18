@@ -206,6 +206,19 @@ class SeedIngestionCommander @Inject() (
     }
   }
 
+  def getPublicSeedItem(uriId: Id[NormalizedURI]): Option[PublicSeedItem] = {
+    db.readOnlyReplica { implicit session =>
+      rawSeedsRepo.getFirstByUriId(uriId).map { rawItem =>
+        val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
+          Keepers.TooMany
+        } else {
+          Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
+        }
+        cookPublicSeedItem(rawItem, keepers)
+      }
+    }
+  }
+
   def getUsersWithSufficientData(): Set[Id[User]] = {
     db.readOnlyReplica { implicit session =>
       keepInfoRepo.getUsersWithKeepsCounts()
