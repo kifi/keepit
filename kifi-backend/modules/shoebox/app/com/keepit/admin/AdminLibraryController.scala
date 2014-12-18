@@ -8,6 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.RichRequestHeader
+import com.keepit.common.util.Paginator
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.model._
 import play.api.mvc.AnyContent
@@ -102,10 +103,10 @@ class AdminLibraryController @Inject() (
         keepRepo.librariesWithMostKeepsSince(topListSize, clock.now().minusHours(24))
       } else Seq()
 
-      val pagePublished = libraryRepo.pagePublished(page, size = pageSize)
+      val pagePublished = libraryRepo.pagePublished(Paginator(page, pageSize))
 
       val statsByLibraryId = {
-        val pagedLibrariesById = pagePublished.map(lib => (lib.id.get -> lib)).toMap
+        val pagedLibrariesById = pagePublished.map(lib => lib.id.get -> lib).toMap
         val allLibraryIds = pagedLibrariesById.keySet ++ topDailyFollower.map(_._1) ++ topDailyKeeps.map(_._1)
         val librariesById = {
           val missingLibraryIds = allLibraryIds -- pagedLibrariesById.keys
@@ -129,7 +130,7 @@ class AdminLibraryController @Inject() (
   def libraryView(libraryId: Id[Library]) = AdminUserPage.async { implicit request =>
     val simLibsFut = cortex.similarLibraries(libraryId, 5).map { libIds =>
       db.readOnlyReplica { implicit s =>
-        libIds.map { libraryRepo.get(_) }
+        libIds.map(libraryRepo.get)
       }
     }
     val (library, owner, keepCount, contributors, followers) = db.readOnlyReplica { implicit session =>

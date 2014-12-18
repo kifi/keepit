@@ -14,7 +14,7 @@ import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ KeepRepo, UserRepo, Library, LibraryRepo }
-import org.joda.time.DateTime
+import org.joda.time.{ LocalDate, DateTime }
 import play.api.{ Play, Plugin }
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -69,6 +69,10 @@ case class SiteMapKey() extends Key[String] {
   def toKey(): String = ""
 }
 
+object SiteMapGenerator {
+  val BaselineDate = new LocalDate(2014, 12, 13)
+}
+
 @Singleton
 class SiteMapGenerator @Inject() (
     airbrake: AirbrakeNotifier,
@@ -105,13 +109,16 @@ class SiteMapGenerator @Inject() (
         s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}"
       }
 
-      def lastMod(lib: Library): DateTime = {
-        db.readOnlyReplica { implicit s =>
+      def lastMod(lib: Library): LocalDate = {
+        val date = db.readOnlyReplica { implicit s =>
           keepRepo.latestKeepInLibrary(lib.id.get) match {
-            case Some(date) if date.isAfter(lib.updatedAt) => date
-            case _ => lib.updatedAt
+            case Some(date) if date.isAfter(lib.updatedAt) => date.toLocalDate
+            case _ => lib.updatedAt.toLocalDate
           }
         }
+        if (date.isBefore(SiteMapGenerator.BaselineDate)) {
+          SiteMapGenerator.BaselineDate
+        } else date
       }
 
       val urlset =

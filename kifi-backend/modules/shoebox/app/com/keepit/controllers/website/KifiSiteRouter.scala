@@ -163,7 +163,7 @@ class AngularRouter @Inject() (
             val redir = "/" + (user.username.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
             if (isUserAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
           } else if (path.split.length == 1) { // user profile page
-            Some(Angular(None)) // great place to postload request data since we have `user` available
+            Some(Angular(Some(Future.successful("<meta name=\"robots\" content=\"noindex\">"))))
           } else {
             path.secondary.flatMap { secondary =>
               libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(secondary)).map {

@@ -108,13 +108,15 @@ angular.module('kifi')
       this.numKeeps = library.numKeeps;
       this.ownerPicUrl = routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 200);
       this.name = library.name;
-      this.imageUrl = null; // TODO(josh) add when we get this image from the backend
+      this.description = library.description;
+      this.image = library.image;
+      this.imageUrl = library.image ? routeService.libraryImageUrl(library.image.path) : null;
       this.libraryUrl = library.url;
       this.followers = library.followers.map(function (user) {
         return _.merge(user, { picUrl: routeService.formatPicUrl(user.id, user.pictureName, 200) });
       });
       // default color until we're passed colors from the backend
-      this.cardColor = '#73c785';
+      this.color = library.color || '#73c785';
     }
 
 
@@ -365,11 +367,17 @@ angular.module('kifi')
           libraryOwnerUserName: library.owner.username,
           owner: this.isMyLibrary(library),
           privacySetting: library.visibility,
+          hasCoverImage: !!library.image,
           source: 'site'
         };
 
         if (library.visibility === 'published') {
           defaultAttributes.libraryName = library.name;
+        }
+
+        // o=lr shorthand for origin=libraryRec
+        if ($location.url().indexOf('o=lr') > -1) {
+          defaultAttributes.origin = 'libraryRec';
         }
 
         return defaultAttributes;

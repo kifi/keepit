@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.curator.model.{ LibraryRecoSelectionParams, CuratorLibraryInfo, CuratorLibraryInfoRepo, LibraryRecommendation, LibraryRecommendationGenerationState, LibraryRecommendationGenerationStateRepo, LibraryRecommendationRepo, LibraryRecommendationStates }
+import com.keepit.curator.model._
 import com.keepit.curator.{ LibraryScoringHelper, ScoredLibraryInfo }
 import com.keepit.model.{ ExperimentType, Library, LibraryVisibility, User }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -25,6 +25,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
     libraryInfoRepo: CuratorLibraryInfoRepo,
     libraryRecRepo: LibraryRecommendationRepo,
     genStateRepo: LibraryRecommendationGenerationStateRepo,
+    libMembershipRepo: CuratorLibraryMembershipInfoRepo,
     experimentCommander: RemoteUserExperimentCommander,
     serviceDiscovery: ServiceDiscovery) extends Logging {
 
@@ -37,7 +38,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
 
   def getTopRecommendations(userId: Id[User], howManyMax: Int): Future[Seq[LibraryRecommendation]] = {
     db.readOnlyReplicaAsync { implicit session =>
-      libraryRecRepo.getByTopMasterScore(userId, howManyMax)
+      libraryRecRepo.getRecommendableByTopMasterScore(userId, howManyMax)
     }
   }
 
@@ -72,6 +73,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
   }
 
   case class LibraryRecoGenerationForUserHelper(userId: Id[User], selectionParams: LibraryRecoSelectionParams) {
+
+    lazy val usersFollowedLibraries: Set[Id[Library]] = db.readOnlyReplica { implicit s => libMembershipRepo.getLibrariesByUserId(userId).toSet }
 
     def precomputeRecommendations() = {
       val state: LibraryRecommendationGenerationState = db.readOnlyReplica { implicit session =>
@@ -114,7 +117,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
     private def initialLibraryRecoFilterForUser(libraryInfo: CuratorLibraryInfo): Boolean = {
       libraryInfo.ownerId != userId && libraryInfo.visibility != LibraryVisibility.SECRET &&
         libraryInfo.keepCount >= selectionParams.minKeeps &&
-        libraryInfo.memberCount >= selectionParams.minMembers
+        libraryInfo.memberCount >= selectionParams.minMembers &&
+        !usersFollowedLibraries.contains(libraryInfo.libraryId)
     }
 
     private def getCandidateLibrariesForUser(state: LibraryRecommendationGenerationState): (Seq[CuratorLibraryInfo], SequenceNumber[CuratorLibraryInfo]) = {
@@ -133,7 +137,6 @@ class LibraryRecommendationGenerationCommander @Inject() (
           recoOpt.map { reco =>
             libraryRecRepo.save(reco.copy(
               state = LibraryRecommendationStates.ACTIVE,
-              updatedAt = currentDateTime,
               masterScore = scoredLibraryInfo.masterScore,
               allScores = scoredLibraryInfo.allScores
             ))

@@ -2,6 +2,8 @@ package com.keepit.commanders
 
 import java.io.File
 
+import com.keepit.common.strings.UTF8
+
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
@@ -64,7 +66,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
-        val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json")).mkString)
+        val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json"), UTF8).mkString)
         bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json, libraryId = None))
 
         // Importer is run synchronously in TestKit.
@@ -93,7 +95,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
-        val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json")).mkString)
+        val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json"), UTF8).mkString)
         bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json, libraryId = Some(lib.id.get)))
 
         // Importer is run synchronously in TestKit.

@@ -6,7 +6,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.kifi.macros.json
 import org.joda.time.DateTime
-import play.api.libs.json.{ JsArray, JsValue, Json }
+import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
 
 import scala.concurrent.duration.Duration
@@ -64,6 +64,10 @@ object UserValueName {
   val SENT_EMAIL_CONFIRMATION = UserValueName("sent_email_confirmation")
   val LATEST_EMAIL_TIPS_SENT = UserValueName("latest_email_tips")
   val LIBRARY_SORTING_PREF = UserValueName("library_sorting_pref")
+
+  // User Profile Settings (be sure to add to UserValueSettings.defaultSettings for default values)
+  val USER_PROFILE_SETTINGS = UserValueName("user_profile_settings")
+  val SHOW_FOLLOWED_LIBRARIES = UserValueName("show_followed_libraries") // show libraries I follow
 
   // temp for library callouts for existing user. remove after users know about libraries (Oct 26 2014)
   // library_callout_shown tag_callout_shown guide_callout_shown
@@ -148,4 +152,33 @@ object UserValues {
 
   val tagOrdering = UserValueJsValueHandler(UserValueName.USER_COLLECTION_ORDERING, JsArray())
   val recentInteractions = UserValueJsValueHandler(UserValueName.RECENT_INTERACTION, JsArray())
+
+  val userProfileSettings = UserValueJsValueHandler(UserValueName.USER_PROFILE_SETTINGS, Json.obj())
+}
+
+@json case class UserValueSettings(showFollowedLibraries: Boolean)
+
+object UserValueSettings {
+
+  val defaultSettings: Map[UserValueName, Boolean] = Map(
+    UserValueName.SHOW_FOLLOWED_LIBRARIES -> true
+  )
+
+  def readFromJsValue(body: JsValue): UserValueSettings = {
+    val showFollowedLibrariesOpt = (body \ UserValueName.SHOW_FOLLOWED_LIBRARIES.name).asOpt[Boolean]
+
+    UserValueSettings(
+      showFollowedLibraries = showFollowedLibrariesOpt.getOrElse(UserValueSettings.defaultSettings(UserValueName.SHOW_FOLLOWED_LIBRARIES))
+    )
+  }
+
+  def retrieveSetting(targetVal: UserValueName, userVals: JsValue): Boolean = {
+    retrieveSettings(Set(targetVal), userVals)(targetVal)
+  }
+
+  def retrieveSettings(targetVals: Set[UserValueName], userVals: JsValue): Map[UserValueName, Boolean] = {
+    targetVals.map { userVal =>
+      userVal -> (userVals \ userVal.name).asOpt[Boolean].getOrElse(defaultSettings(userVal))
+    }.toMap
+  }
 }

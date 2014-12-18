@@ -4,35 +4,38 @@ import java.io.File
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders._
-import com.keepit.common.controller.{ FakeUserActionsHelper }
-import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.controller.FakeUserActionsHelper
+import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.store.{ FakeShoeboxStoreModule, ImageSize }
 import com.keepit.common.time._
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.heimdal.HeimdalContext
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScrapeSchedulerConfigModule }
+import com.keepit.scraper.{ FakeScrapeSchedulerConfigModule, FakeScrapeSchedulerModule }
 import com.keepit.search.{ FakeSearchServiceClient, FakeSearchServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
+import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.{ JsObject, JsValue, JsArray, Json }
+import play.api.libs.json.{ JsArray, JsObject, JsValue, Json }
 import play.api.test.Helpers._
 import play.api.test._
-import com.keepit.social.BasicUser
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.UserFactory._
-import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.LibraryMembershipFactoryHelper._
-import com.keepit.model.LibraryMembershipFactory._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -253,9 +256,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         // upload an image
         {
-          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload)
+          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload, user1.id.get)(HeimdalContext.empty)
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved === ImageProcessState.StoreSuccess
+          saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
         }
 
         val testPath = com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url
@@ -419,6 +422,58 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             |}""".stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
         Json.parse(contentAsString(result2)) must equalTo(expected)
+      }
+    }
+
+    "get owner libraries for profile" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val libraryController = inject[LibraryController]
+
+        val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
+          val user1 = user().withName("first", "user").withUsername("firstuser").saved
+          val user2 = user().withName("second", "user").withUsername("seconduser").saved
+          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).saved.savedFollowerMembership(user2)
+          val library2 = library().withName("lib2").withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
+          val library3 = library().withName("lib3").withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
+          keep().withLibrary(library1).saved
+          (user1, user2, library1, library2, library3)
+        }
+
+        val pubId1 = Library.publicId(lib1.id.get)
+        val pubId2 = Library.publicId(lib2.id.get)
+        val pubId3 = Library.publicId(lib3.id.get)
+        db.readOnlyMaster { implicit s =>
+          keepRepo.count === 1
+        }
+        val testPath = com.keepit.controllers.website.routes.LibraryController.ownerLibraries(user1.username, 0, 10).url
+        testPath === "/site/user/firstuser/libraries?pageSize=10"
+        inject[FakeUserActionsHelper].setUser(user1)
+        val request1 = FakeRequest("GET", testPath)
+        val result1 = libraryController.ownerLibraries(user1.username, 0, 10)(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+
+        val (basicUser1, basicUser2) = db.readOnlyMaster { implicit s => (basicUserRepo.load(user1.id.get), basicUserRepo.load(user2.id.get)) }
+
+        val expected = Json.parse(
+          s"""
+            {
+              "libraries":[
+                {
+                  "id":"${pubId1.id}",
+                  "name":"lib1",
+                  "slug":"lib1",
+                  "numFollowers":10,
+                  "numKeeps":1,
+                  "followersToDisplay":[
+                    {"firstName":"second","lastName":"user","pictureName":"0.jpg","username":"seconduser"}
+                  ]
+                }
+               ]
+            }
+           """.stripMargin)
+        Json.parse(contentAsString(result1)) must equalTo(expected)
       }
     }
 
@@ -1212,6 +1267,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             val lib1 = library().withName("Scala").withUser(user1).published().saved
             val lib2 = library().withName("Java").withUser(user1).published().saved
 
+            // test that private libraries are not returned in the response
+            val lib3 = library().withName("Private").withUser(user1).saved
+
             inject[KeepRepo].all() // force slick to create the table
 
             membership().withLibraryOwner(lib1).saved
@@ -1221,8 +1279,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             membership().withLibraryFollower(lib2, user3).saved
 
             inject[SystemValueRepo].save(SystemValue(
-              name = MarketingSuggestedLibraryInfo.systemValueName,
-              value = s"[${lib1.id.get},${lib2.id.get}]"))
+              name = MarketingSuggestedLibrarySystemValue.systemValueName,
+              value = s"""
+                   |[
+                   |  { "id": 424242, "caption": "does not exist" },
+                   |  { "id": ${lib2.id.get}, "color": "#abcdef" },
+                   |  { "id": ${lib1.id.get}, "caption": "yo dawg", "color": "#ffffff" },
+                   |  { "id": ${lib3.id.get} }
+                   |]
+                 """.stripMargin))
           }
 
           val call = com.keepit.controllers.website.routes.LibraryController.marketingSiteSuggestedLibraries()
@@ -1234,11 +1299,16 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
           val libInfos = contentAsJson(result).as[Seq[MarketingSuggestedLibraryInfo]]
           libInfos.size === 2
-          libInfos(0).name === "Scala"
-          libInfos(0).numFollowers === 2
-          libInfos(0).owner.fullName === "John Doe"
-          libInfos(1).name === "Java"
-          libInfos(1).numFollowers === 1
+          libInfos(0).name === "Java"
+          libInfos(0).numFollowers === 1
+          libInfos(0).id.id must beMatching("^l.+") // tests public id
+          libInfos(0).caption must beNone
+          libInfos(0).color.get.hex === "#abcdef"
+          libInfos(1).name === "Scala"
+          libInfos(1).numFollowers === 2
+          libInfos(1).owner.fullName === "John Doe"
+          libInfos(1).caption must beSome("yo dawg")
+          libInfos(1).color.get.hex === "#ffffff"
         }
       }
     }

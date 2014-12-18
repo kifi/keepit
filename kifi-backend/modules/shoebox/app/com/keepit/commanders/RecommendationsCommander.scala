@@ -23,6 +23,8 @@ import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model.{
   RecoInfo,
   RecommendationClientType,
+  FullLibRecoInfo,
+  FullUriRecoInfo,
   FullRecoInfo,
   UriRecoItemInfo,
   RecoMetaData,
@@ -30,7 +32,6 @@ import com.keepit.curator.model.{
   RecoAttributionInfo,
   RecoAttributionKind,
   RecoKind,
-  LibRecoItemInfo,
   RecoLibraryInfo
 }
 import com.keepit.common.db.slick.Database
@@ -189,7 +190,7 @@ class RecommendationsCommander @Inject() (
         case (reco, nUri) => uriSummaryCommander.getDefaultURISummary(nUri, waiting = false).map { uriSummary =>
           val itemInfo = constructRecoItemInfo(nUri, uriSummary, reco)
           val attributionInfo = contstructAttributionInfos(reco.attribution.get)
-          FullRecoInfo(
+          FullUriRecoInfo(
             kind = RecoKind.Keep,
             metaData = Some(RecoMetaData(attributionInfo)),
             itemInfo = itemInfo,
@@ -218,7 +219,7 @@ class RecommendationsCommander @Inject() (
       Future.sequence(recosWithUris.map {
         case (reco, nUri) => uriSummaryCommander.getDefaultURISummary(nUri, waiting = false).map { uriSummary =>
           val itemInfo = constructRecoItemInfo(nUri, uriSummary, reco)
-          FullRecoInfo(
+          FullUriRecoInfo(
             kind = RecoKind.Keep,
             metaData = None,
             itemInfo = itemInfo
@@ -249,21 +250,10 @@ class RecommendationsCommander @Inject() (
 
     libCommander.createFullLibraryInfos(Some(userId), false, maxMembersShown = 10, maxKeepsShown = 0, ProcessedImageSize.Large.idealSize, curatedLibraries, ProcessedImageSize.Large.idealSize).map { fullLibraryInfos =>
       fullLibraryInfos.map { libInfo =>
-        val item = LibRecoItemInfo(
-          id = libInfo.id,
-          name = libInfo.name,
-          url = libInfo.url,
-          description = libInfo.description,
-          owner = libInfo.owner,
-          followers = libInfo.followers,
-          numFollowers = libInfo.numFollowers,
-          numKeeps = libInfo.numKeeps
-        )
-
-        FullRecoInfo(
+        FullLibRecoInfo(
           kind = RecoKind.Library,
           metaData = None,
-          itemInfo = item
+          itemInfo = libInfo
         )
       }
     }

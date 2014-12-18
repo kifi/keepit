@@ -63,7 +63,7 @@ object ImageProcessState {
   case class CDNUploadFailed(ex: Throwable) extends ImageStoreFailureWithException(ex, "cdn_upload_failed")
 
   // Success
-  case object StoreSuccess extends ImageProcessState with ImageProcessSuccess
+  case class StoreSuccess(format: ImageFormat, size: ImageSize, bytes: Int) extends ImageProcessState with ImageProcessSuccess
   case class ExistingStoredImagesFound(images: Seq[BaseImage]) extends ImageProcessState with ImageProcessSuccess
 }
 

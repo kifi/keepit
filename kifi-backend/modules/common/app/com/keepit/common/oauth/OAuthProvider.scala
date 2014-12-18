@@ -5,7 +5,8 @@ import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
+import com.keepit.model.{ SocialUserInfo, OAuth1TokenInfo, OAuth2TokenInfo }
+import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialId }
 import play.api.libs.ws.{ WS, WSResponse }
 import play.api.mvc.{ Result, Request }
 import securesocial.core.IdentityProvider
@@ -18,7 +19,7 @@ sealed abstract class ProviderId(val id: String) {
 object ProviderIds {
   object Facebook extends ProviderId("facebook")
   object LinkedIn extends ProviderId("linkedin")
-  object Twitter extends ProviderId("twitter") // revisit
+  object Twitter extends ProviderId("twitter")
   def toProviderId(id: String) = id match {
     case Facebook.id => Facebook
     case LinkedIn.id => LinkedIn
@@ -41,14 +42,21 @@ object OAuth2AccessToken {
     })
 }
 
+case class UserHandle(underlying: String) extends AnyVal
+
 case class UserProfileInfo(
-  providerId: ProviderId,
-  userId: ProviderUserId,
-  name: String,
-  emailOpt: Option[EmailAddress],
-  firstNameOpt: Option[String],
-  lastNameOpt: Option[String],
-  pictureUrl: Option[java.net.URL])
+    providerId: ProviderId,
+    userId: ProviderUserId,
+    name: String,
+    emailOpt: Option[EmailAddress],
+    firstNameOpt: Option[String],
+    lastNameOpt: Option[String],
+    handle: Option[UserHandle],
+    pictureUrl: Option[java.net.URL],
+    profileUrl: Option[java.net.URL]) {
+  lazy val socialId: SocialId = SocialId(userId.id)
+  lazy val socialNetwork: SocialNetworkType = SocialNetworks.ALL.collectFirst { case n if n.name == providerId.id => n } get
+}
 
 object UserProfileInfo {
   implicit def toUserProfileInfo(identity: securesocial.core.Identity) = UserProfileInfo(
@@ -58,7 +66,9 @@ object UserProfileInfo {
     identity.email.map(EmailAddress(_)),
     Some(identity.firstName),
     Some(identity.lastName),
-    identity.avatarUrl.map(new java.net.URL(_))
+    None,
+    identity.avatarUrl.map(new java.net.URL(_)),
+    None
   )
 }
 

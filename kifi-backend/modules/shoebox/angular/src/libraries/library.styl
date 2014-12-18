@@ -14,6 +14,253 @@ invite-header-orange = #ff7c3c
 .delighted-visible ~ div .kf-library-card-header
   margin-top: 10px
 
+
+lib-body-side-pad = 30px
+
+// libary cover image
+// Warning: Do not nest these styles under an ancestor selector. That would break some of them.
+
+cover-image-dur = .6s
+
+.kf-keep-lib-cover-image
+  width: calc(100% + 60px)
+  height: 210px
+  margin: 10px (-(lib-body-side-pad)) 16px
+  background-color: #eee
+  background-size: cover
+  position: relative
+  cursor: default
+
+  .kf-loaded &.ng-enter
+  .kf-loaded &.ng-leave
+    overflow: hidden
+    transition: height, margin-top, margin-bottom, opacity
+    transition-duration: cover-image-dur
+
+  .kf-loaded &.ng-enter:not(.ng-enter-active)
+  .kf-loaded &.ng-leave.ng-leave-active
+    height: 0
+    margin-top: 0
+    margin-bottom: 0
+    opacity: 0
+
+  &.kf-ns
+    cursor: ns-resize
+    cursor: -webkit-grab
+    cursor: -moz-grab
+    cursor: grab
+
+  &.kf-ew
+    cursor: ew-resize
+    cursor: -webkit-grab
+    cursor: -moz-grab
+    cursor: grab
+
+  &.kf-dragging
+    cursor: -webkit-grabbing
+    cursor: -moz-grabbing
+    cursor: grabbing
+
+cover-image-adjust-width = 35px
+cover-image-adjust-right = 24px
+.kf-keep-lib-cover-image-adjust
+  position: absolute
+  bottom: 12px
+  right: cover-image-adjust-right
+  height: 31px
+  width: cover-image-adjust-width
+  background: url(/img/camera-over.svg) center no-repeat
+  background-size: 33px 29px
+  outline: none
+  transform: scale(.8)
+  transition: opacity, transform
+  transition-duration: .2s
+
+  :hover>&
+    transition-duration: 20ms
+
+  &:not(:hover):not(:focus):not(.kf-active)
+    opacity: .8
+
+  :not(:hover):not(.kf-fake-hover)>&:not(:focus):not(.kf-active)
+    transform: scale(.3)
+    opacity: 0
+
+  &.ng-enter
+    transition-duration: .16s
+    transform-origin: center bottom
+    &:not(.ng-enter-active)
+      transform: scale(.3) translate(0, 40%) !important
+
+  &:hover:active
+  &.kf-active
+    opacity: 1 !important
+
+.kf-keep-lib-cover-image-menu
+  width = 100px
+  position: absolute
+  bottom: 52px
+  right: ((cover-image-adjust-width - width) / 2) + cover-image-adjust-right
+  width: width
+  border: 1px solid #ccc
+  border-radius: 6px
+  padding: 3px 0
+  background: #fff
+  box-shadow: 0 1px 4px rgba(0,0,0,.2)
+
+  &.ng-enter
+  &.ng-leave
+    transition: opacity .16s, transform .16s
+    transform-origin: center bottom
+
+  &.ng-enter:not(.ng-enter-active)
+  &.ng-leave.ng-leave-active
+    transform: scale(.4) translate(0,16px)
+    opacity: 0
+
+.kf-keep-lib-cover-image-menu-opt
+  display: block
+  font-size: 13px
+  line-height: 28px
+  text-align: center
+  color: #333
+
+  &:not(:last-of-type)
+    border-bottom: 1px solid #ccc
+
+  &:hover
+  &.kf-hover
+    background-color: #f2f2f2
+
+.kf-keep-lib-cover-image-menu-tri
+  position: absolute
+  height: 18px
+  width: 36px
+  left: 50%
+  margin-left: -18px
+  bottom: -18px
+  overflow: hidden
+  border-color: inherit
+
+  &::after
+    content: ''
+    position: absolute
+    height: 18px
+    width: 18px
+    left: 9px
+    top: -14px
+    box-sizing: border-box
+    box-shadow: 1px 2px 12px rgba(0,0,0,.2)
+    border: 1px solid
+    border-color: inherit
+    background-color: #fff
+    transform: rotate(45deg)
+
+.kf-keep-lib-cover-image-preview
+  height = 44px
+  position: absolute
+  bottom: 0
+  left: 0
+  right: 0
+  height: height
+  line-height: height
+  overflow: hidden
+  padding: 0 16px
+  background-color: rgba(0,0,0,.25)
+  color: #fff
+  text-align: right
+  font-size: 14px
+  user-select: none
+  transition: height, opacity
+  transition-duration: .2s
+
+  &.ng-enter:not(.ng-enter-active)
+  &.ng-leave.ng-leave-active
+    height: 0
+    opacity: 0
+
+.kf-keep-lib-cover-image-apply
+.kf-keep-lib-cover-image-cancel
+  display: inline-block
+  vertical-align: top
+  margin: 8px 0 8px 8px
+  width: 56px
+  border-radius: 4px
+  line-height: 28px
+  font-size: 12px
+  text-align: center
+  user-select: none
+
+.kf-keep-lib-cover-image-apply
+  $bg = #428bca
+  background-color: $bg
+  color: white
+  margin-left: 16px
+
+  &:hover
+    background-color: lighten($bg, 6%)
+
+    &:active
+      background-color: darken($bg, 4%)
+
+.kf-keep-lib-cover-image-cancel
+  background-color: #fff
+  color: #777
+
+  &:hover
+    color: #333
+
+    &:active
+      background-color: darken(#fff, 4%)
+
+.kf-keep-lib-cover-image-progress
+  position: absolute
+  top: 100%
+  left: 0
+  width: 0
+  height: 3px
+  background: #7bacf1
+  transition: width .2s linear
+
+  &.kf-done
+    width: 100% !important
+    transition: width .16s ease-in
+
+  &.kf-fail
+    background: #b00
+    width: 0 !important
+    transition: width .4s ease-in
+
+  &.ng-leave
+    transition: transform .6s
+
+  &.ng-leave-active
+    transform-origin: top
+    transform: scale(1, 0)
+
+.kf-keep-lib-cover-image-error
+  position: absolute
+  right: 24px
+  border-radius: 5px
+  margin-top: 44px
+  padding: 3px 10px
+  background-color: redColor
+  font-size: 13px
+  color: #fff
+  z-index: 10
+
+  .kf-keep-lib-cover-image+&
+    margin-top: -6px
+
+  &.ng-enter
+  &.ng-leave
+    transition: opacity .5s
+
+  &.ng-enter:not(.ng-enter-active)
+  &.ng-leave.ng-leave-active
+    opacity: 0
+
+
 // For library cards that are displayed when there
 // is no logged in user.
 .library-card.loggedOutUser
@@ -64,6 +311,7 @@ invite-header-orange = #ff7c3c
     transition: margin-top 0.3s ease
 
   .kf-keep-lib-owner
+    white-space: nowrap
     position: relative
     left: 0
     transition: left 0.3s ease
@@ -146,7 +394,7 @@ html:not(.kf-mobile)
       top: -10px
       right: -10px
 
-    .kf-keep-lib-image
+    .kf-keep-lib-cover-image
       display: none
 
 
@@ -203,7 +451,7 @@ html:not(.kf-mobile)
       color: #fff
 
   .kf-keep-lib-body
-    padding: 0 30px 5px
+    padding: 0 lib-body-side-pad 5px
 
   .kf-keep-lib-header
     padding-top: 20px
@@ -271,6 +519,49 @@ html:not(.kf-mobile)
 
   .kf-keep-lib-owner-name
     color: #939393
+
+  .kf-keep-lib-add-pic
+    display: inline-block
+    vertical-align: top
+    line-height: 36px
+    margin-left: 20px
+    padding: 0 6px 0 40px
+    color: #333
+    font-size: 14px
+    outline: none
+    position: relative
+    &:hover
+    &:focus
+      color: #006bb2
+
+    .kf-loaded &.ng-enter
+    .kf-loaded &.ng-leave
+      transition: opacity cover-image-dur, transform cover-image-dur
+
+    .kf-loaded &.ng-enter:not(.ng-enter-active)
+    .kf-loaded &.ng-leave.ng-leave-active
+      transform: scale(.4)
+      opacity: 0
+
+    &::before
+      content: ''
+      position: absolute
+      height: 31px
+      width: 35px
+      top: 2px
+      left: 2px
+      background: url(/img/camera-line.svg) center no-repeat
+      background-size: 33px 29px
+      transform: scale(.8)
+
+    &:not(:hover):not(:focus)::before
+      opacity: .8
+
+  .kf-keep-lib-pic-file-input
+    position: absolute;
+    height: 0
+    width: 0
+    overflow: hidden
 
   .kf-keep-lib-search
     position: absolute
@@ -391,10 +682,6 @@ html:not(.kf-mobile)
   .kf-keep-lib-edit-keeps-button
     margin-right: 15px
     padding-left: 15px
-
-  .kf-keep-lib-image
-    width: 100%
-    padding-top: 30px
 
 // This should be in common; it's so messy right now.
 .kf-keep-lib-footer-button

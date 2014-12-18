@@ -12,6 +12,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.performance.timing
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time._
+import com.keepit.common.util.Paginator
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
@@ -41,6 +42,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countLibrariesOfUserFromAnonymos(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int
   def countLibrariesToSelf(userId: Id[User])(implicit session: RSession): Int
   def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int
+  def getOwnedLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]]
 }
 
 @Singleton
@@ -294,11 +296,24 @@ class LibraryMembershipRepoImpl @Inject() (
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
     val query = if (countFollowLibraries) {
-      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lm.visibility = 'visible') and (lib.visibility = 'published') #$libVisibility)"
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and (((lm.visibility = 'visible') and (lib.visibility = 'published')) #$libVisibility)"
     } else {
-      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lm.visibility = 'visible') and (lib.visibility = 'published' and lm.access='owner') #$libVisibility)"
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and (((lm.visibility = 'visible') and (lib.visibility = 'published' and lm.access='owner')) #$libVisibility)"
     }
     query.as[Int].firstOption.getOrElse(0)
+  }
+
+  //logged in user viewing another’s profile: Everything in countLibrariesOfUserFromAnonymos + libraries user has access to (even if private)
+  def getOwnedLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]] = {
+    import StaticQuery.interpolation
+    val libsFriendFollow = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $userId and lm.user_id = $friendId and lib.state = 'active' and lm.state = 'active'".as[Id[Library]].list
+    val libVisibility = libsFriendFollow.size match {
+      case 0 => ""
+      case 1 => s"or (lib.id = ${libsFriendFollow.head})"
+      case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
+    }
+    val query = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and (((lm.visibility = 'visible') and (lib.visibility = 'published' and lm.access='owner')) #$libVisibility) order by lib.id limit (${page.itemsToDrop}, ${page.size}})"
+    query.as[Id[Library]].list
   }
 
 }

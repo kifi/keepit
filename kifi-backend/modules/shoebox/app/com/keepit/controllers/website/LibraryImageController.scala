@@ -1,12 +1,13 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryCommander, LibraryImageCommander }
+import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, LibraryImageCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time.Clock
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
@@ -26,6 +27,7 @@ class LibraryImageController @Inject() (
   fortyTwoConfig: FortyTwoConfig,
   clock: Clock,
   libraryImageCommander: LibraryImageCommander,
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
   val userActionsHelper: UserActionsHelper,
   val libraryCommander: LibraryCommander,
   val publicIdConfig: PublicIdConfiguration,
@@ -37,8 +39,9 @@ class LibraryImageController @Inject() (
     val imageRequest = db.readWrite { implicit session =>
       libraryImageRequestRepo.save(LibraryImageRequest(libraryId = libraryId, source = ImageSource.UserUpload))
     }
-    val position = LibraryImagePosition(posX, posY)
-    val uploadImageF = libraryImageCommander.uploadLibraryImageFromFile(request.body, libraryId, position, ImageSource.UserUpload, Some(imageRequest.id.get))
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    val uploadImageF = libraryImageCommander.uploadLibraryImageFromFile(
+      request.body, libraryId, LibraryImagePosition(posX, posY), ImageSource.UserUpload, request.userId, Some(imageRequest.id.get))
     uploadImageF.map {
       case fail: ImageStoreFailure =>
         InternalServerError(Json.obj("error" -> fail.reason))
@@ -77,12 +80,13 @@ class LibraryImageController @Inject() (
 
   def removeLibraryImage(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    libraryImageCommander.removeImageForLibrary(libraryId)
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    libraryImageCommander.removeImageForLibrary(libraryId, request.userId)
     NoContent
   }
 }
 
 object LibraryImageController {
-  val defaultImageSize = ImageSize(800, 600)
+  val defaultImageSize = ProcessedImageSize.XLarge.idealSize
   val pathHashRe = "library/([^_]+)_.*".r
 }

@@ -1,5 +1,6 @@
 package com.keepit.common.social
 
+import com.keepit.common.strings.UTF8
 import scala.collection.mutable.Map
 
 import java.io.File
@@ -43,7 +44,7 @@ class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector
   }
 
   def testFacebookGraph(socialUserInfo: SocialUserInfo, jsonFilename: String, numOfFriends: Int)(implicit injector: Injector) = {
-    val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(jsonFilename))).mkString)
+    val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(jsonFilename)), UTF8).mkString)
     val extractedFriends = inject[FacebookSocialGraph].extractFriends(json)
     val socialUsers = inject[SocialUserImportFriends].importFriends(socialUserInfo, extractedFriends)
     socialUsers.size == numOfFriends

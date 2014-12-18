@@ -12,7 +12,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.net.UserAgent
-import com.keepit.common.social.{ FacebookSocialGraph, LinkedInSocialGraph }
+import com.keepit.common.social.{ TwitterSocialGraph, FacebookSocialGraph, LinkedInSocialGraph }
 import com.keepit.heimdal.{ ContextDoubleData, ContextStringData, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
 import com.keepit.model.{ KifiExtVersion, KifiInstallation, KifiInstallationPlatform, KifiInstallationRepo, KifiInstallationStates }
 import com.keepit.model.{ ExperimentType, Library, URLPatternRepo, UserStates }
@@ -38,6 +38,7 @@ class ExtAuthController @Inject() (
   heimdal: HeimdalServiceClient,
   facebook: FacebookSocialGraph,
   linkedIn: LinkedInSocialGraph,
+  twitter: TwitterSocialGraph,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
@@ -126,9 +127,10 @@ class ExtAuthController @Inject() (
       ((providerName match {
         case "linkedin" => linkedIn.vetJsAccessToken(settings, request.body)
         case "facebook" => facebook.vetJsAccessToken(settings, request.body)
+        case "twitter" => twitter.vetJsAccessToken(settings, request.body) // need validation from client; may consolidate with accessTokenLogin
         case _ => Failure(new IllegalArgumentException("Provider: " + providerName))
       }) map { identityId =>
-        authCommander.loginWithTrustedSocialIdentity(identityId)
+        authCommander.loginWithTrustedSocialIdentity(identityId) // does not validate token against server
       } recover {
         case t =>
           airbrake.notify(AirbrakeError.incoming(request, t, "could not log in"))
