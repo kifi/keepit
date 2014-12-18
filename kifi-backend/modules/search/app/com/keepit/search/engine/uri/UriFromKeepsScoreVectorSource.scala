@@ -21,7 +21,8 @@ class UriFromKeepsScoreVectorSource(
     filter: SearchFilter,
     recencyOnly: Boolean,
     protected val config: SearchConfig,
-    protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
+    protected val monitoredAwait: MonitoredAwait,
+    explanation: Option[UriSearchExplanationBuilder]) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
   private[this] var discoverableKeepCount = 0
 
@@ -76,6 +77,7 @@ class UriFromKeepsScoreVectorSource(
           // write to the buffer
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // id (8 bytes), keepId (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(uriId, keepId).putTaggedFloatBits(taggedScores, size)
+          explanation.foreach(_.collectBufferScoreContribution(this.getClass.getSimpleName, uriId, keepId, visibility, taggedScores, size))
 
           docId = pq.top.doc // next doc
         } else {

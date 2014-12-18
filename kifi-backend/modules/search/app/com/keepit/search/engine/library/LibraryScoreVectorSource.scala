@@ -19,7 +19,8 @@ class LibraryScoreVectorSource(
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     filter: SearchFilter,
     protected val config: SearchConfig,
-    protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with VisibilityEvaluator {
+    protected val monitoredAwait: MonitoredAwait,
+    explanation: Option[LibrarySearchExplanationBuilder]) extends ScoreVectorSourceLike with VisibilityEvaluator {
 
   override protected def preprocess(query: Query): Query = QueryProjector.project(query, LibraryFields.textSearchFields)
 
@@ -53,6 +54,7 @@ class LibraryScoreVectorSource(
           // write to the buffer
           output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(libId).putTaggedFloatBits(taggedScores, size)
+          explanation.foreach(_.collectBufferScoreContribution(this.getClass.getSimpleName, libId, -1, visibility, taggedScores, size))
 
           docId = pq.top.doc // next doc
         } else {

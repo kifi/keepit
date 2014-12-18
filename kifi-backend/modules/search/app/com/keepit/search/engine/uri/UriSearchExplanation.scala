@@ -4,7 +4,6 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.search.engine.Visibility
 import com.keepit.search.engine.explain.{ SearchExplanationBuilder, SearchExplanation, ScoreDetail }
-import com.keepit.search.tracking.ResultClickBoosts
 import org.apache.lucene.search.Query
 
 case class UriSearchExplanation(

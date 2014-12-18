@@ -10,7 +10,7 @@ import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Query, Scorer }
 
-class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter: SearchFilter) extends ScoreVectorSourceLike {
+class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter: SearchFilter, explanation: Option[UriSearchExplanationBuilder]) extends ScoreVectorSourceLike {
 
   override protected def preprocess(query: Query): Query = QueryProjector.project(query, ArticleFields.textSearchFields)
 
@@ -49,6 +49,7 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
           val size = pq.getTaggedScores(taggedScores)
           output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(uriId).putTaggedFloatBits(taggedScores, size)
+          explanation.foreach(_.collectBufferScoreContribution(this.getClass.getSimpleName, uriId, -1, visibility, taggedScores, size))
 
           docId = pq.top.doc // next doc
         } else {
@@ -57,6 +58,7 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
             // it is safe to bypass the buffering and joining (assuming all score vector sources other than this are executed already)
             // write directly to the collector through directScoreContext
             directScoreContext.put(uriId, visibility)
+            explanation.foreach(_.collectDirectScoreContribution(this.getClass.getSimpleName, uriId, -1, visibility, directScoreContext.scoreMax))
 
             docId = pq.top.doc // next doc
           } else {

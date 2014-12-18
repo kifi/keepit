@@ -2,6 +2,7 @@ package com.keepit.search.engine.explain
 
 import com.keepit.common.db.Id
 import com.keepit.search.engine.{ ScoreContext, Visibility }
+import com.keepit.search.util.join.DataBuffer
 import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.lucene.search.Query
 
@@ -147,9 +148,21 @@ abstract class SearchExplanationBuilder[T](val resultId: Id[T], val query: Query
     Visibility.name(Visibility.RESTRICTED) -> new ListBuffer[ScoreDetail]()
   )
 
-  def collectScoreContribution(primaryId: Long, secondaryId: Long, visibility: Int, scoreArray: Array[Float]): Unit = {
+  def collectBufferScoreContribution(source: String, primaryId: Long, secondaryId: Long, visibility: Int, taggedScores: Array[Int], numberOfTaggedScores: Int): Unit = {
     if (primaryId == resultId.id) {
-      _details(Visibility.name(visibility)) += ScoreDetail(primaryId, secondaryId, visibility, scoreArray.clone)
+      val scoreArray = Array.fill(taggedScores.size)(0.0f)
+      taggedScores.take(numberOfTaggedScores).foreach { bits =>
+        val idx = DataBuffer.getTaggedFloatTag(bits)
+        val scr = DataBuffer.getTaggedFloatValue(bits)
+        scoreArray(idx) = scr
+      }
+      _details(Visibility.name(visibility)) += new ScoreDetail(source, primaryId, secondaryId, visibility, scoreArray, None)
+    }
+  }
+
+  def collectDirectScoreContribution(source: String, primaryId: Long, secondaryId: Long, visibility: Int, scoreArray: Array[Float]): Unit = {
+    if (primaryId == resultId.id) {
+      _details(Visibility.name(visibility)) += new ScoreDetail(source, primaryId, secondaryId, visibility, scoreArray.clone(), None)
     }
   }
 
@@ -171,4 +184,13 @@ abstract class SearchExplanationBuilder[T](val resultId: Id[T], val query: Query
   def rawScore: Float = _rawScore
   def scoreComputation: String = _scoreComputation
   def details: Map[String, Seq[ScoreDetail]] = _details.mapValues(_.toSeq)
+
 }
+
+object ScoreDetail {
+  def apply(ctx: ScoreContext) = {
+    new ScoreDetail(ctx.getClass.getSimpleName, ctx.id, ctx.secondaryId, ctx.visibility, ctx.scoreMax.clone, Some(ctx.scoreSum.clone))
+  }
+}
+
+class ScoreDetail(source: String, val primaryId: Long, val secondaryId: Long, val visibility: Int, val scoreMax: Array[Float], val scoreSum: Option[Array[Float]])

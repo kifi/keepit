@@ -24,7 +24,8 @@ class UriFromLibraryScoreVectorSource(
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     filter: SearchFilter,
     config: SearchConfig,
-    monitoredAwait: MonitoredAwait) extends ScoreVectorSource with Logging with DebugOption {
+    monitoredAwait: MonitoredAwait,
+    explanation: Option[UriSearchExplanationBuilder]) extends ScoreVectorSource with Logging with DebugOption {
 
   private[this] val libraryNameBoost = config.asFloat("libraryNameBoost")
 
@@ -114,6 +115,7 @@ class UriFromLibraryScoreVectorSource(
             // write to the buffer
             output.alloc(writer, v, 8 + 8 + 4 * size) // id (8 bytes), keepId (8 bytes), taggedScores (4 * size bytes)
             writer.putLong(uriId, keepId).putTaggedFloatBits(taggedScores, size)
+            explanation.foreach(_.collectBufferScoreContribution(this.getClass.getSimpleName, uriId, keepId, visibility, taggedScores, size))
           }
           docId = td.nextDoc()
         }

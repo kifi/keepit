@@ -19,7 +19,6 @@ class ScoreContext(
     collector: ResultCollector[ScoreContext]) = this(scoreExpr, new Array[Float](scoreArraySize), new Array[Float](scoreArraySize), matchWeight, collector)
 
   private[this] var secondaryIdScore: Float = -1.0f
-  private[this] val scoreArray: Array[Float] = new Array[Float](scoreMaxArray.length)
 
   def score(): Float = scoreExpr()(this)
 
@@ -48,7 +47,6 @@ class ScoreContext(
     secondaryId = -1L
     secondaryIdScore = -1.0f
     degree = 0
-    Arrays.fill(scoreArray, 0.0f)
     Arrays.fill(scoreMaxArray, 0.0f)
     Arrays.fill(scoreSumArray, 0.0f)
   }
@@ -57,7 +55,6 @@ class ScoreContext(
     val theVisibility = reader.recordType
     val id2 = if ((theVisibility & Visibility.HAS_SECONDARY_ID) != 0) reader.nextLong() else -1L
     var localSum = 0.0f // use a simple sum of scores to compare secondary ids
-    Arrays.fill(scoreArray, 0.0f)
 
     while (reader.hasMore) {
       val bits = reader.nextTaggedFloatBits()
@@ -66,7 +63,6 @@ class ScoreContext(
       localSum += scr
       scoreSumArray(idx) += scr
       if (scoreMaxArray(idx) < scr) scoreMaxArray(idx) = scr
-      scoreArray(idx) = scr
     }
 
     if (id2 >= 0L && localSum > secondaryIdScore) {
