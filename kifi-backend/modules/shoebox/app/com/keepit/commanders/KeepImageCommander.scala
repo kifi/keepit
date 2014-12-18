@@ -256,7 +256,7 @@ class KeepImageCommanderImpl @Inject() (
         KeepImage(state = KeepImageStates.ACTIVE, keepId = keepId, imagePath = prev.imagePath, format = prev.format, width = prev.width, height = prev.height, source = source, sourceFileHash = prev.sourceFileHash, sourceImageUrl = prev.sourceImageUrl, isOriginal = prev.isOriginal)
       }
 
-      val saved = db.readWrite { implicit session =>
+      val saved = db.readWrite(attempts = 3) { implicit session =>
         val existingForKeep = keepImageRepo.getForKeepId(keepId)
         existingForKeep.map { oldImg =>
           keepImageRepo.save(oldImg.copy(state = KeepImageStates.INACTIVE))
