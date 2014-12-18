@@ -7,7 +7,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.HttpClient
-import com.keepit.common.oauth.{ TwitterUserInfo, TwitterOAuthProvider, OAuth1Configuration, ProviderIds }
+import com.keepit.common.oauth._
 import com.keepit.common.time.Clock
 import com.keepit.common.core._
 import com.keepit.model._
@@ -57,6 +57,7 @@ object PagedTwitterUserInfos {
 class TwitterSocialGraph @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
+    suiRepo: SocialUserInfoRepo,
     oauth1Config: OAuth1Configuration,
     twtrOAuthProvider: TwitterOAuthProvider,
     socialRepo: SocialUserInfoRepo) extends SocialGraph with Logging {
@@ -73,7 +74,17 @@ class TwitterSocialGraph @Inject() (
     }
   }
 
-  def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue): SocialUserInfo = sui
+  // make this async
+  def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue): SocialUserInfo = {
+    val suiF = twtrOAuthProvider.getUserProfileInfo(getOAuth1Info(sui)) map { info =>
+      log.info(s"[updateSocialUserInfo] picUrl=${info.pictureUrl} profileUrl=${info.profileUrl}; info=$info")
+      sui.copy(
+        pictureUrl = info.pictureUrl.map(_.toString) orElse sui.pictureUrl,
+        profileUrl = info.profileUrl.map(_.toString) orElse sui.profileUrl
+      )
+    }
+    Await.result(suiF, 5 minutes)
+  }
 
   // make this async
   def vetJsAccessToken(settings: OAuth2Settings, json: JsValue): Try[IdentityId] = {
