@@ -14,6 +14,8 @@ angular.module('kifi')
     $scope.me = profileService.me;
     profileService.getMe();
 
+    $scope.onProfileExperiment = profileService.me.experiments && profileService.me.experiments.indexOf('profiles_beta') !== -1;
+
     $scope.descInput = {};
     $scope.$watch('me.description', function (val) {
       $scope.descInput.value = val || '';
@@ -207,6 +209,39 @@ angular.module('kifi')
 
         scope.connectFacebook = socialService.connectFacebook;
         scope.disconnectFacebook = socialService.disconnectFacebook;
+      }
+    };
+  }
+])
+
+.directive('kfTwitterConnectButton', [
+  'socialService', 'profileService',
+  function (socialService, profileService) {
+    return {
+      restrict: 'A',
+      link: function (scope) {
+        // todo (aaron): endpoint doesn't return profileUrl yet. Leave this out for now
+        //scope.isTwitterConnected = socialService.twitter && !!socialService.twitter.profileUrl;
+
+        scope.isTwitterConnected = socialService.twitter && !!socialService.twitter.network;
+        scope.twitter = socialService.twitter;
+        scope.twitterExperiment = profileService.me.experiments && profileService.me.experiments.indexOf('twitter_beta') !== -1;
+
+        scope.$watch(function () {
+          return socialService.twitter.network;
+        }, function () {
+          var twitter = socialService.twitter;
+          if (twitter && twitter.network) {
+            scope.isTwitterConnected = true;
+            scope.twProfileUrl = twitter.profileUrl; //expect undefined for now
+          } else {
+            scope.isTwitterConnected = false;
+            scope.twProfileUrl = '';
+          }
+        });
+
+        scope.connectTwitter = socialService.connectTwitter;
+        scope.disconnectTwitter = socialService.disconnectTwitter;
       }
     };
   }

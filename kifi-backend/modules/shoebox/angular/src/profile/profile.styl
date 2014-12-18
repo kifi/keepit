@@ -18,7 +18,7 @@
   padding: 18px 32px 20px 32px
   position: relative
 
-a.profile-logout
+.profile-logout
   position: absolute
   top: 32px
   right: 50px
@@ -90,23 +90,6 @@ a.profile-logout
   top: calc(50% - 16px)
   font-size: 14px
   font-weight: 400
-
-a.profile-image-change
-  display: inline-block
-  padding: 4px 10px
-  border-radius: 2px
-  background: #b8c5d1
-  color: white
-  font-size: 12px
-  letter-spacing: .5px
-  transition: background 0.2s ease
-
-  &:hover
-  &:focus
-    background-color: #C5D2DE
-
-  &:active
-    background-color: #9FACB8
 
 .profile-input-title
   color: #c1c1c1
@@ -230,8 +213,8 @@ input.profile-last-name
 .profile-input-box.edit input.profile-first-name
   margin-right: 8px
 
-a.profile-input-edit
-a.profile-input-save
+.profile-input-edit
+.profile-input-save
   position: absolute
   bottom: 0
   right: 0
@@ -247,7 +230,7 @@ a.profile-input-save
   transition: background 0.2s ease
   display: none
 
-a.profile-input-edit
+.profile-input-edit
   &:hover
   &:focus
     background-color: #C5D2DE
@@ -258,7 +241,7 @@ a.profile-input-edit
   .profile-input-box:hover &
     display: block
 
-a.profile-input-save
+.profile-input-save
   background-color: greenColor
 
   &:hover
@@ -277,16 +260,52 @@ a.profile-input-save
   color: #a7aaa9
   font-size: 13px
 
-a.profile-email-pending-resend
-a.profile-email-pending-cancel
+.profile-email-pending-resend
+.profile-email-pending-cancel
   color: #777c87
   text-decoration: underline
 
 .profile-email-address-pending-email
   color: #777c87
 
-.profile-email-addresses
+.profile-manage-settings
   margin-top: 25px
+
+.profile-manage-settings-option
+  margin-left: 20px
+  margin-bottom: 5px
+
+  &:first-child
+    margin-top: 10px
+
+.profile-manage-settings-option-button
+  display: inline-block
+  position: relative
+  top: 1px
+  width: 10px
+  height: 10px
+  margin-right: 10px
+  background-color: #fff
+  border-radius: 50%
+  border: 1px solid textLightGrey
+
+  &:hover
+    background-color: #eee
+
+  .checked
+    position: relative
+    top: 2px
+    left: 2px
+    width: 6px
+    height: 6px
+    border-radius: 50%
+    background-color: darkBlueColor
+
+.profile-manage-settings-option-text
+  cursor: pointer
+
+  &:hover
+    color: darkBlueColor
 
 .profile-setting-arrow
   position: relative
@@ -324,6 +343,7 @@ a.profile-email-pending-cancel
   height: 100%
   background-color: #fff
 
+.profile-manage-settings-title
 .profile-email-addresses-title
 .profile-change-password-title
 
@@ -335,9 +355,9 @@ a.profile-email-pending-cancel
     color: darkBlueColor
     transition: all 0.3s
 
-a.profile-email-addresses-title-wrapper
-a.profile-uninstall-title-wrapper
-a.profile-manage-account-title-wrapper
+.profile-manage-settings-title-wrapper
+.profile-email-addresses-title-wrapper
+.profile-manage-account-title-wrapper
   display: block
   color: textBlackColor
   font-size: 15px
@@ -345,12 +365,12 @@ a.profile-manage-account-title-wrapper
   margin-top: 10px
   letter-spacing: 0.8px
 
-a.profile-manage-account-title-wrapper
+.profile-manage-account-title-wrapper
   text-align: left
 
+.profile-manage-settings-change
 .profile-email-address-manage
 .profile-change-password-change
-
   &.ng-hide-remove
     transition: max-height 0.3s 0.15s linear
     display: block !important
@@ -372,7 +392,6 @@ a.profile-manage-account-title-wrapper
   padding: 20px
   margin-top: 10px
   line-height: 1.8em
-
 
 .profile-manage-account-section-wrapper
   max-width: 440px
@@ -401,13 +420,13 @@ a.profile-manage-account-title-wrapper
   background-color: #fafafa
 
 .profile-email-address-list
-a.profile-email-address-add
+.profile-email-address-add
   font-size: 14px
   color: #a7aaa9
   font-weight: 200
   letter-spacing: 0.8px
 
-a.profile-email-address-add
+.profile-email-address-add
   display: block
   padding: 10px 0 0 10px
 
@@ -475,7 +494,7 @@ a.profile-email-address-add
     &:active
       background: #cccccc
 
-a.profile-email-address-add
+.profile-email-address-add
   font-size: 14px
   font-weight: 300
   color: #566278
@@ -499,32 +518,7 @@ input.profile-email-address-add-input
   padding-right: 58px
   border-radius: 2px
 
-a.profile-email-address-add-save
-  position: absolute
-  bottom: 0
-  right: 0
-  font-size: 12px
-  line-height: 17px
-  display: inline-block
-  width: 58px
-  padding: 6px 0
-  color: white
-  background-color: #b8c5d1
-  border-radius: 2px
-  text-align: center
-  transition: background 0.2s ease
-
-a.profile-email-address-add-save
-  background-color: #b7ce84
-
-  &:hover
-  &:focus
-    background-color: #C4DB91
-
-  &:active
-    background-color: #9EB56B
-
-a.profile-change-password-title-wrapper
+.profile-change-password-title-wrapper
   display: block
   color: textBlackColor
   font-size: 15px
@@ -538,7 +532,7 @@ a.profile-change-password-title-wrapper
   .profile-change-password.opened &
     display: block
 
-a.profile-change-password-save
+.profile-change-password-save
   font-size: 12px
   line-height: 17px
   display: inline-block
@@ -676,10 +670,6 @@ a.profile-change-password-save
   margin-right: 10px
 
 .profile-nw
-  position: relative
-  display: block
-
-a.profile-nw
   display: inline-block
   color: white
   padding: 8px 16px
@@ -687,81 +677,82 @@ a.profile-nw
   font-size: 13px
   letter-spacing: .5px
   border-radius: 2px
-  transition: background 0.2s ease
+  cursor: pointer
+  position: relative
 
-.profile-nw:before
-  display: block
-  position: absolute
-  top: 0
-  left: 0
-  content: ' '
-  background-image: url(/img/networks2.png)
-  background-size: auto 32px
-  width: 32px
-  height: 32px
+  &::before
+    position: absolute
+    top: 0
+    left: 0
+    width: 32px
+    height: 32px
+    background-image: url(/img/networks2.png)
+    background-size: auto 32px
+    content: ''
 
-.profile-nw.nw-linkedin:before
-  background-position: -32px 0
+  &.nw-linkedin::before
+    background-position: -32px 0
 
-.profile-nw.nw-twitter:before
-  background-position: -60px 0
+  &.nw-twitter::before
+    background-position: -60px 0
 
-.profile-nw.nw-email:before
-  background-position: -128px 0
+  &.nw-email::before
+    background-position: -128px 0
 
-.profile-nw.nw-facebook
-  background-color: #dbdee3
+  &.nw-facebook
+    background-color: #dbdee3
 
-.profile-nw.nw-facebook:hover
-.profile-nw.nw-facebook:focus
-  background-color: #7087C5
+    .connected>&
+      background-color: #637ab8
 
-.connected .nw-facebook
-  background-color: #637ab8
+    &:hover
+    &:focus
+      background-color: #7087C5
 
-.profile-nw.nw-facebook:active
-  background-color: #4A619F
+    &:hover:active
+      background-color: #4A619F
 
-.profile-nw.nw-linkedin
-  background-position: -60px 0
-  background-color: #dbdee3
+  &.nw-linkedin
+    background-color: #dbdee3
 
-.connected .nw-linkedin
-  background-color: #4f83c3
+    .connected>&
+      background-color: #4f83c3
 
+    &:hover
+    &:focus
+      background-color: #5C90D0
 
-.profile-nw.nw-linkedin:hover
-.profile-nw.nw-linkedin:focus
-  background-color: #5C90D0
+    &:hover:active
+      background-color: #366AAA
 
-.profile-nw.nw-linkedin:active
-  background-color: #366AAA
+  &.nw-twitter
+    background-color: #dbdee3  //0da2d9
 
-.profile-nw.nw-twitter
-  background-color: #dbdee3
-  //0da2d9
-  background-position: -120px 0
+    .connected>&
+      background-color: #1dcaff
 
-.profile-nw.nw-google
-  background-color: #dbdee3
-  //dd4c39
-  background-position: -180px 0
+    &:hover
+    &:focus
+      background-color: #37d0ff
 
-.profile-nw.nw-email
-  background-color: #e16869
+    &:hover:active
+      background-color: #1dcaff
 
-.profile-nw.nw-email:hover
-.profile-nw.nw-email:focus
-  background-color: #EE7576
+  //&.nw-google
+  //  background-color: #dbdee3  //dd4c39
 
-.profile-nw.nw-email:active
-  background-color: #C84F50
+  &.nw-email
+    background-color: #e16869
 
-.connected .profile-nw-connected
-  visibility: visible
+    &:hover
+    &:focus
+      background-color: #EE7576
+
+    &:hover:active
+      background-color: #C84F50
+
 
 .profile-nw-connected
-  visibility: hidden
   position: relative
   display: block
   color: #818691
@@ -778,6 +769,9 @@ a.profile-nw
   overflow: hidden
   text-align: left
 
+  :not(.connected)>&
+    visibility: hidden
+
 .profile-connected
   position: absolute
   top: 0
@@ -791,8 +785,8 @@ a.profile-nw
   background-color: white
   transition: top .3s ease
 
-.profile-disconnect:hover
-  text-decoration: underline
+  &:hover
+    text-decoration: underline
 
 .profile-networks li:hover
   & .profile-connected
@@ -813,7 +807,7 @@ a.profile-nw
   &:focus
     background-color: #969696
 
-a.profile-export
+.profile-export
   display: inline-block
   color: white
   padding: 8px 16px

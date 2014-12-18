@@ -34,6 +34,7 @@ class MobileUserController @Inject() (
   libraryRepo: LibraryRepo,
   userRepo: UserRepo,
   userConnectionRepo: UserConnectionRepo,
+  userValueRepo: UserValueRepo,
   db: Database)
     extends UserActions with ShoeboxServiceController {
 
@@ -242,9 +243,38 @@ class MobileUserController @Inject() (
     userCommander.getPrefs(MobilePrefNames, request.userId, request.experiments) map (Ok(_))
   }
 
+  def getSettings() = UserAction { request =>
+    val storedBody = db.readOnlyMaster { implicit s =>
+      userValueRepo.getValue(request.userId, UserValues.userProfileSettings)
+    }
+    val userSettings = UserValueSettings.readFromJsValue(storedBody)
+    //Ok(Json.toJson(userSettings)) // todo (aaron): use this when multiple fields to settings. With only one field @json macro doesn't describe field name
+    Ok(Json.obj("showFollowedLibraries" -> userSettings.showFollowedLibraries))
+  }
+
+  def setSettings() = UserAction(parse.tolerantJson) { request =>
+    val showFollowLibrariesOpt = (request.body \ "showFollowedLibraries").asOpt[Boolean]
+    val settingsList = Map(UserValueName.SHOW_FOLLOWED_LIBRARIES -> showFollowLibrariesOpt)
+
+    val newMapping = settingsList.collect {
+      case (userVal, Some(optionVal)) => userVal -> Json.toJson(optionVal)
+    }
+    userCommander.setSettings(request.userId, newMapping)
+    NoContent
+  }
+
   //this takes appsflyer attribution data and converts it into a kcid for the user
   def setAppsflyerAttribution() = UserAction(parse.json(maxLength = 1024 * 50000)) { request =>
-    Ok(request.body) //dummy method for mobile testing for now. Will be filled in with actual processing logic shortly
+    val kcid1: String = (request.body \ "campaign").asOpt[String].orElse((request.body \ "campaign_name").asOpt[String]).orElse((request.body \ "campaign_id").asOpt[Long].map(_.toString)).getOrElse("na").replace("-", "_")
+    val kcid2: String = (request.body \ "af_status").asOpt[String].map { af_status =>
+      if (af_status == "Non-organic") "pm_m"
+      else af_status.toLowerCase.replace("-", "_")
+    } getOrElse ("na")
+    val kcid3: String = (request.body \ "media_source").asOpt[String].getOrElse("na")
+    db.readWrite(attempts = 2) { implicit session =>
+      if (userValueRepo.getValueStringOpt(request.userId, UserValueName.KIFI_CAMPAIGN_ID).isEmpty) userValueRepo.setValue(request.userId, UserValueName.KIFI_CAMPAIGN_ID, s"$kcid1-$kcid2-$kcid3")
+    }
+    Ok
   }
 }
 

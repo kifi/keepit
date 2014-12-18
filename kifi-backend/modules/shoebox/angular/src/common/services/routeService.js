@@ -42,12 +42,16 @@ angular.module('kifi')
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
+      profileSettings: route('/user/settings'),
       logout: '/logout',
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),
       userPasswordUrl: route('/user/password'),
       formatPicUrl: formatPicUrl,
+      libraryImageUrl: function (path) {
+        return env.picBase + '/' + path;
+      },
       getKeep: function (keepId) {
         return route('/keeps/' + keepId);
       },
@@ -183,6 +187,15 @@ angular.module('kifi')
       deleteLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/delete');
       },
+      uploadLibraryCoverImage: function (libraryId, x, y, idealSize) {
+        return route('/libraries/' + libraryId + '/image/upload?x=' + x + '&y=' + y + (idealSize ? '&is=' + idealSize : ''));
+      },
+      positionLibraryCoverImage: function (libraryId) {
+        return route('/libraries/' + libraryId + '/image/position');
+      },
+      removeLibraryCoverImage: function (libraryId) {
+        return route('/libraries/' + libraryId + '/image');
+      },
       authIntoLibrary: function (username, slug, authToken) {
         return route('/users/' + username + '/libraries/' + slug + '/auth?authToken=' + authToken || '');
       },
@@ -197,6 +210,13 @@ angular.module('kifi')
       },
       getRelatedLibraries: function (libraryId) {
         return route('/libraries/' + libraryId + '/related');
+      },
+
+      ////////////////////////////
+      // User Profile           //
+      ////////////////////////////
+      getUserProfile: function (username) {
+        return route('/user/' + username + '/profile');
       }
     };
   }

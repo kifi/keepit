@@ -6,11 +6,11 @@ import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.cortex.{ CortexServiceClient, FakeCortexServiceClientImpl, FakeCortexServiceClientModule }
 import com.keepit.curator.commanders.LibraryRecommendationGenerationCommander
-import com.keepit.curator.model.{ LibraryRecommendationGenerationStateRepo, LibraryRecommendationGenerationState, CuratorLibraryInfoRepo, CuratorLibraryInfoSequenceNumberAssigner, LibraryRecommendationRepo }
+import com.keepit.curator.model.{ CuratorLibraryMembershipInfoStates, CuratorLibraryMembershipInfo, CuratorLibraryMembershipInfoRepo, LibraryRecommendationGenerationStateRepo, LibraryRecommendationGenerationState, CuratorLibraryInfoRepo, CuratorLibraryInfoSequenceNumberAssigner, LibraryRecommendationRepo }
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.{ FakeGraphServiceClientImpl, FakeGraphServiceModule, GraphServiceClient }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ ExperimentType, UserExperiment }
+import com.keepit.model.{ LibraryAccess, ExperimentType, UserExperiment }
 import com.keepit.search.FakeSearchServiceClientModule
 import org.specs2.mutable.Specification
 
@@ -50,12 +50,17 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
       val libRecoRepo = inject[LibraryRecommendationRepo]
       val libInfoRepo = inject[CuratorLibraryInfoRepo]
 
-      val (lib1, lib2, lib3, lib4) = db.readWrite { implicit s =>
+      val (lib1, lib2, lib3, lib4, lib5) = db.readWrite { implicit s =>
         val lib1 = saveLibraryInfo(100, 600)
         val lib2 = saveLibraryInfo(101, 601)
         val lib3 = saveLibraryInfo(102, 602)
         val lib4 = saveLibraryInfo(103, 603, keepCount = 2)
-        (lib1, lib2, lib3, lib4)
+        val lib5 = saveLibraryInfo(104, 604)
+
+        inject[CuratorLibraryMembershipInfoRepo].save(CuratorLibraryMembershipInfo(access = LibraryAccess.READ_ONLY,
+          userId = user1Id, libraryId = lib5.libraryId, state = CuratorLibraryMembershipInfoStates.ACTIVE))
+
+        (lib1, lib2, lib3, lib4, lib5)
       }
       inject[CuratorLibraryInfoSequenceNumberAssigner].assignSequenceNumbers()
 
@@ -80,8 +85,8 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
       db.readOnlyMaster { implicit s =>
         val stateRepo = inject[LibraryRecommendationGenerationStateRepo]
 
-        val lib4Seq = libInfoRepo.getByLibraryId(lib4.libraryId).get.seq
-        allUsers.foreach { userId => stateRepo.getByUserId(userId).get.seq === lib4Seq }
+        val maxLibSeq = libInfoRepo.getByLibraryId(lib5.libraryId).get.seq
+        allUsers.foreach { userId => stateRepo.getByUserId(userId).get.seq === maxLibSeq }
 
         val libRecosUser1 = libRecoRepo.getByUserId(user1Id).sortBy(_.masterScore)
         libRecosUser1.size === 3
@@ -94,7 +99,7 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
         libRecosUser1(2).allScores.socialScore > libRecosUser1(1).allScores.socialScore
 
         val libRecosUser2 = libRecoRepo.getByUserId(user2Id).sortBy(_.masterScore)
-        libRecosUser2.size === 3
+        libRecosUser2.size === 4
 
         // test that lower interest score has the lowest master score (everything else is the same)
         libRecosUser2(0).libraryId === lib3.libraryId

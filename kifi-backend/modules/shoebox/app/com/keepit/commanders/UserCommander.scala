@@ -103,17 +103,34 @@ class UserCommander @Inject() (
     usernameCache: UsernameCache,
     airbrake: AirbrakeNotifier) extends Logging { self =>
 
-  def profile(username: Username, viewer: Option[User]): UserProfile = db.readOnlyMaster { implicit session =>
-    val user = userRepo.getByUsername(username).getOrElse(throw UserNotFoundException(username)) //cached
-    //not in v1
-    //    val friends = userConnectionRepo.getConnectionCount(user.id.get) //cached
-    //    val numFollowers = libraryMembershipRepo.countFollowersWithOwnerId(user.id.get) //cached
-    val numKeeps = keepRepo.getCountByUser(user.id.get)
-    val isConnected: Option[Boolean] = viewer flatMap {
-      case me if me.id.get == user.id.get => None //if i see my own profile, is connected is not relevant
-      case other => Some(userConnectionRepo.getConnectionOpt(user.id.get, other.id.get).isDefined)
+  def userFromUsername(username: Username): User = db.readOnlyReplica { implicit session =>
+    userRepo.getByUsername(username).getOrElse(throw UserNotFoundException(username)) //cached
+  }
+
+  def profile(username: Username, viewer: Option[User]): UserProfile = {
+    val user = userFromUsername(username)
+    db.readOnlyReplica { implicit session =>
+      //not in v1
+      //    val friends = userConnectionRepo.getConnectionCount(user.id.get) //cached
+      //    val numFollowers = libraryMembershipRepo.countFollowersWithOwnerId(user.id.get) //cached
+      val numKeeps = keepRepo.getCountByUser(user.id.get)
+      val isConnected: Option[Boolean] = viewer flatMap {
+        case me if me.id.get == user.id.get => None //if i see my own profile, is connected is not relevant
+        case other => Some(userConnectionRepo.getConnectionOpt(user.id.get, other.id.get).isDefined)
+      }
+      UserProfile(user = user, viewer = viewer.map(_.id.get), numKeeps = numKeeps, isConnected = isConnected)
     }
-    UserProfile(user = user, viewer = viewer.map(_.id.get), numKeeps = numKeeps, isConnected = isConnected)
+  }
+
+  def setSettings(userId: Id[User], newSettings: Map[UserValueName, JsValue]) = {
+    db.readWrite { implicit s =>
+      var settings = userValueRepo.getValue(userId, UserValues.userProfileSettings).as[JsObject]
+      newSettings.collect {
+        case (UserValueName(name), valueToSet) =>
+          settings = settings ++ Json.obj(name -> valueToSet)
+      }
+      userValueRepo.setValue(userId, UserValueName.USER_PROFILE_SETTINGS, settings)
+    }
   }
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {

@@ -15,6 +15,7 @@ import com.keepit.common.mail.{ BasicContact, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time.Clock
+import com.keepit.common.util.Paginator
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient, HeimdalContextBuilderFactory, UserEvent, UserEventTypes }
 import com.keepit.inject.FortyTwoConfig
@@ -35,6 +36,16 @@ import com.keepit.common.json
 import com.keepit.common.core._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
+
+@json case class MarketingSuggestedLibrarySystemValue(
+  id: Id[Library],
+  caption: Option[String] = None,
+  color: Option[HexColor] = None)
+
+object MarketingSuggestedLibrarySystemValue {
+  // system value that persists the library IDs and additional library data for the marketing site
+  def systemValueName = Name[SystemValue]("marketing_site_libraries")
+}
 
 class LibraryCommander @Inject() (
     db: Database,
@@ -68,9 +79,16 @@ class LibraryCommander @Inject() (
     uriSummaryCommander: URISummaryCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     experimentCommander: LocalUserExperimentCommander,
+    userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
+
+  private def imageUrl(image: LibraryImage): String = addProtocol(libraryImageCommander.getUrl(image))
+
+  private def imageUrl(image: KeepImage): String = addProtocol(keepImageCommander.getUrl(image))
+
+  private def addProtocol(url: String): String = if (url.startsWith("http:") || url.startsWith("https:")) url else s"http:$url"
 
   def libraryMetaTags(library: Library): Future[PublicPageMetaTags] = {
     db.readOnlyMasterAsync { implicit s =>
@@ -86,17 +104,21 @@ class LibraryCommander @Inject() (
         //facebook OG recommends:
         //We suggest that you use an image of at least 1200x630 pixels.
         val imageUrls: Seq[String] = {
-          val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, ProcessedImageSize.XLarge.idealSize).values.flatten.toSeq
-          val sorted: Seq[KeepImage] = images.sortWith {
-            case (image1, image2) =>
-              (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)
+          libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.XLarge.idealSize) match {
+            case Some(image) =>
+              Seq(imageUrl(image))
+            case None =>
+              val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, ProcessedImageSize.XLarge.idealSize).values.flatten.toSeq
+              val sorted: Seq[KeepImage] = images.sortWith {
+                case (image1, image2) =>
+                  (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)
+              }
+              val urls: Seq[String] = sorted.take(10) map { image =>
+                imageUrl(image)
+              }
+              //last image is the kifi image we want to append to all image lists
+              if (urls.isEmpty) Seq("https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png") else urls
           }
-          val urls: Seq[String] = sorted.take(10) map { image =>
-            val url = keepImageCommander.getUrl(image)
-            if (url.startsWith("http:") || url.startsWith("https:")) url else s"http:$url"
-          }
-          //last image is the kifi image we want to append to all image lists
-          if (urls.isEmpty) Seq("https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png") else urls
         }
 
         val url = {
@@ -259,7 +281,7 @@ class LibraryCommander @Inject() (
           color = lib.color,
           kind = lib.kind,
           visibility = lib.visibility,
-          image = libImageOpt.map(LibraryImageInfo.createInfo(_)),
+          image = libImageOpt.map(LibraryImageInfo.createInfo),
           followers = followers,
           keeps = keepInfos,
           numKeeps = keepCount,
@@ -1130,18 +1152,20 @@ class LibraryCommander @Inject() (
 
   def getMarketingSiteSuggestedLibraries(): Future[Seq[MarketingSuggestedLibraryInfo]] = {
     val valueOpt = db.readOnlyReplica { implicit s =>
-      systemValueRepo.getValue(MarketingSuggestedLibraryInfo.systemValueName)
+      systemValueRepo.getValue(MarketingSuggestedLibrarySystemValue.systemValueName)
     }
 
     valueOpt map { value =>
-      val libIds = Json.fromJson[Set[Id[Library]]](Json.parse(value)).fold(
+      val systemValueLibraries = Json.fromJson[Seq[MarketingSuggestedLibrarySystemValue]](Json.parse(value)).fold(
         err => {
-          airbrake.notify(s"Invalid JSON format for Seq[Id[Library]]: $err")
-          Set.empty[Id[Library]]
+          airbrake.notify(s"Invalid JSON format for Seq[MarketingSuggestedLibrarySystemValue]: $err")
+          Seq.empty[MarketingSuggestedLibrarySystemValue]
         },
-        ids => ids
-      )
+        identity
+      ).zipWithIndex.map { case (value, idx) => value.id -> (value, idx) }.toMap
 
+      val libIds = systemValueLibraries.keySet
+      val libPublicIdsToIds = libIds.map { id => (Library.publicId(id), id) }.toMap
       val libIdsMap = db.readOnlyReplica { implicit s => libraryRepo.getLibraries(libIds) } filter {
         case (_, lib) => lib.visibility == LibraryVisibility.PUBLISHED
       }
@@ -1155,7 +1179,11 @@ class LibraryCommander @Inject() (
         idealLibraryImageSize = ProcessedImageSize.Medium.idealSize)
 
       fullLibInfosF map { libInfos =>
-        libInfos map MarketingSuggestedLibraryInfo.fromFullLibraryInfo
+        libInfos map { info =>
+          val libId = libPublicIdsToIds(info.id)
+          val (extraInfo, idx) = systemValueLibraries(libId)
+          MarketingSuggestedLibraryInfo.fromFullLibraryInfo(info, Some(extraInfo)) -> idx
+        } sortBy (_._2) map (_._1)
       }
     } getOrElse Future.successful(Seq.empty)
   }
@@ -1192,7 +1220,7 @@ class LibraryCommander @Inject() (
 
   private def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User]): Int = {
     db.readOnlyReplica { implicit s =>
-      val showFollowLibraries = true
+      val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
       libraryMembershipRepo.countLibrariesForOtherUser(userId, friendId, countFollowLibraries = showFollowLibraries)
     }
   }
@@ -1205,11 +1233,45 @@ class LibraryCommander @Inject() (
 
   private def countLibrariesForAnonymous(userId: Id[User]): Int = {
     db.readOnlyReplica { implicit s =>
-      val showFollowLibraries = true
+      val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
       libraryMembershipRepo.countLibrariesOfUserFromAnonymos(userId, countFollowLibraries = showFollowLibraries)
     }
   }
+
+  private def getUserValueSetting(userId: Id[User], userVal: UserValueName)(implicit rs: RSession): Boolean = {
+    val settingsJs = userValueRepo.getValue(userId, UserValues.userProfileSettings)
+    UserValueSettings.retrieveSetting(userVal, settingsJs)
+  }
+
+  def ownerLibraries(user: User, viewer: Option[User], page: Paginator): Seq[ProfileLibraryView] = db.readOnlyMaster { implicit session =>
+    val libs = viewer match {
+      case None => libraryRepo.getLibrariesOfUserFromAnonymos(user.id.get, page)
+      case Some(other) if other.id.get == user.id.get => libraryRepo.getLibrariesOfSelf(user.id.get, page)
+      case Some(other) =>
+        libraryMembershipRepo.getOwnedLibrariesForOtherUser(user.id.get, other.id.get, page) map { id =>
+          libraryRepo.get(id) //cached
+        }
+    }
+    libs map profilelibraryView
+  }
+
+  private def profilelibraryView(library: Library)(implicit session: RSession) = {
+    val numKeeps = keepRepo.getCountByLibrary(library.id.get)
+    val numFollowers = libraryMembershipRepo.count
+    val followersSample: Seq[BasicUser] = if (numFollowers > 1) {
+      libraryMembershipRepo.pageWithLibraryIdAndAccess(library.id.get, 0, 2, Set(LibraryAccess.READ_ONLY)) map { im =>
+        basicUserRepo.load(im.userId)
+      }
+    } else Seq.empty
+    ProfileLibraryView(
+      library = library,
+      numKeeps = numKeeps,
+      numFollowers = library.memberCount - 1, //not including the creator
+      followersSample)
+  }
 }
+
+case class ProfileLibraryView(library: Library, numKeeps: Int, numFollowers: Int, followersSample: Seq[BasicUser])
 
 sealed abstract class LibraryError(val message: String)
 object LibraryError {
@@ -1335,6 +1397,7 @@ class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermost
 @json case class MarketingSuggestedLibraryInfo(
   id: PublicId[Library],
   name: String,
+  caption: Option[String],
   url: String,
   image: Option[LibraryImageInfo] = None,
   owner: BasicUser,
@@ -1343,18 +1406,17 @@ class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermost
   color: Option[HexColor])
 
 object MarketingSuggestedLibraryInfo {
-  // system value that persists the library IDs for the marketing site
-  def systemValueName = Name[SystemValue]("marketing_site_libraries")
-
-  def fromFullLibraryInfo(info: FullLibraryInfo) = {
+  def fromFullLibraryInfo(info: FullLibraryInfo, extra: Option[MarketingSuggestedLibrarySystemValue] = None) = {
     MarketingSuggestedLibraryInfo(
       id = info.id,
       name = info.name,
+      caption = extra flatMap (_.caption),
       url = info.url,
       image = info.image,
       owner = info.owner,
       numKeeps = info.numKeeps,
       numFollowers = info.numFollowers,
-      color = info.color)
+      color = extra flatMap (_.color))
   }
 }
+

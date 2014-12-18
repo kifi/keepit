@@ -108,7 +108,9 @@ angular.module('kifi')
       this.numKeeps = library.numKeeps;
       this.ownerPicUrl = routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 200);
       this.name = library.name;
+      this.description = library.description;
       this.image = library.image;
+      this.imageUrl = library.image ? routeService.libraryImageUrl(library.image.path) : null;
       this.libraryUrl = library.url;
       this.followers = library.followers.map(function (user) {
         return _.merge(user, { picUrl: routeService.formatPicUrl(user.id, user.pictureName, 200) });
@@ -365,11 +367,17 @@ angular.module('kifi')
           libraryOwnerUserName: library.owner.username,
           owner: this.isMyLibrary(library),
           privacySetting: library.visibility,
+          hasCoverImage: !!library.image,
           source: 'site'
         };
 
         if (library.visibility === 'published') {
           defaultAttributes.libraryName = library.name;
+        }
+
+        // o=lr shorthand for origin=libraryRec
+        if ($location.url().indexOf('o=lr') > -1) {
+          defaultAttributes.origin = 'libraryRec';
         }
 
         return defaultAttributes;
@@ -387,7 +395,6 @@ angular.module('kifi')
 
         $http.get(routeService.getRelatedLibraries(libraryId)).then(function (resp) {
           var decoratedLibs = resp.data.libs.map(function (lib) {
-            lib.image = lib.image || {};
             return new RelatedLibraryDecorator(lib);
           });
           deferred.resolve(decoratedLibs);

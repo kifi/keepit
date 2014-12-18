@@ -286,9 +286,19 @@ angular.module('kifi')
       return userLoggedIn;
     }
 
+    function getSettings() {
+      return $http.get(routeService.profileSettings);
+    }
+
+    function setSettings(changedSettings) {
+      return $http.post(routeService.profileSettings, changedSettings);
+    }
+
     return {
       userLoggedIn: getUserLoggedIn,
       me: me, // when mutated, you MUST increment me.seqNum
+      getSettings: getSettings,
+      setSettings: setSettings,
       fetchMe: fetchMe,
       getMe: getMe,
       postMe: postMe,

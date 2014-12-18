@@ -102,6 +102,9 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         val suiOpt = db.readOnlyMaster { implicit ro => socialUserInfoRepo.getOpt(SocialId(profile.userId.id), SocialNetworks.FACEBOOK) }
         suiOpt.isDefined === true
         suiOpt.exists { sui => sui.userId.isEmpty } === true // userId must not be set in this case
+        suiOpt.get.credentials.isDefined === true
+        val socialUser = suiOpt.get.credentials.get
+        socialUser.oAuth2Info.isDefined === true
       }
     }
     "(signup) report invalid token when fb reports error" in {

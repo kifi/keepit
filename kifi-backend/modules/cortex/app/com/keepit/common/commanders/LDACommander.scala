@@ -13,6 +13,7 @@ import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ Library, Keep, NormalizedURI, User }
 import play.api.libs.json._
 import scala.math.exp
+import scala.util.Random
 
 @Singleton
 class LDACommander @Inject() (
@@ -281,11 +282,12 @@ class LDACommander @Inject() (
           topics.foreach { t =>
             if (bitSet.get(t.index)) numIntersects += 1
           }
-          val multiplier = if (numIntersects >= 1) 1f else 0f
+          val multiplier = if (numIntersects >= 2) 1f else 0f
 
           (kid, score * multiplier)
       }
-      scored.filter { x => x._2 < MAX_KL_DIST && x._2 > 0 }.sortBy(_._2).take(topK).map { _._1 }
+      val good = scored.filter { x => x._2 < MAX_KL_DIST && x._2 > 0 }.sortBy(_._2).take(10)
+      Random.shuffle(good).take(topK).map { _._1 }
     }
 
     val userFeats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserRecentURIFeatures(userId, version, min_num_words = 50, limit = 200) }
