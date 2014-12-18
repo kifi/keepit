@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', 'keepWhoService', 'profileService', 'userProfileActionService',
-  function ($scope, $rootScope, $state, $stateParams, keepWhoService, profileService, userProfileActionService) {
+  '$scope', '$location', '$rootScope', '$state', '$stateParams',
+  'env', 'keepWhoService', 'profileService', 'userProfileActionService',
+  function ($scope, $location, $rootScope, $state, $stateParams,
+            env, keepWhoService, profileService, userProfileActionService) {
     //
     // Configs.
     //
@@ -44,11 +46,15 @@ angular.module('kifi')
     // Internal functions.
     //
     function init() {
-      // If user is not in experiment or the url doesn't include the experiement query parameter,
-      // redirect to home page.
-      if (!$stateParams.upb &&   // upb = User Profiles Beta
+      // Logged in users who are in the "profiles_beta" experiment and logged out users
+      // who have the "upb" query parameter can see this page.
+      // Otherwise, redirect to home.
+      if ($rootScope.userLoggedIn &&
           !(profileService.me.experiments && profileService.me.experiments.indexOf('profiles_beta') > -1)) {
         $state.go('home');
+      }
+      if (!$rootScope.userLoggedIn && !$stateParams.upb) {
+        $location.url(env.navBase);
       }
 
       var username = $stateParams.username;
