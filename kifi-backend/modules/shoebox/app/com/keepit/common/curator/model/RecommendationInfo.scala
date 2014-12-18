@@ -1,16 +1,13 @@
 package com.keepit.curator.model
 
-import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.model.{ NormalizedURI, User, URISummary, Library }
-import com.keepit.social.BasicUser
-import com.keepit.common.crypto.PublicId
 import com.keepit.commanders.FullLibraryInfo
-
+import com.keepit.common.crypto.PublicId
+import com.keepit.common.db.ExternalId
+import com.keepit.model.{ Library, NormalizedURI, URISummary }
+import com.keepit.social.BasicUser
 import com.kifi.macros.json
-
-import play.api.libs.json.{ Json, Writes }
-
 import org.joda.time.DateTime
+import play.api.libs.json.{ Json, Writes }
 
 @json case class RecoAttributionInfo(
   kind: RecoAttributionKind,
@@ -36,7 +33,7 @@ import org.joda.time.DateTime
 trait FullRecoInfo
 
 case class FullUriRecoInfo(
-  kind: RecoKind,
+  kind: RecoKind = RecoKind.Keep,
   metaData: Option[RecoMetaData],
   itemInfo: UriRecoItemInfo,
   explain: Option[String] = None) extends FullRecoInfo
@@ -46,7 +43,7 @@ object FullUriRecoInfo {
 }
 
 case class FullLibRecoInfo(
-  kind: RecoKind,
+  kind: RecoKind = RecoKind.Library,
   metaData: Option[RecoMetaData],
   itemInfo: FullLibraryInfo,
   explain: Option[String] = None) extends FullRecoInfo

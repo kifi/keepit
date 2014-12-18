@@ -44,9 +44,9 @@ class RelatedLibraryCommanderImpl @Inject() (
       .flatMap { libs => libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize) }
 
     for {
-      info <- infoFut
+      idsAndInfos <- infoFut
       suggestedLibs <- suggestedLibsFut
-    } yield (info, suggestedLibs._2)
+    } yield (idsAndInfos map (_._2), suggestedLibs._2)
   }
 
   def suggestedLibraries(libId: Id[Library]): Future[(Seq[Library], Boolean)] = consolidater(libId) { libId =>

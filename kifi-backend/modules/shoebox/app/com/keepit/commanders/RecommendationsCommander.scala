@@ -229,33 +229,54 @@ class RecommendationsCommander @Inject() (
     }
 
     if (userExperimentCommander.userHasExperiment(userId, ExperimentType.LIBRARIES)) {
-      for (uriRecos <- uriRecosFut; libRecos <- topPublicLibraryRecos(userId)) yield libRecos ++ uriRecos
+      for (uriRecos <- uriRecosFut; libRecos <- curatedPublicLibraryRecos(userId)) yield libRecos ++ uriRecos
     } else {
       uriRecosFut
     }
 
   }
 
-  def topPublicLibraryRecos(userId: Id[User]): Future[Seq[FullRecoInfo]] = {
+  def curatedPublicLibraryRecos(userId: Id[User]): Future[Seq[FullRecoInfo]] = {
     val curatedLibIds: Seq[Id[Library]] = Seq(
       25537L, 25116L, 24542L, 25345L, 25471L, 25381L, 24203L, 25370L, 25388L, 25371L, 25340L, 25000L, 26106L, 26473L, 26460L
     ).map(Id[Library])
 
     val curatedLibraries = {
       val libraryById = db.readOnlyReplica { implicit session => libRepo.getLibraries(curatedLibIds.toSet) }
-      curatedLibIds.map(libraryById(_))
+      curatedLibIds.map(libraryById)
     }.filter { lib =>
       lib.visibility == LibraryVisibility.PUBLISHED
     }
 
-    libCommander.createFullLibraryInfos(Some(userId), false, maxMembersShown = 10, maxKeepsShown = 0, ProcessedImageSize.Large.idealSize, curatedLibraries, ProcessedImageSize.Large.idealSize).map { fullLibraryInfos =>
-      fullLibraryInfos.map { libInfo =>
-        FullLibRecoInfo(
-          kind = RecoKind.Library,
-          metaData = None,
-          itemInfo = libInfo
-        )
+    createFullLibraryInfos(userId, curatedLibraries)
+  }
+
+  def topPublicLibraryRecos(userId: Id[User]): Future[Seq[FullLibRecoInfo]] = {
+    curator.topLibraryRecos(userId) flatMap { libInfos =>
+      val libIds = libInfos.map(_.libraryId).toSet
+      val libraries = db.readOnlyReplica { implicit s =>
+        libRepo.getLibraries(libIds).toSeq.filter(_._2.visibility == LibraryVisibility.PUBLISHED)
       }
+
+      val idToLibraryMap = libraries.toMap
+      val libsAndRecoInfos = libInfos.map { libInfo =>
+        idToLibraryMap.get(libInfo.libraryId).map { library => (library, libInfo) }
+      }.flatten
+
+      val libToRecoInfoMap = libsAndRecoInfos.map { case (lib, info) => info.libraryId -> info }.toMap
+      createFullLibraryInfos(userId, libraries map (_._2), id => Some(libToRecoInfoMap(id).explain))
     }
+  }
+
+  private def noopLibRecoExplainer(lib: Id[Library]): Option[String] = None
+
+  private def createFullLibraryInfos(userId: Id[User], libraries: Seq[Library], explainer: Id[Library] => Option[String] = noopLibRecoExplainer) = {
+    libCommander.createFullLibraryInfos(Some(userId), showPublishedLibraries = false, maxMembersShown = 10,
+      maxKeepsShown = 0, ProcessedImageSize.Large.idealSize, libraries,
+      ProcessedImageSize.Large.idealSize).map { fullLibraryInfos =>
+        fullLibraryInfos.map {
+          case (id, libInfo) => FullLibRecoInfo(metaData = None, itemInfo = libInfo, explain = explainer(id))
+        }
+      }
   }
 }

@@ -37,7 +37,7 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def refreshUserRecos(userId: Id[User]): Future[Unit] = { Future.successful() }
 
   def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[Seq[LibraryRecoInfo]] =
-    Future.successful(Seq.empty)
+    Future.successful(topLibraryRecosExpectations(userId))
 
   def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None): Future[Unit] = {
     Future.successful()
@@ -45,5 +45,6 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   // test helpers
   val updatedUriRecommendationFeedback = ListBuffer[(Id[User], Id[NormalizedURI], UriRecommendationFeedback)]()
+  val topLibraryRecosExpectations = collection.mutable.Map[Id[User], Seq[LibraryRecoInfo]]().withDefaultValue(Seq.empty)
 
 }
