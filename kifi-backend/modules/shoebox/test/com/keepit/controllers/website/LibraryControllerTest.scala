@@ -14,6 +14,8 @@ import com.keepit.common.store.{ FakeShoeboxStoreModule, ImageSize }
 import com.keepit.common.time._
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
@@ -420,6 +422,58 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             |}""".stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
         Json.parse(contentAsString(result2)) must equalTo(expected)
+      }
+    }
+
+    "get owner libraries for profile" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val libraryController = inject[LibraryController]
+
+        val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
+          val user1 = user().withName("first", "user").withUsername("firstuser").saved
+          val user2 = user().withName("second", "user").withUsername("seconduser").saved
+          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).saved.savedFollowerMembership(user2)
+          val library2 = library().withName("lib2").withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
+          val library3 = library().withName("lib3").withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
+          keep().withLibrary(library1).saved
+          (user1, user2, library1, library2, library3)
+        }
+
+        val pubId1 = Library.publicId(lib1.id.get)
+        val pubId2 = Library.publicId(lib2.id.get)
+        val pubId3 = Library.publicId(lib3.id.get)
+        db.readOnlyMaster { implicit s =>
+          keepRepo.count === 1
+        }
+        val testPath = com.keepit.controllers.website.routes.LibraryController.ownerLibraries(user1.username, 0, 10).url
+        testPath === "/site/user/firstuser/libraries?pageSize=10"
+        inject[FakeUserActionsHelper].setUser(user1)
+        val request1 = FakeRequest("GET", testPath)
+        val result1 = libraryController.ownerLibraries(user1.username, 0, 10)(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+
+        val (basicUser1, basicUser2) = db.readOnlyMaster { implicit s => (basicUserRepo.load(user1.id.get), basicUserRepo.load(user2.id.get)) }
+
+        val expected = Json.parse(
+          s"""
+            {
+              "libraries":[
+                {
+                  "id":"${pubId1.id}",
+                  "name":"lib1",
+                  "slug":"lib1",
+                  "numFollowers":10,
+                  "numKeeps":1,
+                  "followersToDisplay":[
+                    {"firstName":"second","lastName":"user","pictureName":"0.jpg","username":"seconduser"}
+                  ]
+                }
+               ]
+            }
+           """.stripMargin)
+        Json.parse(contentAsString(result1)) must equalTo(expected)
       }
     }
 
@@ -1164,8 +1218,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         ))
       }
     }
-
-    //    testing lib getters
 
     "update keep in library" in {
       withDb(modules: _*) { implicit injector =>
