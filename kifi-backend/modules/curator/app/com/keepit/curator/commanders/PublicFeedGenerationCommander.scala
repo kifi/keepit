@@ -51,30 +51,37 @@ class PublicFeedGenerationCommander @Inject() (
   def clicked(uriId: Id[NormalizedURI]): Future[Unit] = score(uriId, "clicked")
 
   private def score(uriId: Id[NormalizedURI], reason: String): Future[Unit] = pubicFeedsGenerationLock.withLockFuture {
-    log.info(s"public feed: scoring uriId=$uriId reason=$reason")
-    val scoreOpt = db.readOnlyMaster { implicit session => uriRecRepo.getGeneralRecommendationScore(uriId) }
-    scoreOpt match {
-      case Some(score) =>
-        log.info("public feed: scored, uriId=$uriId")
-        val publicSeedItem = seedCommander.getPublicSeedItem(uriId).toSeq
-        val cleanedItem = publicSeedItem.filter { publicSeedItem => //discard super popular items
-          publicSeedItem.keepers match {
-            case Keepers.ReasonableNumber(users) => true
-            case _ => false
+    try {
+      log.info(s"public feed: scoring uriId=$uriId reason=$reason")
+      val scoreOpt = db.readOnlyMaster { implicit session => uriRecRepo.getGeneralRecommendationScore(uriId) }
+      log.info(s"public feed: got score, uriId=$uriId score=$scoreOpt")
+
+      scoreOpt match {
+        case Some(score) =>
+          val publicSeedItem = seedCommander.getPublicSeedItem(uriId).toSeq
+          val cleanedItem = publicSeedItem.filter { publicSeedItem => //discard super popular items
+            publicSeedItem.keepers match {
+              case Keepers.ReasonableNumber(users) => true
+              case _ => false
+            }
           }
-        }
-        val weightedItem = publicUriWeightingHelper(cleanedItem).filter(_.multiplier != 0.0f)
-        specialCurators().map { boostedKeepersSeq =>
-          publicScoringHelper(weightedItem, boostedKeepersSeq.toSet).map {
-            case Seq(item) =>
-              savePublicScoredSeedItem(item, score)
-            case _ =>
-              log.info("public feed: no item found, uriId=$uriId")
+          val weightedItem = publicUriWeightingHelper(cleanedItem).filter(_.multiplier != 0.0f)
+          specialCurators().map { boostedKeepersSeq =>
+            publicScoringHelper(weightedItem, boostedKeepersSeq.toSet).map {
+              case Seq(item) =>
+                savePublicScoredSeedItem(item, score)
+              case _ =>
+                log.info(s"public feed: no item found, uriId=$uriId")
+            }
           }
-        }
-      case None =>
-        log.info(s"public feed: not scored, uriId=$uriId")
-        Future.successful()
+        case None =>
+          log.info(s"public feed: not scored, uriId=$uriId")
+          Future.successful()
+      }
+    } catch {
+      case ex: Throwable =>
+        log.error(s"public feed: failed to score uriId=$uriId", ex)
+        Future.failed(ex)
     }
   }
 
@@ -93,6 +100,6 @@ class PublicFeedGenerationCommander @Inject() (
     }
     log.info(s"public feed: got ${candidates.size} initial candidates")
 
-    candidates.foreach { uriId => score(uriId, "initial loading") }
+    candidates.foreach { uriId => score(uriId, "initialLoading") }
   }
 }

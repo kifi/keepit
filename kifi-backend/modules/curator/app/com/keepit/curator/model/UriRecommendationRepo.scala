@@ -161,7 +161,7 @@ class UriRecommendationRepoImpl @Inject() (
     // compute scores (the root-mean-square of the inverse of master_scores) for each URI
     sql"""
       select sqrt(sum(score * score)/count(*))
-      from (select uri_id, 1/master_score score from uri_recommendation where where uriId = $uriId and clicked > 0) x
+      from (select 1/master_score score from uri_recommendation where uriId = $uriId and clicked > 0) x
       having count(*) >= $minClickedUsers
     """.as[Float].firstOption
   }
