@@ -4,23 +4,23 @@ angular.module('kifi')
 
 .controller('UserProfileCtrl', [
   '$scope', '$rootScope', '$state', '$stateParams', '$window',
-  'env', 'keepWhoService', 'profileService', 'userProfileActionService',
+  'env', 'keepWhoService', 'profileService', 'userProfileActionService', 'util',
   function ($scope, $rootScope, $state, $stateParams, $window,
-            env, keepWhoService, profileService, userProfileActionService) {
+            env, keepWhoService, profileService, userProfileActionService, util) {
     //
     // Configs.
     //
     var userNavLinksConfig = [
-      { name: 'Libraries', routeState: 'userProfile.libraries.my', countFieldName: 'numLibraries' },
+      { name: 'Libraries', countFieldName: 'numLibraries' },  // For v2, add: routeState: 'userProfile.libraries.my',
       // For V1 only.
-      // { name: 'Keeps', routeState: '/keeps'/* for testing only */, countFieldName: 'numKeeps' }
+      { name: 'Keeps', countFieldName: 'numKeeps' }
 
       /*
        * For V2.
        */
-      { name: 'FRIENDS', routeState: 'userProfile.friends', countFieldName: 'numFriends' },
-      { name: 'FOLLOWERS', routeState: 'userProfile.followers', countFieldName: 'numFollowers' },
-      { name: 'HELPED', routeState: 'userProfile.helped', countFieldName: 'helpedRekeep' }
+      // { name: 'FRIENDS', routeState: 'userProfile.friends', countFieldName: 'numFriends' },
+      // { name: 'FOLLOWERS', routeState: 'userProfile.followers', countFieldName: 'numFollowers' },
+      // { name: 'HELPED', routeState: 'userProfile.helped', countFieldName: 'helpedRekeep' }
     ];
 
     var libraryNavLinksConfig = [
@@ -99,6 +99,24 @@ angular.module('kifi')
       });
     }
 
+    function updateSelectedLibraryNavLink() {
+      _.forEach($scope.libraryNavLinks, function (navLink) {
+        navLink.selected = false;
+      });
+
+      switch ($state.current.data.libraryType) {
+        case 'My':
+          $scope.libraryNavLinks[0].selected = true;
+          break;
+        case 'Following':
+          $scope.libraryNavLinks[1].selected = true;
+          break;
+        case 'Invited':
+          $scope.libraryNavLinks[2].selected = true;
+          break;
+      }
+    }
+
     function initLibraryNavLinks() {
       $scope.libraryNavLinks = _.map(libraryNavLinksConfig, function (config) {
         return {
@@ -107,13 +125,19 @@ angular.module('kifi')
         };
       });
 
-      // For dev testing only.
-      $scope.libraryNavLinks[0].selected = true;
+      updateSelectedLibraryNavLink();
     }
 
     function initLibraries(libraries) {
       $scope.libraries = libraries;
     }
+
+    var deregisterUpdateSelectedLibraryNavLink = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
+      if (util.startsWith(toState.name, 'userProfile.libraries')) {
+        updateSelectedLibraryNavLink();
+      }
+    });
+    $scope.$on('$destroy', deregisterUpdateSelectedLibraryNavLink);
 
 
     // Initialize controller.
