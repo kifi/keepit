@@ -24,9 +24,9 @@ angular.module('kifi')
     ];
 
     var libraryNavLinksConfig = [
-      { name: 'MY', routeState: 'userProfile.libraries.my' },
-      { name: 'FOLLOWING', routeState: 'userProfile.libraries.following' },
-      { name: 'INVITED', routeState: 'userProfile.libraries.invited' }
+      { name: 'my', routeState: 'userProfile.libraries.my' },
+      { name: 'following', routeState: 'userProfile.libraries.following' },
+      { name: 'invited', routeState: 'userProfile.libraries.invited' }
     ];
 
 
@@ -101,20 +101,8 @@ angular.module('kifi')
 
     function updateSelectedLibraryNavLink() {
       _.forEach($scope.libraryNavLinks, function (navLink) {
-        navLink.selected = false;
+        navLink.selected = navLink.name === $state.current.data.libraryType;
       });
-
-      switch ($state.current.data.libraryType) {
-        case 'My':
-          $scope.libraryNavLinks[0].selected = true;
-          break;
-        case 'Following':
-          $scope.libraryNavLinks[1].selected = true;
-          break;
-        case 'Invited':
-          $scope.libraryNavLinks[2].selected = true;
-          break;
-      }
     }
 
     function initLibraryNavLinks() {
