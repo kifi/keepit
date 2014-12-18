@@ -42,6 +42,7 @@ angular.module('kifi')
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
+      profileSettings: route('/user/settings'),
       logout: '/logout',
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
