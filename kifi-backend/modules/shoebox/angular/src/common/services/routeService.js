@@ -210,6 +210,13 @@ angular.module('kifi')
       },
       getRelatedLibraries: function (libraryId) {
         return route('/libraries/' + libraryId + '/related');
+      },
+
+      ////////////////////////////
+      // User Profile           //
+      ////////////////////////////
+      getUserProfile: function (username) {
+        return route('/user/' + username + '/profile');
       }
     };
   }

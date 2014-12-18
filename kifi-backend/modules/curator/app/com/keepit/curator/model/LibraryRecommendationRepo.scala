@@ -16,8 +16,9 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[LibraryRecommendationRepoImpl])
 trait LibraryRecommendationRepo extends DbRepo[LibraryRecommendation] {
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[LibraryRecommendation]
-  def getByLibraryAndUserId(libraryId: Id[Library], userId: Id[User], LibraryRecommendationState: Option[State[LibraryRecommendation]])(implicit session: RSession): Option[LibraryRecommendation]
+  def getByLibraryAndUserId(libraryId: Id[Library], userId: Id[User], LibraryRecommendationState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Option[LibraryRecommendation]
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, LibraryRecommendationState: Option[State[LibraryRecommendation]] = Some(LibraryRecommendationStates.ACTIVE))(implicit session: RSession): Seq[LibraryRecommendation]
+  def getRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[LibraryRecommendation]
   def cleanupLowMasterScoreRecos(userId: Id[User], minNumRecosToKeep: Int, before: DateTime)(implicit session: RWSession): Unit
   def getLibraryIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[Library]]
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]]
@@ -73,7 +74,7 @@ class LibraryRecommendationRepoImpl @Inject() (
     (for (row <- rows if row.userId === userId) yield row).list
   }
 
-  def getByLibraryAndUserId(libraryId: Id[Library], userId: Id[User], excludeLibraryRecommendationState: Option[State[LibraryRecommendation]])(implicit session: RSession): Option[LibraryRecommendation] = {
+  def getByLibraryAndUserId(libraryId: Id[Library], userId: Id[User], excludeLibraryRecommendationState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Option[LibraryRecommendation] = {
     val q = for {
       row <- byUser(userId)(rows) |> byLibrary(libraryId)
       if row.state =!= excludeLibraryRecommendationState.orNull

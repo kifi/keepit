@@ -1,5 +1,7 @@
 package com.keepit.common.social
 
+import com.keepit.common.strings.UTF8
+
 import java.io.File
 
 import com.keepit.abook.FakeABookServiceClientModule
@@ -50,7 +52,7 @@ class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
     val user = db.readWrite { implicit s =>
       userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
     }
-    val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(jsonFilename))).mkString)
+    val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(jsonFilename)), UTF8).mkString)
     val email = inject[FacebookSocialGraph].extractEmails(json)
       .map(em => inject[UserCommander].importSocialEmail(user.id.get, em)).head
     email.address === emailAddress

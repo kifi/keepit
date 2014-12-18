@@ -3,6 +3,7 @@ package com.keepit.common.oauth
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
+import play.api.libs.json.JsValue
 import play.api.libs.oauth.ConsumerKey
 import play.api.libs.ws.WSResponse
 
@@ -10,7 +11,7 @@ import scala.concurrent.Future
 
 trait FakeOAuthProvider extends OAuthProvider {
 
-  var profileInfo = UserProfileInfo(providerId, ProviderUserId("asdf"), "Foo Bar", Some(EmailAddress("bar@foo.com")), Some("Foo"), Some("Bar"), Some(new java.net.URL("http://www.picture.com/foobar")))
+  var profileInfo = UserProfileInfo(providerId, ProviderUserId("asdf"), "Foo Bar", Some(EmailAddress("bar@foo.com")), Some("Foo"), Some("Bar"), None, Some(new java.net.URL("http://www.picture.com/foobar")), Some(new java.net.URL("http://www.profile.com/foobar")))
   def setProfileInfo(info: UserProfileInfo) { profileInfo = info }
 
   var profileInfoF = () => Future.successful(profileInfo)

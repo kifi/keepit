@@ -9,6 +9,7 @@ case class ProdSocialGraphModule() extends SocialGraphModule {
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
     val socialGraphBinder = ScalaMultibinder.newSetBinder[SocialGraph](binder)
     socialGraphBinder.addBinding.to[FacebookSocialGraph]
+    socialGraphBinder.addBinding.to[TwitterSocialGraph]
     socialGraphBinder.addBinding.to[LinkedInSocialGraph]
   }
 }

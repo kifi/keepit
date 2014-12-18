@@ -3,17 +3,16 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
-  'modalService', 'profileService', 'util', '$window', '$analytics', 'librarySearch', 'platformService',
-  function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
-            modalService, profileService, util, $window, $analytics, librarySearch, platformService) {
+  '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
+  'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'util',
+  function ($scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
+    keepDecoratorService, libraryService, modalService, platformService, profileService, util) {
     //
     // Internal data.
     //
     var selectedCount = 0;
     var prePopulated = false;
     var authToken = $location.search().authToken || '';
-    var prevLibrarySearch = false;
 
 
     //
@@ -29,11 +28,6 @@ angular.module('kifi')
         trackLibraryAttributes.owner = $scope.userIsOwner() ? 'Yes' : 'No';
       }
 
-      // o=lr shorthand for origin=libraryRec
-      if ($location.url().indexOf('o=lr') > -1) {
-        trackLibraryAttributes.origin = 'libraryRec';
-      }
-
       $analytics.pageTrack(url, trackLibraryAttributes);
     }
 
@@ -45,9 +39,9 @@ angular.module('kifi')
     //
     // Scope data.
     //
-    $scope.librarySearch = librarySearch;
-    $scope.username = $routeParams.username;
-    $scope.librarySlug = $routeParams.librarySlug;
+    $scope.librarySearch = $state.current.data.librarySearch;
+    $scope.username = $stateParams.username;
+    $scope.librarySlug = $stateParams.librarySlug;
     $scope.keeps = [];
     $scope.library = {};
     $scope.scrollDistance = '100%';
@@ -176,6 +170,7 @@ angular.module('kifi')
     $scope.$on('$destroy', deregisterCurrentLibrary);
 
     var deregisterTrackLibraryEvent = $rootScope.$on('trackLibraryEvent', function (e, eventType, attributes) {
+      attributes.libraryRecCount = $scope.relatedLibraries ? $scope.relatedLibraries.length : 0;
       if (eventType === 'click') {
         if (!$rootScope.userLoggedIn) {
           attributes.type = attributes.type || 'libraryLanding';
@@ -190,10 +185,8 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregisterTrackLibraryEvent);
 
-    var deregisterUpdateLibrarySearch = $rootScope.$on('librarySearchChanged', function (e, librarySearch) {
-      prevLibrarySearch = $scope.librarySearch;
-      $scope.librarySearch = librarySearch;
-      $scope.librarySearchFallingEdge = prevLibrarySearch && !$scope.librarySearch;
+    var deregisterUpdateLibrarySearch = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
+      $scope.librarySearch = toState.data && toState.data.librarySearch;
     });
     $scope.$on('$destroy', deregisterUpdateLibrarySearch);
 

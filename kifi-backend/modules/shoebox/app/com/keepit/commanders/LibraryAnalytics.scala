@@ -7,6 +7,7 @@ import com.keepit.model._
 import com.keepit.heimdal._
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.store.ImageSize
 import com.google.inject.{ Singleton, Inject }
 import org.joda.time.DateTime
 import play.api.db
@@ -42,7 +43,7 @@ class LibraryAnalytics @Inject() (
   }
 
   def followLibrary(userId: Id[User], library: Library, keepCount: Int, context: HeimdalContext): Unit = {
-    val followedAt = currentDateTime
+    val when = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -52,12 +53,12 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("followerCount", library.memberCount - 1)
       contextBuilder += ("keepCount", keepCount)
-      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, followedAt))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, when))
     }
   }
 
   def unfollowLibrary(userId: Id[User], library: Library, keepCount: Int, context: HeimdalContext): Unit = {
-    val unfollowedAt = currentDateTime
+    val when = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -67,12 +68,12 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("followerCount", library.memberCount - 1)
       contextBuilder += ("keepCount", keepCount)
-      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, unfollowedAt))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, when))
     }
   }
 
   def createLibrary(userId: Id[User], library: Library, context: HeimdalContext): Unit = {
-    val createdLibraryAt = currentDateTime
+    val when = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -81,11 +82,11 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryId", library.id.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
-      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, createdLibraryAt))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
   def deleteLibrary(userId: Id[User], library: Library, context: HeimdalContext): Unit = {
-    val createdLibraryAt = currentDateTime
+    val when = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -94,11 +95,11 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryId", library.id.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
-      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, createdLibraryAt))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
   def editLibrary(userId: Id[User], library: Library, context: HeimdalContext, subAction: Option[String] = None): Unit = {
-    val createdLibraryAt = currentDateTime
+    val when = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -116,65 +117,92 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryId", library.id.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
-      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, createdLibraryAt))
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
+    }
+  }
+  def updatedCoverImage(userId: Id[User], libraryId: Id[Library], context: HeimdalContext, imageFormat: ImageFormat, imageSize: ImageSize, imageBytes: Int): Unit = {
+    val when = currentDateTime
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++= context.data
+      contextBuilder += ("action", "updatedCoverImage")
+      contextBuilder += ("imageType", imageFormat.value)
+      contextBuilder += ("imageBytes", imageBytes)
+      contextBuilder += ("imageWidth", imageSize.width)
+      contextBuilder += ("imageHeight", imageSize.height)
+      contextBuilder += ("libraryId", libraryId.toString)
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
+    }
+  }
+  def removedCoverImage(userId: Id[User], libraryId: Id[Library], context: HeimdalContext, imageFormat: ImageFormat, imageSize: ImageSize): Unit = {
+    val when = currentDateTime
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++= context.data
+      contextBuilder += ("action", "removedCoverImage")
+      contextBuilder += ("imageType", imageFormat.value)
+      contextBuilder += ("imageWidth", imageSize.width)
+      contextBuilder += ("imageHeight", imageSize.height)
+      contextBuilder += ("libraryId", libraryId.toString)
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
 
   def renamedTag(oldTag: Collection, newTag: Collection, context: HeimdalContext): Unit = {
-    val renamedAt = currentDateTime
+    val when = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "renamedTag")
       contextBuilder += ("tagId", newTag.id.get.toString)
-      heimdal.trackEvent(UserEvent(oldTag.userId, contextBuilder.build, UserEventTypes.KEPT, renamedAt))
+      heimdal.trackEvent(UserEvent(oldTag.userId, contextBuilder.build, UserEventTypes.KEPT, when))
 
       // Anonymized event with tag information
       anonymise(contextBuilder)
       contextBuilder += ("oldTagName", oldTag.name.tag)
       contextBuilder += ("tagName", newTag.name.tag)
-      heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, renamedAt))
+      heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, when))
     }
   }
 
   def createdTag(newTag: Collection, context: HeimdalContext): Unit = {
-    val createdAt = currentDateTime
+    val when = currentDateTime
     val isDefaultTag = context.get[String]("source").map(_ == KeepSource.default.value) getOrElse false
     if (!isDefaultTag) SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "createdTag")
       contextBuilder += ("tagId", newTag.id.get.toString)
-      heimdal.trackEvent(UserEvent(newTag.userId, contextBuilder.build, UserEventTypes.KEPT, createdAt))
+      heimdal.trackEvent(UserEvent(newTag.userId, contextBuilder.build, UserEventTypes.KEPT, when))
       heimdal.incrementUserProperties(newTag.userId, "tags" -> 1)
 
       // Anonymized event with tag information
       anonymise(contextBuilder)
       contextBuilder += ("tagName", newTag.name.tag)
-      heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, createdAt))
+      heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, when))
     }
   }
 
   def deletedTag(oldTag: Collection, context: HeimdalContext): Unit = {
-    val deletedAt = currentDateTime
+    val when = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "deletedTag")
       contextBuilder += ("tagId", oldTag.id.get.toString)
-      heimdal.trackEvent(UserEvent(oldTag.userId, contextBuilder.build, UserEventTypes.KEPT, deletedAt))
+      heimdal.trackEvent(UserEvent(oldTag.userId, contextBuilder.build, UserEventTypes.KEPT, when))
       heimdal.incrementUserProperties(oldTag.userId, "tags" -> -1)
     }
   }
 
   def undeletedTag(tag: Collection, context: HeimdalContext): Unit = {
-    val undeletedAt = currentDateTime
+    val when = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "undeletedTag")
       contextBuilder += ("tagId", tag.id.get.toString)
-      heimdal.trackEvent(UserEvent(tag.userId, contextBuilder.build, UserEventTypes.KEPT, undeletedAt))
+      heimdal.trackEvent(UserEvent(tag.userId, contextBuilder.build, UserEventTypes.KEPT, when))
       heimdal.incrementUserProperties(tag.userId, "tags" -> 1)
     }
   }
@@ -237,7 +265,7 @@ class LibraryAnalytics @Inject() (
   }
 
   def unkeptPages(userId: Id[User], keeps: Seq[Keep], library: Library, context: HeimdalContext): Unit = {
-    val unkeptAt = currentDateTime
+    val when = currentDateTime
 
     SafeFuture {
       keeps.foreach { keep =>
@@ -249,7 +277,7 @@ class LibraryAnalytics @Inject() (
         contextBuilder += ("hasTitle", keep.title.isDefined)
         contextBuilder += ("uriId", keep.uriId.toString)
         contextBuilder ++= populateLibraryInfoForKeep(library).data
-        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.KEPT, unkeptAt))
+        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.KEPT, when))
       }
       val unkept = keeps.length
       val unkeptPrivate = keeps.count(_.isPrivate)

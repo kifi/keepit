@@ -367,11 +367,17 @@ angular.module('kifi')
           libraryOwnerUserName: library.owner.username,
           owner: this.isMyLibrary(library),
           privacySetting: library.visibility,
+          hasCoverImage: !!library.image,
           source: 'site'
         };
 
         if (library.visibility === 'published') {
           defaultAttributes.libraryName = library.name;
+        }
+
+        // o=lr shorthand for origin=libraryRec
+        if ($location.url().indexOf('o=lr') > -1) {
+          defaultAttributes.origin = 'libraryRec';
         }
 
         return defaultAttributes;

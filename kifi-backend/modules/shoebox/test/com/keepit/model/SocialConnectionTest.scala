@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.keepit.common.strings.UTF8
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.ExecutionContextModule
 import com.keepit.common.db.slick.DBSession.RWSession
@@ -62,7 +63,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
         }
 
         def loadJsonImportFriends(filename: String): Unit = {
-          val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(filename))).mkString)
+          val json = Json.parse(io.Source.fromFile(new File(s"test/com/keepit/common/social/data/$filename"), UTF8).mkString)
           inject[SocialUserImportFriends].importFriends(socialUser, extractFacebookFriendInfo(json)).size
         }
 
@@ -82,8 +83,8 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
           )
         }
 
-        val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_eishay_min.json"))).mkString)
-        val andrewJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_andrew_min.json"))).mkString)
+        val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_eishay_min.json")), UTF8).mkString)
+        val andrewJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_andrew_min.json")), UTF8).mkString)
 
         // Create FortyTwo accounts on certain users
         val users = inject[Database].readWrite { implicit s =>
@@ -143,7 +144,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
         }
 
         def loadJsonImportFriends(filename: String): Unit = {
-          val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(filename))).mkString)
+          val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(filename)), UTF8).mkString)
           inject[SocialUserImportFriends].importFriends(socialUser, extractFacebookFriendInfo(json)).size
         }
 
@@ -161,8 +162,8 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
           (socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(user)), user)
         }
 
-        val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_eishay_min.json"))).mkString)
-        val andrewJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_andrew_min.json"))).mkString)
+        val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_eishay_min.json")), UTF8).mkString)
+        val andrewJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_andrew_min.json")), UTF8).mkString)
 
         // Create FortyTwo accounts on certain users
         val users = inject[Database].readWrite { implicit s =>
@@ -222,7 +223,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
         def loadJsonImportFriends(filenames: Seq[String]): Unit = {
           val jsons = filenames map { filename =>
-            Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(filename))).mkString)
+            Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(filename)), UTF8).mkString)
           }
           inject[SocialUserImportFriends].importFriends(socialUser, jsons flatMap extractFacebookFriendInfo).size
         }
@@ -239,8 +240,8 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
           (socialRepo.save(info.withUser(user)), user)
         }
 
-        val eishay1Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_eishay_min_page1.json"))).mkString)
-        val eishay2Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_eishay_min_page2.json"))).mkString)
+        val eishay1Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_eishay_min_page1.json")), UTF8).mkString)
+        val eishay2Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_eishay_min_page2.json")), UTF8).mkString)
 
         // Create FortyTwo accounts on certain users
         val users = inject[Database].readWrite { implicit s =>
