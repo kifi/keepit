@@ -45,8 +45,10 @@ kifi.form = (function () {
     validateEmailAddress: function ($in) {
       var s = $.trim($in.val());
       if (!s) {
+        Tracker.track('visitor_viewed_page', { error: 'noEmail' });
         kifi.form.showError($in, 'Please enter your email address');
       } else if (!emailAddrRe.test(s)) {
+        Tracker.track('visitor_viewed_page', { error: 'invalidEmail', errorValue: s });
         kifi.form.showError($in, 'Invalid email address');
       } else {
         return s;
@@ -55,8 +57,10 @@ kifi.form = (function () {
     validateNewPassword: function ($in) {
       var s = $in.val();
       if (!s) {
+        Tracker.track('visitor_viewed_page', { error: 'noNewPassword'});
         kifi.form.showError($in, 'Please choose a password<br>for your account');
       } else if (s.length < 7) {
+        Tracker.track('visitor_viewed_page', { error: 'shortNewPassword', errorValue: s.length });
         kifi.form.showError($in, 'Password must be at least 7 characters');
       } else {
         return s;
@@ -65,8 +69,10 @@ kifi.form = (function () {
     validatePassword: function ($in) {
       var s = $in.val();
       if (!s) {
+        Tracker.track('visitor_viewed_page', { error: 'noPassword' });
         kifi.form.showError($in, 'Please enter your password');
       } else if (s.length < 7) {
+        Tracker.track('visitor_viewed_page', { error: 'shortPassword', errorValue: s.length });
         kifi.form.showError($in, 'Password too short');
       } else {
         return s;
@@ -75,6 +81,7 @@ kifi.form = (function () {
     validateName: function ($in) {
       var s = $.trim($in.val());
       if (!s) {
+        Tracker.track('visitor_viewed_page', { error: 'noName' });
         kifi.form.showError($in,
           '<div class=form-error-title>Name is required</div>' +
           '<div class=form-error-explanation>We need your name so that<br>your friends will be able to<br>communicate with you</div>');
@@ -222,6 +229,7 @@ kifi.form = (function () {
         animation.fail();
         var o = xhr.responseJSON;
         if (o && o.error === 'user_exists_failed_auth') {
+          Tracker.track('visitor_viewed_page', { error: 'incorrectPassword' });
           kifi.form.showError($password, 'Account exists, incorrect password');
         }
       }));
@@ -325,6 +333,7 @@ kifi.form = (function () {
         var o = xhr.responseJSON;
         if (o && o.error === 'known_email_address') {
           $form.data('email', email);
+          Tracker.track('visitor_viewed_page', { error: 'knownEmailAddress', errorValue: email });
           kifi.form.showError(
             $email,
             'A Kifi account already uses<br>this email address. <a href=javascript: class=social-claim-account>Claim it</a>')
@@ -373,13 +382,16 @@ kifi.form = (function () {
         if (xhr.status === 403) {
           var o = xhr.responseJSON;
           if (o.error === 'no_such_user') {
+            Tracker.track('visitor_viewed_page', { error: 'noSuchUser', errorValue: email });
             kifi.form.showError($email, 'No account with this email address');
           } else {
+            Tracker.track('visitor_viewed_page', { error: 'incorrectPassword', errorValue: email });
             kifi.form.showError($password,
               '<div class=form-error-title>Incorrect password</div>' +
               '<div class=form-error-explanation>To choose a new password,<br>click “I forgot”.</div>');
           }
         } else {
+          Tracker.track('visitor_viewed_page', { error: 'signinFail', errorValue: s.length });
           // TODO: offline? 500?
         }
       }));
@@ -745,6 +757,7 @@ kifi.form = (function () {
         .fail(function (xhr) {
           var o = xhr.responseJSON;
           if (o && o.error === 'no_account') {
+            Tracker.track('visitor_viewed_page', { error: 'noAccount', errorValue: email });
             kifi.form.showError($email, 'Sorry, we don’t recognize this email address.');
           }
         })
