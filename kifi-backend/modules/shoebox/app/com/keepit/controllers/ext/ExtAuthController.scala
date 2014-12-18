@@ -12,7 +12,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.net.UserAgent
-import com.keepit.common.social.{ TwitterSocialGraph, FacebookSocialGraph, LinkedInSocialGraph }
+import com.keepit.common.social.{ TwitterSocialGraph, TwitterSocialGraphImpl, FacebookSocialGraph, LinkedInSocialGraph }
 import com.keepit.heimdal.{ ContextDoubleData, ContextStringData, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
 import com.keepit.model.{ KifiExtVersion, KifiInstallation, KifiInstallationPlatform, KifiInstallationRepo, KifiInstallationStates }
 import com.keepit.model.{ ExperimentType, Library, URLPatternRepo, UserStates }

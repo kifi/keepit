@@ -10,6 +10,7 @@ import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.oauth.ProviderIds
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -22,10 +23,11 @@ import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.mindrot.jbcrypt.BCrypt
 import org.specs2.mutable.Specification
+import play.api.libs.json.Json
 import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
-import com.keepit.commanders.InviteCommander
+import com.keepit.commanders.{ FullSocialId, InviteCommander }
 
 class InviteControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -75,14 +77,69 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
       val sui1 = socialUserInfoRepo.save(SocialUserInfo(userId = user1.id, fullName = user1.fullName, socialId = SocialId(email1.address.address), networkType = SocialNetworks.FORTYTWO, credentials = Some(socialUser)))
       val inviteRepo = inject[InvitationRepo]
       val invite1 = inviteRepo.save(Invitation(senderUserId = user1.id, recipientSocialUserId = None, recipientEmailAddress = Some(recipientEmail)))
-      (user1, email1, sui1, invite1)
+
+      // twitter
+      val oauth1Info = OAuth1Info("twitter-oauth1-token", "foobar-secret")
+      val identityId2 = IdentityId("1234", ProviderIds.Twitter.id)
+      val socialUser2 = SocialUser(identityId2, "Foo", "Bar", "Foo Bar", None, None, AuthenticationMethod.OAuth1, oAuth1Info = Some(oauth1Info))
+      val sui2 =
+        socialUserInfoRepo.save(SocialUserInfo(
+          userId = user1.id,
+          fullName = socialUser2.fullName,
+          pictureUrl = Some("http://random/rand.png"),
+          profileUrl = None, // not set
+          socialId = SocialId(identityId2.userId),
+          networkType = SocialNetworks.TWITTER,
+          credentials = Some(socialUser2)
+        ))
+      val identityId3 = IdentityId("7890", ProviderIds.Twitter.id)
+      val socialUser3 = SocialUser(identityId3, "FooTweet", "BarTweet", "FooTweet BarTweet", None, None, AuthenticationMethod.OAuth1, oAuth1Info = Some(oauth1Info))
+      val sui3 =
+        socialUserInfoRepo.save(SocialUserInfo(
+          userId = None,
+          fullName = socialUser3.fullName,
+          pictureUrl = Some("http://random/rand.png"),
+          profileUrl = None, // not set
+          socialId = SocialId(identityId3.userId),
+          networkType = SocialNetworks.TWITTER,
+          credentials = Some(socialUser3)
+        ))
+      (user1, email1, sui1, invite1, sui2, sui3)
     }
   }
 
   "InviteController" should {
+    "send Twitter DM invite" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val (user1, email1, sui1, invite1, sui2, sui3) = setUp()
+        val inviteController = inject[InviteController]
+
+        // ensure path exists
+        val path = com.keepit.controllers.website.routes.InviteController.inviteV2().url
+        path === s"/site/user/invite"
+
+        inject[FakeUserActionsHelper].setUser(user1)
+        val fullSocialId = FullSocialId(SocialNetworks.TWITTER, Left(SocialId("7890")))
+        val request = FakeRequest().withBody(Json.obj("id" -> Json.toJson(fullSocialId)))
+        val result = inviteController.inviteV2()(request)
+
+        status(result) === OK
+        val json = contentAsJson(result)
+        (json \ "sent").as[Boolean] === true
+
+        val invites = db.readOnlyMaster { implicit ro =>
+          invitationRepo.getBySenderId(user1.id.get)
+        }
+        val invite = invites.filter(_.recipientSocialUserId.isDefined).head
+        invite.senderUserId === user1.id
+        invite.recipientSocialUserId.get === sui3.id.get
+        invite.state === InvitationStates.ACTIVE
+        invite.lastSentAt.isDefined === true
+      }
+    }
     "acceptInvite should be public endpoint" in {
       running(new ShoeboxApplication(modules: _*)) {
-        val (user1, email1, sui1, invite1) = setUp()
+        val (user1, email1, sui1, invite1, _, _) = setUp()
         val inviteController = inject[InviteController]
 
         // ensure path exists

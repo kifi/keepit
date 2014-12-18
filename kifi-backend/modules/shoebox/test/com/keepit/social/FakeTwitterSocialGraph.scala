@@ -1,0 +1,74 @@
+package com.keepit.social
+
+import com.google.inject.Inject
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.mail.EmailAddress
+import com.keepit.common.net.FakeWSResponse
+import com.keepit.common.oauth.{ UserProfileInfo, TwitterOAuthProviderImpl, OAuth1Configuration }
+import com.keepit.common.social._
+import com.keepit.model.{ OAuth1TokenInfo, SocialUserInfoRepo, UserValueName, SocialUserInfo }
+import play.api.libs.json.{ JsNull, JsArray, JsValue }
+import play.api.libs.ws.WSResponse
+import securesocial.core.{ IdentityId, OAuth2Settings }
+
+import scala.concurrent.Future
+import scala.util.Try
+
+class FakeTwitterSocialGraph @Inject() (
+    airbrake: AirbrakeNotifier,
+    db: Database,
+    oauth1Config: OAuth1Configuration,
+    socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with TwitterGraphTestHelper {
+
+  val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
+    override def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = Future.successful {
+      tweetfortytwoInfo.copy(screenName = "tweet42")
+    }
+  }
+
+  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, oauth1Config, twtrOAuthProvider, socialRepo) {
+    override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = Future.successful {
+      socialUserInfo.socialId.id.toLong match {
+        case tweetfortytwoInfo.id =>
+          JsArray(infos.values.collect { case (json, info) if info.id != tweetfortytwoInfo.id => json }.toSeq)
+        case _ =>
+          JsNull
+      }
+    }
+
+    override protected def fetchIds(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: Long, endpoint: String): Future[Seq[Long]] = Future.successful {
+      socialUserInfo.socialId.id.toLong match {
+        case tweetfortytwoInfo.id =>
+          if (endpoint.contains("followers")) tweetfortytwoFollowerIds
+          else if (endpoint.contains("friends")) tweetfortytwoFriendIds
+          else Seq.empty
+        case _ =>
+          if (endpoint.contains("followers")) {
+            Seq(1L, 2L, 3L, 4L)
+          } else if (endpoint.contains("friends")) {
+            Seq(2L, 3L)
+          } else Seq.empty
+      }
+    }
+
+    override def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse] = Future.successful {
+      val body =
+        s"""
+          {
+            "recipient_id": $receiverUserId
+          }
+        """.stripMargin
+      new FakeWSResponse()
+    }
+  }
+
+  def extractEmails(parentJson: JsValue): Seq[EmailAddress] = twtrGraph.extractEmails(parentJson)
+  def extractFriends(parentJson: JsValue): Seq[SocialUserInfo] = twtrGraph.extractFriends(parentJson)
+  def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue): SocialUserInfo = twtrGraph.updateSocialUserInfo(sui, json)
+  def vetJsAccessToken(settings: OAuth2Settings, json: JsValue): Try[IdentityId] = twtrGraph.vetJsAccessToken(settings, json)
+  def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = twtrGraph.revokePermissions(socialUserInfo)
+  def extractUserValues(json: JsValue): Map[UserValueName, String] = twtrGraph.extractUserValues(json)
+  def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = twtrGraph.fetchSocialUserRawInfo(socialUserInfo)
+  def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse] = twtrGraph.sendDM(socialUserInfo, receiverUserId, msg)
+}
