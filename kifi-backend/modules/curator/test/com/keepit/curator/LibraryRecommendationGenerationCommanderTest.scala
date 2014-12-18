@@ -57,9 +57,6 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
         val lib4 = saveLibraryInfo(103, 603, keepCount = 2)
         val lib5 = saveLibraryInfo(104, 604)
 
-        inject[CuratorLibraryMembershipInfoRepo].save(CuratorLibraryMembershipInfo(access = LibraryAccess.READ_ONLY,
-          userId = user1Id, libraryId = lib5.libraryId, state = CuratorLibraryMembershipInfoStates.ACTIVE))
-
         (lib1, lib2, lib3, lib4, lib5)
       }
       inject[CuratorLibraryInfoSequenceNumberAssigner].assignSequenceNumbers()
@@ -75,6 +72,7 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
       db.readWrite { implicit rw =>
         saveLibraryMembership(userScores(0).userId, lib1.libraryId)
         saveLibraryMembership(userScores(1).userId, lib1.libraryId, owner = true)
+        saveLibraryMembership(user1Id, lib5.libraryId)
       }
 
       val preComputeF = libRecoGenCommander.precomputeRecommendations()

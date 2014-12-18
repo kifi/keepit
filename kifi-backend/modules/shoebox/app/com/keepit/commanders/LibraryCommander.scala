@@ -224,7 +224,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize): Future[Seq[FullLibraryInfo]] = {
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
@@ -271,7 +271,7 @@ class LibraryCommander @Inject() (
         val owner = usersById(lib.ownerId)
         val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_))
         val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, idealLibraryImageSize)
-        FullLibraryInfo(
+        lib.id.get -> FullLibraryInfo(
           id = Library.publicId(lib.id.get),
           name = lib.name,
           owner = owner,
@@ -295,7 +295,9 @@ class LibraryCommander @Inject() (
   }
 
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize): Future[FullLibraryInfo] = {
-    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
+    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize).imap {
+      case Seq((_, info)) => info
+    }
   }
 
   def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], Map[LibraryAccess, Int]) = {
@@ -1165,7 +1167,6 @@ class LibraryCommander @Inject() (
       ).zipWithIndex.map { case (value, idx) => value.id -> (value, idx) }.toMap
 
       val libIds = systemValueLibraries.keySet
-      val libPublicIdsToIds = libIds.map { id => (Library.publicId(id), id) }.toMap
       val libIdsMap = db.readOnlyReplica { implicit s => libraryRepo.getLibraries(libIds) } filter {
         case (_, lib) => lib.visibility == LibraryVisibility.PUBLISHED
       }
@@ -1179,10 +1180,10 @@ class LibraryCommander @Inject() (
         idealLibraryImageSize = ProcessedImageSize.Medium.idealSize)
 
       fullLibInfosF map { libInfos =>
-        libInfos map { info =>
-          val libId = libPublicIdsToIds(info.id)
-          val (extraInfo, idx) = systemValueLibraries(libId)
-          MarketingSuggestedLibraryInfo.fromFullLibraryInfo(info, Some(extraInfo)) -> idx
+        libInfos map {
+          case (libId, info) =>
+            val (extraInfo, idx) = systemValueLibraries(libId)
+            MarketingSuggestedLibraryInfo.fromFullLibraryInfo(info, Some(extraInfo)) -> idx
         } sortBy (_._2) map (_._1)
       }
     } getOrElse Future.successful(Seq.empty)
