@@ -220,7 +220,8 @@ class SearchFactory @Inject() (
     lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
-    config: SearchConfig): Seq[LibrarySearch] = {
+    config: SearchConfig,
+    explain: Option[Id[Library]]): Seq[LibrarySearch] = {
 
     val currentTime = System.currentTimeMillis()
 
@@ -258,7 +259,8 @@ class SearchFactory @Inject() (
             friendIdsFuture,
             libraryIdsFuture,
             monitoredAwait,
-            timeLogs
+            timeLogs,
+            explain
           )
         }
       case None => Seq.empty

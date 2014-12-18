@@ -8,7 +8,7 @@ import org.apache.lucene.search.Query
 
 case class UriSearchExplanation(
     id: Id[NormalizedURI],
-    query: Query,
+    query: String,
     labels: Array[String],
     matching: Float,
     matchingThreshold: Float,
@@ -16,7 +16,7 @@ case class UriSearchExplanation(
     clickBoostValue: Float,
     sharingBoostValue: Float,
     rawScore: Float,
-    boostedScore: Float,
+    score: Float,
     scoreComputation: String,
     details: Map[String, Seq[ScoreDetail]]) extends SearchExplanation[NormalizedURI] {
 
@@ -77,14 +77,14 @@ case class UriSearchExplanation(
 
 class UriSearchExplanationBuilder(uriId: Id[NormalizedURI], query: Query, labels: Array[String]) extends SearchExplanationBuilder[NormalizedURI](uriId, query, labels) {
 
-  private[this] var _boostedScore: Float = -1f
+  private[this] var _score: Float = -1f
   private[this] var _clickBoostValue: Float = -1f
   private[this] var _sharingBoostValue: Float = -1f
 
   def build() = {
     UriSearchExplanation(
       uriId,
-      query,
+      query.toString,
       labels,
       matching,
       matchingThreshold,
@@ -92,15 +92,15 @@ class UriSearchExplanationBuilder(uriId: Id[NormalizedURI], query: Query, labels
       _clickBoostValue,
       _sharingBoostValue,
       rawScore,
-      _boostedScore,
+      _score,
       scoreComputation,
       details
     )
   }
 
-  def collectBoostedScore(id: Long, boostedScore: Float, clickBoostValue: Option[Float], sharingBoostValue: Option[Float]): Unit = {
+  def collectScore(id: Long, score: Float, clickBoostValue: Option[Float], sharingBoostValue: Option[Float]): Unit = {
     if (id == uriId.id) {
-      _boostedScore = boostedScore
+      _score = score
       clickBoostValue.foreach(_clickBoostValue = _)
       sharingBoostValue.foreach(_sharingBoostValue = _)
     }

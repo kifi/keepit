@@ -44,7 +44,7 @@ class LibraryResultCollector(maxHitsPerCategory: Int, myLibraryBoost: Float, mat
 
       explanation.foreach { builder =>
         builder.collectRawScore(ctx, matchingThreshold, minMatchingThreshold)
-        builder.collectBoostedScore(id, score, myLibraryBoost)
+        builder.collectScore(id, score, myLibraryBoost)
       }
     }
   }

@@ -25,21 +25,19 @@ class LibrarySearch(
     friendIdsFuture: Future[Set[Long]],
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     monitoredAwait: MonitoredAwait,
-    timeLogs: SearchTimeLogs) extends DebugOption with Logging {
+    timeLogs: SearchTimeLogs,
+    explain: Option[Id[Library]]) extends DebugOption with Logging {
   private[this] val percentMatch = config.asFloat("percentMatch")
   private[this] val myLibraryBoost = config.asFloat("myLibraryBoost")
 
   def execute(): LibraryShardResult = {
 
-    val engine = engineBuilder.build()
-    debugLog("library search engine created")
-
-    val (myHits, friendsHits, othersHits) = executeTextSearch(engine)
+    val ((myHits, friendsHits, othersHits), explanation) = executeTextSearch()
     debugLog(s"myHits: ${myHits.totalHits}")
     debugLog(s"friendsHits: ${friendsHits.totalHits}")
     debugLog(s"othersHits: ${othersHits.totalHits}")
 
-    val libraryShardResult = LibrarySearch.merge(myHits, friendsHits, othersHits, numHitsToReturn, filter, config)(keepId => KeepRecord.retrieve(keepSearcher, keepId).get)
+    val libraryShardResult = LibrarySearch.merge(myHits, friendsHits, othersHits, numHitsToReturn, filter, config, explanation)(keepId => KeepRecord.retrieve(keepSearcher, keepId).get)
     debugLog(s"libraryShardResult: ${libraryShardResult.hits.map(_.id).mkString(",")}")
     timeLogs.processHits()
     timeLogs.done()
@@ -50,16 +48,16 @@ class LibrarySearch(
     libraryShardResult
   }
 
-  def explain(libraryId: Id[Library]): LibrarySearchExplanation = {
-    val engine = engineBuilder.build()
-    val labels = engineBuilder.getQueryLabels()
-    val query = engine.getQuery()
-    val explanation = new LibrarySearchExplanationBuilder(libraryId, query, labels)
-    executeTextSearch(engine, Some(explanation))
-    explanation.build()
-  }
+  private def executeTextSearch(): ((HitQueue, HitQueue, HitQueue), Option[LibrarySearchExplanation]) = {
 
-  private def executeTextSearch(engine: QueryEngine, explanation: Option[LibrarySearchExplanationBuilder] = None): (HitQueue, HitQueue, HitQueue) = {
+    val engine = engineBuilder.build()
+    debugLog("library search engine created")
+
+    val explanation = explain.map { libraryId =>
+      val labels = engineBuilder.getQueryLabels()
+      val query = engine.getQuery()
+      new LibrarySearchExplanationBuilder(libraryId, query, labels)
+    }
 
     val collector = new LibraryResultCollector(numHitsToReturn * 5, myLibraryBoost, percentMatch / 100.0f, explanation)
 
@@ -75,13 +73,13 @@ class LibrarySearch(
 
     timeLogs.search()
 
-    collector.getResults()
+    (collector.getResults(), explanation.map(_.build()))
   }
 
 }
 
 object LibrarySearch extends Logging {
-  def merge(myHits: HitQueue, friendsHits: HitQueue, othersHits: HitQueue, maxHits: Int, filter: SearchFilter, config: SearchConfig)(keepsRecords: Id[Keep] => KeepRecord): LibraryShardResult = {
+  def merge(myHits: HitQueue, friendsHits: HitQueue, othersHits: HitQueue, maxHits: Int, filter: SearchFilter, config: SearchConfig, explanation: Option[LibrarySearchExplanation])(keepsRecords: Id[Keep] => KeepRecord): LibraryShardResult = {
 
     val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
     val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
@@ -141,7 +139,7 @@ object LibrarySearch extends Logging {
       LibraryShardHit(Id(h.id), h.score, h.visibility, keep)
     }
 
-    LibraryShardResult(libraryShardHits, show)
+    LibraryShardResult(libraryShardHits, show, explanation)
   }
 
   def partition(libraryShardHits: Seq[LibraryShardHit]): (HitQueue, HitQueue, HitQueue, Map[Id[Keep], KeepRecord]) = {

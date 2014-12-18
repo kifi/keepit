@@ -60,7 +60,7 @@ class UriResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, 
         }
         explanation.foreach { builder =>
           builder.collectRawScore(ctx, matchingThreshold, minMatchingThreshold)
-          builder.collectBoostedScore(id, score, Some(clickBoost), Some(sharingBoost))
+          builder.collectScore(id, score, Some(clickBoost), Some(sharingBoost))
         }
       }
     }
@@ -99,7 +99,7 @@ class UriResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: 
         }
         explanation.foreach { builder =>
           builder.collectRawScore(ctx, matchingThreshold, minMatchingThreshold)
-          builder.collectBoostedScore(id, score, None, None)
+          builder.collectScore(id, score, None, None)
         }
       }
     }
@@ -127,7 +127,7 @@ class NonUserUriResultCollector(maxHitsPerCategory: Int, matchingThreshold: Floa
         hits.insert(ctx.id, score, Visibility.OTHERS | (ctx.visibility & Visibility.HAS_SECONDARY_ID), ctx.secondaryId)
         explanation.foreach { builder =>
           builder.collectRawScore(ctx, matchingThreshold, minMatchingThreshold)
-          builder.collectBoostedScore(ctx.id, score, None, None)
+          builder.collectScore(ctx.id, score, None, None)
         }
       }
 

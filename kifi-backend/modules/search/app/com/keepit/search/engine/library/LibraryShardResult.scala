@@ -19,7 +19,7 @@ object LibraryShardHit {
   }
 }
 
-case class LibraryShardResult(hits: Seq[LibraryShardHit], show: Boolean)
+case class LibraryShardResult(hits: Seq[LibraryShardHit], show: Boolean, explanation: Option[LibrarySearchExplanation])
 
 object LibraryShardResult {
   implicit val format = Json.format[LibraryShardResult]

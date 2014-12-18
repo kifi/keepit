@@ -5,18 +5,19 @@ import com.keepit.search.engine.{ ScoreContext, Visibility }
 import com.keepit.search.util.join.DataBuffer
 import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.lucene.search.Query
+import play.api.libs.json.Json
 
 import scala.collection.mutable.ListBuffer
 
 trait SearchExplanation[T] {
   def id: Id[T]
-  def query: Query
+  def query: String
   def labels: Array[String]
   def matching: Float
   def matchingThreshold: Float
   def minMatchingThreshold: Float
   def rawScore: Float
-  def boostedScore: Float
+  def score: Float
   def scoreComputation: String
   def details: Map[String, Seq[ScoreDetail]]
 
@@ -24,7 +25,7 @@ trait SearchExplanation[T] {
     val sb = new StringBuilder
     sb.append("<table>\n")
     sb.append(s"<tr> <th> $title </th> </tr>\n")
-    sb.append(s"""<tr> <td style="text-align:left"> ${query.toString} </td> </tr>\n""")
+    sb.append(s"""<tr> <td style="text-align:left"> $query </td> </tr>\n""")
     sb.append("</table>\n")
 
     sb.toString
@@ -34,8 +35,8 @@ trait SearchExplanation[T] {
     val sb = new StringBuilder
     sb.append("<table>\n")
     sb.append(s"<tr> <th colspan=2> $title </th> </tr>\n")
-    sb.append(s"<tr> <th> raw score </th> <th> boosted score </th> </tr>\n")
-    sb.append(s"<tr> <td> $rawScore </td> <td> $boostedScore </td> </tr>\n")
+    sb.append(s"<tr> <th> raw score </th> <th> score </th> </tr>\n")
+    sb.append(s"<tr> <td> $rawScore </td> <td> $score </td> </tr>\n")
     sb.append("</table>\n")
 
     sb.toString
@@ -174,7 +175,7 @@ abstract class SearchExplanationBuilder[T](val resultId: Id[T], val query: Query
       _matching = ctx.computeMatching(minMatchingThreshold)
       _rawScore = ctx.score()
       _scoreComputation = ctx.explainScoreExpr()
-      _details("aggregate") += ScoreDetail(ctx)
+      _details("aggregate") += ScoreDetail.aggregate(ctx)
     }
   }
 
@@ -187,10 +188,13 @@ abstract class SearchExplanationBuilder[T](val resultId: Id[T], val query: Query
 
 }
 
+case class ScoreDetail(source: String, primaryId: Long, secondaryId: Long, visibility: Int, scoreMax: Array[Float], scoreSum: Option[Array[Float]])
+
 object ScoreDetail {
-  def apply(ctx: ScoreContext) = {
+  def aggregate(ctx: ScoreContext) = {
     new ScoreDetail(ctx.getClass.getSimpleName, ctx.id, ctx.secondaryId, ctx.visibility, ctx.scoreMax.clone, Some(ctx.scoreSum.clone))
   }
+
+  implicit val format = Json.format[ScoreDetail]
 }
 
-class ScoreDetail(source: String, val primaryId: Long, val secondaryId: Long, val visibility: Int, val scoreMax: Array[Float], val scoreSum: Option[Array[Float]])
