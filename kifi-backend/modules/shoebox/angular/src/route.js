@@ -79,7 +79,7 @@ angular.module('kifi')
             templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
             controller: 'UserProfileLibrariesListCtrl',
             data: {
-              libraryType: 'My'
+              libraryType: 'my'
             }
           })
           .state('userProfile.libraries.following', {
@@ -87,7 +87,7 @@ angular.module('kifi')
             templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
             controller: 'UserProfileLibrariesListCtrl',
             data: {
-              libraryType: 'Following'
+              libraryType: 'following'
             }
           })
           .state('userProfile.libraries.invited', {
@@ -95,7 +95,7 @@ angular.module('kifi')
             templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
             controller: 'UserProfileLibrariesListCtrl',
             data: {
-              libraryType: 'Invited'
+              libraryType: 'invited'
             }
           })
         .state('userProfile.friends', {
@@ -103,7 +103,7 @@ angular.module('kifi')
           templateUrl: 'userProfile/userProfilePeople.tpl.html',
           controller: 'UserProfilePeopleCtrl',
           data: {
-            peopleType: 'Friends'
+            peopleType: 'friends'
           }
         })
         .state('userProfile.followers', {
@@ -111,7 +111,7 @@ angular.module('kifi')
           templateUrl: 'userProfile/userProfilePeople.tpl.html',
           controller: 'UserProfilePeopleCtrl',
           data: {
-            peopleType: 'Followers'
+            peopleType: 'followers'
           }
         })
         .state('userProfile.helped', {
