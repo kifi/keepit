@@ -225,7 +225,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           allMemberships.length === 3
           allMemberships.map(_.userId) === Seq(userAgent.id.get, userCaptain.id.get, userIron.id.get)
           allMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.OWNER, LibraryAccess.OWNER)
-          allMemberships.map(_.visibility) === Seq(LibraryMembershipVisibilityStates.VISIBLE, LibraryMembershipVisibilityStates.HIDDEN, LibraryMembershipVisibilityStates.VISIBLE)
         }
 
         // test re-activating inactive library
