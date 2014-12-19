@@ -79,12 +79,12 @@ angular.module('kifi')
           controller: 'UserProfileLibrariesCtrl',
           'abstract': true
         })
-          .state('userProfile.libraries.my', {
+          .state('userProfile.libraries.own', {
             url: '',
             templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
             controller: 'UserProfileLibrariesListCtrl',
             data: {
-              libraryType: 'my'
+              libraryType: 'own'
             }
           })
           .state('userProfile.libraries.following', {
