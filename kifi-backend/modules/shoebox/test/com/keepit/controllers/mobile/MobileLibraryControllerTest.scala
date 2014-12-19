@@ -185,7 +185,6 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
              |      "pictureName":"0.jpg",
              |      "username":"spongebob"
              |    },
-             |    "membershipVisibility": "visible",
              |    "followers" : [],
              |    "keeps" : [],
              |    "numKeeps" : 0,

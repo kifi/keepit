@@ -198,7 +198,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers", visibility = LibraryVisibility.SECRET)
 
-        val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED, membershipVisibility = Some(LibraryMembershipVisibilityStates.HIDDEN))
+        val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
 
         val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.DISCOVERABLE)
 
