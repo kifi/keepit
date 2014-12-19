@@ -28,7 +28,7 @@
 var kifi = {};
 kifi.form = (function () {
   'use strict';
-  var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
   return {
     showError: function ($in, msg) {
       var $err = $('<div class=form-error>').css('visibility', 'hidden').html(msg).appendTo('body')
@@ -231,6 +231,12 @@ kifi.form = (function () {
         if (o && o.error === 'user_exists_failed_auth') {
           Tracker.track('visitor_viewed_page', { error: 'incorrectPassword' });
           kifi.form.showError($password, 'Account exists, incorrect password');
+        } else if (o && o.error === 'error.email') {
+          Tracker.track('visitor_viewed_page', { error: 'errorEmail' });
+          kifi.form.showError($password, 'Error With Email Format');
+        } else {
+          Tracker.track('visitor_viewed_page', { error: 'unknownSignupError' });
+          kifi.form.showError($password, 'Signup Error');
         }
       }));
     } else {
