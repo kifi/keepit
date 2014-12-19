@@ -54,7 +54,7 @@ class ReactiveLock(numConcurrent: Int = 1) {
     //making sure the runner just starts a future and does nothing else (in case f does some other work, keeping dispatch very light)
     val wrapper = () => {
       val innerPromise = Promise[T]
-      Future { innerPromise.completeWith(f) }
+      innerPromise.completeWith(Future(f).flatMap(future => future))
       innerPromise.future
     }
     taskQueue.add(QueuedItem[T](wrapper, p, ec))
