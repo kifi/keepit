@@ -9,7 +9,7 @@ import com.keepit.common.service.ServiceType
 import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 import com.keepit.common.db.Id
-import com.keepit.curator.model.{ LibraryRecoSelectionParams, LibraryRecoInfo, RecoInfo, RecommendationClientType }
+import com.keepit.curator.model.{ RecommendationSubSource, LibraryRecoSelectionParams, LibraryRecoInfo, RecoInfo, RecommendationSource }
 import collection.mutable.ListBuffer
 
 class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends CuratorServiceClient {
@@ -20,7 +20,7 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   var fakeTopRecos: Map[Id[User], Seq[RecoInfo]] = Map.empty
 
-  def topRecos(userId: Id[User], clientType: RecommendationClientType, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]] =
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]] =
     Future.successful(fakeTopRecos.getOrElse(userId, Seq[RecoInfo]()))
 
   def topPublicRecos(): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)

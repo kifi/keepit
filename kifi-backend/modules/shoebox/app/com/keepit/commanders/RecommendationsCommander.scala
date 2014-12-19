@@ -20,20 +20,7 @@ import com.keepit.model.{
 }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.curator.CuratorServiceClient
-import com.keepit.curator.model.{
-  RecoInfo,
-  RecommendationClientType,
-  FullLibRecoInfo,
-  FullUriRecoInfo,
-  FullRecoInfo,
-  UriRecoItemInfo,
-  RecoMetaData,
-  SeedAttribution,
-  RecoAttributionInfo,
-  RecoAttributionKind,
-  RecoKind,
-  RecoLibraryInfo
-}
+import com.keepit.curator.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.domain.DomainToNameMapper
@@ -181,8 +168,8 @@ class RecommendationsCommander @Inject() (
     libraryAttrInfos ++ keepAttrInfos ++ topicAttrInfos
   }
 
-  def topRecos(userId: Id[User], clientType: RecommendationClientType, more: Boolean, recencyWeight: Float): Future[Seq[FullRecoInfo]] = {
-    curator.topRecos(userId, clientType, more, recencyWeight).flatMap { recos =>
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[FullRecoInfo]] = {
+    curator.topRecos(userId, source, subSource, more, recencyWeight).flatMap { recos =>
       val recosWithUris: Seq[(RecoInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
         recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }
       }

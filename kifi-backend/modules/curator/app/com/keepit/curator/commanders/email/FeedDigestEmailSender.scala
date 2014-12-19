@@ -14,7 +14,7 @@ import com.keepit.common.mail.template.helpers.{ libraryName, toHttpsUrl, tracki
 import com.keepit.common.mail.template.{ EmailToSend, EmailTrackingParam }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationGenerationCommander, SeedAttributionHelper, SeedIngestionCommander }
-import com.keepit.curator.model.{ RecommendationClientType, UriRecommendation, UriRecommendationRepo, UserAttribution }
+import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource, UriRecommendation, UriRecommendationRepo, UserAttribution }
 import com.keepit.curator.queue.SendFeedDigestToUserMessage
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ ExperimentType, SocialUserInfo, NotificationCategory, User, Library, URISummary, Keep, NormalizedURI }
@@ -266,7 +266,7 @@ class FeedDigestEmailSender @Inject() (
       if (sent) {
         db.readWrite { implicit rw =>
           digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.uriRecommendation.id.get, withLastPushedAt = true))
-          curatorAnalytics.trackDeliveredItems(digestRecos.map(_.uriRecommendation), Some(RecommendationClientType.Email))
+          curatorAnalytics.trackDeliveredItems(digestRecos.map(_.uriRecommendation), Some(RecommendationSource.Email))
         }
         sendAnonymoizedEmailToQa(emailToSend, emailData)
       } else {

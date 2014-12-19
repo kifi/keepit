@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.curator.model.RecommendationClientType
+import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource }
 import com.kifi.macros.json
 
 @json case class UriRecommendationFeedback(
@@ -9,6 +9,7 @@ import com.kifi.macros.json
     trashed: Option[Boolean] = None,
     vote: Option[Boolean] = None,
     comment: Option[String] = None,
-    clientType: Option[RecommendationClientType] = None) {
-  override def toString = s"UriRecommendationFeedback(clicked:$clicked, kept:$kept, trashed:$trashed, vote:$vote, comment:$comment, clientType:$clientType)"
+    source: Option[RecommendationSource] = None,
+    subSource: Option[RecommendationSubSource] = None) {
+  override def toString = s"UriRecommendationFeedback(clicked=$clicked kept=$kept trashed=$trashed vote=$vote comment=$comment source=$source subSource=$subSource)"
 }

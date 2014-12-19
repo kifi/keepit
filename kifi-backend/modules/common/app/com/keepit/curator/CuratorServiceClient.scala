@@ -7,7 +7,7 @@ import com.keepit.common.net.{ HttpClient, CallTimeouts }
 import com.keepit.common.routes.Curator
 import com.keepit.common.db.Id
 import com.keepit.model._
-import com.keepit.curator.model.{ LibraryRecoSelectionParams, LibraryRecoInfo, RecoInfo, RecommendationClientType }
+import com.keepit.curator.model.{ RecommendationSubSource, LibraryRecoSelectionParams, LibraryRecoInfo, RecoInfo, RecommendationSource }
 
 import scala.concurrent.Future
 import play.api.libs.json._
@@ -17,7 +17,7 @@ trait CuratorServiceClient extends ServiceClient {
   final val serviceType = ServiceType.CURATOR
 
   def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[RecoInfo]]
-  def topRecos(userId: Id[User], clientType: RecommendationClientType, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]]
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]]
   def topPublicRecos(): Future[Seq[RecoInfo]]
   def generalRecos(): Future[Seq[RecoInfo]]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean]
@@ -40,9 +40,10 @@ class CuratorServiceClientImpl(
     }
   }
 
-  def topRecos(userId: Id[User], clientType: RecommendationClientType, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]] = {
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]] = {
     val payload = Json.obj(
-      "clientType" -> clientType,
+      "source" -> source,
+      "subSource" -> subSource,
       "more" -> more,
       "recencyWeight" -> recencyWeight
     )

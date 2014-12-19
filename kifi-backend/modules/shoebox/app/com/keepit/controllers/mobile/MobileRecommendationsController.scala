@@ -6,7 +6,7 @@ import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxSer
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.UserAgent
-import com.keepit.curator.model.RecommendationClientType
+import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource }
 import com.keepit.model.{ NormalizedURI, UriRecommendationFeedback }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -19,12 +19,12 @@ class MobileRecommendationsController @Inject() (
 
   def topRecos(more: Boolean, recencyWeight: Float) = UserAction.async { request =>
     val agent = UserAgent(request)
-    val recommendationClientType = if (agent.isKifiAndroidApp) {
-      RecommendationClientType.Android
+    val recommendationSource = if (agent.isKifiAndroidApp) {
+      RecommendationSource.Android
     } else if (agent.isKifiIphoneApp) {
-      RecommendationClientType.IOS
+      RecommendationSource.IOS
     } else throw new IllegalArgumentException(s"the user agent is not of a kifi application: $agent")
-    commander.topRecos(request.userId, recommendationClientType, more, recencyWeight).map { recos =>
+    commander.topRecos(request.userId, recommendationSource, RecommendationSubSource.RecommendationsFeed, more, recencyWeight).map { recos =>
       Ok(Json.toJson(recos))
     }
   }
