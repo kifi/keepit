@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.model.{ LibraryImageInfo, HexColor, User, LibraryMembershipRepo, LibraryRepo, Library, LibraryVisibility }
@@ -28,7 +29,8 @@ class RelatedLibraryCommanderImpl @Inject() (
     libRepo: LibraryRepo,
     libMemRepo: LibraryMembershipRepo,
     libCommander: LibraryCommander,
-    cortex: CortexServiceClient) extends RelatedLibraryCommander {
+    cortex: CortexServiceClient,
+    airbrake: AirbrakeNotifier) extends RelatedLibraryCommander {
 
   private val DEFAULT_MIN_FOLLOW = 5
   private val RETURN_SIZE = 5
@@ -49,18 +51,27 @@ class RelatedLibraryCommanderImpl @Inject() (
         val kinds = relatedLibs.map { _.kind }
         val fullInfosFut = libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize)
         fullInfosFut.map { info =>
-          assert(info.size == kinds.size)
-          (info, kinds)
+          try {
+            assert(info.size == kinds.size)
+            (info, kinds)
+          } catch {
+            case ex: Exception =>
+              airbrake.notify(s"error in getting suggested libraries for lib ${libId}, user: ${userIdOpt}. Assertion failed.")
+              (Seq(), Seq())
+          }
         }
       }
 
   }
 
   def suggestedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]] = consolidater(libId) { libId =>
+    val topicRelatedF = topicRelatedLibraries(libId)
+    val ownerLibsF = librariesFromSameOwner(libId)
+    val popularF = topFollowedLibraries()
     for {
-      topicRelated <- topicRelatedLibraries(libId)
-      ownerLibs <- librariesFromSameOwner(libId)
-      popular <- topFollowedLibraries()
+      topicRelated <- topicRelatedF
+      ownerLibs <- ownerLibsF
+      popular <- popularF
     } yield {
       topicRelated ++ ownerLibs.sortBy(-_.library.memberCount) ++ util.Random.shuffle(popular.filter(_.library.id.get != libId))
     }
