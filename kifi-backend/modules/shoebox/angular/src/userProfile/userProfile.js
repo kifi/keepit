@@ -98,54 +98,14 @@ angular.module('kifi')
 .controller('UserProfileLibrariesCtrl', [
   '$scope', '$rootScope', '$state', 'util',
   function ($scope, $rootScope, $state, util) {
-    //
-    // Configs.
-    //
-    var libraryNavLinksConfig = [
-      { type: 'my', label: 'MY', routeState: 'userProfile.libraries.my' },
-      { type: 'following', label: 'FOLLOWING', routeState: 'userProfile.libraries.following' },
-      { type: 'invited', label: 'INVITED', routeState: 'userProfile.libraries.invited' }
-    ];
+    $scope.libraryType = $state.current.data.libraryType;
 
-
-    //
-    // Scope data.
-    //
-    $scope.libraryNavLinks = [];
-
-
-    //
-    // Internal functions.
-    //
-    function init() {
-      initLibraryNavLinks();
-    }
-
-    function updateSelectedLibraryNavLink() {
-      _.forEach($scope.libraryNavLinks, function (navLink) {
-        navLink.selected = navLink.type === $state.current.data.libraryType;
-      });
-    }
-
-    function initLibraryNavLinks() {
-      $scope.libraryNavLinks = libraryNavLinksConfig;
-      updateSelectedLibraryNavLink();
-    }
-
-
-    //
-    // Watches and listeners.
-    //
-    var deregisterUpdateSelectedLibraryNavLink = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
+    var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
       if (util.startsWith(toState.name, 'userProfile.libraries')) {
-        updateSelectedLibraryNavLink();
+        $scope.libraryType = toState.data.libraryType;
       }
     });
-    $scope.$on('$destroy', deregisterUpdateSelectedLibraryNavLink);
-
-
-    // Initialize controller.
-    init();
+    $scope.$on('$destroy', deregister$stateChangeSuccess);
   }
 ])
 
