@@ -67,7 +67,7 @@ angular.module('kifi')
       $scope.profile.picUrl = keepWhoService.getPicUrl({
         id: $scope.profile.id,
         pictureName: $scope.profile.pictureName
-      }, 100);
+      }, 200);
     }
 
     function initViewingUserStatus() {
