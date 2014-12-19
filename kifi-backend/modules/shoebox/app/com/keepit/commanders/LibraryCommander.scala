@@ -54,6 +54,7 @@ class LibraryCommander @Inject() (
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
     libraryInvitesAbuseMonitor: LibraryInvitesAbuseMonitor,
+    libraryImageRepo: LibraryImageRepo,
     userRepo: UserRepo,
     userCommander: Provider[UserCommander],
     basicUserRepo: BasicUserRepo,
@@ -1243,35 +1244,42 @@ class LibraryCommander @Inject() (
     UserValueSettings.retrieveSetting(userVal, settingsJs)
   }
 
-  def ownerLibraries(user: User, viewer: Option[User], page: Paginator): Seq[ProfileLibraryView] = db.readOnlyMaster { implicit session =>
-    val libs = viewer match {
-      case None => libraryRepo.getLibrariesOfUserFromAnonymos(user.id.get, page)
-      case Some(other) if other.id.get == user.id.get => libraryRepo.getLibrariesOfSelf(user.id.get, page)
-      case Some(other) =>
-        libraryMembershipRepo.getOwnedLibrariesForOtherUser(user.id.get, other.id.get, page) map { id =>
-          libraryRepo.get(id) //cached
-        }
+  def ownerLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): Seq[ProfileLibraryView] = {
+    db.readOnlyMaster { implicit session =>
+      val libs = viewer match {
+        case None =>
+          libraryRepo.getLibrariesOfUserFromAnonymos(user.id.get, page)
+        case Some(other) if other.id == user.id =>
+          libraryRepo.getLibrariesOfSelf(user.id.get, page)
+        case Some(other) =>
+          libraryMembershipRepo.getOwnedLibrariesForOtherUser(user.id.get, other.id.get, page) map libraryRepo.get //cached
+      }
+      libs map profileLibraryView(idealSize)
     }
-    libs map profilelibraryView
   }
 
-  private def profilelibraryView(library: Library)(implicit session: RSession) = {
+  private def profileLibraryView(idealSize: ImageSize)(library: Library)(implicit session: RSession): ProfileLibraryView = {
+    val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getForLibraryId(library.id.get))
     val numKeeps = keepRepo.getCountByLibrary(library.id.get)
-    val numFollowers = libraryMembershipRepo.count
-    val followersSample: Seq[BasicUser] = if (numFollowers > 1) {
-      libraryMembershipRepo.pageWithLibraryIdAndAccess(library.id.get, 0, 2, Set(LibraryAccess.READ_ONLY)) map { im =>
-        basicUserRepo.load(im.userId)
+    val (numFollowers, followersSample) = if (library.memberCount > 1) {
+      val count = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, LibraryAccess.READ_ONLY)
+      val sample = libraryMembershipRepo.pageWithLibraryIdAndAccess(library.id.get, 0, 2, Set(LibraryAccess.READ_ONLY)) map { lm =>
+        basicUserRepo.load(lm.userId)
       }
-    } else Seq.empty
+      (count, sample)
+    } else {
+      (0, Seq.empty)
+    }
     ProfileLibraryView(
       library = library,
+      image = image.map(LibraryImageInfo.createInfo),
       numKeeps = numKeeps,
-      numFollowers = library.memberCount - 1, //not including the creator
-      followersSample)
+      numFollowers = numFollowers,
+      followersSample = followersSample)
   }
 }
 
-case class ProfileLibraryView(library: Library, numKeeps: Int, numFollowers: Int, followersSample: Seq[BasicUser])
+case class ProfileLibraryView(library: Library, image: Option[LibraryImageInfo], numKeeps: Int, numFollowers: Int, followersSample: Seq[BasicUser])
 
 sealed abstract class LibraryError(val message: String)
 object LibraryError {
