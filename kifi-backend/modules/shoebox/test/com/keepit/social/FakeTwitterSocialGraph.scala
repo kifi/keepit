@@ -7,7 +7,8 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.FakeWSResponse
 import com.keepit.common.oauth.{ UserProfileInfo, TwitterOAuthProviderImpl, OAuth1Configuration }
 import com.keepit.common.social._
-import com.keepit.model.{ OAuth1TokenInfo, SocialUserInfoRepo, UserValueName, SocialUserInfo }
+import com.keepit.common.time.Clock
+import com.keepit.model._
 import play.api.libs.json.{ JsNull, JsArray, JsValue }
 import play.api.libs.ws.WSResponse
 import securesocial.core.{ IdentityId, OAuth2Settings }
@@ -18,7 +19,9 @@ import scala.util.Try
 class FakeTwitterSocialGraph @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
+    clock: Clock,
     oauth1Config: OAuth1Configuration,
+    userValueRepo: UserValueRepo,
     socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with TwitterGraphTestHelper {
 
   val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
@@ -27,7 +30,7 @@ class FakeTwitterSocialGraph @Inject() (
     }
   }
 
-  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, oauth1Config, twtrOAuthProvider, socialRepo) {
+  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, clock, oauth1Config, twtrOAuthProvider, userValueRepo, socialRepo) {
     override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = Future.successful {
       socialUserInfo.socialId.id.toLong match {
         case tweetfortytwoInfo.id =>
