@@ -5,7 +5,7 @@ import com.keepit.commanders.{ LocalUserExperimentCommander, RecommendationsComm
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.curator.model.RecommendationClientType
+import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource }
 import com.keepit.model.{ NormalizedURI, UriRecommendationFeedback, UriRecommendationScores }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -22,7 +22,7 @@ class RecommendationsController @Inject() (
   }
 
   def topRecos(more: Boolean, recencyWeight: Float) = UserAction.async { request =>
-    commander.topRecos(request.userId, RecommendationClientType.Site, more, recencyWeight).map { recos =>
+    commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, more, recencyWeight).map { recos =>
       Ok(Json.toJson(recos))
     }
   }

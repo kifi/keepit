@@ -11,7 +11,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.curator.commanders.email.{ RecentInterestRankStrategy, EngagementEmailActor, FeedDigestEmailSender }
 import com.keepit.curator.commanders._
-import com.keepit.curator.model.{ LibraryRecoSelectionParams, LibraryRecoInfo, RecommendationClientType, LibraryRecommendation }
+import com.keepit.curator.model.{ RecommendationSubSource, LibraryRecoSelectionParams, LibraryRecoInfo, RecommendationSource, LibraryRecommendation }
 import com.keepit.model.{ Library, UserValueName, UriRecommendationFeedback, NormalizedURI, ExperimentType, User, UriRecommendationScores }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -51,7 +51,8 @@ class CuratorController @Inject() (
   }
 
   def topRecos(userId: Id[User]) = Action.async(parse.tolerantJson) { request =>
-    val clientType = (request.body \ "clientType").as[RecommendationClientType]
+    val source = (request.body \ "source").as[RecommendationSource]
+    val subSource = (request.body \ "subSource").as[RecommendationSubSource]
     val more = (request.body \ "more").as[Boolean]
     val recencyWeight = (request.body \ "recencyWeight").as[Float]
 
@@ -63,7 +64,7 @@ class CuratorController @Inject() (
         if (experiments.contains(ExperimentType.CURATOR_NONLINEAR_SCORING)) nonlinearRecoScoringStrategy
         else defaultRecoScoringStrategy
 
-      Ok(Json.toJson(recoRetrievalCommander.topRecos(userId, more, recencyWeight, clientType, sortStrategy, scoringStrategy)))
+      Ok(Json.toJson(recoRetrievalCommander.topRecos(userId, more, recencyWeight, source, subSource, sortStrategy, scoringStrategy)))
     }
   }
 

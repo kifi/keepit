@@ -1,7 +1,7 @@
 package com.keepit.curator.commanders
 
 import com.keepit.common.db.Id
-import com.keepit.curator.model.{ RecoInfo, RecommendationClientType, UriScores, PublicFeedRepo, UriRecommendationRepo, UriRecommendation }
+import com.keepit.curator.model.{ RecommendationSubSource, RecoInfo, RecommendationSource, UriScores, PublicFeedRepo, UriRecommendationRepo, UriRecommendation }
 import com.keepit.model.User
 import com.keepit.common.db.slick.Database
 import com.keepit.common.akka.SafeFuture
@@ -92,7 +92,7 @@ class NonLinearRecoScoringStrategy extends RecoScoringStrategy {
 @Singleton
 class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: UriRecommendationRepo, analytics: CuratorAnalytics, publicFeedRepo: PublicFeedRepo) {
 
-  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, clientType: RecommendationClientType, recoSortStrategy: RecoSelectionStrategy, scoringStrategy: RecoScoringStrategy): Seq[RecoInfo] = {
+  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, source: RecommendationSource, subSource: RecommendationSubSource, recoSortStrategy: RecoSelectionStrategy, scoringStrategy: RecoScoringStrategy): Seq[RecoInfo] = {
     require(recencyWeight <= 1.0f && recencyWeight >= 0.0f, "recencyWeight must be between 0 and 1")
 
     def scoreReco(reco: UriRecommendation) =
@@ -104,7 +104,7 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
     }
 
     SafeFuture {
-      analytics.trackDeliveredItems(recos.map(_.reco), Some(clientType))
+      analytics.trackDeliveredItems(recos.map(_.reco), Some(source), Some(subSource))
       db.readWrite { implicit session =>
         recos.map { recoScore =>
           uriRecoRepo.incrementDeliveredCount(recoScore.reco.id.get)

@@ -5,7 +5,7 @@ import com.keepit.commanders.{ LocalUserExperimentCommander, RecommendationsComm
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.curator.model.RecommendationClientType
+import com.keepit.curator.model.RecommendationSource
 import com.keepit.model.{ NormalizedURI, UriRecommendationFeedback, UriRecommendationScores }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json

@@ -5,7 +5,7 @@ import com.keepit.common.controller.{ UserRequest, ShoeboxServiceController, Use
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.CuratorServiceClient
-import com.keepit.curator.model.RecommendationClientType
+import com.keepit.curator.model.RecommendationSource
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -25,7 +25,7 @@ class EmailRecosController @Inject() (
     request match {
       case u: UserRequest[_] =>
         val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
-        val feedback = UriRecommendationFeedback(clicked = Some(true), clientType = Some(RecommendationClientType.Email))
+        val feedback = UriRecommendationFeedback(clicked = Some(true), source = Some(RecommendationSource.Email))
         curator.updateUriRecommendationFeedback(u.userId, uri.id.get, feedback)
         Found(uri.url)
       case _ =>
@@ -46,7 +46,7 @@ class EmailRecosController @Inject() (
       keepInterner.internRawBookmark(rawBookmark, request.userId, main, source)
 
       curator.updateUriRecommendationFeedback(request.userId, uri.id.get, UriRecommendationFeedback(kept = Some(true),
-        clientType = Some(RecommendationClientType.Email)))
+        source = Some(RecommendationSource.Email)))
 
       Redirect(com.keepit.controllers.website.routes.HomeController.home())
     } getOrElse BadRequest
@@ -59,7 +59,7 @@ class EmailRecosController @Inject() (
 
     val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
     curator.updateUriRecommendationFeedback(request.userId, uri.id.get, UriRecommendationFeedback(clicked = Some(true),
-      clientType = Some(RecommendationClientType.Email)))
+      source = Some(RecommendationSource.Email)))
 
     handleAuthenticatedDeepLink(request, uri, DeepLocator("#compose"), None)
   }
