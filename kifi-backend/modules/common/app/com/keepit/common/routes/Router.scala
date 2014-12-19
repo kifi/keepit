@@ -399,6 +399,7 @@ object Curator extends Service {
     def topPublicRecos() = ServiceRoute(GET, "/internal/curator/topPublicRecos")
     def generalRecos() = ServiceRoute(GET, "/internal/curator/generalRecos")
     def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/curator/updateUriRecommendationFeedback", Param("userId", userId), Param("uriId", uriId))
+    def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library]) = ServiceRoute(POST, "/internal/curator/updateLibraryRecommendationFeedback", Param("userId", userId), Param("libraryId", libraryId))
     def triggerEmailToUser(code: String, userId: Id[User]) = ServiceRoute(POST, "/internal/curator/triggerEmailToUser", Param("code", code), Param("userId", userId))
     def refreshUserRecos(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/refreshUserRecos", Param("userId", userId))
     def topLibraryRecos(userId: Id[User], limit: Option[Int]) = ServiceRoute(POST, "/internal/curator/topLibraryRecos", Param("userId", userId), Param("limit", limit))

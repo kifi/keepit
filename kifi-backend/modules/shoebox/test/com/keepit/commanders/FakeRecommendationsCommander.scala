@@ -45,7 +45,7 @@ class FakeRecommendationsCommander @Inject() (
 
   override def topPublicRecos(userId: Id[User]) = Future.successful(Seq.empty)
 
-  override def topPublicLibraryRecos(userId: Id[User]) = {
-    Future.successful(libRecoInfos)
+  override def topPublicLibraryRecos(userId: Id[User], limit: Int) = {
+    Future.successful(libRecoInfos take limit)
   }
 }

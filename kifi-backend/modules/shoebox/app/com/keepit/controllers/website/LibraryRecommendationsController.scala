@@ -17,7 +17,7 @@ class LibraryRecommendationsController @Inject() (
     db: Database) extends UserActions with ShoeboxServiceController {
 
   def topLibRecos() = UserAction.async { request =>
-    commander.topPublicLibraryRecos(request.userId).map { recos =>
+    commander.topPublicLibraryRecos(request.userId, limit = 5).map { recos =>
       Ok(Json.toJson(recos))
     }
   }

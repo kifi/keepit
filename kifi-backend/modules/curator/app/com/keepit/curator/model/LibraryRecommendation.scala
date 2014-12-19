@@ -27,7 +27,10 @@ case class LibraryRecommendation(
     userId: Id[User],
     masterScore: Float,
     allScores: LibraryScores,
-    followed: Boolean = false) extends Model[LibraryRecommendation] with ModelWithPublicId[LibraryRecommendation] with ModelWithState[LibraryRecommendation] {
+    followed: Boolean = false,
+    delivered: Int = 0,
+    clicked: Int = 0,
+    trashed: Boolean = false) extends Model[LibraryRecommendation] with ModelWithPublicId[LibraryRecommendation] with ModelWithState[LibraryRecommendation] {
 
   def withId(id: Id[LibraryRecommendation]): LibraryRecommendation = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): LibraryRecommendation = this.copy(updatedAt = updateTime)

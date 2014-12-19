@@ -21,6 +21,7 @@ trait CuratorServiceClient extends ServiceClient {
   def topPublicRecos(): Future[Seq[RecoInfo]]
   def generalRecos(): Future[Seq[RecoInfo]]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean]
+  def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Future[Boolean]
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String]
   def refreshUserRecos(userId: Id[User]): Future[Unit]
   def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[Seq[LibraryRecoInfo]]
@@ -66,6 +67,12 @@ class CuratorServiceClientImpl(
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
     call(Curator.internal.updateUriRecommendationFeedback(userId, uriId), body = Json.toJson(feedback), callTimeouts = longTimeout).map(response =>
+      response.json.as[Boolean]
+    )
+  }
+
+  def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Future[Boolean] = {
+    call(Curator.internal.updateLibraryRecommendationFeedback(userId, libraryId), body = Json.toJson(feedback), callTimeouts = longTimeout).map(response =>
       response.json.as[Boolean]
     )
   }

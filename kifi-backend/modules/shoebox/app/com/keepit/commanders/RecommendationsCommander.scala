@@ -1,23 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.model.{
-  User,
-  NormalizedURI,
-  UriRecommendationFeedback,
-  NormalizedURIRepo,
-  UriRecommendationScores,
-  NormalizedURIStates,
-  URISummary,
-  KeepRepo,
-  KeepStates,
-  Keep,
-  LibraryRepo,
-  Library,
-  ExperimentType,
-  UserRepo,
-  LibraryVisibility
-}
+import com.keepit.model._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model._
@@ -90,6 +74,10 @@ class RecommendationsCommander @Inject() (
       case Some(uri) => curator.updateUriRecommendationFeedback(userId, uri.id.get, feedback)
       case None => Future.successful(false)
     }
+  }
+
+  def updateLibraryRecommendationFeedback(userId: Id[User], id: Id[Library], feedback: LibraryRecommendationFeedback): Future[Boolean] = {
+    curator.updateLibraryRecommendationFeedback(userId, id, feedback)
   }
 
   private def constructRecoItemInfo(nUri: NormalizedURI, uriSummary: URISummary, reco: RecoInfo): UriRecoItemInfo = {
@@ -238,12 +226,13 @@ class RecommendationsCommander @Inject() (
     createFullLibraryInfos(userId, curatedLibraries)
   }
 
-  def topPublicLibraryRecos(userId: Id[User]): Future[Seq[FullLibRecoInfo]] = {
-    curator.topLibraryRecos(userId) flatMap { libInfos =>
+  def topPublicLibraryRecos(userId: Id[User], limit: Int): Future[Seq[FullLibRecoInfo]] = {
+    // get extra recos from curator incase we filter out some below
+    curator.topLibraryRecos(userId, Some(limit * 4)) flatMap { libInfos =>
       val libIds = libInfos.map(_.libraryId).toSet
       val libraries = db.readOnlyReplica { implicit s =>
         libRepo.getLibraries(libIds).toSeq.filter(_._2.visibility == LibraryVisibility.PUBLISHED)
-      }
+      }.take(limit)
 
       val idToLibraryMap = libraries.toMap
       val libsAndRecoInfos = libInfos.map { libInfo =>
