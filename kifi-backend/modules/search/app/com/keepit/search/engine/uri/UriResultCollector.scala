@@ -1,6 +1,7 @@
 package com.keepit.search.engine.uri
 
 import com.keepit.common.logging.Logging
+import com.keepit.search.engine.library.LibrarySearchExplanationBuilder
 import com.keepit.search.engine.result.{ HitQueue, ResultCollector }
 import com.keepit.search.engine.{ ScoreContext, Visibility }
 import com.keepit.search.tracking.ResultClickBoosts
@@ -15,7 +16,7 @@ abstract class UriResultCollector extends ResultCollector[ScoreContext] {
   def getResults(): (HitQueue, HitQueue, HitQueue)
 }
 
-class UriResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, maxHitsPerCategory: Int, matchingThreshold: Float, sharingBoost: Float) extends UriResultCollector with Logging {
+class UriResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, maxHitsPerCategory: Int, matchingThreshold: Float, sharingBoost: Float, explanation: Option[UriSearchExplanationBuilder]) extends UriResultCollector with Logging {
 
   import com.keepit.search.engine.uri.UriResultCollector._
 
@@ -57,6 +58,10 @@ class UriResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, 
         } else {
           othersHits.insert(id, score, visibility, ctx.secondaryId)
         }
+        explanation.foreach { builder =>
+          builder.collectRawScore(ctx, matchingThreshold, minMatchingThreshold)
+          builder.collectScore(id, score, Some(clickBoost), Some(sharingBoost))
+        }
       }
     }
   }
@@ -64,7 +69,7 @@ class UriResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, 
   def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
 }
 
-class UriResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: Float) extends UriResultCollector with Logging {
+class UriResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: Float, explanation: Option[UriSearchExplanationBuilder]) extends UriResultCollector with Logging {
 
   import com.keepit.search.engine.uri.UriResultCollector._
 
@@ -92,6 +97,10 @@ class UriResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: 
         } else {
           othersHits.insert(id, score, visibility, ctx.secondaryId)
         }
+        explanation.foreach { builder =>
+          builder.collectRawScore(ctx, matchingThreshold, minMatchingThreshold)
+          builder.collectScore(id, score, None, None)
+        }
       }
     }
   }
@@ -99,7 +108,7 @@ class UriResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: 
   def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
 }
 
-class NonUserUriResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
+class NonUserUriResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float, explanation: Option[UriSearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
 
   import com.keepit.search.engine.uri.UriResultCollector._
 
@@ -112,11 +121,16 @@ class NonUserUriResultCollector(maxHitsPerCategory: Int, matchingThreshold: Floa
     // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
     val matching = ctx.computeMatching(minMatchingThreshold)
 
-    if (matching >= matchingThreshold) {
+    if (matching > 0.0f) {
       val score = ctx.score() * matching
       if (score > 0.0f) {
         hits.insert(ctx.id, score, Visibility.OTHERS | (ctx.visibility & Visibility.HAS_SECONDARY_ID), ctx.secondaryId)
+        explanation.foreach { builder =>
+          builder.collectRawScore(ctx, matchingThreshold, minMatchingThreshold)
+          builder.collectScore(ctx.id, score, None, None)
+        }
       }
+
     }
   }
 

@@ -4,7 +4,6 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.NormalizedURI
-import com.keepit.search.engine.explain.Explanation
 import com.keepit.search.engine.result.{ Hit, HitQueue }
 import com.keepit.search.engine.{ DebugOption, SearchTimeLogs, Visibility }
 import com.keepit.search.index.Searcher
@@ -23,7 +22,7 @@ object UriSearch {
 abstract class UriSearch(articleSearcher: Searcher, keepSearcher: Searcher, timeLogs: SearchTimeLogs) extends DebugOption { self: Logging =>
 
   def execute(): UriShardResult
-  def explain(uriId: Id[NormalizedURI]): Explanation
+  def explain(uriId: Id[NormalizedURI]): UriSearchExplanation
 
   @inline def isDiscoverable(id: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, id.toString))
 

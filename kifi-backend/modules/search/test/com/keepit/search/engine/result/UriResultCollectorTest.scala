@@ -19,7 +19,8 @@ class UriResultCollectorTest extends Specification {
         clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.7f,
-        sharingBoost = 0.0f)
+        sharingBoost = 0.0f,
+        None)
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
@@ -64,7 +65,8 @@ class UriResultCollectorTest extends Specification {
         clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = matchingThreshold,
-        sharingBoost = 0.0f)
+        sharingBoost = 0.0f,
+        None)
 
       val ctx = new ScoreContext(expr, exprSize, Array(0.1f, 0.2f, 0.7f), collector)
 
@@ -100,7 +102,8 @@ class UriResultCollectorTest extends Specification {
         clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 3.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.99f,
-        sharingBoost = 0.0f)
+        sharingBoost = 0.0f,
+        None)
       val remainingWeight = 1.0f - UriResultCollector.MIN_MATCHING - 0.01f
       val ctx = new ScoreContext(expr, exprSize, Array(UriResultCollector.MIN_MATCHING - 0.01f, 0.02f, remainingWeight), collector)
 
@@ -137,7 +140,8 @@ class UriResultCollectorTest extends Specification {
         clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f,
-        sharingBoost = 0.0f)
+        sharingBoost = 0.0f,
+        None)
       val ctx = new ScoreContext(MaxExpr(0), 1, Array(1.0f), collector)
 
       ctx.set(1)
@@ -181,7 +185,8 @@ class UriResultCollectorTest extends Specification {
         clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f,
-        sharingBoost = 0.0f)
+        sharingBoost = 0.0f,
+        None)
       val ctx = new ScoreContext(MaxExpr(0), 1, Array(1.0f), collector)
 
       ctx.set(10)
@@ -211,7 +216,8 @@ class UriResultCollectorTest extends Specification {
         clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f,
-        sharingBoost = 1.0f)
+        sharingBoost = 1.0f,
+        None)
       val ctx = new ScoreContext(expr, exprSize, Array(0.8f, 0.1f, 0.1f), collector)
 
       ctx.set(10)

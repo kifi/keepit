@@ -5,7 +5,7 @@ import com.keepit.search.engine.uri.UriResultCollector
 import com.keepit.search.engine.{ Visibility, ScoreContext }
 import com.keepit.search.engine.result.{ HitQueue, ResultCollector }
 
-class LibraryResultCollector(maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
+class LibraryResultCollector(maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float, explanation: Option[LibrarySearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
 
   import UriResultCollector._
 
@@ -38,8 +38,13 @@ class LibraryResultCollector(maxHitsPerCategory: Int, myLibraryBoost: Float, mat
         } else {
           othersHits
         }
-        val boostedScore = if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) score * myLibraryBoost else score
-        relevantQueue.insert(id, boostedScore, visibility, ctx.secondaryId)
+        if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) score = score * myLibraryBoost
+        relevantQueue.insert(id, score, visibility, ctx.secondaryId)
+      }
+
+      explanation.foreach { builder =>
+        builder.collectRawScore(ctx, matchingThreshold, minMatchingThreshold)
+        builder.collectScore(id, score, myLibraryBoost)
       }
     }
   }

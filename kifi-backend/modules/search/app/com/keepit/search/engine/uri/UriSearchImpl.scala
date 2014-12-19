@@ -5,7 +5,6 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.explain.{ Explanation }
 import UriResultCollector._
 import com.keepit.search.engine.result._
 import com.keepit.search.engine._
@@ -50,11 +49,17 @@ class UriSearchImpl(
     ret
   }
 
-  private def executeTextSearch(engine: QueryEngine, collector: ResultCollector[ScoreContext]): Unit = {
+  private def executeTextSearch(engine: QueryEngine, explanation: Option[UriSearchExplanationBuilder] = None): (HitQueue, HitQueue, HitQueue) = {
+    val maxTextHitsPerCategory = numHitsToReturn * 5
+    val collector: UriResultCollector = if (engine.recencyOnly) {
+      new UriResultCollectorWithNoBoost(maxTextHitsPerCategory, percentMatch / 100.0f, explanation)
+    } else {
+      new UriResultCollectorWithBoost(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f, sharingBoostInNetwork, explanation)
+    }
 
-    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait)
-    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait)
-    val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
+    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait, explanation)
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait, explanation)
+    val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter, explanation)
 
     if (debugFlags != 0) {
       engine.debug(this)
@@ -66,23 +71,16 @@ class UriSearchImpl(
     engine.execute(collector, libraryScoreSource, keepScoreSource, articleScoreSource)
 
     timeLogs.search()
+
+    collector.getResults()
   }
 
   def execute(): UriShardResult = {
 
-    val maxTextHitsPerCategory = numHitsToReturn * 5
     val engine = engineBuilder.build()
     debugLog("engine created")
 
-    val collector: UriResultCollector = if (engine.recencyOnly) {
-      new UriResultCollectorWithNoBoost(maxTextHitsPerCategory, percentMatch / 100.0f)
-    } else {
-      new UriResultCollectorWithBoost(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f, sharingBoostInNetwork)
-    }
-
-    executeTextSearch(engine, collector)
-
-    val (myHits, friendsHits, othersHits) = collector.getResults()
+    val (myHits, friendsHits, othersHits) = executeTextSearch(engine)
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
@@ -155,18 +153,12 @@ class UriSearchImpl(
     UriShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
   }
 
-  def explain(uriId: Id[NormalizedURI]): Explanation = {
+  def explain(uriId: Id[NormalizedURI]): UriSearchExplanation = {
     val engine = engineBuilder.build()
     val labels = engineBuilder.getQueryLabels()
     val query = engine.getQuery()
-    val collector = if (engine.recencyOnly) {
-      new UriScoreDetailCollector(uriId.id, percentMatch / 100.0f, None, None)
-    } else {
-      new UriScoreDetailCollector(uriId.id, percentMatch / 100.0f, Some(clickBoostsProvider), Some(sharingBoostInNetwork))
-    }
-
-    executeTextSearch(engine, collector)
-
-    Explanation(query, labels, collector.getMatchingValues(), collector.getBoostValues(), collector.getRawScore, collector.getBoostedScore, collector.getScoreComputation, collector.getDetails())
+    val explanation = new UriSearchExplanationBuilder(uriId, query, labels)
+    executeTextSearch(engine, Some(explanation))
+    explanation.build()
   }
 }
