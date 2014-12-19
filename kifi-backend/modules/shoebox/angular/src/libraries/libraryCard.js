@@ -37,7 +37,6 @@ angular.module('kifi')
         var coverImageMoveTracked;
         var URL = $window.URL || $window.webkitURL;
 
-        var kfColsElement = angular.element('.kf-cols');
         var headerLinksElement = angular.element('.kf-header-right');
         var searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
         var libraryBodyElement = angular.element('.kf-library-body');
@@ -57,24 +56,6 @@ angular.module('kifi')
         //
         // Internal methods.
         //
-        function init() {
-          if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
-            showKfColsOverflow();
-            $timeout(hideKfColsOverflow);
-          }
-        }
-
-        function hideKfColsOverflow() {
-          // Hide overflow so that there is no horizontal scrollbar due to the very
-          // wide white background on the library header.
-          kfColsElement.css({ 'overflow-x': 'hidden' });
-        }
-
-        function showKfColsOverflow() {
-          // Show overflow so that infinite scroll can be initialized correctly.
-          kfColsElement.css({ 'overflow-x': 'visible' });
-        }
-
         function adjustFollowerPicsSize() {
           var statsAndFollowersDiv = element.find('.kf-keep-lib-stats-and-followers');
           var followerPicsDiv = element.find('.kf-keep-lib-follower-pics');
@@ -287,11 +268,6 @@ angular.module('kifi')
 
         function hideLibrarySearchBar() {
           scrollToTop();
-
-          if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
-            showKfColsOverflow();
-            $timeout(hideKfColsOverflow);
-          }
 
           scope.librarySearchInProgress = false;
           prevQuery = '';
@@ -927,10 +903,6 @@ angular.module('kifi')
 
         scope.onSearchInputChange = _.debounce(function (query) {
           $timeout(function () {
-            if (scope.isUserLoggedOut && !platformService.isSupportedMobilePlatform()) {
-              showKfColsOverflow();
-            }
-
             if (query) {
               // Replace last history record if we were previously already searching a query.
               var location = prevQuery ? 'replace' : true;
@@ -1023,8 +995,6 @@ angular.module('kifi')
         scope.$on('$destroy', function () {
           $window.removeEventListener('scroll', onScroll);
         });
-
-        init();
       }
     };
   }
