@@ -68,8 +68,8 @@ class CuratorController @Inject() (
     }
   }
 
-  def topPublicRecos() = Action { request =>
-    Ok(Json.toJson(recoRetrievalCommander.topPublicRecos()))
+  def topPublicRecos(userId: Option[Long]) = Action { request =>
+    Ok(Json.toJson(recoRetrievalCommander.topPublicRecos(userId map Id[User])))
   }
 
   def generalRecos() = Action { request =>
