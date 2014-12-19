@@ -49,18 +49,23 @@ class UriResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, 
 
       if (score > 0.0f) {
         val visibility = ctx.visibility
+        var queue: HitQueue = null
+        var actualSharingBoost = 1.0f
         if ((visibility & Visibility.OWNER) != 0) {
-          score = score * (1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat)
-          myHits.insert(id, score, visibility, ctx.secondaryId)
+          queue = myHits
+          actualSharingBoost = 1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat
         } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
-          score = score * (1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat)
-          friendsHits.insert(id, score, visibility, ctx.secondaryId)
+          queue = friendsHits
+          actualSharingBoost = 1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat
         } else {
-          othersHits.insert(id, score, visibility, ctx.secondaryId)
+          queue = othersHits
+          actualSharingBoost = 1.0f
         }
+        score = score * actualSharingBoost
+        queue.insert(id, score, visibility, ctx.secondaryId)
         explanation.foreach { builder =>
           builder.collectRawScore(ctx, matchingThreshold, minMatchingThreshold)
-          builder.collectScore(id, score, Some(clickBoost), Some(sharingBoost))
+          builder.collectScore(id, score, Some(clickBoost), Some(actualSharingBoost))
         }
       }
     }
