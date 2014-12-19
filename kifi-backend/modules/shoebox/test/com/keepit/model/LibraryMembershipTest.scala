@@ -19,13 +19,13 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
       val library2 = libraryRepo.save(Library(name = "Lib2", ownerId = user2.id.get, createdAt = t1.plusMinutes(5),
         visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("B"), memberCount = 1))
       val lm1 = libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get,
-        access = LibraryAccess.OWNER, createdAt = t1.plusHours(1), showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+        access = LibraryAccess.OWNER, createdAt = t1.plusHours(1)))
       val lm2 = libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user2.id.get,
-        access = LibraryAccess.READ_ONLY, createdAt = t1.plusHours(2), showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+        access = LibraryAccess.READ_ONLY, createdAt = t1.plusHours(2)))
       val lm3 = libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user2.id.get,
-        access = LibraryAccess.OWNER, createdAt = t1.plusHours(3), showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+        access = LibraryAccess.OWNER, createdAt = t1.plusHours(3)))
       val lm4 = libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user1.id.get,
-        access = LibraryAccess.OWNER, createdAt = t1.plusHours(4), showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+        access = LibraryAccess.OWNER, createdAt = t1.plusHours(4)))
       (library1, library2, user1, user2, lm1, lm2, lm3, lm4, t1)
     }
   }
@@ -60,7 +60,7 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get,
-            access = LibraryAccess.READ_WRITE, createdAt = t1.plusHours(1), showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+            access = LibraryAccess.READ_WRITE, createdAt = t1.plusHours(1)))
         }
         db.readWrite { implicit s =>
           libraryMembershipRepo.count === 4

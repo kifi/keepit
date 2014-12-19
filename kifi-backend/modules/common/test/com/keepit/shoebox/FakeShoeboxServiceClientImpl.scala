@@ -307,7 +307,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       val slug = LibrarySlug(if (isPrivate) "private" else "main")
       val library = Library(name = name, ownerId = userId, visibility = visibility, slug = slug, memberCount = 0)
       val libraryId = saveLibraries(library).head.id.get
-      val membership = LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE)
+      val membership = LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.OWNER)
       saveLibraryMemberships(membership)
       allLibraries(libraryId)
     }

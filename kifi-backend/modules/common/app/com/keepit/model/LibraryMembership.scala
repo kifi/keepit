@@ -1,11 +1,16 @@
 package com.keepit.model
 
+import com.keepit.common.cache._
 import com.keepit.common.db._
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.keepit.model.view.LibraryMembershipView
 import com.kifi.macros.json
 import org.joda.time.DateTime
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
+import scala.concurrent.duration.Duration
 
 case class LibraryMembership(
     id: Option[Id[LibraryMembership]] = None,
@@ -16,8 +21,9 @@ case class LibraryMembership(
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryMembership] = LibraryMembershipStates.ACTIVE,
     seq: SequenceNumber[LibraryMembership] = SequenceNumber.ZERO,
-    showInSearch: Boolean,
-    visibility: LibraryMembershipVisibility, //using this field only if the user is the LibraryAccess is OWNER (may change in the future)
+    showInSearch: Boolean = true,
+    visibility: LibraryMembershipVisibility = LibraryMembershipVisibilityStates.VISIBLE, //using this field only if the user is the LibraryAccess is OWNER (may change in the future)
+    listed: Boolean = true, // does library appear on user's profile?
     lastViewed: Option[DateTime] = None,
     lastEmailSent: Option[DateTime] = None) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
@@ -35,10 +41,29 @@ case class LibraryMembership(
     LibraryMembershipView(id = id.get, libraryId = libraryId, userId = userId, access = access, createdAt = createdAt, state = state, seq = seq, showInSearch = showInSearch)
 }
 
+object LibraryMembership {
+  implicit val format = (
+    (__ \ 'id).formatNullable(Id.format[LibraryMembership]) and
+    (__ \ 'libraryId).format[Id[Library]] and
+    (__ \ 'userId).format[Id[User]] and
+    (__ \ 'access).format[LibraryAccess] and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
+    (__ \ 'state).format(State.format[LibraryMembership]) and
+    (__ \ 'seq).format(SequenceNumber.format[LibraryMembership]) and
+    (__ \ 'showInSearch).format[Boolean] and
+    (__ \ 'visibility).format[LibraryMembershipVisibility] and
+    (__ \ 'listed).format[Boolean] and
+    (__ \ 'lastViewed).formatNullable[DateTime] and
+    (__ \ 'lastEmailSent).formatNullable[DateTime]
+  )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
+}
+
 case class LibraryMembershipVisibility(value: String)
 
 object LibraryMembershipVisibility {
-  implicit val format = Json.format[LibraryMembershipVisibility]
+  implicit def format[T]: Format[LibraryMembershipVisibility] =
+    Format(__.read[String].map(LibraryMembershipVisibility(_)), new Writes[LibraryMembershipVisibility] { def writes(o: LibraryMembershipVisibility) = JsString(o.value) })
 }
 
 object LibraryMembershipVisibilityStates {
@@ -74,3 +99,31 @@ object LibraryAccess {
 
   def getAll() = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
 }
+
+case class LibraryMembershipIdKey(id: Id[LibraryMembership]) extends Key[LibraryMembership] {
+  override val version = 2
+  val namespace = "library_membership_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class LibraryMembershipIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LibraryMembershipIdKey, LibraryMembership](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class LibraryMembershipCountKey(userId: Id[User], access: LibraryAccess) extends Key[Int] {
+  override val version = 1
+  val namespace = "library_membership_count"
+  def toKey(): String = s"$userId:$access"
+}
+
+class LibraryMembershipCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[LibraryMembershipCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class FollowersCountKey(userId: Id[User]) extends Key[Int] {
+  override val version = 1
+  val namespace = "followers_count"
+  def toKey(): String = s"$userId"
+}
+
+class FollowersCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[FollowersCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
