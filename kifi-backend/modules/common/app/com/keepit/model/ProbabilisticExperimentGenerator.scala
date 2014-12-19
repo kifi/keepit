@@ -58,7 +58,7 @@ object ProbabilisticExperimentGenerator {
 object ProbabilisticExperimentGeneratorStates extends States[ProbabilisticExperimentGenerator]
 
 trait ProbabilisticExperimentGeneratorAllKey extends Key[Seq[ProbabilisticExperimentGenerator]] {
-  override val version = 1
+  override val version = 2
   val namespace = "probabilistic_experiment_generator_all"
   def toKey(): String = "all"
 }
