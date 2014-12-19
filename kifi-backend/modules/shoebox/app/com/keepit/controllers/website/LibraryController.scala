@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
@@ -45,7 +46,7 @@ class LibraryController @Inject() (
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
-    extends UserActions with LibraryAccessActions with ShoeboxServiceController {
+    extends UserActions with LibraryAccessActions with ShoeboxServiceController with Logging {
 
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
     val addRequest = request.body.as[LibraryAddRequest]
@@ -522,11 +523,14 @@ class LibraryController @Inject() (
     val id = Library.decodePublicId(pubId).get
     val userIdOpt = request.userIdOpt
     val isUserAction = userIdOpt.isDefined
+    val t1 = System.currentTimeMillis()
     relatedLibraryCommander.suggestedLibrariesInfo(id, userIdOpt)
       .map {
-        case (fullInfos, isRelated) =>
+        case (fullInfos, relatedKinds) =>
           val libs = fullInfos.map { info => RelatedLibraryInfo.fromFullLibraryInfo(info, isUserAction) }
-          Ok(Json.obj("libs" -> libs, "related" -> isRelated))
+          val t2 = System.currentTimeMillis()
+          statsd.timing("libraryController.relatedLibraries", t2 - t1, 1.0)
+          Ok(Json.obj("libs" -> libs, "kinds" -> relatedKinds))
       }
   }
 
