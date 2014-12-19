@@ -5,7 +5,7 @@ import com.keepit.common.strings._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 
-trait AlertingActor extends Actor {
+trait AlertingActor extends Actor with Logging {
   def alert(reason: Throwable, message: Option[Any])
   def error(reason: Throwable, message: Option[Any]) =
     AirbrakeError(exception = reason,
@@ -13,6 +13,7 @@ trait AlertingActor extends Actor {
     )
 
   override def preRestart(reason: Throwable, message: Option[Any]) {
+    log.error(s"Actor ${this.getClass.getSimpleName} is preRestarting ...")
     alert(reason, message)
     super.preRestart(reason, message)
   }
