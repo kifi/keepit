@@ -5,7 +5,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.oauth._
 import com.keepit.common.social.TwitterSocialGraphImpl
-import com.keepit.model.{ UserFactory, OAuth1TokenInfo, SocialUserInfo }
+import com.keepit.common.time.Clock
+import com.keepit.model.{ UserValueRepo, UserFactory, OAuth1TokenInfo, SocialUserInfo }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsArray, Json, JsNull, JsValue }
@@ -17,14 +18,16 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
 
   def setup()(implicit injector: Injector) = {
     val db = inject[Database]
+    val clock = inject[Clock]
     val airbrake = inject[AirbrakeNotifier]
     val oauth1Config = inject[OAuth1Configuration]
+    val userValueRepo = inject[UserValueRepo]
     val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
       override def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = Future.successful {
         tweetfortytwoInfo.copy(screenName = "tweet42")
       }
     }
-    val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, oauth1Config, twtrOAuthProvider, socialUserInfoRepo) {
+    val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, clock, oauth1Config, twtrOAuthProvider, userValueRepo, socialUserInfoRepo) {
       override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = Future.successful {
         socialUserInfo.socialId.id.toLong match {
           case tweetfortytwoInfo.id =>

@@ -2,15 +2,20 @@ package com.keepit.common.social
 
 import com.google.inject.Inject
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.oauth.{ TwitterUserInfo, TwitterOAuthProvider, OAuth1Configuration, ProviderIds }
 import com.keepit.common.core._
+import com.keepit.common.time.Clock
+import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model._
 import com.keepit.social._
+import com.kifi.macros.json
 import com.ning.http.client.providers.netty.NettyResponse
+import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Play.current
 import play.api.libs.json.JsValue
@@ -52,6 +57,9 @@ object PagedTwitterUserInfos {
 
 }
 
+@json case class TwitterError(message: String, code: Int)
+@json case class TwitterErrors(errors: Seq[TwitterError])
+
 trait TwitterSocialGraph extends SocialGraph {
   val networkType: SocialNetworkType = SocialNetworks.TWITTER
 
@@ -62,9 +70,11 @@ trait TwitterSocialGraph extends SocialGraph {
 class TwitterSocialGraphImpl @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
+    clock: Clock,
     oauth1Config: OAuth1Configuration,
     twtrOAuthProvider: TwitterOAuthProvider,
-    socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with Logging {
+    userValueRepo: UserValueRepo,
+    socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with Status with Logging {
 
   val providerConfig = oauth1Config.getProviderConfig(ProviderIds.Twitter.id).get
 
@@ -152,31 +162,62 @@ class TwitterSocialGraphImpl @Inject() (
     )
   }
 
-  protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = {
+  protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: Long, resp: WSResponse): Unit = {
+    val nettyResp = resp.underlying[NettyResponse]
+    def warn(twtrErrors: TwitterErrors, notify: Boolean = true): Unit = {
+      val errorMessage = twtrErrors.errors.headOption.getOrElse {
+        resp.status match {
+          case TOO_MANY_REQUEST => "hit rate-limit"
+          case UNAUTHORIZED => "unauthorized or invalid/expired token"
+          case _ => "non-OK response"
+        }
+      }
+      val errMsg = s"[$tag] Error: $errorMessage for $endpoint. status=${resp.status} body=${resp.body}; request=${nettyResp} request.uri=${nettyResp.getUri}"
+      if (notify)
+        airbrake.notify(errMsg)
+      else // to reduce noise: see LinkedInSocialGraph
+        log.error(errMsg)
+    }
+    val twitterErrors = Try { resp.json.asOpt[TwitterErrors].get } getOrElse TwitterErrors(Seq.empty)
+    warn(twitterErrors)
+    resp.status match {
+      case TOO_MANY_REQUEST => // 429: rate-limit exceeded
+        db.readWrite { implicit s =>
+          userValueRepo.setValue(sui.userId.get, uvName, cursor)
+        }
+      case UNAUTHORIZED => // 401: invalid or expired token
+        db.readWrite { implicit s => socialRepo.save(sui.copy(state = APP_NOT_AUTHORIZED, lastGraphRefresh = Some(clock.now))) }
+      case _ =>
+    }
+  }
+
+  protected def lookupUsers(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = {
     val endpoint = "https://api.twitter.com/1.1/users/lookup.json"
-    val accF = FutureHelpers.foldLeft[Set[Long], JsArray](mutualFollows.grouped(100).toIterable)(JsArray()) { (a, c) =>
+    val sorted = mutualFollows.toSeq.sorted // expensive
+    def pred(arr: JsArray, acc: Seq[Long]) = arr.value.isEmpty
+    val accF = FutureHelpers.foldLeftWhile[Seq[Long], JsArray](sorted.grouped(100).toIterable)(JsArray())({ (a, c) =>
       val params = Map("user_id" -> c.mkString(","), "include_entities" -> false.toString)
       val chunkF = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
         .post(params.map(kv => (kv._1, Seq(kv._2))))
         .map { resp =>
-          if (resp.status != 200) {
-            airbrake.notify(s"[fetchSocialUserInfo] non-OK response from $endpoint. socialUser=$socialUserInfo; status=${resp.status} body=${resp.body}; request=${resp.underlying[NettyResponse]} request.uri=${resp.underlying[NettyResponse].getUri}")
-            JsArray(Seq.empty[JsValue])
-          } else {
-            log.info(s"[lookup] response.json=${resp.json}")
-            resp.json
+          log.info(s"[lookup] response.json=${resp.json}")
+          resp.status match {
+            case OK => resp.json
+            case _ =>
+              handleError("lookupUsers", endpoint, sui, UserValueName.TWITTER_LOOKUP_CURSOR, c.head, resp)
+              JsArray(Seq.empty[JsValue])
           }
         }
       chunkF map { chunk => a ++ chunk.as[JsArray] }
-    }
+    }, Some(pred))
     accF map { acc =>
       log.info(s"[lookup.acc] acc(len=${acc.value.length}):${acc.value}")
       acc
     }
   }
 
-  protected def fetchIds(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: Long, endpoint: String): Future[Seq[Long]] = {
+  protected def fetchIds(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: Long, endpoint: String): Future[Seq[Long]] = {
     def pagedFetchIds(page: Int, cursor: Long, count: Long): Future[Seq[Long]] = {
       log.info(s"[pagedFetchIds] userId=$userId endpoint=$endpoint count=$count cursor=$cursor")
       val call = WS.url(endpoint)
@@ -187,20 +228,22 @@ class TwitterSocialGraphImpl @Inject() (
           "count" -> count.toString)
         .get()
       call flatMap { resp =>
-        if (resp.status != 200) {
-          airbrake.notify(s"[fetchSocialUserInfo] non-OK response from $endpoint. socialUser=$socialUserInfo; status=${resp.status} body=${resp.body}; request=${resp.underlying[NettyResponse]} request.uri=${resp.underlying[NettyResponse].getUri}")
-          Future.successful(Seq.empty[Long])
-        } else {
-          val pagedIds = resp.json.as[PagedIds]
-          log.info(s"[pagedFetchIds#$page] userId=$userId endpoint=$endpoint pagedIds=$pagedIds")
-          val next = pagedIds.next
-          if (next > 0) {
-            pagedFetchIds(page + 1, next, count) map { seq =>
-              pagedIds.ids ++ seq
+        resp.status match {
+          case OK =>
+            val pagedIds = resp.json.as[PagedIds]
+            log.info(s"[pagedFetchIds#$page] userId=$userId endpoint=$endpoint pagedIds=$pagedIds")
+            val next = pagedIds.next
+            if (next > 0) {
+              pagedFetchIds(page + 1, next, count) map { seq =>
+                pagedIds.ids ++ seq
+              }
+            } else {
+              Future.successful(pagedIds.ids)
             }
-          } else {
-            Future.successful(pagedIds.ids)
-          }
+          case _ =>
+            val name = if (endpoint.contains("friends")) UserValueName.TWITTER_FRIENDS_CURSOR else UserValueName.TWITTER_FOLLOWERS_CURSOR
+            handleError(s"pagedFetchIds#$page", endpoint, sui, name, cursor, resp)
+            Future.successful(Seq.empty[Long])
         }
       }
     }
