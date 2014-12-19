@@ -2,6 +2,7 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
@@ -16,16 +17,17 @@ case class ArticleSearchResultHitMeta(uri: NormalizedURI, hit: ArticleHit)
 class AdminSearchController @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
-    userRepo: UserRepo,
     articleSearchResultStore: ArticleSearchResultStore,
     uriRepo: NormalizedURIRepo,
-    searchConfigRepo: SearchConfigExperimentRepo,
     searchClient: SearchServiceClient,
-    heimdalContextBuilder: HeimdalContextBuilderFactory,
-    heimdal: HeimdalServiceClient) extends AdminUserActions with Logging {
+    implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions with Logging {
 
-  def explain(query: String, uriId: Id[NormalizedURI], lang: String, debug: Option[String]) = AdminUserPage.async { request =>
-    searchClient.explainResult(query, request.userId, uriId, lang, debug).map(Ok(_))
+  def explainUriResult(query: String, uriId: Id[NormalizedURI], lang: String, debug: Option[String]) = AdminUserPage.async { request =>
+    searchClient.explainUriResult(query, request.userId, uriId, lang, debug).map(Ok(_))
+  }
+
+  def explainLibraryResult(query: String, libraryId: PublicId[Library], lang: String, debug: Option[String]) = AdminUserPage.async { request =>
+    searchClient.explainLibraryResult(query, request.userId, Library.decodePublicId(libraryId).get, lang, debug).map(Ok(_))
   }
 
   def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminUserPage { implicit request =>

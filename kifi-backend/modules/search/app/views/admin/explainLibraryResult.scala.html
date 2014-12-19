@@ -1,0 +1,65 @@
+@(userId: Id[User], libraryId: Id[Library], explanation: Option[com.keepit.search.engine.library.LibrarySearchExplanation])
+
+<html>
+
+<head>
+    <title>Explaining for User:@userId Library:@libraryId</title>
+    <style>
+        table {
+        border: 3px solid #ddd;
+        border-collapse: collapse;
+        }
+        th {
+        border: 2px solid #fff;
+        border-collapse: collapse;
+        background-color: #ddd;
+        padding: 7px;
+        text-align: center;
+        }
+        td {
+        border: 2px solid #ddd;
+        border-collapse: collapse;
+        padding: 7px;
+        text-align: right;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>Explaining for User:@userId Library:@libraryId</h2>
+
+<p/>
+
+@Html(explanation.map(_.queryHtml("Parsed Query")).getOrElse("<ul><li>none</li></ul>"))
+
+<p/>
+
+<table style="border:0px">
+    <tr>
+        <td style="border:0px; padding:0px;">
+
+            @Html(explanation.map(_.scoreHtml("Score")).getOrElse(""))
+
+        </td>
+        <td style="border:0px">
+
+            @Html(explanation.map(_.boostValuesHtml("BoostValues")).getOrElse(""))
+
+        </td>
+    </tr>
+</table>
+
+
+<p/>
+
+@Html(explanation.map(_.detailsHtml("Score Details")).getOrElse(""))
+
+<p/>
+
+@Html(explanation.map(_.scoreComputationHtml("Score Computation Details")).getOrElse(""))
+
+<p/>
+
+</body>
+</html>

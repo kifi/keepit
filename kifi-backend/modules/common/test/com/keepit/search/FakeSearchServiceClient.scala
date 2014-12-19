@@ -2,7 +2,7 @@ package com.keepit.search
 
 import com.keepit.common.healthcheck.BenchmarkResults
 import com.keepit.common.db.Id
-import com.keepit.model.{ BasicLibrary, Collection, NormalizedURI, User }
+import com.keepit.model._
 import com.keepit.search.augmentation._
 import play.twirl.api.Html
 import scala.concurrent.Future
@@ -55,7 +55,9 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]] = Future.successful(Seq.empty)
 
-  override def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html] = ???
+  override def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html] = ???
+
+  override def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], lang: String, debug: Option[String]): Future[Html] = ???
 
   override def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = ???
 
