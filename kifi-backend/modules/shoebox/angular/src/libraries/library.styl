@@ -14,6 +14,11 @@ invite-header-orange = #ff7c3c
 .delighted-visible ~ div .kf-library-card-header
   margin-top: 10px
 
+.kf-logged-out .kf-main-library-keeps
+  width: nonUserAppMaxWidth
+  margin: 0 auto
+
+
 
 lib-body-side-pad = 30px
 
@@ -271,18 +276,6 @@ cover-image-adjust-right = 24px
   max-height: 5000px
   transition: max-height 0.3s ease
   box-shadow: none
-
-  &::before
-    position: absolute
-    top: 0
-    left: -5000px
-    display: block
-    box-shadow: none
-    width: 9999px
-    height: 100%
-    background-color: #fff
-    content: ''
-    z-index: -1
 
   .kf-keep-lib-body
   .kf-keep-lib-header
