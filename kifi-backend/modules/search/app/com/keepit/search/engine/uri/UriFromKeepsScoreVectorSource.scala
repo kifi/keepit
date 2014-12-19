@@ -102,6 +102,7 @@ class UriFromKeepsScoreVectorSource(
             // write to the buffer
             output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
             writer.putLong(uriId)
+            explanation.foreach(_.collectBufferScoreContribution(this.getClass.getSimpleName, uriId, -1, Visibility.NETWORK, Array.empty[Int], 0))
           }
           docId = td.nextDoc()
         }
