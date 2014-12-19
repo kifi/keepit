@@ -7,7 +7,7 @@ import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceTy
 import com.keepit.common.db.Id
 import com.keepit.common.net.{ ClientResponse, HttpClient }
 import com.keepit.common.routes.{ ServiceRoute, Search, Common }
-import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.model.{ Library, NormalizedURI, User }
 import com.keepit.search.index.{ IndexInfo }
 import com.keepit.search.index.user.UserSearchResult
 import com.keepit.search.index.user.UserSearchRequest
@@ -48,7 +48,8 @@ trait SearchServiceClient extends ServiceClient {
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]]
-  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html]
+  def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html]
+  def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], lang: String, debug: Option[String]): Future[Html]
   def showUserConfig(id: Id[User]): Future[SearchConfig]
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
   def resetUserConfig(id: Id[User]): Unit
@@ -186,8 +187,12 @@ class SearchServiceClientImpl(
     }
   }
 
-  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html] = {
-    call(Search.internal.explain(query, userId, uriId, Some(lang), debug)).map(r => Html(r.body))
+  def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html] = {
+    call(Search.internal.explainUriResult(query, userId, uriId, Some(lang), debug)).map(r => Html(r.body))
+  }
+
+  def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], lang: String, debug: Option[String]): Future[Html] = {
+    call(Search.internal.explainLibraryResult(query, userId, libraryId, Some(lang), debug)).map(r => Html(r.body))
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = {

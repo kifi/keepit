@@ -8,7 +8,7 @@ import com.keepit.search._
 import play.api.mvc.Action
 import views.html
 import com.keepit.model.User
-import scala.concurrent.Await
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import play.api.libs.json._
 import com.keepit.search.index.sharding.ShardSpecParser
@@ -17,11 +17,10 @@ import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.routes.Search
 import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest, AugmentationCommander }
-import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryIndexer }
 import com.keepit.search.controllers.util.SearchControllerUtil
 
 class SearchController @Inject() (
-    searchCommander: UriSearchCommander,
+    uriSearchCommander: UriSearchCommander,
     augmentationCommander: AugmentationCommander,
     languageCommander: LanguageCommander,
     librarySearchCommander: LibrarySearchCommander,
@@ -47,7 +46,7 @@ class SearchController @Inject() (
     val id = Id[User](userId)
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(id), 5 seconds)
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    val result = searchCommander.distSearch(
+    val result = uriSearchCommander.distSearch(
       shards,
       id,
       Lang(lang1),
@@ -86,7 +85,7 @@ class SearchController @Inject() (
     val id = Id[User](userId)
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(id), 5 seconds)
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    searchCommander.distSearch2(
+    uriSearchCommander.distSearch2(
       shards,
       id,
       Lang(lang1),
@@ -140,7 +139,7 @@ class SearchController @Inject() (
 
   //internal (from eliza/shoebox)
   def warmUpUser(userId: Id[User]) = Action { request =>
-    searchCommander.warmUp(userId)
+    uriSearchCommander.warmUp(userId)
     Ok
   }
 
@@ -150,7 +149,7 @@ class SearchController @Inject() (
     val query = (js \ "query").as[String]
     val maxHits = (js \ "maxHits").as[Int]
     val predefinedConfig = (js \ "config").as[Map[String, String]]
-    val res = searchCommander.search(userId, acceptLangs = Seq(), experiments = Set.empty, query = query, filter = None, maxHits = maxHits, lastUUIDStr = None, context = None, predefinedConfig = Some(SearchConfig(predefinedConfig)))
+    val res = uriSearchCommander.search(userId, acceptLangs = Seq(), experiments = Set.empty, query = query, filter = None, maxHits = maxHits, lastUUIDStr = None, context = None, predefinedConfig = Some(SearchConfig(predefinedConfig)))
     Ok(JsArray(res.hits.map { x =>
       val id = x.uriId.id
       val title = x.bookmark.title.getOrElse("")
@@ -171,14 +170,21 @@ class SearchController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], debug: Option[String]) = Action.async { request =>
-    if (searchCommander.findShard(uriId).isDefined) {
+  def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], debug: Option[String]) = Action.async { request =>
+    if (uriSearchCommander.findShard(uriId).isDefined) {
       val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
-      searchCommander.explain(userId, uriId, lang, userExperiments, query, debug) map { explanationOpt =>
-        Ok(html.admin.explainResult(userId, uriId, explanationOpt))
+      uriSearchCommander.explain(userId, uriId, lang, userExperiments, query, debug) map { explanationOpt =>
+        Ok(html.admin.explainUriResult(userId, uriId, explanationOpt))
       }
     } else {
-      distributedSearchClient.call(userId, uriId, Search.internal.explain(query, userId, uriId, lang, debug), JsNull).map(r => Ok(r.body))
+      distributedSearchClient.call(userId, uriId, Search.internal.explainUriResult(query, userId, uriId, lang, debug), JsNull).map(r => Ok(r.body))
+    }
+  }
+
+  def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], lang: Option[String], debug: Option[String]) = Action.async { request =>
+    val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
+    librarySearchCommander.librarySearch(userId, lang.toSeq, userExperiments, query, None, None, 1, None, debug, Some(libraryId)).map { result =>
+      Ok(html.admin.explainLibraryResult(userId, libraryId, result.explanation))
     }
   }
 
