@@ -3,6 +3,7 @@ package com.keepit.common.social
 import com.google.inject.Inject
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.time._
+import com.keepit.common.core._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -13,7 +14,6 @@ import com.keepit.common.time.Clock
 import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model._
 import com.keepit.social._
-import com.kifi.macros.json
 import com.ning.http.client.providers.netty.NettyResponse
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -57,8 +57,7 @@ object PagedTwitterUserInfos {
 
 }
 
-@json case class TwitterError(message: String, code: Int)
-@json case class TwitterErrors(errors: Seq[TwitterError])
+case class TwitterError(message: String, code: Long)
 
 trait TwitterSocialGraph extends SocialGraph {
   val networkType: SocialNetworkType = SocialNetworks.TWITTER
@@ -164,22 +163,19 @@ class TwitterSocialGraphImpl @Inject() (
 
   protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: Long, resp: WSResponse): Unit = {
     val nettyResp = resp.underlying[NettyResponse]
-    def warn(twtrErrors: TwitterErrors, notify: Boolean = true): Unit = {
-      val errorMessage = twtrErrors.errors.headOption.getOrElse {
-        resp.status match {
-          case TOO_MANY_REQUEST => "hit rate-limit"
-          case UNAUTHORIZED => "unauthorized or invalid/expired token"
-          case _ => "non-OK response"
-        }
+    def warn(notify: Boolean): Unit = {
+      val errorMessage = resp.status match {
+        case TOO_MANY_REQUEST => "hit rate-limit"
+        case UNAUTHORIZED => "unauthorized or invalid/expired token"
+        case _ => "non-OK response"
       }
-      val errMsg = s"[$tag] Error: $errorMessage for $endpoint. status=${resp.status} body=${resp.body}; request=${nettyResp} request.uri=${nettyResp.getUri}"
+      val errMsg = s"[$tag] Error: $errorMessage for $endpoint. status=${resp.status} body=${resp.body}; request.uri=${nettyResp.getUri}"
       if (notify)
         airbrake.notify(errMsg)
-      else // to reduce noise: see LinkedInSocialGraph
+      else
         log.error(errMsg)
     }
-    val twitterErrors = Try { resp.json.asOpt[TwitterErrors].get } getOrElse TwitterErrors(Seq.empty)
-    warn(twitterErrors)
+    warn(true) // set to false to reduce noise: see LinkedInSocialGraph
     resp.status match {
       case TOO_MANY_REQUEST => // 429: rate-limit exceeded
         db.readWrite { implicit s =>
@@ -192,16 +188,21 @@ class TwitterSocialGraphImpl @Inject() (
   }
 
   protected def lookupUsers(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = {
+    log.info(s"[lookupUsers] mutualFollows(len=${mutualFollows.size}): ${mutualFollows.take(20).mkString(",")}... sui=$sui")
     val endpoint = "https://api.twitter.com/1.1/users/lookup.json"
     val sorted = mutualFollows.toSeq.sorted // expensive
-    def pred(arr: JsArray, acc: Seq[Long]) = arr.value.isEmpty
+    def pred(prevAcc: JsArray, currAcc: JsArray, c: Seq[Long]) = {
+      prevAcc.value.length != currAcc.value.length tap { res =>
+        if (!res) log.warn(s"[lookupUsers.pred] prevAcc(len=${prevAcc.value.length}) currAcc.value.length=${currAcc.value.length} c.head=${c.headOption} res=$res")
+      }
+    }
     val accF = FutureHelpers.foldLeftWhile[Seq[Long], JsArray](sorted.grouped(100).toIterable)(JsArray())({ (a, c) =>
       val params = Map("user_id" -> c.mkString(","), "include_entities" -> false.toString)
       val chunkF = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
         .post(params.map(kv => (kv._1, Seq(kv._2))))
         .map { resp =>
-          log.info(s"[lookup] response.json=${resp.json}")
+          log.info(s"[lookupUsers] prevAcc.len=${a.value.length} cursor=${c.head} response.json=${resp.json}")
           resp.status match {
             case OK => resp.json
             case _ =>
@@ -212,7 +213,7 @@ class TwitterSocialGraphImpl @Inject() (
       chunkF map { chunk => a ++ chunk.as[JsArray] }
     }, Some(pred))
     accF map { acc =>
-      log.info(s"[lookup.acc] acc(len=${acc.value.length}):${acc.value}")
+      log.info(s"[lookupUsers.prevAcc] prevAcc(len=${acc.value.length}):${acc.value}")
       acc
     }
   }
@@ -231,7 +232,7 @@ class TwitterSocialGraphImpl @Inject() (
         resp.status match {
           case OK =>
             val pagedIds = resp.json.as[PagedIds]
-            log.info(s"[pagedFetchIds#$page] userId=$userId endpoint=$endpoint pagedIds=$pagedIds")
+            log.info(s"[pagedFetchIds#$page] cursor=$cursor userId=$userId endpoint=$endpoint pagedIds=$pagedIds")
             val next = pagedIds.next
             if (next > 0) {
               pagedFetchIds(page + 1, next, count) map { seq =>
