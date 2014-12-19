@@ -145,6 +145,7 @@ class UriFromLibraryScoreVectorSource(
               // write to the buffer
               output.alloc(writer, v, 8 + 8) // id (8 bytes), keepId (8 bytes)
               writer.putLong(uriId, keepId)
+              explanation.foreach(_.collectBufferScoreContribution(this.getClass.getSimpleName, uriId, keepId, visibility, Array.empty[Int], 0))
             }
             docId = td.nextDoc()
           }
