@@ -5,7 +5,7 @@
       <span class="kf-small-library-count" ng-if="library.numKeeps > 0">
         <ng-pluralize count="library.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}"></ng-pluralize>
       </span>
-      <span class="kf-small-library-count-sep" ng-if="library.numKeeps > 0">·</span>
+      <span class="kf-small-library-count-sep" ng-if="library.numFollowers > 0 && library.numKeeps > 0">·</span>
       <span class="kf-small-library-count" ng-if="library.numFollowers > 0">
         <ng-pluralize count="library.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}"></ng-pluralize>
       </span>

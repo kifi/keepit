@@ -143,16 +143,15 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
 
   def generalRecos(): Seq[RecoInfo] = {
     db.readOnlyReplica { implicit session =>
-      uriRecoRepo.getGeneralRecommendationsBylUserEngagements(1000)
-    } map {
-      case (uriId, score) =>
-        RecoInfo(
-          userId = None,
-          uriId = uriId,
-          score = score,
-          explain = None,
-          attribution = None
-        )
+      publicFeedRepo.getByTopMasterScore(100)
+    } map { reco =>
+      RecoInfo(
+        userId = None,
+        uriId = reco.uriId,
+        score = reco.publicMasterScore,
+        explain = None,
+        attribution = None
+      )
     }
   }
 }

@@ -11,7 +11,7 @@ import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.social.{ LinkedInSocialGraph, BasicUserRepo }
+import com.keepit.common.social.{ TwitterSocialGraph, TwitterSocialGraphImpl, LinkedInSocialGraph, BasicUserRepo }
 import com.keepit.common.store.S3ImageStore
 import com.keepit.controllers.website.routes
 import com.keepit.eliza.ElizaServiceClient
@@ -27,7 +27,8 @@ import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
+import scala.concurrent.duration._
 import scala.util.Try
 import com.keepit.common.queue.{ CancelInvitation }
 import com.keepit.abook.ABookServiceClient
@@ -74,6 +75,7 @@ object InviteStatus {
   def clientHandle(savedInvite: Invitation) = InviteStatus(false, Some(savedInvite), "client_handle")
   def facebookError(code: Int, savedInvite: Option[Invitation]) = InviteStatus(false, savedInvite, s"facebook_error_$code")
   def linkedInError(code: Int) = InviteStatus(false, None, s"linkedin_error_{$code}")
+  def twitterError(code: Int) = InviteStatus(false, None, s"twitter_error_$code")
   val unknownError = InviteStatus(false, None, "unknown_error")
   val forbidden = InviteStatus(false, None, "over_invite_limit")
   val notFound = InviteStatus(false, None, "invite_not_found")
@@ -99,6 +101,7 @@ class InviteCommander @Inject() (
     eliza: ElizaServiceClient,
     basicUserRepo: BasicUserRepo,
     linkedIn: LinkedInSocialGraph,
+    twitter: TwitterSocialGraph,
     eventContextBuilder: HeimdalContextBuilderFactory,
     heimdal: HeimdalServiceClient,
     abook: ABookServiceClient,
@@ -247,6 +250,7 @@ class InviteCommander @Inject() (
     val inviteStatusFuture = socialNetwork match {
       case SocialNetworks.FACEBOOK => Future.successful(handleFacebookInvite(inviteInfo))
       case SocialNetworks.LINKEDIN => sendInvitationForLinkedIn(inviteInfo)
+      case SocialNetworks.TWITTER => sendTwitterDM(inviteInfo)
       case SocialNetworks.EMAIL => Future.successful(sendEmailInvitation(inviteInfo))
       case _ => Future.successful(InviteStatus.unsupportedNetwork)
     }
@@ -256,6 +260,33 @@ class InviteCommander @Inject() (
         log.info(s"[processInvite] Processed: $inviteStatus")
         if (inviteStatus.sent) { reportSentInvitation(Some(request), inviteStatus.savedInvite.get, socialNetwork, source) }
         inviteStatus
+    }
+  }
+
+  private def sendTwitterDM(inviteInfo: InviteInfo): Future[InviteStatus] = {
+    val invite = inviteInfo.invitation
+    val userId = invite.senderUserId.get
+    val me = db.readOnlyReplica { implicit s => socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.TWITTER).get }
+    val socialUserInfo = inviteInfo.friend.left.get
+    val path = routes.InviteController.acceptInvite(invite.externalId).url
+    val message = s"Join me on Kifi, the smartest way to collect, discover, and share knowledge. Try it free! $baseUrl$path"
+    val receiverUserId = socialUserInfo.socialId.id.toLong
+    twitter.sendDM(me, receiverUserId, message) map { resp =>
+      if (resp.status != 200) {
+        airbrake.notify(s"[sendTwitterDM] non-OK response. receiverUserId=$receiverUserId; status=${resp.status} body=${resp.body}; request=${resp.underlying[NettyResponse]} request.uri=${resp.underlying[NettyResponse].getUri}")
+        log.error(s"[sendTwitterDM($userId)] Cannot send invitation ($invite): ${resp.body}")
+        if (resp.status == Status.UNAUTHORIZED) {
+          db.readWrite { implicit rw =>
+            val latestSocialUserInfo = socialUserInfoRepo.get(socialUserInfo.id.get)
+            socialUserInfoRepo.save(latestSocialUserInfo.copy(state = SocialUserInfoStates.APP_NOT_AUTHORIZED))
+          }
+        }
+        InviteStatus.twitterError(resp.status)
+      } else {
+        log.info(s"[sendTwitterDM] response.json=${resp.json}")
+        val savedInvite = db.readWrite { implicit rw => invitationRepo.save(invite.withState(InvitationStates.ACTIVE).withLastSentTime(clock.now())) }
+        InviteStatus.sent(savedInvite)
+      }
     }
   }
 

@@ -6,9 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.common.net.HttpClient
-import com.keepit.common.oauth._
-import com.keepit.common.time.Clock
+import com.keepit.common.oauth.{ TwitterUserInfo, TwitterOAuthProvider, OAuth1Configuration, ProviderIds }
 import com.keepit.common.core._
 import com.keepit.model._
 import com.keepit.social._
@@ -17,7 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.libs.oauth.OAuthCalculator
-import play.api.libs.ws.WS
+import play.api.libs.ws.{ WSResponse, WS }
 import securesocial.core.{ IdentityId, OAuth2Settings }
 
 import scala.concurrent.{ Await, Future }
@@ -54,14 +52,19 @@ object PagedTwitterUserInfos {
 
 }
 
-class TwitterSocialGraph @Inject() (
+trait TwitterSocialGraph extends SocialGraph {
+  val networkType: SocialNetworkType = SocialNetworks.TWITTER
+
+  def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse]
+
+}
+
+class TwitterSocialGraphImpl @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
     oauth1Config: OAuth1Configuration,
     twtrOAuthProvider: TwitterOAuthProvider,
-    socialRepo: SocialUserInfoRepo) extends SocialGraph with Logging {
-
-  val networkType: SocialNetworkType = SocialNetworks.TWITTER
+    socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with Logging {
 
   val providerConfig = oauth1Config.getProviderConfig(ProviderIds.Twitter.id).get
 
@@ -205,5 +208,15 @@ class TwitterSocialGraph @Inject() (
   }
 
   def extractUserValues(json: JsValue): Map[UserValueName, String] = Map.empty
+
+  def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse] = {
+    val endpoint = "https://api.twitter.com/1.1/direct_messages/new.json"
+    val call = WS.url(endpoint)
+      .sign(OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo)))
+      .withQueryString("user_id" -> receiverUserId.toString, "text" -> msg)
+      .post(Map.empty[String, Seq[String]])
+    call onComplete { tr => log.info(s"[sendDM] receiverUserId=$receiverUserId msg=$msg res=$tr") }
+    call
+  }
 
 }

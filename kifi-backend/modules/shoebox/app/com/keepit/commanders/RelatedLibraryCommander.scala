@@ -49,7 +49,7 @@ class RelatedLibraryCommanderImpl @Inject() (
       .flatMap { relatedLibs =>
         val libs = relatedLibs.map { _.library }
         val kinds = relatedLibs.map { _.kind }
-        val fullInfosFut = libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize)
+        val fullInfosFut = libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize).map { _.map { _._2 } }
         fullInfosFut.map { info =>
           try {
             assert(info.size == kinds.size)

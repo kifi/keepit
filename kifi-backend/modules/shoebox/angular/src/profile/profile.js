@@ -220,20 +220,18 @@ angular.module('kifi')
     return {
       restrict: 'A',
       link: function (scope) {
-        // todo (aaron): endpoint doesn't return profileUrl yet. Leave this out for now
-        //scope.isTwitterConnected = socialService.twitter && !!socialService.twitter.profileUrl;
 
-        scope.isTwitterConnected = socialService.twitter && !!socialService.twitter.network;
+        scope.isTwitterConnected = socialService.twitter && !!socialService.twitter.profileUrl;
         scope.twitter = socialService.twitter;
         scope.twitterExperiment = profileService.me.experiments && profileService.me.experiments.indexOf('twitter_beta') !== -1;
 
         scope.$watch(function () {
-          return socialService.twitter.network;
+          return socialService.twitter.profileUrl;
         }, function () {
           var twitter = socialService.twitter;
-          if (twitter && twitter.network) {
+          if (twitter && twitter.profileUrl) {
             scope.isTwitterConnected = true;
-            scope.twProfileUrl = twitter.profileUrl; //expect undefined for now
+            scope.twProfileUrl = twitter.profileUrl;
           } else {
             scope.isTwitterConnected = false;
             scope.twProfileUrl = '';
