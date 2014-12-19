@@ -154,20 +154,20 @@ class RecommendationsCommander @Inject() (
       }
     } getOrElse Seq.empty
 
-    val keepAttrInfos = attr.keep.map { keepAttr =>
-      keepAttr.keeps.map { keepId =>
-        db.readOnlyReplica { implicit session => keepRepo.get(keepId) }
-      } filter { keep =>
-        keep.state == KeepStates.ACTIVE
-      } map { keep =>
-        RecoAttributionInfo(
-          kind = RecoAttributionKind.Keep,
-          name = keep.title,
-          url = Some(keep.url),
-          when = Some(keep.createdAt)
-        )
-      }
-    } getOrElse Seq.empty
+    // val keepAttrInfos = attr.keep.map { keepAttr =>
+    //   keepAttr.keeps.map { keepId =>
+    //     db.readOnlyReplica { implicit session => keepRepo.get(keepId) }
+    //   } filter { keep =>
+    //     keep.state == KeepStates.ACTIVE
+    //   } map { keep =>
+    //     RecoAttributionInfo(
+    //       kind = RecoAttributionKind.Keep,
+    //       name = keep.title,
+    //       url = Some(keep.url),
+    //       when = Some(keep.createdAt)
+    //     )
+    //   }
+    // } getOrElse Seq.empty
 
     val topicAttrInfos = attr.topic.map { topicAttr =>
       Seq(RecoAttributionInfo(
@@ -178,7 +178,7 @@ class RecommendationsCommander @Inject() (
       ))
     } getOrElse Seq.empty
 
-    libraryAttrInfos ++ keepAttrInfos ++ topicAttrInfos
+    libraryAttrInfos ++ topicAttrInfos //++ keepAttrInfos
   }
 
   def topRecos(userId: Id[User], clientType: RecommendationClientType, more: Boolean, recencyWeight: Float): Future[Seq[FullRecoInfo]] = {
