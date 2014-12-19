@@ -198,7 +198,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers", visibility = LibraryVisibility.SECRET)
 
-        val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
+        val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED, membershipVisibility = Some(LibraryMembershipVisibilityStates.HIDDEN))
 
         val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.DISCOVERABLE)
 
@@ -225,6 +225,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           allMemberships.length === 3
           allMemberships.map(_.userId) === Seq(userAgent.id.get, userCaptain.id.get, userIron.id.get)
           allMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.OWNER, LibraryAccess.OWNER)
+          allMemberships.map(_.visibility) === Seq(LibraryMembershipVisibilityStates.VISIBLE, LibraryMembershipVisibilityStates.HIDDEN, LibraryMembershipVisibilityStates.VISIBLE)
         }
 
         // test re-activating inactive library

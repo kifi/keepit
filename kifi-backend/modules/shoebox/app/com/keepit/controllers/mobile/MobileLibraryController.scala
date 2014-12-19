@@ -64,7 +64,8 @@ class MobileLibraryController @Inject() (
     val newDescription = (json \ "newDescription").asOpt[String]
     val newVisibility = (json \ "newVisibility").asOpt[LibraryVisibility]
     val newSlug = (json \ "newSlug").asOpt[String]
-    val newColor = (json \ "color").asOpt[HexColor]
+    val newColor = (json \ "newColor").asOpt[HexColor]
+
     val res = libraryCommander.modifyLibrary(libId, request.userId, newName, newDescription, newSlug, newVisibility, newColor)
     res match {
       case Left(fail) =>
