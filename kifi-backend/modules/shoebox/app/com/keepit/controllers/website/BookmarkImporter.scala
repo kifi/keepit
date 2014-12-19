@@ -135,7 +135,20 @@ class BookmarkImporter @Inject() (
         val tags = Option(elem.attr("tags")).getOrElse("")
 
         val tagList = (lists + tags).split(",").map(_.trim).filter(_.nonEmpty).toList
-        val createdDate: Option[DateTime] = Option(elem.attr("add_date")).map(x => Try(new DateTime(x.toLong)).toOption).flatten
+        val createdDate: Option[DateTime] = Option(elem.attr("add_date")).map { x =>
+          Try {
+            x.toLong match { // This breaks in 2020.
+              case l if l > 1000000000L && l < 1600000000L => // Unix time
+                Some(new DateTime(l * 1000))
+              case l if l > 1000000000000L && l < 1600000000000L => // ms since epoch
+                Some(new DateTime(l))
+              case l if l > 1000000000000000L && l < 1600000000000000L => // μs since epoch (Google Bookmarks uses this)
+                Some(new DateTime(l / 1000))
+              case _ =>
+                None
+            }
+          }.toOption.flatten
+        }.flatten
 
         // This may be useful in the future, but we currently are not using them:
 
