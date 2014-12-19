@@ -541,7 +541,7 @@ class LibraryController @Inject() (
         NotFound(username.value)
       case Some(user) =>
         val viewer = request.userOpt
-        val libs = libraryCommander.ownerLibraries(user, viewer, Paginator(page, pageSize))
+        val libs = libraryCommander.ownerLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
         Ok(Json.obj("libraries" -> (libs map profileLibraryViewJson)))
     }
   }
@@ -551,17 +551,17 @@ class LibraryController @Inject() (
       "id" -> Library.publicId(libView.library.id.get).id,
       "name" -> libView.library.name,
       "slug" -> libView.library.slug,
-      "numFollowers" -> libView.numFollowers,
+      "image" -> libView.image,
       "numKeeps" -> libView.numKeeps,
-      "followersToDisplay" ->
-        (libView.followersSample map { user =>
-          Json.obj(
-            "firstName" -> user.firstName,
-            "lastName" -> user.lastName,
-            "pictureName" -> user.pictureName,
-            "username" -> user.username.value
-          )
-        })
+      "numFollowers" -> libView.numFollowers,
+      "followers" -> libView.followersSample.map { user =>
+        Json.obj( // BasicUser with "id" omitted
+          "firstName" -> user.firstName,
+          "lastName" -> user.lastName,
+          "pictureName" -> user.pictureName,
+          "username" -> user.username.value
+        )
+      }
     )
   }
 

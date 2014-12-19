@@ -461,18 +461,19 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             {
               "libraries":[
                 {
-                  "id":"${pubId1.id}",
-                  "name":"lib1",
-                  "slug":"lib1",
-                  "numFollowers":10,
-                  "numKeeps":1,
-                  "followersToDisplay":[
+                  "id": "${pubId1.id}",
+                  "name": "lib1",
+                  "slug": "lib1",
+                  "image": null,
+                  "numKeeps": 1,
+                  "numFollowers": 1,
+                  "followers": [
                     {"firstName":"second","lastName":"user","pictureName":"0.jpg","username":"seconduser"}
                   ]
                 }
                ]
             }
-           """.stripMargin)
+           """)
         Json.parse(contentAsString(result1)) must equalTo(expected)
       }
     }
