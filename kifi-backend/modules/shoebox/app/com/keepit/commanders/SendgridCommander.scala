@@ -106,6 +106,7 @@ class SendgridCommander @Inject() (
           val builder = heimdalContextBuilder()
           builder.addExistingContext(context)
           builder += ("userStatus", ExperimentType.getUserStatus(experiments))
+          builder.addExperiments(experiments)
           val userEventContext = builder.build
           heimdalClient.trackEvent(UserEvent(userId, userEventContext, UserEventTypes.WAS_NOTIFIED, eventTime))
 
