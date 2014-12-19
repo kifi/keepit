@@ -162,13 +162,16 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         Json.parse(contentAsString(result1)).as[LibraryInfo].name === "LibraryA"
 
-        val inputJson2 = Json.obj("slug" -> "libA", "description" -> "asdf", "visibility" -> LibraryVisibility.PUBLISHED.value)
+        val inputJson2 = Json.obj("slug" -> "libA", "description" -> "asdf", "visibility" -> LibraryVisibility.PUBLISHED.value, "membershipVisibility" -> LibraryMembershipVisibilityStates.HIDDEN.value)
         val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
         val result2 = libraryController.modifyLibrary(pubId)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
-        val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
+        val basicUser1 = db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get.visibility === LibraryMembershipVisibilityStates.HIDDEN
+          basicUserRepo.load(user1.id.get)
+        }
         val expected = Json.parse(
           s"""
              |{
@@ -290,6 +293,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |  "pictureName":"${basicUser1.pictureName}",
              |  "username":"${basicUser1.username.value}"
              |  },
+             |"membershipVisibility":"visible",
              |"followers":[],
              |"keeps":[],
              |"numKeeps":0,
@@ -412,6 +416,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  "pictureName":"${basicUser1.pictureName}",
                |  "username":"${basicUser1.username.value}"
                |  },
+               |"membershipVisibility":"visible",
                |"followers":[],
                |"keeps":[],
                |"numKeeps":0,

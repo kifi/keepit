@@ -265,10 +265,17 @@ class LibraryCommander @Inject() (
       library.id.get -> (collaboratorCount, followerCount, keepCount)
     }.toMap
 
+    val membershipsByLibraryId = viewerUserIdOpt.map { userId =>
+      db.readOnlyMaster { implicit s =>
+        libraryMembershipRepo.getWithLibraryIdsAndUserId(libraries.map(_.id.get).toSet, userId)
+      }
+    }.getOrElse(Map.empty[Id[Library], LibraryMembership])
+
     val futureFullLibraryInfos = libraries.map { lib =>
       futureKeepInfosByLibraryId(lib.id.get).map { keepInfos =>
         val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(lib.id.get)
         val owner = usersById(lib.ownerId)
+        val membershipOpt = membershipsByLibraryId.get(lib.id.get)
         val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_))
         val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, idealLibraryImageSize)
         lib.id.get -> FullLibraryInfo(
@@ -282,6 +289,7 @@ class LibraryCommander @Inject() (
           kind = lib.kind,
           visibility = lib.visibility,
           image = libImageOpt.map(LibraryImageInfo.createInfo),
+          membershipVisibility = membershipOpt.map(_.visibility),
           followers = followers,
           keeps = keepInfos,
           numKeeps = keepCount,
@@ -439,12 +447,12 @@ class LibraryCommander @Inject() (
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
                     visibility = libAddReq.visibility, slug = validSlug, color = libAddReq.color, kind = LibraryKind.USER_CREATED, memberCount = 1))
-                  libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+                  libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true, visibility = libAddReq.membershipVisibility.getOrElse(LibraryMembershipVisibilityStates.VISIBLE)))
                   lib
                 case Some(lib) =>
                   val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
                   libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId, None) match {
-                    case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+                    case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true, visibility = libAddReq.membershipVisibility.getOrElse(LibraryMembershipVisibilityStates.VISIBLE)))
                     case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
                   }
                   newLib
@@ -469,9 +477,14 @@ class LibraryCommander @Inject() (
     description: Option[String] = None,
     slug: Option[String] = None,
     visibility: Option[LibraryVisibility] = None,
-    color: Option[HexColor] = None): Either[LibraryFail, Library] = {
+    color: Option[HexColor] = None,
+    membershipVisibility: Option[LibraryMembershipVisibility] = None): Either[LibraryFail, Library] = {
 
-    val targetLib = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
+    val (targetLib, targetMembership) = db.readOnlyMaster { implicit s =>
+      val lib = libraryRepo.get(libraryId)
+      val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, userId)
+      (lib, membership)
+    }
     if (targetLib.ownerId != userId) {
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
     } else {
@@ -532,6 +545,11 @@ class LibraryCommander @Inject() (
             val ownerId = targetLib.ownerId
             libraryAliasRepo.reclaim(ownerId, newSlug)
             libraryAliasRepo.alias(ownerId, targetLib.slug, targetLib.id.get)
+          }
+          (targetMembership, membershipVisibility) match {
+            case (Some(mem), Some(newVisibility)) if mem.visibility != newVisibility =>
+              libraryMembershipRepo.save(mem.copy(visibility = newVisibility))
+            case _ =>
           }
           libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, state = LibraryStates.ACTIVE))
         }
@@ -1296,7 +1314,8 @@ case class LibraryFail(status: Int, message: String)
   visibility: LibraryVisibility,
   description: Option[String] = None,
   slug: String,
-  color: Option[HexColor] = None)
+  color: Option[HexColor] = None,
+  membershipVisibility: Option[LibraryMembershipVisibility] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],
@@ -1376,6 +1395,7 @@ case class FullLibraryInfo(
   kind: LibraryKind,
   lastKept: Option[DateTime],
   owner: BasicUser,
+  membershipVisibility: Option[LibraryMembershipVisibility] = None,
   followers: Seq[BasicUser],
   keeps: Seq[KeepInfo],
   numKeeps: Int,

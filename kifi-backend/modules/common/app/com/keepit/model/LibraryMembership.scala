@@ -35,11 +35,7 @@ case class LibraryMembership(
     LibraryMembershipView(id = id.get, libraryId = libraryId, userId = userId, access = access, createdAt = createdAt, state = state, seq = seq, showInSearch = showInSearch)
 }
 
-case class LibraryMembershipVisibility(value: String)
-
-object LibraryMembershipVisibility {
-  implicit val format = Json.format[LibraryMembershipVisibility]
-}
+@json case class LibraryMembershipVisibility(value: String)
 
 object LibraryMembershipVisibilityStates {
   val HIDDEN = LibraryMembershipVisibility("hidden")
