@@ -16,6 +16,7 @@ import com.keepit.search.Article
 import org.joda.time.DateTime
 
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 
 // pull-based; see http://letitcrash.com/post/29044669086/balancing-workload-across-nodes-with-akka-2
 object InternalMessages {
@@ -135,7 +136,7 @@ class ScrapeAgentSupervisor @Inject() (
 
   override def supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 5, withinTimeRange = 15 minutes) {
     case _: IllegalStateException => Restart
-    // todo(ray): handle interruption/cancellation
+    case NonFatal(e) => Restart // not propagated
   }
 
 }
