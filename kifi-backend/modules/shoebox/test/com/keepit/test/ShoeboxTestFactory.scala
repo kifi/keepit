@@ -132,11 +132,11 @@ class ShoeboxTestFactory @Inject() (
       val libScience = libraryRepo.save(Library(name = "Science & Stuff", slug = LibrarySlug("science"),
         visibility = LibraryVisibility.DISCOVERABLE, ownerId = userIron.id.get, createdAt = t1, memberCount = 1))
 
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userAgent.id.get, access = LibraryAccess.READ_ONLY, createdAt = t2, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userCaptain.id.get, access = LibraryAccess.READ_ONLY, createdAt = t2, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libScience.id.get, userId = userIron.id.get, access = LibraryAccess.READ_ONLY, createdAt = t2, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userAgent.id.get, access = LibraryAccess.READ_ONLY, createdAt = t2, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userAgent.id.get, access = LibraryAccess.READ_ONLY, createdAt = t2))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, createdAt = t2))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userCaptain.id.get, access = LibraryAccess.READ_ONLY, createdAt = t2))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libScience.id.get, userId = userIron.id.get, access = LibraryAccess.READ_ONLY, createdAt = t2))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userAgent.id.get, access = LibraryAccess.READ_ONLY, createdAt = t2))
       (libShield, libMurica, libScience)
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)

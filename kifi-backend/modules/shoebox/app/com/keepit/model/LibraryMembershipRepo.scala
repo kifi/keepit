@@ -67,8 +67,8 @@ class LibraryMembershipRepoImpl @Inject() (
     def showInSearch = column[Boolean]("show_in_search", O.NotNull)
     def lastViewed = column[Option[DateTime]]("last_viewed", O.Nullable)
     def lastEmailSent = column[Option[DateTime]]("last_email_sent", O.Nullable)
-    def visibility = column[LibraryMembershipVisibility]("visibility", O.NotNull)
-    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, visibility, lastViewed, lastEmailSent) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
+    def listed = column[Boolean]("listed", O.NotNull)
+    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
 
   def table(tag: Tag) = new LibraryMemberTable(tag)
@@ -272,9 +272,9 @@ class LibraryMembershipRepoImpl @Inject() (
   def countLibrariesOfUserFromAnonymos(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int = {
     import StaticQuery.interpolation
     val query = if (countFollowLibraries) {
-      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.visibility = 'visible' and lib.visibility = 'published'"
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lib.visibility = 'published'"
     } else {
-      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.visibility = 'visible' and lib.visibility = 'published' and lm.access='owner'"
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lib.visibility = 'published' and lm.access='owner'"
     }
     query.as[Int].firstOption.getOrElse(0)
   }
@@ -296,9 +296,9 @@ class LibraryMembershipRepoImpl @Inject() (
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
     val query = if (countFollowLibraries) {
-      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and (((lm.visibility = 'visible') and (lib.visibility = 'published')) #$libVisibility)"
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lib.visibility = 'published') #$libVisibility)"
     } else {
-      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and (((lm.visibility = 'visible') and (lib.visibility = 'published' and lm.access='owner')) #$libVisibility)"
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lib.visibility = 'published' and lm.access='owner') #$libVisibility)"
     }
     query.as[Int].firstOption.getOrElse(0)
   }
@@ -312,7 +312,7 @@ class LibraryMembershipRepoImpl @Inject() (
       case 1 => s"or (lib.id = ${libsFriendFollow.head})"
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
-    val query = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and (((lm.visibility = 'visible') and (lib.visibility = 'published' and lm.access='owner')) #$libVisibility) order by lib.id limit (${page.itemsToDrop}, ${page.size})"
+    val query = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lib.visibility = 'published' and lm.access='owner') #$libVisibility) order by lib.id limit (${page.itemsToDrop}, ${page.size})"
     query.as[Id[Library]].list
   }
 

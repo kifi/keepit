@@ -9,4 +9,3 @@ ALTER TABLE library_recommendation ADD COLUMN trashed BOOLEAN NOT NULL DEFAULT f
 INSERT INTO evolutions (name, description) VALUES('275.sql', 'add columns to library_recommendation (delivered,clicked,trashed)');
 
 # --- !Downs
-
