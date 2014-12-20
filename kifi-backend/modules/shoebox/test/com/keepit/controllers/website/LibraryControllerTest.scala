@@ -470,7 +470,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 {
                   "id": "${pubId1.id}",
                   "name": "lib1",
-                  "slug": "lib1",
+                  "path": "/firstuser/lib1",
                   "image": {"path": "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x": 50, "y": 50},
                   "color": "#e3e3e3",
                   "numKeeps": 1,
