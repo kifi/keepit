@@ -9,7 +9,7 @@ object LibraryMembershipFactory {
 
   def membership(): PartialLibraryMembership = {
     new PartialLibraryMembership(LibraryMembership(id = Some(Id[LibraryMembership](idx.incrementAndGet())),
-      libraryId = Id[Library](idx.incrementAndGet()), userId = Id[User](idx.incrementAndGet()), access = LibraryAccess.OWNER, showInSearch = true, listed = true))
+      libraryId = Id[Library](idx.incrementAndGet()), userId = Id[User](idx.incrementAndGet()), access = LibraryAccess.OWNER))
   }
 
   def memberships(count: Int): Seq[PartialLibraryMembership] = List.fill(count)(membership())
@@ -24,7 +24,7 @@ object LibraryMembershipFactory {
     def withUser(id: Int) = new PartialLibraryMembership(membership.copy(userId = Id[User](id)))
     def withUser(id: Id[User]) = new PartialLibraryMembership(membership.copy(userId = id))
     def withUser(user: User) = new PartialLibraryMembership(membership.copy(userId = user.id.get))
-    def invisible() = new PartialLibraryMembership(membership.copy(listed = false))
+    def unlisted() = new PartialLibraryMembership(membership.copy(listed = false))
     def fromLibraryInvite(invite: LibraryInvite) = new PartialLibraryMembership(membership.copy(userId = invite.userId.get, libraryId = invite.libraryId, access = invite.access))
     def withState(state: State[LibraryMembership]) = new PartialLibraryMembership(membership.copy(state = state))
     def get: LibraryMembership = membership
