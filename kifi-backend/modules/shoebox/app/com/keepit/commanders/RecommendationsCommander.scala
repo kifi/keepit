@@ -94,7 +94,7 @@ class RecommendationsCommander @Inject() (
           owner = owner,
           id = Library.publicId(libraryId),
           name = lib.name,
-          path = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)
+          path = Library.formatLibraryPath(owner.username, lib.slug)
         )
     }
 
@@ -123,7 +123,7 @@ class RecommendationsCommander @Inject() (
         RecoAttributionInfo(
           kind = RecoAttributionKind.Library,
           name = Some(lib.name),
-          url = Some(Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)),
+          url = Some(Library.formatLibraryPath(owner.username, lib.slug)),
           when = None
         )
       }

@@ -75,7 +75,7 @@ class MobileSearchController @Inject() (
           libraryRecordsAndVisibilityById.get(hit.id).map {
             case (library, visibility) =>
               val owner = usersById(library.ownerId)
-              val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
+              val path = Library.formatLibraryPath(owner.username, library.slug)
               val statistics = libraryStatisticsById(library.id)
               val description = library.description.getOrElse("")
               Json.obj(

@@ -49,7 +49,7 @@ class ExtLibraryController @Inject() (
         id = Library.publicId(lib.id.get),
         name = lib.name,
         visibility = lib.visibility,
-        path = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug))
+        path = Library.formatLibraryPath(owner.username, lib.slug))
     }
     Ok(Json.obj("libraries" -> datas))
   }
@@ -68,7 +68,7 @@ class ExtLibraryController @Inject() (
           id = Library.publicId(lib.id.get),
           name = lib.name,
           visibility = lib.visibility,
-          path = Library.formatLibraryPath(request.user.username, request.user.externalId, lib.slug))))
+          path = Library.formatLibraryPath(request.user.username, lib.slug))))
     }
   }
 

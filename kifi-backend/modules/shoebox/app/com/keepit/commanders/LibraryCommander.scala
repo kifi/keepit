@@ -94,7 +94,7 @@ class LibraryCommander @Inject() (
   def libraryMetaTags(library: Library): Future[PublicPageMetaTags] = {
     db.readOnlyMasterAsync { implicit s =>
       val owner = userRepo.get(library.ownerId)
-      val urlPathOnly = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
+      val urlPathOnly = Library.formatLibraryPath(owner.username, library.slug)
       if (library.visibility != PUBLISHED) {
         PublicPageMetaPrivateTags(urlPathOnly)
       } else {
@@ -278,7 +278,7 @@ class LibraryCommander @Inject() (
           owner = owner,
           description = lib.description,
           slug = lib.slug,
-          url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
+          url = Library.formatLibraryPath(owner.username, lib.slug),
           color = lib.color,
           kind = lib.kind,
           visibility = lib.visibility,
@@ -662,7 +662,7 @@ class LibraryCommander @Inject() (
           }
           val imgUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName, Some("https"))
           val inviterImage = if (imgUrl.endsWith(".jpg.jpg")) imgUrl.dropRight(4) else imgUrl // basicUser appends ".jpg" which causes an extra .jpg in this case
-          val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, libOwner.externalId, lib.slug)}"""
+          val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
 
           // send notifications to kifi users only
           val inviteeIdSet = key._2.map(_.userId).flatten.toSet
@@ -821,7 +821,7 @@ class LibraryCommander @Inject() (
       title = "New Library Follower",
       body = s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}",
       linkText = "Go to Library",
-      linkUrl = "https://kifi.com" + Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
+      linkUrl = "https://www.kifi.com" + Library.formatLibraryPath(owner.username, lib.slug),
       imageUrl = s3ImageStore.avatarUrlByUser(follower),
       sticky = false,
       category = NotificationCategory.User.LIBRARY_FOLLOWED
@@ -847,7 +847,7 @@ class LibraryCommander @Inject() (
           title = s"New Keep in ${library.name}",
           body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
           linkText = "Go to Library",
-          linkUrl = "https://kifi.com" + Library.formatLibraryPath(owner.username, owner.externalId, library.slug),
+          linkUrl = "https://www.kifi.com" + Library.formatLibraryPath(owner.username, library.slug),
           imageUrl = s3ImageStore.avatarUrlByUser(keeper),
           sticky = false,
           category = NotificationCategory.User.NEW_KEEP
@@ -1128,7 +1128,7 @@ class LibraryCommander @Inject() (
         getLibraryBySlugOrAlias(owner.id.get, slug) match {
           case None => Left(LibraryFail(NOT_FOUND, "no_library_found"))
           case Some((library, isLibraryAlias)) =>
-            if ((isUserAlias || isLibraryAlias) && !followRedirect) Left(LibraryFail(MOVED_PERMANENTLY, Library.formatLibraryPath(owner.username, owner.externalId, library.slug)))
+            if ((isUserAlias || isLibraryAlias) && !followRedirect) Left(LibraryFail(MOVED_PERMANENTLY, Library.formatLibraryPath(owner.username, library.slug)))
             else Right(library)
         }
     }
@@ -1343,7 +1343,7 @@ object LibraryInfo {
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
-      url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
+      url = Library.formatLibraryPath(owner.username, lib.slug),
       color = lib.color,
       owner = owner,
       numKeeps = keepCount,
