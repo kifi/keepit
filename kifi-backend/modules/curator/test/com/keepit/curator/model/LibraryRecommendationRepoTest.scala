@@ -2,7 +2,7 @@ package com.keepit.curator
 
 import com.keepit.common.db.Id
 import com.keepit.curator.model.{ LibraryRecommendation, LibraryRecommendationRepo }
-import com.keepit.model.{ User }
+import com.keepit.model.{ LibraryRecommendationFeedback, User }
 import org.specs2.mutable.Specification
 
 class LibraryRecommendationRepoTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
@@ -34,5 +34,28 @@ class LibraryRecommendationRepoTest extends Specification with CuratorTestInject
       }
     }
 
+    "updates followed, clicked, trashed" in withDb() { implicit injector =>
+      val repo = inject[LibraryRecommendationRepo]
+      val reco1 = db.readWrite { implicit s =>
+        val recs = setup()
+        repo.save(recs(0))
+      }
+
+      reco1.followed === false
+      reco1.clicked === 0
+      reco1.trashed === false
+
+      db.readWrite { implicit rw =>
+        repo.updateLibraryRecommendationFeedback(reco1.userId, reco1.libraryId, LibraryRecommendationFeedback(
+          followed = Some(true), trashed = Some(true), clicked = Some(true)))
+      }
+
+      db.readOnlyMaster { implicit s =>
+        val reco = repo.getByLibraryAndUserId(reco1.libraryId, reco1.userId).get
+        reco.followed === true
+        reco.clicked === 1
+        reco.trashed === true
+      }
+    }
   }
 }
