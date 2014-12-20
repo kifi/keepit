@@ -22,7 +22,6 @@ case class LibraryMembership(
     state: State[LibraryMembership] = LibraryMembershipStates.ACTIVE,
     seq: SequenceNumber[LibraryMembership] = SequenceNumber.ZERO,
     showInSearch: Boolean = true,
-    visibility: LibraryMembershipVisibility = LibraryMembershipVisibilityStates.VISIBLE, //using this field only if the user is the LibraryAccess is OWNER (may change in the future)
     listed: Boolean = true, // does library appear on user's profile?
     lastViewed: Option[DateTime] = None,
     lastEmailSent: Option[DateTime] = None) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
@@ -52,7 +51,6 @@ object LibraryMembership {
     (__ \ 'state).format(State.format[LibraryMembership]) and
     (__ \ 'seq).format(SequenceNumber.format[LibraryMembership]) and
     (__ \ 'showInSearch).format[Boolean] and
-    (__ \ 'visibility).format[LibraryMembershipVisibility] and
     (__ \ 'listed).format[Boolean] and
     (__ \ 'lastViewed).formatNullable[DateTime] and
     (__ \ 'lastEmailSent).formatNullable[DateTime]

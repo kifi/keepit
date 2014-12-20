@@ -62,7 +62,7 @@ class AdminLibraryController @Inject() (
       libraryMembershipRepo.save(currentOwnership.copy(access = LibraryAccess.READ_ONLY))
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, toUserId) match {
         case None =>
-          libraryMembershipRepo.save(LibraryMembership(userId = toUserId, libraryId = libraryId, access = LibraryAccess.OWNER, showInSearch = currentOwnership.showInSearch, visibility = currentOwnership.visibility, listed = currentOwnership.listed))
+          libraryMembershipRepo.save(LibraryMembership(userId = toUserId, libraryId = libraryId, access = LibraryAccess.OWNER, showInSearch = currentOwnership.showInSearch, listed = currentOwnership.listed))
         case Some(newOwnership) =>
           libraryMembershipRepo.save(newOwnership.copy(access = LibraryAccess.OWNER, showInSearch = currentOwnership.showInSearch))
       }
