@@ -25,6 +25,8 @@ object LibraryFactory {
     def withUser(user: User) = new PartialLibrary(library.copy(ownerId = user.id.get))
     def withName(name: String) = new PartialLibrary(library.copy(name = name))
     def withSlug(slug: String) = new PartialLibrary(library.copy(slug = LibrarySlug(slug)))
+    def withColor(color: String): PartialLibrary = withColor(HexColor(color))
+    def withColor(color: HexColor) = new PartialLibrary(library.copy(color = Some(color)))
     def withState(state: State[Library]) = new PartialLibrary(library.copy(state = state))
     def secret() = new PartialLibrary(library.copy(visibility = SECRET))
     def published() = new PartialLibrary(library.copy(visibility = PUBLISHED))

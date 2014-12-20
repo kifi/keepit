@@ -435,11 +435,16 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
           val user1 = user().withName("first", "user").withUsername("firstuser").saved
           val user2 = user().withName("second", "user").withUsername("seconduser").saved
-          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).saved.savedFollowerMembership(user2)
+          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("#e3e3e3").saved.savedFollowerMembership(user2)
           val library2 = library().withName("lib2").withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
           val library3 = library().withName("lib3").withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
           keep().withLibrary(library1).saved
           (user1, user2, library1, library2, library3)
+        }
+
+        { // upload an image for lib1
+          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload, user1.id.get)(HeimdalContext.empty)
+          Await.result(savedF, Duration("10 seconds")) === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
         }
 
         val pubId1 = Library.publicId(lib1.id.get)
@@ -466,7 +471,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   "id": "${pubId1.id}",
                   "name": "lib1",
                   "slug": "lib1",
-                  "image": null,
+                  "image": {"path": "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x": 50, "y": 50},
+                  "color": "#e3e3e3",
                   "numKeeps": 1,
                   "numFollowers": 1,
                   "followers": [

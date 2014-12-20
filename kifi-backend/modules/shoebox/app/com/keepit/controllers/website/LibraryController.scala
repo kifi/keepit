@@ -553,6 +553,7 @@ class LibraryController @Inject() (
       "id" -> Library.publicId(libView.library.id.get).id,
       "name" -> libView.library.name,
       "slug" -> libView.library.slug,
+      "color" -> libView.library.color,
       "image" -> libView.image,
       "numKeeps" -> libView.numKeeps,
       "numFollowers" -> libView.numFollowers,
