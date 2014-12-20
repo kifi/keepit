@@ -12,7 +12,7 @@ import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.curator.model._
 import com.keepit.curator.{ LibraryScoringHelper, ScoredLibraryInfo }
-import com.keepit.model.{ ExperimentType, Library, LibraryVisibility, User }
+import com.keepit.model.{ LibraryKind, ExperimentType, Library, LibraryVisibility, User }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
@@ -103,7 +103,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
     }
 
     private def shouldInclude(scoredLibrary: ScoredLibraryInfo): Boolean = {
-      true // TODO(josh)
+      scoredLibrary.masterScore > 1 // TODO(josh) improve this cutoff
     }
 
     private def getStateOfUser(): LibraryRecommendationGenerationState = {
@@ -118,6 +118,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
       libraryInfo.ownerId != userId && libraryInfo.visibility != LibraryVisibility.SECRET &&
         libraryInfo.keepCount >= selectionParams.minKeeps &&
         libraryInfo.memberCount >= selectionParams.minMembers &&
+        libraryInfo.kind == LibraryKind.USER_CREATED &&
         !usersFollowedLibraries.contains(libraryInfo.libraryId)
     }
 
