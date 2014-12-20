@@ -23,7 +23,7 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]] =
     Future.successful(fakeTopRecos.getOrElse(userId, Seq[RecoInfo]()))
 
-  def topPublicRecos(): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)
+  def topPublicRecos(userId: Option[Id[User]]): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)
 
   def generalRecos(): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)
 
