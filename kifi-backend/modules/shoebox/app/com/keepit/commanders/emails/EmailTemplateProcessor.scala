@@ -146,7 +146,7 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.avatarUrl => toHttpsUrl(input.imageUrls(userId))
         case tags.libraryUrl =>
           val libOwner = input.users(library.ownerId)
-          config.applicationBaseUrl + Library.formatLibraryPath(libOwner.username, libOwner.externalId, library.slug)
+          config.applicationBaseUrl + Library.formatLibraryPath(libOwner.username, library.slug)
         case tags.libraryName => library.name
         case tags.unsubscribeUrl =>
           getUnsubUrl(emailToSend.to match {

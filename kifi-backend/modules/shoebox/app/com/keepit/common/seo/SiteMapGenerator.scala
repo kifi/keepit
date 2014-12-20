@@ -106,7 +106,7 @@ class SiteMapGenerator @Inject() (
 
       def path(lib: Library): String = {
         val owner = owners(lib.ownerId)
-        s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}"
+        s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, lib.slug)}"
       }
 
       def lastMod(lib: Library): LocalDate = {
