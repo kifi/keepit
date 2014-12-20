@@ -328,7 +328,6 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           val libMem = libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user4.id.get).get
           libMem.access === LibraryAccess.READ_ONLY
           libMem.state.value === "active"
-          libMem.visibility.value === "visible"
 
           import StaticQuery.interpolation
           val ret1 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4".as[Int].firstOption.getOrElse(0)
