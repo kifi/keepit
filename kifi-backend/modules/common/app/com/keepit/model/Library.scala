@@ -92,7 +92,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
   }
 
   def formatLibraryPath(ownerUsername: Username, slug: LibrarySlug): String = {
-    s"/$ownerUsername.value/${slug.value}"
+    s"/${ownerUsername.value}/${slug.value}"
   }
 
   def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
