@@ -544,15 +544,15 @@ class LibraryController @Inject() (
       case Some(user) =>
         val viewer = request.userOpt
         val libs = libraryCommander.ownerLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
-        Ok(Json.obj("libraries" -> (libs map profileLibraryViewJson)))
+        Ok(Json.obj("libraries" -> (libs map profileLibraryViewJson(user))))
     }
   }
 
-  private def profileLibraryViewJson(libView: ProfileLibraryView): JsValue = {
+  private def profileLibraryViewJson(owner: User)(libView: ProfileLibraryView): JsValue = {
     Json.obj(
       "id" -> Library.publicId(libView.library.id.get).id,
       "name" -> libView.library.name,
-      "slug" -> libView.library.slug,
+      "path" -> Library.formatLibraryPath(owner.username, libView.library.slug),
       "color" -> libView.library.color,
       "image" -> libView.image,
       "numKeeps" -> libView.numKeeps,
