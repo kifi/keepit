@@ -6,10 +6,9 @@ import com.keepit.common.db.slick.Database
 import com.keepit.curator.RecommendationUserAction
 import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource, UriRecommendationRepo, UriRecommendation }
 import com.keepit.heimdal.{ UserEventTypes, HeimdalContextBuilderFactory, UserEvent, HeimdalServiceClient }
-import com.keepit.model.{ NormalizedURI, User, UriRecommendationFeedback }
+import com.keepit.model.{ LibraryRecommendationFeedback, Library, NormalizedURI, User, UriRecommendationFeedback, ExperimentType }
 import com.keepit.common.logging.Logging
 import com.keepit.commanders.RemoteUserExperimentCommander
-import com.keepit.model.ExperimentType
 import com.keepit.common.akka.SafeFuture
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -45,6 +44,10 @@ class CuratorAnalytics @Inject() (
       })
     }
     if (contexts.isEmpty) log.info(s"[analytics] nothing to do for user $userId reco feedback on $uriId to track: $feedback")
+  }
+
+  def trackUserFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Unit = {
+    // TODO(josh)
   }
 
   private def toRecoUserActionContext(item: UriRecommendation, source: RecommendationSource, subSource: RecommendationSubSource): RecommendationUserActionContext = {

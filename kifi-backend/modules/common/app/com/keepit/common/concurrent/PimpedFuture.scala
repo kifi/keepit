@@ -90,16 +90,19 @@ object FutureHelpers {
     foldLeftWhile(items)(accumulator)(fMap)
   }
 
-  private def foldLeftWhile[I, T](items: Iterable[I], promised: Promise[T] = Promise[T]())(acc: T)(fMap: (T, I) => Future[T], pred: Option[(T, I) => Boolean] = None)(implicit ec: ScalaExecutionContext): Future[T] = {
+  def foldLeftWhile[I, T](items: Iterable[I], promised: Promise[T] = Promise[T]())(acc: T)(fMap: (T, I) => Future[T], pred: Option[(T, T, I) => Boolean] = None)(implicit ec: ScalaExecutionContext): Future[T] = {
     if (items.isEmpty) { promised.success(acc) }
     else {
       val item = items.head
-      if (pred.forall(p => p(acc, item))) {
-        fMap(acc, item).onComplete {
-          case Success(updatedAcc) => foldLeftWhile(items.tail, promised)(updatedAcc)(fMap, pred)
-          case Failure(ex) => promised.failure(ex)
-        }
-      } else promised.success(acc)
+      fMap(acc, item).onComplete {
+        case Success(updatedAcc) =>
+          if (pred.forall(p => p(acc, updatedAcc, item)))
+            foldLeftWhile(items.tail, promised)(updatedAcc)(fMap, pred)
+          else
+            promised.success(acc)
+        case Failure(ex) =>
+          promised.failure(ex)
+      }
     }
     promised.future
   }

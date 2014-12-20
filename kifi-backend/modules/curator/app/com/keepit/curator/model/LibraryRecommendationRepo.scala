@@ -6,8 +6,8 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.{ DBSession, DataBaseComponent, DbRepo }
 import com.keepit.common.db.{ SequenceNumber, Id, State }
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.Clock
-import com.keepit.model.{ Library, User }
+import com.keepit.common.time._
+import com.keepit.model.{ LibraryRecommendationFeedback, Library, User }
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
@@ -22,6 +22,7 @@ trait LibraryRecommendationRepo extends DbRepo[LibraryRecommendation] {
   def cleanupLowMasterScoreRecos(userId: Id[User], minNumRecosToKeep: Int, before: DateTime)(implicit session: RWSession): Unit
   def getLibraryIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[Library]]
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]]
+  def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback)(implicit session: RWSession): Boolean
 }
 
 @Singleton
@@ -63,7 +64,10 @@ class LibraryRecommendationRepoImpl @Inject() (
     def masterScore = column[Float]("master_score", O.NotNull)
     def allScores = column[LibraryScores]("all_scores", O.NotNull)
     def followed = column[Boolean]("followed", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, libraryId, userId, masterScore, allScores, followed) <>
+    def delivered = column[Int]("delivered", O.NotNull)
+    def clicked = column[Int]("clicked", O.NotNull)
+    def trashed = column[Boolean]("trashed", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, libraryId, userId, masterScore, allScores, followed, delivered, clicked, trashed) <>
       ((LibraryRecommendation.apply _).tupled, LibraryRecommendation.unapply)
   }
 
@@ -105,6 +109,24 @@ class LibraryRecommendationRepoImpl @Inject() (
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]] = {
     import scala.slick.jdbc.StaticQuery.interpolation
     sql"SELECT DISTINCT user_id FROM library_recommendation".as[Id[User]].list.toSet
+  }
+
+  def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback)(implicit session: RWSession): Boolean = {
+    import StaticQuery.interpolation
+
+    lazy val rowz = for (row <- byUser(userId)(rows) |> byLibrary(libraryId)) yield row
+    val clickedResult =
+      if (feedback.clicked.exists(true ==))
+        sql"UPDATE library_recommendation SET clicked=clicked+1, updated_at=$currentDateTime WHERE user_id=$userId AND library_id=$libraryId".asUpdate.first > 0
+      else true
+    val trashedResult =
+      if (feedback.trashed.exists(true ==)) rowz.map(row => (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0
+      else true
+    val followedResult =
+      if (feedback.followed.exists(true ==)) rowz.map(row => (row.followed, row.updatedAt)).update((feedback.followed.get, currentDateTime)) > 0
+      else true
+
+    clickedResult && trashedResult && followedResult
   }
 
   def deleteCache(model: LibraryRecommendation)(implicit session: RSession): Unit = {}

@@ -1,10 +1,11 @@
-# SHOEBOX
+# CURATOR
 
 # --- !Ups
 
-ALTER TABLE library_membership MODIFY COLUMN visibility varchar(20) DEFAULT 'visible';
-ALTER TABLE library_membership ADD COLUMN listed varchar(20) NOT NULL DEFAULT 1;
+ALTER TABLE library_recommendation ADD COLUMN delivered INT NOT NULL DEFAULT 0;
+ALTER TABLE library_recommendation ADD COLUMN clicked INT NOT NULL DEFAULT 0;
+ALTER TABLE library_recommendation ADD COLUMN trashed BOOLEAN NOT NULL DEFAULT false;
 
-insert into evolutions (name, description) values('275.sql', 'add listed column to the library membership');
+INSERT INTO evolutions (name, description) VALUES('275.sql', 'add columns to library_recommendation (delivered,clicked,trashed)');
 
 # --- !Downs
