@@ -42,6 +42,13 @@ class MarketingSiteRouterTest extends Specification with ShoeboxApplicationInjec
       running(new ShoeboxApplication(modules: _*)) {
         val request = FakeRequest("GET", "?v=3").withHeaders("user-agent" -> "Mozilla/5.0 (X11; CrOS armv7l 2913.260.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.99 Safari/537.11")
         val landing = MarketingSiteRouter.landing(request)
+        landing === "index.3"
+      }
+    }
+    "landing page routing v4" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val request = FakeRequest("GET", "?v=4").withHeaders("user-agent" -> "Mozilla/5.0 (X11; CrOS armv7l 2913.260.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.99 Safari/537.11")
+        val landing = MarketingSiteRouter.landing(request)
         landing === "index.1"
       }
     }

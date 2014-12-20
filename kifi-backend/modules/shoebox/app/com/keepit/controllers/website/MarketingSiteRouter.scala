@@ -43,6 +43,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
   }
   private object Version1 extends LandingVersion { val version = 1 }
   private object Version2 extends LandingVersion { val version = 2 }
+  private object Version3 extends LandingVersion { val version = 3 }
 
   def landing(implicit request: Request[_]): String = {
     val possiblyBot = request.userAgentOpt.map(_.possiblyBot).getOrElse(true)
@@ -60,6 +61,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
       pickOpt match {
         case Some(idx) if idx == 1 => Version1
         case Some(idx) if idx == 2 => Version2
+        case Some(idx) if idx == 3 => Version3
         case _ =>
           val ip = request.remoteAddress // remoteAddress looks up 'X-Forwarded-For'
           val hash = (Math.abs(ip.hashCode()) % 100) // rough
