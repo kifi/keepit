@@ -57,18 +57,6 @@ object LibraryMembership {
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 }
 
-case class LibraryMembershipVisibility(value: String)
-
-object LibraryMembershipVisibility {
-  implicit def format[T]: Format[LibraryMembershipVisibility] =
-    Format(__.read[String].map(LibraryMembershipVisibility(_)), new Writes[LibraryMembershipVisibility] { def writes(o: LibraryMembershipVisibility) = JsString(o.value) })
-}
-
-object LibraryMembershipVisibilityStates {
-  val HIDDEN = LibraryMembershipVisibility("hidden")
-  val VISIBLE = LibraryMembershipVisibility("visible")
-}
-
 object LibraryMembershipStates extends States[LibraryMembership]
 
 sealed abstract class LibraryAccess(val value: String, val priority: Int)
