@@ -529,7 +529,20 @@ class LibraryController @Inject() (
     relatedLibraryCommander.suggestedLibrariesInfo(id, userIdOpt)
       .map {
         case (fullInfos, relatedKinds) =>
-          val libs = fullInfos.map { info => RelatedLibraryInfo.fromFullLibraryInfo(info, isUserAction) }
+          val libs = fullInfos.map { info =>
+            LibraryCardInfo(
+              id = info.id,
+              name = info.name,
+              description = info.description,
+              color = info.color,
+              image = info.image,
+              slug = info.slug,
+              owner = info.owner,
+              numKeeps = info.numKeeps,
+              numFollowers = info.numFollowers,
+              followers = LibraryCardInfo.showable(info.followers, isUserAction),
+              caption = None)
+          }
           val t2 = System.currentTimeMillis()
           statsd.timing("libraryController.relatedLibraries", t2 - t1, 1.0)
           Ok(Json.obj("libs" -> libs, "kinds" -> relatedKinds))
@@ -544,22 +557,9 @@ class LibraryController @Inject() (
         NotFound(username.value)
       case Some(user) =>
         val viewer = request.userOpt
-        val libs = libraryCommander.ownerLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
-        Ok(Json.obj("own" -> (libs map profileLibraryViewJson)))
+        val libs = libraryCommander.getOwnProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
+        Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
     }
-  }
-
-  private def profileLibraryViewJson(libView: ProfileLibraryView): JsValue = {
-    Json.obj(
-      "id" -> Library.publicId(libView.library.id.get).id,
-      "name" -> libView.library.name,
-      "description" -> libView.library.description,
-      "slug" -> libView.library.slug,
-      "color" -> libView.library.color,
-      "image" -> libView.image,
-      "numKeeps" -> libView.numKeeps,
-      "numFollowers" -> libView.numFollowers,
-      "followers" -> libView.followersSample)
   }
 
   def marketingSiteSuggestedLibraries() = Action.async {

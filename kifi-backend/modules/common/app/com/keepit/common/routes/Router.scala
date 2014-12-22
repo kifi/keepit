@@ -352,6 +352,7 @@ object Cortex extends Service {
     def word2vecUserUriSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/userUriSimilarity")
     def word2vecFeedUserUris() = ServiceRoute(POST, "/internal/cortex/word2vec/feedUserUris")
 
+    def defulatLDAVersion() = ServiceRoute(GET, "/internal/cortex/lda/defaultVersion")
     def ldaNumOfTopics(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/numOfTopics", Param("version", version))
     def ldaShowTopics(fromId: Int, toId: Int, topN: Int)(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/showTopics", Param("fromId", fromId), Param("toId", toId), Param("topN", topN), Param("version", version))
     def ldaWordTopic(word: String)(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/wordTopic", Param("word", word), Param("version", version))

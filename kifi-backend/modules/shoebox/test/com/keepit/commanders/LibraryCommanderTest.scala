@@ -1121,17 +1121,17 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (owner, ownerLibs1 ++ ownerLibs2)
         }
 
-        val libsP1 = libraryCommander.ownerLibraries(owner, None, Paginator(0, 5), ImageSize("100x100"))
+        val libsP1 = libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 5), ImageSize("100x100"))
         libsP1.size === 5
-        libsP1.map(_.library.id.get) === allLibs.reverse.take(5).map(_.id.get)
+        libsP1.map(_.id) === allLibs.reverse.take(5).map(_.id.get)
 
-        val libsP2 = libraryCommander.ownerLibraries(owner, None, Paginator(1, 5), ImageSize("100x100"))
+        val libsP2 = libraryCommander.getOwnProfileLibraries(owner, None, Paginator(1, 5), ImageSize("100x100"))
         libsP2.size === 5
-        libsP2.map(_.library.id.get) === allLibs.reverse.drop(5).take(5).map(_.id.get)
+        libsP2.map(_.id) === allLibs.reverse.drop(5).take(5).map(_.id.get)
 
-        val libsP3 = libraryCommander.ownerLibraries(owner, None, Paginator(2, 5), ImageSize("100x100"))
+        val libsP3 = libraryCommander.getOwnProfileLibraries(owner, None, Paginator(2, 5), ImageSize("100x100"))
         libsP3.size === 2
-        libsP3.map(_.library.id.get) === allLibs.reverse.drop(10).take(5).map(_.id.get)
+        libsP3.map(_.id) === allLibs.reverse.drop(10).take(5).map(_.id.get)
       }
     }
 
@@ -1152,14 +1152,14 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (owner, other, friend, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
         }
 
-        libraryCommander.ownerLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 12
+        libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 12
 
-        val libsForOther = libraryCommander.ownerLibraries(owner, Some(other), Paginator(0, 1000), ImageSize("100x100"))
+        val libsForOther = libraryCommander.getOwnProfileLibraries(owner, Some(other), Paginator(0, 1000), ImageSize("100x100"))
         libsForOther.size === 12
 
-        val libsForFriend = libraryCommander.ownerLibraries(owner, Some(friend), Paginator(0, 1000), ImageSize("100x100"))
+        val libsForFriend = libraryCommander.getOwnProfileLibraries(owner, Some(friend), Paginator(0, 1000), ImageSize("100x100"))
         libsForFriend.size === 13
-        libsForFriend.map(_.library.id.get) === allLibs.reverse.map(_.id.get)
+        libsForFriend.map(_.id) === allLibs.reverse.map(_.id.get)
       }
     }
 
@@ -1178,14 +1178,14 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (owner, other, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
         }
 
-        libraryCommander.ownerLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 12
+        libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 12
 
-        val libsForOther = libraryCommander.ownerLibraries(owner, Some(other), Paginator(0, 1000), ImageSize("100x100"))
+        val libsForOther = libraryCommander.getOwnProfileLibraries(owner, Some(other), Paginator(0, 1000), ImageSize("100x100"))
         libsForOther.size === 12
 
-        val libsForFriend = libraryCommander.ownerLibraries(owner, Some(owner), Paginator(0, 1000), ImageSize("100x100"))
+        val libsForFriend = libraryCommander.getOwnProfileLibraries(owner, Some(owner), Paginator(0, 1000), ImageSize("100x100"))
         libsForFriend.size === 13
-        libsForFriend.map(_.library.id.get) === allLibs.reverse.map(_.id.get)
+        libsForFriend.map(_.id) === allLibs.reverse.map(_.id.get)
       }
     }
   }

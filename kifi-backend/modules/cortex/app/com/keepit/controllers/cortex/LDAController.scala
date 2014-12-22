@@ -2,9 +2,8 @@ package com.keepit.controllers.cortex
 
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
-import com.keepit.cortex.PublishingVersions
+import com.keepit.cortex.ModelVersions
 import com.keepit.cortex.core.{ CortexVersionCommander, ModelVersion }
-import com.keepit.macros.MonitoredAwaitMacro
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.common.controller.CortexServiceController
@@ -25,7 +24,7 @@ class LDAController @Inject() (
   infoCommander: LDAInfoCommander)
     extends CortexServiceController with Logging {
 
-  private val defaultVersion = PublishingVersions.denseLDAVersion
+  private val defaultVersion = ModelVersions.defaultLDAVersion
 
   implicit def toVersion(implicit version: Option[Int]): ModelVersion[DenseLDA] = version.map { ModelVersion[DenseLDA](_) } getOrElse defaultVersion
 
@@ -35,6 +34,10 @@ class LDAController @Inject() (
       case (None, Some(uid)) => Await.result(versionCommander.getLDAVersionForUser(uid), 1 second) // use of Await is temp. (Only during model experimenting)
       case (None, None) => defaultVersion
     }
+  }
+
+  def getDefaultVersion() = Action { request =>
+    Ok(Json.toJson(defaultVersion))
   }
 
   def numOfTopics(implicit version: Option[Int]) = Action { request =>

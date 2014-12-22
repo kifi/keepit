@@ -6,13 +6,14 @@ import com.keepit.cortex.CortexServiceClient
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json._
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 import com.keepit.cortex.models.lda.{ DenseLDA, LDATopicDetail, LDATopicConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.common.db.Id
 import play.api.libs.concurrent.Execution.Implicits._
 import views.html
+import scala.concurrent.duration._
 
 class AdminLDAController @Inject() (
     cortex: CortexServiceClient,
@@ -28,7 +29,8 @@ class AdminLDAController @Inject() (
   implicit def int2VersionOpt(n: Int) = Some(ModelVersion[DenseLDA](n))
   implicit def int2Version(n: Int) = ModelVersion[DenseLDA](n)
 
-  val defaultVersion = ModelVersion[DenseLDA](2) // TODO soon: get this from cortex client
+  val defaultVersionF = cortex.defaultLDAVersion()
+  lazy val defaultVersion = Await.result(defaultVersionF, 1 second)
 
   def index() = versionPage(defaultVersion)
 

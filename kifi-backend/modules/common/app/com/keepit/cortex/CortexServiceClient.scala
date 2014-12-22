@@ -31,6 +31,7 @@ trait CortexServiceClient extends ServiceClient {
   def word2vecUserUriSimilarity(userUris: Seq[Id[NormalizedURI]], uri: Id[NormalizedURI]): Future[Map[String, Float]]
   def word2vecFeedUserUris(userUris: Seq[Id[NormalizedURI]], feedUris: Seq[Id[NormalizedURI]]): Future[Seq[Id[NormalizedURI]]]
 
+  def defaultLDAVersion(): Future[ModelVersion[DenseLDA]]
   def ldaNumOfTopics(implicit version: LDAVersionOpt = None): Future[Int]
   def ldaShowTopics(fromId: Int, toId: Int, topN: Int)(implicit version: LDAVersionOpt = None): Future[Seq[LDATopicInfo]]
   def ldaConfigurations(implicit version: LDAVersionOpt): Future[LDATopicConfigurations]
@@ -117,6 +118,10 @@ class CortexServiceClientImpl(
     call(Cortex.internal.word2vecFeedUserUris(), payload).map { r =>
       Json.fromJson[Seq[Id[NormalizedURI]]](r.json).get
     }
+  }
+
+  def defaultLDAVersion(): Future[ModelVersion[DenseLDA]] = {
+    call(Cortex.internal.defulatLDAVersion()).map { r => (r.json).as[ModelVersion[DenseLDA]] }
   }
 
   def ldaNumOfTopics(implicit version: LDAVersionOpt = None): Future[Int] = {
