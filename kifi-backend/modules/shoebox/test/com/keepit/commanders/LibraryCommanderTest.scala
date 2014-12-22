@@ -11,11 +11,11 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.RichContact
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.mail.{ ElectronicMailRepo, EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.store.{ ImageSize, FakeShoeboxStoreModule }
 import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, FakeElizaServiceClientImpl, FakeElizaServiceClientModule }
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
@@ -1104,6 +1104,91 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryMembershipRepo.getWithLibraryIdAndUserId(libScience.id.get, userIron.id.get).map(_.lastEmailSent) must beSome
           libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userCaptain.id.get).get.lastEmailSent must beNone
         }
+      }
+    }
+
+    "get ownerLibraries for anonymos and paginate" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val libraryCommander = inject[LibraryCommander]
+        val (owner, allLibs) = db.readWrite { implicit s =>
+          val owner = user().saved
+          val other = user().saved
+          val ownerLibs1 = libraries(2).map(_.published().withUser(owner)).saved
+          libraries(2).map(_.secret().withUser(owner)).saved
+          libraries(2).map(_.published().withUser(other)).saved
+          val ownerLibs2 = libraries(10).map(_.published().withUser(owner)).saved
+          libraries(10).map(_.published().withUser(other)).saved
+          (owner, ownerLibs1 ++ ownerLibs2)
+        }
+
+        val libsP1 = libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 5), ImageSize("100x100"))
+        libsP1.size === 5
+        libsP1.map(_.id) === allLibs.reverse.take(5).map(_.id.get).map(Library.publicId)
+
+        val libsP2 = libraryCommander.getOwnProfileLibraries(owner, None, Paginator(1, 5), ImageSize("100x100"))
+        libsP2.size === 5
+        libsP2.map(_.id) === allLibs.reverse.drop(5).take(5).map(_.id.get).map(Library.publicId)
+
+        val libsP3 = libraryCommander.getOwnProfileLibraries(owner, None, Paginator(2, 5), ImageSize("100x100"))
+        libsP3.size === 2
+        libsP3.map(_.id) === allLibs.reverse.drop(10).take(5).map(_.id.get).map(Library.publicId)
+      }
+    }
+
+    "get ownerLibraries for friend" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val libraryCommander = inject[LibraryCommander]
+        val (owner, other, friend, allLibs) = db.readWrite { implicit s =>
+          val owner = user().saved
+          val other = user().saved
+          val friend = user().saved
+          val ownerLibs1 = libraries(2).map(_.published().withUser(owner)).saved
+          library.secret().withUser(owner).saved
+          val ownerPrivLib = library.secret().withUser(owner).saved.savedFollowerMembership(friend)
+          libraries(2).map(_.published().withUser(other)).saved
+          libraries(2).map(_.secret().withUser(other)).saved
+          val ownerLibs2 = libraries(10).map(_.published().withUser(owner)).saved
+          libraries(10).map(_.published().withUser(other)).saved
+          (owner, other, friend, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
+        }
+
+        libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 12
+
+        val libsForOther = libraryCommander.getOwnProfileLibraries(owner, Some(other), Paginator(0, 1000), ImageSize("100x100"))
+        libsForOther.size === 12
+
+        val libsForFriend = libraryCommander.getOwnProfileLibraries(owner, Some(friend), Paginator(0, 1000), ImageSize("100x100"))
+        libsForFriend.size === 13
+        libsForFriend.map(_.id) === allLibs.reverse.map(_.id.get).map(Library.publicId)
+      }
+    }
+
+    "get ownerLibraries for self" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val libraryCommander = inject[LibraryCommander]
+        val (owner, other, allLibs) = db.readWrite { implicit s =>
+          val owner = user().saved
+          val other = user().saved
+          val ownerLibs1 = libraries(2).map(_.published().withUser(owner)).saved
+          val ownerPrivLib = library.secret().withUser(owner).saved
+          libraries(2).map(_.published().withUser(other)).saved
+          libraries(2).map(_.secret().withUser(other)).saved
+          val ownerLibs2 = libraries(10).map(_.published().withUser(owner)).saved
+          libraries(10).map(_.published().withUser(other)).saved
+          (owner, other, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
+        }
+
+        libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 12
+
+        val libsForOther = libraryCommander.getOwnProfileLibraries(owner, Some(other), Paginator(0, 1000), ImageSize("100x100"))
+        libsForOther.size === 12
+
+        val libsForFriend = libraryCommander.getOwnProfileLibraries(owner, Some(owner), Paginator(0, 1000), ImageSize("100x100"))
+        libsForFriend.size === 13
+        libsForFriend.map(_.id) === allLibs.reverse.map(_.id.get).map(Library.publicId)
       }
     }
   }
