@@ -466,17 +466,18 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val expected = Json.parse(
           s"""
             {
-              "libraries":[
+              "libraries": [
                 {
                   "id": "${pubId1.id}",
                   "name": "lib1",
+                  "description": null,
                   "slug": "lib1",
-                  "image": {"path": "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x": 50, "y": 50},
                   "color": "#e3e3e3",
+                  "image": {"path": "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x": 50, "y": 50},
                   "numKeeps": 1,
                   "numFollowers": 1,
                   "followers": [
-                    {"firstName":"second","lastName":"user","pictureName":"0.jpg","username":"seconduser"}
+                    {"id": "${user2.externalId.id}", "firstName": "second", "lastName": "user", "pictureName": "0.jpg", "username": "seconduser"}
                   ]
                 }
                ]
