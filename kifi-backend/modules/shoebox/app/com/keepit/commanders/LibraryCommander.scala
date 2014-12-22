@@ -1280,21 +1280,55 @@ class LibraryCommander @Inject() (
         } else {
           (0, Seq.empty)
         }
-        LibraryCardInfo(
-          id = Library.publicId(lib.id.get),
-          name = lib.name,
-          description = lib.description,
-          color = lib.color,
-          image = image.map(LibraryImageInfo.createInfo),
-          slug = lib.slug,
-          owner = ownerBasicUser,
-          numKeeps = numKeeps,
-          numFollowers = numFollowers,
-          followers = LibraryCardInfo.showable(followersSample, viewer.isDefined),
-          caption = None)
+        createLibraryCardInfo(lib, image, ownerBasicUser, numKeeps, numFollowers, followersSample, viewer.isDefined)
       }
     }
   }
+
+  def getFollowingLibraries(owner: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): Seq[LibraryCardInfo] = {
+    val ownerBasicUser = BasicUser.fromUser(owner)
+    db.readOnlyMaster { implicit session =>
+      val libs = viewer match {
+        case None =>
+          libraryRepo.getLibrariesUserFollowFromAnonymos(owner.id.get, page)
+        case Some(other) if other.id == owner.id =>
+          libraryRepo.getLibrariesOfSelf(owner.id.get, page)
+        case Some(other) =>
+          libraryMembershipRepo.getOwnedLibrariesForOtherUser(owner.id.get, other.id.get, page) map libraryRepo.get //cached
+      }
+      libs map { lib => // may want to optimize queries below into bulk queries
+        val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getForLibraryId(lib.id.get))
+        val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
+        val (numFollowers, followersSample) = if (lib.memberCount > 1) {
+          val count = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
+          val sample = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 2, Set(LibraryAccess.READ_ONLY)) map { lm =>
+            basicUserRepo.load(lm.userId)
+          }
+          (count, sample)
+        } else {
+          (0, Seq.empty)
+        }
+        createLibraryCardInfo(lib, image, ownerBasicUser, numKeeps, numFollowers, followersSample, viewer.isDefined)
+      }
+    }
+  }
+
+  private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numKeeps: Int, numFollowers: Int,
+                                    followers: Seq[BasicUser], isAuthenticatedRequest: Boolean): LibraryCardInfo = {
+    LibraryCardInfo(
+      id = Library.publicId(lib.id.get),
+      name = lib.name,
+      description = lib.description,
+      color = lib.color,
+      image = image.map(LibraryImageInfo.createInfo),
+      slug = lib.slug,
+      owner = owner,
+      numKeeps = numKeeps,
+      numFollowers = numFollowers,
+      followers = LibraryCardInfo.showable(followers, isAuthenticatedRequest),
+      caption = None)
+  }
+
 }
 
 sealed abstract class LibraryError(val message: String)
