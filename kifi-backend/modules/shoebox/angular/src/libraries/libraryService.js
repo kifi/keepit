@@ -111,7 +111,7 @@ angular.module('kifi')
       this.description = library.description;
       this.image = library.image;
       this.imageUrl = library.image ? routeService.libraryImageUrl(library.image.path) : null;
-      this.libraryUrl = library.url;
+      this.libraryPath = '/' + library.owner.username + '/' + library.slug;
       this.followers = library.followers.map(function (user) {
         return _.merge(user, { picUrl: routeService.formatPicUrl(user.id, user.pictureName, 200) });
       });

@@ -1,6 +1,6 @@
 <div class="kf-small-library-card" ng-attr-style="background-color: {{library.color}}" ng-attr-title="{{library.description}}">
   <div class="kf-small-library-card-header">
-    <a ng-href="{{library.libraryUrl}}" ng-click="clickLibraryReco($event)" class="kf-small-library-name">{{ library.name }}</a>
+    <a ng-href="{{library.libraryPath}}" ng-click="clickLibraryReco($event)" class="kf-small-library-name">{{library.name}}</a>
     <div class="kf-small-library-counts-row">
       <span class="kf-small-library-count" ng-if="library.numKeeps > 0">
         <ng-pluralize count="library.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}"></ng-pluralize>
