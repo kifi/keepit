@@ -529,7 +529,20 @@ class LibraryController @Inject() (
     relatedLibraryCommander.suggestedLibrariesInfo(id, userIdOpt)
       .map {
         case (fullInfos, relatedKinds) =>
-          val libs = fullInfos.map { info => LibraryCardInfo.fromFullLibraryInfo(info, isUserAction) }
+          val libs = fullInfos.map { info =>
+            LibraryCardInfo(
+              id = info.id,
+              name = info.name,
+              description = info.description,
+              color = info.color,
+              image = info.image,
+              slug = info.slug,
+              owner = info.owner,
+              numKeeps = info.numKeeps,
+              numFollowers = info.numFollowers,
+              followers = LibraryCardInfo.showable(info.followers, isUserAction),
+              caption = None)
+          }
           val t2 = System.currentTimeMillis()
           statsd.timing("libraryController.relatedLibraries", t2 - t1, 1.0)
           Ok(Json.obj("libs" -> libs, "kinds" -> relatedKinds))

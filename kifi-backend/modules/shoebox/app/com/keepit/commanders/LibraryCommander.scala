@@ -1290,7 +1290,7 @@ class LibraryCommander @Inject() (
           owner = ownerBasicUser,
           numKeeps = numKeeps,
           numFollowers = numFollowers,
-          followers = followersSample,
+          followers = LibraryCardInfo.showable(followersSample, viewer.isDefined),
           caption = None)
       }
     }
@@ -1382,27 +1382,17 @@ case class LibraryCardInfo(
   followers: Seq[BasicUser],
   caption: Option[String])
 object LibraryCardInfo {
-  val writesWithoutOwner = Writes[LibraryCardInfo] { o =>
+  val writesWithoutOwner = Writes[LibraryCardInfo] { o => // for case when receiving end already knows the owner
     JsObject((Json.toJson(o).asInstanceOf[JsObject].value - "owner").toSeq)
   }
 
-  def fromFullLibraryInfo(info: FullLibraryInfo, isAuthenticatedRequest: Boolean): LibraryCardInfo = {
-    val showableFollowers = if (isAuthenticatedRequest) {
-      val goodLooking = info.followers.filter(_.pictureName != "0.jpg")
-      if (goodLooking.size < 8) goodLooking else goodLooking.take(3) // cannot show more than 8 avatars in frontend
-    } else Seq.empty
-    LibraryCardInfo(
-      id = info.id,
-      name = info.name,
-      description = info.description,
-      color = info.color,
-      image = info.image,
-      slug = info.slug,
-      owner = info.owner,
-      numKeeps = info.numKeeps,
-      numFollowers = info.numFollowers,
-      followers = showableFollowers,
-      caption = None)
+  def showable(followers: Seq[BasicUser], isAuthenticatedRequest: Boolean): Seq[BasicUser] = {
+    if (isAuthenticatedRequest) {
+      val goodLooking = followers.filter(_.pictureName != "0.jpg")
+      if (goodLooking.size <= 7) goodLooking else goodLooking.take(3) // only 7 can fit
+    } else {
+      Seq.empty
+    }
   }
 }
 
