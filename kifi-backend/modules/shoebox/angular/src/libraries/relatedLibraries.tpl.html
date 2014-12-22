@@ -1,14 +1,14 @@
-<div class="kf-related-libraries">
-  <div class="kf-related-library-explore-more-header" ng-if="!$root.userLoggedIn">Explore More Kifi Libraries</div>
+<section class="kf-related-libraries">
+  <header class="kf-related-library-explore-more-header" ng-if="!$root.userLoggedIn">Explore More Kifi Libraries</header>
   <div class="kf-related-library-card" ng-repeat="library in relatedLibraries">
     <div kf-small-library-card library="library" origin="rl" action="clickedLibraryRec"></div>
   </div>
-  <div ng-if="!$root.userLoggedIn">
+  <footer ng-if="!$root.userLoggedIn" class="kf-related-library-footer">
     <a href="/libraries/featured" class="kf-related-libraries-see-more" ng-click="clickSeeMore($event)" target="_blank">See more &raquo;</a>
     <div class="kf-related-libraries-card-your-own-card">
       <div>Create Your Own Library</div>
       <a href="/signup" ng-click="join($event)" class="kf-related-libraries-card-your-own-card-btn">Join now</a>
     </div>
-  </div>
+  </footer>
   <div class="clearfix"></div>
-</div>
+</section>
