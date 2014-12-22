@@ -1,18 +1,18 @@
 <div>
   <!-- Library page -->
-  <div class="kf-main-library-keeps" ng-if="page === 'library'" ng-class="{'library-search': librarySearch}">
-    <div ng-if="!librarySearch || !$root.userLoggedIn" class="kf-library-card-header">
-      <div kf-library-card
-        library="library"
-        username="username"
-        library-slug="librarySlug"
-        loading="loading"
-        toggle-edit="toggleEdit"
-        recommendation="false"
-        library-search="librarySearch"
-      ></div>
-    </div>
+  <div ng-if="!librarySearch || !$root.userLoggedIn" class="kf-library-card-header-container">
+    <div kf-library-card
+      library="library"
+      username="username"
+      library-slug="librarySlug"
+      loading="loading"
+      toggle-edit="toggleEdit"
+      recommendation="false"
+      library-search="librarySearch"
+    ></div>
+  </div>
 
+  <div class="kf-main-library-keeps" ng-if="page === 'library'" ng-class="{'library-search': librarySearch}">
     <div class="kf-library-body">
       <div ui-view></div>
       <div kf-related-libraries ng-if="!userLoggedIn && relatedLibraries"
