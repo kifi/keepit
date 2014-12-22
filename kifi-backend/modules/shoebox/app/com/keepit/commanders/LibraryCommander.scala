@@ -1153,7 +1153,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getMarketingSiteSuggestedLibraries(): Future[Seq[MarketingSuggestedLibraryInfo]] = {
+  def getMarketingSiteSuggestedLibraries(): Future[Seq[LibraryCardInfo]] = {
     val valueOpt = db.readOnlyReplica { implicit s =>
       systemValueRepo.getValue(MarketingSuggestedLibrarySystemValue.systemValueName)
     }
@@ -1184,7 +1184,19 @@ class LibraryCommander @Inject() (
         libInfos map {
           case (libId, info) =>
             val (extraInfo, idx) = systemValueLibraries(libId)
-            MarketingSuggestedLibraryInfo.fromFullLibraryInfo(info, Some(extraInfo)) -> idx
+            val card = LibraryCardInfo(
+              id = info.id,
+              name = info.name,
+              description = None, // not currently used
+              color = info.color.orElse(extraInfo.color),
+              image = info.image,
+              slug = info.slug,
+              owner = info.owner,
+              numKeeps = info.numKeeps,
+              numFollowers = info.numFollowers,
+              followers = Seq.empty,
+              caption = extraInfo.caption)
+            card -> idx
         } sortBy (_._2) map (_._1)
       }
     } getOrElse Future.successful(Seq.empty)
@@ -1278,7 +1290,8 @@ class LibraryCommander @Inject() (
           owner = ownerBasicUser,
           numKeeps = numKeeps,
           numFollowers = numFollowers,
-          followers = followersSample)
+          followers = followersSample,
+          caption = None)
       }
     }
   }
@@ -1366,19 +1379,11 @@ case class LibraryCardInfo(
   owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
-  followers: Seq[BasicUser])
+  followers: Seq[BasicUser],
+  caption: Option[String])
 object LibraryCardInfo {
   val writesWithoutOwner = Writes[LibraryCardInfo] { o =>
-    Json.obj(
-      "id" -> o.id,
-      "name" -> o.name,
-      "description" -> o.description,
-      "color" -> o.color,
-      "image" -> o.image,
-      "slug" -> o.slug,
-      "numKeeps" -> o.numKeeps,
-      "numFollowers" -> o.numFollowers,
-      "followers" -> o.followers)
+    JsObject((Json.toJson(o).asInstanceOf[JsObject].value - "owner").toSeq)
   }
 
   def fromFullLibraryInfo(info: FullLibraryInfo, isAuthenticatedRequest: Boolean): LibraryCardInfo = {
@@ -1386,8 +1391,18 @@ object LibraryCardInfo {
       val goodLooking = info.followers.filter(_.pictureName != "0.jpg")
       if (goodLooking.size < 8) goodLooking else goodLooking.take(3) // cannot show more than 8 avatars in frontend
     } else Seq.empty
-    LibraryCardInfo(info.id, info.name, info.description, info.color, info.image, info.slug, info.owner,
-      info.numKeeps, info.numFollowers, showableFollowers)
+    LibraryCardInfo(
+      id = info.id,
+      name = info.name,
+      description = info.description,
+      color = info.color,
+      image = info.image,
+      slug = info.slug,
+      owner = info.owner,
+      numKeeps = info.numKeeps,
+      numFollowers = info.numFollowers,
+      followers = showableFollowers,
+      caption = None)
   }
 }
 
@@ -1431,30 +1446,3 @@ case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
 
 class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends ImmutableJsonCacheImpl[LibraryInfoIdKey, LibraryInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-@json case class MarketingSuggestedLibraryInfo(
-  id: PublicId[Library],
-  name: String,
-  caption: Option[String],
-  url: String,
-  image: Option[LibraryImageInfo] = None,
-  owner: BasicUser,
-  numKeeps: Int,
-  numFollowers: Int,
-  color: Option[HexColor])
-
-object MarketingSuggestedLibraryInfo {
-  def fromFullLibraryInfo(info: FullLibraryInfo, extra: Option[MarketingSuggestedLibrarySystemValue] = None) = {
-    MarketingSuggestedLibraryInfo(
-      id = info.id,
-      name = info.name,
-      caption = extra flatMap (_.caption),
-      url = info.url,
-      image = info.image,
-      owner = info.owner,
-      numKeeps = info.numKeeps,
-      numFollowers = info.numFollowers,
-      color = extra flatMap (_.color))
-  }
-}
-

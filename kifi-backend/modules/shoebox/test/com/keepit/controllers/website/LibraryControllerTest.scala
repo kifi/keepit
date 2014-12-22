@@ -1307,7 +1307,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val result = inject[LibraryController].marketingSiteSuggestedLibraries()(FakeRequest())
           status(result) === OK
 
-          val libInfos = contentAsJson(result).as[Seq[MarketingSuggestedLibraryInfo]]
+          val libInfos = contentAsJson(result).as[Seq[LibraryCardInfo]]
           libInfos.size === 2
           libInfos(0).name === "Java"
           libInfos(0).numFollowers === 1
