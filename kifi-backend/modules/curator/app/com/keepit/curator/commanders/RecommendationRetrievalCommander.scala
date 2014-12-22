@@ -62,6 +62,8 @@ trait RecoScoringStrategy {
 class DefaultRecoScoringStrategy extends RecoScoringStrategy
 
 class NonLinearRecoScoringStrategy extends RecoScoringStrategy {
+  private[this] val rnd = new Random
+
   override def scoreItem(masterScore: Float, scores: UriScores, timesDelivered: Int, timesClicked: Int, goodBad: Option[Boolean], heavyPenalty: Boolean, recencyWeight: Float): Float = {
     super.scoreItem(recomputeScore(scores), scores, timesDelivered, timesClicked, goodBad, heavyPenalty, recencyWeight)
   }
@@ -72,8 +74,12 @@ class NonLinearRecoScoringStrategy extends RecoScoringStrategy {
       7 * scores.recentInterestScore +
       4 * scores.libraryInducedScore.getOrElse(0.0f)
     )
-    val normalizer = (5f + 7f + scores.libraryInducedScore.fold(0f)(_ => 4f))
-    val factor = interestPart / normalizer
+    val factor = if (rnd.nextDouble() > 0.1d) {
+      val normalizer = (5f + 7f + scores.libraryInducedScore.fold(0f)(_ => 4f))
+      interestPart / normalizer
+    } else {
+      1.0f
+    }
 
     val socialPart = (
       4 * scores.socialScore +
