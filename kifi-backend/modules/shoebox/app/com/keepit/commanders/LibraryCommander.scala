@@ -1245,7 +1245,7 @@ class LibraryCommander @Inject() (
     UserValueSettings.retrieveSetting(userVal, settingsJs)
   }
 
-  def ownerLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): Seq[ProfileLibraryView] = {
+  def ownerLibraries(user: User, viewer: Option[User], page: Paginator, idealImageSize: ImageSize): Seq[ProfileLibraryView] = {
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
@@ -1255,12 +1255,12 @@ class LibraryCommander @Inject() (
         case Some(other) =>
           libraryMembershipRepo.getOwnedLibrariesForOtherUser(user.id.get, other.id.get, page) map libraryRepo.get //cached
       }
-      libs map profileLibraryView(idealSize)
+      libs map profileLibraryView(idealImageSize)
     }
   }
 
-  private def profileLibraryView(idealSize: ImageSize)(library: Library)(implicit session: RSession): ProfileLibraryView = {
-    val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getForLibraryId(library.id.get))
+  private def profileLibraryView(idealImageSize: ImageSize)(library: Library)(implicit session: RSession): ProfileLibraryView = {
+    val image = ProcessedImageSize.pickBestImage(idealImageSize, libraryImageRepo.getForLibraryId(library.id.get))
     val numKeeps = keepRepo.getCountByLibrary(library.id.get)
     val (numFollowers, followersSample) = if (library.memberCount > 1) {
       val count = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, LibraryAccess.READ_ONLY)

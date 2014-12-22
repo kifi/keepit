@@ -312,7 +312,7 @@ class LibraryMembershipRepoImpl @Inject() (
       case 1 => s"or (lib.id = ${libsFriendFollow.head})"
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
-    val query = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lib.visibility = 'published' and lm.access='owner') #$libVisibility) order by lib.id limit (${page.itemsToDrop}, ${page.size})"
+    val query = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lib.visibility = 'published' and lm.access='owner') #$libVisibility) order by lib.id desc limit ${page.itemsToDrop}, ${page.size}"
     query.as[Id[Library]].list
   }
 
