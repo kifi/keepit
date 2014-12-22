@@ -15,6 +15,7 @@ import com.kifi.macros.json
     dimension: Int,
     topicId: Int,
     topicName: String = LDAInfo.DEFUALT_NAME,
+    pmiScore: Option[Float] = None,
     isActive: Boolean = true,
     isNameable: Boolean = true,
     numOfDocs: Int = 0) extends Model[LDAInfo] {
