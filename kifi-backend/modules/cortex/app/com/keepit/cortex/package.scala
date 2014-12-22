@@ -10,15 +10,10 @@ package object cortex {
 
   // version of feature representers/updaters
   object ModelVersions {
-    val denseLDAVersion = ModelVersion[DenseLDA](2)
+    val defaultLDAVersion = ModelVersion[DenseLDA](2)
     val experimentalLDAVersion = List(ModelVersion[DenseLDA](3))
-    val availableLDAVersions = List(ModelVersion[DenseLDA](2)) ++ experimentalLDAVersion
+    val availableLDAVersions = List(defaultLDAVersion) ++ experimentalLDAVersion
     val word2vecVersion = ModelVersion[Word2Vec](2)
-  }
-
-  // default version provided to consumers, unless they specify a particular version
-  object PublishingVersions {
-    val denseLDAVersion = ModelVersion[DenseLDA](2)
   }
 
   object ModelStorePrefix {

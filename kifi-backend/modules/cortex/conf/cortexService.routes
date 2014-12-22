@@ -16,6 +16,7 @@ POST    /internal/cortex/word2vec/queryUriSimilarity                            
 POST    /internal/cortex/word2vec/userUriSimilarity                                 @com.keepit.controllers.cortex.CortexController.userUriSimilarity
 POST    /internal/cortex/word2vec/feedUserUris                                      @com.keepit.controllers.cortex.CortexController.feedUserUris
 
+GET     /internal/cortex/lda/defaultVersion                                         @com.keepit.controllers.cortex.LDAController.getDefaultVersion()
 GET     /internal/cortex/lda/numOfTopics                                            @com.keepit.controllers.cortex.LDAController.numOfTopics(version: Option[Int] ?= None)
 GET     /internal/cortex/lda/showTopics                                             @com.keepit.controllers.cortex.LDAController.showTopics(fromId: Int, toId: Int, topN: Int, version: Option[Int] ?= None)
 GET     /internal/cortex/lda/wordTopic                                              @com.keepit.controllers.cortex.LDAController.wordTopic(word, version: Option[Int] ?= None)

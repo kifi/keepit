@@ -7,7 +7,7 @@ import com.keepit.model.NormalizedURI
 import com.keepit.common.commanders.FeatureRetrievalCommander
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.models.lda.DenseLDA
-import com.keepit.cortex.PublishingVersions
+import com.keepit.cortex.ModelVersions
 import play.api.mvc.Action
 import com.keepit.cortex.core.ModelVersion
 
@@ -16,7 +16,7 @@ class CortexDataPipeController @Inject() (
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
 
-    val publishedLDAVersion = PublishingVersions.denseLDAVersion
+    val publishedLDAVersion = ModelVersions.defaultLDAVersion
     require(modelVersion <= publishedLDAVersion, s"Version $modelVersion of LDA has not been published yet.")
     val lowUriSeq = if (modelVersion < publishedLDAVersion) SequenceNumber.ZERO[NormalizedURI] else seqNum
 
