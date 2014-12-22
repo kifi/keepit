@@ -48,7 +48,8 @@ class LDAController @Inject() (
     val infos = topicWords.map {
       case (tid, words) =>
         val config = topicConfigs(tid)
-        LDATopicInfo(tid.toInt, words, config)
+        val pmi = infoCommander.getPMIScore(tid.toInt)
+        LDATopicInfo(tid.toInt, pmi, words, config)
     }.toArray.sortBy(x => x.topicId)
     Ok(Json.toJson(infos))
   }

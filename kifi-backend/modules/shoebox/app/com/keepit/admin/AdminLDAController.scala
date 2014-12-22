@@ -59,10 +59,11 @@ class AdminLDAController @Inject() (
     cortex.ldaShowTopics(fromId, toId, topN)(version).map { res =>
       val ids = res.map { _.topicId }
       val topics = res.map { x => getFormatted(x.topicWords) }
+      val pmiScores = res.map { _.pmiScore.getOrElse(Float.NaN) }.map { x => "%.3f".format(x) }
       val names = res.map { _.config.topicName }
       val states = res.map { _.config.isActive }
       val nameables = res.map { _.config.isNameable }
-      val js = Json.obj("ids" -> ids, "topicWords" -> topics, "topicNames" -> names, "states" -> states, "nameables" -> nameables)
+      val js = Json.obj("ids" -> ids, "topicWords" -> topics, "pmiScores" -> pmiScores, "topicNames" -> names, "states" -> states, "nameables" -> nameables)
       Ok(js)
     }
   }

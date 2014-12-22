@@ -60,12 +60,14 @@ object LDATopicConfigurations {
 
 case class LDATopicInfo(
   topicId: Int,
+  pmiScore: Option[Float],
   topicWords: Map[String, Float],
   config: LDATopicConfiguration)
 
 object LDATopicInfo {
   implicit val format = (
     (__ \ 'topicId).format[Int] and
+    (__ \ 'pmiScore).format[Option[Float]] and
     (__ \ 'topicWords).format[Map[String, Float]] and
     (__ \ 'config).format[LDATopicConfiguration]
   )(LDATopicInfo.apply, unlift(LDATopicInfo.unapply))
