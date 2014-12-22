@@ -60,6 +60,16 @@ class LDAInfoCommander @Inject() (
 
   // edits from admin
   def saveConfigEdits(config: Map[String, LDATopicConfiguration])(implicit version: ModelVersion[DenseLDA]) = topicConfsCommander.saveConfigEdits(config)
+
+  def savePMIScores(pmis: Array[Float])(version: ModelVersion[DenseLDA]): Unit = {
+    val infos = db.readOnlyReplica { implicit s => topicInfoRepo.getAllByVersion(version) }
+    assert(infos.size == pmis.size, s"pmi score array should match topic model dimension. version = ${version}, get ${pmis.size}, expect ${infos.size}")
+    db.readWrite { implicit s =>
+      infos.foreach { info =>
+        topicInfoRepo.save(info.copy(pmiScore = Some(pmis(info.topicId))))
+      }
+    }
+  }
 }
 
 case class LDATopicWordsCommander(topicWordsStore: LDATopicWordsStore, versions: ModelVersion[DenseLDA]*) {

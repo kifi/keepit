@@ -199,4 +199,11 @@ class LDAController @Inject() (
     Ok(Json.toJson(libs))
   }
 
+  def uploadPMIScores(version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val pmis = (js \ "pmis").as[JsArray].value.map { _.as[Float] }.toArray
+    infoCommander.savePMIScores(pmis)(version)
+    Ok
+  }
+
 }
