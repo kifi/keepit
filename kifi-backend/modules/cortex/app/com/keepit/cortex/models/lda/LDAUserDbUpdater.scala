@@ -98,7 +98,7 @@ class LDAUserDbUpdaterImpl @Inject() (
       }
       val (snaphShotChanged, tosave) = updateSnapshotIfNecessary(newModel)
       db.readWrite { implicit s => userTopicRepo.save(tosave) }
-      if (snaphShotChanged && version == ModelVersions.denseLDAVersion) { curator.refreshUserRecos(user) }
+      if (snaphShotChanged && version == ModelVersions.defaultLDAVersion) { curator.refreshUserRecos(user) }
     }
   }
 

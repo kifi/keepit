@@ -3,7 +3,7 @@ package com.keepit.common.commanders
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
-import com.keepit.cortex.{ ModelVersions, MiscPrefix, PublishingVersions }
+import com.keepit.cortex.{ ModelVersions, MiscPrefix }
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel.{ LDAInfo, LDAInfoRepo }
 import com.keepit.cortex.models.lda._

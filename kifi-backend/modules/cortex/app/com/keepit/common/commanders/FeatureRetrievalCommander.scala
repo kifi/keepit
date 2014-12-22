@@ -6,7 +6,7 @@ import com.keepit.cortex.models.lda._
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.common.db.SequenceNumber
 import com.keepit.model.NormalizedURI
-import com.keepit.cortex.PublishingVersions
+import com.keepit.cortex.ModelVersions
 
 @Singleton
 class FeatureRetrievalCommander @Inject() (
@@ -14,7 +14,7 @@ class FeatureRetrievalCommander @Inject() (
     ldaCommander: LDACommander) {
 
   private val defaultSparsity = 2
-  private val allowedVersion = PublishingVersions.denseLDAVersion
+  private val allowedVersion = ModelVersions.defaultLDAVersion
 
   def getSparseLDAFeaturesChanged(lowSeq: SequenceNumber[NormalizedURI], fetchSize: Int, version: ModelVersion[DenseLDA], sparsity: Int = defaultSparsity): Seq[UriSparseLDAFeatures] = {
     assume(version == allowedVersion, s"allowed lda version = ${allowedVersion}, queried for version = ${version}")

@@ -20,14 +20,14 @@ class CortexVersionCommander @Inject() (userExpCmdr: RemoteUserExperimentCommand
 
   def getLDAVersionForUser(userId: Id[User]): Future[ModelVersion[DenseLDA]] = {
     if (ModelVersions.experimentalLDAVersion.isEmpty) {
-      Future.successful(ModelVersions.denseLDAVersion)
+      Future.successful(ModelVersions.defaultLDAVersion)
     } else {
       userIsOnNewModel(userId).map { useNewModel =>
         if (useNewModel) {
           val v = ModelVersions.experimentalLDAVersion.head
           log.info(s"using experimental LDA version ${v} for user ${userId}")
           v
-        } else ModelVersions.denseLDAVersion
+        } else ModelVersions.defaultLDAVersion
       }
     }
   }

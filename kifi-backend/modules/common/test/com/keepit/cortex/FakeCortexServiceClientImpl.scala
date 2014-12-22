@@ -31,6 +31,7 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
   override def word2vecUserUriSimilarity(userUris: Seq[Id[NormalizedURI]], uri: Id[NormalizedURI]): Future[Map[String, Float]] = ???
   override def word2vecFeedUserUris(userUris: Seq[Id[NormalizedURI]], feedUris: Seq[Id[NormalizedURI]]): Future[Seq[Id[NormalizedURI]]] = ???
 
+  override def defaultLDAVersion(): Future[ModelVersion[DenseLDA]] = ???
   override def ldaNumOfTopics(implicit version: LDAVersionOpt = None): Future[Int] = ???
   override def ldaShowTopics(fromId: Int, toId: Int, topN: Int)(implicit version: LDAVersionOpt = None): Future[Seq[LDATopicInfo]] = ???
   override def ldaConfigurations(implicit version: LDAVersionOpt): Future[LDATopicConfigurations] = Future.successful(LDATopicConfigurations(Map()))
