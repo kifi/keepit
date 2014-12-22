@@ -252,8 +252,20 @@ class KeepImageCommanderImpl @Inject() (
       }
       ImageProcessState.ExistingStoredImagesFound(saved)
     } else {
-      val copiedImages = existingSameHash.map { prev =>
-        KeepImage(state = KeepImageStates.ACTIVE, keepId = keepId, imagePath = prev.imagePath, format = prev.format, width = prev.width, height = prev.height, source = source, sourceFileHash = prev.sourceFileHash, sourceImageUrl = prev.sourceImageUrl, isOriginal = prev.isOriginal)
+      val copiedImages = existingSameHash.flatMap { prev =>
+        if (prev.keepId == keepId) {
+          if (prev.state == KeepImageStates.ACTIVE) {
+            log.info(s"skipping image since its already of the same keep id: $prev")
+            None
+          } else {
+            log.info(s"re-activating image: $prev")
+            Some(prev.copy(state = KeepImageStates.ACTIVE, source = source))
+          }
+        } else {
+          val image = KeepImage(state = KeepImageStates.ACTIVE, keepId = keepId, imagePath = prev.imagePath, format = prev.format, width = prev.width, height = prev.height, source = source, sourceFileHash = prev.sourceFileHash, sourceImageUrl = prev.sourceImageUrl, isOriginal = prev.isOriginal)
+          log.info(s"saving new image [$image] derived from [$prev]")
+          Some(image)
+        }
       }
 
       val saved = db.readWrite(attempts = 3) { implicit session =>
