@@ -536,15 +536,16 @@ class LibraryController @Inject() (
       }
   }
 
-  def ownerLibraries(username: Username, page: Int, pageSize: Int) = MaybeUserAction { request =>
+  def getProfileLibraries(username: Username, filter: String, page: Int, pageSize: Int) = MaybeUserAction { request =>
+    // TODO: honor filter param: "own", "following", "invited", or "all"
     userCommander.userFromUsername(username) match {
       case None =>
-        log.warn(s"user asked for unknown username $username")
+        log.warn(s"unknown username ${username.value} requested")
         NotFound(username.value)
       case Some(user) =>
         val viewer = request.userOpt
         val libs = libraryCommander.ownerLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
-        Ok(Json.obj("libraries" -> (libs map profileLibraryViewJson)))
+        Ok(Json.obj("own" -> (libs map profileLibraryViewJson)))
     }
   }
 

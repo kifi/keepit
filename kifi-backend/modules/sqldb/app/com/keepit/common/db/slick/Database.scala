@@ -1,6 +1,5 @@
 package com.keepit.common.db.slick
 
-
 import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 import scala.slick.jdbc.JdbcBackend.Session
 import scala.slick.jdbc.ResultSetConcurrency

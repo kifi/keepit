@@ -298,7 +298,7 @@ POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureCo
 
 # Profile pages
 GET     /site/user/:username/profile @com.keepit.controllers.website.UserController.profile(username)
-GET     /site/user/:username/libraries @com.keepit.controllers.website.LibraryController.ownerLibraries(username: Username, page: Int ?= 0, pageSize: Int ?= 1000)
+GET     /site/user/:username/libraries @com.keepit.controllers.website.LibraryController.getProfileLibraries(username: Username, filter: String ?= "own", page: Int ?= 0, pageSize: Int ?= 1000)
 
 ##########################################
 # Feeds (RSS)
