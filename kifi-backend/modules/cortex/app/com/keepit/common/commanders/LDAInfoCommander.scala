@@ -23,6 +23,25 @@ class LDAInfoCommander @Inject() (
   val activeTopics = topicConfsCommander.activeTopics
   val inactiveTopics = topicConfsCommander.inactiveTopics
 
+  private val pmiScores = {
+    val map = mutable.Map.empty[ModelVersion[DenseLDA], Option[Array[Float]]]
+    availableVersions.foreach { version =>
+      val infos = db.readOnlyReplica { implicit s => topicInfoRepo.getAllByVersion(version) }
+      val scores = infos.sortBy(_.topicId).map { _.pmiScore }.collect { case Some(pmi) => pmi }
+      assert(scores.isEmpty || scores.size == infos.size, "pmi score is either defined for every topic, or defined for non")
+      if (scores.isEmpty) {
+        map(version) = None
+      } else {
+        map(version) = Some(scores.toArray)
+      }
+    }
+    map
+  }
+
+  def getPMIScore(topicId: Int)(implicit version: ModelVersion[DenseLDA]): Option[Float] = {
+    pmiScores.get(version).flatten.map { arr => arr(topicId) }
+  }
+
   def getLDADimension(implicit version: ModelVersion[DenseLDA]): Int = topicWordsCommander.getLDADimension(version)
 
   def topicWords(fromId: Int, toId: Int, topN: Int)(implicit version: ModelVersion[DenseLDA]): Map[Int, Seq[(String, Float)]] = topicWordsCommander.topicWords(fromId, toId, topN)
