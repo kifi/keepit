@@ -11,7 +11,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.RichContact
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.mail.{ ElectronicMailRepo, EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
@@ -1109,6 +1109,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
     "get ownerLibraries for anonymos and paginate" in {
       withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
         val libraryCommander = inject[LibraryCommander]
         val (owner, allLibs) = db.readWrite { implicit s =>
           val owner = user().saved
@@ -1123,20 +1124,21 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val libsP1 = libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 5), ImageSize("100x100"))
         libsP1.size === 5
-        libsP1.map(_.id) === allLibs.reverse.take(5).map(_.id.get)
+        libsP1.map(_.id) === allLibs.reverse.take(5).map(_.id.get).map(Library.publicId)
 
         val libsP2 = libraryCommander.getOwnProfileLibraries(owner, None, Paginator(1, 5), ImageSize("100x100"))
         libsP2.size === 5
-        libsP2.map(_.id) === allLibs.reverse.drop(5).take(5).map(_.id.get)
+        libsP2.map(_.id) === allLibs.reverse.drop(5).take(5).map(_.id.get).map(Library.publicId)
 
         val libsP3 = libraryCommander.getOwnProfileLibraries(owner, None, Paginator(2, 5), ImageSize("100x100"))
         libsP3.size === 2
-        libsP3.map(_.id) === allLibs.reverse.drop(10).take(5).map(_.id.get)
+        libsP3.map(_.id) === allLibs.reverse.drop(10).take(5).map(_.id.get).map(Library.publicId)
       }
     }
 
     "get ownerLibraries for friend" in {
       withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
         val libraryCommander = inject[LibraryCommander]
         val (owner, other, friend, allLibs) = db.readWrite { implicit s =>
           val owner = user().saved
@@ -1159,12 +1161,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val libsForFriend = libraryCommander.getOwnProfileLibraries(owner, Some(friend), Paginator(0, 1000), ImageSize("100x100"))
         libsForFriend.size === 13
-        libsForFriend.map(_.id) === allLibs.reverse.map(_.id.get)
+        libsForFriend.map(_.id) === allLibs.reverse.map(_.id.get).map(Library.publicId)
       }
     }
 
     "get ownerLibraries for self" in {
       withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
         val libraryCommander = inject[LibraryCommander]
         val (owner, other, allLibs) = db.readWrite { implicit s =>
           val owner = user().saved
@@ -1185,7 +1188,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val libsForFriend = libraryCommander.getOwnProfileLibraries(owner, Some(owner), Paginator(0, 1000), ImageSize("100x100"))
         libsForFriend.size === 13
-        libsForFriend.map(_.id) === allLibs.reverse.map(_.id.get)
+        libsForFriend.map(_.id) === allLibs.reverse.map(_.id.get).map(Library.publicId)
       }
     }
   }
