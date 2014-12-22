@@ -427,7 +427,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get owner libraries for profile" in {
+    "get own libraries for profile" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val libraryController = inject[LibraryController]
@@ -453,11 +453,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 1
         }
-        val testPath = com.keepit.controllers.website.routes.LibraryController.ownerLibraries(user1.username, 0, 10).url
+        val testPath = com.keepit.controllers.website.routes.LibraryController.getProfileLibraries(user1.username, "own", 0, 10).url
         testPath === "/site/user/firstuser/libraries?pageSize=10"
         inject[FakeUserActionsHelper].setUser(user1)
         val request1 = FakeRequest("GET", testPath)
-        val result1 = libraryController.ownerLibraries(user1.username, 0, 10)(request1)
+        val result1 = libraryController.getProfileLibraries(user1.username, "own", 0, 10)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -466,7 +466,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val expected = Json.parse(
           s"""
             {
-              "libraries": [
+              "own": [
                 {
                   "id": "${pubId1.id}",
                   "name": "lib1",
