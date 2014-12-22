@@ -241,7 +241,7 @@ class KeepImageCommanderImpl @Inject() (
     }
   }
 
-  private def copyExistingImagesAndReplace(keepId: Id[Keep], source: ImageSource, existingSameHash: Seq[KeepImage]) = {
+  private def copyExistingImagesAndReplace(keepId: Id[Keep], source: ImageSource, existingSameHash: Seq[KeepImage]): ImageProcessDone = {
     val allForThisKeep = existingSameHash.filter(i => i.keepId == keepId)
     val activeForThisKeep = allForThisKeep.filter(i => i.state == KeepImageStates.ACTIVE)
     if (activeForThisKeep.nonEmpty) {
@@ -252,7 +252,7 @@ class KeepImageCommanderImpl @Inject() (
       }
       ImageProcessState.ExistingStoredImagesFound(saved)
     } else {
-      val copiedImages = existingSameHash.flatMap { prev =>
+      val copiedImages: Set[KeepImage] = existingSameHash.toSet.flatMap { prev: KeepImage =>
         if (prev.keepId == keepId) {
           if (prev.state == KeepImageStates.ACTIVE) {
             log.info(s"skipping image since its already of the same keep id: $prev")
@@ -268,6 +268,8 @@ class KeepImageCommanderImpl @Inject() (
         }
       }
 
+      log.info(s"new images to keep for $keepId from ${existingSameHash.size} is ${copiedImages.size}")
+
       val saved = db.readWrite(attempts = 3) { implicit session =>
         val existingForKeep = keepImageRepo.getForKeepId(keepId)
         existingForKeep.map { oldImg =>
@@ -277,7 +279,7 @@ class KeepImageCommanderImpl @Inject() (
           keepImageRepo.save(img)
         }
       }
-      ImageProcessState.ExistingStoredImagesFound(saved)
+      ImageProcessState.ExistingStoredImagesFound(saved.toSeq)
     }
   }
 
