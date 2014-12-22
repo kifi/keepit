@@ -435,7 +435,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
           val user1 = user().withName("first", "user").withUsername("firstuser").saved
           val user2 = user().withName("second", "user").withUsername("seconduser").saved
-          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("#e3e3e3").saved.savedFollowerMembership(user2)
+          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("#e3e3e3").withDesc("My first library!").saved.savedFollowerMembership(user2)
           val library2 = library().withName("lib2").withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
           val library3 = library().withName("lib3").withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
           keep().withLibrary(library1).saved
@@ -470,7 +470,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 {
                   "id": "${pubId1.id}",
                   "name": "lib1",
-                  "description": null,
+                  "description": "My first library!",
                   "slug": "lib1",
                   "color": "#e3e3e3",
                   "image": {"path": "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x": 50, "y": 50},

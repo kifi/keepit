@@ -112,28 +112,3 @@ object RelatedLibraryKind {
 }
 
 case class RelatedLibrary(library: Library, kind: RelatedLibraryKind)
-
-@json
-case class RelatedLibraryInfo(
-  id: PublicId[Library],
-  name: String,
-  description: Option[String],
-  url: String, // deprecated, use: '/' + owner.username + '/' + slug
-  slug: LibrarySlug,
-  owner: BasicUser,
-  followers: Seq[BasicUser],
-  numKeeps: Int,
-  numFollowers: Int,
-  color: Option[HexColor],
-  image: Option[LibraryImageInfo])
-
-object RelatedLibraryInfo {
-  def fromFullLibraryInfo(info: FullLibraryInfo, isAuthenticatedRequest: Boolean): RelatedLibraryInfo = {
-    val showableFollowers = if (isAuthenticatedRequest) {
-      val goodLooking = info.followers.filter(_.pictureName != "0.jpg")
-      if (goodLooking.size < 8) goodLooking else goodLooking.take(3) // cannot show more than 8 avatars in frontend
-    } else Seq.empty
-    RelatedLibraryInfo(info.id, info.name, info.description, info.url, info.slug, info.owner, showableFollowers, info.numKeeps,
-      info.numFollowers, info.color, info.image)
-  }
-}
