@@ -294,8 +294,6 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    // todo (aaron): will test listed / unlisted libraries later
-    /*
     "get profile for self" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val userConnectionRepo = inject[UserConnectionRepo]
@@ -334,7 +332,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           import StaticQuery.interpolation
           val ret1 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4".as[Int].firstOption.getOrElse(0)
           ret1 === 1
-          val ret2 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4 and lib.state = 'active' and lm.state = 'active' and lib.visibility = 'published'".as[Int].firstOption.getOrElse(0)
+          val ret2 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4 and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published'".as[Int].firstOption.getOrElse(0)
           ret2 === 1
 
           libraryMembershipRepo.countLibrariesToSelf(user1.id.get) === 6
@@ -342,7 +340,6 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.countLibrariesToSelf(user3.id.get) === 1
           libraryMembershipRepo.countLibrariesToSelf(user4.id.get) === 1
           libraryMembershipRepo.countLibrariesToSelf(user5.id.get) === 3
-
 
           libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user1.id.get, countFollowLibraries = true) === 2
           libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user1.id.get, countFollowLibraries = false) === 1
@@ -444,7 +441,6 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           """)
       }
     }
-    */
 
     "set user profile settings" in {
       withDb(controllerTestModules: _*) { implicit injector =>
