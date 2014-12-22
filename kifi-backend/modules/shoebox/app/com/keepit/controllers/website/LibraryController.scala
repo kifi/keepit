@@ -552,20 +552,13 @@ class LibraryController @Inject() (
     Json.obj(
       "id" -> Library.publicId(libView.library.id.get).id,
       "name" -> libView.library.name,
+      "description" -> libView.library.description,
       "slug" -> libView.library.slug,
       "color" -> libView.library.color,
       "image" -> libView.image,
       "numKeeps" -> libView.numKeeps,
       "numFollowers" -> libView.numFollowers,
-      "followers" -> libView.followersSample.map { user =>
-        Json.obj( // BasicUser with "id" omitted
-          "firstName" -> user.firstName,
-          "lastName" -> user.lastName,
-          "pictureName" -> user.pictureName,
-          "username" -> user.username.value
-        )
-      }
-    )
+      "followers" -> libView.followersSample)
   }
 
   def marketingSiteSuggestedLibraries() = Action.async {
