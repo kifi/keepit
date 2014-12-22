@@ -1153,7 +1153,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getMarketingSiteSuggestedLibraries(): Future[Seq[MarketingSuggestedLibraryInfo]] = {
+  def getMarketingSiteSuggestedLibraries(): Future[Seq[LibraryCardInfo]] = {
     val valueOpt = db.readOnlyReplica { implicit s =>
       systemValueRepo.getValue(MarketingSuggestedLibrarySystemValue.systemValueName)
     }
@@ -1184,7 +1184,19 @@ class LibraryCommander @Inject() (
         libInfos map {
           case (libId, info) =>
             val (extraInfo, idx) = systemValueLibraries(libId)
-            MarketingSuggestedLibraryInfo.fromFullLibraryInfo(info, Some(extraInfo)) -> idx
+            val card = LibraryCardInfo(
+              id = info.id,
+              name = info.name,
+              description = None, // not currently used
+              color = info.color.orElse(extraInfo.color),
+              image = info.image,
+              slug = info.slug,
+              owner = info.owner,
+              numKeeps = info.numKeeps,
+              numFollowers = info.numFollowers,
+              followers = Seq.empty,
+              caption = extraInfo.caption)
+            card -> idx
         } sortBy (_._2) map (_._1)
       }
     } getOrElse Future.successful(Seq.empty)
@@ -1245,42 +1257,45 @@ class LibraryCommander @Inject() (
     UserValueSettings.retrieveSetting(userVal, settingsJs)
   }
 
-  def ownerLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): Seq[ProfileLibraryView] = {
+  def getOwnProfileLibraries(owner: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): Seq[LibraryCardInfo] = {
+    val ownerBasicUser = BasicUser.fromUser(owner)
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
-          libraryRepo.getLibrariesOfUserFromAnonymos(user.id.get, page)
-        case Some(other) if other.id == user.id =>
-          libraryRepo.getLibrariesOfSelf(user.id.get, page)
+          libraryRepo.getLibrariesOfUserFromAnonymos(owner.id.get, page)
+        case Some(other) if other.id == owner.id =>
+          libraryRepo.getLibrariesOfSelf(owner.id.get, page)
         case Some(other) =>
-          libraryMembershipRepo.getOwnedLibrariesForOtherUser(user.id.get, other.id.get, page) map libraryRepo.get //cached
+          libraryMembershipRepo.getOwnedLibrariesForOtherUser(owner.id.get, other.id.get, page) map libraryRepo.get //cached
       }
-      libs map profileLibraryView(idealSize)
-    }
-  }
-
-  private def profileLibraryView(idealSize: ImageSize)(library: Library)(implicit session: RSession): ProfileLibraryView = {
-    val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getForLibraryId(library.id.get))
-    val numKeeps = keepRepo.getCountByLibrary(library.id.get)
-    val (numFollowers, followersSample) = if (library.memberCount > 1) {
-      val count = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, LibraryAccess.READ_ONLY)
-      val sample = libraryMembershipRepo.pageWithLibraryIdAndAccess(library.id.get, 0, 2, Set(LibraryAccess.READ_ONLY)) map { lm =>
-        basicUserRepo.load(lm.userId)
+      libs map { lib => // may want to optimize queries below into bulk queries
+        val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getForLibraryId(lib.id.get))
+        val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
+        val (numFollowers, followersSample) = if (lib.memberCount > 1) {
+          val count = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
+          val sample = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 2, Set(LibraryAccess.READ_ONLY)) map { lm =>
+            basicUserRepo.load(lm.userId)
+          }
+          (count, sample)
+        } else {
+          (0, Seq.empty)
+        }
+        LibraryCardInfo(
+          id = Library.publicId(lib.id.get),
+          name = lib.name,
+          description = lib.description,
+          color = lib.color,
+          image = image.map(LibraryImageInfo.createInfo),
+          slug = lib.slug,
+          owner = ownerBasicUser,
+          numKeeps = numKeeps,
+          numFollowers = numFollowers,
+          followers = followersSample,
+          caption = None)
       }
-      (count, sample)
-    } else {
-      (0, Seq.empty)
     }
-    ProfileLibraryView(
-      library = library,
-      image = image.map(LibraryImageInfo.createInfo),
-      numKeeps = numKeeps,
-      numFollowers = numFollowers,
-      followersSample = followersSample)
   }
 }
-
-case class ProfileLibraryView(library: Library, image: Option[LibraryImageInfo], numKeeps: Int, numFollowers: Int, followersSample: Seq[BasicUser])
 
 sealed abstract class LibraryError(val message: String)
 object LibraryError {
@@ -1320,8 +1335,6 @@ case class LibraryInfo(
   lastKept: Option[DateTime],
   inviter: Option[BasicUser])
 object LibraryInfo {
-  implicit val libraryExternalIdFormat = ExternalId.format[Library]
-
   implicit val format = (
     (__ \ 'id).format[PublicId[Library]] and
     (__ \ 'name).format[String] and
@@ -1353,13 +1366,44 @@ object LibraryInfo {
       inviter = inviter
     )
   }
+}
 
-  val MaxDescriptionLength = 120
-  def descriptionShortener(str: Option[String]): Option[String] = str match {
-    case Some(s) => { Some(s.dropRight(s.length - MaxDescriptionLength)) } // will change later!
-    case _ => None
+@json
+case class LibraryCardInfo(
+  id: PublicId[Library],
+  name: String,
+  description: Option[String],
+  color: Option[HexColor],
+  image: Option[LibraryImageInfo],
+  slug: LibrarySlug,
+  owner: BasicUser,
+  numKeeps: Int,
+  numFollowers: Int,
+  followers: Seq[BasicUser],
+  caption: Option[String])
+object LibraryCardInfo {
+  val writesWithoutOwner = Writes[LibraryCardInfo] { o =>
+    JsObject((Json.toJson(o).asInstanceOf[JsObject].value - "owner").toSeq)
   }
 
+  def fromFullLibraryInfo(info: FullLibraryInfo, isAuthenticatedRequest: Boolean): LibraryCardInfo = {
+    val showableFollowers = if (isAuthenticatedRequest) {
+      val goodLooking = info.followers.filter(_.pictureName != "0.jpg")
+      if (goodLooking.size < 8) goodLooking else goodLooking.take(3) // cannot show more than 8 avatars in frontend
+    } else Seq.empty
+    LibraryCardInfo(
+      id = info.id,
+      name = info.name,
+      description = info.description,
+      color = info.color,
+      image = info.image,
+      slug = info.slug,
+      owner = info.owner,
+      numKeeps = info.numKeeps,
+      numFollowers = info.numFollowers,
+      followers = showableFollowers,
+      caption = None)
+  }
 }
 
 case class MaybeLibraryMember(member: Either[BasicUser, BasicContact], access: Option[LibraryAccess], lastInvitedAt: Option[DateTime])
@@ -1402,30 +1446,3 @@ case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
 
 class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends ImmutableJsonCacheImpl[LibraryInfoIdKey, LibraryInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-@json case class MarketingSuggestedLibraryInfo(
-  id: PublicId[Library],
-  name: String,
-  caption: Option[String],
-  url: String,
-  image: Option[LibraryImageInfo] = None,
-  owner: BasicUser,
-  numKeeps: Int,
-  numFollowers: Int,
-  color: Option[HexColor])
-
-object MarketingSuggestedLibraryInfo {
-  def fromFullLibraryInfo(info: FullLibraryInfo, extra: Option[MarketingSuggestedLibrarySystemValue] = None) = {
-    MarketingSuggestedLibraryInfo(
-      id = info.id,
-      name = info.name,
-      caption = extra flatMap (_.caption),
-      url = info.url,
-      image = info.image,
-      owner = info.owner,
-      numKeeps = info.numKeeps,
-      numFollowers = info.numFollowers,
-      color = extra flatMap (_.color))
-  }
-}
-
