@@ -65,30 +65,6 @@
   border-radius: 6px  // TODO: investigate why our toolchain strips out border-radius: inherit
   font-size: 0.8em
   color: #333539
-// =======
-// .kf-user-profile-libraries-nav
-// a.kf-user-profile-libraries-nav-link
-//   height: 38px
-
-// .kf-user-profile-libraries-nav
-//   position: relative
-//   top: 15px
-
-// a.kf-user-profile-libraries-nav-link
-//   display: inline-block
-//   box-sizing: border-box
-//   width: 25%
-//   max-width: 180px
-//   min-width: 100px
-//   font-size: 0.8em
-//   color: #333539
-//   background: #cbcbcb
-//   vertical-align: middle
-
-//   &:first-child
-//     border-top-left-radius: 6px
-//     border-bottom-left-radius: 6px
-// >>>>>>> Checkpoint 1: mobile logged out styles.
 
   &.kf-selected
     background: #fff
@@ -96,50 +72,24 @@
 
   &.kf-my::before
     content: 'My '
-//   &.selected
-//     position: relative
-
-//     &::before
-//       position: absolute
-//       top: 0
-//       left: 0
-//       border-radius: 6px
-//       width: 100%
-//       height: 38px
-//       background: #fff
-//       content: ''
-
-// .kf-user-profile-libraries-nav-link-text
-//   position: relative
-//   top: 10px
 
 
 //
 // Mobile styles.
 //
-// .kf-logged-out.kf-mobile
-//   .kf-user-profile
-//     font-size: 1.5em
+.kf-logged-out.kf-mobile
+  .kf-user-profile
+    font-size: 1.5em
 
-//   .kf-user-profile-header-content
-//     padding: 55px 0 30px
+  .kf-user-profile-header-content
+    padding: 55px 0 30px
 
-//   .kf-user-profile-libraries-nav-container
-//     height: 100px
+  .kf-upl-nav-container
+    height: 70px
+    padding-top: 20px
 
-//   .kf-user-profile-libraries-nav
-//     top: 22px
-
-//   .kf-user-profile-libraries-nav
-//   a.kf-user-profile-libraries-nav-link
-//   a.kf-user-profile-libraries-nav-link.selected::before
-//     height: 55px
-
-//   a.kf-user-profile-libraries-nav-link
-//     width: 30%
-//     max-width: 220px
-//     font-size: 0.9em
-
-//   .kf-user-profile-libraries-nav-link-text
-//     top: 14px
-
+  .kf-upl-nav-link
+    height: 45px
+    width: 30%
+    max-width: 220px
+    font-size: 1.1em
