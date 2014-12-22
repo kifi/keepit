@@ -1,6 +1,6 @@
 package com.keepit.curator
 
-import com.keepit.model.{ UriRecommendationFeedback, NormalizedURI, UriRecommendationScores, User }
+import com.keepit.model.{ LibraryRecommendationFeedback, Library, UriRecommendationFeedback, NormalizedURI, UriRecommendationScores, User }
 
 import scala.concurrent.Future
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -23,12 +23,17 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]] =
     Future.successful(fakeTopRecos.getOrElse(userId, Seq[RecoInfo]()))
 
-  def topPublicRecos(): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)
+  def topPublicRecos(userId: Option[Id[User]]): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)
 
   def generalRecos(): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
     updatedUriRecommendationFeedback.append((userId, uriId, feedback))
+    Future.successful(true)
+  }
+
+  def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Future[Boolean] = {
+    updatedLibraryRecommendationFeedback.append((userId, libraryId, feedback))
     Future.successful(true)
   }
 
@@ -45,6 +50,7 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   // test helpers
   val updatedUriRecommendationFeedback = ListBuffer[(Id[User], Id[NormalizedURI], UriRecommendationFeedback)]()
+  val updatedLibraryRecommendationFeedback = ListBuffer[(Id[User], Id[Library], LibraryRecommendationFeedback)]()
   val topLibraryRecosExpectations = collection.mutable.Map[Id[User], Seq[LibraryRecoInfo]]().withDefaultValue(Seq.empty)
 
 }

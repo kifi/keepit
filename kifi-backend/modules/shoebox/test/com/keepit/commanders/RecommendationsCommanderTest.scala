@@ -69,7 +69,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
             LibraryRecoInfo(user1.id.get, lib1.id.get, 8, "")
           )
 
-          val recosF = commander.topPublicLibraryRecos(user1.id.get)
+          val recosF = commander.topPublicLibraryRecos(user1.id.get, 5)
           val recos = Await.result(recosF, Duration(5, "seconds"))
           recos.size === 2
           recos(0).itemInfo.name === "Java"

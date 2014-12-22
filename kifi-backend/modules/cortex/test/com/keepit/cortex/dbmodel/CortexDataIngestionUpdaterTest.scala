@@ -76,7 +76,7 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
           cortexLibRepo.getByLibraryId(Id[Library](2)).get.seq.value === 2
         }
 
-        val libMem = LibraryMembership(libraryId = Id[Library](1), userId = Id[User](1), access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE)
+        val libMem = LibraryMembership(libraryId = Id[Library](1), userId = Id[User](1), access = LibraryAccess.OWNER)
         shoebox.saveLibraryMemberships(
           libMem,
           libMem.copy(libraryId = Id[Library](2)),

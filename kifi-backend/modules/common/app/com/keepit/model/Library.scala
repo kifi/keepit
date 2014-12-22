@@ -91,9 +91,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     name.nonEmpty && name.length <= 200 && !name.contains('"') && !name.contains('/')
   }
 
-  def formatLibraryPath(ownerUsername: Username, ownerExternalId: ExternalId[User], slug: LibrarySlug): String = {
-    val usernameString = ownerUsername.value
-    s"/$usernameString/${slug.value}"
+  def formatLibraryPath(ownerUsername: Username, slug: LibrarySlug): String = {
+    s"/${ownerUsername.value}/${slug.value}"
   }
 
   def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
@@ -203,7 +202,7 @@ case class BasicLibrary(id: PublicId[Library], name: String, path: String, visib
 object BasicLibrary {
 
   def apply(library: Library, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
+    val path = Library.formatLibraryPath(owner.username, library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility)
   }
 }

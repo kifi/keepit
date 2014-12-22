@@ -1,5 +1,6 @@
 package com.keepit.common.db.slick
 
+
 import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 import scala.slick.jdbc.JdbcBackend.Session
 import scala.slick.jdbc.ResultSetConcurrency
@@ -139,7 +140,7 @@ class Database @Inject() (
       } catch {
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
-          log.warn(s"Failed ($throwableName) readWrite transaction attempt $attempt of $attempts")
+          log.error(s"Failed ($throwableName) readWrite transaction attempt $attempt of $attempts: $t", t)
           statsd.incrementOne(s"db.fail.attempt.$attempt.$throwableName", ALWAYS)
       }
     }

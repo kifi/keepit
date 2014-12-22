@@ -12,10 +12,10 @@ import com.keepit.common.time._
 import com.keepit.curator.commanders.email.{ RecentInterestRankStrategy, EngagementEmailActor, FeedDigestEmailSender }
 import com.keepit.curator.commanders._
 import com.keepit.curator.model.{ RecommendationSubSource, LibraryRecoSelectionParams, LibraryRecoInfo, RecommendationSource, LibraryRecommendation }
-import com.keepit.model.{ Library, UserValueName, UriRecommendationFeedback, NormalizedURI, ExperimentType, User, UriRecommendationScores }
+import com.keepit.model.{ LibraryRecommendationFeedback, Library, UserValueName, UriRecommendationFeedback, NormalizedURI, ExperimentType, User, UriRecommendationScores }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsString, Json }
+import play.api.libs.json.{ JsValue, JsString, Json }
 import play.api.mvc.Action
 
 import concurrent.Future
@@ -68,8 +68,8 @@ class CuratorController @Inject() (
     }
   }
 
-  def topPublicRecos() = Action { request =>
-    Ok(Json.toJson(recoRetrievalCommander.topPublicRecos()))
+  def topPublicRecos(userId: Option[Long]) = Action { request =>
+    Ok(Json.toJson(recoRetrievalCommander.topPublicRecos(userId map Id[User])))
   }
 
   def generalRecos() = Action { request =>
@@ -81,6 +81,13 @@ class CuratorController @Inject() (
     val feedback = json.as[UriRecommendationFeedback]
     curatorAnalytics.trackUserFeedback(userId, uriId, feedback) // WARN: this has to happen before next line (due to read/write of UriRecommendationRepo)
     recoFeedbackCommander.updateUriRecommendationFeedback(userId, uriId, feedback).map(update => Ok(Json.toJson(update)))
+  }
+
+  def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library]) = Action.async[JsValue](parse.tolerantJson) { request =>
+    val feedback = request.body.as[LibraryRecommendationFeedback]
+    curatorAnalytics.trackUserFeedback(userId, libraryId, feedback)
+    recoFeedbackCommander.updateLibraryRecommendationFeedback(userId, libraryId, feedback)
+    Future.successful(NoContent)
   }
 
   def triggerEmailToUser(code: String, userId: Id[User]) = Action.async {

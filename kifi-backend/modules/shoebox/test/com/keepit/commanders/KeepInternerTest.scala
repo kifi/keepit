@@ -77,7 +77,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val (user, lib) = db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
           val lib = library().saved
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER))
           (user, lib)
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)

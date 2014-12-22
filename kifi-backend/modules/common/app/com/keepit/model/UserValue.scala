@@ -65,6 +65,10 @@ object UserValueName {
   val LATEST_EMAIL_TIPS_SENT = UserValueName("latest_email_tips")
   val LIBRARY_SORTING_PREF = UserValueName("library_sorting_pref")
 
+  val TWITTER_FOLLOWERS_CURSOR = UserValueName("twitter_followers_cursor")
+  val TWITTER_FRIENDS_CURSOR = UserValueName("twitter_friends_cursor")
+  val TWITTER_LOOKUP_CURSOR = UserValueName("twitter_lookup_cursor")
+
   // User Profile Settings (be sure to add to UserValueSettings.defaultSettings for default values)
   val USER_PROFILE_SETTINGS = UserValueName("user_profile_settings")
   val SHOW_FOLLOWED_LIBRARIES = UserValueName("show_followed_libraries") // show libraries I follow

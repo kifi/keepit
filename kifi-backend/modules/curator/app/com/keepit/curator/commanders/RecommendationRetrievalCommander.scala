@@ -1,7 +1,7 @@
 package com.keepit.curator.commanders
 
 import com.keepit.common.db.Id
-import com.keepit.curator.model.{ RecommendationSubSource, RecoInfo, RecommendationSource, UriScores, PublicFeedRepo, UriRecommendationRepo, UriRecommendation }
+import com.keepit.curator.model._
 import com.keepit.model.User
 import com.keepit.common.db.slick.Database
 import com.keepit.common.akka.SafeFuture
@@ -96,7 +96,12 @@ class NonLinearRecoScoringStrategy extends RecoScoringStrategy {
 }
 
 @Singleton
-class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: UriRecommendationRepo, analytics: CuratorAnalytics, publicFeedRepo: PublicFeedRepo) {
+class RecommendationRetrievalCommander @Inject() (
+    seedCommander: SeedIngestionCommander,
+    db: Database,
+    uriRecoRepo: UriRecommendationRepo,
+    analytics: CuratorAnalytics,
+    publicFeedRepo: PublicFeedRepo) {
 
   def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, source: RecommendationSource, subSource: RecommendationSubSource, recoSortStrategy: RecoSelectionStrategy, scoringStrategy: RecoScoringStrategy): Seq[RecoInfo] = {
     require(recencyWeight <= 1.0f && recencyWeight >= 0.0f, "recencyWeight must be between 0 and 1")
@@ -131,12 +136,21 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
 
   }
 
-  def topPublicRecos(): Seq[RecoInfo] = {
+  def topPublicRecos(userIdOpt: Option[Id[User]]): Seq[RecoInfo] = {
     val candidates = db.readOnlyReplica { implicit session =>
       publicFeedRepo.getByTopMasterScore(1000)
     }.sortBy(-1 * _.updatedAt.getMillis).take(100)
 
-    Random.shuffle(candidates).take(10).map { reco =>
+    Random.shuffle(candidates).iterator.filter { feed =>
+      userIdOpt.forall { userId =>
+        seedCommander.getPublicSeedItem(feed.uriId).exists { seed =>
+          seed.keepers match {
+            case Keepers.ReasonableNumber(users) => !users.contains(userId)
+            case _ => false
+          }
+        }
+      }
+    }.take(10).map { reco =>
       RecoInfo(
         userId = None,
         uriId = reco.uriId,
@@ -144,7 +158,7 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
         explain = None,
         attribution = None
       )
-    }
+    }.toSeq
   }
 
   def generalRecos(): Seq[RecoInfo] = {
