@@ -1,23 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.model.{
-  User,
-  NormalizedURI,
-  UriRecommendationFeedback,
-  NormalizedURIRepo,
-  UriRecommendationScores,
-  NormalizedURIStates,
-  URISummary,
-  KeepRepo,
-  KeepStates,
-  Keep,
-  LibraryRepo,
-  Library,
-  ExperimentType,
-  UserRepo,
-  LibraryVisibility
-}
+import com.keepit.model._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model._
@@ -92,6 +76,10 @@ class RecommendationsCommander @Inject() (
     }
   }
 
+  def updateLibraryRecommendationFeedback(userId: Id[User], id: Id[Library], feedback: LibraryRecommendationFeedback): Future[Boolean] = {
+    curator.updateLibraryRecommendationFeedback(userId, id, feedback)
+  }
+
   private def constructRecoItemInfo(nUri: NormalizedURI, uriSummary: URISummary, reco: RecoInfo): UriRecoItemInfo = {
     val libraries: Map[Id[User], Id[Library]] = reco.attribution.flatMap { attr => attr.user.flatMap(_.friendsLib) }.getOrElse(Map.empty)
     val keeperIds: Seq[Id[User]] = reco.attribution.flatMap { attr => attr.user.map(_.friends) }.getOrElse(Seq.empty)
@@ -106,7 +94,7 @@ class RecommendationsCommander @Inject() (
           owner = owner,
           id = Library.publicId(libraryId),
           name = lib.name,
-          path = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)
+          path = Library.formatLibraryPath(owner.username, lib.slug)
         )
     }
 
@@ -135,26 +123,26 @@ class RecommendationsCommander @Inject() (
         RecoAttributionInfo(
           kind = RecoAttributionKind.Library,
           name = Some(lib.name),
-          url = Some(Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)),
+          url = Some(Library.formatLibraryPath(owner.username, lib.slug)),
           when = None
         )
       }
     } getOrElse Seq.empty
 
-    val keepAttrInfos = attr.keep.map { keepAttr =>
-      keepAttr.keeps.map { keepId =>
-        db.readOnlyReplica { implicit session => keepRepo.get(keepId) }
-      } filter { keep =>
-        keep.state == KeepStates.ACTIVE
-      } map { keep =>
-        RecoAttributionInfo(
-          kind = RecoAttributionKind.Keep,
-          name = keep.title,
-          url = Some(keep.url),
-          when = Some(keep.createdAt)
-        )
-      }
-    } getOrElse Seq.empty
+    // val keepAttrInfos = attr.keep.map { keepAttr =>
+    //   keepAttr.keeps.map { keepId =>
+    //     db.readOnlyReplica { implicit session => keepRepo.get(keepId) }
+    //   } filter { keep =>
+    //     keep.state == KeepStates.ACTIVE
+    //   } map { keep =>
+    //     RecoAttributionInfo(
+    //       kind = RecoAttributionKind.Keep,
+    //       name = keep.title,
+    //       url = Some(keep.url),
+    //       when = Some(keep.createdAt)
+    //     )
+    //   }
+    // } getOrElse Seq.empty
 
     val topicAttrInfos = attr.topic.map { topicAttr =>
       Seq(RecoAttributionInfo(
@@ -165,7 +153,7 @@ class RecommendationsCommander @Inject() (
       ))
     } getOrElse Seq.empty
 
-    libraryAttrInfos ++ keepAttrInfos ++ topicAttrInfos
+    libraryAttrInfos ++ topicAttrInfos //++ keepAttrInfos
   }
 
   def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[FullRecoInfo]] = {
@@ -189,17 +177,20 @@ class RecommendationsCommander @Inject() (
   }
 
   def topPublicRecos(userId: Id[User]): Future[Seq[FullRecoInfo]] = {
-    val magicRecosUriIds = Seq(9282L, 1113120L, 1174911L, 1322581L, 1429738L, 1455719L, 1597454L, 1698263L, 1912272L, 1946530L, 1959849L, 2060916L, 2143952L, 2147214L, 2163010L, 2320712L, 2439562L, 2665654L, 2669346L, 2765186L, 2767408L, 2804797L, 2819130L, 2838370L, 2908230L, 2917336L, 2950411L, 3035002L, 3035085L, 3035111L, 3036832L, 3036840L, 3036841L, 3036844L, 3036848L, 3036849L, 3036853L, 3036854L, 3036855L, 3036857L, 3036859L, 3036860L, 3036861L, 3036862L, 3036863L, 3036868L, 3036869L, 3036872L, 3036873L, 3036877L, 3036878L, 3036879L, 3036880L, 3036882L, 3036884L, 3036885L, 3036887L, 3036889L, 3036892L, 3036893L, 3036895L, 3036896L, 3036897L, 3036902L, 3036904L, 3036906L, 3036907L, 3036911L, 3036912L, 3036913L, 3036914L, 3036916L, 3036920L, 3036921L, 3036923L, 3036925L, 3036930L, 3036931L, 3036932L, 3036933L, 3036938L, 3036940L, 3036942L, 3036946L, 3036947L, 3036948L, 3036949L, 3036950L, 3036955L, 3036957L, 3036958L, 3036960L, 3036965L, 3036967L, 3036970L, 3036973L, 3036975L, 3036976L, 3036977L, 3036978L, 3036981L, 3036982L, 3036984L, 3036985L, 3036987L, 3036991L, 3036992L, 3036995L, 3036997L, 3036998L, 3037001L, 3037002L, 3037003L, 3037007L, 3037010L, 463170L, 571466L, 691458L, 924722L, 1103920L, 1153307L, 1211098L, 1269096L, 1422342L, 1783994L, 1938067L, 1976452L, 2154007L, 2261470L, 2277662L, 2808995L, 2912069L, 2912327L, 2929756L, 2969450L, 3034005L, 3035065L, 3035267L, 3036594L).map(Id[NormalizedURI])
-    val fakeRecosFut = Future.successful(Random.shuffle(magicRecosUriIds).take(10).map { uriId =>
-      RecoInfo(
-        userId = None,
-        uriId = uriId,
-        score = 42.0f,
-        explain = None,
-        attribution = None)
-    })
-
-    val uriRecosFut = fakeRecosFut.flatMap { recos =>
+    val recosFut = if (userExperimentCommander.userHasExperiment(userId, ExperimentType.NEW_PUBLIC_FEED)) {
+      curator.topPublicRecos(Some(userId))
+    } else {
+      val magicRecosUriIds = Seq(9282L, 1113120L, 1174911L, 1322581L, 1429738L, 1455719L, 1597454L, 1698263L, 1912272L, 1946530L, 1959849L, 2060916L, 2143952L, 2147214L, 2163010L, 2320712L, 2439562L, 2665654L, 2669346L, 2765186L, 2767408L, 2804797L, 2819130L, 2838370L, 2908230L, 2917336L, 2950411L, 3035002L, 3035085L, 3035111L, 3036832L, 3036840L, 3036841L, 3036844L, 3036848L, 3036849L, 3036853L, 3036854L, 3036855L, 3036857L, 3036859L, 3036860L, 3036861L, 3036862L, 3036863L, 3036868L, 3036869L, 3036872L, 3036873L, 3036877L, 3036878L, 3036879L, 3036880L, 3036882L, 3036884L, 3036885L, 3036887L, 3036889L, 3036892L, 3036893L, 3036895L, 3036896L, 3036897L, 3036902L, 3036904L, 3036906L, 3036907L, 3036911L, 3036912L, 3036913L, 3036914L, 3036916L, 3036920L, 3036921L, 3036923L, 3036925L, 3036930L, 3036931L, 3036932L, 3036933L, 3036938L, 3036940L, 3036942L, 3036946L, 3036947L, 3036948L, 3036949L, 3036950L, 3036955L, 3036957L, 3036958L, 3036960L, 3036965L, 3036967L, 3036970L, 3036973L, 3036975L, 3036976L, 3036977L, 3036978L, 3036981L, 3036982L, 3036984L, 3036985L, 3036987L, 3036991L, 3036992L, 3036995L, 3036997L, 3036998L, 3037001L, 3037002L, 3037003L, 3037007L, 3037010L, 463170L, 571466L, 691458L, 924722L, 1103920L, 1153307L, 1211098L, 1269096L, 1422342L, 1783994L, 1938067L, 1976452L, 2154007L, 2261470L, 2277662L, 2808995L, 2912069L, 2912327L, 2929756L, 2969450L, 3034005L, 3035065L, 3035267L, 3036594L).map(Id[NormalizedURI])
+      Future.successful(Random.shuffle(magicRecosUriIds).take(10).map { uriId =>
+        RecoInfo(
+          userId = None,
+          uriId = uriId,
+          score = 42.0f,
+          explain = None,
+          attribution = None)
+      })
+    }
+    val uriRecosFut = recosFut.flatMap { recos =>
       val recosWithUris: Seq[(RecoInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
         recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }
       }
@@ -238,12 +229,13 @@ class RecommendationsCommander @Inject() (
     createFullLibraryInfos(userId, curatedLibraries)
   }
 
-  def topPublicLibraryRecos(userId: Id[User]): Future[Seq[FullLibRecoInfo]] = {
-    curator.topLibraryRecos(userId) flatMap { libInfos =>
+  def topPublicLibraryRecos(userId: Id[User], limit: Int): Future[Seq[FullLibRecoInfo]] = {
+    // get extra recos from curator incase we filter out some below
+    curator.topLibraryRecos(userId, Some(limit * 4)) flatMap { libInfos =>
       val libIds = libInfos.map(_.libraryId).toSet
       val libraries = db.readOnlyReplica { implicit s =>
         libRepo.getLibraries(libIds).toSeq.filter(_._2.visibility == LibraryVisibility.PUBLISHED)
-      }
+      }.take(limit)
 
       val idToLibraryMap = libraries.toMap
       val libsAndRecoInfos = libInfos.map { libInfo =>

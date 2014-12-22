@@ -380,7 +380,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val libShwarmas = db.readWrite { implicit s =>
           val libShwarmas = libraryRepo.save(Library(name = "NY Shwarmas", ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1, slug = LibrarySlug("shwarma")))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libShwarmas.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libShwarmas.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER))
           libShwarmas
         }
 
@@ -403,7 +403,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val userWidow = db.readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Natalia", lastName = "Romanova", username = Username("blackwidow"), normalizedUsername = "bar", primaryEmail = Some(EmailAddress("blackwidow@shield.com"))))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = user.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = user.id.get, access = LibraryAccess.READ_ONLY))
           user
         }
         // test can view (permission denied)
@@ -493,7 +493,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // Removes dupes
         db.readWrite { implicit session =>
           val lib = libraryRepo.save(Library(ownerId = userIron.id.get, name = "Main 2!", kind = LibraryKind.SYSTEM_MAIN, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main2"), memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(userId = userIron.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(userId = userIron.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER))
         }
 
         libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
@@ -586,7 +586,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.joinLibrary(userIron.id.get, libMurica.id.get).right.get.name === libMurica.name // Ironman accepts invite to 'Murica'
 
         eliza.inbox.size === 1
-        eliza.inbox(0) === (userCaptain.id.get, NotificationCategory.User.LIBRARY_FOLLOWED, "https://kifi.com/captainamerica/murica", s"http://localhost/users/${userIron.externalId}/pics/200/0.jpg")
+        eliza.inbox(0) === (userCaptain.id.get, NotificationCategory.User.LIBRARY_FOLLOWED, "https://www.kifi.com/captainamerica/murica", s"http://localhost/users/${userIron.externalId}/pics/200/0.jpg")
 
         libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get).right.get.name === libMurica.name // Agent accepts invite to 'Murica'
         libraryCommander.declineLibrary(userHulk.id.get, libMurica.id.get) // Hulk declines invite to 'Murica'
@@ -669,11 +669,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // Ironman has read-only to Murica, and read-write to libRW, and owns 2 libraries: libOwn & Science
         val (libRW, libOwn, keepsInMurica) = db.readWrite { implicit s =>
           val libRW = libraryRepo.save(Library(name = "B", slug = LibrarySlug("b"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libRW.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libRW.id.get, userId = userIron.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libRW.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libRW.id.get, userId = userIron.id.get, access = LibraryAccess.READ_WRITE))
 
           val libOwn = libraryRepo.save(Library(name = "C", slug = LibrarySlug("c"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libOwn.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libOwn.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER))
 
           val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 0, 20)
           (libRW, libOwn, keepsInMurica)
@@ -770,11 +770,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // Ironman has read-only to Murica, and read-write to libRW, and owns 2 libraries: libOwn & Science
         val (libRW, libOwn, keepsInMurica) = db.readWrite { implicit s =>
           val libRW = libraryRepo.save(Library(name = "B", slug = LibrarySlug("b"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libRW.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libRW.id.get, userId = userIron.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libRW.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libRW.id.get, userId = userIron.id.get, access = LibraryAccess.READ_WRITE))
 
           val libOwn = libraryRepo.save(Library(name = "C", slug = LibrarySlug("c"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libOwn.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libOwn.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER))
 
           val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 0, 20)
           (libRW, libOwn, keepsInMurica)
@@ -880,7 +880,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val (tag1, tag2, libUSA, k1, k2, k3) = db.readWrite { implicit s =>
           val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
@@ -962,7 +962,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val (tag1, tag2, libUSA, k1, k2, k3) = db.readWrite { implicit s =>
           val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true, visibility = LibraryMembershipVisibilityStates.VISIBLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))

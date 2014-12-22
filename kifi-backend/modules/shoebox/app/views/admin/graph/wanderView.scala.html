@@ -68,7 +68,7 @@
         <table class = "table table-bordered">
             <tr><th colspan="3"><h3>Library Collisions</h3></th></tr>
             <tr> <th>Public Id</th> <th>Title</th> <th>Owner</th><th>Score</th> </tr>
-            @libraries.map { case (library, owner, count) => <tr> <td>@library.id.get</td> <td><a href=https://www.kifi.com@{com.keepit.model.Library.formatLibraryPath(owner.username, owner.externalId, library.slug)}>@library.name</a></td><td>@owner.fullName</td> <td>@count</td> </tr> }
+            @libraries.map { case (library, owner, count) => <tr> <td>@library.id.get</td> <td><a href=https://www.kifi.com@{com.keepit.model.Library.formatLibraryPath(owner.username, library.slug)}>@library.name</a></td><td>@owner.fullName</td> <td>@count</td> </tr> }
         </table>
     }
 

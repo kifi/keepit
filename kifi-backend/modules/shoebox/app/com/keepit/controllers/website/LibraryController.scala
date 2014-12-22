@@ -69,7 +69,9 @@ class LibraryController @Inject() (
     val newDescription = (json \ "description").asOpt[String]
     val newSlug = (json \ "slug").asOpt[String]
     val newVisibility = (json \ "visibility").asOpt[LibraryVisibility]
-    val res = libraryCommander.modifyLibrary(id, request.userId, newName, newDescription, newSlug, newVisibility, None)
+    val newColor = (json \ "color").asOpt[HexColor]
+
+    val res = libraryCommander.modifyLibrary(id, request.userId, newName, newDescription, newSlug, newVisibility, newColor)
     res match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
@@ -551,6 +553,7 @@ class LibraryController @Inject() (
       "id" -> Library.publicId(libView.library.id.get).id,
       "name" -> libView.library.name,
       "slug" -> libView.library.slug,
+      "color" -> libView.library.color,
       "image" -> libView.image,
       "numKeeps" -> libView.numKeeps,
       "numFollowers" -> libView.numFollowers,

@@ -11,16 +11,15 @@ angular.module('kifi')
     // Configs.
     //
     var userNavLinksConfig = [
-      { name: 'Libraries', countFieldName: 'numLibraries' },  // For v2, add: routeState: 'userProfile.libraries.my',
-      // For V1 only.
-      { name: 'Keeps', countFieldName: 'numKeeps' }
+      { name: 'Libraries', /*routeState: 'userProfile.libraries.own',*/ countFieldName: 'numLibraries' },  // routeState is V2
+      { name: 'Keeps', countFieldName: 'numKeeps' }  // V1 only
 
       /*
-       * For V2.
+       * V2
        */
-      // { name: 'FRIENDS', routeState: 'userProfile.friends', countFieldName: 'numFriends' },
-      // { name: 'FOLLOWERS', routeState: 'userProfile.followers', countFieldName: 'numFollowers' },
-      // { name: 'HELPED', routeState: 'userProfile.helped', countFieldName: 'helpedRekeep' }
+      // { name: 'Friends', routeState: 'userProfile.friends', countFieldName: 'numFriends' },
+      // { name: 'Followers', routeState: 'userProfile.followers', countFieldName: 'numFollowers' },
+      // { name: 'Helped', routeState: 'userProfile.helped', countFieldName: 'numRekeeps' }
     ];
 
 
@@ -62,12 +61,7 @@ angular.module('kifi')
 
     function initProfile(profile) {
       $scope.profile = _.cloneDeep(profile);
-
-      // Picture URL.
-      $scope.profile.picUrl = keepWhoService.getPicUrl({
-        id: $scope.profile.id,
-        pictureName: $scope.profile.pictureName
-      }, 200);
+      $scope.profile.picUrl = keepWhoService.getPicUrl($scope.profile, 200);
     }
 
     function initViewingUserStatus() {

@@ -56,7 +56,7 @@ class FeedCommander @Inject() (
         val metaTags = idToMetaTags(lib.id.get)
         val owner = owners(lib.ownerId)
         val libImg = metaTags.images.headOption.getOrElse(logo)
-        val itemUrl = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)}"
+        val itemUrl = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, lib.slug)}"
         val desc = Unparsed(
           s"""
                |<![CDATA[
