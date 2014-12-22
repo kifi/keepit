@@ -241,6 +241,18 @@ class KeepImageCommanderImpl @Inject() (
     }
   }
 
+  private case class ImageSourceIndex(hash: ImageHash, width: Int, height: Int, keepId: Id[Keep])
+  private object ImageSourceIndex {
+    def apply(image: KeepImage): ImageSourceIndex = ImageSourceIndex(image.sourceFileHash, image.width, image.height, image.keepId)
+  }
+
+  private def uniqueKeepImages(orig: Set[KeepImage]): Set[KeepImage] = {
+    val uniqueMap = orig.map(i => ImageSourceIndex(i) -> i).toMap
+    val uniqueKeeps = uniqueMap.values.toSet
+    if (orig.size != uniqueKeeps.size) log.info(s"shrinking keep image set from ${orig.size} to ${uniqueKeeps.size}")
+    uniqueKeeps
+  }
+
   private def copyExistingImagesAndReplace(keepId: Id[Keep], source: ImageSource, existingSameHash: Seq[KeepImage]): ImageProcessDone = {
     val allForThisKeep = existingSameHash.filter(i => i.keepId == keepId)
     val activeForThisKeep = allForThisKeep.filter(i => i.state == KeepImageStates.ACTIVE)
@@ -252,7 +264,7 @@ class KeepImageCommanderImpl @Inject() (
       }
       ImageProcessState.ExistingStoredImagesFound(saved)
     } else {
-      val copiedImages: Set[KeepImage] = existingSameHash.toSet.flatMap { prev: KeepImage =>
+      val copiedImagesSet: Set[KeepImage] = existingSameHash.toSet.flatMap { prev: KeepImage =>
         if (prev.keepId == keepId) {
           if (prev.state == KeepImageStates.ACTIVE) {
             log.info(s"skipping image since its already of the same keep id: $prev")
@@ -267,15 +279,15 @@ class KeepImageCommanderImpl @Inject() (
           Some(image)
         }
       }
-
-      log.info(s"new images to keep for $keepId from ${existingSameHash.size} is ${copiedImages.size}")
+      val uniqueImages = uniqueKeepImages(copiedImagesSet)
+      if (existingSameHash.size != uniqueImages.size) log.info(s"smaller set of new images to keep for $keepId from ${existingSameHash.size} is ${uniqueImages.size}: $uniqueImages")
 
       val saved = db.readWrite(attempts = 3) { implicit session =>
         val existingForKeep = keepImageRepo.getForKeepId(keepId)
         existingForKeep.map { oldImg =>
           keepImageRepo.save(oldImg.copy(state = KeepImageStates.INACTIVE))
         }
-        copiedImages.map { img =>
+        uniqueImages.map { img =>
           keepImageRepo.save(img)
         }
       }
