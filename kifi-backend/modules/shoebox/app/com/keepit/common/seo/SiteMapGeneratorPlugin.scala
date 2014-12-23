@@ -1,0 +1,76 @@
+package com.keepit.common.seo
+
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import com.google.inject.{ Singleton, Inject }
+import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.{ seo, CollectionHelpers }
+import com.keepit.common.cache._
+import com.keepit.common.net.{ DirectUrl, HttpClient }
+import com.keepit.common.time._
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.{ AccessLog, Logging }
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.inject.FortyTwoConfig
+import com.keepit.model._
+import org.joda.time.{ LocalDate, DateTime }
+import play.api.{ Play, Plugin }
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+trait SiteMapGeneratorPlugin extends Plugin {
+  def submit()
+}
+
+class SiteMapGeneratorPluginImpl @Inject() (
+    actor: ActorInstance[SiteMapGeneratorActor],
+    val scheduling: SchedulingProperties) extends Logging with SiteMapGeneratorPlugin with SchedulerPlugin {
+
+  // plugin lifecycle methods
+  override def enabled: Boolean = true
+  override def onStart() {
+    for (app <- Play.maybeApplication) {
+      val (initDelay, freq) = (60 minutes, 60 minutes)
+      log.info(s"[onStart] SiteMapGeneratorPlugin started with initDelay=$initDelay freq=$freq")
+      scheduleTaskOnLeader(actor.system, initDelay, freq, actor.ref, SubmitSitemap)
+    }
+  }
+
+  override def submit() { actor.ref ! SubmitSitemap }
+}
+
+object SubmitSitemap
+
+// library-only for now
+class SiteMapGeneratorActor @Inject() (
+    airbrake: AirbrakeNotifier,
+    httpClient: HttpClient,
+    fortyTwoConfig: FortyTwoConfig) extends FortyTwoActor(airbrake) with Logging {
+
+  def receive() = {
+    case SubmitSitemap =>
+      val sitemapUrl = java.net.URLEncoder.encode(s"${fortyTwoConfig.applicationBaseUrl}assets/sitemap.xml", "UTF-8")
+      val googleRes = httpClient.get(DirectUrl(s"http://www.google.com/webmasters/sitemaps/ping?sitemap=$sitemapUrl"))
+      log.info(s"submitted sitemap to google. res(${googleRes.status}): ${googleRes.body}")
+      val bingRes = httpClient.get(DirectUrl(s"http://www.bing.com/webmaster/ping.aspx?siteMap=$sitemapUrl"))
+      log.info(s"submitted sitemap to bing. res(${bingRes.status}): ${bingRes.body}")
+  }
+
+}
+
+class SiteMapCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends StringCacheImpl[SiteMapKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class SiteMapKey(modelType: String) extends Key[String] {
+  override val version = 1
+  val namespace = "sitemap"
+  def toKey(): String = modelType
+}
+
+object SiteMapKey {
+  val libraries = SiteMapKey("libraries")
+  val users = SiteMapKey("users")
+}
