@@ -22,7 +22,7 @@ case class LibraryMembership(
     state: State[LibraryMembership] = LibraryMembershipStates.ACTIVE,
     seq: SequenceNumber[LibraryMembership] = SequenceNumber.ZERO,
     showInSearch: Boolean = true,
-    listed: Boolean = true, // whether library appears on user's profile
+    listed: Boolean = true, // whether library may appear on user's profile
     lastViewed: Option[DateTime] = None,
     lastEmailSent: Option[DateTime] = None) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 

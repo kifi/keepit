@@ -134,6 +134,8 @@ object MaybeLibraryMember {
   }
 }
 
+@json case class LibraryMembershipInfo(access: LibraryAccess, listed: Boolean)
+
 case class FullLibraryInfo(id: PublicId[Library],
   name: String,
   visibility: LibraryVisibility,
