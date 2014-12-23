@@ -2,11 +2,14 @@
 
 # --- !Ups
 
-DROP INDEX library_membership_i_visible ON library_membership;
-ALTER TABLE library_membership DROP COLUMN visibility;
+drop index library_membership_i_visible;
+alter table library_membership drop column visibility;
 
-CREATE INDEX library_membership_i_listed ON library_membership (listed);
+create index library_membership_i_listed on library_membership(listed);
 
-insert into evolutions (name, description) values('278.sql', 'drop visibility column from library membership');
+INSERT INTO evolutions (name, description) VALUES('278.sql', 'delete visibility column from library_membership');
+
 
 # --- !Downs
+
+
