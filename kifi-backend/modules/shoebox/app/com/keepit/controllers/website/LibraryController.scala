@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryAddRequest, RawBookmarkRepresentation, _ }
+import com.keepit.commanders.{ RawBookmarkRepresentation, _ }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ UserRequest, _ }
 import com.keepit.common.core._
@@ -558,6 +558,7 @@ class LibraryController @Inject() (
       case Some(user) =>
         val viewer = request.userOpt
         val libs = libraryCommander.getOwnProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
+        //also get following libs via libraryCommander.getFollowingLibraries
         Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
     }
   }

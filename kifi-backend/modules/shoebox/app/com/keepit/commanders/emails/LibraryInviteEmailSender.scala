@@ -1,7 +1,7 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.Inject
-import com.keepit.commanders.LibraryInfo
+import com.keepit.model.LibraryInfo
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database

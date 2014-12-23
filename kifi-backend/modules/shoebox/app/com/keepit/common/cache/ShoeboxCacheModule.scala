@@ -1,5 +1,6 @@
 package com.keepit.common.cache
 
+import com.keepit.commanders.BasicCollectionByIdCache
 import com.keepit.common.seo.SiteMapCache
 import com.keepit.controllers.core.StateTokenCache
 import com.keepit.model.cache.UserSessionViewExternalIdCache
@@ -14,7 +15,6 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.typeahead.{ UserHashtagTypeaheadCache, KifiUserTypeaheadCache, SocialUserTypeaheadCache }
-import com.keepit.commanders.{ LibraryInfoIdCache, BasicCollectionByIdCache }
 import com.keepit.graph.model._
 
 case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {

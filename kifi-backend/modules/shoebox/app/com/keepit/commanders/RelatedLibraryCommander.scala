@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.model.{ LibraryImageInfo, HexColor, User, LibraryMembershipRepo, LibraryRepo, Library, LibrarySlug, LibraryVisibility }
+import com.keepit.model._
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits._
