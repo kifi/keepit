@@ -434,19 +434,20 @@ class LibraryCommander @Inject() (
           case Some(lib) if lib.slug == validSlug =>
             Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
           case None =>
+            val newListed = libAddReq.listed.getOrElse(true)
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
                     visibility = libAddReq.visibility, slug = validSlug, color = libAddReq.color, kind = LibraryKind.USER_CREATED, memberCount = 1))
-                  libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER))
+                  libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed))
                   lib
                 case Some(lib) =>
                   val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
                   libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId, None) match {
                     case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER))
-                    case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
+                    case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE, listed = newListed))
                   }
                   newLib
               }
@@ -465,17 +466,18 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def modifyLibrary(libraryId: Id[Library], userId: Id[User],
-    name: Option[String] = None,
-    description: Option[String] = None,
-    slug: Option[String] = None,
-    visibility: Option[LibraryVisibility] = None,
-    color: Option[HexColor] = None): Either[LibraryFail, Library] = {
+  def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest): Either[LibraryFail, Library] = {
 
-    val targetLib = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
-    if (targetLib.ownerId != userId) {
+    val (targetLib, targetMembershipOpt) = db.readOnlyMaster { implicit s =>
+      val lib = libraryRepo.get(libraryId)
+      val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+      (lib, mem)
+    }
+    if (targetMembershipOpt.isEmpty || !targetMembershipOpt.get.canWrite) {
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
     } else {
+      val targetMembership = targetMembershipOpt.get
+
       def validName(newNameOpt: Option[String]): Either[LibraryFail, String] = {
         newNameOpt match {
           case None => Right(targetLib.name)
@@ -511,12 +513,13 @@ class LibraryCommander @Inject() (
       }
 
       val result = for {
-        newName <- validName(name).right
-        newSlug <- validSlug(slug).right
+        newName <- validName(modifyReq.name).right
+        newSlug <- validSlug(modifyReq.slug).right
       } yield {
-        val newDescription: Option[String] = description.orElse(targetLib.description)
-        val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
-        val newColor: Option[HexColor] = color.orElse(targetLib.color)
+        val newDescription = modifyReq.description.orElse(targetLib.description)
+        val newVisibility = modifyReq.visibility.getOrElse(targetLib.visibility)
+        val newColor = modifyReq.color.orElse(targetLib.color)
+        val newListed = modifyReq.listed.getOrElse(targetMembership.listed)
         future {
           val keeps = db.readOnlyMaster { implicit s =>
             keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, None)
@@ -534,6 +537,7 @@ class LibraryCommander @Inject() (
             libraryAliasRepo.reclaim(ownerId, newSlug)
             libraryAliasRepo.alias(ownerId, targetLib.slug, targetLib.id.get)
           }
+          libraryMembershipRepo.save(targetMembership.copy(listed = newListed))
           libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, state = LibraryStates.ACTIVE))
         }
       }

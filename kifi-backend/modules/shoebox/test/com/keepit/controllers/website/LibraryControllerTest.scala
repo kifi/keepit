@@ -84,12 +84,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
-        val parse1 = Json.parse(contentAsString(result1))
-        (parse1 \ "name").as[String] === "Library1"
-        (parse1 \ "slug").as[LibrarySlug].value === "lib1"
-        (parse1 \ "visibility").as[LibraryVisibility].value === "secret"
-        (parse1 \ "keeps").as[Seq[JsValue]].size === 0
-        (parse1 \ "owner").as[BasicUser].externalId === user.externalId
+        val parseLibrary = (contentAsJson(result1) \ "library")
+        (parseLibrary \ "name").as[String] === "Library1"
+        (parseLibrary \ "slug").as[LibrarySlug].value === "lib1"
+        (parseLibrary \ "visibility").as[LibraryVisibility].value === "secret"
+        (parseLibrary \ "keeps").as[Seq[JsValue]].size === 0
+        (parseLibrary \ "owner").as[BasicUser].externalId === user.externalId
+        (contentAsJson(result1) \ "listed").asOpt[Boolean].get === true
 
         val inputJson2 = Json.obj(
           "name" -> "Invalid Library - Slug",
@@ -160,7 +161,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
-        Json.parse(contentAsString(result1)).as[LibraryInfo].name === "LibraryA"
+        (contentAsJson(result1) \ "library" \ "name").as[String] === "LibraryA"
 
         val inputJson2 = Json.obj("slug" -> "libA", "description" -> "asdf", "visibility" -> LibraryVisibility.PUBLISHED.value)
         val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
@@ -174,21 +175,24 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val expected = Json.parse(
           s"""
              |{
-             |"id":"${pubId.id}",
-             |"name":"LibraryA",
-             |"visibility":"published",
-             |"shortDescription":"asdf",
-             |"url":"/ahsu/libA",
-             |"owner":{
-             |  "id":"${basicUser1.externalId}",
-             |  "firstName":"${basicUser1.firstName}",
-             |  "lastName":"${basicUser1.lastName}",
-             |  "pictureName":"${basicUser1.pictureName}",
-             |  "username":"${basicUser1.username.value}"
-             |  },
-             |"numKeeps":0,
-             |"numFollowers":0,
-             |"kind":"user_created"
+               |"library": {
+                 |"id":"${pubId.id}",
+                 |"name":"LibraryA",
+                 |"visibility":"published",
+                 |"shortDescription":"asdf",
+                 |"url":"/ahsu/libA",
+                 |"owner":{
+                 |  "id":"${basicUser1.externalId}",
+                 |  "firstName":"${basicUser1.firstName}",
+                 |  "lastName":"${basicUser1.lastName}",
+                 |  "pictureName":"${basicUser1.pictureName}",
+                 |  "username":"${basicUser1.username.value}"
+                 |  },
+                 |"numKeeps":0,
+                 |"numFollowers":0,
+                 |"kind":"user_created"
+               |},
+               |"listed": true
              |}
            """.stripMargin)
         Json.parse(contentAsString(result2)) must equalTo(expected)

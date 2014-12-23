@@ -56,28 +56,31 @@ class LibraryController @Inject() (
       case Left(fail) =>
         Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
       case Right(newLibrary) =>
+        val membership = db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
+        }
         libraryCommander.createFullLibraryInfo(Some(request.userId), false, newLibrary, LibraryController.defaultLibraryImageSize).map { lib =>
-          Ok(Json.toJson(lib))
+          Ok(Json.obj("library" -> Json.toJson(lib), "listed" -> membership.map(_.listed)))
         }
     }
   }
 
   def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
-    val json = request.body
-    val newName = (json \ "name").asOpt[String]
-    val newDescription = (json \ "description").asOpt[String]
-    val newSlug = (json \ "slug").asOpt[String]
-    val newVisibility = (json \ "visibility").asOpt[LibraryVisibility]
-    val newColor = (json \ "color").asOpt[HexColor]
+    val libModifyRequest = request.body.as[LibraryModifyRequest]
 
-    val res = libraryCommander.modifyLibrary(id, request.userId, newName, newDescription, newSlug, newVisibility, newColor)
-    res match {
+    libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
-        val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(id)) }
-        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)))
+        val (owner, numKeeps, membership) = db.readOnlyMaster { implicit s =>
+          val basicUser = basicUserRepo.load(lib.ownerId)
+          val numKeeps = keepRepo.getCountByLibrary(id)
+          val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
+          (basicUser, numKeeps, membership)
+        }
+        val libInfo = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None))
+        Ok(Json.obj("library" -> libInfo, "listed" -> membership.map(_.listed)))
     }
   }
 
