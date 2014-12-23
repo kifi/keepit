@@ -141,7 +141,6 @@ angular.module('kifi')
 
     $scope.libraryType = $state.current.data.libraryType;
     $scope.libraries = null;
-    fetchLibraries();
 
     var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
       if (/^userProfile\.libraries\./.test(toState.name)) {
@@ -173,6 +172,8 @@ angular.module('kifi')
         } : {};
       return lib;
     }
+
+    fetchLibraries();
   }
 ])
 
