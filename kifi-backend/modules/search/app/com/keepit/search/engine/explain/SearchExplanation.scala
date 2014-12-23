@@ -2,6 +2,7 @@ package com.keepit.search.engine.explain
 
 import com.keepit.common.db.Id
 import com.keepit.macros.Location
+import com.keepit.search.Lang
 import com.keepit.search.engine.{ ScoreContext, Visibility }
 import com.keepit.search.util.join.DataBuffer
 import org.apache.commons.lang3.StringEscapeUtils
@@ -21,11 +22,12 @@ trait SearchExplanation[T] {
   def score: Float
   def scoreComputation: String
   def details: Seq[ScoreDetail]
+  def lang: (Lang, Option[Lang])
 
   def queryHtml(title: String): String = {
     val sb = new StringBuilder
     sb.append("<table>\n")
-    sb.append(s"<tr> <th> $title </th> </tr>\n")
+    sb.append(s"<tr> <th> $title (Lang: ${lang._1},${lang._2.map(_.toString).getOrElse("")})</th> </tr>\n")
     sb.append(s"""<tr> <td style="text-align:left"> $query </td> </tr>\n""")
     sb.append("</table>\n")
 
@@ -124,7 +126,7 @@ trait SearchExplanation[T] {
   }
 }
 
-abstract class SearchExplanationBuilder[T](val resultId: Id[T], val query: Query, val labels: Array[String]) {
+abstract class SearchExplanationBuilder[T](val resultId: Id[T], val lang: (Lang, Option[Lang]), val query: Query, val labels: Array[String]) {
 
   def build(): SearchExplanation[T]
 

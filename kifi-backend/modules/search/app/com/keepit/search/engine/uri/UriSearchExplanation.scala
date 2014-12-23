@@ -2,6 +2,7 @@ package com.keepit.search.engine.uri
 
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
+import com.keepit.search.Lang
 import com.keepit.search.engine.Visibility
 import com.keepit.search.engine.explain.{ SearchExplanationBuilder, SearchExplanation, ScoreDetail }
 import org.apache.lucene.search.Query
@@ -10,6 +11,7 @@ case class UriSearchExplanation(
     id: Id[NormalizedURI],
     query: String,
     labels: Array[String],
+    lang: (Lang, Option[Lang]),
     matching: Float,
     matchingThreshold: Float,
     minMatchingThreshold: Float,
@@ -81,7 +83,7 @@ case class UriSearchExplanation(
   }
 }
 
-class UriSearchExplanationBuilder(uriId: Id[NormalizedURI], query: Query, labels: Array[String]) extends SearchExplanationBuilder[NormalizedURI](uriId, query, labels) {
+class UriSearchExplanationBuilder(uriId: Id[NormalizedURI], lang: (Lang, Option[Lang]), query: Query, labels: Array[String]) extends SearchExplanationBuilder[NormalizedURI](uriId, lang, query, labels) {
 
   private[this] var _score: Float = -1f
   private[this] var _clickBoostValue: Float = -1f
@@ -92,6 +94,7 @@ class UriSearchExplanationBuilder(uriId: Id[NormalizedURI], query: Query, labels
       uriId,
       query.toString,
       labels,
+      lang,
       matching,
       matchingThreshold,
       minMatchingThreshold,
