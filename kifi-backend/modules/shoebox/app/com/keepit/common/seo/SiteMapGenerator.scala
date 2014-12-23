@@ -2,7 +2,8 @@ package com.keepit.common.seo
 
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.CollectionHelpers
+import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.{ seo, CollectionHelpers }
 import com.keepit.common.cache._
 import com.keepit.common.net.{ DirectUrl, HttpClient }
 import com.keepit.common.time._
@@ -13,7 +14,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.{ KeepRepo, UserRepo, Library, LibraryRepo }
+import com.keepit.model._
 import org.joda.time.{ LocalDate, DateTime }
 import play.api.{ Play, Plugin }
 import scala.concurrent.Future
@@ -63,10 +64,15 @@ class SiteMapGeneratorActor @Inject() (
 class SiteMapCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends StringCacheImpl[SiteMapKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class SiteMapKey() extends Key[String] {
+case class SiteMapKey(modelType: String) extends Key[String] {
   override val version = 1
   val namespace = "sitemap"
-  def toKey(): String = ""
+  def toKey(): String = modelType
+}
+
+object SiteMapKey {
+  val libraries = SiteMapKey("libraries")
+  val users = SiteMapKey("users")
 }
 
 object SiteMapGenerator {
@@ -81,12 +87,17 @@ class SiteMapGenerator @Inject() (
     keepRepo: KeepRepo,
     fortyTwoConfig: FortyTwoConfig,
     libraryRepo: LibraryRepo,
+    experimentRepo: UserExperimentRepo,
     siteMapCache: SiteMapCache) extends Logging {
 
   def intern(): Future[String] = {
-    siteMapCache.getOrElseFuture(SiteMapKey()) {
+    siteMapCache.getOrElseFuture(SiteMapKey.libraries) {
       generate()
     }
+  }
+
+  private def keepsInRepo(library: Library)(implicit session: RSession): Int = {
+    keepRepo.getCountByLibrary(library.id.get)
   }
 
   // prototype/silver-bullet implementation -- will learn and improve
@@ -94,14 +105,24 @@ class SiteMapGenerator @Inject() (
     db.readOnlyReplicaAsync { implicit ro =>
       // ahem does not scale
       // may want to add warning when > 40K
-      libraryRepo.getAllPublishedLibraries().take(50000)
+      val libs = libraryRepo.getAllPublishedLibraries().take(50000)
+      if (libs.size > 40000) airbrake.notify(s"there are ${libs.size} libraries for sitemap, need to paginate the list!")
+      libs
     } map { libraries =>
 
       // batch, optimize
       val ownerIds = CollectionHelpers.dedupBy(libraries.map(_.ownerId))(id => id)
-      val owners = db.readOnlyMaster { implicit ro => userRepo.getUsers(ownerIds) } // cached
-      val libs = libraries.filter { lib =>
-        owners.get(lib.ownerId).isDefined && db.readOnlyMaster { implicit ro => keepRepo.getCountByLibrary(lib.id.get) > 3 } // proxy for quality; need bulk version
+      val owners = db.readOnlyMaster { implicit ro =>
+        val realUsers = ownerIds.filterNot { id =>
+          val experiments = experimentRepo.getAllUserExperiments(id)
+          experiments.contains(ExperimentType.FAKE) || experiments.contains(ExperimentType.AUTO_GEN)
+        }
+        userRepo.getUsers(realUsers)
+      } // cached
+      val libs = db.readOnlyReplica { implicit ro =>
+        libraries.filter { lib =>
+          owners.get(lib.ownerId).isDefined && keepsInRepo(lib) > 3 // proxy for quality; need bulk version
+        }
       }
 
       def path(lib: Library): String = {
