@@ -1,6 +1,7 @@
 package com.keepit.search.engine.explain
 
 import com.keepit.common.db.Id
+import com.keepit.macros.Location
 import com.keepit.search.engine.{ ScoreContext, Visibility }
 import com.keepit.search.util.join.DataBuffer
 import org.apache.commons.lang3.StringEscapeUtils
@@ -19,7 +20,7 @@ trait SearchExplanation[T] {
   def rawScore: Float
   def score: Float
   def scoreComputation: String
-  def details: Map[String, Seq[ScoreDetail]]
+  def details: Seq[ScoreDetail]
 
   def queryHtml(title: String): String = {
     val sb = new StringBuilder
@@ -59,20 +60,12 @@ trait SearchExplanation[T] {
   def detailsHtml(title: String): String = {
     val sb = new StringBuilder
 
-    def categoryByVisibility(visibility: Int): Unit = {
-      val name = Visibility.name(visibility)
-      val source = if ((visibility & (Visibility.OWNER | Visibility.MEMBER | Visibility.NETWORK)) != 0) {
-        s"keep ($name)"
-      } else if ((visibility & Visibility.OTHERS) != 0) {
-        "article"
-      } else {
-        "restricted"
-      }
+    def categoryBySourceAndVisibility(source: String, visibility: String, allDetails: Seq[ScoreDetail]): Unit = {
 
-      val detailsWithScores = details(name).filter { detail => detail.scoreMax.exists(_ != 0f) }
+      val detailsWithScores = allDetails.filter { detail => detail.scoreMax.exists(_ != 0f) }
       val nRows = detailsWithScores.size
       if (nRows > 0) {
-        sb.append(s"<tr> <th rowspan=$nRows> $source </th>")
+        sb.append(s"<tr> <th rowspan=$nRows> $source ($visibility) </th>")
         detailsWithScores.headOption.foreach { detail =>
           listScores(detail.scoreMax)
           sb.append("</tr>\n")
@@ -93,15 +86,15 @@ trait SearchExplanation[T] {
     }
 
     def aggregatedScores(): Unit = {
-      val detailsWithScores = details("aggregate")
+      val detailsWithScores = details.filter(detail => ScoreDetail.isFromCollector(detail.source))
       detailsWithScores.foreach(aggregatedScoreDetail(_))
     }
 
     def aggregatedScoreDetail(detail: ScoreDetail): Unit = {
-      sb.append(s"<tr> <th> <u>max</u> </th>")
+      sb.append(s"<tr> <th> <u>max</u> (${detail.source}) </th>")
       listScores(detail.scoreMax)
       sb.append("</tr>\n")
-      sb.append("<tr> <th> <u>sum</u> </th>")
+      sb.append(s"<tr> <th> <u>sum</u> (${detail.source}) </th>")
       detail.scoreSum.foreach(listScores(_))
       sb.append("</tr>\n")
     }
@@ -118,12 +111,13 @@ trait SearchExplanation[T] {
     sb.append("</tr>\n")
 
     aggregatedScores()
-    categoryByVisibility(Visibility.OWNER)
-    categoryByVisibility(Visibility.MEMBER)
-    categoryByVisibility(Visibility.NETWORK)
-    categoryByVisibility(Visibility.OTHERS)
-    categoryByVisibility(Visibility.RESTRICTED)
-
+    details.groupBy(_.source).collect {
+      case (source, sourceDetails) if !ScoreDetail.isFromCollector(source) =>
+        sourceDetails.groupBy(detail => Visibility.name(detail.visibility)).map {
+          case (visibility, sourceAndVisibilityDetails) =>
+            categoryBySourceAndVisibility(source, visibility, sourceAndVisibilityDetails)
+        }
+    }
     sb.append(s"""</table>\n""")
 
     sb.toString
@@ -140,16 +134,9 @@ abstract class SearchExplanationBuilder[T](val resultId: Id[T], val query: Query
   private[this] var _rawScore: Float = -1f
   private[this] var _scoreComputation: String = ""
 
-  private[this] val _details: Map[String, ListBuffer[ScoreDetail]] = Map(
-    "aggregate" -> new ListBuffer[ScoreDetail](),
-    Visibility.name(Visibility.OWNER) -> new ListBuffer[ScoreDetail](),
-    Visibility.name(Visibility.MEMBER) -> new ListBuffer[ScoreDetail](),
-    Visibility.name(Visibility.NETWORK) -> new ListBuffer[ScoreDetail](),
-    Visibility.name(Visibility.OTHERS) -> new ListBuffer[ScoreDetail](),
-    Visibility.name(Visibility.RESTRICTED) -> new ListBuffer[ScoreDetail]()
-  )
+  private[this] val _details = new ListBuffer[ScoreDetail]()
 
-  def collectBufferScoreContribution(source: String, primaryId: Long, secondaryId: Long, visibility: Int, taggedScores: Array[Int], numberOfTaggedScores: Int): Unit = {
+  def collectBufferScoreContribution(primaryId: Long, secondaryId: Long, visibility: Int, taggedScores: Array[Int], numberOfTaggedScores: Int)(implicit location: Location): Unit = {
     if (primaryId == resultId.id) {
       val scoreArray = Array.fill(taggedScores.size)(0.0f)
       taggedScores.take(numberOfTaggedScores).foreach { bits =>
@@ -157,17 +144,17 @@ abstract class SearchExplanationBuilder[T](val resultId: Id[T], val query: Query
         val scr = DataBuffer.getTaggedFloatValue(bits)
         scoreArray(idx) = scr
       }
-      _details(Visibility.name(visibility)) += new ScoreDetail(source, primaryId, secondaryId, visibility, scoreArray, None)
+      _details += new ScoreDetail(ScoreDetail.sourceFromLocation(location), primaryId, secondaryId, visibility, scoreArray, None)
     }
   }
 
-  def collectDirectScoreContribution(source: String, primaryId: Long, secondaryId: Long, visibility: Int, scoreArray: Array[Float]): Unit = {
+  def collectDirectScoreContribution(primaryId: Long, secondaryId: Long, visibility: Int, scoreArray: Array[Float])(implicit location: Location): Unit = {
     if (primaryId == resultId.id) {
-      _details(Visibility.name(visibility)) += new ScoreDetail(source, primaryId, secondaryId, visibility, scoreArray.clone(), None)
+      _details += new ScoreDetail(ScoreDetail.sourceFromLocation(location), primaryId, secondaryId, visibility, scoreArray.clone(), None)
     }
   }
 
-  def collectRawScore(ctx: ScoreContext, matchingThreshold: Float, minMatchingThreshold: Float): Unit = {
+  def collectRawScore(ctx: ScoreContext, matchingThreshold: Float, minMatchingThreshold: Float)(implicit location: Location): Unit = {
     if (ctx.id == resultId.id) {
       // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
       _matchingThreshold = matchingThreshold
@@ -175,7 +162,7 @@ abstract class SearchExplanationBuilder[T](val resultId: Id[T], val query: Query
       _matching = ctx.computeMatching(minMatchingThreshold)
       _rawScore = ctx.score()
       _scoreComputation = ctx.explainScoreExpr()
-      _details("aggregate") += ScoreDetail.aggregate(ctx)
+      _details += ScoreDetail.aggregate(ScoreDetail.sourceFromLocation(location), ctx)
     }
   }
 
@@ -184,16 +171,21 @@ abstract class SearchExplanationBuilder[T](val resultId: Id[T], val query: Query
   def minMatchingThreshold = _minMatchingThreshold
   def rawScore: Float = _rawScore
   def scoreComputation: String = _scoreComputation
-  def details: Map[String, Seq[ScoreDetail]] = _details.mapValues(_.toSeq)
+  def details: Seq[ScoreDetail] = _details.toSeq
 
 }
 
 case class ScoreDetail(source: String, primaryId: Long, secondaryId: Long, visibility: Int, scoreMax: Array[Float], scoreSum: Option[Array[Float]])
 
 object ScoreDetail {
-  def aggregate(ctx: ScoreContext) = {
-    new ScoreDetail(ctx.getClass.getSimpleName, ctx.id, ctx.secondaryId, ctx.visibility, ctx.scoreMax.clone, Some(ctx.scoreSum.clone))
+  def aggregate(source: String, ctx: ScoreContext) = {
+    require(isFromCollector(source), "Aggregated scores should be captured from the collector.")
+    new ScoreDetail(source, ctx.id, ctx.secondaryId, ctx.visibility, ctx.scoreMax.clone, Some(ctx.scoreSum.clone))
   }
+
+  def isFromCollector(source: String) = source.contains("Collector")
+
+  def sourceFromLocation(location: Location): String = location.className.stripPrefix("class").stripSuffix("ScoreVectorSource").trim
 
   implicit val format = Json.format[ScoreDetail]
 }

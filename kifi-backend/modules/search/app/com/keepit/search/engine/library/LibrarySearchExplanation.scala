@@ -17,7 +17,7 @@ case class LibrarySearchExplanation(
     rawScore: Float,
     score: Float,
     scoreComputation: String,
-    details: Map[String, Seq[ScoreDetail]]) extends SearchExplanation[Library] {
+    details: Seq[ScoreDetail]) extends SearchExplanation[Library] {
 
   def boostValuesHtml(title: String): String = {
     val sb = new StringBuilder

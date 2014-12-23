@@ -77,7 +77,7 @@ class UriFromKeepsScoreVectorSource(
           // write to the buffer
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // id (8 bytes), keepId (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(uriId, keepId).putTaggedFloatBits(taggedScores, size)
-          explanation.foreach(_.collectBufferScoreContribution(this.getClass.getSimpleName, uriId, keepId, visibility, taggedScores, size))
+          explanation.foreach(_.collectBufferScoreContribution(uriId, keepId, visibility, taggedScores, size))
 
           docId = pq.top.doc // next doc
         } else {
@@ -102,7 +102,7 @@ class UriFromKeepsScoreVectorSource(
             // write to the buffer
             output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
             writer.putLong(uriId)
-            explanation.foreach(_.collectBufferScoreContribution(this.getClass.getSimpleName, uriId, -1, Visibility.NETWORK, Array.empty[Int], 0))
+            explanation.foreach(_.collectBufferScoreContribution(uriId, -1, Visibility.NETWORK, Array.empty[Int], 0))
           }
           docId = td.nextDoc()
         }
