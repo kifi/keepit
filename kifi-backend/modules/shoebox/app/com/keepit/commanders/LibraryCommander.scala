@@ -1258,26 +1258,38 @@ class LibraryCommander @Inject() (
     UserValueSettings.retrieveSetting(userVal, settingsJs)
   }
 
+  def getOwnProfileLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize): ParSeq[OwnLibraryCardInfo] = {
+    db.readOnlyMaster { implicit session =>
+      val libs = libraryRepo.getLibrariesOfSelf(user.id.get, page)
+      val owners = Map(user.id.get -> BasicUser.fromUser(user))
+      createLibraryCardInfos(libs, owners, idealSize, true) zip libs
+    } map {
+      case (info, lib) =>
+        OwnLibraryCardInfo(
+          id = info.id,
+          name = info.name,
+          description = info.description,
+          color = info.color,
+          image = info.image,
+          slug = info.slug,
+          kind = lib.kind,
+          visibility = lib.visibility,
+          numKeeps = info.numKeeps,
+          numFollowers = info.numFollowers,
+          followers = info.followers)
+    }
+  }
+
   def getOwnProfileLibraries(owner: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
           libraryRepo.getLibrariesOfUserFromAnonymos(owner.id.get, page)
-        case Some(other) if other.id == owner.id =>
-          libraryRepo.getLibrariesOfSelf(owner.id.get, page)
         case Some(other) =>
           getLibrariesBatch(libraryMembershipRepo.getOwnedLibrariesForOtherUser(owner.id.get, other.id.get, page))
       }
-      createLibraryCardInfos(libs, idealSize, viewer.isDefined)
-    }
-  }
-
-  private def getLibrariesBatch(ids: Seq[Id[Library]])(implicit session: RSession): Seq[Library] = {
-    if (ids.isEmpty) Seq.empty
-    else if (ids.size == 1) Seq(libraryRepo.get(ids.head))
-    else {
-      val libs = libraryRepo.getLibraries(ids.toSet)
-      ids.map(id => libs(id))
+      val owners = Map(owner.id.get -> BasicUser.fromUser(owner))
+      createLibraryCardInfos(libs, owners, idealSize, viewer.isDefined)
     }
   }
 
@@ -1297,26 +1309,33 @@ class LibraryCommander @Inject() (
             getLibrariesBatch(libraryMembershipRepo.getFollowingLibrariesForOtherUser(owner.id.get, other.id.get, page))
           } else Seq.empty
       }
-      createLibraryCardInfos(libs, idealSize, viewer.isDefined)
+      val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
+      createLibraryCardInfos(libs, owners, idealSize, viewer.isDefined)
     }
   }
 
-  def getInvitedLibraries(invitee: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
-    viewer match {
-      case None =>
-        ParSeq.empty
-      case Some(other) if other.id.get == invitee.id.get =>
-        db.readOnlyMaster { implicit session =>
-          val libs = getLibrariesBatch(libraryInviteRepo.getActiveWithUserId(invitee.id.get, page))
-          createLibraryCardInfos(libs, idealSize, viewer.isDefined)
-        }
-      case Some(other) =>
-        ParSeq.empty
+  def getInvitedLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
+    if (viewer.exists(_.id == user.id)) {
+      db.readOnlyMaster { implicit session =>
+        val libs = getLibrariesBatch(libraryInviteRepo.getActiveWithUserId(user.id.get, page))
+        val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
+        createLibraryCardInfos(libs, owners, idealSize, viewer.isDefined)
+      }
+    } else {
+      ParSeq.empty
     }
   }
 
-  private def createLibraryCardInfos(libs: Seq[Library], idealSize: ImageSize, isAuthenticatedRequest: Boolean)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
-    val owners: Map[Id[User], BasicUser] = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
+  private def getLibrariesBatch(ids: Seq[Id[Library]])(implicit session: RSession): Seq[Library] = {
+    if (ids.isEmpty) Seq.empty
+    else if (ids.size == 1) Seq(libraryRepo.get(ids.head))
+    else {
+      val libs = libraryRepo.getLibraries(ids.toSet)
+      ids.map(id => libs(id))
+    }
+  }
+
+  private def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], idealSize: ImageSize, isAuthenticatedRequest: Boolean)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getForLibraryId(lib.id.get))
       val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
@@ -1328,11 +1347,11 @@ class LibraryCommander @Inject() (
       } else {
         (0, Seq.empty)
       }
-      createLibraryCardInfo(lib, image, owners, numKeeps, numFollowers, followersSample, isAuthenticatedRequest)
+      createLibraryCardInfo(lib, image, owners(lib.ownerId), numKeeps, numFollowers, followersSample, isAuthenticatedRequest)
     }
   }
 
-  private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owners: Map[Id[User], BasicUser], numKeeps: Int, numFollowers: Int,
+  private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numKeeps: Int, numFollowers: Int,
     followers: Seq[BasicUser], isAuthenticatedRequest: Boolean): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
@@ -1341,7 +1360,7 @@ class LibraryCommander @Inject() (
       color = lib.color,
       image = image.map(LibraryImageInfo.createInfo),
       slug = lib.slug,
-      owner = owners(lib.ownerId),
+      owner = owner,
       numKeeps = numKeeps,
       numFollowers = numFollowers,
       followers = LibraryCardInfo.showable(followers, isAuthenticatedRequest),

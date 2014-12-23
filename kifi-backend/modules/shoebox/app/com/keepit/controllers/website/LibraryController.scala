@@ -560,19 +560,24 @@ class LibraryController @Inject() (
         val imageSize = ProcessedImageSize.Medium.idealSize
         filter match {
           case "own" =>
-            val libs = libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).seq
-            Future.successful(Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes))))
-
+            val libs = if (viewer.exists(_.id == user.id)) {
+              Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize).seq)
+            } else {
+              Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).seq)
+            }
+            Future.successful(Ok(Json.obj("own" -> libs)))
           case "following" =>
             val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
-            Future.successful(Ok(Json.obj("following" -> Json.toJson(libs))))
-
+            Future.successful(Ok(Json.obj("following" -> libs)))
           case "invited" =>
             val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
-            Future.successful(Ok(Json.obj("invited" -> Json.toJson(libs))))
-
+            Future.successful(Ok(Json.obj("invited" -> libs)))
           case "all" if page == 0 =>
-            val ownLibsF = SafeFuture(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).seq)
+            val ownLibsF = if (viewer.exists(_.id == user.id)) {
+              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize).seq))
+            } else {
+              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).seq))
+            }
             val followLibsF = SafeFuture(libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
             val invitedLibsF = SafeFuture(libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
             for {
@@ -581,14 +586,15 @@ class LibraryController @Inject() (
               invitedLibs <- invitedLibsF
             } yield {
               Ok(Json.obj(
-                "own" -> ownLibs.map(LibraryCardInfo.writesWithoutOwner.writes),
-                "following" -> Json.toJson(followLibs),
-                "invited" -> Json.toJson(invitedLibs)
+                "own" -> ownLibs,
+                "following" -> followLibs,
+                "invited" -> invitedLibs
               ))
             }
-
+          case "all" if page != 0 =>
+            Future.successful(BadRequest(Json.obj("error" -> "cannot_page_all_filters")))
           case _ =>
-            Future.successful(BadRequest(Json.obj("error" -> "invalid_parameters")))
+            Future.successful(BadRequest(Json.obj("error" -> "no_such_filter")))
         }
     }
   }

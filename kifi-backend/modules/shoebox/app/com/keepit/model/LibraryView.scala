@@ -33,7 +33,8 @@ object LibraryError {
 
 case class LibraryFail(status: Int, message: String)
 
-@json case class LibraryAddRequest(name: String,
+@json case class LibraryAddRequest(
+  name: String,
   visibility: LibraryVisibility,
   description: Option[String] = None,
   slug: String,
@@ -86,8 +87,35 @@ object LibraryInfo {
   }
 }
 
+private[model] abstract class BaseLibraryCardInfo(
+  id: PublicId[Library],
+  name: String,
+  description: Option[String],
+  color: Option[HexColor],
+  image: Option[LibraryImageInfo],
+  slug: LibrarySlug,
+  numKeeps: Int,
+  numFollowers: Int,
+  followers: Seq[BasicUser])
+
 @json
-case class LibraryCardInfo(id: PublicId[Library],
+case class OwnLibraryCardInfo(
+  id: PublicId[Library],
+  name: String,
+  description: Option[String],
+  color: Option[HexColor],
+  image: Option[LibraryImageInfo],
+  slug: LibrarySlug,
+  kind: LibraryKind,
+  visibility: LibraryVisibility,
+  numKeeps: Int,
+  numFollowers: Int,
+  followers: Seq[BasicUser])
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers)
+
+@json
+case class LibraryCardInfo(
+  id: PublicId[Library],
   name: String,
   description: Option[String],
   color: Option[HexColor],
@@ -98,12 +126,9 @@ case class LibraryCardInfo(id: PublicId[Library],
   numFollowers: Int,
   followers: Seq[BasicUser],
   caption: Option[String])
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers)
 
 object LibraryCardInfo {
-  val writesWithoutOwner = Writes[LibraryCardInfo] { o => // for case when receiving end already knows the owner
-    JsObject((Json.toJson(o).asInstanceOf[JsObject].value - "owner").toSeq)
-  }
-
   def showable(followers: Seq[BasicUser], isAuthenticatedRequest: Boolean): Seq[BasicUser] = {
     if (isAuthenticatedRequest) {
       val goodLooking = followers.filter(_.pictureName != "0.jpg")
@@ -124,7 +149,8 @@ object MaybeLibraryMember {
   }
 }
 
-case class FullLibraryInfo(id: PublicId[Library],
+case class FullLibraryInfo(
+  id: PublicId[Library],
   name: String,
   visibility: LibraryVisibility,
   description: Option[String],

@@ -472,6 +472,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   "name": "lib1",
                   "description": "My first library!",
                   "slug": "lib1",
+                  "kind": "user_created",
+                  "visibility": "published",
                   "color": "#e3e3e3",
                   "image": {"path": "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x": 50, "y": 50},
                   "numKeeps": 1,
