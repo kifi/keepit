@@ -1268,7 +1268,7 @@ class LibraryCommander @Inject() (
         case Some(other) =>
           libraryMembershipRepo.getOwnedLibrariesForOtherUser(owner.id.get, other.id.get, page) map libraryRepo.get //cached
       }
-      createLibraryCardInfos(libs, ownerBasicUser, idealSize, viewer.isDefined)
+      createLibraryCardInfos(libs, idealSize, viewer.isDefined)
     }
   }
 
@@ -1278,35 +1278,35 @@ class LibraryCommander @Inject() (
       val libs = viewer match {
         case None =>
           val showFollowLibraries = getUserValueSetting(owner.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
-          if (!showFollowLibraries) Seq.empty
-          else libraryMembershipRepo.getFollowingLibrariesFromAnonymos(owner.id.get, page) map libraryRepo.get //cached
+          if (showFollowLibraries) libraryMembershipRepo.getFollowingLibrariesFromAnonymos(owner.id.get, page) map libraryRepo.get //cached
+          else Seq.empty
         case Some(other) if other.id == owner.id =>
           libraryMembershipRepo.getFollowingLibrariesOfSelf(owner.id.get, page) map libraryRepo.get //cached
         case Some(other) =>
           val showFollowLibraries = getUserValueSetting(owner.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
-          if (!showFollowLibraries) Seq.empty
-          else libraryMembershipRepo.getFollowingLibrariesForOtherUser(owner.id.get, other.id.get, page) map libraryRepo.get //cached
+          if (showFollowLibraries) libraryMembershipRepo.getFollowingLibrariesForOtherUser(owner.id.get, other.id.get, page) map libraryRepo.get //cached
+          else Seq.empty
       }
-      createLibraryCardInfos(libs, ownerBasicUser, idealSize, viewer.isDefined)
+      createLibraryCardInfos(libs, idealSize, viewer.isDefined)
     }
   }
 
-  def getInvitedLibraries(owner: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): Seq[LibraryCardInfo] = {
-    val ownerBasicUser = BasicUser.fromUser(owner)
+  def getInvitedLibraries(invitee: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): Seq[LibraryCardInfo] = {
+    val inviteeBasicUser = BasicUser.fromUser(invitee)
     viewer match {
       case None =>
         Seq.empty
-      case Some(other) if other.id == owner.id =>
+      case Some(other) if other.id == invitee.id =>
         db.readOnlyMaster { implicit session =>
-          val libs = libraryInviteRepo.getActiveWithUserId(owner.id.get, page) map libraryRepo.get //cached
-          createLibraryCardInfos(libs, ownerBasicUser, idealSize, viewer.isDefined)
+          val libs = libraryInviteRepo.getActiveWithUserId(invitee.id.get, page) map libraryRepo.get //cached
+          createLibraryCardInfos(libs, idealSize, viewer.isDefined)
         }
       case Some(other) =>
         Seq.empty
     }
   }
 
-  private def createLibraryCardInfos(libs: Seq[Library], ownerBasicUser: BasicUser, idealSize: ImageSize, isAuthenticatedRequest: Boolean)(implicit session: RSession): Seq[LibraryCardInfo] = {
+  private def createLibraryCardInfos(libs: Seq[Library], idealSize: ImageSize, isAuthenticatedRequest: Boolean)(implicit session: RSession): Seq[LibraryCardInfo] = {
     libs map {
       lib => // may want to optimize queries below into bulk queries
         val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getForLibraryId(lib.id.get))
@@ -1321,11 +1321,14 @@ class LibraryCommander @Inject() (
         } else {
           (0, Seq.empty)
         }
-        createLibraryCardInfo(lib, image, ownerBasicUser, numKeeps, numFollowers, followersSample, isAuthenticatedRequest)
+        val owners: Map[Id[User], BasicUser] = libs.map(_.ownerId).toSet.map { owner: Id[User] =>
+          owner -> basicUserRepo.load(owner)
+        } toMap;
+        createLibraryCardInfo(lib, image, owners, numKeeps, numFollowers, followersSample, isAuthenticatedRequest)
     }
   }
 
-  private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numKeeps: Int, numFollowers: Int,
+  private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owners: Map[Id[User], BasicUser], numKeeps: Int, numFollowers: Int,
     followers: Seq[BasicUser], isAuthenticatedRequest: Boolean): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
@@ -1334,7 +1337,7 @@ class LibraryCommander @Inject() (
       color = lib.color,
       image = image.map(LibraryImageInfo.createInfo),
       slug = lib.slug,
-      owner = owner,
+      owner = owners(lib.ownerId),
       numKeeps = numKeeps,
       numFollowers = numFollowers,
       followers = LibraryCardInfo.showable(followers, isAuthenticatedRequest),
