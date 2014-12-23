@@ -488,7 +488,16 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         Json.parse(contentAsString(result2)) must equalTo(Json.parse(
           s"""
             {
-              "following": []
+              "following": [
+                {
+                  "name": "lib3",
+                  "numFollowers": 1,
+                  "numKeeps": 0,
+                  "followers": [],
+                  "slug": "lib3",
+                  "id": "${pubId3.id}"
+                }
+              ]
             }
           """
         ))
@@ -511,7 +520,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result4) must beSome("application/json")
         val resultJson4 = contentAsJson(result4)
         (resultJson4 \ "own").as[Seq[JsObject]].length === 1
-        (resultJson4 \ "following").as[Seq[JsObject]].length === 0
+        (resultJson4 \ "following").as[Seq[JsObject]].length === 1
         (resultJson4 \ "invited").as[Seq[JsObject]].length === 0
       }
     }
