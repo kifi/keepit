@@ -170,6 +170,9 @@ angular.module('kifi')
           'background-image': 'url(' + routeService.libraryImageUrl(lib.image.path) + ')',
           'background-position': lib.image.x + '% ' + lib.image.y + '%'
         } : {};
+      lib.followers.forEach(function (user) {
+        user.picUrl = keepWhoService.getPicUrl(user, 100);
+      });
       return lib;
     }
 

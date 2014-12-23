@@ -135,7 +135,7 @@ name-line-height = 25px
   font-size: 20px
   line-height: name-line-height
   height: 2 * name-line-height
-  vertical-align: middle
+  vertical-align: bottom
   padding: 0 16px
 
 .kf-upl-card-name-clip
@@ -167,11 +167,12 @@ name-line-height = 25px
   text-transform: uppercase
   text-shadow: 0 0 3px rgba(0,0,0,.6)
 
-  &::before
-    content: 'by '
-    font-style: italic
-    font-weight: normal
-    text-transform: none
+.kf-upl-card-by
+  font-style: italic
+  font-weight: normal
+  text-transform: none
+  letter-spacing: normal
+  margin-right: 2px
 
 .kf-upl-card-cover
   position: absolute
@@ -220,6 +221,35 @@ name-line-height = 25px
   bottom: 0
   height: 34px
   border-top: 1px solid rgba(255,255,255,.3)
+  -webkit-font-smoothing: antialiased
+
+follower-pic-diameter = 23px
+
+.kf-upl-followers
+  padding: 4px 16px 0
+  text-align: left
+  line-height: follower-pic-diameter
+  font-size: 11px
+  vertical-align: middle
+  color: rgba(255,255,255,.7)
+
+.kf-upl-follower
+  display: inline-block
+  vertical-align: top
+  width: follower-pic-diameter
+  height: follower-pic-diameter
+  background-size: cover
+  background-position: center
+  border-radius: 100%
+  margin-right: 4px
+
+  &:last-of-type
+    margin-right: 6px
+
+.kf-upl-updated
+  line-height: 32px
+  font-size: 12px
+  color: rgba(255,255,255,.4)
 
 //
 // Mobile styles.
