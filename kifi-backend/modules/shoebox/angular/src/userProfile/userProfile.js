@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', '$window',
-  'keepWhoService', 'profileService', 'userProfileActionService',
-  function ($scope, $rootScope, $state, $stateParams, $window,
-            keepWhoService, profileService, userProfileActionService) {
+  '$scope', '$rootScope', '$state', '$stateParams', '$timeout', '$window',
+  'env', 'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService',
+  function ($scope, $rootScope, $state, $stateParams, $timeout, $window,
+            env, inviteService, keepWhoService, profileService, userProfileActionService) {
     //
     // Configs.
     //
@@ -24,8 +24,18 @@ angular.module('kifi')
 
 
     //
+    // Internal data.
+    //
+    var ignoreClick = {
+      'connect': true
+    };
+    var $connectEl = null;
+    var connectElSelector = '.kf-user-profile-connect';
+
+    //
     // Scope data.
     //
+    $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
     $scope.profile = null;
     $scope.userLoggedIn = false;
     $scope.viewingOwnProfile = false;
@@ -62,6 +72,10 @@ angular.module('kifi')
     function initProfile(profile) {
       $scope.profile = _.cloneDeep(profile);
       $scope.profile.picUrl = keepWhoService.getPicUrl($scope.profile, 200);
+
+      // User id from profile is needed for connection.
+      // Use timeout to wait until the connect element is added to the DOM with ng-if.
+      $timeout(enableConnectClick);
     }
 
     function initViewingUserStatus() {
@@ -81,6 +95,36 @@ angular.module('kifi')
         };
       });
     }
+
+    function enableConnectClick() {
+      ignoreClick.connect = false;
+      $connectEl = $connectEl || angular.element(connectElSelector);
+      $connectEl.attr('href', 'javascript:');  // jshint ignore:line
+    }
+
+    function disableConnectClick() {
+      ignoreClick.connect = true;
+      $connectEl = $connectEl || angular.element(connectElSelector);
+      $connectEl.removeAttr('href');
+    }
+
+
+    //
+    // Scope methods.
+    //
+    $scope.connect = function () {
+      if (ignoreClick.connect) {
+        return;
+      }
+
+      disableConnectClick();
+      $connectEl = $connectEl || angular.element(connectElSelector);
+      $connectEl.text('SENDING REQUEST...');
+
+      inviteService.friendRequest($scope.profile.id).then(function () {
+        $connectEl.text('SENT!');
+      });
+    };
 
 
     // Initialize controller.
