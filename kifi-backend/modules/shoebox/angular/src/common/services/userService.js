@@ -17,6 +17,4 @@ angular.module('kifi')
       }
     };
   }
-])
-
-;
+]);
