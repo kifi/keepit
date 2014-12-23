@@ -107,7 +107,8 @@ class SearchFactory @Inject() (
             clickBoostsFuture,
             clickHistoryFuture,
             monitoredAwait,
-            timeLogs
+            timeLogs,
+            (lang1, lang2)
           )
         }
       case None => Seq.empty[UriSearch]
@@ -203,7 +204,8 @@ class SearchFactory @Inject() (
             friendIdsFuture,
             libraryIdsFuture,
             monitoredAwait,
-            timeLogs
+            timeLogs,
+            (lang1, lang2)
           )
         }
       case None => Seq.empty[UriSearchNonUserImpl]
@@ -260,7 +262,7 @@ class SearchFactory @Inject() (
             libraryIdsFuture,
             monitoredAwait,
             timeLogs,
-            explain
+            explain.map((_, lang1, lang2))
           )
         }
       case None => Seq.empty

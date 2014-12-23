@@ -5,7 +5,7 @@ import com.keepit.model.{ Library, Keep, User }
 import com.keepit.search.engine._
 import com.keepit.search.engine.uri.UriSearch
 import com.keepit.search.index.Searcher
-import com.keepit.search.{ SearchConfig, SearchFilter }
+import com.keepit.search.{ Lang, SearchConfig, SearchFilter }
 import com.keepit.search.engine.result.{ ResultCollector, HitQueue }
 import com.keepit.common.logging.Logging
 import scala.concurrent.Future
@@ -26,7 +26,7 @@ class LibrarySearch(
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     monitoredAwait: MonitoredAwait,
     timeLogs: SearchTimeLogs,
-    explain: Option[Id[Library]]) extends DebugOption with Logging {
+    explain: Option[(Id[Library], Lang, Option[Lang])]) extends DebugOption with Logging {
   private[this] val percentMatch = config.asFloat("percentMatch")
   private[this] val myLibraryBoost = config.asFloat("myLibraryBoost")
 
@@ -53,10 +53,11 @@ class LibrarySearch(
     val engine = engineBuilder.build()
     debugLog("library search engine created")
 
-    val explanation = explain.map { libraryId =>
-      val labels = engineBuilder.getQueryLabels()
-      val query = engine.getQuery()
-      new LibrarySearchExplanationBuilder(libraryId, query, labels)
+    val explanation = explain.map {
+      case (libraryId, firstLang, secondLang) =>
+        val labels = engineBuilder.getQueryLabels()
+        val query = engine.getQuery()
+        new LibrarySearchExplanationBuilder(libraryId, (firstLang, secondLang), query, labels)
     }
 
     val collector = new LibraryResultCollector(numHitsToReturn * 5, myLibraryBoost, percentMatch / 100.0f, explanation)

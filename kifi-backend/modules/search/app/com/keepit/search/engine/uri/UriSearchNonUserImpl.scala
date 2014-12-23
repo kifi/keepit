@@ -22,7 +22,8 @@ class UriSearchNonUserImpl(
     friendIdsFuture: Future[Set[Long]],
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     monitoredAwait: MonitoredAwait,
-    timeLogs: SearchTimeLogs) extends UriSearch(articleSearcher, keepSearcher, timeLogs) with Logging {
+    timeLogs: SearchTimeLogs,
+    lang: (Lang, Option[Lang])) extends UriSearch(articleSearcher, keepSearcher, timeLogs) with Logging {
 
   // get config params
   private[this] val percentMatch = config.asFloat("percentMatch")
@@ -88,7 +89,7 @@ class UriSearchNonUserImpl(
     val engine = engineBuilder.build()
     val labels = engineBuilder.getQueryLabels()
     val query = engine.getQuery()
-    val explanation = new UriSearchExplanationBuilder(uriId, query, labels)
+    val explanation = new UriSearchExplanationBuilder(uriId, lang, query, labels)
     executeTextSearch(engine, Some(explanation))
     explanation.build()
   }

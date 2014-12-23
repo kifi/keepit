@@ -29,7 +29,8 @@ class UriSearchImpl(
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     monitoredAwait: MonitoredAwait,
-    timeLogs: SearchTimeLogs) extends UriSearch(articleSearcher, keepSearcher, timeLogs) with Logging {
+    timeLogs: SearchTimeLogs,
+    lang: (Lang, Option[Lang])) extends UriSearch(articleSearcher, keepSearcher, timeLogs) with Logging {
 
   private[this] val isInitialSearch = filter.idFilter.isEmpty
 
@@ -157,7 +158,7 @@ class UriSearchImpl(
     val engine = engineBuilder.build()
     val labels = engineBuilder.getQueryLabels()
     val query = engine.getQuery()
-    val explanation = new UriSearchExplanationBuilder(uriId, query, labels)
+    val explanation = new UriSearchExplanationBuilder(uriId, lang, query, labels)
     executeTextSearch(engine, Some(explanation))
     explanation.build()
   }

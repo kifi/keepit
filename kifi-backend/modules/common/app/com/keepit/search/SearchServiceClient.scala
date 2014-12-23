@@ -49,7 +49,7 @@ trait SearchServiceClient extends ServiceClient {
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]]
   def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html]
-  def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], lang: String, debug: Option[String]): Future[Html]
+  def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: Seq[String], debug: Option[String]): Future[Html]
   def showUserConfig(id: Id[User]): Future[SearchConfig]
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
   def resetUserConfig(id: Id[User]): Unit
@@ -191,8 +191,8 @@ class SearchServiceClientImpl(
     call(Search.internal.explainUriResult(query, userId, uriId, Some(lang), debug)).map(r => Html(r.body))
   }
 
-  def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], lang: String, debug: Option[String]): Future[Html] = {
-    call(Search.internal.explainLibraryResult(query, userId, libraryId, Some(lang), debug)).map(r => Html(r.body))
+  def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: Seq[String], debug: Option[String]): Future[Html] = {
+    call(Search.internal.explainLibraryResult(query, userId, libraryId, acceptLangs, debug)).map(r => Html(r.body))
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = {
