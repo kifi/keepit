@@ -224,8 +224,12 @@ class UserRepoImpl @Inject() (
     }
   }
   def getAllUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User] = {
-    if (ids.isEmpty) Map.empty[Id[User], User]
-    else {
+    if (ids.isEmpty) {
+      Map.empty
+    } else if (ids.size == 1) {
+      val id = ids.head
+      Map(id -> get(id))
+    } else {
       val valueMap = idCache.bulkGetOrElse(ids.map(UserIdKey(_)).toSet) { keys =>
         val missing = keys.map(_.id)
         val users = (for (f <- rows if f.id.inSet(missing)) yield f).list

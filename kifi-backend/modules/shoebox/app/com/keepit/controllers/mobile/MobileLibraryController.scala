@@ -2,6 +2,7 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.commanders._
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
@@ -347,40 +348,46 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction { request =>
+  def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
     userCommander.userFromUsername(username) match {
       case None =>
         log.warn(s"unknown username ${username.value} requested")
-        NotFound(username.value)
+        Future.successful(NotFound(username.value))
       case Some(user) =>
         val viewer = request.userOpt
         val paginator = Paginator(page, pageSize)
         val imageSize = ProcessedImageSize.Medium.idealSize
         filter match {
           case "own" =>
-            val libs = libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize)
-            Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
+            val libs = libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).seq
+            Future.successful(Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes))))
 
           case "following" =>
-            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize)
-            Ok(Json.obj("following" -> Json.toJson(libs)))
+            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
+            Future.successful(Ok(Json.obj("following" -> Json.toJson(libs))))
 
           case "invited" =>
-            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)
-            Ok(Json.obj("invited" -> Json.toJson(libs)))
+            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
+            Future.successful(Ok(Json.obj("invited" -> Json.toJson(libs))))
 
           case "all" if page == 0 =>
-            val ownLibs = libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize)
-            val followLibs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize)
-            val invitedLibs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)
-            Ok(Json.obj(
-              "own" -> ownLibs.map(LibraryCardInfo.writesWithoutOwner.writes),
-              "following" -> Json.toJson(followLibs),
-              "invited" -> Json.toJson(invitedLibs)
-            ))
+            val ownLibsF = SafeFuture(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize))
+            val followLibsF = SafeFuture(libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize))
+            val invitedLibsF = SafeFuture(libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize))
+            for {
+              ownLibs <- ownLibsF
+              followLibs <- followLibsF
+              invitedLibs <- invitedLibsF
+            } yield {
+              Ok(Json.obj(
+                "own" -> ownLibs.seq.map(LibraryCardInfo.writesWithoutOwner.writes),
+                "following" -> Json.toJson(followLibs.seq),
+                "invited" -> Json.toJson(invitedLibs.seq)
+              ))
+            }
 
           case _ =>
-            BadRequest(Json.obj("error" -> "invalid_parameters"))
+            Future.successful(BadRequest(Json.obj("error" -> "invalid_parameters")))
         }
     }
   }
