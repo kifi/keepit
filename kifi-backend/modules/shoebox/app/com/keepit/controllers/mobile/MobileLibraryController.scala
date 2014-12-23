@@ -360,22 +360,22 @@ class MobileLibraryController @Inject() (
         filter match {
           case "own" =>
             val libs = if (viewer.exists(_.id == user.id)) {
-              Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize))
+              Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize).seq)
             } else {
-              Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize))
+              Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).seq)
             }
             Future.successful(Ok(Json.obj("own" -> libs)))
           case "following" =>
-            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize)
+            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("following" -> libs)))
           case "invited" =>
-            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)
+            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("invited" -> libs)))
           case "all" if page == 0 =>
             val ownLibsF = if (viewer.exists(_.id == user.id)) {
-              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize)))
+              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize).seq))
             } else {
-              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize)))
+              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).seq))
             }
             val followLibsF = SafeFuture(libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
             val invitedLibsF = SafeFuture(libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
