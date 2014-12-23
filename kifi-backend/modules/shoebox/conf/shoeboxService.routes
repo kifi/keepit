@@ -311,7 +311,9 @@ GET     /feeds/libraries/new        @com.keepit.controllers.website.FeedControll
 
 POST    /site/events                @com.keepit.controllers.tracking.EventProxyController.track()
 
-GET     /assets/sitemap.xml         @com.keepit.controllers.website.SiteMapController.sitemap()
+GET     /assets/sitemap.xml                     @com.keepit.controllers.website.SiteMapController.librariesSitemapLegacy()
+GET     /assets/sitemap/libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
+GET     /assets/sitemap/users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
 
 GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()
@@ -521,7 +523,8 @@ POST    /admin/reKeepStats/user/update  @com.keepit.controllers.admin.AdminAttri
 POST    /admin/reKeepStats/users/update @com.keepit.controllers.admin.AdminAttributionController.updateUsersReKeepStats
 POST    /admin/reKeepStats/all/update   @com.keepit.controllers.admin.AdminAttributionController.updateAllReKeepStats
 
-GET    /admin/sitemap                  @com.keepit.controllers.admin.AdminSiteMapController.generate()
+GET     /admin/sitemap/library          @com.keepit.controllers.admin.AdminSiteMapController.generateLibrarySitemap()
+GET     /admin/sitemap/user             @com.keepit.controllers.admin.AdminSiteMapController.generateUserSitemap()
 
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection

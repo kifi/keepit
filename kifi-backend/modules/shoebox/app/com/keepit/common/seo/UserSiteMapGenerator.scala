@@ -4,6 +4,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.util.Paginator
 import com.keepit.common.{ seo, CollectionHelpers }
 import com.keepit.common.cache._
 import com.keepit.common.net.{ DirectUrl, HttpClient }
@@ -23,88 +24,73 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-object LibrarySiteMapGenerator {
-  val BaselineDate = new LocalDate(2014, 12, 13)
+object UserSiteMapGenerator {
+  val BaselineDate = new LocalDate(2014, 12, 23)
 }
 
 @Singleton
-class LibrarySiteMapGenerator @Inject() (
-    airbrake: AirbrakeNotifier,
+class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
     db: Database,
-    userRepo: BasicUserRepo,
-    keepRepo: KeepRepo,
-    fortyTwoConfig: FortyTwoConfig,
+    userRepo: UserRepo,
     libraryRepo: LibraryRepo,
+    fortyTwoConfig: FortyTwoConfig,
     experimentRepo: UserExperimentRepo,
     siteMapCache: SiteMapCache) extends SitemapGenerator with Logging {
 
   def intern(): Future[String] = {
-    siteMapCache.getOrElseFuture(SiteMapKey.libraries) {
+    siteMapCache.getOrElseFuture(SiteMapKey.users) {
       generate()
     }
   }
 
-  private def keepsInRepo(library: Library)(implicit session: RSession): Int = {
-    keepRepo.getCountByLibrary(library.id.get)
-  }
-
-  private def path(lib: Library, owner: BasicUser): String = {
-    s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, lib.slug)}"
-  }
-
-  private def lastMod(lib: Library): LocalDate = {
-    val date = db.readOnlyReplica { implicit s =>
-      keepRepo.latestKeepInLibrary(lib.id.get) match {
-        case Some(date) if date.isAfter(lib.updatedAt) => date.toLocalDate
-        case _ => lib.updatedAt.toLocalDate
+  private def lastMod(user: User): LocalDate = {
+    val date = {
+      val userUpdate = user.updatedAt.toLocalDate
+      val lastLib = db.readOnlyReplica { implicit s =>
+        libraryRepo.getLibrariesOfUserFromAnonymos(user.id.get, Paginator.fromStart(1)).headOption.map(_.updatedAt.toLocalDate).getOrElse(userUpdate)
       }
+      if (userUpdate.isAfter(lastLib)) userUpdate else lastLib
     }
-    if (date.isBefore(LibrarySiteMapGenerator.BaselineDate)) {
-      LibrarySiteMapGenerator.BaselineDate
+    if (date.isBefore(UserSiteMapGenerator.BaselineDate)) {
+      UserSiteMapGenerator.BaselineDate
     } else date
   }
 
   def generateAndCache(): Future[String] = generate() map { sitemap =>
-    siteMapCache.set(SiteMapKey.libraries, sitemap)
+    siteMapCache.set(SiteMapKey.users, sitemap)
     sitemap
   }
 
   def generate(): Future[String] = {
     db.readOnlyReplicaAsync { implicit ro =>
-      val libs = libraryRepo.getAllPublishedLibraries().take(50000)
-      if (libs.size > 40000) airbrake.notify(s"there are ${libs.size} libraries for sitemap, need to paginate the list!")
-      libs
-    } map { libraries =>
+      val users = userRepo.getAllIds()
+      if (users.size > 40000) airbrake.notify(s"there are ${users.size} libraries for sitemap, need to paginate the list!")
+      users
+    } map { userIds =>
 
       // batch, optimize
-      val ownerIds = CollectionHelpers.dedupBy(libraries.map(_.ownerId))(id => id)
-      val owners = db.readOnlyMaster { implicit ro =>
-        val realUsers = ownerIds.filterNot { id =>
+      val users = db.readOnlyMaster { implicit ro =>
+        val realUsers = userIds.filterNot { id =>
           val experiments = experimentRepo.getAllUserExperiments(id)
           experiments.contains(ExperimentType.FAKE) || experiments.contains(ExperimentType.AUTO_GEN)
         }
-        userRepo.loadAll(realUsers.toSet)
+        userRepo.getAllUsers(realUsers.toSeq).values.toSeq
       } // cached
-      val libs = db.readOnlyReplica { implicit ro =>
-        libraries.filter { lib =>
-          owners.get(lib.ownerId).isDefined && keepsInRepo(lib) > 3 // proxy for quality; need bulk version
-        }
-      }
 
       val urlset =
         <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
           {
-            libs.map { lib =>
+            users.map { user =>
               <url>
                 <loc>
-                  { path(lib, owners(lib.ownerId)) }
+                  { s"https://www.kifi.com/${user.username}" }
                 </loc>
-                <lastmod>{ ISO_8601_DAY_FORMAT.print(lastMod(lib)) }</lastmod>
+                <lastmod>{ ISO_8601_DAY_FORMAT.print(lastMod(user)) }</lastmod>
               </url>
             }
           }
         </urlset>
-      log.info(s"[generate] done with sitemap generation. #libraries=${libs.size}")
+      log.info(s"[generate] done with sitemap generation. #libraries=${users.size}")
       s"""
          |<?xml-stylesheet type='text/xsl' href='sitemap.xsl'?>
          |${urlset.toString}

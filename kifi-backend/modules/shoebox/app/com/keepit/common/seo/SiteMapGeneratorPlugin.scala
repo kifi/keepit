@@ -33,30 +33,50 @@ class SiteMapGeneratorPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     for (app <- Play.maybeApplication) {
-      val (initDelay, freq) = (60 minutes, 60 minutes)
-      log.info(s"[onStart] SiteMapGeneratorPlugin started with initDelay=$initDelay freq=$freq")
-      scheduleTaskOnLeader(actor.system, initDelay, freq, actor.ref, SubmitSitemap)
+      scheduleTaskOnLeader(actor.system, 1 hour, 6 hours, actor.ref, GenerateLibrarySitemap)
+      scheduleTaskOnLeader(actor.system, 2 hour, 6 hours, actor.ref, GenerateUserSitemap)
     }
   }
 
-  override def submit() { actor.ref ! SubmitSitemap }
+  override def submit() { actor.ref ! GenerateLibrarySitemap }
 }
 
-object SubmitSitemap
+trait SitemapGenerator {
+  def generate(): Future[String]
+  def generateAndCache(): Future[String]
+  def intern(): Future[String]
+}
+
+object GenerateUserSitemap
+object GenerateLibrarySitemap
 
 // library-only for now
 class SiteMapGeneratorActor @Inject() (
     airbrake: AirbrakeNotifier,
     httpClient: HttpClient,
+    librarySiteMapGenerator: LibrarySiteMapGenerator,
+    userSiteMapGenerator: UserSiteMapGenerator,
     fortyTwoConfig: FortyTwoConfig) extends FortyTwoActor(airbrake) with Logging {
 
+  private def submitSitemap(sitemapUrl: String): Unit = {
+    val googleRes = httpClient.get(DirectUrl(s"http://www.google.com/webmasters/sitemaps/ping?sitemap=$sitemapUrl"))
+    log.info(s"submitted sitemap to google. res(${googleRes.status}): ${googleRes.body}")
+    val bingRes = httpClient.get(DirectUrl(s"http://www.bing.com/webmaster/ping.aspx?siteMap=$sitemapUrl"))
+    log.info(s"submitted sitemap to bing. res(${bingRes.status}): ${bingRes.body}")
+  }
+
   def receive() = {
-    case SubmitSitemap =>
-      val sitemapUrl = java.net.URLEncoder.encode(s"${fortyTwoConfig.applicationBaseUrl}assets/sitemap.xml", "UTF-8")
-      val googleRes = httpClient.get(DirectUrl(s"http://www.google.com/webmasters/sitemaps/ping?sitemap=$sitemapUrl"))
-      log.info(s"submitted sitemap to google. res(${googleRes.status}): ${googleRes.body}")
-      val bingRes = httpClient.get(DirectUrl(s"http://www.bing.com/webmaster/ping.aspx?siteMap=$sitemapUrl"))
-      log.info(s"submitted sitemap to bing. res(${bingRes.status}): ${bingRes.body}")
+    case GenerateLibrarySitemap =>
+      librarySiteMapGenerator.generateAndCache().onComplete { sitemap =>
+        val sitemapUrl = java.net.URLEncoder.encode(s"${fortyTwoConfig.applicationBaseUrl}assets/sitemap/libraries-0.xml", "UTF-8")
+        submitSitemap(sitemapUrl)
+      }
+    case GenerateUserSitemap =>
+      userSiteMapGenerator.generateAndCache().onComplete { sitemap =>
+        val sitemapUrl = java.net.URLEncoder.encode(s"${fortyTwoConfig.applicationBaseUrl}assets/sitemap/users-0.xml", "UTF-8")
+        log.info(s"when user profile will be alive we'll send sitemap with this url to the search engines: $sitemapUrl")
+        //submitSitemap(sitemapUrl)
+      }
   }
 
 }
