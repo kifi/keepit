@@ -406,25 +406,4 @@ class LDACommander @Inject() (
     }
   }
 
-  def oneTimeFix() = {
-    val tofix = db.readOnlyReplica { implicit s => libTopicRepo.getToFix() }
-    assert(tofix.size < 200, "correct query should return < 200 items")
-    db.readWrite { implicit s =>
-      tofix.foreach { model =>
-        model.topic match {
-          case Some(mean) =>
-            // copied from LDALibraryUpdater
-            val sorted = mean.value.zipWithIndex.sortBy(-_._1).take(3)
-            val Array(first, second, third) = sorted.map { _._2 }
-            val firstTopicScore = sorted(0)._1
-            val entro = entropy(mean.value).toFloat
-            val newModel = model.copy(firstTopic = Some(LDATopic(first)), secondTopic = Some(LDATopic(second)), thirdTopic = Some(LDATopic(third)), firstTopicScore = Some(firstTopicScore), entropy = Some(entro))
-            libTopicRepo.save(newModel)
-          case None =>
-        }
-      }
-    }
-
-  }
-
 }

@@ -209,9 +209,4 @@ class LDAController @Inject() (
     Ok
   }
 
-  def oneTimeFix() = Action { request =>
-    lda.oneTimeFix()
-    Ok
-  }
-
 }
