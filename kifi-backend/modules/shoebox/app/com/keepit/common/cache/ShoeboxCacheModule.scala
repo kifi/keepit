@@ -289,7 +289,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def siteMapCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SiteMapCache(stats, accessLog, (innerRepo, 1 hours), (outerRepo, 1 hours))
+    new SiteMapCache(stats, accessLog, (innerRepo, 1 hour), (outerRepo, 7 days))
 
   @Singleton
   @Provides
