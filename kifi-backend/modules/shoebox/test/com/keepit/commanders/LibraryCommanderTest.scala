@@ -250,31 +250,31 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val libraryCommander = inject[LibraryCommander]
         val mod1 = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-          description = Some("Samuel L. Jackson was here"))
+          LibraryModifyRequest(description = Some("Samuel L. Jackson was here")))
         mod1.isRight === true
         mod1.right.get.description === Some("Samuel L. Jackson was here")
 
         val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.id.get, userId = userCaptain.id.get,
-          name = Some("MURICA #1!!!!!"), slug = Some("murica_#1"))
+          LibraryModifyRequest(name = Some("MURICA #1!!!!!"), slug = Some("murica_#1")))
         mod2.isRight === true
         mod2.right.get.name === "MURICA #1!!!!!"
         mod2.right.get.slug === LibrarySlug("murica_#1")
 
         val mod3 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
-          visibility = Some(LibraryVisibility.PUBLISHED))
+          LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED)))
         mod3.isRight === true
         mod3.right.get.visibility === LibraryVisibility.PUBLISHED
 
         val mod3NoChange = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
-          visibility = Some(LibraryVisibility.PUBLISHED))
+          LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED)))
         mod3NoChange.isRight === true
         mod3NoChange.right.get.visibility === LibraryVisibility.PUBLISHED
 
         val mod4 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userHulk.id.get,
-          name = Some("HULK SMASH"))
+          LibraryModifyRequest(name = Some("HULK SMASH")))
         mod4.isRight === false
         val mod5 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
-          name = Some(""))
+          LibraryModifyRequest(name = Some("")))
         mod5.isRight === false
 
         db.readOnlyMaster { implicit s =>
