@@ -474,6 +474,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                   "numKeeps":0,
                   "followers":[],
                   "slug":"catching-jellyfish",
+                  "kind" : "user_created",
+                  "visibility" : "published",
                   "id":"${pubId2.id}"
                 },
                 {
@@ -482,6 +484,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                   "numKeeps":0,
                   "followers":[],
                   "slug":"krabby-patty",
+                  "kind" : "user_created",
+                  "visibility" : "secret",
                   "id":"${pubId1.id}"
                 }
               ]
