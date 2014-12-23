@@ -57,7 +57,7 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html] = ???
 
-  override def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], lang: String, debug: Option[String]): Future[Html] = ???
+  override def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: Seq[String], debug: Option[String]): Future[Html] = ???
 
   override def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = ???
 
