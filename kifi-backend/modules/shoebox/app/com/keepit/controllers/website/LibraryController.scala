@@ -550,15 +550,39 @@ class LibraryController @Inject() (
   }
 
   def getProfileLibraries(username: Username, filter: String, page: Int, pageSize: Int) = MaybeUserAction { request =>
-    // TODO: honor filter param: "own", "following", "invited", or "all"
     userCommander.userFromUsername(username) match {
       case None =>
         log.warn(s"unknown username ${username.value} requested")
         NotFound(username.value)
       case Some(user) =>
         val viewer = request.userOpt
-        val libs = libraryCommander.getOwnProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
-        Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
+        filter match {
+          case "own" =>
+            val libs = libraryCommander.getOwnProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
+            Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
+
+          case "following" =>
+            //val libs = libraryCommander.getFollowingProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize) // todo (aaron, eishay): implement retrieving following libraries
+            val libs = Seq.empty[LibraryCardInfo]
+            Ok(Json.obj("following" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
+
+          case "invited" =>
+            //val libs = libraryCommander.getInvitedProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize) // todo (aaron, eishay): implement retrieving invited libraries
+            val libs = Seq.empty[LibraryCardInfo]
+            Ok(Json.obj("invited" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
+
+          case "all" =>
+            val ownLibs = libraryCommander.getOwnProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
+            val followLibs = Seq.empty[LibraryCardInfo] // todo (aaron, eishay): implement following libraries
+            val invitedLibs = Seq.empty[LibraryCardInfo] // todo (aaron, eishay): implement invited libraries
+            Ok(Json.obj(
+              "own" -> ownLibs.map(LibraryCardInfo.writesWithoutOwner.writes),
+              "following" -> followLibs.map(LibraryCardInfo.writesWithoutOwner.writes),
+              "invited" -> invitedLibs.map(LibraryCardInfo.writesWithoutOwner.writes)
+            ))
+          case _ =>
+            BadRequest(Json.obj("error" -> "invalid_filter_token"))
+        }
     }
   }
 

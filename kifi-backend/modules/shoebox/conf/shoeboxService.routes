@@ -296,10 +296,6 @@ GET     /users/:id/pics/:size/:name @com.keepit.controllers.assets.UserPictureCo
 
 POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureController.update()
 
-# Profile pages
-GET     /site/user/:username/profile @com.keepit.controllers.website.UserController.profile(username)
-GET     /site/user/:username/libraries @com.keepit.controllers.website.LibraryController.getProfileLibraries(username: Username, filter: String ?= "own", page: Int ?= 0, pageSize: Int ?= 1000)
-
 ##########################################
 # Feeds (RSS)
 ##########################################
@@ -341,6 +337,10 @@ GET     /site/collections/search    @com.keepit.controllers.website.KeepsControl
 
 GET     /site/users/:userStr/libraries/:slug    @com.keepit.controllers.website.LibraryController.getLibraryByPath(userStr:String, slug: String, showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None)
 POST    /site/users/:userStr/libraries/:slug/auth    @com.keepit.controllers.website.LibraryController.authToLibrary(userStr: String, slug: String, authToken: Option[String])
+
+# Profile pages
+GET     /site/user/:username/profile @com.keepit.controllers.website.UserController.profile(username)
+GET     /site/user/:username/libraries @com.keepit.controllers.website.LibraryController.getProfileLibraries(username: Username, filter: String ?= "own", page: Int ?= 0, size: Int ?= 12)
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
 POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()

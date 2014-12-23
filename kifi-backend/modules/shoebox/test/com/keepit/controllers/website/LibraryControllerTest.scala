@@ -427,7 +427,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get own libraries for profile" in {
+    "get libraries for profile" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val libraryController = inject[LibraryController]
@@ -450,19 +450,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val pubId1 = Library.publicId(lib1.id.get)
         val pubId2 = Library.publicId(lib2.id.get)
         val pubId3 = Library.publicId(lib3.id.get)
-        db.readOnlyMaster { implicit s =>
-          keepRepo.count === 1
-        }
+
         val testPath = com.keepit.controllers.website.routes.LibraryController.getProfileLibraries(user1.username, "own", 0, 10).url
-        testPath === "/site/user/firstuser/libraries?pageSize=10"
+        testPath === "/site/user/firstuser/libraries?size=10"
+
         inject[FakeUserActionsHelper].setUser(user1)
         val request1 = FakeRequest("GET", testPath)
         val result1 = libraryController.getProfileLibraries(user1.username, "own", 0, 10)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
-
-        val (basicUser1, basicUser2) = db.readOnlyMaster { implicit s => (basicUserRepo.load(user1.id.get), basicUserRepo.load(user2.id.get)) }
-
         val expected = Json.parse(
           s"""
             {
@@ -484,6 +480,39 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             }
            """)
         Json.parse(contentAsString(result1)) must equalTo(expected)
+
+        val request2 = FakeRequest("GET", testPath)
+        val result2 = libraryController.getProfileLibraries(user1.username, "following", 0, 10)(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
+          s"""
+            {
+              "following": []
+            }
+          """
+        ))
+
+        val request3 = FakeRequest("GET", testPath)
+        val result3 = libraryController.getProfileLibraries(user1.username, "invited", 0, 10)(request3)
+        status(result3) must equalTo(OK)
+        contentType(result3) must beSome("application/json")
+        Json.parse(contentAsString(result3)) must equalTo(Json.parse(
+          s"""
+            {
+              "invited": []
+            }
+          """
+        ))
+
+        val request4 = FakeRequest("GET", testPath)
+        val result4 = libraryController.getProfileLibraries(user1.username, "all", 0, 10)(request4)
+        status(result4) must equalTo(OK)
+        contentType(result4) must beSome("application/json")
+        val resultJson4 = contentAsJson(result4)
+        (resultJson4 \ "own").as[Seq[JsObject]].length === 1
+        (resultJson4 \ "following").as[Seq[JsObject]].length === 0
+        (resultJson4 \ "invited").as[Seq[JsObject]].length === 0
       }
     }
 
