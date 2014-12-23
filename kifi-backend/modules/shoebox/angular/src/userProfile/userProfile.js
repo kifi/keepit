@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('UserProfileCtrl', [
   '$scope', '$rootScope', '$state', '$stateParams', '$window',
-  'keepWhoService', 'profileService', 'userProfileActionService',
+  'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService',
   function ($scope, $rootScope, $state, $stateParams, $window,
-            keepWhoService, profileService, userProfileActionService) {
+            inviteService, keepWhoService, profileService, userProfileActionService) {
     //
     // Configs.
     //
@@ -32,6 +32,9 @@ angular.module('kifi')
     $scope.canConnectToUser = false;
     $scope.userNavLinks = [];
     $scope.optionalAction = null;
+    $scope.ignoreClick = {
+      'connect': true
+    };
 
 
     //
@@ -62,6 +65,7 @@ angular.module('kifi')
     function initProfile(profile) {
       $scope.profile = _.cloneDeep(profile);
       $scope.profile.picUrl = keepWhoService.getPicUrl($scope.profile, 200);
+      $scope.ignoreClick.connect = false;  // User id from profile is needed for connection.
     }
 
     function initViewingUserStatus() {
@@ -81,6 +85,24 @@ angular.module('kifi')
         };
       });
     }
+
+
+    //
+    // Scope methods.
+    //
+    $scope.connect = function () {
+      if ($scope.ignoreClick.connect) {
+        return;
+      }
+
+      var $connect = angular.element('.kf-user-profile-connect');
+      $connect.text('SENDING REQUEST...');
+      $scope.ignoreClick.connect = true;
+
+      inviteService.friendRequest($scope.profile.id).then(function () {
+        $connect.text('SENT!');
+      });
+    };
 
 
     // Initialize controller.
