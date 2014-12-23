@@ -14,6 +14,6 @@ case class ConnectedUserScoreCacheKey(userId: Id[User], avoidFirstDegreeConnecti
   def toKey(): String = s"userId=${userId.id.toString}#avoidFirstDegreeConnection=${avoidFirstDegreeConnections.toString}"
 }
 
-class ConnectedUserScoreCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+class ConnectedUserScoreCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration, Duration), outer: (FortyTwoCachePlugin, Duration, Duration)*)
   extends JsonCacheImpl[ConnectedUserScoreCacheKey, Seq[ConnectedUserScore]](stats, accessLog, inner, outer: _*)(TraversableFormat.seq(ConnectedUserScore.format))
 
