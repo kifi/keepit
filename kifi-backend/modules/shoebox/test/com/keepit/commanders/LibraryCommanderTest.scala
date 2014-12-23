@@ -1182,6 +1182,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val libs = libraryCommander.getFollowingLibraries(other, Some(other), Paginator(0, 500), ImageSize("100x100"))
         libs.size === 12
+        libs.head.owner.externalId === owner.externalId
         libs.map(_.id) === allLibs.reverse.map(_.id.get).map(Library.publicId)
       }
     }
