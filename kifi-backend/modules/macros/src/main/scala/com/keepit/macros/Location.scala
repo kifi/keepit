@@ -3,7 +3,9 @@ package com.keepit.macros
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 
-class Location(val location: String)
+case class Location(className: String, methodName: String, line: Int) {
+  def location = s"[${className}][${methodName}]:${line}"
+}
 
 object Location {
 
@@ -14,7 +16,6 @@ object Location {
     val className = Option(x.enclosingClass).map(_.symbol.toString).getOrElse("")
     val methodName = Option(x.enclosingMethod).map(_.symbol.toString).getOrElse("")
     val line = x.enclosingPosition.line
-    val where = s"[${className}][${methodName}]:${line}"
-    reify(new Location(x.literal(where).splice))
+    reify(new Location(x.literal(className).splice, x.literal(methodName).splice, x.literal(line).splice))
   }
 }
