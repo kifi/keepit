@@ -6,6 +6,8 @@ import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.LibraryInviteFactory._
+import com.keepit.model.LibraryInviteFactoryHelper._
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.RichContact
@@ -1133,6 +1135,42 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val libsP3 = libraryCommander.getOwnProfileLibraries(owner, None, Paginator(2, 5), ImageSize("100x100"))
         libsP3.size === 2
         libsP3.map(_.id) === allLibs.reverse.drop(10).take(5).map(_.id.get).map(Library.publicId)
+      }
+    }
+
+    "get invited to libraries" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val libraryCommander = inject[LibraryCommander]
+        val (user1, user2, user3, libs) = db.readWrite { implicit s =>
+          val user1 = user().saved
+          val user2 = user().saved
+          val user3 = user().saved
+          val lib1 = libraries(2).map(_.published().withUser(user1)).saved.head.savedInvitation(user2)
+          val lib2 = libraries(2).map(_.secret().withUser(user1)).saved.head.savedInvitation(user2).savedInvitation(user3)
+          val lib3 = libraries(2).map(_.published().withUser(user2)).saved.head.savedInvitation(user1)
+          invite().fromLibraryOwner(library.published().withUser(user2).saved).saved.savedStateChange(LibraryInviteStates.ACCEPTED)
+          invite().fromLibraryOwner(library.published().withUser(user2).saved).declined.saved
+          libraries(10).map(_.published().withUser(user1)).saved
+          libraries(10).map(_.published().withUser(user2)).saved
+          (user1, user2, user3, lib1 :: lib2 :: lib3 :: Nil)
+        }
+
+        libraryCommander.getInvitedLibraries(user1, None, Paginator(0, 5), ImageSize("100x100")).size === 0
+        libraryCommander.getInvitedLibraries(user1, Some(user2), Paginator(0, 5), ImageSize("100x100")).size === 0
+
+        val libs1 = libraryCommander.getInvitedLibraries(user1, Some(user1), Paginator(0, 5), ImageSize("100x100"))
+        libs1.size === 1
+        libs1.map(_.id).head === Library.publicId(libs(2).id.get)
+
+        val libs2 = libraryCommander.getInvitedLibraries(user2, Some(user2), Paginator(0, 5), ImageSize("100x100"))
+        libs2.size === 2
+        libs2.map(_.id) === libs.take(2).reverse.map(_.id.get).map(Library.publicId)
+
+        val libs3 = libraryCommander.getInvitedLibraries(user3, Some(user3), Paginator(0, 5), ImageSize("100x100"))
+        libs3.size === 1
+        libs3.map(_.id).head === Library.publicId(libs(1).id.get)
+
       }
     }
 

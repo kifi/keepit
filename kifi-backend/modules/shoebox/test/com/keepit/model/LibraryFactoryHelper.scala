@@ -5,6 +5,8 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.model.LibraryFactory.PartialLibrary
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.LibraryInviteFactory._
+import com.keepit.model.LibraryInviteFactoryHelper._
 
 object LibraryFactoryHelper {
 
@@ -19,6 +21,13 @@ object LibraryFactoryHelper {
   implicit class LibraryOwnershipPersister(library: Library) {
     def savedFollowerMembership(followers: User*)(implicit injector: Injector, session: RWSession): Library = {
       followers foreach { follower => membership().withLibraryFollower(library, follower).saved }
+      library
+    }
+  }
+
+  implicit class LibraryInvitationPersister(library: Library) {
+    def savedInvitation(invited: User*)(implicit injector: Injector, session: RWSession): Library = {
+      invited foreach { user => invite().fromLibraryOwner(library).toUser(user).saved }
       library
     }
   }

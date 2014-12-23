@@ -549,39 +549,52 @@ class LibraryController @Inject() (
       }
   }
 
-  def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction { request =>
+  def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
     userCommander.userFromUsername(username) match {
       case None =>
         log.warn(s"unknown username ${username.value} requested")
-        NotFound(username.value)
+        Future.successful(NotFound(username.value))
       case Some(user) =>
         val viewer = request.userOpt
         val paginator = Paginator(page, pageSize)
         val imageSize = ProcessedImageSize.Medium.idealSize
         filter match {
           case "own" =>
-            val own = if (viewer.exists(_.id == user.id)) {
+            val libs = if (viewer.exists(_.id == user.id)) {
               Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize))
             } else {
               Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize))
             }
-            Ok(Json.obj("own" -> own))
+            Future.successful(Ok(Json.obj("own" -> libs)))
           case "following" =>
-            Ok(Json.obj("following" -> libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize)))
+            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize)
+            Future.successful(Ok(Json.obj("following" -> libs)))
           case "invited" =>
-            Ok(Json.obj("invited" -> libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)))
+            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)
+            Future.successful(Ok(Json.obj("invited" -> libs)))
           case "all" if page == 0 =>
-            val own = if (viewer.exists(_.id == user.id)) {
-              Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize))
+            val ownLibsF = if (viewer.exists(_.id == user.id)) {
+              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize)))
             } else {
-              Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize))
+              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize)))
             }
-            Ok(Json.obj(
-              "own" -> own,
-              "following" -> libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize),
-              "invited" -> libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)))
+            val followLibsF = SafeFuture(libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
+            val invitedLibsF = SafeFuture(libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
+            for {
+              ownLibs <- ownLibsF
+              followLibs <- followLibsF
+              invitedLibs <- invitedLibsF
+            } yield {
+              Ok(Json.obj(
+                "own" -> ownLibs,
+                "following" -> followLibs,
+                "invited" -> invitedLibs
+              ))
+            }
+          case "all" if page != 0 =>
+            Future.successful(BadRequest(Json.obj("error" -> "cannot_page_all_filters")))
           case _ =>
-            BadRequest(Json.obj("error" -> "invalid_parameters"))
+            Future.successful(BadRequest(Json.obj("error" -> "no_such_filter")))
         }
     }
   }
