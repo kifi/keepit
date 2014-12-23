@@ -477,8 +477,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   "numKeeps": 1,
                   "numFollowers": 1,
                   "followers": [
-                    {"id": "${user2.externalId.id}", "firstName": "second", "lastName": "user", "pictureName": "alf.jpg", "username": "seconduser"}
-                  ]
+                    {
+                      "id": "${user2.externalId.id}",
+                      "firstName": "second",
+                      "lastName": "user",
+                      "pictureName": "alf.jpg",
+                      "username": "seconduser"
+                    }]
                 }
                ]
             }
@@ -498,11 +503,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   "name":"lib3",
                   "slug":"lib3",
                   "owner":{
-                    "id":"${basicUser1.externalId}",
-                    "firstName":"first",
+                    "id":"${basicUser2.externalId.id}",
+                    "firstName":"second",
                     "lastName":"user",
-                    "pictureName":"0.jpg",
-                    "username":"firstuser"
+                    "pictureName":"alf.jpg",
+                    "username":"seconduser"
                   },
                   "numKeeps":0,
                   "numFollowers":1,

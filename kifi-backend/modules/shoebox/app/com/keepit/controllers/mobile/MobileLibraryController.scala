@@ -354,30 +354,33 @@ class MobileLibraryController @Inject() (
         NotFound(username.value)
       case Some(user) =>
         val viewer = request.userOpt
+        val paginator = Paginator(page, pageSize)
+        val imageSize = ProcessedImageSize.Medium.idealSize
         filter match {
           case "own" =>
-            val libs = libraryCommander.getOwnProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
+            val libs = libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize)
             Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
 
           case "following" =>
-            val libs = libraryCommander.getFollowingLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
+            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize)
             Ok(Json.obj("following" -> Json.toJson(libs)))
 
           case "invited" =>
-            val libs = libraryCommander.getInvitedLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
+            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)
             Ok(Json.obj("invited" -> Json.toJson(libs)))
 
-          case "all" =>
-            val ownLibs = libraryCommander.getOwnProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
-            val followLibs = libraryCommander.getFollowingLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
-            val invitedLibs = libraryCommander.getInvitedLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
+          case "all" if page == 0 =>
+            val ownLibs = libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize)
+            val followLibs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize)
+            val invitedLibs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)
             Ok(Json.obj(
               "own" -> ownLibs.map(LibraryCardInfo.writesWithoutOwner.writes),
               "following" -> Json.toJson(followLibs),
               "invited" -> Json.toJson(invitedLibs)
             ))
+
           case _ =>
-            BadRequest(Json.obj("error" -> "invalid_filter_token"))
+            BadRequest(Json.obj("error" -> "invalid_parameters"))
         }
     }
   }
