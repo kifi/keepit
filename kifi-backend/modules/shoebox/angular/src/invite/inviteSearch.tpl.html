@@ -5,9 +5,10 @@
 
       <div ng-if="!result.custom" itemscope itemtype="http://data-vocabulary.org/Person">
         <div ng-if="result.networkType !== 'email'">
-          <a href="{{result.userProfileUrl}}" itemprop="url">
+          <a ng-if="inUserProfileBeta" href="{{result.userProfileUrl}}" itemprop="url">
             <img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="social-invite-image" itemprop="photo">
           </a>
+          <img ng-if="!inUserProfileBeta" ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="social-invite-image" itemprop="photo">
         </div>
 
         <div ng-if="!result.status">

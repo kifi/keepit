@@ -6,9 +6,10 @@
 
   <div class="kf-add-friend-banner">
     <div itemscope itemtype="http://data-vocabulary.org/Person">
-      <a href="{{userProfileUrl}}" itemprop="url">
+      <a ng-if="inUserProfileBeta" href="{{userProfileUrl}}" itemprop="url">
         <img class="kf-add-friend-banner-image" onerror="this.src='/assets/img/ghost.200.png'" ng-src="{{mainImage}}" itemprop="photo" />
       </a>
+      <img ng-if="!inUserProfileBeta" class="kf-add-friend-banner-image" onerror="this.src='/assets/img/ghost.200.png'" ng-src="{{mainImage}}" itemprop="photo" />
       <span class="kf-add-friend-banner-who">
         <span class="kf-add-friend-banner-main-label" title="{{mainLabel}}" itemprop="name">{{mainLabel}}</span>
         <div class="kf-friend-card-count" title="{{user.friendCount}}" ng-show="user.friendCount > 0">

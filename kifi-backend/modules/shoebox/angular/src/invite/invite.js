@@ -172,8 +172,8 @@ angular.module('kifi')
 ])
 
 .directive('kfSocialInviteSearch', [
-  '$document', '$log', 'inviteService', 'modalService',
-  function ($document, $log, inviteService, modalService) {
+  '$document', '$log', 'inviteService', 'modalService', 'userService',
+  function ($document, $log, inviteService, modalService, userService) {
     return {
       scope: {},
       replace: true,
@@ -186,6 +186,7 @@ angular.module('kifi')
 
         scope.results = [];
         scope.selected = inviteService.socialSelected;
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
 
         scope.change = _.debounce(function () { // todo: integrate service-wide debounce into Clutch, remove me
           inviteService.socialSearch(scope.search.name).then(function (res) {
@@ -295,6 +296,7 @@ angular.module('kifi')
         scope.mainImage = picUrl;
         scope.mainLabel = user.firstName + ' ' + user.lastName;
         scope.userProfileUrl = env.origin + '/' + user.username;
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
         scope.hidden = false;
         scope.actionText = 'Add';
         scope.result = {
