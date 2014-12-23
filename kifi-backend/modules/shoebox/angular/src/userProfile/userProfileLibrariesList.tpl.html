@@ -19,3 +19,7 @@
   <a class="kf-upl-card-owner-pic" href="/{{lib.owner.username}}" ng-style="{'background-image': 'url(' + lib.ownerPicUrl + ')'}"></a>
   <div class="kf-upl-card-foot"></div>
 </div>
+<div class="kf-upl-empty" ng-if="libraries && libraries.length === 0">
+  <span ng-if="libraryType == 'following'">{{viewingOwnProfile ? 'You are' : profile.firstName + ' is'}} not following any libraries.</span>
+  <span ng-if="libraryType == 'invited'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} no pending invitations to follow a library.</span>
+</div>

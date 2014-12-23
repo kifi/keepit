@@ -134,42 +134,41 @@ angular.module('kifi')
 
 
 .controller('UserProfileLibrariesCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', 'util', 'routeService', 'keepWhoService', 'profileService', 'userProfileActionService',
-  function ($scope, $rootScope, $state, $stateParams, util, routeService, keepWhoService, profileService, userProfileActionService) {
-    var colors = ['#C764A2', '#E35957', '#FF9430', '#2EC89A', '#3975BF', '#955CB4', '#FAB200', '#FAB200', '#FAB200'];
+  '$scope', '$rootScope', '$state', '$stateParams', 'routeService', 'keepWhoService', 'profileService', 'userProfileActionService',
+  function ($scope, $rootScope, $state, $stateParams, routeService, keepWhoService, profileService, userProfileActionService) {
+    var colors = ['#C764A2', '#E35957', '#FF9430', '#2EC89A', '#3975BF', '#955CB4', '#FAB200'];
     var username = $stateParams.username;
 
     $scope.libraryType = $state.current.data.libraryType;
-    $scope.libraries = [];
-
-    userProfileActionService.getLibraries(username, 'own').then(function (data) {
-      $scope.libraries = data.own.map(function augment(lib) {
-        lib.path = '/' + username + '/' + lib.slug;
-        lib.owner = $scope.profile;
-        lib.ownerPicUrl = $scope.profile.picUrl;
-        lib.color = lib.color || _.sample(colors);
-        lib.imageCss = lib.image ? {
-            'background-image': 'url(' + routeService.libraryImageUrl(lib.image.path) + ')',
-            'background-position': lib.image.x + '% ' + lib.image.y + '%'
-          } : {};
-        return lib;
-      });
-    });
+    $scope.libraries = null;
+    fetchLibraries();
 
     var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
-      if (util.startsWith(toState.name, 'userProfile.libraries')) {
+      if (/^userProfile\.libraries\./.test(toState.name)) {
         $scope.libraryType = toState.data.libraryType;
+        fetchLibraries();
       }
     });
     $scope.$on('$destroy', deregister$stateChangeSuccess);
-  }
-])
 
+    function fetchLibraries() {
+      var filter = $scope.libraryType;
+      userProfileActionService.getLibraries(username, filter).then(function (data) {
+        $scope.libraries = data[filter].map(augmentLibrary);
+      });
+    }
 
-.controller('UserProfileLibrariesListCtrl', [
-  '$scope', '$state',
-  function ($scope, $state) {
-    $scope.libraryType = $state.current.data.libraryType;
+    function augmentLibrary(lib) {
+      lib.path = '/' + username + '/' + lib.slug;
+      lib.owner = $scope.profile;
+      lib.ownerPicUrl = $scope.profile.picUrl;
+      lib.color = lib.color || _.sample(colors);
+      lib.imageCss = lib.image ? {
+          'background-image': 'url(' + routeService.libraryImageUrl(lib.image.path) + ')',
+          'background-position': lib.image.x + '% ' + lib.image.y + '%'
+        } : {};
+      return lib;
+    }
   }
 ])
 

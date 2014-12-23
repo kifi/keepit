@@ -82,7 +82,6 @@ angular.module('kifi')
           .state('userProfile.libraries.own', {
             url: '',
             templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
-            controller: 'UserProfileLibrariesListCtrl',
             data: {
               libraryType: 'own'
             }
@@ -90,7 +89,6 @@ angular.module('kifi')
           .state('userProfile.libraries.following', {
             url: '/libraries/following',
             templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
-            controller: 'UserProfileLibrariesListCtrl',
             data: {
               libraryType: 'following'
             }
@@ -98,7 +96,6 @@ angular.module('kifi')
           .state('userProfile.libraries.invited', {
             url: '/libraries/invited',
             templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
-            controller: 'UserProfileLibrariesListCtrl',
             data: {
               libraryType: 'invited'
             }
