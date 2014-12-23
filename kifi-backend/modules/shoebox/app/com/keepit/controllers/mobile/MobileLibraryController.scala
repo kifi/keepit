@@ -9,6 +9,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.util.Paginator
 import com.keepit.controllers.mobile.ImplicitHelper._
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
@@ -30,6 +31,7 @@ class MobileLibraryController @Inject() (
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
   pageCommander: PageCommander,
+  userCommander: UserCommander,
   keepImageCommander: KeepImageCommander,
   normalizedUriInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -342,6 +344,44 @@ class MobileLibraryController @Inject() (
         }
       }
       case _ => Future.successful(Forbidden)
+    }
+  }
+
+  def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction { request =>
+    userCommander.userFromUsername(username) match {
+      case None =>
+        log.warn(s"unknown username ${username.value} requested")
+        NotFound(username.value)
+      case Some(user) =>
+        val viewer = request.userOpt
+        val paginator = Paginator(page, pageSize)
+        val imageSize = ProcessedImageSize.Medium.idealSize
+        filter match {
+          case "own" =>
+            val libs = libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize)
+            Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
+
+          case "following" =>
+            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize)
+            Ok(Json.obj("following" -> Json.toJson(libs)))
+
+          case "invited" =>
+            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)
+            Ok(Json.obj("invited" -> Json.toJson(libs)))
+
+          case "all" if page == 0 =>
+            val ownLibs = libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize)
+            val followLibs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize)
+            val invitedLibs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)
+            Ok(Json.obj(
+              "own" -> ownLibs.map(LibraryCardInfo.writesWithoutOwner.writes),
+              "following" -> Json.toJson(followLibs),
+              "invited" -> Json.toJson(invitedLibs)
+            ))
+
+          case _ =>
+            BadRequest(Json.obj("error" -> "invalid_parameters"))
+        }
     }
   }
 }

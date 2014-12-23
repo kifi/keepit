@@ -549,17 +549,41 @@ class LibraryController @Inject() (
       }
   }
 
-  def getProfileLibraries(username: Username, filter: String, page: Int, pageSize: Int) = MaybeUserAction { request =>
-    // TODO: honor filter param: "own", "following", "invited", or "all"
+  def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction { request =>
     userCommander.userFromUsername(username) match {
       case None =>
         log.warn(s"unknown username ${username.value} requested")
         NotFound(username.value)
       case Some(user) =>
         val viewer = request.userOpt
-        val libs = libraryCommander.getOwnProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
-        //also get following libs via libraryCommander.getFollowingLibraries
-        Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
+        val paginator = Paginator(page, pageSize)
+        val imageSize = ProcessedImageSize.Medium.idealSize
+        filter match {
+          case "own" =>
+            val libs = libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize)
+            Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
+
+          case "following" =>
+            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize)
+            Ok(Json.obj("following" -> Json.toJson(libs)))
+
+          case "invited" =>
+            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)
+            Ok(Json.obj("invited" -> Json.toJson(libs)))
+
+          case "all" if page == 0 =>
+            val ownLibs = libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize)
+            val followLibs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize)
+            val invitedLibs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)
+            Ok(Json.obj(
+              "own" -> ownLibs.map(LibraryCardInfo.writesWithoutOwner.writes),
+              "following" -> Json.toJson(followLibs),
+              "invited" -> Json.toJson(invitedLibs)
+            ))
+
+          case _ =>
+            BadRequest(Json.obj("error" -> "invalid_parameters"))
+        }
     }
   }
 
