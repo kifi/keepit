@@ -566,14 +566,13 @@ class LibraryController @Inject() (
             Ok(Json.obj("following" -> Json.toJson(libs)))
 
           case "invited" =>
-            //val libs = libraryCommander.getInvitedProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize) // todo (aaron, eishay): implement retrieving invited libraries
-            val libs = Seq.empty[LibraryCardInfo]
+            val libs = libraryCommander.getInvitedLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
             Ok(Json.obj("invited" -> Json.toJson(libs)))
 
           case "all" =>
             val ownLibs = libraryCommander.getOwnProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
             val followLibs = libraryCommander.getFollowingLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
-            val invitedLibs = Seq.empty[LibraryCardInfo] // todo (aaron, eishay): implement invited libraries
+            val invitedLibs = libraryCommander.getInvitedLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
             Ok(Json.obj(
               "own" -> ownLibs.map(LibraryCardInfo.writesWithoutOwner.writes),
               "following" -> Json.toJson(followLibs),
