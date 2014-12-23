@@ -27,7 +27,7 @@ trait SearchExplanation[T] {
   def queryHtml(title: String): String = {
     val sb = new StringBuilder
     sb.append("<table>\n")
-    sb.append(s"<tr> <th> $title (Lang: ${lang._1},${lang._2.map(_.toString).getOrElse("")})</th> </tr>\n")
+    sb.append(s"<tr> <th> $title (Lang: ${lang._1.lang},${lang._2.map(_.lang).getOrElse("")})</th> </tr>\n")
     sb.append(s"""<tr> <td style="text-align:left"> $query </td> </tr>\n""")
     sb.append("</table>\n")
 
