@@ -1,23 +1,10 @@
 package com.keepit.common.cache
 
-import scala.collection.concurrent.{ TrieMap => ConcurrentMap }
-import scala.concurrent._
 import scala.concurrent.duration._
-import java.util.concurrent.atomic.AtomicInteger
-import net.codingwell.scalaguice.ScalaModule
-import net.sf.ehcache._
-import net.sf.ehcache.config.CacheConfiguration
-import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.keepit.common.healthcheck.AirbrakeError
 import com.keepit.common.logging.Access.CACHE
-import com.keepit.common.logging._
-import com.keepit.common.time._
 import com.keepit.serializer.Serializer
 import com.keepit.common.logging.{ AccessLogTimer, AccessLog }
-import com.keepit.common.logging.Access._
-import play.api.Logger
-import play.api.Plugin
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import java.util.Random
 
@@ -187,6 +174,10 @@ class FortyTwoCacheImpl[K <: Key[T], T](
     val serializer: Serializer[T],
     override val outerCache: Option[ObjectCache[K, T]]) extends FortyTwoCache[K, T] {
 
+  assert(minTTL.toMillis <= (30 days).toMillis, "minTTL too long")
+  assert(maxTTL.toMillis <= (30 days).toMillis, "maxTTL too long")
+  assert(minTTL.toMillis <= maxTTL.toMillis, "minTTL longer than maxTTL")
+
   // Constructor using a distinct serializer for each cache plugin
   def this(
     stats: CacheStatistics, accessLog: AccessLog,
@@ -203,8 +194,8 @@ class FortyTwoCacheImpl[K <: Key[T], T](
     innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(serializer: Serializer[T]) = {
     this(stats,
       accessLog,
-      (innermostPluginSettings._1, innermostPluginSettings._2, innermostPluginSettings._2, serializer),
-      innerToOuterPluginSettings.map { case (plugin, ttl) => (plugin, ttl, ttl, serializer) }: _*)
+      (innermostPluginSettings._1, innermostPluginSettings._2 * 0.9, innermostPluginSettings._2, serializer),
+      innerToOuterPluginSettings.map { case (plugin, ttl) => (plugin, ttl * 0.9, ttl, serializer) }: _*)
   }
 
   def this(
