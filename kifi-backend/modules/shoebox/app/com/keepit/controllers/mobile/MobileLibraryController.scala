@@ -371,18 +371,18 @@ class MobileLibraryController @Inject() (
             Future.successful(Ok(Json.obj("invited" -> Json.toJson(libs))))
 
           case "all" if page == 0 =>
-            val ownLibsF = SafeFuture(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize))
-            val followLibsF = SafeFuture(libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize))
-            val invitedLibsF = SafeFuture(libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize))
+            val ownLibsF = SafeFuture(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).seq)
+            val followLibsF = SafeFuture(libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
+            val invitedLibsF = SafeFuture(libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
             for {
               ownLibs <- ownLibsF
               followLibs <- followLibsF
               invitedLibs <- invitedLibsF
             } yield {
               Ok(Json.obj(
-                "own" -> ownLibs.seq.map(LibraryCardInfo.writesWithoutOwner.writes),
-                "following" -> Json.toJson(followLibs.seq),
-                "invited" -> Json.toJson(invitedLibs.seq)
+                "own" -> ownLibs.map(LibraryCardInfo.writesWithoutOwner.writes),
+                "following" -> Json.toJson(followLibs),
+                "invited" -> Json.toJson(invitedLibs)
               ))
             }
 
