@@ -12,7 +12,7 @@ trait ObjectCache[K <: Key[T], T] {
   val minTTL: Duration
   val maxTTL: Duration
 
-  outerCache map { outer => require(maxTTL <= outer.minTTL) }
+  outerCache map { outer => require(maxTTL <= outer.maxTTL) }
 
   protected[cache] def getFromInnerCache(key: K): ObjectState[T]
   protected[cache] def setInnerCache(key: K, value: Option[T]): Unit
