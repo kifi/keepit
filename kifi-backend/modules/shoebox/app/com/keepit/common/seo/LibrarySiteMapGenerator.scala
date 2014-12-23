@@ -21,66 +21,12 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-trait SiteMapGeneratorPlugin extends Plugin {
-  def submit()
-}
-
-class SiteMapGeneratorPluginImpl @Inject() (
-    actor: ActorInstance[SiteMapGeneratorActor],
-    val scheduling: SchedulingProperties) extends Logging with SiteMapGeneratorPlugin with SchedulerPlugin {
-
-  // plugin lifecycle methods
-  override def enabled: Boolean = true
-  override def onStart() {
-    for (app <- Play.maybeApplication) {
-      val (initDelay, freq) = (60 minutes, 60 minutes)
-      log.info(s"[onStart] SiteMapGeneratorPlugin started with initDelay=$initDelay freq=$freq")
-      scheduleTaskOnLeader(actor.system, initDelay, freq, actor.ref, SubmitSitemap)
-    }
-  }
-
-  override def submit() { actor.ref ! SubmitSitemap }
-}
-
-object SubmitSitemap
-
-// library-only for now
-class SiteMapGeneratorActor @Inject() (
-    airbrake: AirbrakeNotifier,
-    httpClient: HttpClient,
-    fortyTwoConfig: FortyTwoConfig) extends FortyTwoActor(airbrake) with Logging {
-
-  def receive() = {
-    case SubmitSitemap =>
-      val sitemapUrl = java.net.URLEncoder.encode(s"${fortyTwoConfig.applicationBaseUrl}assets/sitemap.xml", "UTF-8")
-      val googleRes = httpClient.get(DirectUrl(s"http://www.google.com/webmasters/sitemaps/ping?sitemap=$sitemapUrl"))
-      log.info(s"submitted sitemap to google. res(${googleRes.status}): ${googleRes.body}")
-      val bingRes = httpClient.get(DirectUrl(s"http://www.bing.com/webmaster/ping.aspx?siteMap=$sitemapUrl"))
-      log.info(s"submitted sitemap to bing. res(${bingRes.status}): ${bingRes.body}")
-  }
-
-}
-
-class SiteMapCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends StringCacheImpl[SiteMapKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-case class SiteMapKey(modelType: String) extends Key[String] {
-  override val version = 1
-  val namespace = "sitemap"
-  def toKey(): String = modelType
-}
-
-object SiteMapKey {
-  val libraries = SiteMapKey("libraries")
-  val users = SiteMapKey("users")
-}
-
-object SiteMapGenerator {
+object LibrarySiteMapGenerator {
   val BaselineDate = new LocalDate(2014, 12, 13)
 }
 
 @Singleton
-class SiteMapGenerator @Inject() (
+class LibrarySiteMapGenerator @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
     userRepo: UserRepo,
@@ -103,8 +49,6 @@ class SiteMapGenerator @Inject() (
   // prototype/silver-bullet implementation -- will learn and improve
   def generate(): Future[String] = {
     db.readOnlyReplicaAsync { implicit ro =>
-      // ahem does not scale
-      // may want to add warning when > 40K
       val libs = libraryRepo.getAllPublishedLibraries().take(50000)
       if (libs.size > 40000) airbrake.notify(s"there are ${libs.size} libraries for sitemap, need to paginate the list!")
       libs
@@ -137,8 +81,8 @@ class SiteMapGenerator @Inject() (
             case _ => lib.updatedAt.toLocalDate
           }
         }
-        if (date.isBefore(SiteMapGenerator.BaselineDate)) {
-          SiteMapGenerator.BaselineDate
+        if (date.isBefore(LibrarySiteMapGenerator.BaselineDate)) {
+          LibrarySiteMapGenerator.BaselineDate
         } else date
       }
 

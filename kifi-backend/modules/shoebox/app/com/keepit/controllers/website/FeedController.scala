@@ -5,7 +5,7 @@ import com.keepit.commanders.LibraryCommander
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.seo.{ FeedCommander, SiteMapGenerator }
+import com.keepit.common.seo.{ FeedCommander, LibrarySiteMapGenerator }
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
@@ -25,7 +25,7 @@ class FeedController @Inject() (
     fortyTwoConfig: FortyTwoConfig,
     airbrake: AirbrakeNotifier,
     val userActionsHelper: UserActionsHelper,
-    generator: SiteMapGenerator) extends AdminUserActions {
+    generator: LibrarySiteMapGenerator) extends AdminUserActions {
 
   def getNewLibraries() = Action.async { request =>
     db.readOnlyReplicaAsync { implicit ro =>
