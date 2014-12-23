@@ -549,7 +549,7 @@ class LibraryController @Inject() (
       }
   }
 
-  def getProfileLibraries(username: Username, filter: String, page: Int, pageSize: Int) = MaybeUserAction { request =>
+  def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction { request =>
     userCommander.userFromUsername(username) match {
       case None =>
         log.warn(s"unknown username ${username.value} requested")

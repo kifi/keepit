@@ -554,7 +554,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
   private def getProfileLibraries(user: User, page: Int, size: Int, filter: String)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.getProfileLibraries(user.username, filter, page, size)(request(routes.MobileLibraryController.getProfileLibraries(user.username, filter, page, size)))
+    controller.getProfileLibraries(user.username, page, size, filter)(request(routes.MobileLibraryController.getProfileLibraries(user.username, page, size, filter)))
   }
 
   // User 'Spongebob' has one library called "Krabby Patty" (secret)
