@@ -52,7 +52,9 @@ describe('kifi.friends.seeMutualFriends', function () {
         savedPymk: testSavedPerson
       };
 
-      elem = $compile('<div kf-see-mutual-friends></div>')(scope);
+      // Compile also the parent 'kfModal' directive because 'kfSeeMutualFriends' depends
+      // on the controller in 'kfModal'.
+      elem = $compile('<div kf-modal><div kf-see-mutual-friends></div></div>')(scope);
 
       spyOn(friendService, 'getPictureUrlForUser').andReturn('fake picture URL');
     });

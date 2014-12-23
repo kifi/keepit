@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('inviteService', [
-  '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log', '$analytics', '$location', '$FB',
-  function ($http, env, $q, routeService, util, Clutch, $window, $log, $analytics, $location, $FB) {
+  '$http', '$q', 'routeService', 'userService', 'util', 'Clutch', '$window', '$log', '$analytics', '$location', '$FB',
+  function ($http, $q, routeService, userService, util, Clutch, $window, $log, $analytics, $location, $FB) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
@@ -45,6 +45,10 @@ angular.module('kifi')
       result.iconStyle = 'kf-' + result.networkType + '-icon-micro';
       if (result.networkType === 'fortytwo' || result.networkType === 'fortytwoNF') {
         result.image = routeService.formatPicUrl(result.socialId, result.image);
+
+        userService.getBasicUserInfo(result.socialId, false).then(function (res) {
+          result.userProfileUrl = userService.getProfileUrl(res.data.username);
+        });
       }
       if (result.status === 'invited') {
         var sendText = $window.moment(new Date(result.inviteLastSentAt)).fromNow();

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('userService', [
-  '$http', '$q', 'routeService',
-  function ($http, $q, routeService) {
+  '$http', '$q', '$rootScope', '$stateParams', 'env', 'routeService', 'profileService',
+  function ($http, $q, $rootScope, $stateParams, env, routeService, profileService) {
     return {
       getBasicUserInfo: function (id, friendCount) {
         var deferred = $q.defer();
@@ -14,9 +14,20 @@ angular.module('kifi')
           deferred.reject(res);
         });
         return deferred.promise;
+      },
+
+      getProfileUrl: function (username) {
+        return username ? env.origin + '/' + username : null;
+      },
+
+      // Returns true if the user is in user profiles beta experiment or if the
+      // user profiles beta query parameter is set. Temporarily lodged here because
+      // code that needs this also usually needs userService.
+      inUserProfileBeta: function () {
+        return ($rootScope.userLoggedIn &&
+                profileService.me.experiments && profileService.me.experiments.indexOf('profiles_beta') > -1) ||
+               (!$rootScope.userLoggedIn && $stateParams.upb);
       }
     };
   }
-])
-
-;
+]);

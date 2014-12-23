@@ -2,7 +2,10 @@
    ng-mouseenter="showTooltip()"
    ng-mouseleave="hideTooltip()"
    ng-click="hideTooltip()">
-  <span class="kf-keep-who-pic" href="javascript:"
+  <a ng-if="inUserProfileBeta" class="kf-keep-who-pic" href="{{keeper.profileUrl}}"
    ng-attr-style="background-image: url({{getPicUrl(keeper)}})">
+  </a>
+  <span ng-if="!inUserProfileBeta" class="kf-keep-who-pic" href="javascript:"
+  	ng-attr-style="background-image: url({{getPicUrl(keeper)}})">
   </span>
 </span>

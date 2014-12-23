@@ -4,9 +4,12 @@
     <a ng-href="{{friendsLink()}}">See all &#0187;</a>
   </div>
   <div class="kf-compact-friends-image-row">
-    <a href="/friends" ng-repeat="friend in friends | limitTo: 4">
-      <img class="kf-compact-friend-image" title="{{friend.firstName}}" ng-src="{{friend.pictureUrl}}">
-    </a>
+    <span ng-repeat="friend in friends | limitTo: 4">
+      <a ng-if="inUserProfileBeta" href="{{friend.profileUrl}}">
+        <img class="kf-compact-friend-image" title="{{friend.firstName}}" ng-src="{{friend.pictureUrl}}">
+      </a>
+      <img ng-if="!inUserProfileBeta" class="kf-compact-friend-image" title="{{friend.firstName}}" ng-src="{{friend.pictureUrl}}">
+    </span>
   </div>
 </div>
-  
+
