@@ -6,7 +6,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.db.{ State, Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
@@ -1288,6 +1288,21 @@ class LibraryCommander @Inject() (
           else libraryMembershipRepo.getFollowingLibrariesForOtherUser(owner.id.get, other.id.get, page) map libraryRepo.get //cached
       }
       createLibraryCardInfos(libs, ownerBasicUser, idealSize, viewer.isDefined)
+    }
+  }
+
+  def getInvitedLibraries(owner: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): Seq[LibraryCardInfo] = {
+    val ownerBasicUser = BasicUser.fromUser(owner)
+    viewer match {
+      case None =>
+        Seq.empty
+      case Some(other) if other.id == owner.id =>
+        db.readOnlyMaster { implicit session =>
+          val libs = libraryInviteRepo.getActiveWithUserId(owner.id.get, page) map libraryRepo.get //cached
+          createLibraryCardInfos(libs, ownerBasicUser, idealSize, viewer.isDefined)
+        }
+      case Some(other) =>
+        Seq.empty
     }
   }
 
