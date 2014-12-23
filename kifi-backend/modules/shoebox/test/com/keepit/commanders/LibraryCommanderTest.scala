@@ -1208,7 +1208,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         self.map(_.id) === (List(follows1, follows2) ++ follows3 ++ follows4).reverse.map(_.id.get).map(Library.publicId)
 
         val libs1 = libraryCommander.getFollowingLibraries(user2, Some(user1), Paginator(0, 500), ImageSize("100x100"))
-        println(libs1.map(_.name))
         libs1.size === 12
         libs1.map(_.id) === (List(follows1, follows2) ++ follows4).reverse.map(_.id.get).map(Library.publicId)
       }
