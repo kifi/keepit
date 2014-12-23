@@ -360,23 +360,22 @@ class MobileLibraryController @Inject() (
             Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
 
           case "following" =>
-            //val libs = libraryCommander.getFollowingProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize) // todo (aaron, eishay): implement retrieving following libraries
-            val libs = Seq.empty[LibraryCardInfo]
-            Ok(Json.obj("following" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
+            val libs = libraryCommander.getFollowingLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
+            Ok(Json.obj("following" -> Json.toJson(libs)))
 
           case "invited" =>
             //val libs = libraryCommander.getInvitedProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize) // todo (aaron, eishay): implement retrieving invited libraries
             val libs = Seq.empty[LibraryCardInfo]
-            Ok(Json.obj("invited" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes)))
+            Ok(Json.obj("invited" -> Json.toJson(libs)))
 
           case "all" =>
             val ownLibs = libraryCommander.getOwnProfileLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
-            val followLibs = Seq.empty[LibraryCardInfo] // todo (aaron, eishay): implement following libraries
+            val followLibs = libraryCommander.getFollowingLibraries(user, viewer, Paginator(page, pageSize), ProcessedImageSize.Medium.idealSize)
             val invitedLibs = Seq.empty[LibraryCardInfo] // todo (aaron, eishay): implement invited libraries
             Ok(Json.obj(
               "own" -> ownLibs.map(LibraryCardInfo.writesWithoutOwner.writes),
-              "following" -> followLibs.map(LibraryCardInfo.writesWithoutOwner.writes),
-              "invited" -> invitedLibs.map(LibraryCardInfo.writesWithoutOwner.writes)
+              "following" -> Json.toJson(followLibs),
+              "invited" -> Json.toJson(invitedLibs)
             ))
           case _ =>
             BadRequest(Json.obj("error" -> "invalid_filter_token"))

@@ -451,6 +451,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val pubId2 = Library.publicId(lib2.id.get)
         val pubId3 = Library.publicId(lib3.id.get)
 
+        val (basicUser1, basicUser2) = db.readOnlyMaster { implicit s =>
+          (basicUserRepo.load(user1.id.get), basicUserRepo.load(user2.id.get))
+        }
+
         val testPath = com.keepit.controllers.website.routes.LibraryController.getProfileLibraries(user1.username, 0, 10, "own").url
         testPath === "/site/user/firstuser/libraries?size=10"
 
@@ -490,12 +494,19 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             {
               "following": [
                 {
-                  "name": "lib3",
-                  "numFollowers": 1,
-                  "numKeeps": 0,
-                  "followers": [],
-                  "slug": "lib3",
-                  "id": "${pubId3.id}"
+                  "id":"${pubId3.id}",
+                  "name":"lib3",
+                  "slug":"lib3",
+                  "owner":{
+                    "id":"${basicUser1.externalId}",
+                    "firstName":"first",
+                    "lastName":"user",
+                    "pictureName":"0.jpg",
+                    "username":"firstuser"
+                  },
+                  "numKeeps":0,
+                  "numFollowers":1,
+                  "followers":[]
                 }
               ]
             }
