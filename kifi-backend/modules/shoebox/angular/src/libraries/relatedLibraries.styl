@@ -3,111 +3,96 @@ relatedLibrariesColumnWidth = 226px
 desktopBorderRadius = 19px
 mobileBorderRadius = 54px
 
-.kf-logged-out {
-  .kf-library-results-wrapper {
-    width: keepsColumnWidth;
-    float: left;
-  }
-  &.kf-mobile .kf-library-results-wrapper {
-    max-width: initial;
-    float: none;
-  }
+.kf-logged-out
+  .kf-library-results-wrapper
+    width: keepsColumnWidth
+    float: left
 
-  .kf-library-body {
-    min-width: keepsColumnWidth + relatedLibrariesColumnWidth;
-    .kf-main-keeps {
-      max-width: keepsColumnWidth;
-    }
-  }
-  &.kf-mobile .kf-library-body {
-    min-width: initial;
-    .kf-main-keeps {
-      max-width: initial;
-    }
-  }
-}
+  &.kf-mobile .kf-library-results-wrapper
+    max-width: initial
+    float: none
 
-.kf-related-libraries {
-  margin-top: 42px;
-  float: left;
-  width: relatedLibrariesColumnWidth;
-  box-sizing: border-box;
-  padding: 0;
-  .kf-mobile & {
-    margin-top: 0;
-    float: none;
-    width: initial;
-  }
-}
+  .kf-library-body
+    min-width: keepsColumnWidth + relatedLibrariesColumnWidth
+    .kf-main-keeps
+      max-width: keepsColumnWidth
 
-.kf-related-libraries-see-more {
-  display: block;
-  margin: 0 4px 16px;
-  font-size: 15px;
-  &, &:link, &:hover, &:visited {
-    color: #74a6e5;
-    text-decoration: none;
-  }
-  .kf-mobile & {
-    font-size: 36px;
-    margin: 60px 38px;
-  }
-}
+  &.kf-mobile .kf-library-body
+    min-width: initial
+    .kf-main-keeps
+      max-width: initial
 
-.kf-related-libraries-card-your-own-card {
-  background: #73c785;
-  border-radius: desktopBorderRadius;
-  font-size: 20px;
-  text-align: center;
-  color: #fff;
-  padding: 21px 10px;
-  margin-bottom: 1em;
+.kf-related-libraries
+  margin-top: 42px
+  float: left
+  width: relatedLibrariesColumnWidth
+  box-sizing: border-box
+  padding: 0
+  .kf-mobile &
+    margin-top: 0
+    float: none
+    width: initial
 
-  .kf-related-libraries-card-your-own-card-btn {
-    &, &:link, &:visited, &:hover {
-      color: #fff;
-      text-decoration: none;
-    }
-    background: #418cc9;
-    display: inline-block;
-    margin: 18px auto 0;
-    font-size: 16px;
-    font-weight: bold;
-    border-radius: 4px;
-    padding: 6px 16px;
-  }
+.kf-related-libraries-see-more
+  margin: 0 4px
+  font-size: 15px
+  &, &:link, &:hover, &:visited
+    color: #74a6e5
+    text-decoration: none
+  .kf-mobile &
+    font-size: 36px
+    margin: 60px 38px
 
-  .kf-mobile & {
-    display: none;
-  }
-}
+.kf-related-libraries-card-your-own-card
+  background: #73c785
+  border-radius: desktopBorderRadius
+  font-size: 20px
+  text-align: center
+  color: #fff
+  padding: 21px 10px
+  margin: 1em 0
 
-.kf-related-library-explore-more-header {
-  text-transform: uppercase;
-  color: #4e4754;
-  display: block;
-  font-size: 14px;
-  font-weight: bold;
-  text-align: left;
-  margin-bottom: 1em;
-  .kf-mobile & {
-    text-align: center;
-    background: #e8e8e8;
-    font-size: 30px;
-    line-height: 3em;
-    clear: both;
-    float: none;
-    margin-bottom: 0;
-  }
-}
+  .kf-related-libraries-card-your-own-card-btn
+    &, &:link, &:visited, &:hover
+      color: #fff
+      text-decoration: none
 
-.kf-related-library-card {
-  float: left;
-  width: 100%;
-  margin-bottom: 1em;
-  .kf-mobile & {
-    margin: 40px 25px 10px 30px;
-    float: none;
-    width: auto;
-  }
-}
+    background: #418cc9
+    display: inline-block
+    margin: 18px auto 0
+    font-size: 16px
+    font-weight: bold
+    border-radius: 4px
+    padding: 6px 16px
+
+  .kf-mobile &
+    display: none
+
+.kf-related-library-explore-more-header
+  text-transform: uppercase
+  color: #4e4754
+  display: block
+  font-size: 14px
+  font-weight: bold
+  text-align: left
+  margin-bottom: 1em
+  .kf-mobile &
+    text-align: center
+    background: #e8e8e8
+    font-size: 30px
+    line-height: 3em
+    clear: both
+    float: none
+    margin-bottom: 0
+
+.kf-related-library-card
+  float: left
+  width: 100%
+  margin-bottom: 1em
+  .kf-mobile &
+    margin: 40px 25px 10px 30px
+    float: none
+    width: auto
+
+.kf-related-library-footer
+  float: left

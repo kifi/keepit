@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryAddRequest, RawBookmarkRepresentation, _ }
+import com.keepit.commanders.{ RawBookmarkRepresentation, _ }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ UserRequest, _ }
 import com.keepit.common.core._

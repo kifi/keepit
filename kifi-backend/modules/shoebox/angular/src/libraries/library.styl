@@ -3,9 +3,14 @@
 // Library card colors
 invite-header-orange = #ff7c3c
 
+.kf-library-card-header-container
+  padding: 0 25px 0 30px
+
+  .kf-logged-out &
+    padding: 0
+
 .kf-library-card-header
   margin-bottom: 10px
-  padding: 0 25px 0 30px
 
 .kf-logged-out .kf-library-card-header
   margin-bottom: 0
@@ -13,6 +18,11 @@ invite-header-orange = #ff7c3c
 
 .delighted-visible ~ div .kf-library-card-header
   margin-top: 10px
+
+.kf-logged-out .kf-main-library-keeps
+  width: nonUserAppMaxWidth
+  margin: 0 auto
+
 
 
 lib-body-side-pad = 30px
@@ -272,18 +282,6 @@ cover-image-adjust-right = 24px
   transition: max-height 0.3s ease
   box-shadow: none
 
-  &::before
-    position: absolute
-    top: 0
-    left: -5000px
-    display: block
-    box-shadow: none
-    width: 9999px
-    height: 100%
-    background-color: #fff
-    content: ''
-    z-index: -1
-
   .kf-keep-lib-body
   .kf-keep-lib-header
     max-height: 5000px
@@ -353,15 +351,23 @@ cover-image-adjust-right = 24px
 // For logged-out library search.
 //
 html:not(.kf-mobile)
+  .kf-library-card-header-wrapper.library-search
+  .kf-library-card-header-wrapper.library-search-in-progress
+    height: 90px
+
+  .kf-library-card-header.library-search
+  .kf-library-card-header.library-search-in-progress
+    position: fixed
+    top: 62px
+    width: 100%
+    z-index: 500
+
+    &.pageScrolled
+      box-shadow: 0px 5px 5px #ddd
+
   .library-search .library-card
   .library-card.library-search-in-progress
     max-height: 90px
-    position: fixed
-    top: 62px
-    z-index: 500
-
-    &.pageScrolled::before
-      box-shadow: 0px 5px 5px #ddd
 
     .kf-keep-lib-body
       max-height: 90px

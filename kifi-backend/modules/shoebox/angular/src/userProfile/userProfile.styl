@@ -1,6 +1,15 @@
+//
+// Desktop styles.
+// Note: mobile styles defined at the bottom.
+//
 .kf-user-profile
   margin: 0 auto
   text-align: center
+
+  // The following styles are hacky and can be removed when we move to
+  // a two-column layout.
+  margin-top: -15px  // So that the background will extend to the top
+  margin-left: 1px   // Otherwise there is a small area jutting out on the top left
 
 .kf-user-profile-header
   color: #fff
@@ -63,3 +72,24 @@
 
   &.kf-my::before
     content: 'My '
+
+
+//
+// Mobile styles.
+//
+.kf-logged-out.kf-mobile
+  .kf-user-profile
+    font-size: 1.5em
+
+  .kf-user-profile-header-content
+    padding: 55px 0 30px
+
+  .kf-upl-nav-container
+    height: 70px
+    padding-top: 20px
+
+  .kf-upl-nav-link
+    height: 45px
+    width: 30%
+    max-width: 220px
+    font-size: 1.1em
