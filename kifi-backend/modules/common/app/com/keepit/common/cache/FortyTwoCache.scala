@@ -174,9 +174,9 @@ class FortyTwoCacheImpl[K <: Key[T], T](
     val serializer: Serializer[T],
     override val outerCache: Option[ObjectCache[K, T]]) extends FortyTwoCache[K, T] {
 
-  assert(minTTL.toMillis <= (30 days).toMillis, "minTTL too long")
-  assert(maxTTL.toMillis <= (30 days).toMillis, "maxTTL too long")
-  assert(minTTL.toMillis <= maxTTL.toMillis, "minTTL longer than maxTTL")
+//  assert(minTTL.toMillis <= (30 days).toMillis, "minTTL too long")
+//  assert(maxTTL.toMillis <= (30 days).toMillis, "maxTTL too long")
+//  assert(minTTL.toMillis <= maxTTL.toMillis, "minTTL longer than maxTTL")
 
   // Constructor using a distinct serializer for each cache plugin
   def this(
