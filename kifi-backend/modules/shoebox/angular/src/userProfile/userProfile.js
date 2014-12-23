@@ -154,14 +154,18 @@ angular.module('kifi')
     function fetchLibraries() {
       var filter = $scope.libraryType;
       userProfileActionService.getLibraries(username, filter).then(function (data) {
-        $scope.libraries = data[filter].map(augmentLibrary);
+        if ($scope.libraryType === filter) {
+          var owner = filter === 'own' ? _.extend({username: username}, $scope.profile) : null;
+          $scope.libraries = data[filter].map(augmentLibrary.bind(null, owner));
+        }
       });
     }
 
-    function augmentLibrary(lib) {
-      lib.path = '/' + username + '/' + lib.slug;
-      lib.owner = $scope.profile;
-      lib.ownerPicUrl = $scope.profile.picUrl;
+    function augmentLibrary(owner, lib) {
+      owner = lib.owner || owner;
+      lib.path = '/' + owner.username + '/' + lib.slug;
+      lib.owner = owner;
+      lib.ownerPicUrl = keepWhoService.getPicUrl(owner, 200);
       lib.color = lib.color || _.sample(colors);
       lib.imageCss = lib.image ? {
           'background-image': 'url(' + routeService.libraryImageUrl(lib.image.path) + ')',
