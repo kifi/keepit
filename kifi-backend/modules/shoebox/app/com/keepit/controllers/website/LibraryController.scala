@@ -560,21 +560,21 @@ class LibraryController @Inject() (
         val imageSize = ProcessedImageSize.Medium.idealSize
         filter match {
           case "own" =>
-            val libs = libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize)
+            val libs = libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("own" -> libs.map(LibraryCardInfo.writesWithoutOwner.writes))))
 
           case "following" =>
-            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize)
+            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("following" -> Json.toJson(libs))))
 
           case "invited" =>
-            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize)
+            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("invited" -> Json.toJson(libs))))
 
           case "all" if page == 0 =>
-            val ownLibsF = SafeFuture(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize))
-            val followLibsF = SafeFuture(libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize))
-            val invitedLibsF = SafeFuture(libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize))
+            val ownLibsF = SafeFuture(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).seq)
+            val followLibsF = SafeFuture(libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
+            val invitedLibsF = SafeFuture(libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
             for {
               ownLibs <- ownLibsF
               followLibs <- followLibsF
