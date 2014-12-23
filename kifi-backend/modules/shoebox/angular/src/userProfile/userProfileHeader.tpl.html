@@ -8,9 +8,9 @@
   </div>
 
   <div class="kf-user-profile-basic-info" itemscope itemtype="http://data-vocabulary.org/Person">
-    <!-- TODO: Add itemprop url here and make this picture into a link -->
-    <img class="kf-user-profile-picture" ng-src="{{profile.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
-         alt="{{profile.firstName}} {{profile.lastName}}" itemprop="photo">
+    <a href="{{userProfileRootUrl}}" itemprop="url">
+      <img class="kf-user-profile-picture" ng-src="{{profile.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" alt="{{profile.firstName}} {{profile.lastName}}" itemprop="photo">
+    </a>
     <div class="kf-user-profile-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</div>
   </div>
 

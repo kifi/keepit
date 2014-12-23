@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('UserProfileCtrl', [
   '$scope', '$rootScope', '$state', '$stateParams', '$window',
-  'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService',
+  'env', 'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService',
   function ($scope, $rootScope, $state, $stateParams, $window,
-            inviteService, keepWhoService, profileService, userProfileActionService) {
+            env, inviteService, keepWhoService, profileService, userProfileActionService) {
     //
     // Configs.
     //
@@ -26,6 +26,7 @@ angular.module('kifi')
     //
     // Scope data.
     //
+    $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
     $scope.profile = null;
     $scope.userLoggedIn = false;
     $scope.viewingOwnProfile = false;
