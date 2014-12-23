@@ -1292,11 +1292,10 @@ class LibraryCommander @Inject() (
   }
 
   def getInvitedLibraries(invitee: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): Seq[LibraryCardInfo] = {
-    val inviteeBasicUser = BasicUser.fromUser(invitee)
     viewer match {
       case None =>
         Seq.empty
-      case Some(other) if other.id == invitee.id =>
+      case Some(other) if other.id.get == invitee.id.get =>
         db.readOnlyMaster { implicit session =>
           val libs = libraryInviteRepo.getActiveWithUserId(invitee.id.get, page) map libraryRepo.get //cached
           createLibraryCardInfos(libs, idealSize, viewer.isDefined)
