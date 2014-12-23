@@ -1341,7 +1341,7 @@ class LibraryCommander @Inject() (
       val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
       val (numFollowers, followersSample) = if (lib.memberCount > 1) {
         val count = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
-        val followersIds = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 2, Set(LibraryAccess.READ_ONLY)).map(_.userId).toSet
+        val followersIds = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_ONLY)).map(_.userId).toSet
         val sample = basicUserRepo.loadAll(followersIds).values.toSeq //we don't care about the order now anyway
         (count, sample)
       } else {
