@@ -217,6 +217,9 @@ angular.module('kifi')
       ////////////////////////////
       getUserProfile: function (username) {
         return route('/user/' + username + '/profile');
+      },
+      getUserLibraries: function (username) {
+        return route('/user/' + username + '/libraries');
       }
     };
   }
