@@ -33,6 +33,11 @@ abstract class JsonCacheImpl[K <: Key[T], T] private (cache: ObjectCache[K, T], 
     innermostPluginSettings: (FortyTwoCachePlugin, Duration),
     innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: Format[T]) =
     this(new FortyTwoCacheImpl(stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(Serializer(formatter)), Serializer(formatter))
+  def this(
+    stats: CacheStatistics, accessLog: AccessLog,
+    innermostPluginSettings: (FortyTwoCachePlugin, Duration, Duration),
+    innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration, Duration)*)(implicit formatter: Format[T]) =
+    this(new FortyTwoCacheImpl(stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(Serializer(formatter)), Serializer(formatter))
 }
 
 abstract class ImmutableJsonCacheImpl[K <: Key[T], T] private (cache: ObjectCache[K, T], serializer: Serializer[T]) extends TransactionalCache(cache, serializer, Some(NoCopyLocalSerializer[T]())) {
