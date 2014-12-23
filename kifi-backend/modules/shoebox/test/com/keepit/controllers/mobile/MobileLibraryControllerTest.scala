@@ -4,7 +4,7 @@ import java.io.File
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ LibraryImageCommander, KeepData, LibraryInfo }
+import com.keepit.commanders.{ LibraryImageCommander, KeepData }
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }

@@ -1136,6 +1136,84 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
     }
 
+    "getFollowingLibraries for anonymos and paginate" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val libraryCommander = inject[LibraryCommander]
+        val (owner, other, allLibs) = db.readWrite { implicit s =>
+          val owner = user().saved
+          val other = user().saved
+          val otherFollows1 = libraries(2).map(_.published().withUser(owner)).saved.head.savedFollowerMembership(other)
+          val otherFollows2 = libraries(2).map(_.secret().withUser(owner)).saved.head.savedFollowerMembership(other)
+          libraries(2).map(_.published().withUser(other)).saved.head.savedFollowerMembership(owner)
+          val otherFollows3 = libraries(10).map(_.published().withUser(owner)).saved.map(_.savedFollowerMembership(other))
+          libraries(10).map(_.published().withUser(other)).saved
+          (owner, other, List(otherFollows1) ++ otherFollows3)
+        }
+
+        val libsP1 = libraryCommander.getFollowingLibraries(other, None, Paginator(0, 5), ImageSize("100x100"))
+        libsP1.size === 5
+        libsP1.map(_.id) === allLibs.reverse.take(5).map(_.id.get).map(Library.publicId)
+
+        val libsP2 = libraryCommander.getFollowingLibraries(other, None, Paginator(1, 5), ImageSize("100x100"))
+        libsP2.size === 5
+        libsP2.map(_.id) === allLibs.reverse.drop(5).take(5).map(_.id.get).map(Library.publicId)
+
+        val libsP3 = libraryCommander.getFollowingLibraries(other, None, Paginator(2, 5), ImageSize("100x100"))
+        libsP3.size === 1
+        libsP3.map(_.id) === allLibs.reverse.drop(10).take(5).map(_.id.get).map(Library.publicId)
+      }
+    }
+
+    "getFollowingLibraries for self" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val libraryCommander = inject[LibraryCommander]
+        val (owner, other, allLibs) = db.readWrite { implicit s =>
+          val owner = user().saved
+          val other = user().saved
+          val otherFollows1 = libraries(2).map(_.published().withUser(owner)).saved.head.savedFollowerMembership(other)
+          val otherFollows2 = libraries(2).map(_.secret().withUser(owner)).saved.head.savedFollowerMembership(other)
+          libraries(2).map(_.published().withUser(other)).saved.head.savedFollowerMembership(owner)
+          val otherFollows3 = libraries(10).map(_.published().withUser(owner)).saved.map(_.savedFollowerMembership(other))
+          libraries(10).map(_.published().withUser(other)).saved
+          (owner, other, List(otherFollows1, otherFollows2) ++ otherFollows3)
+        }
+
+        val libs = libraryCommander.getFollowingLibraries(other, Some(other), Paginator(0, 500), ImageSize("100x100"))
+        libs.size === 12
+        libs.map(_.id) === allLibs.reverse.map(_.id.get).map(Library.publicId)
+      }
+    }
+
+    "getFollowingLibraries for other" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val libraryCommander = inject[LibraryCommander]
+        val (user1, user2, user3, follows1, follows2, follows3, follows4) = db.readWrite { implicit s =>
+          val user1 = user().saved
+          val user2 = user().saved
+          val user3 = user().saved
+          val follows1 = libraries(2).map(_.published().withUser(user1).withName("a")).saved.head.savedFollowerMembership(user2)
+          val follows2 = libraries(2).map(_.secret().withUser(user1).withName("b")).saved.head.savedFollowerMembership(user2).savedFollowerMembership(user3)
+          val follows3 = libraries(10).map(_.secret().withUser(user3).withName("c")).saved.map(_.savedFollowerMembership(user2))
+          libraries(2).map(_.published().withUser(user2).withName("d")).saved.head.savedFollowerMembership(user1)
+          val follows4 = libraries(10).map(_.published().withUser(user1).withName("e")).saved.map(_.savedFollowerMembership(user2))
+          libraries(10).map(_.published().withUser(user2).withName("f")).saved
+          (user1, user2, user3, follows1, follows2, follows3, follows4)
+        }
+
+        val self = libraryCommander.getFollowingLibraries(user2, Some(user2), Paginator(0, 500), ImageSize("100x100"))
+        self.size === 22
+        self.map(_.id) === (List(follows1, follows2) ++ follows3 ++ follows4).reverse.map(_.id.get).map(Library.publicId)
+
+        val libs1 = libraryCommander.getFollowingLibraries(user2, Some(user1), Paginator(0, 500), ImageSize("100x100"))
+        println(libs1.map(_.name))
+        libs1.size === 12
+        libs1.map(_.id) === (List(follows1, follows2) ++ follows4).reverse.map(_.id.get).map(Library.publicId)
+      }
+    }
+
     "get ownerLibraries for friend" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]

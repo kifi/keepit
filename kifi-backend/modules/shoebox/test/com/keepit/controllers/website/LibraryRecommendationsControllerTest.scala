@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders
-import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, FullLibraryInfo, FakeRecommendationsCommander, RecommendationsCommander }
+import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, FakeRecommendationsCommander, RecommendationsCommander }
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.external.FakeExternalServiceModule

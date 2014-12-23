@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ LibraryAddRequest, LibraryCommander, UserCommander }
+import com.keepit.commanders.{ LibraryCommander, UserCommander }
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, UserRequest, NonUserRequest }
 import com.keepit.common.crypto.FakeCryptoModule
