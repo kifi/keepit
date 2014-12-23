@@ -455,6 +455,46 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         (response4 \ "alreadyKept").asOpt[Seq[JsObject]] === None
       }
     }
+
+    "get profile libraries" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, lib1, lib2, _, _) = setupTwoUsersThreeLibraries()
+        val pubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val pubId2 = Library.publicId(lib2.id.get)(inject[PublicIdConfiguration])
+
+        val result1 = getProfileLibraries(user1, 0, 10, "own")
+        status(result1) must equalTo(OK)
+        Json.parse(contentAsString(result1)) === Json.parse(
+          s"""
+             {
+              "own" : [
+                {
+                  "name":"Catching Jellyfish",
+                  "numFollowers":0,
+                  "numKeeps":0,
+                  "followers":[],
+                  "slug":"catching-jellyfish",
+                  "id":"${pubId2.id}"
+                },
+                {
+                  "name":"Krabby Patty",
+                  "numFollowers":0,
+                  "numKeeps":0,
+                  "followers":[],
+                  "slug":"krabby-patty",
+                  "id":"${pubId1.id}"
+                }
+              ]
+            }
+           """)
+        val result2 = getProfileLibraries(user1, 0, 10, "all")
+        status(result2) must equalTo(OK)
+        val resultJson2 = contentAsJson(result2)
+        (resultJson2 \ "own").as[Seq[JsObject]].length === 2
+        (resultJson2 \ "following").as[Seq[JsObject]].length === 0
+        (resultJson2 \ "invited").as[Seq[JsObject]].length === 0
+      }
+    }
   }
 
   private def createLibrary(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
@@ -510,6 +550,11 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
   private def getSummariesWithUrl(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.getLibrarySummariesWithUrl()(request(routes.MobileLibraryController.getLibrarySummariesWithUrl()).withBody(body))
+  }
+
+  private def getProfileLibraries(user: User, page: Int, size: Int, filter: String)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.getProfileLibraries(user.username, filter, page, size)(request(routes.MobileLibraryController.getProfileLibraries(user.username, filter, page, size)))
   }
 
   // User 'Spongebob' has one library called "Krabby Patty" (secret)
