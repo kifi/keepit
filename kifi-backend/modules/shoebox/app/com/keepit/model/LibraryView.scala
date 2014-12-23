@@ -129,6 +129,10 @@ case class LibraryCardInfo(
     extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers)
 
 object LibraryCardInfo {
+  val writesWithoutOwner = Writes[LibraryCardInfo] { o => // for case when receiving end already knows the owner
+    JsObject((Json.toJson(o).asInstanceOf[JsObject].value - "owner").toSeq)
+  }
+
   def showable(followers: Seq[BasicUser], isAuthenticatedRequest: Boolean): Seq[BasicUser] = {
     if (isAuthenticatedRequest) {
       val goodLooking = followers.filter(_.pictureName != "0.jpg")
