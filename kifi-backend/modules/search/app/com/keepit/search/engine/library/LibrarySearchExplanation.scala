@@ -1,7 +1,9 @@
 package com.keepit.search.engine.library
 
 import com.keepit.common.db.Id
+import com.keepit.common.json.TupleFormat
 import com.keepit.model.Library
+import com.keepit.search.Lang
 import com.keepit.search.engine.explain.{ SearchExplanationBuilder, SearchExplanation, ScoreDetail }
 import org.apache.lucene.search.Query
 import play.api.libs.json.Json
@@ -10,6 +12,7 @@ case class LibrarySearchExplanation(
     id: Id[Library],
     query: String,
     labels: Array[String],
+    lang: (Lang, Option[Lang]),
     matching: Float,
     matchingThreshold: Float,
     minMatchingThreshold: Float,
@@ -32,10 +35,13 @@ case class LibrarySearchExplanation(
 }
 
 object LibrarySearchExplanation {
-  implicit val format = Json.format[LibrarySearchExplanation]
+  implicit val format = {
+    implicit val langFormat = TupleFormat.tuple2Format[Lang, Option[Lang]]
+    Json.format[LibrarySearchExplanation]
+  }
 }
 
-class LibrarySearchExplanationBuilder(libraryId: Id[Library], query: Query, labels: Array[String]) extends SearchExplanationBuilder[Library](libraryId, query, labels) {
+class LibrarySearchExplanationBuilder(libraryId: Id[Library], lang: (Lang, Option[Lang]), query: Query, labels: Array[String]) extends SearchExplanationBuilder[Library](libraryId, lang, query, labels) {
 
   private[this] var _score: Float = -1f
   private[this] var _myLibraryBoostValue: Float = -1f
@@ -45,6 +51,7 @@ class LibrarySearchExplanationBuilder(libraryId: Id[Library], query: Query, labe
       libraryId,
       query.toString,
       labels,
+      lang,
       matching,
       matchingThreshold,
       minMatchingThreshold,

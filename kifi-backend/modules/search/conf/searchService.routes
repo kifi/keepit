@@ -82,7 +82,7 @@ GET         /internal/search/indexInfo/listAll        @com.keepit.search.control
 POST        /internal/search/search/users        @com.keepit.search.controllers.search.SearchController.searchUsers()
 POST        /internal/search/search/userTypeahead        @com.keepit.search.controllers.search.SearchController.userTypeahead()
 GET         /internal/search/search/uri/explain        @com.keepit.search.controllers.search.SearchController.explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], debug: Option[String])
-GET         /internal/search/search/library/explain        @com.keepit.search.controllers.search.SearchController.explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], lang: Option[String], debug: Option[String])
+GET         /internal/search/search/library/explain        @com.keepit.search.controllers.search.SearchController.explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String])
 POST        /internal/searchWithConfig        @com.keepit.search.controllers.search.SearchController.searchWithConfig
 
 GET         /internal/search/searchConfig/:id        @com.keepit.search.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
