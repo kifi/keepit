@@ -1,9 +1,8 @@
 <div class="kf-user-profile-header-content"><!-- limit to 800px or so -->
   <div ng-switch="optionalAction" class="kf-user-profile-optional-action">
-    <div ng-switch-when="connect" class="kf-user-profile-connect svg-connect-to-user"
-         ng-click="connect()" ng-class="{'clickable': ignoreClick.connect === false}">
+    <a ng-switch-when="connect" class="kf-user-profile-connect svg-connect-to-user" ng-click="connect()">
       CONNECT
-    </div>
+    </a>
     <a ng-switch-when="settings" class="kf-user-profile-user-settings svg-settings-gear" ui-sref="settings"></a>
   </div>
 
