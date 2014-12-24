@@ -85,7 +85,7 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
             users.map { user =>
               <url>
                 <loc>
-                  { s"https://www.kifi.com/${user.username}" }
+                  { s"https://www.kifi.com/${user.username.value}" }
                 </loc>
                 <lastmod>{ ISO_8601_DAY_FORMAT.print(lastMod(user)) }</lastmod>
               </url>
