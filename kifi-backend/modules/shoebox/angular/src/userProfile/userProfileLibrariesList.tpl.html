@@ -1,5 +1,6 @@
-<div class="kf-upl-card" ng-repeat="lib in libraries track by lib.id">
-  <a class="kf-upl-card-link" href="{{lib.path}}" ng-style="{'background-color': lib.color}">
+<div class="kf-upl-card" ng-repeat="lib in libraries track by lib.id" ng-style="{'background-color': lib.color}">
+  <a class="kf-upl-card-link" href="{{lib.path}}">
+    <div class="kf-upl-card-icon" ng-class="lib.kind === 'system_main' ? 'svg-card-star' : 'svg-card-lock'" ng-if="lib.system"></div>
     <div class="kf-upl-card-cover">
       <div class="kf-upl-card-cover-image" ng-style="{{lib.imageCss}}" ng-if="lib.image"></div>
     </div>
@@ -20,9 +21,8 @@
   <div class="kf-upl-card-foot">
     <div class="kf-upl-followers" ng-if="lib.followers.length > 0">
       <span class="kf-upl-follower" ng-repeat="user in lib.followers" ng-attr-style="background-image:url({{user.picUrl}})"></span>
-      <span class="kf-upl-followers-text"><!-- ng-if="lib.numFollowers > lib.followers.length" -->
-        + <ng-pluralize count="lib.numFollowers - lib.followers.length" when="{'1':'{} other follows ','other':'{} others follow '}"></ng-pluralize> this library
-      </span>
+      <!-- ng-if="lib.numFollowers > lib.followers.length" -->
+      + <ng-pluralize count="lib.numFollowers - lib.followers.length" when="{'1':'{} other follows ','other':'{} others follow '}"></ng-pluralize> this library
     </div>
     <div class="kf-upl-updated" ng-if="lib.followers.length === 0">
       Updated N days ago

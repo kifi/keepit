@@ -165,7 +165,11 @@ angular.module('kifi')
       lib.path = '/' + owner.username + '/' + lib.slug;
       lib.owner = owner;
       lib.ownerPicUrl = keepWhoService.getPicUrl(owner, 200);
-      lib.color = lib.color || _.sample(colors);
+      if (/^system_/.test(lib.kind)) {
+        lib.system = true;
+      } else {
+        lib.color = lib.color || _.sample(colors);
+      }
       lib.imageCss = lib.image ? {
           'background-image': 'url(' + routeService.libraryImageUrl(lib.image.path) + ')',
           'background-position': lib.image.x + '% ' + lib.image.y + '%'
