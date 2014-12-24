@@ -205,8 +205,8 @@ class LibraryCommander @Inject() (
 
   def getLibrarySummaryAndMembership(userIdOpt: Option[Id[User]], id: Id[Library]): (LibraryInfo, Option[LibraryMembership]) = {
     val Seq(libInfo) = getLibrarySummaries(Seq(id))
-    val accessStr = getMaybeMembership(userIdOpt, id)
-    (libInfo, accessStr)
+    val memOpt = getMaybeMembership(userIdOpt, id)
+    (libInfo, memOpt)
   }
 
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Int, Option[Boolean])] = {

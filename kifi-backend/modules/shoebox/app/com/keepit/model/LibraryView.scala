@@ -135,6 +135,9 @@ object MaybeLibraryMember {
 }
 
 @json case class LibraryMembershipInfo(access: LibraryAccess, listed: Boolean)
+object LibraryMembershipInfo {
+  def fromMembership(mem: LibraryMembership) = LibraryMembershipInfo(mem.access, mem.listed)
+}
 
 case class FullLibraryInfo(id: PublicId[Library],
   name: String,

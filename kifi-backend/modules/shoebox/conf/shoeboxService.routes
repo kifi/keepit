@@ -339,6 +339,7 @@ POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsCont
 GET     /site/collections/search    @com.keepit.controllers.website.KeepsController.searchUserTags(query: String, limit: Option[Int] = None)
 
 GET     /site/users/:userStr/libraries/:slug    @com.keepit.controllers.website.LibraryController.getLibraryByPath(userStr:String, slug: String, showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None)
+GET     /site/users/:userStr/libraries1/:slug    @com.keepit.controllers.website.LibraryController.getLibraryByPathFake(userStr:String, slug: String, showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None)
 POST    /site/users/:userStr/libraries/:slug/auth    @com.keepit.controllers.website.LibraryController.authToLibrary(userStr: String, slug: String, authToken: Option[String])
 
 # Profile pages
@@ -353,6 +354,7 @@ POST    /site/libraries/move        @com.keepit.controllers.website.LibraryContr
 GET     /site/libraries/marketing-suggestions   @com.keepit.controllers.website.LibraryController.marketingSiteSuggestedLibraries()
 
 GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibraryById(id: PublicId[Library], showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None)
+GET     /site/libraries1/:id         @com.keepit.controllers.website.LibraryController.getLibraryByIdFake(id: PublicId[Library], showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None)
 GET     /site/libraries/:id/summary         @com.keepit.controllers.website.LibraryController.getLibrarySummaryById(id: PublicId[Library])
 POST    /site/libraries/:id/modify  @com.keepit.controllers.website.LibraryController.modifyLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryController.removeLibrary(id: PublicId[Library])

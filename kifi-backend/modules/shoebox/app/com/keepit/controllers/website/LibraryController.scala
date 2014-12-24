@@ -102,6 +102,15 @@ class LibraryController @Inject() (
     }
   }
 
+  def getLibraryByIdFake(pubId: PublicId[Library], showPublishedLibraries: Boolean, imageSize: Option[String] = None) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
+    libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize) map { libInfo =>
+      val membershipInfo = libraryCommander.getMaybeMembership(request.userIdOpt, libraryId).map(LibraryMembershipInfo.fromMembership(_))
+      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> Json.toJson(membershipInfo)))
+    }
+  }
+
   def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
     val (libInfo, memOpt) = libraryCommander.getLibrarySummaryAndMembership(request.userIdOpt, id)
@@ -118,6 +127,22 @@ class LibraryController @Inject() (
           libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize).map { libInfo =>
             val accessStr = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get).map(_.access.value).getOrElse("none")
             Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
+          }
+        })
+      case Left(fail) => Future.successful {
+        if (fail.status == MOVED_PERMANENTLY) MovedPermanently(fail.message) else Status(fail.status)(Json.obj("error" -> fail.message))
+      }
+    }
+  }
+  def getLibraryByPathFake(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
+    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), followRedirect = false) match {
+      case Right(library) =>
+        LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
+          val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
+          request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
+          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize).map { libInfo =>
+            val membershipInfo = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get).map(LibraryMembershipInfo.fromMembership(_))
+            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> Json.toJson(membershipInfo)))
           }
         })
       case Left(fail) => Future.successful {
