@@ -70,6 +70,9 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
 
         // Username routing
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abez"))) must beAnInstanceOf[Angular]
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abez/libraries/following"))) must beAnInstanceOf[Angular]
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abez/libraries/invited"))) must beAnInstanceOf[Angular]
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abez/libraries1234/invited"))) === Error404
         router.route(NonUserRequest(FakeRequest.apply("GET", "/leo1221"))) === SeeOtherRoute("/l%C3%A9o1221")
         router.route(NonUserRequest(FakeRequest.apply("GET", "/léo1221"))) must beAnInstanceOf[Angular]
         router.route(NonUserRequest(FakeRequest.apply("GET", "/léo1222"))) === Error404
