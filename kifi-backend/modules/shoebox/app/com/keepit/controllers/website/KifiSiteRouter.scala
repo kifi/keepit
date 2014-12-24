@@ -162,7 +162,9 @@ class AngularRouter @Inject() (
           if (user.username.value != path.primary) { // username normalization or alias
             val redir = "/" + (user.username.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
             if (isUserAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
-          } else if (path.split.length == 1 || path.secondary.exists(_ == "libraries")) { // user profile page
+          } else if (path.split.length == 1) { // user profile page
+            Some(Angular(Some(Future.successful("<meta name=\"robots\" content=\"noindex\">"))))
+          } else if (path.split.length == 3 && path.split(1) == "libraries" && (path.split(2) == "following" || path.split(2) == "invited")) { // user profile page (nested routes)
             Some(Angular(Some(Future.successful("<meta name=\"robots\" content=\"noindex\">"))))
           } else {
             path.secondary.flatMap { secondary =>
