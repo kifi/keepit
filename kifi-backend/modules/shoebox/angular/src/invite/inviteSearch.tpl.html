@@ -3,12 +3,12 @@
   <ul class="social-invite-dropdown" ng-show="search.showDropdown">
     <li class="social-invite-element" ng-repeat="result in results" ng-class="'social-invite-{{result.status === 'joined' && result.network === 'fortytwoNF' ? '' : result.status}}'">
 
-      <div ng-if="!result.custom" itemscope itemtype="http://data-vocabulary.org/Person">
+      <div ng-if="!result.custom">
         <div ng-if="result.networkType !== 'email'">
-          <a ng-if="inUserProfileBeta" href="{{result.userProfileUrl}}" itemprop="url">
-            <img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="social-invite-image" itemprop="photo">
+          <a ng-if="inUserProfileBeta" href="{{result.userProfileUrl}}">
+            <img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="social-invite-image">
           </a>
-          <img ng-if="!inUserProfileBeta" ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="social-invite-image" itemprop="photo">
+          <img ng-if="!inUserProfileBeta" ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="social-invite-image">
         </div>
 
         <div ng-if="!result.status">
@@ -25,7 +25,7 @@
 
         <div ng-if="result.status === 'joined' && result.networkType === 'fortytwo'">
           <div class="social-invite-summary">
-            <div class="social-invite-name" itemprop="name">{{result.label}}</div>
+            <div class="social-invite-name">{{result.label}}</div>
             <div class="social-invite-network">
               Your friend on Kifi
             </div>
@@ -34,7 +34,7 @@
 
         <div ng-if="result.status === 'requested' && result.networkType === 'fortytwoNF'">
           <div class="social-invite-summary">
-            <div class="social-invite-name" itemprop="name">{{result.label}}</div>
+            <div class="social-invite-name">{{result.label}}</div>
             <div class="social-invite-network">
               Kifi user — request sent
             </div>
@@ -43,7 +43,7 @@
 
         <div ng-if="result.status === 'joined' && result.networkType === 'fortytwoNF'">
           <div class="social-invite-summary">
-            <div class="social-invite-name" itemprop="name">{{result.label}}</div>
+            <div class="social-invite-name">{{result.label}}</div>
             <div class="social-invite-network">
               Kifi user
             </div>
