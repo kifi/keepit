@@ -79,6 +79,10 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234"))) must beAnInstanceOf[Angular]
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abeZ1234/awesome-lib"))) === SeeOtherRoute("/abe.z1234/awesome-lib")
 
+        // Profile routing
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/libraries/following"))) must beAnInstanceOf[Angular]
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/libraries/invited"))) must beAnInstanceOf[Angular]
+
         val libraryCommander = inject[LibraryCommander]
         val Right(library) = {
           val libraryRequest = LibraryAddRequest("Awesome Lib", LibraryVisibility.PUBLISHED, None, "awesome-lib")
