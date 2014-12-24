@@ -302,7 +302,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"numCollaborators":0,
              |"numFollowers":0
            |},
-           |"membership":"owner"
+           |"membership":"owner",
+           |"listed": true
           }""".stripMargin))
 
         // viewed by another user with an invite
@@ -343,7 +344,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"numCollaborators":0,
              |"numFollowers":0
            |},
-           |"membership":"none"
+           |"membership":"none",
+           |"listed": null
           }""".stripMargin))
       }
     }
@@ -357,7 +359,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val (user1, lib1) = db.readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("ahsu"), normalizedUsername = UsernameOps.normalize("ahsu")))
           val library = libraryRepo.save(Library(name = "Library1", ownerId = user.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
-          libraryMembershipRepo.save(LibraryMembership(userId = user.id.get, libraryId = library.id.get, access = LibraryAccess.OWNER))
+          libraryMembershipRepo.save(LibraryMembership(userId = user.id.get, libraryId = library.id.get, access = LibraryAccess.OWNER, listed = false))
           (user, library)
         }
 
@@ -424,7 +426,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"numCollaborators":0,
                |"numFollowers":0
              |},
-             |"membership":"owner"
+             |"membership":"owner",
+             |"listed": false
             |}""".stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
         Json.parse(contentAsString(result2)) must equalTo(expected)

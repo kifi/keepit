@@ -157,11 +157,12 @@ class LibraryCommander @Inject() (
     db.readOnlyMasterAsync { implicit s => keepRepo.getCountByLibrary(libraryId) }
   }
 
-  def getAccessStr(userId: Id[User], libraryId: Id[Library]): Option[String] = {
-    val membership: Option[LibraryMembership] = db.readOnlyMaster { implicit s =>
-      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
-    }
-    membership.map(_.access.value)
+  def getMaybeMembership(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembership] = {
+    userIdOpt.map { userId =>
+      db.readOnlyMaster { implicit s =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+      }
+    }.flatten
   }
 
   def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit = {
@@ -174,12 +175,9 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize): Future[(FullLibraryInfo, String)] = {
+  def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize): Future[FullLibraryInfo] = {
     val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-    createFullLibraryInfo(userIdOpt, showPublishedLibraries, lib, imageSize).map { libInfo =>
-      val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
-      (libInfo, accessStr)
-    }
+    createFullLibraryInfo(userIdOpt, showPublishedLibraries, lib, imageSize)
   }
 
   def getLibrarySummaries(libraryIds: Seq[Id[Library]]): Seq[LibraryInfo] = {
@@ -204,10 +202,10 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibrarySummaryAndAccessString(userIdOpt: Option[Id[User]], id: Id[Library]): (LibraryInfo, String) = {
-    val Seq(libInfo) = getLibrarySummaries(Seq(id))
-    val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
-    (libInfo, accessStr)
+  def getLibrarySummaryAndMembership(userIdOpt: Option[Id[User]], libraryId: Id[Library]): (LibraryInfo, Option[LibraryMembership]) = {
+    val Seq(libInfo) = getLibrarySummaries(Seq(libraryId))
+    val memOpt = getMaybeMembership(userIdOpt, libraryId)
+    (libInfo, memOpt)
   }
 
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Int, Option[Boolean])] = {
