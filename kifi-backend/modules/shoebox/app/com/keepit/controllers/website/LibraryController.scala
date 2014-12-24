@@ -94,16 +94,18 @@ class LibraryController @Inject() (
   }
 
   def getLibraryById(pubId: PublicId[Library], showPublishedLibraries: Boolean, imageSize: Option[String] = None) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
-    val id = Library.decodePublicId(pubId).get
+    val libraryId = Library.decodePublicId(pubId).get
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
-    libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, id, idealSize) map {
-      case (libInfo, accessStr) => Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
+    libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize) map { libInfo =>
+      val accessStr = libraryCommander.getMaybeMembership(request.userIdOpt, libraryId).map(_.access.value).getOrElse("none")
+      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
     }
   }
 
   def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
-    val (libInfo, accessStr) = libraryCommander.getLibrarySummaryAndAccessString(request.userIdOpt, id)
+    val (libInfo, memOpt) = libraryCommander.getLibrarySummaryAndMembership(request.userIdOpt, id)
+    val accessStr = memOpt.map(_.access.value).getOrElse("none")
     Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
   }
 
@@ -114,11 +116,7 @@ class LibraryController @Inject() (
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
           request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
           libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize).map { libInfo =>
-            val accessStr = request.userIdOpt.map { userId =>
-              libraryCommander.getAccessStr(userId, library.id.get)
-            }.flatten.getOrElse {
-              "none"
-            }
+            val accessStr = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get).map(_.access.value).getOrElse("none")
             Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
           }
         })

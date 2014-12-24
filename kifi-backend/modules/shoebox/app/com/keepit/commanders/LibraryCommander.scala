@@ -203,7 +203,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibrarySummaryAndAccess(userIdOpt: Option[Id[User]], id: Id[Library]): (LibraryInfo, Option[LibraryMembership]) = {
+  def getLibrarySummaryAndMembership(userIdOpt: Option[Id[User]], id: Id[Library]): (LibraryInfo, Option[LibraryMembership]) = {
     val Seq(libInfo) = getLibrarySummaries(Seq(id))
     val accessStr = getMaybeMembership(userIdOpt, id)
     (libInfo, accessStr)
