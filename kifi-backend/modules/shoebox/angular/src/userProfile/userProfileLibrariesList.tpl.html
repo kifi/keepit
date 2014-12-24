@@ -1,5 +1,6 @@
-<div class="kf-upl-card" ng-repeat="lib in libraries track by lib.id">
-  <a class="kf-upl-card-link" href="{{lib.path}}" ng-style="{'background-color': lib.color}">
+<div class="kf-upl-card" ng-repeat="lib in libraries track by lib.id" ng-style="{'background-color': lib.color}">
+  <a class="kf-upl-card-link" href="{{lib.path}}">
+    <div class="kf-upl-card-icon" ng-class="lib.kind === 'system_main' ? 'svg-card-star' : 'svg-card-lock'" ng-if="lib.system"></div>
     <div class="kf-upl-card-cover">
       <div class="kf-upl-card-cover-image" ng-style="{{lib.imageCss}}" ng-if="lib.image"></div>
     </div>
