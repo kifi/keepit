@@ -70,6 +70,9 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
 
         // Username routing
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abez"))) must beAnInstanceOf[Angular]
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abez/libraries/following"))) must beAnInstanceOf[Angular]
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abez/libraries/invited"))) must beAnInstanceOf[Angular]
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abez/libraries1234/invited"))) === Error404
         router.route(NonUserRequest(FakeRequest.apply("GET", "/leo1221"))) === SeeOtherRoute("/l%C3%A9o1221")
         router.route(NonUserRequest(FakeRequest.apply("GET", "/léo1221"))) must beAnInstanceOf[Angular]
         router.route(NonUserRequest(FakeRequest.apply("GET", "/léo1222"))) === Error404
@@ -79,6 +82,10 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234"))) must beAnInstanceOf[Angular]
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abeZ1234/awesome-lib"))) === SeeOtherRoute("/abe.z1234/awesome-lib")
 
+        // Profile routing
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/libraries/following"))) must beAnInstanceOf[Angular]
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/libraries/invited"))) must beAnInstanceOf[Angular]
+
         val libraryCommander = inject[LibraryCommander]
         val Right(library) = {
           val libraryRequest = LibraryAddRequest("Awesome Lib", LibraryVisibility.PUBLISHED, None, "awesome-lib")
@@ -87,7 +94,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/awesome-lib"))) must beAnInstanceOf[Angular]
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/awesome-lib/whatever?q=weee"))) must beAnInstanceOf[Angular]
 
-        libraryCommander.modifyLibrary(library.id.get, library.ownerId, slug = Some("most-awesome-lib"))
+        libraryCommander.modifyLibrary(library.id.get, library.ownerId, LibraryModifyRequest(slug = Some("most-awesome-lib")))
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/awesome-lib"))) === MovedPermanentlyRoute("/abe.z1234/most-awesome-lib")
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/most-awesome-lib"))) must beAnInstanceOf[Angular]
 

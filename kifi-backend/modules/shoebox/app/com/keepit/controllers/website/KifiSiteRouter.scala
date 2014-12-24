@@ -164,6 +164,8 @@ class AngularRouter @Inject() (
             if (isUserAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
           } else if (path.split.length == 1) { // user profile page
             Some(Angular(Some(Future.successful("<meta name=\"robots\" content=\"noindex\">"))))
+          } else if (path.split.length == 3 && path.split(1) == "libraries" && (path.split(2) == "following" || path.split(2) == "invited")) { // user profile page (nested routes)
+            Some(Angular(Some(Future.successful("<meta name=\"robots\" content=\"noindex\">"))))
           } else {
             path.secondary.flatMap { secondary =>
               libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(secondary)).map {

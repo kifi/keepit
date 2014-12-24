@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.Injector
-import com.keepit.common.seo.SiteMapGenerator
+import com.keepit.common.seo.LibrarySiteMapGenerator
 import com.keepit.common.time._
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
@@ -10,7 +10,7 @@ import org.specs2.mutable.Specification
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-class SitemapTest extends Specification with ShoeboxTestInjector {
+class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -70,7 +70,7 @@ class SitemapTest extends Specification with ShoeboxTestInjector {
     "basically work" in { // test read/write/save
       withDb() { implicit injector =>
         val lib = setup()
-        val sitemap = Await.result(inject[SiteMapGenerator].generate(), Duration.Inf)
+        val sitemap = Await.result(inject[LibrarySiteMapGenerator].generate(), Duration.Inf)
         val updateAt = ISO_8601_DAY_FORMAT.print(lib.updatedAt)
 
         sitemap ===

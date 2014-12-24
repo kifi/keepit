@@ -38,7 +38,16 @@ case class LibraryFail(status: Int, message: String)
   visibility: LibraryVisibility,
   description: Option[String] = None,
   slug: String,
-  color: Option[HexColor] = None)
+  color: Option[HexColor] = None,
+  listed: Option[Boolean] = None)
+
+@json case class LibraryModifyRequest(
+  name: Option[String] = None,
+  slug: Option[String] = None,
+  visibility: Option[LibraryVisibility] = None,
+  description: Option[String] = None,
+  color: Option[HexColor] = None,
+  listed: Option[Boolean] = None)
 
 case class LibraryInfo(id: PublicId[Library],
   name: String,
