@@ -70,7 +70,7 @@ class LibraryInviteRepoImpl @Inject() (
 
   def getActiveWithUserId(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]] = {
     import StaticQuery.interpolation
-    val query = sql"select library_id from library_invite where user_id = $userId and state = 'active' order by id desc limit ${page.itemsToDrop}, ${page.size}"
+    val query = sql"select distinct library_id from library_invite where user_id = $userId and state = 'active' order by library_id desc limit ${page.itemsToDrop}, ${page.size}"
     query.as[Id[Library]].list
   }
 
