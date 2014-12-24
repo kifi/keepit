@@ -68,12 +68,12 @@ class SiteMapGeneratorActor @Inject() (
   def receive() = {
     case GenerateLibrarySitemap =>
       librarySiteMapGenerator.generateAndCache().onComplete { sitemap =>
-        val sitemapUrl = java.net.URLEncoder.encode(s"${fortyTwoConfig.applicationBaseUrl}assets/sitemap/libraries-0.xml", "UTF-8")
+        val sitemapUrl = java.net.URLEncoder.encode(s"${fortyTwoConfig.applicationBaseUrl}assets/sitemap-libraries-0.xml", "UTF-8")
         submitSitemap(sitemapUrl)
       }
     case GenerateUserSitemap =>
       userSiteMapGenerator.generateAndCache().onComplete { sitemap =>
-        val sitemapUrl = java.net.URLEncoder.encode(s"${fortyTwoConfig.applicationBaseUrl}assets/sitemap/users-0.xml", "UTF-8")
+        val sitemapUrl = java.net.URLEncoder.encode(s"${fortyTwoConfig.applicationBaseUrl}assets/sitemap-users-0.xml", "UTF-8")
         log.info(s"when user profile will be alive we'll send sitemap with this url to the search engines: $sitemapUrl")
         //submitSitemap(sitemapUrl)
       }
