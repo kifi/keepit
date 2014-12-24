@@ -46,10 +46,13 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
   private def lastMod(user: User): LocalDate = {
     val date = {
       val userUpdate = user.updatedAt.toLocalDate
-      val lastLib = db.readOnlyReplica { implicit s =>
-        libraryRepo.getLibrariesOfUserFromAnonymos(user.id.get, Paginator.fromStart(1)).headOption.map(_.updatedAt.toLocalDate).getOrElse(userUpdate)
-      }
-      if (userUpdate.isAfter(lastLib)) userUpdate else lastLib
+      //seems like we're timing out on sitemap creation and this call is pretty slow
+      //after we'll stop timing out i'll go back to check if we can make it happen
+      //      val lastLib = db.readOnlyReplica { implicit s =>
+      //        libraryRepo.getLibrariesOfUserFromAnonymos(user.id.get, Paginator.fromStart(1)).headOption.map(_.updatedAt.toLocalDate).getOrElse(userUpdate)
+      //      }
+      //      if (userUpdate.isAfter(lastLib)) userUpdate else lastLib
+      userUpdate
     }
     if (date.isBefore(UserSiteMapGenerator.BaselineDate)) {
       UserSiteMapGenerator.BaselineDate
@@ -67,16 +70,15 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
       if (users.size > 40000) airbrake.notify(s"there are ${users.size} libraries for sitemap, need to paginate the list!")
       users
     } map { userIds =>
-
-      // batch, optimize
-      val users = db.readOnlyMaster { implicit ro =>
-        val realUsers = userIds.filterNot { id =>
-          val experiments = experimentRepo.getAllUserExperiments(id)
-          experiments.contains(ExperimentType.FAKE) || experiments.contains(ExperimentType.AUTO_GEN)
+      val users: Iterator[User] = userIds.grouped(100) flatMap { group =>
+        db.readOnlyMaster { implicit ro =>
+          val realUsers = group.filterNot { id =>
+            val experiments = experimentRepo.getAllUserExperiments(id)
+            experiments.contains(ExperimentType.FAKE) || experiments.contains(ExperimentType.AUTO_GEN)
+          }
+          userRepo.getAllUsers(realUsers.toSeq).values.toSeq
         }
-        userRepo.getAllUsers(realUsers.toSeq).values.toSeq
-      } // cached
-
+      }
       val urlset =
         <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
           {
