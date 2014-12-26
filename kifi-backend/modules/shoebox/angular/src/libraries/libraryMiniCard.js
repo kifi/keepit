@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryMiniCard', [
-  '$rootScope', '$state', 'libraryService', 'profileService', 'friendService', 'modalService', '$location',
-  function ($rootScope, $state, libraryService, profileService, friendService, modalService, $location) {
+  '$rootScope', '$state', 'env', 'libraryService', 'profileService', 'friendService', 'modalService', 'userService', '$location',
+  function ($rootScope, $state, env, libraryService, profileService, friendService, modalService, userService, $location) {
     return {
       restrict: 'A',
       replace: true,
@@ -15,7 +15,9 @@ angular.module('kifi')
       templateUrl: 'libraries/libraryMiniCard.tpl.html',
       link: function (scope/*, element, attrs*/) {
         scope.library = _.cloneDeep(scope.refLibrary());
+        scope.library.owner.profileUrl = env.origin + '/' + scope.library.owner.username;
         scope.showMiniCard = true;
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
 
 
         //

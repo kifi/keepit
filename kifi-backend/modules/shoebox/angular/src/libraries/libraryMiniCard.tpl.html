@@ -8,7 +8,10 @@
 
   <div class="kf-library-mini-card-header">
     <div class="kf-library-mini-card-curator">
-      <img class="kf-library-mini-card-curator-img" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}">
+      <a ng-if="inUserProfileBeta" href="{{library.owner.profileUrl}}">
+        <img class="kf-library-mini-card-curator-img" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}">
+      </a>
+      <img ng-if="!inUserProfileBeta" class="kf-library-mini-card-curator-img" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}">
       <span class="kf-library-mini-card-curator-info">
         <div class="kf-library-mini-card-curator-heading">Library Curator:</div>
         <div class="kf-library-mini-card-curator-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
