@@ -91,10 +91,12 @@ class MobileLibraryController @Inject() (
   }
 
   def getLibraryById(pubId: PublicId[Library], imageSize: Option[String] = None) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
-    val id = Library.decodePublicId(pubId).get
+    val libraryId = Library.decodePublicId(pubId).get
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
-    libraryCommander.getLibraryById(request.userIdOpt, false, id, idealSize) map {
-      case (libInfo, accessStr) => Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
+    libraryCommander.getLibraryById(request.userIdOpt, false, libraryId, idealSize) map { libInfo =>
+      val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, libraryId)
+      val accessStr = memOpt.map(_.access.value).getOrElse("none")
+      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
     }
   }
 
@@ -105,11 +107,8 @@ class MobileLibraryController @Inject() (
           request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
           libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
-            val accessStr = request.userIdOpt.map { userId =>
-              libraryCommander.getAccessStr(userId, library.id.get)
-            }.flatten.getOrElse {
-              "none"
-            }
+            val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
+            val accessStr = memOpt.map(_.access.value).getOrElse("none")
             Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
           }
         })
