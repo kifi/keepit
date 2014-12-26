@@ -98,7 +98,10 @@
                 <!-- TODO: remove this when discoverable libraries have been converted to public libraries in the db. -->
                 <div class="library-icon svg-yellow-card-with-globe" ng-if="library.visibility=='discoverable'"></div>
 
-                <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+                <a ng-if="inUserProfileBeta" href="{{getLibraryOwnerProfileUrl(library)}}">
+                  <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+                </a>
+                <ng-if="!inUserProfileBeta" img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
               </div>
               <div class="kf-nav-lib-info">
                 <div kf-ellipsis full-text="library.name" max-num-lines=2 class="kf-nav-lib-name"></div>
@@ -136,8 +139,10 @@
 
                 <!-- TODO: remove this when discoverable libraries have been converted to public libraries in the db. -->
                 <div class="library-icon svg-yellow-card-with-globe" ng-if="library.visibility=='discoverable'"></div>
-
-                <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+                <a ng-if="inUserProfileBeta" href="{{getLibraryOwnerProfileUrl(library)}}">
+                  <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+                </a>
+                <img ng-if="!inUserProfileBeta" class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
               </div>
               <div class="kf-nav-lib-info">
                 <div kf-ellipsis full-text="library.name" max-num-lines=2 class="kf-nav-lib-name"></div>
@@ -166,7 +171,10 @@
             <a class="kf-nav-link" ng-href="{{library.url}}">
               <div class="library-icon-holder">
                 <div class="library-icon svg-library-card"></div>
-                <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+                <a ng-if="inUserProfileBeta" href="{{getLibraryOwnerProfileUrl(library)}}">
+                  <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+                </a>
+                <img ng-if="!inUserProfileBeta" class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
               </div>
               <div class="kf-nav-lib-info">
                 <div kf-ellipsis full-text="library.name" max-num-lines=2 class="kf-nav-lib-name"></div>

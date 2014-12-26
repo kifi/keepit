@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', '$window', '$rootScope', '$timeout', '$document', 'util',
-    'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$interval',
-  function ($location, $window, $rootScope, $timeout, $document, util,
-    friendService, modalService, tagService, profileService, libraryService, $interval) {
+  '$location', '$window', '$rootScope', '$timeout', '$document', 'util', 'userService',
+    'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$interval', 'env',
+  function ($location, $window, $rootScope, $timeout, $document, util, userService,
+    friendService, modalService, tagService, profileService, libraryService, $interval, env) {
     return {
       //replace: true,
       restrict: 'A',
@@ -35,6 +35,8 @@ angular.module('kifi')
           friendsCount: friendService.totalFriends(),
           friendsNotifCount: friendService.requests.length
         };
+
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
 
         //
         // Internal methods.
@@ -162,8 +164,12 @@ angular.module('kifi')
           return loc === path || util.startsWith(loc, path + '/');
         };
 
-        scope.toggleMyLibsFirst = function() {
+        scope.toggleMyLibsFirst = function () {
           scope.sortingMenu.myLibsFirst = !scope.sortingMenu.myLibsFirst;
+        };
+
+        scope.getLibraryOwnerProfileUrl = function (library) {
+          return env.origin + '/' + library.owner.username;
         };
 
         //
