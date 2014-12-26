@@ -101,9 +101,8 @@
                       ng-click="hideTooltip()"
                       itemprop="photo"
                       alt="{{follower.firstName}} {{follower.lastName}}"
-                    ><meta itemprop="name" content="{{follower.firstName}} {{follower.lastName}}" />
-                  </a>
-                  <img ng-if="!inUserProfileBeta" ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
+                    ><meta itemprop="name" content="{{follower.firstName}} {{follower.lastName}}" /></a><img
+                      ng-if="!inUserProfileBeta" ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
                       class="kf-keep-lib-user-image"
                       kf-who-tooltip
                       keeper="follower"

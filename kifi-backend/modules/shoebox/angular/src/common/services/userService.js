@@ -22,7 +22,7 @@ angular.module('kifi')
       inUserProfileBeta: function () {
         return ($rootScope.userLoggedIn &&
                 profileService.me.experiments && profileService.me.experiments.indexOf('profiles_beta') > -1) ||
-               (!$rootScope.userLoggedIn && !$stateParams.upb);
+               (!$rootScope.userLoggedIn && $stateParams.upb);
       }
     };
   }

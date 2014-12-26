@@ -124,7 +124,7 @@ angular.module('kifi')
 
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
-        url: '/:username/:librarySlug',
+        url: '/:username/:librarySlug?upb',
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
         data: {
