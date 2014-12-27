@@ -17,7 +17,7 @@
 
           <ul class="lib-followers-list" itemscope itemtype="http://data-vocabulary.org/Person">
             <li class="lib-follower lib-owner">
-              <a ng-if="inUserProfileBeta" href="{{library.owner.profileUrl}}" itemprop="url">
+              <a ng-if="inUserProfileBeta" href="{{library.owner.profileUrl}}" ng-click="close()" itemprop="url">
                 <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
               </a>
               <img ng-if="!inUserProfileBeta" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
@@ -26,7 +26,7 @@
 
             <li class="lib-follower" ng-repeat="follower in followerList" itemscope itemtype="http://data-vocabulary.org/Person">
               <div class="lib-follower-user" ng-if="follower.id">
-                <a ng-if="inUserProfileBeta" href="{{follower.profileUrl}}" itemprop="url">
+                <a ng-if="inUserProfileBeta" href="{{follower.profileUrl}}" ng-click="close()" itemprop="url">
                   <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{follower.firstName}} {{follower.lastName}}">
                 </a>
                 <img ng-if="!inUserProfileBeta" ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{follower.firstName}} {{follower.lastName}}">
