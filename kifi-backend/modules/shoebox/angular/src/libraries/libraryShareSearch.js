@@ -2,8 +2,9 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryShareSearch', ['$document', '$timeout', 'friendService', 'keyIndices', 'libraryService', 'socialService', 'util',
-  function ($document, $timeout, friendService, keyIndices, libraryService, socialService, util) {
+.directive('kfLibraryShareSearch', [
+  '$document', '$timeout', 'env', 'friendService', 'keyIndices', 'libraryService', 'socialService', 'userService', 'util',
+  function ($document, $timeout, env, friendService, keyIndices, libraryService, socialService, userService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -39,6 +40,15 @@ angular.module('kifi')
         //
         // Internal methods.
         //
+        function init() {
+          if (scope.manageLibInvite) {
+            searchInput.attr('placeholder', 'Type a name or email');
+            showMenu();
+          }
+
+          scope.inUserProfileBeta = userService.inUserProfileBeta();
+        }
+
         function showMenu() {
           resultIndex = -1;
           clearSelection();
@@ -147,6 +157,8 @@ angular.module('kifi')
                 if (result.email) {
                   result.emailFormatted = emphasizeMatchedPrefix(result.email, opt_query);
                 }
+
+                result.userProfileUrl = result.username ? env.origin + '/' + result.username : null;
               });
 
               if (opt_query) {
@@ -381,13 +393,7 @@ angular.module('kifi')
         };
 
 
-        //
-        // On link.
-        //
-        if (scope.manageLibInvite) {
-          searchInput.attr('placeholder', 'Type a name or email');
-          showMenu();
-        }
+        init();
       }
     };
   }
