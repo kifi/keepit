@@ -15,7 +15,6 @@ angular.module('kifi')
       templateUrl: 'libraries/libraryMiniCard.tpl.html',
       link: function (scope/*, element, attrs*/) {
         scope.library = _.cloneDeep(scope.refLibrary());
-        scope.library.owner.profileUrl = env.origin + '/' + scope.library.owner.username;
         scope.showMiniCard = true;
         scope.inUserProfileBeta = userService.inUserProfileBeta();
 

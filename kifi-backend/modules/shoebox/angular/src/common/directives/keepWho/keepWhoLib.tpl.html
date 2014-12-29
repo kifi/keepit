@@ -1,12 +1,17 @@
 <span ng-if="!library.hidden">
   <span ng-if="!isBot">
-    <a class="kf-keep-who-pic-box" href="{{library.absPath}}" ng-class="{ 'secret': library.visibility === 'secret' }" ng-click="onLibraryAttributionClicked()">
-      <span class="kf-keep-who-pic" ng-attr-style="background-image: url({{library.keeperPic}})"></span>
-      <span class="kf-keep-who-lib">{{library.name}}</span>
+    <span class="kf-keep-who-pic-box" ng-class="{ 'secret': library.visibility === 'secret' }">
+      <a ng-if="inUserProfileBeta" href="{{library.keeperProfileUrl}}">
+        <span class="kf-keep-who-pic" ng-attr-style="background-image: url({{library.keeperPic}})"></span>
+      </a>
+      <span ng-if="!inUserProfileBeta" class="kf-keep-who-pic" ng-attr-style="background-image: url({{library.keeperPic}})"></span>
+      <a href="{{library.absPath}}" ng-click="onLibraryAttributionClicked()">
+        <span class="kf-keep-who-lib">{{library.name}}</span>
+      </a>
       <span kf-tooltip position="top" padding="10">
         <span kf-library-mini-card library="library"></span>
       </span>
-    </a>
+    </span>
   </span>
   <span ng-if="isBot" class="kf-keep-who-pic-box">
     <a href="{{library.absPath}}" target="_self">{{library.name}}</a>
