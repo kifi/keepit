@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfNav', [
   '$location', '$window', '$rootScope', '$timeout', '$document', 'util', 'userService',
-    'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$interval', 'env',
+    'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$interval',
   function ($location, $window, $rootScope, $timeout, $document, util, userService,
-    friendService, modalService, tagService, profileService, libraryService, $interval, env) {
+    friendService, modalService, tagService, profileService, libraryService, $interval) {
     return {
       //replace: true,
       restrict: 'A',
@@ -169,7 +169,7 @@ angular.module('kifi')
         };
 
         scope.getLibraryOwnerProfileUrl = function (library) {
-          return env.origin + '/' + library.owner.username;
+          return userService.getProfileUrl(library.owner.username);
         };
 
         //

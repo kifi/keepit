@@ -275,9 +275,9 @@ angular.module('kifi')
 ])
 
 .directive('kfFriendRequestBanner', [
-  '$analytics', '$timeout', 'analyticsState', 'env', 'injectedState', 'keepWhoService',
+  '$analytics', '$timeout', 'analyticsState', 'injectedState', 'keepWhoService',
   'profileService', 'routeService', 'userService',
-  function ($analytics, $timeout, analyticsState, env, injectedState, keepWhoService,
+  function ($analytics, $timeout, analyticsState, injectedState, keepWhoService,
     profileService, routeService, userService) {
 
     function setupShowFriendRequestBanner(scope, externalId) {
@@ -295,7 +295,7 @@ angular.module('kifi')
         scope.user = user;
         scope.mainImage = picUrl;
         scope.mainLabel = user.firstName + ' ' + user.lastName;
-        scope.userProfileUrl = env.origin + '/' + user.username;
+        scope.userProfileUrl = userService.getProfileUrl(user.username);
         scope.inUserProfileBeta = userService.inUserProfileBeta();
         scope.hidden = false;
         scope.actionText = 'Add';

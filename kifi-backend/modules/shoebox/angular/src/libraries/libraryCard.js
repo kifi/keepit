@@ -155,7 +155,7 @@ angular.module('kifi')
 
           if (scope.library.owner) {
             scope.library.owner.picUrl = friendService.getPictureUrlForUser(scope.library.owner);
-            scope.library.owner.profileUrl = env.origin + '/' + scope.library.owner.username;
+            scope.library.owner.profileUrl = userService.getProfileUrl(scope.library.owner.username);
           }
 
           scope.library.followers = scope.library.followers || [];

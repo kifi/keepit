@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryShareSearch', [
-  '$document', '$timeout', 'env', 'friendService', 'keyIndices', 'libraryService', 'socialService', 'userService', 'util',
-  function ($document, $timeout, env, friendService, keyIndices, libraryService, socialService, userService, util) {
+  '$document', '$timeout', 'friendService', 'keyIndices', 'libraryService', 'socialService', 'userService', 'util',
+  function ($document, $timeout, friendService, keyIndices, libraryService, socialService, userService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -158,7 +158,7 @@ angular.module('kifi')
                   result.emailFormatted = emphasizeMatchedPrefix(result.email, opt_query);
                 }
 
-                result.userProfileUrl = result.username ? env.origin + '/' + result.username : null;
+                result.userProfileUrl = userService.getProfileUrl(result.username);
               });
 
               if (opt_query) {

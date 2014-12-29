@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfSeeMutualFriends', ['$rootScope', '$timeout', 'env', 'friendService', 'inviteService', 'userService',
-  function ($rootScope, $timeout, env, friendService, inviteService, userService) {
+.directive('kfSeeMutualFriends', ['$rootScope', '$timeout', 'friendService', 'inviteService', 'userService',
+  function ($rootScope, $timeout, friendService, inviteService, userService) {
     return {
       replace: true,
       restrict: 'A',
@@ -35,7 +35,7 @@ angular.module('kifi')
           var mutualFriendPair = [];
           person.mutualFriends.forEach(function (mutualFriend, index) {
             mutualFriend.pictureUrl = friendService.getPictureUrlForUser(mutualFriend);
-            mutualFriend.profileUrl = env.origin + '/' + mutualFriend.username;
+            mutualFriend.profileUrl = userService.getProfileUrl(mutualFriend.username);
             mutualFriendPair.push(mutualFriend);
 
             if (index % 2 !== 0) {

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryMiniCard', [
-  '$rootScope', '$state', 'env', 'libraryService', 'profileService', 'friendService', 'modalService', 'userService', '$location',
-  function ($rootScope, $state, env, libraryService, profileService, friendService, modalService, userService, $location) {
+  '$rootScope', '$state', 'libraryService', 'profileService', 'friendService', 'modalService', 'userService', '$location',
+  function ($rootScope, $state, libraryService, profileService, friendService, modalService, userService, $location) {
     return {
       restrict: 'A',
       replace: true,

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryFollowers', [
-  '$location', '$window', '$rootScope', 'env', 'friendService', 'libraryService', 'userService',
-  function ($location, $window, $rootScope, env, friendService, libraryService, userService) {
+  '$location', '$window', '$rootScope', 'friendService', 'libraryService', 'userService',
+  function ($location, $window, $rootScope, friendService, libraryService, userService) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -45,7 +45,7 @@ angular.module('kifi')
                 members = _.reject(members, function(m) { return m.lastInvitedAt; });
                 members.forEach(function (member) {
                   member.picUrl = friendService.getPictureUrlForUser(member);
-                  member.profileUrl = env.origin + '/' + member.username;
+                  member.profileUrl = userService.getProfileUrl(member.username);
                 });
                 scope.followerList.push.apply(scope.followerList, members);
               }
