@@ -40,19 +40,22 @@ trait SimpleLocalEdgeReader extends LocalEdgeReader {
     case None => throw new UninitializedReaderException(s"$this is not initialized over a valid vertex")
     case Some(iterator) if iterator.hasNext => {
       currentComponent = Some(iterator.next())
-      edges = Some(getEdgeIterator())
+      edges = None
       true
     }
     case _ => false
   }
   def moveToNextEdge(): Boolean = edges match {
-    case None => throw new UninitializedReaderException(s"$this is not initialized over a valid component")
+    case None =>
+      edges = Some(getEdgeIterator())
+      moveToNextEdge()
     case Some(iterator) if iterator.hasNext =>
       currentEdge = Some(iterator.next()); true
     case _ => false
   }
   def reset(): Unit = {
     components = Some(getComponentIterator())
+    edges = None
     currentComponent = None
     currentEdge = None
   }
