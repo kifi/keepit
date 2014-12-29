@@ -86,7 +86,9 @@ class SecureSocialUserPluginImpl @Inject() (
     if (socialUserInfo.state == SocialUserInfoStates.APP_NOT_AUTHORIZED || socialUserInfo.state == SocialUserInfoStates.INACTIVE) {
       //assuming that at this point the user re-authenticated so we can alter the satate
       log.info(s"updating $socialGraphPlugin state to CREATED")
-      socialUserInfoRepo.save(socialUserInfo.copy(state = SocialUserInfoStates.CREATED))
+      db.readWrite { implicit session =>
+        socialUserInfoRepo.save(socialUserInfo.copy(state = SocialUserInfoStates.CREATED))
+      }
     } else socialUserInfo
   }
 
