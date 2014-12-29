@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Provider, Inject, Singleton }
 import com.keepit.common.db.slick._
+import com.keepit.common.net.URIParser
 import com.keepit.common.time._
 import com.keepit.common.db.{ ExternalId, State, SequenceNumber, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
@@ -15,6 +16,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.queue._
 import scala.slick.jdbc.StaticQuery
 import com.keepit.model.serialize.UriIdAndSeq
+import com.keepit.common.strings._
 
 class UriInternException(msg: String, cause: Throwable) extends Exception(msg, cause)
 
@@ -122,7 +124,10 @@ class NormalizedURIRepoImpl @Inject() (
       uriWithSeq.copy(state = NormalizedURIStates.REDIRECTED)
     } else uriWithSeq
 
-    val cleaned = validatedUri.clean()
+    val cleaned = {
+      val cleanTitle = validatedUri.title.map(_.trimAndRemoveLineBreaks().abbreviate(NormalizedURI.TitleMaxLen))
+      validatedUri.copy(title = cleanTitle)
+    }
     val saved = try {
       super.save(cleaned)
     } catch {
