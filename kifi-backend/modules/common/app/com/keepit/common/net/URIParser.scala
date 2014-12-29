@@ -41,7 +41,7 @@ trait URIParserGrammar extends RegexParsers {
     case host ~ Some(dots) => Host(dots.foldLeft(host.reverse) { (names, c) => "" :: names }: _*)
   }
 
-  def domainPart: Parser[String] = """[^~/?#@:\.]+""".r ^^ (_.toLowerCase)
+  def domainPart: Parser[String] = """[^~/?#@:\. ]+""".r ^^ (_.toLowerCase)
 
   def domainTrailingDots: Parser[String] = """\.+""".r
 
