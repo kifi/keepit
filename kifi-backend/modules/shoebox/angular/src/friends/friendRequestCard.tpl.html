@@ -1,5 +1,8 @@
 <div class="kf-friend-card kf-friend-request-card"> <!-- Should really be ng-if but that causes some error for some reason -->
-  <img class="kf-friend-card-image" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'" ng-src="{{mainImage}}">
+  <a ng-if="inUserProfileBeta" href="{{friendProfileUrl}}">
+  	<img class="kf-friend-card-image" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'" ng-src="{{mainImage}}">
+  </a>
+  <img ng-if="!inUserProfileBeta" class="kf-friend-card-image" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'" ng-src="{{mainImage}}">
   <span class="kf-friend-card-who">
     <div class="kf-friend-card-name" title="{{name}}">{{name}}</div>
     <div>Accept as your Kifi friend?</div>
