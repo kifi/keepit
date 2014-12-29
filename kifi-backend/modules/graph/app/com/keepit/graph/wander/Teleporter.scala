@@ -1,7 +1,7 @@
 package com.keepit.graph.wander
 
 import com.keepit.graph.model.{ VertexDataReader, VertexKind, VertexReader, VertexId }
-import com.keepit.common.math.ProbabilityDensity
+import com.keepit.common.math.{ Probability, ProbabilityDensity }
 
 trait Teleporter {
   def surely: VertexId
@@ -13,7 +13,7 @@ case class UniformTeleporter(destinations: Set[VertexId])(mayTeleport: VertexRea
 
   private val teleportAlmostSurely = {
     val probability = 1d / destinations.size
-    val density = destinations.map { vertexId => vertexId -> probability }.toSeq
+    val density = destinations.map { vertexId => Probability(vertexId, probability) }.toSeq
     ProbabilityDensity(density)
   }
 
