@@ -68,7 +68,7 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def userSessionExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserSessionViewExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
+    new UserSessionViewExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 3 days))
 
   @Singleton
   @Provides
@@ -108,7 +108,7 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def normalizedURIUrlHashCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURIUrlHashCache(stats, accessLog, (outerRepo, 7 days))
+    new NormalizedURIUrlHashCache(stats, accessLog, (outerRepo, 30 days))
 
   @Singleton
   @Provides

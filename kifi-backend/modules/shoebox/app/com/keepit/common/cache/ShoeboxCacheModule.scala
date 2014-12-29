@@ -42,7 +42,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def normalizedURIUrlHashCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURIUrlHashCache(stats, accessLog, (outerRepo, 7 days))
+    new NormalizedURIUrlHashCache(stats, accessLog, (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -62,7 +62,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def latestBookmarkUrlCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new LatestKeepUrlCache(stats, accessLog, (outerRepo, 7 days))
+    new LatestKeepUrlCache(stats, accessLog, (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -82,7 +82,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def collectionsForBookmarkCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new CollectionsForKeepCache(stats, accessLog, (outerRepo, 1 day))
+    new CollectionsForKeepCache(stats, accessLog, (outerRepo, 7 day))
 
   @Singleton
   @Provides
@@ -152,7 +152,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def userSessionExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserSessionViewExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
+    new UserSessionViewExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 3 days))
 
   @Singleton
   @Provides

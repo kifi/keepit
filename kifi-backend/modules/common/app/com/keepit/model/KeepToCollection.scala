@@ -30,13 +30,6 @@ case class CollectionsForKeepKey(keepId: Id[Keep]) extends Key[Seq[Id[Collection
 class CollectionsForKeepCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[CollectionsForKeepKey, Seq[Id[Collection]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(TraversableFormat.seq(Id.format[Collection]))
 
-// NOTE: the following code is left here as comment for record that we used the name space, bookmarks_for_collection. bump up the version number if you want to use it again.
-//case class BookmarksForCollectionKey(collectionId: Id[Collection]) extends Key[Seq[Id[Keep]]] {
-//  override val version = 1
-//  val namespace = "bookmarks_for_collection"
-//  def toKey(): String = collectionId.toString
-//}
-
 case class KeepCountForCollectionKey(collectionId: Id[Collection]) extends Key[Int] {
   override val version = 1
   val namespace = "bookmark_count_for_collection"
