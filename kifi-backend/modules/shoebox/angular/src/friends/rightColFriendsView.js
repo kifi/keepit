@@ -46,70 +46,75 @@ angular.module('kifi')
 }])
 
 .directive('kfPeopleYouMayKnowView',
-  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'modalService', 'wtiService',
-  function ($log, $q, $rootScope, $timeout, friendService, inviteService, modalService, wtiService) {
+  ['$log', '$q', '$rootScope', '$timeout', 'env', 'friendService', 'inviteService', 'modalService', 'userService', 'wtiService',
+  function ($log, $q, $rootScope, $timeout, env, friendService, inviteService, modalService, userService, wtiService) {
   return {
     replace: true,
     restrict: 'A',
     templateUrl: 'friends/peopleYouMayKnowView.tpl.html',
     link: function (scope/*, element, attrs*/) {
-      friendService.getPeopleYouMayKnow().then(function (people) {
-        var peopleYouMayKnow = [];
+      function init() {
+        friendService.getPeopleYouMayKnow().then(function (people) {
+          var peopleYouMayKnow = [];
 
-        people.forEach(function (person) {
-          var name = person.firstName + ' ' + person.lastName;
-          var numMutualFriends = person.mutualFriends.length || 0;
+          people.forEach(function (person) {
+            var name = person.firstName + ' ' + person.lastName;
+            var numMutualFriends = person.mutualFriends.length || 0;
 
-          peopleYouMayKnow.push({
-            id: person.id,
-            fullName: name,
-            pictureUrl: friendService.getPictureUrlForUser(person),
-            actionText: 'Add',
-            clickable: true,
-            isKifiUser: true,
-            via: numMutualFriends > 0 ? '' : 'Kifi',
-            numMutualFriends: numMutualFriends,
-            mutualFriends: person.mutualFriends
-          });
-        });
-
-        var networkNamesMap = {
-          'facebook': 'Facebook',
-          'linkedin': 'LinkedIn',
-          'email': 'email'
-        };
-
-        if (peopleYouMayKnow.length < 3) {
-          (wtiService.list.length > 0 ? $q.when(wtiService.list) : wtiService.getMore()).then(function () {
-            var wtiList = wtiService.list;
-
-            wtiList.forEach(function (person) {
-              var name = '';
-              var via = '';
-
-              name = person.name;
-              via = (person.network === 'email' && person.identifier) || networkNamesMap[person.network];
-
-              peopleYouMayKnow.push({
-                networkType: person.network,
-                id: person.identifier,
-                fullName: name,
-                pictureUrl: person.pictureUrl || 'https://www.kifi.com/assets/img/ghost.100.png',
-                actionText: 'Invite',
-                clickable: true,
-                isKifiUser: false,
-                via: via
-              });
+            peopleYouMayKnow.push({
+              id: person.id,
+              fullName: name,
+              pictureUrl: friendService.getPictureUrlForUser(person),
+              profileUrl: env.origin + '/' + person.username,
+              actionText: 'Add',
+              clickable: true,
+              isKifiUser: true,
+              via: numMutualFriends > 0 ? '' : 'Kifi',
+              numMutualFriends: numMutualFriends,
+              mutualFriends: person.mutualFriends
             });
           });
 
-          scope.header = 'Find People to Invite';
-        } else {
-          scope.header = 'People You May Know';
-        }
+          var networkNamesMap = {
+            'facebook': 'Facebook',
+            'linkedin': 'LinkedIn',
+            'email': 'email'
+          };
 
-        scope.peopleYouMayKnow = peopleYouMayKnow;
-      });
+          if (peopleYouMayKnow.length < 3) {
+            (wtiService.list.length > 0 ? $q.when(wtiService.list) : wtiService.getMore()).then(function () {
+              var wtiList = wtiService.list;
+
+              wtiList.forEach(function (person) {
+                var name = '';
+                var via = '';
+
+                name = person.name;
+                via = (person.network === 'email' && person.identifier) || networkNamesMap[person.network];
+
+                peopleYouMayKnow.push({
+                  networkType: person.network,
+                  id: person.identifier,
+                  fullName: name,
+                  pictureUrl: person.pictureUrl || 'https://www.kifi.com/assets/img/ghost.100.png',
+                  actionText: 'Invite',
+                  clickable: true,
+                  isKifiUser: false,
+                  via: via
+                });
+              });
+            });
+
+            scope.header = 'Find People to Invite';
+          } else {
+            scope.header = 'People You May Know';
+          }
+
+          scope.peopleYouMayKnow = peopleYouMayKnow;
+        });
+
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
+      }
 
       scope.action = function (person) {
         if (!person.clickable) {
@@ -166,6 +171,9 @@ angular.module('kifi')
           modalData: { savedPymk: person }
         });
       };
+
+
+      init();
     }
   };
 }])
