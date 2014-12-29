@@ -4,7 +4,7 @@ angular.module('kifi')
 
 .factory('userService', [
   '$http', '$q', '$rootScope', '$stateParams', 'env', 'routeService', 'profileService',
-  function ($http, $q, $rootScope, env, $stateParams, routeService, profileService) {
+  function ($http, $q, $rootScope, $stateParams, env, routeService, profileService) {
     return {
       getBasicUserInfo: function (id, friendCount) {
         var deferred = $q.defer();
