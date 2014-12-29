@@ -83,6 +83,10 @@ angular.module('kifi')
           // TODO(yiping): how should we handle this case?
         }
       });  //jshint ignore:line
+
+      $timeout(function () {
+        $window.document.body.scrollTop = 0;
+      });
     }
 
 
