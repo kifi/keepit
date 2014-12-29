@@ -43,54 +43,62 @@ class ImageFetcherImpl @Inject() (
   private def getBufferedImage(is: InputStream) = Try { imageUtils.forceRGB(ImageIO.read(is)) }
 
   override def fetchRawImage(url: URI): Future[Option[BufferedImage]] = {
-    val trace = new StackTrace()
-    val timer = accessLog.timer(Access.HTTP_OUT)
-    val uriObj = URI.parse(url.toString()) match {
-      case Success(goodUri) => goodUri
+    val validUri = URI.parse(url.toString()) match {
+      case Success(goodUri) =>
+        if (goodUri.host.exists(_.domain.exists(_.contains("_")))) {
+          log.error(s"Url [$url] has a hostname which contains an underscore, our current http client would not like that!")
+          None
+        } else Some(goodUri)
       case Failure(e) =>
         log.error(s"Url [$url] parsing error, ignoring image", e)
-        return Future.successful(None) //just ignore
+        None
     }
-    val getFuture = try {
-      WS.url(uriObj.toString()).withRequestTimeout(120000).get
-    } catch {
-      case t: Throwable =>
-        airbrake.notify(s"Failed to request an image with url $url", trace.withCause(t))
-        return Future.successful(None) //just ignore
-    }
-    getFuture map { resp =>
-      log.info(s"[fetchRawImage($url)] resp=${resp.statusText}")
-      resp.status match {
-        case Status.OK =>
-          withInputStream(resp.underlying[NettyResponse].getResponseBodyAsStream) { is =>
-            getBufferedImage(is) match {
-              case Failure(ex) =>
-                log.error(s"Failed to process image: ($url)")
-                None
-              case Success(rawImage) =>
-                timer.done(url = uriObj.toString(), statusCode = resp.status)
-                Some(rawImage)
-            }
+    validUri match {
+      case None => Future.successful(None) // ignoring
+      case Some(uriObj) =>
+        val trace = new StackTrace()
+        val timer = accessLog.timer(Access.HTTP_OUT)
+        val getFuture = try {
+          WS.url(uriObj.toString()).withRequestTimeout(120000).get
+        } catch {
+          case t: Throwable =>
+            airbrake.notify(s"Failed to request an image with url $url", trace.withCause(t))
+            return Future.successful(None) //just ignore
+        }
+        getFuture map { resp =>
+          log.info(s"[fetchRawImage($url)] resp=${resp.statusText}")
+          resp.status match {
+            case Status.OK =>
+              withInputStream(resp.underlying[NettyResponse].getResponseBodyAsStream) { is =>
+                getBufferedImage(is) match {
+                  case Failure(ex) =>
+                    log.error(s"Failed to process image: ($url)")
+                    None
+                  case Success(rawImage) =>
+                    timer.done(url = uriObj.toString(), statusCode = resp.status)
+                    Some(rawImage)
+                }
+              }
+            case _ =>
+              log.error(s"[fetchRawImage($url)] Failed to retrieve image. Response: ${resp.statusText}")
+              timer.done(url = uriObj.toString(), statusCode = resp.status, error = resp.statusText)
+              None
           }
-        case _ =>
-          log.error(s"[fetchRawImage($url)] Failed to retrieve image. Response: ${resp.statusText}")
-          timer.done(url = uriObj.toString(), statusCode = resp.status, error = resp.statusText)
-          None
-      }
-    } recover {
-      case e @ (
-        _: TimeoutException |
-        _: ConnectTimeoutException |
-        _: GeneralSecurityException |
-        _: IOException) => {
-        timer.done(url = url.toString(), error = e.toString)
-        log.warn(s"Can't connect to $url, next time it may work", trace.withCause(e))
-        None
-      }
-      case t: Throwable => {
-        airbrake.notify(s"Error fetching image with url $url", trace.withCause(t))
-        None
-      }
+        } recover {
+          case e @ (
+            _: TimeoutException |
+            _: ConnectTimeoutException |
+            _: GeneralSecurityException |
+            _: IOException) => {
+            timer.done(url = url.toString(), error = e.toString)
+            log.warn(s"Can't connect to $url, next time it may work", trace.withCause(e))
+            None
+          }
+          case t: Throwable => {
+            airbrake.notify(s"Error fetching image with url $url", trace.withCause(t))
+            None
+          }
+        }
     }
   }
 }
