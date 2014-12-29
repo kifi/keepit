@@ -129,7 +129,12 @@ class SocialUserInfoRepoImpl @Inject() (
   }
 
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo] = {
-    (for (f <- rows if f.state.inSet(UNPROCESSED_STATES) && f.userId.isNotNull && f.credentials.isNotNull && f.networkType.inSet(SocialNetworks.REFRESHING) && f.createdAt < clock.now.minusMinutes(15)) yield f).list
+    (for (
+      f <- rows if f.state.inSet(UNPROCESSED_STATES) &&
+        f.userId.isNotNull && f.credentials.isNotNull &&
+        f.networkType.inSet(SocialNetworks.REFRESHING) &&
+        f.createdAt < clock.now.minusMinutes(15)
+    ) yield f).list
   }
 
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo] = {
