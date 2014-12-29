@@ -1,5 +1,15 @@
 package com.keepit.controllers.mobile
 
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.KeepFactory._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserConnectionFactoryHelper._
+import com.keepit.model.UserConnectionFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
@@ -16,6 +26,11 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.controllers.website.{ routes, UserController }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
+import com.keepit.model.KeepFactory._
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.UserConnectionFactory._
+import com.keepit.model.UserFactory._
 import com.keepit.model.{ UserConnection, _ }
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -33,6 +48,7 @@ import securesocial.core.providers.utils.{ BCryptPasswordHasher, PasswordHasher 
 import securesocial.core.{ IdentityId, _ }
 
 import scala.concurrent.Future
+import scala.slick.jdbc.StaticQuery
 
 class MobileUserControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -131,6 +147,107 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
   }
 
   "MobileUserControllerTest" should {
+
+    "get profile for self" in {
+      withDb(modules: _*) { implicit injector =>
+        val userConnectionRepo = inject[UserConnectionRepo]
+        val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
+          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
+          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          connect(user1 -> user2,
+            user1 -> user3,
+            user4 -> user1,
+            user2 -> user3).saved
+
+          val user1secretLib = libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2)
+
+          val user1lib = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
+          user1lib.visibility === LibraryVisibility.PUBLISHED
+
+          val user3lib = library().withUser(user3).published().saved
+          val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
+          membership().withLibraryFollower(library().withUser(user5).published().saved, user1).unlisted().saved
+
+          keeps(2).map(_.withLibrary(user1secretLib)).saved
+          keeps(3).map(_.withLibrary(user1lib)).saved
+          keep().withLibrary(user3lib).saved
+
+          (user1, user2, user3, user4, user5, user1lib)
+        }
+
+        val userController = inject[MobileUserController]
+        def call(viewer: Option[User], viewing: Username) = {
+          viewer match {
+            case None => inject[FakeUserActionsHelper].unsetUser()
+            case Some(user) => inject[FakeUserActionsHelper].setUser(user)
+          }
+          val url = routes.MobileUserController.profile(viewing.value).url
+          url === s"/m/1/user/${viewing.value}/profile"
+          val request = FakeRequest("GET", url)
+          userController.profile(viewing.value)(request)
+        }
+        //non existing username
+        status(call(Some(user1), Username("foo"))) must equalTo(NOT_FOUND)
+
+        //seeing a profile from an anonymos user
+        val anonViewer = call(None, user1.username)
+        status(anonViewer) must equalTo(OK)
+        contentType(anonViewer) must beSome("application/json")
+        val res1 = contentAsJson(anonViewer)
+        res1 === Json.parse(
+          s"""
+            {
+              "id":"${user1.externalId.id}",
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1.jpg",
+              "numLibraries":2,
+              "friendsWith": null,
+              "numKeeps": 5
+            }
+          """)
+
+        //seeing a profile of my own
+        val selfViewer = call(Some(user1), user1.username)
+        status(selfViewer) must equalTo(OK)
+        contentType(selfViewer) must beSome("application/json")
+        val res2 = contentAsJson(selfViewer)
+        res2 === Json.parse(
+          s"""
+            {
+              "id":"${user1.externalId.id}",
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1.jpg",
+              "numLibraries":6,
+              "friendsWith": null,
+              "numKeeps": 5
+            }
+          """)
+
+        //seeing a profile from another user (friend)
+        val friendViewer = call(Some(user2), user1.username)
+        status(friendViewer) must equalTo(OK)
+        contentType(friendViewer) must beSome("application/json")
+        val res3 = contentAsJson(friendViewer)
+        res3 === Json.parse(
+          s"""
+            {
+              "id":"${user1.externalId.id}",
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1.jpg",
+              "numLibraries":3,
+              "friendsWith": true,
+              "numKeeps": 5
+            }
+          """)
+      }
+    }
 
     "get currentUser" in {
       withDb(modules: _*) { implicit injector =>
@@ -340,5 +457,4 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
       }
     }
   }
-
 }
