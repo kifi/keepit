@@ -82,16 +82,24 @@ class SecureSocialUserPluginImpl @Inject() (
     }
   }
 
+  private def updateState(socialUserInfo: SocialUserInfo): SocialUserInfo = {
+    if (socialUserInfo.state == SocialUserInfoStates.APP_NOT_AUTHORIZED || socialUserInfo.state == SocialUserInfoStates.INACTIVE) {
+      //assuming that at this point the user re-authenticated so we can alter the satate
+      log.info(s"updating $socialGraphPlugin state to CREATED")
+      socialUserInfoRepo.save(socialUserInfo.copy(state = SocialUserInfoStates.CREATED))
+    } else socialUserInfo
+  }
+
   def save(identity: Identity): SocialUser = reportExceptions {
     val (userId, socialUser, allowSignup) = getUserIdAndSocialUser(identity)
     log.info(s"[save] persisting (social|42) user $socialUser")
-    val socialUserInfo = internUser(
+    val socialUserInfo = updateState(internUser(
       SocialId(socialUser.identityId.userId),
       SocialNetworkType(socialUser.identityId.providerId),
       socialUser,
-      userId, allowSignup)
+      userId, allowSignup))
     require(socialUserInfo.credentials.isDefined, s"social user info's credentials is not defined: $socialUserInfo")
-    if (!socialUser.identityId.providerId.equals("userpass")) // FIXME
+    if (!socialUser.identityId.providerId.equals("userpass"))
       socialGraphPlugin.asyncFetch(socialUserInfo)
     log.info(s"[save] persisting $socialUser into $socialUserInfo")
     socialUserInfo.userId.foreach(updateExperimentIfTestUser)
