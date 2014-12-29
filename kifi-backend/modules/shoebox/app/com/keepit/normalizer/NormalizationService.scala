@@ -59,7 +59,7 @@ class NormalizationServiceImpl @Inject() (
   private def processUpdate(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[NormalizationReference]] = timing(s"NormalizationService.processUpdate.${currentReference.url}") {
     log.debug(s"[processUpdate($currentReference,${candidates.mkString(",")})")
     val contentChecks = {
-      Try { java.net.URI.create(currentReference.url) } match { // for debugging bad reference urls -- this is the only place that invokes getContentChecks
+      URI.parse(currentReference.url) match { // for debugging bad reference urls -- this is the only place that invokes getContentChecks
         case Success(uri) => log.debug(s"[processUpdate-check] currRef=$currentReference parsed-uri=$uri")
         case Failure(t) => throw new IllegalArgumentException(s"[processUpdate-check] -- failed to parse currRef=$currentReference; Exception=$t; Cause=${t.getCause}", t)
       }

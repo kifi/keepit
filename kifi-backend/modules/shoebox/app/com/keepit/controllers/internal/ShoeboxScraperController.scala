@@ -6,6 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.{ URI, URIParser }
 import com.keepit.common.performance._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time.Clock
@@ -119,7 +120,8 @@ class ShoeboxScraperController @Inject() (
   }
 
   def recordScrapedNormalization() = Action.async(parse.tolerantJson) { request =>
-    val candidateUrl = (request.body \ "url").as[String]
+    val candidateUrlString = (request.body \ "url").as[String]
+    val candidateUrl = URI.parse(candidateUrlString).get.toString()
     timing(s"recordScrapedNormalization.$candidateUrl") {
       val candidateNormalization = (request.body \ "normalization").as[Normalization]
       val scrapedCandidate = ScrapedCandidate(candidateUrl, candidateNormalization)
@@ -136,7 +138,8 @@ class ShoeboxScraperController @Inject() (
           } getOrElse scrapedUri
           // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
           bestReference.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
-            alternateUrls.foreach { alternateUrl =>
+            alternateUrls.foreach { alternateUrlString =>
+              val alternateUrl = URI.parse(alternateUrlString).get.toString()
               val uri = db.readOnlyMaster { implicit session =>
                 normalizedURIInterner.getByUri(alternateUrl)
               }

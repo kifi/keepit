@@ -15,6 +15,10 @@ class URITest extends Specification {
       URI.parse("http://push notification to client web browser/?+http://www.reddit.com/r/laravel/comments/2e6hgz/push_notification_to_client_web_browser/").isFailure === true
     }
 
+    "normalizing" in {
+      URI.parse("http://foo.com/this is a test").get.toString() === "http://foo.com/this%20is%20a%20test"
+    }
+
     "bad fragment" in {
       URI.parse("http://www.facebook.com/justcreativedesign#!/posted.php?id=12415723757&share_id=125818997465306&comments=1#s125818997465306").get.toString() ===
         "http://www.facebook.com/justcreativedesign#!/posted.php?id=12415723757&share_id=125818997465306&comments=1%23s125818997465306"
