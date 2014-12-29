@@ -92,7 +92,9 @@ class UserConnectionRepoImpl @Inject() (
       val results = query.as[(Id[User], Int)].list
       results.map { case (userId, cnt) => UserConnectionCountKey(userId) -> cnt }.toMap
     }
-    ret.map { case (key, count) => key.userId -> count }.toMap
+    val connectionMap = ret.map { case (key, count) => key.userId -> count }.toMap
+    //for users who have no active connections
+    connectionMap.withDefaultValue(0)
   }
 
   type RepoImpl = UserConnectionTable
