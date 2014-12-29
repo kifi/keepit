@@ -84,6 +84,8 @@ private[social] class SocialGraphActor @Inject() (
   def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[SocialConnection] = timing(s"fetchUserInfo($socialUserInfo)") {
     try {
       require(socialUserInfo.credentials.isDefined, s"SocialUserInfo's credentials are not defined: $socialUserInfo")
+      require(socialUserInfo.state != SocialUserInfoStates.APP_NOT_AUTHORIZED, s"SocialUserInfo's state is not authorized, need to wait until user re-auth: $socialUserInfo")
+      require(socialUserInfo.state != SocialUserInfoStates.INACTIVE, s"SocialUserInfo's state is inactive: $socialUserInfo")
       val connectionsOpt = for {
         userId <- socialUserInfo.userId if !isImportAlreadyInProcess(userId, socialUserInfo.networkType)
         graph <- networkTypeToGraph.get(socialUserInfo.networkType)
@@ -123,7 +125,7 @@ private[social] class SocialGraphActor @Inject() (
     } catch {
       case ex: Exception =>
         db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh()) }
-        throw new Exception(s"Error updating SocialUserInfo: ${socialUserInfo.id}, ${socialUserInfo.fullName}", ex)
+        throw new Exception(s"Error updating SocialUserInfo: $socialUserInfo", ex)
     } finally {
       socialUserInfo.userId.foreach { userId =>
         db.readWrite(attempts = 3) { implicit session =>
