@@ -2,48 +2,58 @@
 
 angular.module('kifi')
 
-.directive('kfCompactFriendsView', ['friendService', function (friendService) {
-  return {
-    replace: true,
-    restrict: 'A',
-    templateUrl: 'friends/compactFriendsView.tpl.html',
-    link: function (scope/*, element, attrs*/) {
-      scope.friendCount = friendService.totalFriends;
+.directive('kfCompactFriendsView', ['friendService', 'userService',
+  function (friendService, userService) {
+    return {
+      replace: true,
+      restrict: 'A',
+      templateUrl: 'friends/compactFriendsView.tpl.html',
+      link: function (scope/*, element, attrs*/) {
+        function init() {
+          scope.friendCount = friendService.totalFriends;
 
-      friendService.getKifiFriends().then(function (data) {
-        var actualFriends = _.filter(data, function (friend) {
-          return !friend.unfriended;
-        });
+          friendService.getKifiFriends().then(function (data) {
+            var actualFriends = _.filter(data, function (friend) {
+              return !friend.unfriended;
+            });
 
-        // Randomly select 4 friends to display, but always display
-        // friends with pictures before friends without pictures.
-        var pictureGroups = _.groupBy(actualFriends, function (friend) {
-          return friend.pictureName !== '0.jpg';
-        });
-        var friendsToDisplay = _.sample(pictureGroups['true'], 4);
-        if (friendsToDisplay.length < 4) {
-          friendsToDisplay = friendsToDisplay.concat(
-            _.sample(pictureGroups['false'], 4 - friendsToDisplay.length)
-          );
+            // Randomly select 4 friends to display, but always display
+            // friends with pictures before friends without pictures.
+            var pictureGroups = _.groupBy(actualFriends, function (friend) {
+              return friend.pictureName !== '0.jpg';
+            });
+            var friendsToDisplay = _.sample(pictureGroups['true'], 4);
+            if (friendsToDisplay.length < 4) {
+              friendsToDisplay = friendsToDisplay.concat(
+                _.sample(pictureGroups['false'], 4 - friendsToDisplay.length)
+              );
+            }
+
+            friendsToDisplay.forEach(function (friend) {
+              friend.pictureUrl = friendService.getPictureUrlForUser(friend);
+              friend.profileUrl = userService.getProfileUrl(friend.username);
+            });
+
+            scope.friends = friendsToDisplay;
+          });
+
+          scope.inUserProfileBeta = userService.inUserProfileBeta();
         }
 
-        friendsToDisplay.forEach(function (friend) {
-          friend.pictureUrl = friendService.getPictureUrlForUser(friend);
-        });
+        scope.friendsLink = function () {
+          if (scope.friendCount() > 0) {
+            return '/friends';
+          } else {
+            return '/invite';
+          }
+        };
 
-        scope.friends = friendsToDisplay;
-      });
 
-      scope.friendsLink = function () {
-        if (scope.friendCount() > 0) {
-          return '/friends';
-        } else {
-          return '/invite';
-        }
-      };
-    }
-  };
-}])
+        init();
+      }
+    };
+  }
+])
 
 .directive('kfPeopleYouMayKnowView',
   ['$log', '$q', '$rootScope', '$timeout', 'env', 'friendService', 'inviteService', 'modalService', 'userService', 'wtiService',

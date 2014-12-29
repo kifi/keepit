@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('userService', [
-  '$http', '$q', 'routeService', '$rootScope', 'profileService', '$stateParams',
-  function ($http, $q, routeService, $rootScope, profileService, $stateParams) {
+  '$http', '$q', '$rootScope', '$stateParams', 'env', 'routeService', 'profileService',
+  function ($http, $q, $rootScope, env, $stateParams, routeService, profileService) {
     return {
       getBasicUserInfo: function (id, friendCount) {
         var deferred = $q.defer();
@@ -14,6 +14,10 @@ angular.module('kifi')
           deferred.reject(res);
         });
         return deferred.promise;
+      },
+
+      getProfileUrl: function (username) {
+        return username ? env.origin + '/' + username : null;
       },
 
       // Returns true if the user is in user profiles beta experiment or if the
