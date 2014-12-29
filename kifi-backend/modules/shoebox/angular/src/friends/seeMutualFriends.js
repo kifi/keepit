@@ -2,19 +2,21 @@
 
 angular.module('kifi')
 
-.directive('kfSeeMutualFriends', [
-  '$rootScope',
-  '$timeout',
-  'friendService',
-  'inviteService',
-  function ($rootScope, $timeout, friendService, inviteService) {
+.directive('kfSeeMutualFriends', ['$rootScope', '$timeout', 'env', 'friendService', 'inviteService', 'userService',
+  function ($rootScope, $timeout, env, friendService, inviteService, userService) {
     return {
       replace: true,
       restrict: 'A',
       templateUrl: 'friends/seeMutualFriends.tpl.html',
-      link: function (scope/*, element, attrs*/) {
+      require: '^kfModal',
+      link: function (scope, element, attrs, kfModalCtrl) {
         scope.actionText = 'Add Friend';
         scope.clickable = true;
+
+        function init() {
+          updateScopeValues(scope.modalData.savedPymk);
+          scope.inUserProfileBeta = userService.inUserProfileBeta();
+        }
 
         // Helper function to update scope values based on passed-in person.
         function updateScopeValues (person) {
@@ -25,6 +27,7 @@ angular.module('kifi')
           scope.name = person.fullName;
           scope.numMutualFriends = person.numMutualFriends;
           scope.pictureUrl = person.pictureUrl;
+          scope.userProfileUrl = person.profileUrl;
 
           // Divide up list of mutual friends into list of pairs of mutual
           // friends for two-column display in modal.
@@ -32,6 +35,7 @@ angular.module('kifi')
           var mutualFriendPair = [];
           person.mutualFriends.forEach(function (mutualFriend, index) {
             mutualFriend.pictureUrl = friendService.getPictureUrlForUser(mutualFriend);
+            mutualFriend.profileUrl = env.origin + '/' + mutualFriend.username;
             mutualFriendPair.push(mutualFriend);
 
             if (index % 2 !== 0) {
@@ -48,8 +52,6 @@ angular.module('kifi')
           scope.mutualFriendsPairs = mutualFriendsPairs;
         }
 
-        updateScopeValues(scope.modalData.savedPymk);
-
         scope.addFriend = function (id) {
           if (!scope.clickable) {
             return;
@@ -65,6 +67,13 @@ angular.module('kifi')
             inviteService.expireSocialSearch();
           });
         };
+
+        scope.close = function () {
+          kfModalCtrl.close();
+        };
+
+
+        init();
       }
     };
   }
