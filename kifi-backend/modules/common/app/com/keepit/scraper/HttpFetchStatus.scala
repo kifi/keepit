@@ -20,7 +20,18 @@ case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination
 }
 
 object HttpRedirect {
-  def withStandardizationEffort(statusCode: Int, currentLocation: String, newDestination: String): HttpRedirect = HttpRedirect(statusCode, currentLocation, URI.absoluteUrl(currentLocation, newDestination).getOrElse(newDestination))
+  def withStandardizationEffort(statusCode: Int, currentLocation: String, destination: String): HttpRedirect = {
+    def escaped = escapeLong25(destination)
+    val newDestination = URI.absoluteUrl(currentLocation, escaped).getOrElse(escaped)
+    HttpRedirect(statusCode, currentLocation, newDestination)
+  }
+
+  private val AmpersandLongEscaping = "%25(25)+".r
+  private val AmpersandNormalizedEscaping = "%25%"
+
+  private def escapeLong25(url: String): String = {
+    AmpersandLongEscaping.replaceAllIn(url, AmpersandNormalizedEscaping)
+  }
 
   import play.api.libs.functional.syntax._
   import play.api.libs.json._
