@@ -151,9 +151,6 @@ angular.module('kifi')
         $scope.hasMore = !!result.mayHaveMore;
         lastResult = result;
         $scope.loading = false;
-        $timeout(function () {
-          $window.document.body.scrollTop = 0;
-        });
       });
     };
 
