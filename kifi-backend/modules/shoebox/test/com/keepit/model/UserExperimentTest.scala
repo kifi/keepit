@@ -5,7 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.db.Id
 import play.api.libs.json.Json
-import com.keepit.common.math.ProbabilityDensity
+import com.keepit.common.math.{ Probability, ProbabilityDensity }
 
 class UserExperimentTest extends Specification with ShoeboxTestInjector {
 
@@ -78,15 +78,15 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
     val salt = "pepper"
 
     val firstDensity = ProbabilityDensity(Seq(
-      firstExp -> 0.2,
-      secondExp -> 0.7,
-      thirdExp -> 0.1
+      Probability(firstExp, 0.2),
+      Probability(secondExp, 0.7),
+      Probability(thirdExp, 0.1)
     ))
 
     val secondDensity = ProbabilityDensity(Seq(
-      firstExp -> 0.2,
-      secondExp -> 0.3,
-      thirdExp -> 0.3
+      Probability(firstExp, 0.2),
+      Probability(secondExp, 0.3),
+      Probability(thirdExp, 0.3)
     ))
 
     val firstGen = ProbabilisticExperimentGenerator(name = Name("first test generator"), condition = Some(conditionExp), salt = salt, density = firstDensity)
@@ -132,7 +132,7 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
       val n = 47
       val p = 1.0 / n
       val eps = 1.0 / (2 * n)
-      val density = ProbabilityDensity((0 until n - 1).map { i => (i, p) })
+      val density = ProbabilityDensity((0 until n - 1).map { i => Probability(i, p) })
       (0 until n - 1).map { i =>
         val x = eps + i * p
         density.linearSample(x).get === i
@@ -143,7 +143,7 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
     }
 
     "work in edge cases" in {
-      var density = ProbabilityDensity(Seq((1, 0.5)))
+      var density = ProbabilityDensity(Seq(Probability(1, 0.5)))
       density.binarySample(0.7) === None
       density.binarySample(0.3) === Some(1)
 

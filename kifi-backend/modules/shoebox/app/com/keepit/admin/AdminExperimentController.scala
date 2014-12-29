@@ -15,7 +15,7 @@ import com.keepit.model.{
 import com.google.inject.Inject
 
 import play.api.libs.json.{ JsObject }
-import com.keepit.common.math.ProbabilityDensity
+import com.keepit.common.math.{ Probability, ProbabilityDensity }
 
 case class AdminExperimentInfo(name: String, numUsers: Int, percentage: Float, variations: Seq[(String, Double)])
 
@@ -36,7 +36,7 @@ class AdminExperimentController @Inject() (
       case (experimentType, userCount) =>
         db.readOnlyMaster { implicit session =>
           val defaultDensity = generatorRepo.getByName(Name[ProbabilisticExperimentGenerator](experimentType.value + "-default"), None).map(_.density.density.map {
-            case (cond, prob) => (cond.value, prob)
+            case Probability(cond, prob) => (cond.value, prob)
           })
           AdminExperimentInfo(experimentType.value, userCount, (100 * userCount.toFloat / totalUserCount), defaultDensity getOrElse Seq.empty)
         }
@@ -50,7 +50,7 @@ class AdminExperimentController @Inject() (
     val condition = (data \ "condition").as[String]
     val density = (data \ "density").as[JsObject].fields.map {
       case (name, percentage) =>
-        (ExperimentType(name), percentage.as[Double] / 100)
+        Probability(ExperimentType(name), percentage.as[Double] / 100)
     }
     db.readWrite { implicit session =>
       generatorRepo.internByName(Name[ProbabilisticExperimentGenerator](condition + "-default"), ProbabilityDensity[ExperimentType](density), None, Some(ExperimentType(condition)))

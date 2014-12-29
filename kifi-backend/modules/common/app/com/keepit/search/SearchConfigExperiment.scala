@@ -12,7 +12,7 @@ import play.api.libs.json._
 import scala.concurrent.duration._
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.model.{ ProbabilisticExperimentGenerator, Name, ExperimentType }
-import com.keepit.common.math.ProbabilityDensity
+import com.keepit.common.math.{ Probability, ProbabilityDensity }
 
 case class SearchConfigExperiment(
     id: Option[Id[SearchConfigExperiment]] = None,
@@ -41,7 +41,7 @@ case class SearchConfigExperiment(
 object SearchConfigExperiment {
   val probabilisticGenerator = Name[ProbabilisticExperimentGenerator]("searchConfigExperiment")
   def getDensity(searchExperiments: Seq[SearchConfigExperiment]): ProbabilityDensity[ExperimentType] = {
-    ProbabilityDensity(searchExperiments.sortBy(_.id.get.id).map { se => se.experiment -> se.weight })
+    ProbabilityDensity(searchExperiments.sortBy(_.id.get.id).map { se => Probability(se.experiment, se.weight) })
   }
   private implicit val idFormat = Id.format[SearchConfigExperiment]
   private implicit val stateFormat = State.format[SearchConfigExperiment]
