@@ -181,6 +181,8 @@ class SocialGraphPluginImpl @Inject() (
   def asyncFetch(socialUserInfo: SocialUserInfo, broadcastToOthers: Boolean = true): Future[Unit] = {
     require(socialUserInfo.credentials.isDefined, s"social user info's credentials are not defined: $socialUserInfo")
     require(socialUserInfo.id.isDefined, s"social user info's id is not defined: $socialUserInfo")
+    require(socialUserInfo.state != SocialUserInfoStates.APP_NOT_AUTHORIZED, s"SocialUserInfo's state is not authorized, need to wait until user re-auth: $socialUserInfo")
+    require(socialUserInfo.state != SocialUserInfoStates.INACTIVE, s"SocialUserInfo's state is inactive: $socialUserInfo")
 
     if (serviceDiscovery.isLeader()) {
       log.info(s"[SocialGraphPluginImpl] Need to refresh SocialUserInfoId(${socialUserInfo.id.get}). I'm leader.")
