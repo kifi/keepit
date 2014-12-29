@@ -1,5 +1,8 @@
 <div class="kf-friend-card">
-  <img class="kf-friend-card-image" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'" ng-src="{{mainImage}}">
+  <a ng-if="inUserProfileBeta" href="{{friendProfileUrl}}">
+    <img class="kf-friend-card-image" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'" ng-src="{{mainImage}}">
+  </a>
+  <img ng-if="!inUserProfileBeta" class="kf-friend-card-image" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'" ng-src="{{mainImage}}">
   <span class="kf-friend-card-who">
     <div class="kf-friend-card-name" title="{{name}}">{{name}}</div>
     <div class="kf-friend-card-count" title="{{friendCount}}"><ng-pluralize count="friendCount" when="{'one': '1 friend ', 'other': '{} friends '}"></ng-pluralize>on Kifi</div>
