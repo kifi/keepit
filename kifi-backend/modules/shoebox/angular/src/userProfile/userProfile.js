@@ -145,7 +145,7 @@ angular.module('kifi')
     var loading = false;
 
     $scope.libraryType = $state.current.data.libraryType;
-    $scope.libraries = [];
+    $scope.libraries = null;
 
     var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
       if (/^userProfile\.libraries\./.test(toState.name)) {
@@ -167,7 +167,7 @@ angular.module('kifi')
           hasMoreLibraries = data[filter].length === fetchPageSize;
 
           var owner = filter === 'own' ? _.extend({username: username}, $scope.profile) : null;
-          $scope.libraries = $scope.libraries.concat(data[filter].map(augmentLibrary.bind(null, owner)));
+          $scope.libraries = ($scope.libraries || []).concat(data[filter].map(augmentLibrary.bind(null, owner)));
 
           fetchPageNumber++;
           loading = false;
@@ -180,7 +180,7 @@ angular.module('kifi')
     };
 
     function resetFetchState() {
-      $scope.libraries = [];
+      $scope.libraries = null;
       fetchPageNumber = 0;
       hasMoreLibraries = true;
       loading = false;
