@@ -218,8 +218,11 @@ angular.module('kifi')
       getUserProfile: function (username) {
         return route('/user/' + username + '/profile');
       },
-      getUserLibraries: function (username, filter) {
-        return route('/user/' + username + '/libraries?filter=' + filter);
+      getUserLibraries: function (username, filter, opt_page, opt_size) {
+        return route('/user/' + username + '/libraries?filter=' + filter +
+          (!_.isUndefined(opt_page) ? '&page=' + opt_page : '') +
+          (!_.isUndefined(opt_size) ? '&size=' + opt_size : '')
+        );
       }
     };
   }
