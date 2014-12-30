@@ -12,6 +12,7 @@ import javax.net.ssl.{ SSLException, SSLHandshakeException }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.service.RequestConsolidator
+import com.keepit.common.strings._
 import play.api.Play.current
 
 import com.keepit.common.time._
@@ -48,6 +49,8 @@ import scala.concurrent.Future
 import scala.ref.WeakReference
 import scala.util.{ Failure, Success, Try }
 import scala.concurrent.duration._
+
+import org.apache.commons.io.{ IOUtils, FileUtils }
 
 // based on Apache HTTP Client (this one is blocking but feature-rich & flexible; see http://hc.apache.org/httpcomponents-client-ga/index.html)
 class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends HttpFetcher with Logging with ScraperUtils {
@@ -308,8 +311,9 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
             case HttpStatus.SC_NOT_MODIFIED =>
               HttpFetchStatus(statusCode, None, httpContext)
             case _ =>
-              log.info(s"request failed for bad error code: [${response.getStatusLine().toString()}][$url]")
-              HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), httpContext)
+              val content = IOUtils.toString(new HttpInputStream(entity.getContent), UTF8).abbreviate(1000)
+              log.info(s"request failed while parsing response, bad error code: [${response.getStatusLine().toString()}][$url] with content: $content")
+              HttpFetchStatus(statusCode, Some(s"${response.getStatusLine.toString} : $content"), httpContext)
           }
         }
       }
@@ -326,8 +330,9 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
         case HttpStatus.SC_NOT_MODIFIED =>
           HttpFetchStatus(statusCode, None, httpContext)
         case _ =>
-          log.info(s"request failed while consuming data, bad error code: [${response.getStatusLine().toString()}][$url]")
-          HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), httpContext)
+          val content = IOUtils.toString(input, UTF8).abbreviate(1000)
+          log.info(s"request failed while consuming data, bad error code: [${response.getStatusLine().toString()}][$url] with content: $content")
+          HttpFetchStatus(statusCode, Some(s"${response.getStatusLine.toString} : $content"), httpContext)
       }
     } catch {
       case ex: IOException =>
