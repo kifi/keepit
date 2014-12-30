@@ -63,11 +63,13 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
         case Some(idx) if idx == 2 => Version2
         case Some(idx) if idx == 3 => Version3
         case _ =>
-          val ip = request.remoteAddress // remoteAddress looks up 'X-Forwarded-For'
-          val hash = (Math.abs(ip.hashCode()) % 100) // rough
-          val winner = if (hash < 50) Version3 else Version1
-          log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$winner")
-          winner
+          //currently we have only one version alive. When we'll restart the a/b testing the next five lines will be relevant again.
+          //          val ip = request.remoteAddress // remoteAddress looks up 'X-Forwarded-For'
+          //          val hash = (Math.abs(ip.hashCode()) % 100) // rough
+          //          val winner = if (hash < 50) Version3 else Version1
+          //          log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$winner")
+          //          winner
+          Version3
       }
     }
     s"index.${version.version}"
