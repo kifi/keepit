@@ -213,7 +213,7 @@ class PageCommander @Inject() (
 }
 
 object PageCommander {
-  val LowQualityLibraryNamesRe = "(?i)(test|delicious|bookmark|pocket|kippt|asdf)".r
+  val LowQualityLibraryNamesRe = "(?i)(test|delicious|bookmark|pocket|kippt|asdf|pinboard|import)".r
 }
 
 case class KeeperPagePartialInfo(
