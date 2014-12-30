@@ -32,6 +32,7 @@ angular.module('kifi')
     var $connectEl = null;
     var connectElSelector = '.kf-user-profile-connect';
 
+
     //
     // Scope data.
     //
@@ -138,26 +139,56 @@ angular.module('kifi')
   function ($scope, $rootScope, $state, $stateParams, routeService, keepWhoService, profileService, userProfileActionService) {
     var colors = ['#C764A2', '#E35957', '#FF9430', '#2EC89A', '#3975BF', '#955CB4', '#FAB200'];
     var username = $stateParams.username;
+    var fetchPageSize = 12;
+    var fetchPageNumber = 0;
+    var hasMoreLibraries = true;
+    var loading = false;
 
     $scope.libraryType = $state.current.data.libraryType;
-    $scope.libraries = null;
+    $scope.libraries = [];
 
     var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
       if (/^userProfile\.libraries\./.test(toState.name)) {
         $scope.libraryType = toState.data.libraryType;
-        fetchLibraries();
+        refetchLibraries();
       }
     });
     $scope.$on('$destroy', deregister$stateChangeSuccess);
 
-    function fetchLibraries() {
+    $scope.fetchLibraries = function () {
+      if (loading) {
+        return;
+      }
+      loading = true;
+
       var filter = $scope.libraryType;
-      userProfileActionService.getLibraries(username, filter).then(function (data) {
+      userProfileActionService.getLibraries(username, filter, fetchPageNumber, fetchPageSize).then(function (data) {
         if ($scope.libraryType === filter) {
+          hasMoreLibraries = data[filter].length === fetchPageSize;
+
           var owner = filter === 'own' ? _.extend({username: username}, $scope.profile) : null;
-          $scope.libraries = data[filter].map(augmentLibrary.bind(null, owner));
+          $scope.libraries = $scope.libraries.concat(data[filter].map(augmentLibrary.bind(null, owner)));
+
+          fetchPageNumber++;
+          loading = false;
         }
       });
+    };
+
+    $scope.hasMoreLibraries = function () {
+      return hasMoreLibraries;
+    };
+
+    function resetFetchState() {
+      $scope.libraries = [];
+      fetchPageNumber = 0;
+      hasMoreLibraries = true;
+      loading = false;
+    }
+
+    function refetchLibraries() {
+      resetFetchState();
+      $scope.fetchLibraries();
     }
 
     function augmentLibrary(owner, lib) {
@@ -179,8 +210,6 @@ angular.module('kifi')
       });
       return lib;
     }
-
-    fetchLibraries();
   }
 ])
 
