@@ -50,17 +50,15 @@ import scala.util.{ Failure, Success, Try }
 import scala.concurrent.duration._
 
 // based on Apache HTTP Client (this one is blocking but feature-rich & flexible; see http://hc.apache.org/httpcomponents-client-ga/index.html)
-class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends HttpFetcher with Logging with ScraperUtils {
+class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends HttpFetcher with Logging with ScraperUtils {
 
   implicit def toFetcherContext(apacheCtx: HttpContext): FetcherHttpContext = new FetcherHttpContextAdaptor(apacheCtx)
 
-  val cm = if (trustBlindly) {
+  val cm = {
     val registry = RegistryBuilder.create[ConnectionSocketFactory]
     registry.register("http", PlainConnectionSocketFactory.INSTANCE)
     registry.register("https", UnsafeSSLSocketFactory())
     new PoolingHttpClientConnectionManager(registry.build())
-  } else {
-    new PoolingHttpClientConnectionManager
   }
   cm.setMaxTotal(100)
 
@@ -305,12 +303,12 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
           httpGet.abort()
           statusCode match {
             case HttpStatus.SC_OK =>
-              log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
+              log.info(s"request failed, no entity found: [${response.getStatusLine().toString()}][$url]")
               HttpFetchStatus(-1, Some("no entity found"), httpContext)
             case HttpStatus.SC_NOT_MODIFIED =>
               HttpFetchStatus(statusCode, None, httpContext)
             case _ =>
-              log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
+              log.info(s"request failed for bad error code: [${response.getStatusLine().toString()}][$url]")
               HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), httpContext)
           }
         }
@@ -328,7 +326,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
         case HttpStatus.SC_NOT_MODIFIED =>
           HttpFetchStatus(statusCode, None, httpContext)
         case _ =>
-          log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
+          log.info(s"request failed while consuming data, bad error code: [${response.getStatusLine().toString()}][$url]")
           HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), httpContext)
       }
     } catch {
