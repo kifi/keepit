@@ -57,12 +57,15 @@ angular.module('kifi')
           }
 
           submitting = true;
+          console.log('listed: ' + scope.library.listed);
+
           var saveData = {
             id: scope.library.id,
             name: scope.library.name,
             description: scope.library.description,
             slug: scope.library.slug,
-            visibility: scope.library.visibility
+            visibility: scope.library.visibility,
+            listed: scope.library.listed
           };
           var promise;
           if (scope.modifyingExistingLibrary && scope.library.id) {
@@ -231,7 +234,8 @@ angular.module('kifi')
             'slug': '',
 
             // By default, the create library form selects the "published" visibility for a new library.
-            'visibility': 'published'
+            'visibility': 'published',
+            'listed': true
           };
           scope.modalTitle = 'Create a library';
         }

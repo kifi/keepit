@@ -47,6 +47,14 @@
                 <div ng-switch="library.visibility" class="manage-lib-visibility-description">
                   <div ng-switch-default class="manage-lib-visibility-description-content">It's public. Everyone in the world can see and follow this public library.</div>
                   <div ng-switch-when="secret" class="manage-lib-visibility-description-content">Make it private. Only you and the people you invite to your private library can see its content.</div>
+
+                  <div class="manage-lib-listed-visibility">
+                    <input type="checkbox" id="listed-visibility-checkbox" ng-model="library.listed">
+                    <label for="listed-visibility-checkbox">
+                      <span></span>
+                      Show this Library on my Public Profile
+                    </label>
+                  </div>
                 </div>
 
                 <div ng-switch="library.visibility" class="manage-lib-choice-card">

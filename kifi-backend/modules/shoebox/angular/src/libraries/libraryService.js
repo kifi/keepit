@@ -64,6 +64,7 @@ angular.module('kifi')
         //       on the library object.
         if (res.data && res.data.library) {
           res.data.library.access = res.data.membership;
+          res.data.library.listed = res.data.listed;
           return res.data.library;
         }
         return null;
