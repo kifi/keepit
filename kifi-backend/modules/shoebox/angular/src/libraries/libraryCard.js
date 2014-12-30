@@ -161,7 +161,7 @@ angular.module('kifi')
           scope.library.followers = scope.library.followers || [];
           scope.library.followers.forEach(function (follower) {
             follower.picUrl = friendService.getPictureUrlForUser(follower);
-            follower.profileUrl = env.origin + '/' + follower.username;
+            follower.profileUrl = userService.getProfileUrl(follower.username);
           });
 
           var maxLength = 150;
