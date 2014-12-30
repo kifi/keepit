@@ -5,10 +5,10 @@ angular.module('kifi')
 .directive('kfLibraryCard', [
   '$FB', '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$twitter', '$window',
   'env', 'friendService', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
-  'routeService', 'util',
+  'routeService', 'userService', 'util',
   function ($FB, $http, $location, $q, $rootScope, $state, $stateParams, $timeout, $twitter, $window,
             env, friendService, libraryService, modalService, profileService, platformService, signupService,
-            routeService, util) {
+            routeService, userService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -52,6 +52,7 @@ angular.module('kifi')
         scope.librarySearchInProgress = false;
         scope.search = { 'text': $stateParams.q || '' };
         scope.pageScrolled = false;
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
 
         //
         // Internal methods.
@@ -154,11 +155,13 @@ angular.module('kifi')
 
           if (scope.library.owner) {
             scope.library.owner.picUrl = friendService.getPictureUrlForUser(scope.library.owner);
+            scope.library.owner.profileUrl = userService.getProfileUrl(scope.library.owner.username);
           }
 
           scope.library.followers = scope.library.followers || [];
           scope.library.followers.forEach(function (follower) {
             follower.picUrl = friendService.getPictureUrlForUser(follower);
+            follower.profileUrl = userService.getProfileUrl(follower.username);
           });
 
           var maxLength = 150;

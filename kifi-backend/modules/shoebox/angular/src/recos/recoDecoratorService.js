@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.factory('recoDecoratorService', ['keepDecoratorService', 'util', 'friendService',
-  function (keepDecoratorService, util, friendService) {
+.factory('recoDecoratorService', ['keepDecoratorService', 'util', 'friendService', 'userService',
+  function (keepDecoratorService, util, friendService, userService) {
 
     function Recommendation(rawReco, type) {
       this.recoData = {
@@ -24,6 +24,8 @@ angular.module('kifi')
         var libUsers = {};
         rawReco.itemInfo.libraries.forEach( function (lib) {
           lib.keeperPic = friendService.getPictureUrlForUser(lib.owner);
+          lib.keeperProfileUrl = userService.getProfileUrl(lib.owner.username);
+          lib.keeperName = lib.owner.firstName + ' ' + lib.owner.lastName;
           libUsers[lib.owner.id] = true;
         });
         //don't show a face only if there is also a library for that person

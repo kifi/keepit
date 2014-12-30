@@ -61,8 +61,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepWhoLib', ['$rootScope', 'platformService',
-  function ($rootScope, platformService) {
+.directive('kfKeepWhoLib', ['$rootScope', 'platformService', 'userService',
+  function ($rootScope, platformService, userService) {
     return {
       restrict: 'A',
       replace: true,
@@ -75,19 +75,24 @@ angular.module('kifi')
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedLibraryAttribution' });
         };
         scope.isBot = platformService.isBot();
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
       }
     };
   }
 ])
 
-.directive('kfKeepWhoPic', [
-  function () {
+.directive('kfKeepWhoPic', ['userService',
+  function (userService) {
     return {
       restrict: 'A',
       replace: true,
       templateUrl: 'common/directives/keepWho/keepWhoPic.tpl.html',
       scope: {
         keeper: '='
+      },
+      link: function (scope) {
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
+        scope.keeper.profileUrl = userService.getProfileUrl(scope.keeper.username);
       }
     };
   }

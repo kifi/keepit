@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryFollowers', [
-  '$location', '$window', '$rootScope', 'friendService', 'libraryService',
-  function ($location, $window, $rootScope, friendService, libraryService) {
+  '$location', '$window', '$rootScope', 'friendService', 'libraryService', 'userService',
+  function ($location, $window, $rootScope, friendService, libraryService, userService) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -17,6 +17,7 @@ angular.module('kifi')
         scope.moreFollowers = true;
         scope.followerList = [];
         scope.followerScrollDistance = '100%';
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
 
         scope.isFollowerScrollDisabled = function () {
           return !(scope.moreFollowers);
@@ -44,6 +45,7 @@ angular.module('kifi')
                 members = _.reject(members, function(m) { return m.lastInvitedAt; });
                 members.forEach(function (member) {
                   member.picUrl = friendService.getPictureUrlForUser(member);
+                  member.profileUrl = userService.getProfileUrl(member.username);
                 });
                 scope.followerList.push.apply(scope.followerList, members);
               }

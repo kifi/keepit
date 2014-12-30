@@ -2,114 +2,129 @@
 
 angular.module('kifi')
 
-.directive('kfCompactFriendsView', ['friendService', function (friendService) {
-  return {
-    replace: true,
-    restrict: 'A',
-    templateUrl: 'friends/compactFriendsView.tpl.html',
-    link: function (scope/*, element, attrs*/) {
-      scope.friendCount = friendService.totalFriends;
+.directive('kfCompactFriendsView', ['friendService', 'userService',
+  function (friendService, userService) {
+    return {
+      replace: true,
+      restrict: 'A',
+      templateUrl: 'friends/compactFriendsView.tpl.html',
+      link: function (scope/*, element, attrs*/) {
+        function init() {
+          scope.friendCount = friendService.totalFriends;
 
-      friendService.getKifiFriends().then(function (data) {
-        var actualFriends = _.filter(data, function (friend) {
-          return !friend.unfriended;
-        });
+          friendService.getKifiFriends().then(function (data) {
+            var actualFriends = _.filter(data, function (friend) {
+              return !friend.unfriended;
+            });
 
-        // Randomly select 4 friends to display, but always display
-        // friends with pictures before friends without pictures.
-        var pictureGroups = _.groupBy(actualFriends, function (friend) {
-          return friend.pictureName !== '0.jpg';
-        });
-        var friendsToDisplay = _.sample(pictureGroups['true'], 4);
-        if (friendsToDisplay.length < 4) {
-          friendsToDisplay = friendsToDisplay.concat(
-            _.sample(pictureGroups['false'], 4 - friendsToDisplay.length)
-          );
+            // Randomly select 4 friends to display, but always display
+            // friends with pictures before friends without pictures.
+            var pictureGroups = _.groupBy(actualFriends, function (friend) {
+              return friend.pictureName !== '0.jpg';
+            });
+            var friendsToDisplay = _.sample(pictureGroups['true'], 4);
+            if (friendsToDisplay.length < 4) {
+              friendsToDisplay = friendsToDisplay.concat(
+                _.sample(pictureGroups['false'], 4 - friendsToDisplay.length)
+              );
+            }
+
+            friendsToDisplay.forEach(function (friend) {
+              friend.pictureUrl = friendService.getPictureUrlForUser(friend);
+              friend.profileUrl = userService.getProfileUrl(friend.username);
+            });
+
+            scope.friends = friendsToDisplay;
+          });
+
+          scope.inUserProfileBeta = userService.inUserProfileBeta();
         }
 
-        friendsToDisplay.forEach(function (friend) {
-          friend.pictureUrl = friendService.getPictureUrlForUser(friend);
-        });
+        scope.friendsLink = function () {
+          if (scope.friendCount() > 0) {
+            return '/friends';
+          } else {
+            return '/invite';
+          }
+        };
 
-        scope.friends = friendsToDisplay;
-      });
 
-      scope.friendsLink = function () {
-        if (scope.friendCount() > 0) {
-          return '/friends';
-        } else {
-          return '/invite';
-        }
-      };
-    }
-  };
-}])
+        init();
+      }
+    };
+  }
+])
 
 .directive('kfPeopleYouMayKnowView',
-  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'modalService', 'wtiService',
-  function ($log, $q, $rootScope, $timeout, friendService, inviteService, modalService, wtiService) {
+  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'modalService', 'userService', 'wtiService',
+  function ($log, $q, $rootScope, $timeout, friendService, inviteService, modalService, userService, wtiService) {
   return {
     replace: true,
     restrict: 'A',
     templateUrl: 'friends/peopleYouMayKnowView.tpl.html',
     link: function (scope/*, element, attrs*/) {
-      friendService.getPeopleYouMayKnow().then(function (people) {
-        var peopleYouMayKnow = [];
+      function init() {
+        friendService.getPeopleYouMayKnow().then(function (people) {
+          var peopleYouMayKnow = [];
 
-        people.forEach(function (person) {
-          var name = person.firstName + ' ' + person.lastName;
-          var numMutualFriends = person.mutualFriends.length || 0;
+          people.forEach(function (person) {
+            var name = person.firstName + ' ' + person.lastName;
+            var numMutualFriends = person.mutualFriends.length || 0;
 
-          peopleYouMayKnow.push({
-            id: person.id,
-            fullName: name,
-            pictureUrl: friendService.getPictureUrlForUser(person),
-            actionText: 'Add',
-            clickable: true,
-            isKifiUser: true,
-            via: numMutualFriends > 0 ? '' : 'Kifi',
-            numMutualFriends: numMutualFriends,
-            mutualFriends: person.mutualFriends
-          });
-        });
-
-        var networkNamesMap = {
-          'facebook': 'Facebook',
-          'linkedin': 'LinkedIn',
-          'email': 'email'
-        };
-
-        if (peopleYouMayKnow.length < 3) {
-          (wtiService.list.length > 0 ? $q.when(wtiService.list) : wtiService.getMore()).then(function () {
-            var wtiList = wtiService.list;
-
-            wtiList.forEach(function (person) {
-              var name = '';
-              var via = '';
-
-              name = person.name;
-              via = (person.network === 'email' && person.identifier) || networkNamesMap[person.network];
-
-              peopleYouMayKnow.push({
-                networkType: person.network,
-                id: person.identifier,
-                fullName: name,
-                pictureUrl: person.pictureUrl || 'https://www.kifi.com/assets/img/ghost.100.png',
-                actionText: 'Invite',
-                clickable: true,
-                isKifiUser: false,
-                via: via
-              });
+            peopleYouMayKnow.push({
+              id: person.id,
+              fullName: name,
+              pictureUrl: friendService.getPictureUrlForUser(person),
+              profileUrl: userService.getProfileUrl(person.username),
+              actionText: 'Add',
+              clickable: true,
+              isKifiUser: true,
+              via: numMutualFriends > 0 ? '' : 'Kifi',
+              numMutualFriends: numMutualFriends,
+              mutualFriends: person.mutualFriends
             });
           });
 
-          scope.header = 'Find People to Invite';
-        } else {
-          scope.header = 'People You May Know';
-        }
+          var networkNamesMap = {
+            'facebook': 'Facebook',
+            'linkedin': 'LinkedIn',
+            'email': 'email'
+          };
 
-        scope.peopleYouMayKnow = peopleYouMayKnow;
-      });
+          if (peopleYouMayKnow.length < 3) {
+            (wtiService.list.length > 0 ? $q.when(wtiService.list) : wtiService.getMore()).then(function () {
+              var wtiList = wtiService.list;
+
+              wtiList.forEach(function (person) {
+                var name = '';
+                var via = '';
+
+                name = person.name;
+                via = (person.network === 'email' && person.identifier) || networkNamesMap[person.network];
+
+                peopleYouMayKnow.push({
+                  networkType: person.network,
+                  id: person.identifier,
+                  fullName: name,
+                  pictureUrl: person.pictureUrl || 'https://www.kifi.com/assets/img/ghost.100.png',
+                  actionText: 'Invite',
+                  clickable: true,
+                  isKifiUser: false,
+                  via: via
+                });
+              });
+            });
+
+            scope.header = 'Find People to Invite';
+          } else {
+            scope.header = 'People You May Know';
+          }
+
+          scope.peopleYouMayKnow = peopleYouMayKnow;
+        });
+
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
+      }
 
       scope.action = function (person) {
         if (!person.clickable) {
@@ -166,6 +181,9 @@ angular.module('kifi')
           modalData: { savedPymk: person }
         });
       };
+
+
+      init();
     }
   };
 }])
