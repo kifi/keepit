@@ -10,7 +10,7 @@ case class Probability[A](outcome: A, probability: Double)
 case class ProbabilityDensity[A](density: Seq[Probability[A]]) {
   require(density.forall(_.probability >= 0), "Probabilities must be non-negative")
   require(density.map(_.probability).sum <= 1.1, "Probabilities sum up to more than 1")
-  private val cumulative: Array[Probability[A]] = { // The order of the density sequence is implied to compute the CDF
+  private[this] val cumulative: Array[Probability[A]] = { // The order of the density sequence is implied to compute the CDF
     var cdf = 0.0
     density.collect {
       case Probability(outcome, probability) if probability > 0 =>
@@ -64,9 +64,7 @@ object ProbabilityDensity {
 class ProbabilityDensityBuilder[A] {
   private[this] val buf = new mutable.ArrayBuffer[Probability[A]]
 
-  def add(outcome: A, weight: Double) = {
-    buf += Probability(outcome, weight)
-  }
+  def add(outcome: A, weight: Double): Unit = { buf += Probability(outcome, weight) }
 
   def build(): ProbabilityDensity[A] = ProbabilityDensity.normalized(buf)
 }
