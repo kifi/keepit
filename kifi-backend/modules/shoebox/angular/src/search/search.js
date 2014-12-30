@@ -83,6 +83,10 @@ angular.module('kifi')
           // TODO(yiping): how should we handle this case?
         }
       });  //jshint ignore:line
+
+      $timeout(function () {
+        $window.document.body.scrollTop = 0;
+      });
     }
 
 
@@ -151,9 +155,6 @@ angular.module('kifi')
         $scope.hasMore = !!result.mayHaveMore;
         lastResult = result;
         $scope.loading = false;
-        $timeout(function () {
-          $window.document.body.scrollTop = 0;
-        });
       });
     };
 

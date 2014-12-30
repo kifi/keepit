@@ -265,22 +265,24 @@ angular.module('kifi')
       },
 
       joinLibrary: function (libraryId) {
-        var alreadyJoined = _.some(librarySummaries, { id: libraryId });
+        return this.fetchLibrarySummaries(true).then(function () {
+          var alreadyJoined = _.some(librarySummaries, { id: libraryId });
 
-        if (!alreadyJoined) {
-          return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
-            var library = response.data;
-            augmentLibrarySummary(library);
+          if (!alreadyJoined) {
+            return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
+              var library = response.data;
+              augmentLibrarySummary(library);
 
-            librarySummaries.push(library);
-            _.remove(invitedSummaries, { id: libraryId });
+              librarySummaries.push(library);
+              _.remove(invitedSummaries, { id: libraryId });
 
-            $rootScope.$emit('librarySummariesChanged');
-            $rootScope.$emit('libraryUpdated', library);
-          });
-        }
+              $rootScope.$emit('librarySummariesChanged');
+              $rootScope.$emit('libraryUpdated', library);
+            });
+          }
 
-        return $q.when('already_joined');
+          return $q.when('already_joined');
+        });
       },
 
       leaveLibrary: function (libraryId) {

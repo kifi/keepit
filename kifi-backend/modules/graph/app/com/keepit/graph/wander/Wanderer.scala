@@ -2,7 +2,7 @@ package com.keepit.graph.wander
 
 import com.keepit.graph.model._
 import scala.collection.mutable
-import com.keepit.common.math.ProbabilityDensity
+import com.keepit.common.math.{ ProbabilityDensityBuilder, ProbabilityDensity }
 import com.keepit.graph.model.EdgeKind.EdgeType
 import com.keepit.graph.model.Component.Component
 import com.keepit.common.logging.Logging
@@ -69,13 +69,13 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
   }
 
   private def sampleOutgoingComponent(resolver: EdgeResolver): Option[Component] = {
-    val componentWeights = mutable.MutableList[(Component, Double)]()
+    val builder = new ProbabilityDensityBuilder[Component]
     while (wanderer.outgoingEdgeReader.moveToNextComponent()) {
       val component = wanderer.outgoingEdgeReader.component
       val weight = resolver.weightComponent(component)
-      componentWeights += component -> weight
+      builder.add(component, weight)
     }
-    val probability = ProbabilityDensity.normalized(componentWeights)
+    val probability = builder.build()
     probability.sample(Math.random())
   }
 
@@ -87,15 +87,14 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
   }
 
   private def computeDestinationProbability(component: Component, resolver: EdgeResolver): ProbabilityDensity[VertexId] = {
-    val edgeWeights = getDestinationWeights(wanderer, scout, component, resolver)
-    ProbabilityDensity.normalized(edgeWeights)
+    val builder = new ProbabilityDensityBuilder[VertexId]
+    getDestinationWeights(wanderer, scout, component, resolver) { (vertexId, weight) => builder.add(vertexId, weight) }
+    builder.build
   }
 }
 
 trait DestinationWeightsQuerier {
-
-  def getDestinationWeights(wanderer: GlobalVertexReader, scout: GlobalVertexReader, component: Component, resolver: EdgeResolver): Seq[(VertexId, Double)] = {
-    val edgeWeights = mutable.MutableList[(VertexId, Double)]()
+  def getDestinationWeights(wanderer: GlobalVertexReader, scout: GlobalVertexReader, component: Component, resolver: EdgeResolver)(f: (VertexId, Double) => Unit): Unit = {
     wanderer.outgoingEdgeReader.reset()
     while (wanderer.outgoingEdgeReader.moveToNextComponent()) {
       if (wanderer.outgoingEdgeReader.component == component) {
@@ -103,10 +102,9 @@ trait DestinationWeightsQuerier {
           val destination = wanderer.outgoingEdgeReader.destination
           scout.moveTo(destination)
           val weight = resolver.weightEdge(wanderer, scout, wanderer.outgoingEdgeReader)
-          edgeWeights += (destination -> weight)
+          f(destination, weight)
         }
       }
     }
-    edgeWeights
   }
 }

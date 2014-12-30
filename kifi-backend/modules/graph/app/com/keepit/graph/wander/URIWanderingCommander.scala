@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.math.ProbabilityDensity
+import com.keepit.common.math.{ ProbabilityDensityBuilder, ProbabilityDensity }
 import com.keepit.common.time._
 
 import com.keepit.graph.manager.GraphManager
@@ -108,8 +108,9 @@ class URIWanderingCommander @Inject() (
       val scout = reader.getNewVertexReader()
       wanderer.moveTo(source)
 
-      val weights = getDestinationWeights(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver)
-      val density = ProbabilityDensity.normalized(weights)
+      val builder = new ProbabilityDensityBuilder[VertexId]
+      getDestinationWeights(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver) { (vertexId, weight) => builder.add(vertexId, weight) }
+      val density = builder.build()
       val scores = mutable.Map[VertexDataId[D], Int]().withDefaultValue(0)
       (0 until trials).foreach { i =>
         density.sample(Math.random()) foreach { vertex => scores(vertex.asId[D]) += 1 }
