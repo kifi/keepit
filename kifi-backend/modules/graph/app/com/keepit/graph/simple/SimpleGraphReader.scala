@@ -27,37 +27,46 @@ class SimpleGlobalVertexReader(vertices: Map[VertexId, Vertex]) extends GlobalVe
 trait SimpleLocalEdgeReader extends LocalEdgeReader {
   protected def getComponentIterator(): Iterator[(VertexType, VertexType, EdgeType)]
   protected def getEdgeIterator(): Iterator[(VertexId, VertexId, EdgeDataReader)]
-  private var components: Option[Iterator[(VertexType, VertexType, EdgeType)]] = None
-  private var currentComponent: Option[(VertexType, VertexType, EdgeType)] = None
-  private var edges: Option[Iterator[(VertexId, VertexId, EdgeDataReader)]] = None
-  private var currentEdge: Option[(VertexId, VertexId, EdgeDataReader)] = None
-  def component: (VertexType, VertexType, EdgeType) = currentComponent getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid component") }
-  def source: VertexId = currentEdge.get._1
-  def destination: VertexId = currentEdge.get._2
-  def data: EdgeDataReader = currentEdge.get._3
-  def kind: EdgeType = component._3
-  def moveToNextComponent(): Boolean = components match {
-    case None => throw new UninitializedReaderException(s"$this is not initialized over a valid vertex")
-    case Some(iterator) if iterator.hasNext => {
-      currentComponent = Some(iterator.next())
-      edges = None
-      true
-    }
-    case _ => false
+  private[this] var components: Iterator[(VertexType, VertexType, EdgeType)] = null
+  private[this] var currentComponent: (VertexType, VertexType, EdgeType) = null
+  private[this] var edges: Iterator[(VertexId, VertexId, EdgeDataReader)] = null
+  private[this] var currentEdge: (VertexId, VertexId, EdgeDataReader) = null
+  private def edge: (VertexId, VertexId, EdgeDataReader) = {
+    if (currentEdge == null) throw new UninitializedReaderException(s"$this is not initialized over a valid edge")
+    currentEdge
   }
-  def moveToNextEdge(): Boolean = edges match {
-    case None =>
-      edges = Some(getEdgeIterator())
-      moveToNextEdge()
-    case Some(iterator) if iterator.hasNext =>
-      currentEdge = Some(iterator.next()); true
-    case _ => false
+  def component: (VertexType, VertexType, EdgeType) = {
+    if (currentComponent == null) throw new UninitializedReaderException(s"$this is not initialized over a valid component")
+    currentComponent
+  }
+  def source: VertexId = edge._1
+  def destination: VertexId = edge._2
+  def data: EdgeDataReader = edge._3
+  def kind: EdgeType = component._3
+  def moveToNextComponent(): Boolean = {
+    if (components == null) throw new UninitializedReaderException(s"$this is not initialized over a valid vertex")
+    if (components.hasNext) {
+      currentComponent = components.next()
+      edges = null
+      true
+    } else {
+      false
+    }
+  }
+  def moveToNextEdge(): Boolean = {
+    if (edges == null) edges = getEdgeIterator()
+    if (edges.hasNext) {
+      currentEdge = edges.next()
+      true
+    } else {
+      false
+    }
   }
   def reset(): Unit = {
-    components = Some(getComponentIterator())
-    edges = None
-    currentComponent = None
-    currentEdge = None
+    components = getComponentIterator()
+    edges = null
+    currentComponent = null
+    currentEdge = null
   }
 }
 
@@ -80,11 +89,14 @@ class SimpleIncomingEdgeReader(owner: VertexReader, incomingEdges: => IncomingEd
 }
 
 class SimpleGlobalEdgeReader(vertices: Map[VertexId, Vertex]) extends GlobalEdgeReader {
-  private val globalSourceReader = new SimpleGlobalVertexReader(vertices)
-  private val globalDestinationReader = new SimpleGlobalVertexReader(vertices)
-  private var currentEdgeKind: Option[EdgeType] = None
+  private[this] val globalSourceReader = new SimpleGlobalVertexReader(vertices)
+  private[this] val globalDestinationReader = new SimpleGlobalVertexReader(vertices)
+  private[this] var currentEdgeKind: EdgeType = null
 
-  def kind: EdgeType = currentEdgeKind getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid edge") }
+  def kind: EdgeType = {
+    if (currentEdgeKind == null) throw new UninitializedReaderException(s"$this is not initialized over a valid edge")
+    currentEdgeKind
+  }
   def source: VertexId = globalSourceReader.id
   def destination: VertexId = globalDestinationReader.id
   private def component = (source.kind, destination.kind, kind)
@@ -98,7 +110,7 @@ class SimpleGlobalEdgeReader(vertices: Map[VertexId, Vertex]) extends GlobalEdge
     Vertex.checkIfEdgeExists(vertices)(sourceVertexId, destinationVertexId, edgeKind)
     globalSourceReader.moveTo(source)
     globalDestinationReader.moveTo(destination)
-    currentEdgeKind = Some(edgeKind)
+    currentEdgeKind = edgeKind
   }
 }
 
