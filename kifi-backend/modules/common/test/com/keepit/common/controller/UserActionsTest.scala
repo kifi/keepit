@@ -1,6 +1,7 @@
 package com.keepit.common.controller
 
 import com.google.inject.util.Providers
+import com.keepit.common.controller.KifiSession.HttpSessionWrapper
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.model.{ User, Username }
 import com.keepit.test.CommonTestInjector
@@ -28,6 +29,13 @@ class UserActionsTest extends Specification with CommonTestInjector {
 
   class FakeController(val actionsHelper: UserActionsHelper) extends Controller with UserActions {
     val userActionsHelper = actionsHelper
+  }
+
+  "HttpSessionWrapper" should {
+    "parse ids" in {
+      new HttpSessionWrapper(null).parseUserId("123") === Id[User](123)
+      new HttpSessionWrapper(null).parseUserId("Some(123)") === Id[User](123)
+    }
   }
 
   "UserActions" should {

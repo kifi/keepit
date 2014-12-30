@@ -298,7 +298,17 @@ object KifiSession {
 
   implicit class HttpSessionWrapper(val underlying: Session) extends AnyVal {
     def setUserId(userId: Id[User]): Session = underlying + (FORTYTWO_USER_ID -> userId.id.toString)
-    def getUserId(): Option[Id[User]] = underlying.get(FORTYTWO_USER_ID).map(id => Id[User](id.toLong))
+    def getUserId(): Option[Id[User]] = underlying.get(FORTYTWO_USER_ID) map parseUserId
+    def parseUserId(id: String): Id[User] = {
+      val idInt = try {
+        id.toLong
+      } catch {
+        //There's some bad sessions out there that contains the id in the format of "Some(1234)" instead of just "1234". This is an attempt to let these ids through in spite of the bad formatting.
+        case e: NumberFormatException =>
+          """Some\(([0-9]+)\)""".r.findAllMatchIn(id).map(_.group(1)).toSeq.headOption.map(_.toLong).getOrElse(throw new Exception(s"can't parse id $id", e))
+      }
+      Id[User](idInt)
+    }
     def deleteUserId(): Session = underlying - FORTYTWO_USER_ID
   }
 
