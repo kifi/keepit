@@ -11,6 +11,7 @@ angular.module('kifi')
         item.libraries.forEach( function (lib) {
           lib[0].keeperPic = friendService.getPictureUrlForUser(lib[1]);
           lib[0].keeperProfileUrl = userService.getProfileUrl(lib[1].username);
+          lib[0].keeperName = lib[1].firstName + ' ' + lib[1].lastName;
           if (lib[1].id !== profileService.me.id) {
             usersWithLibs[lib[1].id] = true;
             cleanedLibraries.push(lib[0]);

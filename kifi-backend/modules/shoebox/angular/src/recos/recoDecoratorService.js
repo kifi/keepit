@@ -25,6 +25,7 @@ angular.module('kifi')
         rawReco.itemInfo.libraries.forEach( function (lib) {
           lib.keeperPic = friendService.getPictureUrlForUser(lib.owner);
           lib.keeperProfileUrl = userService.getProfileUrl(lib.owner.username);
+          lib.keeperName = lib.owner.firstName + ' ' + lib.owner.lastName;
           libUsers[lib.owner.id] = true;
         });
         //don't show a face only if there is also a library for that person

@@ -91,7 +91,7 @@
             <div class="kf-keep-lib-follower-preview">
               <div class="kf-keep-lib-follower-pics">
                 <span ng-repeat="follower in followersToShow" itemscope itemtype="http://data-vocabulary.org/Person">
-                  <a ng-if="inUserProfileBeta" href="{{follower.profileUrl}}">
+                  <a ng-if="inUserProfileBeta" href="{{follower.profileUrl}}" itemprop="url">
                     <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
                       class="kf-keep-lib-user-image"
                       kf-who-tooltip

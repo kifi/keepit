@@ -51,6 +51,7 @@ angular.module('kifi')
           user = users[idxUser];
           lib.keeperPic = friendService.getPictureUrlForUser(user);
           lib.keeperProfileUrl = userService.getProfileUrl(user.username);
+          lib.keeperName = user.firstName + ' ' + user.lastName;
           lib.owner = user;
           decompressedLibraries.push(lib);
           libUsers[idxUser] = true;
@@ -58,6 +59,7 @@ angular.module('kifi')
           user = profileService.me;
           lib.keeperPic = friendService.getPictureUrlForUser(user);
           lib.keeperProfileUrl = userService.getProfileUrl(user.username);
+          lib.keeperName = user.firstName + ' ' + user.lastName;
           lib.owner = user;
 
           if (!libraryService.isSystemLibrary(lib.id)) {
