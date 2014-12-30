@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryMiniCard', [
-  '$rootScope', '$state', 'libraryService', 'profileService', 'friendService', 'modalService', '$location',
-  function ($rootScope, $state, libraryService, profileService, friendService, modalService, $location) {
+  '$rootScope', '$state', 'libraryService', 'profileService', 'friendService', 'modalService', 'userService', '$location',
+  function ($rootScope, $state, libraryService, profileService, friendService, modalService, userService, $location) {
     return {
       restrict: 'A',
       replace: true,
@@ -16,6 +16,7 @@ angular.module('kifi')
       link: function (scope/*, element, attrs*/) {
         scope.library = _.cloneDeep(scope.refLibrary());
         scope.showMiniCard = true;
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
 
 
         //
@@ -88,11 +89,14 @@ angular.module('kifi')
             _.assign(scope.library, data.library);
 
             scope.library.owner.image = friendService.getPictureUrlForUser(scope.library.owner);
+            scope.library.owner.profileUrl = userService.getProfileUrl(scope.library.owner.username);
             scope.library.access = data.membership;
             scope.library.isMine = scope.library.access === 'owner';
           })['catch'](function () {
             scope.showMiniCard = false;
           });
+        } else {
+          scope.library.owner.profileUrl = userService.getProfileUrl(scope.library.owner.username);
         }
       }
     };

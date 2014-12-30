@@ -5,7 +5,10 @@
   <h2 class="kf-add-friend-banner-title">{{friendRequestBannerHeader}}</h2>
 
   <div class="kf-add-friend-banner">
-    <img class="kf-add-friend-banner-image" onerror="this.src='/assets/img/ghost.200.png'" ng-src="{{mainImage}}"/>
+    <a ng-if="inUserProfileBeta" href="{{userProfileUrl}}">
+      <img class="kf-add-friend-banner-image" onerror="this.src='/assets/img/ghost.200.png'" ng-src="{{mainImage}}" />
+    </a>
+    <img ng-if="!inUserProfileBeta" class="kf-add-friend-banner-image" onerror="this.src='/assets/img/ghost.200.png'" ng-src="{{mainImage}}" />
     <span class="kf-add-friend-banner-who">
       <span class="kf-add-friend-banner-main-label" title="{{mainLabel}}">{{mainLabel}}</span>
       <div class="kf-friend-card-count" title="{{user.friendCount}}" ng-show="user.friendCount > 0">
@@ -13,6 +16,7 @@
       </div>
       <div class="kf-friend-card-count" ng-show="friendCount < 1">Kifi user</div>
     </span>
+
     <div kf-social-invite-action class="clickable kf-add-friend-banner-action" result="result" on-after-invite="onAfterInvite()">
       <div class="kf-add-friend-banner-add-button clickable-target" href="javascript:" ng-click="invite(result, $event)">
         <span class="sprite sprite-tag-new-plus-icon"> </span>Add

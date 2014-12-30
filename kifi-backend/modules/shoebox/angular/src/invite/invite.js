@@ -172,8 +172,8 @@ angular.module('kifi')
 ])
 
 .directive('kfSocialInviteSearch', [
-  '$document', '$log', 'inviteService', 'modalService',
-  function ($document, $log, inviteService, modalService) {
+  '$document', '$log', 'inviteService', 'modalService', 'userService',
+  function ($document, $log, inviteService, modalService, userService) {
     return {
       scope: {},
       replace: true,
@@ -186,6 +186,7 @@ angular.module('kifi')
 
         scope.results = [];
         scope.selected = inviteService.socialSelected;
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
 
         scope.change = _.debounce(function () { // todo: integrate service-wide debounce into Clutch, remove me
           inviteService.socialSearch(scope.search.name).then(function (res) {
@@ -274,8 +275,10 @@ angular.module('kifi')
 ])
 
 .directive('kfFriendRequestBanner', [
-  'injectedState', 'routeService', 'userService', 'keepWhoService', 'profileService', '$timeout', '$analytics', 'analyticsState',
-  function (injectedState, routeService, userService, keepWhoService, profileService, $timeout, $analytics, analyticsState) {
+  '$analytics', '$timeout', 'analyticsState', 'injectedState', 'keepWhoService',
+  'profileService', 'routeService', 'userService',
+  function ($analytics, $timeout, analyticsState, injectedState, keepWhoService,
+    profileService, routeService, userService) {
 
     function setupShowFriendRequestBanner(scope, externalId) {
       function closeBanner() {
@@ -292,6 +295,8 @@ angular.module('kifi')
         scope.user = user;
         scope.mainImage = picUrl;
         scope.mainLabel = user.firstName + ' ' + user.lastName;
+        scope.userProfileUrl = userService.getProfileUrl(user.username);
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
         scope.hidden = false;
         scope.actionText = 'Add';
         scope.result = {
@@ -329,6 +334,7 @@ angular.module('kifi')
 
     function link(scope) {
       var externalId = injectedState.state.friend;
+
       scope.hidden = true;
       if (!externalId) {
         return;
@@ -347,6 +353,4 @@ angular.module('kifi')
       link: link
     };
   }
-])
-
-;
+]);
