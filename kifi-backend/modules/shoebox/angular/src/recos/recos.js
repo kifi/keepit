@@ -42,7 +42,9 @@ angular.module('kifi')
     };
 
     $scope.trash = function (reco) {
-      recoActionService.trash(reco.recoKeep);
+      if (reco.recoData && reco.recoData.kind === 'keep') {
+        recoActionService.trash(reco.recoKeep);
+      }
 
       var trashedRecoIndex = _.findIndex($scope.recos, reco);
       var trashedReco = $scope.recos.splice(trashedRecoIndex, 1)[0];
@@ -185,7 +187,9 @@ angular.module('kifi')
     };
 
     $scope.submitImprovement = function (reco) {
-      recoActionService.improve(reco.recoKeep, $scope.improvement.type);
+      if (reco.recoData && reco.recoData.kind === 'keep') {
+        recoActionService.improve(reco.recoKeep, $scope.improvement.type);
+      }
     };
 
     $scope.trackRecoKeep = function (recoKeep) {
@@ -243,12 +247,18 @@ angular.module('kifi')
 
         scope.upVote = function (reco) {
           hideMenu();
-          recoActionService.vote(reco.recoKeep, true);
+
+          if (reco.recoData && reco.recoData.kind === 'keep') {
+            recoActionService.vote(reco.recoKeep, true);
+          }
         };
 
         scope.downVote = function (reco) {
           hideMenu();
-          recoActionService.vote(reco.recoKeep, false);
+
+          if (reco.recoData && reco.recoData.kind === 'keep') {
+            recoActionService.vote(reco.recoKeep, false);
+          }
         };
 
         scope.showModal = function () {
