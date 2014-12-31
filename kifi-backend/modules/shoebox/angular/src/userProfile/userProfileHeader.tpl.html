@@ -1,15 +1,18 @@
 <div class="kf-user-profile-header-content"><!-- limit to 800px or so -->
-  <div ng-switch="optionalAction" class="kf-user-profile-optional-action">
-    <a ng-switch-when="connect" class="kf-user-profile-connect svg-connect-to-user" ng-click="connect()">
-      CONNECT
-    </a>
-    <a ng-switch-when="settings" class="kf-user-profile-user-settings svg-settings-gear" ui-sref="settings"></a>
-  </div>
-
   <div class="kf-user-profile-basic-info" itemscope itemtype="http://data-vocabulary.org/Person">
-    <a href="{{userProfileRootUrl}}" itemprop="url">
-      <img class="kf-user-profile-picture" ng-src="{{profile.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" alt="{{profile.firstName}} {{profile.lastName}}" itemprop="photo">
-    </a>
+    <div class="kf-up-basic-info-main-content">
+      <a href="{{userProfileRootUrl}}" itemprop="url">
+        <img class="kf-user-profile-picture" ng-src="{{profile.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" alt="{{profile.firstName}} {{profile.lastName}}" itemprop="photo">
+      </a>
+
+      <div ng-switch="optionalAction" class="kf-user-profile-optional-action">
+        <a ng-switch-when="connect" class="kf-user-profile-connect svg-connect-to-user" ng-click="connect()">
+          CONNECT
+        </a>
+        <a ng-switch-when="settings" class="kf-user-profile-user-settings svg-settings-gear" ui-sref="settings"></a>
+      </div>
+    </div>
+
     <div class="kf-user-profile-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</div>
   </div>
 
