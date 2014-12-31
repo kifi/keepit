@@ -4,7 +4,7 @@ import java.net.{ URLDecoder, URLEncoder }
 
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.google.inject.{ Provider, Inject, Singleton }
-import com.keepit.commanders.{ UserCommander, LibraryCommander }
+import com.keepit.commanders.{ PageMetaTagsCommander, UserCommander, LibraryCommander }
 import com.keepit.common.core._
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
@@ -122,6 +122,7 @@ class KifiSiteRouter @Inject() (
 @Singleton
 class AngularRouter @Inject() (
     userCommander: UserCommander,
+    pageMetaTagsCommander: PageMetaTagsCommander,
     libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier,
     libraryMetadataCache: LibraryMetadataCache) {
@@ -190,7 +191,7 @@ class AngularRouter @Inject() (
 
   private def libMetadata(library: Library): Future[String] = try {
     libraryMetadataCache.getOrElseFuture(LibraryMetadataKey(library.id.get)) {
-      libraryCommander.libraryMetaTags(library).imap(_.formatOpenGraph)
+      pageMetaTagsCommander.libraryMetaTags(library).imap(_.formatOpenGraph)
     }
   } catch {
     case e: Throwable =>

@@ -75,78 +75,13 @@ class LibraryCommander @Inject() (
     libraryInviteSender: Provider[LibraryInviteEmailSender],
     heimdal: HeimdalServiceClient,
     contextBuilderFactory: HeimdalContextBuilderFactory,
-    keepImageCommander: KeepImageCommander,
     libraryImageCommander: LibraryImageCommander,
-    applicationConfig: FortyTwoConfig,
     uriSummaryCommander: URISummaryCommander,
-    socialUserInfoRepo: SocialUserInfoRepo,
     experimentCommander: LocalUserExperimentCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
-
-  private def imageUrl(image: LibraryImage): String = addProtocol(libraryImageCommander.getUrl(image))
-
-  private def imageUrl(image: KeepImage): String = addProtocol(keepImageCommander.getUrl(image))
-
-  private def addProtocol(url: String): String = if (url.startsWith("http:") || url.startsWith("https:")) url else s"http:$url"
-
-  def libraryMetaTags(library: Library): Future[PublicPageMetaTags] = {
-    db.readOnlyMasterAsync { implicit s =>
-      val owner = userRepo.get(library.ownerId)
-      val urlPathOnly = Library.formatLibraryPath(owner.username, library.slug)
-      if (library.visibility != PUBLISHED) {
-        PublicPageMetaPrivateTags(urlPathOnly)
-      } else {
-        val facebookId: Option[String] = socialUserInfoRepo.getByUser(owner.id.get).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
-
-        val keeps = keepRepo.getByLibrary(library.id.get, 0, 50)
-
-        //facebook OG recommends:
-        //We suggest that you use an image of at least 1200x630 pixels.
-        val imageUrls: Seq[String] = {
-          libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.XLarge.idealSize) match {
-            case Some(image) =>
-              Seq(imageUrl(image))
-            case None =>
-              val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, ProcessedImageSize.XLarge.idealSize).values.flatten.toSeq
-              val sorted: Seq[KeepImage] = images.sortWith {
-                case (image1, image2) =>
-                  (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)
-              }
-              val urls: Seq[String] = sorted.take(10) map { image =>
-                imageUrl(image)
-              }
-              //last image is the kifi image we want to append to all image lists
-              if (urls.isEmpty) Seq("https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png") else urls
-          }
-        }
-
-        val url = {
-          val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
-          if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
-        }
-
-        val lowQualityLibrary: Boolean = {
-          keeps.size <= 3 || ((library.description.isEmpty || library.description.get.length <= 10) && keeps.size <= 6)
-        }
-
-        PublicPageMetaFullTags(
-          unsafeTitle = s"${library.name} by ${owner.firstName} ${owner.lastName} \u2022 Kifi",
-          url = url,
-          urlPathOnly = urlPathOnly,
-          unsafeDescription = PublicPageMetaTags.generateMetaTagsDescription(library.description, owner.fullName, library.name),
-          images = imageUrls,
-          facebookId = facebookId,
-          createdAt = library.createdAt,
-          updatedAt = library.updatedAt,
-          unsafeFirstName = owner.firstName,
-          unsafeLastName = owner.lastName,
-          noIndex = lowQualityLibrary)
-      }
-    }
-  }
 
   def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Future[Seq[Keep]] = {
     if (limit > 0) db.readOnlyReplicaAsync { implicit s => keepRepo.getByLibrary(libraryId, offset, limit) }
