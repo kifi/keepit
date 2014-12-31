@@ -18,7 +18,12 @@
       </div>
       <div class="kf-upl-card-byline"><span class="kf-upl-card-by">by</span> {{lib.owner.firstName}} {{lib.owner.lastName}}</div>
     </a>
-    <a class="kf-upl-card-owner-pic" href="/{{lib.owner.username}}" ng-style="{'background-image': 'url(' + lib.ownerPicUrl + ')'}"></a>
+    <div itemscope itemtype="http://data-vocabulary.org/Person">
+      <a href="/{{lib.owner.username}}" itemprop="url">
+        <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" itemprop="photo">
+      </a>
+      <meta itemprop="name" content="{{lib.owner.firstName}} {{lib.owner.lastName}}" />
+    </div>
     <div class="kf-upl-card-foot">
       <div class="kf-upl-followers" ng-if="lib.followers.length > 0">
         <span class="kf-upl-follower" ng-repeat="user in lib.followers" ng-attr-style="background-image:url({{user.picUrl}})"></span>
