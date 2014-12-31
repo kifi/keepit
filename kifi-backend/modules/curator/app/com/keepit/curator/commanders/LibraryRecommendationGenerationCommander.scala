@@ -36,10 +36,25 @@ class LibraryRecommendationGenerationCommander @Inject() (
     experimentCommander.getUsersByExperiment(ExperimentType.CURATOR_LIBRARY_RECOS).
       map(users => users.map(_.id.get).toSeq)
 
-  def getTopRecommendations(userId: Id[User], howManyMax: Int): Future[Seq[LibraryRecommendation]] = {
-    db.readOnlyReplicaAsync { implicit session =>
-      libraryRecRepo.getRecommendableByTopMasterScore(userId, howManyMax)
+  def getTopRecommendations(userId: Id[User], howManyMax: Int, recoSortStrategy: LibraryRecoSelectionStrategy, scoringStrategy: LibraryRecoScoringStrategy): Seq[LibraryRecoInfo] = {
+
+    def scoreReco(reco: LibraryRecommendation) =
+      LibraryRecoScore(scoringStrategy.scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, None, false, 0f), reco)
+
+    val recos = db.readOnlyReplica { implicit session =>
+      val recosByTopScore = libraryRecRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
+      recoSortStrategy.sort(recosByTopScore) take howManyMax
     }
+
+    SafeFuture {
+      db.readWrite { implicit session =>
+        recos.map { recoScore =>
+          libraryRecRepo.incrementDeliveredCount(recoScore.reco.id.get)
+        }
+      }
+    }
+
+    recos.map { case LibraryRecoScore(s, r) => LibraryRecommendation.toLibraryRecoInfo(r) }
   }
 
   /**
@@ -162,4 +177,51 @@ class LibraryRecommendationGenerationCommander @Inject() (
 
   }
 
+}
+
+case class LibraryRecoScore(score: Float, reco: LibraryRecommendation)
+
+trait LibraryRecoSelectionStrategy {
+  def sort(recosByTopScore: Seq[LibraryRecoScore]): Seq[LibraryRecoScore]
+}
+
+class TopScoreLibraryRecoSelectionStrategy(val minScore: Float = 0f) extends LibraryRecoSelectionStrategy {
+  def sort(recosByTopScore: Seq[LibraryRecoScore]) =
+    recosByTopScore filter (_.score > minScore) sortBy (-_.score)
+}
+
+trait LibraryRecoScoringStrategy {
+  def scoreItem(masterScore: Float, scores: LibraryScores, timesDelivered: Int, timesClicked: Int, goodBad: Option[Boolean], heavyPenalty: Boolean, recencyWeight: Float): Float = {
+    val basePenaltyFactor = Math.pow(0.97, timesDelivered) * Math.pow(0.8, timesClicked)
+    val votePenaltyFactor = goodBad.map { vote => if (vote) 0.97 else 0.5 }.getOrElse(1.0)
+    val finalPenaltyFactor = Math.pow(basePenaltyFactor * votePenaltyFactor, if (heavyPenalty) 5 else 1)
+    val adjustedScore = masterScore + recencyWeight * scores.recencyScore
+    (masterScore * finalPenaltyFactor).toFloat
+  }
+}
+
+class DefaultLibraryRecoScoringStrategy extends LibraryRecoScoringStrategy
+
+class NonLinearLibraryRecoScoringStrategy(selectionParams: LibraryRecoSelectionParams) extends LibraryRecoScoringStrategy {
+
+  override def scoreItem(masterScore: Float, scores: LibraryScores, timesDelivered: Int, timesClicked: Int, goodBad: Option[Boolean], heavyPenalty: Boolean, recencyWeight: Float): Float = {
+    super.scoreItem(recomputeScore(scores), scores, timesDelivered, timesClicked, goodBad, heavyPenalty, recencyWeight)
+  }
+
+  private def recomputeScore(scores: LibraryScores): Float = {
+    val interestPart = (scores.interestScore * selectionParams.interestScoreWeight)
+    val factor = {
+      val normalizer = selectionParams.interestScoreWeight
+      interestPart / normalizer
+    }
+
+    val socialPart = (
+      scores.recencyScore * selectionParams.recencyScoreWeight +
+      scores.socialScore * selectionParams.socialScoreWeight +
+      scores.popularityScore * selectionParams.popularityScoreWeight +
+      scores.sizeScore * selectionParams.sizeScoreWeight
+    )
+
+    (interestPart + factor * socialPart)
+  }
 }
