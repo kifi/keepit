@@ -112,8 +112,10 @@ class URIWanderingCommander @Inject() (
       getDestinationWeights(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver) { (vertexId, weight) => builder.add(vertexId, weight) }
       val density = builder.build()
       val scores = mutable.Map[VertexDataId[D], Int]().withDefaultValue(0)
-      (0 until trials).foreach { i =>
+      var i = 0
+      while (i < trials) {
         density.sample(Math.random()) foreach { vertex => scores(vertex.asId[D]) += 1 }
+        i += 1
       }
       scores.toMap
     }
