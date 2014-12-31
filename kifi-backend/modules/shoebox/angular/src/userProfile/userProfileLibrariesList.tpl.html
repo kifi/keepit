@@ -26,7 +26,7 @@
     </div>
     <div class="kf-upl-card-foot">
       <div class="kf-upl-followers" ng-if="lib.followers.length > 0">
-        <span class="kf-upl-follower" ng-repeat="user in lib.followers" ng-attr-style="background-image:url({{user.picUrl}})"></span>
+        <a href="{{getUserProfileUrl(user)}}" class="kf-upl-follower" ng-repeat="user in lib.followers" ng-attr-style="background-image:url({{user.picUrl}})"></a>
         <!-- ng-if="lib.numFollowers > lib.followers.length" -->
         + <ng-pluralize count="lib.numFollowers - lib.followers.length" when="{'1':'{} other follows ','other':'{} others follow '}"></ng-pluralize> this library
       </div>

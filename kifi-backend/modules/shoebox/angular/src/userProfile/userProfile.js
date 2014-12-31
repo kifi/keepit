@@ -135,8 +135,8 @@ angular.module('kifi')
 
 
 .controller('UserProfileLibrariesCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', 'routeService', 'keepWhoService', 'profileService', 'userProfileActionService',
-  function ($scope, $rootScope, $state, $stateParams, routeService, keepWhoService, profileService, userProfileActionService) {
+  '$scope', '$rootScope', '$state', '$stateParams', 'routeService', 'keepWhoService', 'profileService', 'userProfileActionService', 'userService',
+  function ($scope, $rootScope, $state, $stateParams, routeService, keepWhoService, profileService, userProfileActionService, userService) {
     var colors = ['#C764A2', '#E35957', '#FF9430', '#2EC89A', '#3975BF', '#955CB4', '#FAB200'];
     var username = $stateParams.username;
     var fetchPageSize = 12;
@@ -177,6 +177,10 @@ angular.module('kifi')
 
     $scope.hasMoreLibraries = function () {
       return hasMoreLibraries;
+    };
+
+    $scope.getUserProfileUrl = function (user) {
+      return userService.getProfileUrl(user.username);
     };
 
     function resetFetchState() {
