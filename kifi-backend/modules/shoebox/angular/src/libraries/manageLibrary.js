@@ -57,7 +57,6 @@ angular.module('kifi')
           }
 
           submitting = true;
-          console.log('listed: ' + scope.library.listed);
 
           var saveData = {
             id: scope.library.id,
