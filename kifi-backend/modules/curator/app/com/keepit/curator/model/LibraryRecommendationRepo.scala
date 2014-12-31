@@ -23,6 +23,7 @@ trait LibraryRecommendationRepo extends DbRepo[LibraryRecommendation] {
   def getLibraryIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[Library]]
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]]
   def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback)(implicit session: RWSession): Boolean
+  def incrementDeliveredCount(recoId: Id[LibraryRecommendation])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -127,6 +128,11 @@ class LibraryRecommendationRepoImpl @Inject() (
       else true
 
     clickedResult && trashedResult && followedResult
+  }
+
+  def incrementDeliveredCount(recoId: Id[LibraryRecommendation])(implicit session: RWSession): Unit = {
+    import StaticQuery.interpolation
+    sqlu"UPDATE library_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
   }
 
   def deleteCache(model: LibraryRecommendation)(implicit session: RSession): Unit = {}

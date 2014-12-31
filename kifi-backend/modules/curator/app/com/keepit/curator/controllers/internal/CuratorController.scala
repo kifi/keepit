@@ -43,6 +43,11 @@ class CuratorController @Inject() (
   val defaultRecoScoringStrategy = new DefaultRecoScoringStrategy()
   val nonlinearRecoScoringStrategy = new NonLinearRecoScoringStrategy()
 
+  val topScoreLibraryRecoStrategy = new TopScoreLibraryRecoSelectionStrategy()
+
+  val defaultLibraryRecoScoringStrategy = new DefaultLibraryRecoScoringStrategy()
+  val nonlinearLibraryRecoScoringStrategy = new NonLinearLibraryRecoScoringStrategy(libraryRecoGenCommander.defaultLibraryScoreParams)
+
   def adHocRecos(userId: Id[User], n: Int) = Action.async { request =>
     recoGenCommander.getAdHocRecommendations(userId, n, request.body.asJson match {
       case Some(json) => json.as[UriRecommendationScores]
@@ -115,8 +120,15 @@ class CuratorController @Inject() (
 
   def topLibraryRecos(userId: Id[User], limit: Int) = Action.async { request =>
     log.info(s"topLibraryRecos called userId=$userId limit=$limit")
-    libraryRecoGenCommander.getTopRecommendations(userId, limit) map { libRecos =>
-      val libRecoInfos = libRecos.map { r => LibraryRecommendation.toLibraryRecoInfo(r) }
+
+    userExperimentCommander.getExperimentsByUser(userId) map { experiments =>
+      val sortStrategy =
+        topScoreLibraryRecoStrategy
+      val scoringStrategy =
+        if (experiments.contains(ExperimentType.CURATOR_NONLINEAR_SCORING)) nonlinearLibraryRecoScoringStrategy
+        else defaultLibraryRecoScoringStrategy
+
+      val libRecoInfos = libraryRecoGenCommander.getTopRecommendations(userId, limit, sortStrategy, scoringStrategy)
       log.info(s"topLibraryRecos returning userId=$userId resultCount=${libRecoInfos.size}")
       Ok(Json.toJson(libRecoInfos))
     }
