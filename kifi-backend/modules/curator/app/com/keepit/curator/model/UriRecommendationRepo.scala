@@ -127,13 +127,10 @@ class UriRecommendationRepoImpl @Inject() (
 
   def incrementDeliveredCount(recoId: Id[UriRecommendation], withlastPushedAt: Boolean = false)(implicit session: RWSession): Unit = {
     import StaticQuery.interpolation
-    if (withlastPushedAt) sqlu"UPDATE uri_recommendation SET delivered=delivered+1, last_pushed_at=$currentDateTime, updated_at=$currentDateTime WHERE id=$recoId".first()
-    else sqlu"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
-  }
 
-  def incrementDeliveredCount(recoId: Id[UriRecommendation])(implicit session: RWSession): Unit = {
-    import StaticQuery.interpolation
-    sqlu"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
+    // do not change updated_at
+    if (withlastPushedAt) sqlu"UPDATE uri_recommendation SET delivered=delivered+1, last_pushed_at=$currentDateTime WHERE id=$recoId".first()
+    else sqlu"UPDATE uri_recommendation SET delivered=delivered+1 WHERE id=$recoId".first()
   }
 
   def cleanupLowMasterScoreRecos(userId: Id[User], limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Unit = {

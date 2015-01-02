@@ -132,7 +132,9 @@ class LibraryRecommendationRepoImpl @Inject() (
 
   def incrementDeliveredCount(recoId: Id[LibraryRecommendation])(implicit session: RWSession): Unit = {
     import StaticQuery.interpolation
-    sqlu"UPDATE library_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
+
+    // do not change updated_at
+    sqlu"UPDATE library_recommendation SET delivered=delivered+1 WHERE id=$recoId".first()
   }
 
   def deleteCache(model: LibraryRecommendation)(implicit session: RSession): Unit = {}
