@@ -43,7 +43,7 @@ class LibraryRecommendationRepoImpl @Inject() (
 
   private object QueryBuilder {
     def recommendable(rows: RepoQuery) =
-      for (row <- active(rows) if row.followed === false) yield row
+      for (row <- active(rows) if row.followed === false && row.delivered < 10) yield row
 
     def byLibrary(libraryId: Id[Library])(rows: RepoQuery): RepoQuery =
       for (row <- rows if row.libraryId === libraryId) yield row
