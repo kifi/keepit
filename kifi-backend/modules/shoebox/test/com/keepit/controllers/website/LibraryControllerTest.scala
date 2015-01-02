@@ -90,7 +90,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         (parseLibrary \ "visibility").as[LibraryVisibility].value === "secret"
         (parseLibrary \ "keeps").as[Seq[JsValue]].size === 0
         (parseLibrary \ "owner").as[BasicUser].externalId === user.externalId
-        (contentAsJson(result1) \ "listed").asOpt[Boolean].get === true
+        (contentAsJson(result1) \ "listed").asOpt[Boolean].get === false
 
         val inputJson2 = Json.obj(
           "name" -> "Invalid Library - Slug",
@@ -144,8 +144,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val (user1, lib1, lib2) = db.readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("ahsu"), normalizedUsername = "test"))
           val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
-
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user.id.get, access = LibraryAccess.OWNER))
+
           val library2 = libraryRepo.save(Library(name = "Library2", ownerId = user.id.get, slug = LibrarySlug("lib2"), memberCount = 1, visibility = LibraryVisibility.SECRET))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user.id.get, access = LibraryAccess.OWNER))
           (user, library1, library2)
@@ -163,7 +163,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         (contentAsJson(result1) \ "library" \ "name").as[String] === "LibraryA"
 
-        val inputJson2 = Json.obj("slug" -> "libA", "description" -> "asdf", "visibility" -> LibraryVisibility.PUBLISHED.value)
+        val inputJson2 = Json.obj("slug" -> "libA", "description" -> "asdf", "visibility" -> LibraryVisibility.PUBLISHED, "listed" -> true)
         val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
         val result2 = libraryController.modifyLibrary(pubId)(request2)
         status(result2) must equalTo(OK)
