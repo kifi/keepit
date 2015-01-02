@@ -132,6 +132,8 @@ class LibraryRecommendationRepoImpl @Inject() (
 
   def incrementDeliveredCount(recoId: Id[LibraryRecommendation])(implicit session: RWSession): Unit = {
     import StaticQuery.interpolation
+
+    // do not change updated_at
     sqlu"UPDATE library_recommendation SET delivered=delivered+1 WHERE id=$recoId".first()
   }
 
