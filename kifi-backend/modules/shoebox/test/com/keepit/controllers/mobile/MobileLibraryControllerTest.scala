@@ -469,6 +469,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
              {
               "own" : [
                 {
+                  "id":"${pubId2.id}",
                   "name":"Catching Jellyfish",
                   "numFollowers":0,
                   "numKeeps":0,
@@ -476,9 +477,13 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                   "slug":"catching-jellyfish",
                   "kind" : "user_created",
                   "visibility" : "published",
-                  "id":"${pubId2.id}"
+                  "numKeeps" : 0,
+                  "numFollowers" : 0,
+                  "followers": [],
+                  "listed": true
                 },
                 {
+                  "id":"${pubId1.id}",
                   "name":"Krabby Patty",
                   "numFollowers":0,
                   "numKeeps":0,
@@ -486,7 +491,10 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                   "slug":"krabby-patty",
                   "kind" : "user_created",
                   "visibility" : "secret",
-                  "id":"${pubId1.id}"
+                  "numKeeps" : 0,
+                  "numFollowers" : 0,
+                  "followers": [],
+                  "listed": true
                 }
               ]
             }
