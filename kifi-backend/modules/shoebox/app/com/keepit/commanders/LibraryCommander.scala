@@ -1263,11 +1263,15 @@ class LibraryCommander @Inject() (
   }
 
   def getOwnProfileLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize): ParSeq[OwnLibraryCardInfo] = {
-    db.readOnlyMaster { implicit session =>
+    val (libraryInfos, memberships) = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getLibrariesOfSelf(user.id.get, page)
+      val libraryIds = libs.map(_.id.get).toSet
       val owners = Map(user.id.get -> BasicUser.fromUser(user))
-      createLibraryCardInfos(libs, owners, idealSize, true) zip libs
-    } map {
+      val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
+      val libraryInfos = createLibraryCardInfos(libs, owners, idealSize, true) zip libs
+      (libraryInfos, memberships)
+    }
+    libraryInfos map {
       case (info, lib) =>
         OwnLibraryCardInfo(
           id = info.id,
@@ -1280,7 +1284,8 @@ class LibraryCommander @Inject() (
           visibility = lib.visibility,
           numKeeps = info.numKeeps,
           numFollowers = info.numFollowers,
-          followers = info.followers)
+          followers = info.followers,
+          listed = memberships(lib.id.get).listed)
     }
   }
 

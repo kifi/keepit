@@ -119,7 +119,8 @@ case class OwnLibraryCardInfo(
   visibility: LibraryVisibility,
   numKeeps: Int,
   numFollowers: Int,
-  followers: Seq[BasicUser])
+  followers: Seq[BasicUser],
+  listed: Boolean)
     extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers)
 
 @json

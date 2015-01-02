@@ -492,7 +492,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                       "lastName": "user",
                       "pictureName": "alf.jpg",
                       "username": "seconduser"
-                    }]
+                    }],
+                  "listed": true
                 }
                ]
             }
