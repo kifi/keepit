@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('UserProfileCtrl', [
   '$scope', '$rootScope', '$state', '$stateParams', '$timeout', '$window',
-  'env', 'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService',
+  'env', 'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService', 'modalService', 'libraryService',
   function ($scope, $rootScope, $state, $stateParams, $timeout, $window,
-            env, inviteService, keepWhoService, profileService, userProfileActionService) {
+            env, inviteService, keepWhoService, profileService, userProfileActionService, modalService, libraryService) {
     //
     // Configs.
     //
@@ -127,6 +127,30 @@ angular.module('kifi')
       });
     };
 
+    $scope.isMyLibrary = function(libraryOwnerId) {
+      return libraryOwnerId === $scope.profile.id;
+    };
+
+    $scope.isHidden = function(library) {
+      return library.visibility === 'published' && library.listed === false;
+    };
+
+    $scope.openModifyLibrary = function (library) {
+      modalService.open({
+        template: 'libraries/manageLibraryModal.tpl.html',
+        modalData: {
+          pane: 'manage',
+          library: library,
+          returnAction: function () {
+            libraryService.getLibraryById(library.id, true).then(function (data) {
+              _.assign(library, data.library);
+              library.listed = data.listed;
+              library.path = data.library.url;
+            })['catch'](modalService.openGenericErrorModal);
+          }
+        }
+      });
+    };
 
     // Initialize controller.
     init();
