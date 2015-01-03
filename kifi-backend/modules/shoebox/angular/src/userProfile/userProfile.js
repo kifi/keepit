@@ -145,6 +145,7 @@ angular.module('kifi')
             libraryService.getLibraryById(library.id, true).then(function (data) {
               _.assign(library, data.library);
               library.listed = data.listed;
+              library.path = data.library.url;
             })['catch'](modalService.openGenericErrorModal);
           }
         }
