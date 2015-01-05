@@ -109,15 +109,6 @@ angular.module('kifi')
       $connectEl.removeAttr('href');
     }
 
-    function displayTimeUnit(num, unit) {
-      if (num === 1) {
-        return num + ' ' + unit + ' ago'; // singular
-      } else {
-        return num + ' ' + unit + 's ago'; // plural
-      }
-    }
-
-
     //
     // Scope methods.
     //
@@ -158,29 +149,6 @@ angular.module('kifi')
           }
         }
       });
-    };
-
-    $scope.lastUpdatedMessage = function(library) {
-      if (library.lastKept) {
-        var msg = 'Updated ';
-        var currentTime = Date.now();
-        var timeDiffSeconds = Math.floor((currentTime - library.lastKept) / 1000); // in seconds
-
-        if (timeDiffSeconds < 60) { // less than a minute ago
-          msg += 'just now';
-        } else if (timeDiffSeconds < 3600) { // few minutes ago
-          var numMinutes = Math.floor(timeDiffSeconds / 60);
-          msg += displayTimeUnit(numMinutes, 'minute');
-        } else if (timeDiffSeconds < 3600 * 24) { // few hours ago
-          var numHours = Math.floor(timeDiffSeconds / 3600);
-          msg += displayTimeUnit(numHours, 'hour');
-        } else { // some time ago
-          var numDays = Math.floor(timeDiffSeconds / 3600 / 24);
-          msg += displayTimeUnit(numDays, 'day');
-        }
-        return msg;
-      }
-      return '';
     };
 
     // Initialize controller.

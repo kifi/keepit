@@ -32,8 +32,8 @@
         <!-- ng-if="lib.numFollowers > lib.followers.length" -->
         <ng-pluralize count="lib.numFollowers - lib.followers.length" when="{'0': 'is following ', '1':'+{} other follows ','other':'+{} others follow '}"></ng-pluralize> this library
       </div>
-      <div class="kf-upl-updated" ng-if="lib.followers.length === 0">
-        {{lastUpdatedMessage(lib)}}
+      <div class="kf-upl-updated" ng-if="lib.followers.length === 0 && lib.lastKept">
+        Updated&nbsp;<time ng-attr-datetime="{{lib.lastKept}}" am-time-ago="lib.lastKept"></time>
       </div>
     </div>
   </div>
