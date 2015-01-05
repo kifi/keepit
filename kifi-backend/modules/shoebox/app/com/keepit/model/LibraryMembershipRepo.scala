@@ -39,13 +39,13 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countByLibraryAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
   def countsByLibraryAccess(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
   def countFollowersWithOwnerId(ownerId: Id[User])(implicit session: RSession): Int
-  def countLibrariesOfUserFromAnonymos(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int
+  def countLibrariesOfUserFromAnonymous(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int
   def countLibrariesToSelf(userId: Id[User])(implicit session: RSession): Int
   def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int
   def getOwnedLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]]
   def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]]
   def getFollowingLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]]
-  def getFollowingLibrariesFromAnonymos(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]]
+  def getFollowingLibrariesFromAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]]
 }
 
 @Singleton
@@ -272,7 +272,7 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   //non user: number of public libraries that are “displayable on profile” (see library pref) plus libraries i follow that are public unless I oped in the "don't show libraries I follow" pref
-  def countLibrariesOfUserFromAnonymos(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int = {
+  def countLibrariesOfUserFromAnonymous(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int = {
     import StaticQuery.interpolation
     val query = if (countFollowLibraries) {
       sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published'"
@@ -337,7 +337,7 @@ class LibraryMembershipRepoImpl @Inject() (
     query.as[Id[Library]].list
   }
 
-  def getFollowingLibrariesFromAnonymos(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]] = {
+  def getFollowingLibrariesFromAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]] = {
     import StaticQuery.interpolation
     val query = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access != 'owner' order by lm.id desc limit ${page.itemsToDrop}, ${page.size}"
     query.as[Id[Library]].list

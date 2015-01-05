@@ -25,7 +25,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
-  def getLibrariesOfUserFromAnonymos(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
+  def getLibrariesOfUserFromAnonymous(ownerId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getAllPublishedLibraries()(implicit session: RSession): Seq[Library]
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library]
@@ -168,8 +168,12 @@ class LibraryRepoImpl @Inject() (
     }
   }
 
-  def getLibrariesOfUserFromAnonymos(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
-    (for (r <- rows if r.ownerId === userId && r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).sortBy(_.id.desc).drop(page.itemsToDrop).take(page.size).list
+  def getLibrariesOfUserFromAnonymous(ownerId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+    val q = (for {
+      lib <- rows if lib.ownerId === ownerId && lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && lib.state === LibraryStates.ACTIVE
+      lm <- libraryMembershipRepo.get.rows if lm.libraryId === lib.id && lm.userId === ownerId && lm.listed
+    } yield lib).sortBy(_.id.desc).drop(page.itemsToDrop).take(page.size)
+    q.list
   }
 
   def getLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
