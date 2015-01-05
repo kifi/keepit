@@ -17,6 +17,7 @@ import com.keepit.common.concurrent.ReactiveLock
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
+import scala.util.Random
 
 @Singleton
 class TopUriSeedIngestionHelper @Inject() (
@@ -81,8 +82,9 @@ class TopUriSeedIngestionHelper @Inject() (
     }
 
     val betweenHours = Hours.hoursBetween(lastIngestionTime, currentDateTime).getHours
+    val randomShift = Random.nextInt(3) - 1
 
-    if (betweenHours > uriIngestionFreq || firstTimeIngesting || force) {
+    if ((betweenHours + randomShift) > uriIngestionFreq || firstTimeIngesting || force) {
       graph.uriWander(userId, 50000).flatMap { uriScores =>
         val rescaledUriScores = uriScores.mapValues(score => Math.log(score.toDouble + 1).toFloat).toSeq.sortBy {
           case (uriId, score) => -1 * score
