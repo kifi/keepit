@@ -30,10 +30,10 @@
       <div class="kf-upl-followers" ng-if="lib.followers.length > 0">
         <a href="{{getUserProfileUrl(user)}}" class="kf-upl-follower" ng-repeat="user in lib.followers" ng-attr-style="background-image:url({{user.picUrl}})"></a>
         <!-- ng-if="lib.numFollowers > lib.followers.length" -->
-        + <ng-pluralize count="lib.numFollowers - lib.followers.length" when="{'1':'{} other follows ','other':'{} others follow '}"></ng-pluralize> this library
+        <ng-pluralize count="lib.numFollowers - lib.followers.length" when="{'0': 'is following ', '1':'+{} other follows ','other':'+{} others follow '}"></ng-pluralize> this library
       </div>
       <div class="kf-upl-updated" ng-if="lib.followers.length === 0">
-        Updated N days ago
+        {{lastUpdatedMessage(lib)}}
       </div>
     </div>
   </div>

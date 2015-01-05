@@ -152,6 +152,37 @@ angular.module('kifi')
       });
     };
 
+    $scope.lastUpdatedMessage = function(library) {
+      if (library.lastKept) {
+        var msg = 'Updated ';
+        var currentTime = Date.now();
+        var timeDiffSeconds = Math.floor((currentTime - library.lastKept) / 1000); // in seconds
+
+        if (timeDiffSeconds < 60) { // less than a minute ago
+          msg += 'just now';
+        } else if (timeDiffSeconds < 3600) { // few minutes ago
+          var numMinutes = Math.floor(timeDiffSeconds / 60);
+          if (numMinutes === 1) {
+            msg += numMinutes + ' minute ago';
+          } else {
+            msg += numMinutes + ' minutes ago';
+          }
+        } else if (timeDiffSeconds < 3600 * 24) { // few hours ago
+          var numHours = Math.floor(timeDiffSeconds / 3600);
+          if (numHours === 1) {
+            msg += numHours + ' hour ago';
+          } else {
+            msg += numHours + ' hours ago';
+          }
+        } else { // some time ago
+          var numDays = Math.floor(timeDiffSeconds / 3600 / 24);
+          msg += numDays + ' days ago';
+        }
+        return msg;
+      }
+      return '';
+    };
+
     // Initialize controller.
     init();
   }
