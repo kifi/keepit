@@ -68,6 +68,9 @@ angular.module('kifi')
         initViewingUserStatus();
         initUserNavLinks();
       });
+
+      // setting title of page
+      $window.document.title = username + '\'s profile • Kifi' ;
     }
 
     function initProfile(profile) {
