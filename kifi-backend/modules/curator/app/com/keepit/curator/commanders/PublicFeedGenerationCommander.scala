@@ -53,7 +53,7 @@ class PublicFeedGenerationCommander @Inject() (
   private def score(uriId: Id[NormalizedURI], reason: String): Future[Unit] = pubicFeedsGenerationLock.withLockFuture {
     try {
       log.info(s"public feed: scoring uriId=$uriId reason=$reason")
-      val scoreOpt = db.readOnlyMaster { implicit session => uriRecRepo.getGeneralRecommendationScore(uriId) }
+      val scoreOpt = db.readOnlyMaster { implicit session => uriRecRepo.getGeneralRecommendationScore(uriId, 2) }
       log.info(s"public feed: got score, uriId=$uriId score=$scoreOpt")
 
       scoreOpt match {
