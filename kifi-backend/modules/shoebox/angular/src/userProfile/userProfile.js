@@ -114,7 +114,6 @@ angular.module('kifi')
       $connectEl.removeAttr('href');
     }
 
-
     //
     // Scope methods.
     //

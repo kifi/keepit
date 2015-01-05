@@ -29,11 +29,10 @@
     <div class="kf-upl-card-foot">
       <div class="kf-upl-followers" ng-if="lib.followers.length > 0">
         <a href="{{getUserProfileUrl(user)}}" class="kf-upl-follower" ng-repeat="user in lib.followers" ng-attr-style="background-image:url({{user.picUrl}})"></a>
-        <!-- ng-if="lib.numFollowers > lib.followers.length" -->
-        + <ng-pluralize count="lib.numFollowers - lib.followers.length" when="{'1':'{} other follows ','other':'{} others follow '}"></ng-pluralize> this library
+        <ng-pluralize count="lib.numFollowers - lib.followers.length" when="{'1':'+{} other ','other':'+{} others '}"></ng-pluralize> follow this library
       </div>
-      <div class="kf-upl-updated" ng-if="lib.followers.length === 0">
-        Updated N days ago
+      <div class="kf-upl-updated" ng-if="lib.followers.length === 0 && lib.lastKept">
+        Updated&nbsp;<time ng-attr-datetime="{{lib.lastKept}}" am-time-ago="lib.lastKept"></time>
       </div>
     </div>
   </div>
