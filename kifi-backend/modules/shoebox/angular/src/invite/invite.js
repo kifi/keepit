@@ -295,7 +295,7 @@ angular.module('kifi')
         scope.user = user;
         scope.mainImage = picUrl;
         scope.mainLabel = user.firstName + ' ' + user.lastName;
-        scope.userProfileUrl = userService.getProfileUrl(user.username);
+        scope.userProfileUrl = routeService.getProfileUrl(user.username);
         scope.inUserProfileBeta = userService.inUserProfileBeta();
         scope.hidden = false;
         scope.actionText = 'Add';

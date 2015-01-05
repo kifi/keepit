@@ -215,6 +215,9 @@ angular.module('kifi')
       ////////////////////////////
       // User Profile           //
       ////////////////////////////
+      getProfileUrl: function (username) {
+        return username ? env.origin + '/' + username : null;
+      },
       getUserProfile: function (username) {
         return route('/user/' + username + '/profile');
       },

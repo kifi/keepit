@@ -155,13 +155,13 @@ angular.module('kifi')
 
           if (scope.library.owner) {
             scope.library.owner.picUrl = friendService.getPictureUrlForUser(scope.library.owner);
-            scope.library.owner.profileUrl = userService.getProfileUrl(scope.library.owner.username);
+            scope.library.owner.profileUrl = routeService.getProfileUrl(scope.library.owner.username);
           }
 
           scope.library.followers = scope.library.followers || [];
           scope.library.followers.forEach(function (follower) {
             follower.picUrl = friendService.getPictureUrlForUser(follower);
-            follower.profileUrl = userService.getProfileUrl(follower.username);
+            follower.profileUrl = routeService.getProfileUrl(follower.username);
           });
 
           var maxLength = 150;

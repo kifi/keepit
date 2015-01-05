@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .factory('searchActionService', [
   '$analytics', '$http', '$location', '$log', '$q',
-  'routeService', 'profileService', 'friendService', 'libraryService', 'userService',
+  'routeService', 'profileService', 'friendService', 'libraryService',
   function ($analytics, $http, $location, $log, $q,
-    routeService, profileService, friendService, libraryService, userService) {
+    routeService, profileService, friendService, libraryService) {
     //
     // Internal helper methods.
     //
@@ -50,7 +50,7 @@ angular.module('kifi')
         if (idxUser !== -1) {
           user = users[idxUser];
           lib.keeperPic = friendService.getPictureUrlForUser(user);
-          lib.keeperProfileUrl = userService.getProfileUrl(user.username);
+          lib.keeperProfileUrl = routeService.getProfileUrl(user.username);
           lib.keeperName = user.firstName + ' ' + user.lastName;
           lib.owner = user;
           decompressedLibraries.push(lib);
@@ -58,7 +58,7 @@ angular.module('kifi')
         } else if (userLoggedIn) {
           user = profileService.me;
           lib.keeperPic = friendService.getPictureUrlForUser(user);
-          lib.keeperProfileUrl = userService.getProfileUrl(user.username);
+          lib.keeperProfileUrl = routeService.getProfileUrl(user.username);
           lib.keeperName = user.firstName + ' ' + user.lastName;
           lib.owner = user;
 
