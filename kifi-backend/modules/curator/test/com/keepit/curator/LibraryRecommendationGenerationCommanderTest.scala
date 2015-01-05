@@ -50,14 +50,18 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
       val libRecoRepo = inject[LibraryRecommendationRepo]
       val libInfoRepo = inject[CuratorLibraryInfoRepo]
 
-      val (lib1, lib2, lib3, lib4, lib5) = db.readWrite { implicit s =>
+      val (lib1, lib2, lib3, lib4) = db.readWrite { implicit s =>
         val lib1 = saveLibraryInfo(100, 600)
         val lib2 = saveLibraryInfo(101, 601)
         val lib3 = saveLibraryInfo(102, 602)
         val lib4 = saveLibraryInfo(103, 603, keepCount = 2)
-        val lib5 = saveLibraryInfo(104, 604)
 
-        (lib1, lib2, lib3, lib4, lib5)
+        (lib1, lib2, lib3, lib4)
+      }
+      inject[CuratorLibraryInfoSequenceNumberAssigner].assignSequenceNumbers()
+      val lib5 = db.readWrite { implicit s =>
+        val lib5 = saveLibraryInfo(104, 604)
+        lib5
       }
       inject[CuratorLibraryInfoSequenceNumberAssigner].assignSequenceNumbers()
 

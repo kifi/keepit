@@ -51,7 +51,7 @@ class UriRecommendationRepoImpl @Inject() (
 
   private object QueryBuilder {
     def recommendable(rows: RepoQuery) =
-      for (row <- active(rows) if row.kept === false && row.trashed === false) yield row
+      for (row <- active(rows) if row.kept === false && row.trashed === false && row.delivered < 10) yield row
 
     def byUri(uriId: Id[NormalizedURI])(rows: RepoQuery): RepoQuery =
       for (row <- rows if row.uriId === uriId) yield row
