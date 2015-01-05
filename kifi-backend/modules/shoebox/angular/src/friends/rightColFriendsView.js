@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfCompactFriendsView', ['friendService', 'userService',
-  function (friendService, userService) {
+.directive('kfCompactFriendsView', ['friendService', 'routeService', 'userService',
+  function (friendService, routeService, userService) {
     return {
       replace: true,
       restrict: 'A',
@@ -31,7 +31,7 @@ angular.module('kifi')
 
             friendsToDisplay.forEach(function (friend) {
               friend.pictureUrl = friendService.getPictureUrlForUser(friend);
-              friend.profileUrl = userService.getProfileUrl(friend.username);
+              friend.profileUrl = routeService.getProfileUrl(friend.username);
             });
 
             scope.friends = friendsToDisplay;
@@ -56,8 +56,8 @@ angular.module('kifi')
 ])
 
 .directive('kfPeopleYouMayKnowView',
-  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'modalService', 'userService', 'wtiService',
-  function ($log, $q, $rootScope, $timeout, friendService, inviteService, modalService, userService, wtiService) {
+  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'modalService', 'routeService', 'userService', 'wtiService',
+  function ($log, $q, $rootScope, $timeout, friendService, inviteService, modalService, routeService, userService, wtiService) {
   return {
     replace: true,
     restrict: 'A',
@@ -75,7 +75,7 @@ angular.module('kifi')
               id: person.id,
               fullName: name,
               pictureUrl: friendService.getPictureUrlForUser(person),
-              profileUrl: userService.getProfileUrl(person.username),
+              profileUrl: routeService.getProfileUrl(person.username),
               actionText: 'Add',
               clickable: true,
               isKifiUser: true,

@@ -81,8 +81,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepWhoPic', ['userService',
-  function (userService) {
+.directive('kfKeepWhoPic', ['routeService', 'userService',
+  function (routeService, userService) {
     return {
       restrict: 'A',
       replace: true,
@@ -92,7 +92,7 @@ angular.module('kifi')
       },
       link: function (scope) {
         scope.inUserProfileBeta = userService.inUserProfileBeta();
-        scope.keeper.profileUrl = userService.getProfileUrl(scope.keeper.username);
+        scope.keeper.profileUrl = routeService.getProfileUrl(scope.keeper.username);
       }
     };
   }

@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.factory('recoDecoratorService', ['keepDecoratorService', 'util', 'friendService', 'userService',
-  function (keepDecoratorService, util, friendService, userService) {
+.factory('recoDecoratorService', ['keepDecoratorService', 'util', 'friendService', 'routeService',
+  function (keepDecoratorService, util, friendService, routeService) {
 
     function Recommendation(rawReco, type) {
       this.recoData = {
@@ -24,7 +24,7 @@ angular.module('kifi')
         var libUsers = {};
         rawReco.itemInfo.libraries.forEach( function (lib) {
           lib.keeperPic = friendService.getPictureUrlForUser(lib.owner);
-          lib.keeperProfileUrl = userService.getProfileUrl(lib.owner.username);
+          lib.keeperProfileUrl = routeService.getProfileUrl(lib.owner.username);
           lib.keeperName = lib.owner.firstName + ' ' + lib.owner.lastName;
           libUsers[lib.owner.id] = true;
         });

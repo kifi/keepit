@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfManageLibrary', [
   '$location', '$window', '$rootScope', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'userService', 'util',
+  'profileService', 'routeService', 'userService', 'util',
   function ($location, $window, $rootScope, friendService, libraryService, modalService,
-    profileService, userService, util) {
+    profileService, routeService, userService, util) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -173,7 +173,7 @@ angular.module('kifi')
                 scope.offset += 1;
                 members.forEach(function (member) {
                   member.picUrl = friendService.getPictureUrlForUser(member);
-                  member.profileUrl = userService.getProfileUrl(member.username);
+                  member.profileUrl = routeService.getProfileUrl(member.username);
                   member.status = setMemberStatus(member);
                 });
                 scope.memberList.push.apply(scope.memberList, members);
