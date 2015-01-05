@@ -341,20 +341,20 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.countLibrariesToSelf(user4.id.get) === 1
           libraryMembershipRepo.countLibrariesToSelf(user5.id.get) === 3
 
-          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user1.id.get, countFollowLibraries = true) === 2
-          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user1.id.get, countFollowLibraries = false) === 1
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymous(user1.id.get, countFollowLibraries = true) === 2
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymous(user1.id.get, countFollowLibraries = false) === 1
 
-          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user2.id.get, countFollowLibraries = true) === 0
-          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user2.id.get, countFollowLibraries = false) === 0
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymous(user2.id.get, countFollowLibraries = true) === 0
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymous(user2.id.get, countFollowLibraries = false) === 0
 
-          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user3.id.get, countFollowLibraries = true) === 1
-          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user3.id.get, countFollowLibraries = false) === 1
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymous(user3.id.get, countFollowLibraries = true) === 1
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymous(user3.id.get, countFollowLibraries = false) === 1
 
-          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user4.id.get, countFollowLibraries = true) === 1
-          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user4.id.get, countFollowLibraries = false) === 0
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymous(user4.id.get, countFollowLibraries = true) === 1
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymous(user4.id.get, countFollowLibraries = false) === 0
 
-          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user5.id.get, countFollowLibraries = true) === 3
-          libraryMembershipRepo.countLibrariesOfUserFromAnonymos(user5.id.get, countFollowLibraries = false) === 2
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymous(user5.id.get, countFollowLibraries = true) === 3
+          libraryMembershipRepo.countLibrariesOfUserFromAnonymous(user5.id.get, countFollowLibraries = false) === 2
 
           libraryMembershipRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get, countFollowLibraries = true) === 2
           libraryMembershipRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get, countFollowLibraries = false) === 1

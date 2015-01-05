@@ -1254,7 +1254,7 @@ class LibraryCommander @Inject() (
   private def countLibrariesForAnonymous(userId: Id[User]): Int = {
     db.readOnlyReplica { implicit s =>
       val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
-      libraryMembershipRepo.countLibrariesOfUserFromAnonymos(userId, countFollowLibraries = showFollowLibraries)
+      libraryMembershipRepo.countLibrariesOfUserFromAnonymous(userId, countFollowLibraries = showFollowLibraries)
     }
   }
 
@@ -1295,7 +1295,7 @@ class LibraryCommander @Inject() (
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
-          libraryRepo.getLibrariesOfUserFromAnonymos(owner.id.get, page)
+          libraryRepo.getLibrariesOfUserFromAnonymous(owner.id.get, page)
         case Some(other) =>
           getLibrariesBatch(libraryMembershipRepo.getOwnedLibrariesForOtherUser(owner.id.get, other.id.get, page))
       }
@@ -1310,7 +1310,7 @@ class LibraryCommander @Inject() (
         case None =>
           val showFollowLibraries = getUserValueSetting(owner.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
           if (showFollowLibraries) {
-            getLibrariesBatch(libraryMembershipRepo.getFollowingLibrariesFromAnonymos(owner.id.get, page))
+            getLibrariesBatch(libraryMembershipRepo.getFollowingLibrariesFromAnonymous(owner.id.get, page))
           } else Seq.empty
         case Some(other) if other.id == owner.id =>
           getLibrariesBatch(libraryMembershipRepo.getFollowingLibrariesOfSelf(owner.id.get, page))
