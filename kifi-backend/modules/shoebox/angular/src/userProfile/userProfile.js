@@ -109,6 +109,14 @@ angular.module('kifi')
       $connectEl.removeAttr('href');
     }
 
+    function displayTimeUnit(num, unit) {
+      if (num === 1) {
+        return num + ' ' + unit + ' ago'; // singular
+      } else {
+        return num + ' ' + unit + 's ago'; // plural
+      }
+    }
+
 
     //
     // Scope methods.
@@ -162,21 +170,13 @@ angular.module('kifi')
           msg += 'just now';
         } else if (timeDiffSeconds < 3600) { // few minutes ago
           var numMinutes = Math.floor(timeDiffSeconds / 60);
-          if (numMinutes === 1) {
-            msg += numMinutes + ' minute ago';
-          } else {
-            msg += numMinutes + ' minutes ago';
-          }
+          msg += displayTimeUnit(numMinutes, 'minute');
         } else if (timeDiffSeconds < 3600 * 24) { // few hours ago
           var numHours = Math.floor(timeDiffSeconds / 3600);
-          if (numHours === 1) {
-            msg += numHours + ' hour ago';
-          } else {
-            msg += numHours + ' hours ago';
-          }
+          msg += displayTimeUnit(numHours, 'hour');
         } else { // some time ago
           var numDays = Math.floor(timeDiffSeconds / 3600 / 24);
-          msg += numDays + ' days ago';
+          msg += displayTimeUnit(numDays, 'day');
         }
         return msg;
       }
