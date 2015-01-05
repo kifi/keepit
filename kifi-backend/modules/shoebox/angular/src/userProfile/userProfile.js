@@ -64,10 +64,15 @@ angular.module('kifi')
       var username = $stateParams.username;
 
       userProfileActionService.getProfile(username).then(function (profile) {
+        setTitle(profile);
         initProfile(profile);
         initViewingUserStatus();
         initUserNavLinks();
       });
+    }
+
+    function setTitle(profile) {
+      $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi' ;
     }
 
     function initProfile(profile) {
