@@ -1200,6 +1200,7 @@ class LibraryCommander @Inject() (
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
               followers = Seq.empty,
+              lastKept = info.lastKept,
               caption = extraInfo.caption)
             card -> idx
         } sortBy (_._2) map (_._1)
@@ -1285,6 +1286,7 @@ class LibraryCommander @Inject() (
           numKeeps = info.numKeeps,
           numFollowers = info.numFollowers,
           followers = info.followers,
+          lastKept = lib.lastKept,
           listed = memberships(lib.id.get).listed)
     }
   }
@@ -1373,6 +1375,7 @@ class LibraryCommander @Inject() (
       numKeeps = numKeeps,
       numFollowers = numFollowers,
       followers = LibraryCardInfo.showable(followers, isAuthenticatedRequest),
+      lastKept = lib.lastKept,
       caption = None)
   }
 

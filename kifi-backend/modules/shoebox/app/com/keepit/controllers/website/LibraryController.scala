@@ -546,6 +546,7 @@ class LibraryController @Inject() (
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
               followers = LibraryCardInfo.showable(info.followers, isUserAction),
+              lastKept = info.lastKept,
               caption = None)
           }
           val t2 = System.currentTimeMillis()

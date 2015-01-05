@@ -105,7 +105,8 @@ private[model] abstract class BaseLibraryCardInfo(
   slug: LibrarySlug,
   numKeeps: Int,
   numFollowers: Int,
-  followers: Seq[BasicUser])
+  followers: Seq[BasicUser],
+  lastKept: Option[DateTime])
 
 @json
 case class OwnLibraryCardInfo(
@@ -120,8 +121,9 @@ case class OwnLibraryCardInfo(
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],
+  lastKept: Option[DateTime],
   listed: Boolean)
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers)
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept)
 
 @json
 case class LibraryCardInfo(
@@ -135,8 +137,9 @@ case class LibraryCardInfo(
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],
+  lastKept: Option[DateTime],
   caption: Option[String])
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers)
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept)
 
 object LibraryCardInfo {
   val writesWithoutOwner = Writes[LibraryCardInfo] { o => // for case when receiving end already knows the owner
