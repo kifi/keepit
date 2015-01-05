@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.model.URL
 import org.joda.time.DateTime
 import com.keepit.common.time.ISO_8601_DAY_FORMAT
 
@@ -44,7 +45,7 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
 }
 
 case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
-    createdAt: DateTime, updatedAt: DateTime, unsafeFirstName: String, unsafeLastName: String, noIndex: Boolean) extends PublicPageMetaTags {
+    createdAt: DateTime, updatedAt: DateTime, unsafeFirstName: String, unsafeLastName: String, noIndex: Boolean, related: Seq[String]) extends PublicPageMetaTags {
 
   def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
 
@@ -55,6 +56,12 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   val fullName = s"$firstName $lastName"
 
   def formatOpenGraph: String = {
+
+    def ogSeeAlso = related.take(6) map { link =>
+      s"""
+         |<meta property="og:see_also" content="$link">
+       """.stripMargin
+    }
 
     def ogImageTags = images map { image =>
       s"""
@@ -99,6 +106,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |<meta property="al:android:class" content="com.kifi.SplashActivity">
       |$ogImageTags
       |$facebookIdTag
+      |$ogSeeAlso
       |<meta property="og:url" content="$url">
       |<meta property="og:site_name" content="Kifi - Connecting People With Knowledge">
       |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}">

@@ -1,7 +1,7 @@
 package com.keepit.common.seo
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ LibraryCommander, PublicPageMetaFullTags }
+import com.keepit.commanders.{ PageMetaTagsCommander, LibraryCommander, PublicPageMetaFullTags }
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -25,7 +25,7 @@ class FeedCommander @Inject() (
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    libraryCommander: LibraryCommander) extends Logging {
+    libraryCommander: PageMetaTagsCommander) extends Logging {
 
   def wrap(elem: Elem): Enumerator[Array[Byte]] = {
     val elems = Enumerator.enumerate(elem)
