@@ -21,7 +21,7 @@
       <div class="kf-upl-card-byline"><span class="kf-upl-card-by">by</span> {{lib.owner.firstName}} {{lib.owner.lastName}}</div>
     </a>
     <div itemscope itemtype="http://data-vocabulary.org/Person">
-      <a href="/{{lib.owner.username}}" itemprop="url">
+      <a href="{{getUserProfileUrl(lib.owner)}}" itemprop="url">
         <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" itemprop="photo">
       </a>
       <meta itemprop="name" content="{{lib.owner.firstName}} {{lib.owner.lastName}}" />
