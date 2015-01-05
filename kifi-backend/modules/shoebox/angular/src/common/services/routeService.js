@@ -123,6 +123,9 @@ angular.module('kifi')
       recoFeedback: function (urlId) {
         return route('/recos/feedback?id=' + urlId);
       },
+      libraryRecos: function () {
+        return route('/libraries/recos/top');
+      },
       basicUserInfo: function (id, friendCount) {
         friendCount = friendCount ? 1 : 0;
         return route('/user/' + id + '?friendCount=' + friendCount);
