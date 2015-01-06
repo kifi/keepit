@@ -25,6 +25,10 @@ case class ContextBoolean(value: Boolean) extends SimpleContextData
 case class ContextDate(value: DateTime) extends SimpleContextData
 case class ContextList(values: Seq[SimpleContextData]) extends ContextData
 
+object ContextList {
+  implicit def toContextList[E](values: Seq[E])(implicit toCtx: E => SimpleContextData): ContextList = ContextList(values map toCtx)
+}
+
 object SimpleContextData {
   implicit val format = new Format[SimpleContextData] {
     def reads(json: JsValue): JsResult[SimpleContextData] = json match {
@@ -42,10 +46,10 @@ object SimpleContextData {
     }
   }
 
-  implicit def toContextStringData(value: String) = ContextStringData(value)
-  implicit def toContextDoubleData[T](value: T)(implicit toDouble: T => Double) = ContextDoubleData(value)
-  implicit def toContextBoolean(value: Boolean) = ContextBoolean(value)
-  implicit def toContextDate(value: DateTime) = ContextDate(value)
+  implicit def toContextStringData(value: String): SimpleContextData = ContextStringData(value)
+  implicit def toContextDoubleData[T](value: T)(implicit toDouble: T => Double): SimpleContextData = ContextDoubleData(value)
+  implicit def toContextBoolean(value: Boolean): SimpleContextData = ContextBoolean(value)
+  implicit def toContextDate(value: DateTime): SimpleContextData = ContextDate(value)
 
   implicit def fromContextStringData(simpleContextData: SimpleContextData): Option[String] = Some(simpleContextData) collect { case ContextStringData(value) => value }
   implicit def fromContextDoubleData(simpleContextData: SimpleContextData): Option[Double] = Some(simpleContextData) collect { case ContextDoubleData(value) => value }
@@ -57,7 +61,7 @@ object ContextData {
 
   implicit val format = new Format[ContextData] {
     def reads(json: JsValue): JsResult[ContextData] = json match {
-      case list: JsArray => Json.fromJson[Seq[SimpleContextData]](list) map ContextList
+      case list: JsArray => Json.fromJson[Seq[SimpleContextData]](list) map ContextList.apply
       case _ => Json.fromJson[SimpleContextData](json)
     }
 

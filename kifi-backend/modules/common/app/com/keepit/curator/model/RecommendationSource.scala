@@ -11,6 +11,7 @@ object RecommendationSource {
   object Extension extends RecommendationSource("extension")
   object Email extends RecommendationSource("email")
   object Unknown extends RecommendationSource("unknown")
+  object Admin extends RecommendationSource("admin")
 }
 
 @json case class RecommendationSubSource(value: String)
