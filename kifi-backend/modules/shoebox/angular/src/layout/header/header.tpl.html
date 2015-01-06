@@ -32,14 +32,23 @@
         </div>
       </div>
       <a href="/tags/manage" class="kf-header-manage-tags sprite svg-tag-black" ng-class="{'svg-tag-hover': hover, 'kf-callout-tags-button': showCallout()}" ng-mouseenter="hover = true" ng-mouseleave="hover = false">Manage your tags</a>
-      <div class="kf-header-icon-hover-container">
+      <div class="kf-header-icon-hover-container kf-header-friends">
         <a href="/friends" class="kf-header-icon-friends sprite sprite-friends">Friends</a>
         <menu class="kf-dropdown-menu">
-          <a class="kf-dropdown-menu-item" ng-class="{'active': isActive('/friends')}" href="javascript:" ng-click="navigateToFriends()">Your Kifi Friends</a>
-          <a class="kf-dropdown-menu-item" ng-class="{'active': isActive('/invite')}" href="javascript:" ng-click="navigateToInvite()">Invite a friend to Kifi</a>
+          <a class="kf-dropdown-menu-item" href="/friends">Your Kifi Friends</a>
+          <a class="kf-dropdown-menu-item" href="/invite">Invite a friend to Kifi</a>
         </menu>
       </div>
-      <a href="/profile"><div class="kf-header-profile-picture" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></div></a>
+      <div class="kf-header-icon-hover-container kf-header-profile">
+        <a href="{{inUserProfileBeta ? userProfileUrl : '/profile'}}">
+          <div class="kf-header-profile-picture" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></div>
+        </a>
+        <menu class="kf-dropdown-menu">
+          <a ng-if="inUserProfileBeta" class="kf-dropdown-menu-item" href="{{userProfileUrl}}">Your Profile</a>
+          <a class="kf-dropdown-menu-item" href="/profile">Settings</a>
+          <a class="kf-dropdown-menu-item" href="javascript:" ng-click="logout()">Log out</a>
+        </menu>
+      </div>
 
     </div>
   </div>
