@@ -15,10 +15,11 @@ import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[UserConnectionRepoImpl])
 trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[UserConnection] {
+  def areConnected(u1: Id[User], u2: Id[User])(implicit session: RSession): Boolean
+  def getConnectionOpt(u1: Id[User], u2: Id[User])(implicit session: RSession): Option[UserConnection]
   def getConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
   def getConnectedUsersForUsers(ids: Set[Id[User]])(implicit session: RSession): Map[Id[User], Set[Id[User]]]
   def getUnfriendedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
-  def getConnectionOpt(u1: Id[User], u2: Id[User])(implicit session: RSession): Option[UserConnection]
   def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession)
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int
   def getConnectionCount(userId: Id[User])(implicit session: RSession): Int
@@ -106,6 +107,9 @@ class UserConnectionRepoImpl @Inject() (
 
   def table(tag: Tag) = new UserConnectionTable(tag)
   initTable()
+
+  def areConnected(u1: Id[User], u2: Id[User])(implicit session: RSession): Boolean =
+    (for (c <- rows if c.user1 === u1 && c.user2 === u2 || c.user2 === u1 && c.user1 === u2) yield c.state === UserConnectionStates.ACTIVE).firstOption.getOrElse(false)
 
   def getConnectionOpt(u1: Id[User], u2: Id[User])(implicit session: RSession): Option[UserConnection] =
     (for (c <- rows if c.user1 === u1 && c.user2 === u2 || c.user2 === u1 && c.user1 === u2) yield c).firstOption
