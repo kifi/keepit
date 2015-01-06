@@ -27,6 +27,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
     genStateRepo: LibraryRecommendationGenerationStateRepo,
     libMembershipRepo: CuratorLibraryMembershipInfoRepo,
     experimentCommander: RemoteUserExperimentCommander,
+    analytics: CuratorAnalytics,
     serviceDiscovery: ServiceDiscovery) extends Logging {
 
   val recommendationGenerationLock = new ReactiveLock(8)
@@ -36,8 +37,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
     experimentCommander.getUsersByExperiment(ExperimentType.CURATOR_LIBRARY_RECOS).
       map(users => users.map(_.id.get).toSeq)
 
-  def getTopRecommendations(userId: Id[User], howManyMax: Int, recoSortStrategy: LibraryRecoSelectionStrategy, scoringStrategy: LibraryRecoScoringStrategy): Seq[LibraryRecoInfo] = {
-
+  def getTopRecommendations(userId: Id[User], howManyMax: Int, source: RecommendationSource, subSource: RecommendationSubSource,
+    recoSortStrategy: LibraryRecoSelectionStrategy, scoringStrategy: LibraryRecoScoringStrategy): Seq[LibraryRecoInfo] = {
     def scoreReco(reco: LibraryRecommendation) =
       LibraryRecoScore(scoringStrategy.scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, None, false, 0f), reco)
 
@@ -51,6 +52,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
         recos.map { recoScore =>
           libraryRecRepo.incrementDeliveredCount(recoScore.reco.id.get)
         }
+        analytics.trackDeliveredItems(recos.map(_.reco), Some(source), Some(subSource))
+
       }
     }
 

@@ -229,9 +229,9 @@ class RecommendationsCommander @Inject() (
     createFullLibraryInfos(userId, curatedLibraries)
   }
 
-  def topPublicLibraryRecos(userId: Id[User], limit: Int): Future[Seq[FullLibRecoInfo]] = {
+  def topPublicLibraryRecos(userId: Id[User], limit: Int, source: RecommendationSource, subSource: RecommendationSubSource): Future[Seq[FullLibRecoInfo]] = {
     // get extra recos from curator incase we filter out some below
-    curator.topLibraryRecos(userId, Some(limit * 4)) flatMap { libInfos =>
+    curator.topLibraryRecos(userId, Some(limit * 4), source, subSource) flatMap { libInfos =>
       val libIds = libInfos.map(_.libraryId).toSet
       val libraries = db.readOnlyReplica { implicit s =>
         libRepo.getLibraries(libIds).toSeq.filter(_._2.visibility == LibraryVisibility.PUBLISHED)

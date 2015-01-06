@@ -10,7 +10,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.model.LibraryRecoInfo
+import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource, LibraryRecoInfo }
 import com.keepit.curator.{ FakeCuratorServiceClientModule, FakeCuratorServiceClientImpl, CuratorServiceClient }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
@@ -69,7 +69,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
             LibraryRecoInfo(user1.id.get, lib1.id.get, 8, "")
           )
 
-          val recosF = commander.topPublicLibraryRecos(user1.id.get, 5)
+          val recosF = commander.topPublicLibraryRecos(user1.id.get, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed)
           val recos = Await.result(recosF, Duration(5, "seconds"))
           recos.size === 2
           recos(0).itemInfo.name === "Java"

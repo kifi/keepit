@@ -4,8 +4,8 @@ import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.RecommendationUserAction
-import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource, UriRecommendationRepo, UriRecommendation }
-import com.keepit.heimdal.{ UserEventTypes, HeimdalContextBuilderFactory, UserEvent, HeimdalServiceClient }
+import com.keepit.curator.model.{ LibraryRecommendationRepo, LibraryRecommendation, RecommendationSubSource, RecommendationSource, UriRecommendationRepo, UriRecommendation }
+import com.keepit.heimdal.{ ContextList, SimpleContextData, HeimdalContext, ContextData, UserEventTypes, HeimdalContextBuilderFactory, UserEvent, HeimdalServiceClient }
 import com.keepit.model.{ LibraryRecommendationFeedback, Library, NormalizedURI, User, UriRecommendationFeedback, ExperimentType }
 import com.keepit.common.logging.Logging
 import com.keepit.commanders.RemoteUserExperimentCommander
@@ -19,18 +19,18 @@ import scala.concurrent.Future
 class CuratorAnalytics @Inject() (
     db: Database,
     uriRecoRepo: UriRecommendationRepo,
+    libraryRecoRepo: LibraryRecommendationRepo,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     heimdal: HeimdalServiceClient,
     userExperimentCommander: RemoteUserExperimentCommander) extends Logging {
 
-  def trackDeliveredItems(items: Seq[UriRecommendation], sourceOpt: Option[RecommendationSource], subSourceOpt: Option[RecommendationSubSource] = None): Unit = {
+  def trackDeliveredItems[E](items: Seq[E], sourceOpt: Option[RecommendationSource], subSourceOpt: Option[RecommendationSubSource] = None)(
+    implicit f: E => (RecommendationSource, RecommendationSubSource) => RecommendationUserActionContext): Unit = {
     val source = sourceOpt.getOrElse(RecommendationSource.Unknown)
     val subSource = subSourceOpt.getOrElse(RecommendationSubSource.Unknown)
     items.foreach { item =>
-      val context = toRecoUserActionContext(item, source, subSource)
-      new SafeFuture(toHeimdalEvent(context).map { event =>
-        heimdal.trackEvent(event)
-      })
+      val context: RecommendationUserActionContext = f(item)(source, subSource)
+      new SafeFuture(toHeimdalEvent(context).map(heimdal.trackEvent))
     }
   }
 
@@ -47,11 +47,15 @@ class CuratorAnalytics @Inject() (
   }
 
   def trackUserFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Unit = {
-    // TODO(josh)
-  }
-
-  private def toRecoUserActionContext(item: UriRecommendation, source: RecommendationSource, subSource: RecommendationSubSource): RecommendationUserActionContext = {
-    RecommendationUserActionContext(item.userId, item.uriId, item.masterScore.toInt, source, subSource, RecommendationUserAction.Delivered, None)
+    log.info(s"[analytics] Received user $userId library reco feedback on $libraryId to track: $feedback")
+    val contexts = toRecoUserActionContexts(userId, libraryId, feedback)
+    contexts.foreach { context =>
+      new SafeFuture(toHeimdalEvent(context).map { event =>
+        log.info(s"[analytics] Sending event: $event")
+        heimdal.trackEvent(event)
+      })
+    }
+    if (contexts.isEmpty) log.info(s"[analytics] nothing to do for user $userId reco feedback on $libraryId to track: $feedback")
   }
 
   private def toRecoUserActionContexts(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Seq[RecommendationUserActionContext] = {
@@ -65,18 +69,49 @@ class CuratorAnalytics @Inject() (
 
       var contexts = List.empty[RecommendationUserActionContext]
 
-      feedback.clicked.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.Clicked, None, keepers) :: contexts }
+      feedback.clicked.filter { x => x }.foreach { _ => contexts = UriRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.Clicked, None, keepers) :: contexts }
       if (!modelOpt.get.kept) {
-        feedback.kept.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.Kept, None, keepers) :: contexts }
+        feedback.kept.filter { x => x }.foreach { _ => contexts = UriRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.Kept, None, keepers) :: contexts }
       }
 
       feedback.vote.foreach { isThumbUp =>
         val action = if (isThumbUp) RecommendationUserAction.MarkedGood else RecommendationUserAction.MarkedBad
-        contexts = RecommendationUserActionContext(userId, uriId, masterScore, source, subSource, action) :: contexts
+        contexts = UriRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, action) :: contexts
       }
 
-      feedback.trashed.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.Trashed) :: contexts }
-      feedback.comment.foreach { text => contexts = RecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.ImprovementSuggested, Some(text)) :: contexts }
+      feedback.trashed.filter { x => x }.foreach { _ => contexts = UriRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.Trashed) :: contexts }
+      feedback.comment.foreach { text => contexts = UriRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.ImprovementSuggested, Some(text)) :: contexts }
+
+      contexts
+    } else {
+      // purely a keep action (not caused by recommendation)
+      Seq()
+    }
+  }
+
+  private def toRecoUserActionContexts(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Seq[LibraryRecommendationUserActionContext] = {
+    val modelOpt = db.readOnlyReplica { implicit s => libraryRecoRepo.getByLibraryAndUserId(libraryId, userId, None) }
+
+    if (modelOpt.exists(_.delivered > 0)) {
+      val libReco = modelOpt.get
+      val masterScore = libReco.masterScore.toInt
+      val source = feedback.source.getOrElse(RecommendationSource.Unknown)
+      val subSource = feedback.subSource.getOrElse(RecommendationSubSource.Unknown)
+
+      var contexts = List.empty[LibraryRecommendationUserActionContext]
+
+      feedback.clicked.foreach { _ => contexts = LibraryRecommendationUserActionContext(userId, libraryId, masterScore, source, subSource, RecommendationUserAction.Clicked, None) :: contexts }
+      if (!libReco.followed) {
+        feedback.followed.foreach { _ => contexts = LibraryRecommendationUserActionContext(userId, libraryId, masterScore, source, subSource, RecommendationUserAction.Followed, None) :: contexts }
+      }
+
+      feedback.vote.foreach { isThumbUp =>
+        val action = if (isThumbUp) RecommendationUserAction.MarkedGood else RecommendationUserAction.MarkedBad
+        contexts = LibraryRecommendationUserActionContext(userId, libraryId, masterScore, source, subSource, action) :: contexts
+      }
+
+      feedback.trashed.filter { x => x }.foreach { _ => contexts = LibraryRecommendationUserActionContext(userId, libraryId, masterScore, source, subSource, RecommendationUserAction.Trashed) :: contexts }
+      feedback.comment.foreach { text => contexts = LibraryRecommendationUserActionContext(userId, libraryId, masterScore, source, subSource, RecommendationUserAction.ImprovementSuggested, Some(text)) :: contexts }
 
       contexts
     } else {
@@ -88,25 +123,66 @@ class CuratorAnalytics @Inject() (
   private def toHeimdalEvent(context: RecommendationUserActionContext): Future[UserEvent] = {
     userExperimentCommander.getExperimentsByUser(context.userId).map { experiments =>
       val contextBuilder = heimdalContextBuilder()
-      contextBuilder += ("userId", context.userId.id)
-      contextBuilder += ("uriId", context.uriId.id)
-      contextBuilder += ("master_score", context.truncatedMasterScore)
-      contextBuilder += ("source", context.source.value)
-      contextBuilder += ("subsource", context.subSource.value)
-      contextBuilder += ("action", context.userAction.value)
-
+      contextBuilder ++= context.contextData.toMap
       contextBuilder += ("experiments", experiments.map(_.value).toSeq)
       contextBuilder += ("userStatus", ExperimentType.getUserStatus(experiments))
-
-      context.suggestion.foreach { suggest => contextBuilder += ("user_suggestion", suggest) }
-      context.keepers.foreach { userIds => contextBuilder += ("keepers", userIds.map { _.id }) }
       UserEvent(context.userId, contextBuilder.build, UserEventTypes.RECOMMENDATION_USER_ACTION)
     }
   }
-
 }
 
-case class RecommendationUserActionContext(userId: Id[User], uriId: Id[NormalizedURI], truncatedMasterScore: Int, source: RecommendationSource,
-    subSource: RecommendationSubSource, userAction: RecommendationUserAction, suggestion: Option[String] = None, keepers: Option[Seq[Id[User]]] = None) {
-  require((userAction == RecommendationUserAction.ImprovementSuggested) == suggestion.isDefined, s"invalid arguments: userAction = $userAction, suggestion = ${suggestion}")
+object RecommendationUserActionContext {
+  implicit def toRecoUserActionContext(item: UriRecommendation)(source: RecommendationSource, subSource: RecommendationSubSource): RecommendationUserActionContext = {
+    UriRecommendationUserActionContext(item.userId, item.uriId, item.masterScore.toInt, source, subSource, RecommendationUserAction.Delivered, None)
+  }
+
+  implicit def toRecoUserActionContext(item: LibraryRecommendation)(source: RecommendationSource, subSource: RecommendationSubSource): RecommendationUserActionContext = {
+    LibraryRecommendationUserActionContext(item.userId, item.libraryId, item.masterScore.toInt, source, subSource, RecommendationUserAction.Delivered, None)
+  }
+}
+
+trait RecommendationUserActionContext {
+  def userId: Id[User]
+
+  def truncatedMasterScore: Int
+
+  def source: RecommendationSource
+
+  def subSource: RecommendationSubSource
+
+  def userAction: RecommendationUserAction
+
+  def suggestion: Option[String]
+
+  require((userAction == RecommendationUserAction.ImprovementSuggested) == suggestion.isDefined,
+    s"invalid arguments: userAction = $userAction, suggestion = $suggestion}")
+
+  def contextData: Seq[(String, ContextData)] = {
+    val baseData = Seq[(String, SimpleContextData)](
+      ("userId", userId.id),
+      ("master_score", truncatedMasterScore),
+      ("source", source.value),
+      ("subsource", subSource.value),
+      ("action", userAction.value)
+    )
+    suggestion.map { suggest => baseData :+ ("user_suggestion", suggest: SimpleContextData) } getOrElse baseData
+  }
+}
+
+case class UriRecommendationUserActionContext(userId: Id[User], uriId: Id[NormalizedURI], truncatedMasterScore: Int, source: RecommendationSource,
+    subSource: RecommendationSubSource, userAction: RecommendationUserAction, suggestion: Option[String] = None, keepers: Option[Seq[Id[User]]] = None) extends RecommendationUserActionContext {
+
+  override def contextData = {
+    val uriContextData: (String, SimpleContextData) = ("uriId", uriId.id)
+    val keepersContextData: (String, ContextList) = ("keepers", keepers.getOrElse(Seq.empty).map(_.id))
+    super.contextData :+ uriContextData :+ keepersContextData
+  }
+}
+
+case class LibraryRecommendationUserActionContext(userId: Id[User], libraryId: Id[Library], truncatedMasterScore: Int, source: RecommendationSource,
+    subSource: RecommendationSubSource, userAction: RecommendationUserAction, suggestion: Option[String] = None) extends RecommendationUserActionContext {
+  override def contextData = {
+    val libraryContextData: (String, SimpleContextData) = ("libraryId", libraryId.id)
+    super.contextData :+ libraryContextData
+  }
 }

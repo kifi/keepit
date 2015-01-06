@@ -5,6 +5,7 @@ import com.keepit.commanders.{ LocalUserExperimentCommander, RecommendationsComm
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
+import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource }
 import com.keepit.model.{ Library, LibraryRecommendationFeedback }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsValue, Json }
@@ -20,7 +21,7 @@ class LibraryRecommendationsController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
   def topLibRecos() = UserAction.async { request =>
-    commander.topPublicLibraryRecos(request.userId, limit = 5).map { recos =>
+    commander.topPublicLibraryRecos(request.userId, limit = 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed).map { recos =>
       Ok(Json.toJson(recos))
     }
   }

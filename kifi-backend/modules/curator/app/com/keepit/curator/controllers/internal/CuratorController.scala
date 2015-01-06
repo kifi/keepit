@@ -118,17 +118,18 @@ class CuratorController @Inject() (
     Ok
   }
 
-  def topLibraryRecos(userId: Id[User], limit: Int) = Action.async { request =>
+  def topLibraryRecos(userId: Id[User], limit: Int) = Action.async(parse.tolerantJson) { request =>
     log.info(s"topLibraryRecos called userId=$userId limit=$limit")
+    val source = (request.body \ "source").as[RecommendationSource]
+    val subSource = (request.body \ "subSource").as[RecommendationSubSource]
 
     userExperimentCommander.getExperimentsByUser(userId) map { experiments =>
-      val sortStrategy =
-        topScoreLibraryRecoStrategy
+      val sortStrategy = topScoreLibraryRecoStrategy
       val scoringStrategy =
         if (experiments.contains(ExperimentType.CURATOR_NONLINEAR_SCORING)) nonlinearLibraryRecoScoringStrategy
         else defaultLibraryRecoScoringStrategy
 
-      val libRecoInfos = libraryRecoGenCommander.getTopRecommendations(userId, limit, sortStrategy, scoringStrategy)
+      val libRecoInfos = libraryRecoGenCommander.getTopRecommendations(userId, limit, source, subSource, sortStrategy, scoringStrategy)
       log.info(s"topLibraryRecos returning userId=$userId resultCount=${libRecoInfos.size}")
       Ok(Json.toJson(libRecoInfos))
     }

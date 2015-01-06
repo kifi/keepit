@@ -27,7 +27,9 @@ class RecommendationsController @Inject() (
 
   def topRecos(more: Boolean, recencyWeight: Float) = UserAction.async { request =>
     val sendLibRecos = userExperimentCommander.getExperimentsByUser(request.userId).exists(ExperimentType.CURATOR_LIBRARY_RECOS ==)
-    val libRecosF = if (sendLibRecos) commander.topPublicLibraryRecos(request.userId, 5) else Future.successful(Seq.empty)
+    val libRecosF =
+      if (sendLibRecos) commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed)
+      else Future.successful(Seq.empty)
     val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, more, recencyWeight)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
