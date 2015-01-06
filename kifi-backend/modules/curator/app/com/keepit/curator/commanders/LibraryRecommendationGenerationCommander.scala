@@ -47,13 +47,10 @@ class LibraryRecommendationGenerationCommander @Inject() (
       recoSortStrategy.sort(recosByTopScore) take howManyMax
     }
 
-    SafeFuture {
+    if (source != RecommendationSource.Admin) SafeFuture {
       db.readWrite { implicit session =>
-        recos.map { recoScore =>
-          libraryRecRepo.incrementDeliveredCount(recoScore.reco.id.get)
-        }
+        recos.map { recoScore => libraryRecRepo.incrementDeliveredCount(recoScore.reco.id.get) }
         analytics.trackDeliveredItems(recos.map(_.reco), Some(source), Some(subSource))
-
       }
     }
 
