@@ -6,7 +6,22 @@ pushd "$(dirname $0)/.." > /dev/null
 
 if [[ ! -f FortyTwo.pem ]]; then
 
-  echo $'\nERROR: cannot find FortyTwo.pem'
+  echo $'\nERROR: need FortyTwo.pem in '$(pwd)' (ask Jared or Andrew)'
+  exit 1
+
+elif ! which -s xpisign; then
+
+  echo $'\nERROR: need to install xpisign'
+  which -s swig || echo '  brew install swig'
+  which -s pip || echo '  sudo easy_install pip'
+  echo '  sudo pip install https://github.com/nmaier/xpisign.py/zipball/master'
+  exit 1
+
+elif ! which -s aws; then
+
+  echo $'\nERROR: need to install awscli'
+  which -s pip || echo '  sudo easy_install pip'
+  echo '  sudo pip install awscli'
   exit 1
 
 elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
@@ -49,7 +64,7 @@ elif [[ -f out/kifi-dev.crx && -f out/kifi-dev.xml && -f out/kifi-dev.xpi && -f 
 
 else
 
-  echo $'\nERROR: cannot find files to deploy'
+  echo $'\nERROR: missing files to deploy in '$(pwd)'/out'
   exit 1
 
 fi
