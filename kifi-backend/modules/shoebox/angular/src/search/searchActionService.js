@@ -187,6 +187,7 @@ angular.module('kifi')
           pageSession: pageSession
         };
 
+        resData.query = query;
         return resData;
       });
     }

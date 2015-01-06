@@ -123,12 +123,11 @@ angular.module('kifi')
       }
 
       $scope.loading = true;
-      var searchedQuery = query;
-
       searchActionService.find(query, filter, library, lastResult && lastResult.context, $rootScope.userLoggedIn).then(function (result) {
-        if (searchedQuery !== query) { // query was updated
+        if (result.query !== query) { // query was updated
           return;
         }
+
         if (resetExistingResults) {
           $scope.resultKeeps.length = 0;
           $scope.resultTotals.myTotal = 0;
@@ -138,23 +137,38 @@ angular.module('kifi')
 
         var hits = result.hits;
 
-        hits.forEach(function (hit) {
-          var searchKeep = new keepDecoratorService.Keep(hit);
-          if (!!searchKeep.id) {
-            searchKeep.buildKeep(searchKeep);
+        // Break up this update-query-results function into segments so that the event loop has
+        // a chance to pick up more keystrokes from the search input.
+        $timeout(function () {
+          if (result.query !== query) { // query was updated
+            return;
           }
-          // TODO remove after we get rid of the deprecated code and update new code to use 'tags' instead of 'hashtags'
-          searchKeep.hashtags = searchKeep.tags;
-          $scope.resultKeeps.push(searchKeep);
+
+          hits.forEach(function (hit) {
+            var searchKeep = new keepDecoratorService.Keep(hit);
+            if (!!searchKeep.id) {
+              searchKeep.buildKeep(searchKeep);
+            }
+            // TODO remove after we get rid of the deprecated code and update new code to use 'tags' instead of 'hashtags'
+            searchKeep.hashtags = searchKeep.tags;
+            $scope.resultKeeps.push(searchKeep);
+          });
+
+          // Another segment to be executed on the next cycle for keystrokes to come through.
+          $timeout(function () {
+            if (result.query !== query) { // query was updated
+              return;
+            }
+
+            $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.myTotal;
+            $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.friendsTotal;
+            $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
+
+            $scope.hasMore = !!result.mayHaveMore;
+            lastResult = result;
+            $scope.loading = false;
+          });
         });
-
-        $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.myTotal;
-        $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.friendsTotal;
-        $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
-
-        $scope.hasMore = !!result.mayHaveMore;
-        lastResult = result;
-        $scope.loading = false;
       });
     };
 
@@ -221,16 +235,20 @@ angular.module('kifi')
     //
     // Watches and event listeners.
     //
-    var newSearch = _.debounce(function () {
-        // Use $state.params instead of $stateParams because changes to $stateParams
-        // does not propagate to HeaderCtrl when it is injected there.
-        // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
+
+    // Wait for a quiescent period of 250ms before firing off a new search.
+    var newSearchPromise = null;
+    var newSearch = function () {
+      if (newSearchPromise) {
+        $timeout.cancel(newSearchPromise);
+        newSearchPromise = null;
+      }
+
+      newSearchPromise = $timeout(function () {
         _.assign($state.params, $location.search());
         init();
-      },
-      250,
-      { 'leading': true }
-    );
+      }, 250);
+    };
     $scope.$on('$locationChangeSuccess', newSearch);
 
 
