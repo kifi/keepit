@@ -81,8 +81,8 @@ class TopUriSeedIngestionHelper @Inject() (
       }
     }
 
-    val betweenHours = Hours.hoursBetween(lastIngestionTime, currentDateTime).getHours
-    val randomShift = Random.nextInt(3) - 1
+    val randomShift = Random.nextInt(200) - 100
+    val betweenHours = Hours.hoursBetween(lastIngestionTime.plusSeconds(randomShift), currentDateTime).getHours
 
     if ((betweenHours + randomShift) > uriIngestionFreq || firstTimeIngesting || force) {
       graph.uriWander(userId, 50000).flatMap { uriScores =>
