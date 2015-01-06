@@ -4,7 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton, Provider }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ DbSequenceAssigner, Id, State }
+import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
@@ -12,8 +12,7 @@ import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import org.joda.time.DateTime
 import scala.concurrent.duration._
-import scala.slick.jdbc.StaticQuery
-import scala.slick.jdbc.StaticQuery.interpolation
+import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
@@ -64,6 +63,26 @@ class LibraryRepoImpl @Inject() (
 
   def table(tag: Tag) = new LibraryTable(tag)
   initTable()
+
+  private implicit val getLibraryResult: GetResult[com.keepit.model.Library] = GetResult { r: PositionedResult =>
+    Library.applyFromDbRow(
+      id = r.<<[Option[Id[Library]]],
+      createdAt = r.<<[DateTime],
+      updatedAt = r.<<[DateTime],
+      name = r.<<[String],
+      ownerId = r.<<[Id[User]],
+      visibility = r.<<[LibraryVisibility],
+      description = r.<<[Option[String]],
+      slug = LibrarySlug(r.<<[String]),
+      color = r.<<[Option[String]].map(HexColor(_)),
+      state = r.<<[State[Library]],
+      seq = r.<<[SequenceNumber[Library]],
+      kind = LibraryKind(r.<<[String]),
+      universalLink = r.<<[String],
+      memberCount = r.<<[Int],
+      lastKept = r.<<[Option[DateTime]]
+    )
+  }
 
   override def save(library: Library)(implicit session: RWSession): Library = {
     val toSave = library.copy(seq = deferredSeqNum())
@@ -171,13 +190,13 @@ class LibraryRepoImpl @Inject() (
   def getLibrariesOfUserFromAnonymous(ownerId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
     val q = (for {
       lib <- rows if lib.ownerId === ownerId && lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && lib.state === LibraryStates.ACTIVE
-      lm <- libraryMembershipRepo.get.rows if lm.libraryId === lib.id && lm.userId === ownerId && lm.listed
-    } yield lib).sortBy(_.id.desc).drop(page.itemsToDrop).take(page.size)
+      lm <- libraryMembershipRepo.get.rows if lm.libraryId === lib.id && lm.userId === ownerId && lm.listed && lm.state === LibraryMembershipStates.ACTIVE
+    } yield lib).sortBy(x => (x.memberCount.desc, x.lastKept.desc, x.id.desc)).drop(page.itemsToDrop).take(page.size)
     q.list
   }
 
   def getLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
-    (for (r <- rows if r.ownerId === userId && r.state === LibraryStates.ACTIVE) yield r).sortBy(_.id.desc).drop(page.itemsToDrop).take(page.size).list
+    (for (r <- rows if r.ownerId === userId && r.state === LibraryStates.ACTIVE) yield r).sortBy(x => (x.kind, x.memberCount.desc, x.lastKept.desc, x.id.desc)).drop(page.itemsToDrop).take(page.size).list
   }
 
   def getAllPublishedLibraries()(implicit session: RSession): Seq[Library] = {
