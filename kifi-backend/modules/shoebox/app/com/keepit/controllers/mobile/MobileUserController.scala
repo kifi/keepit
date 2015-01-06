@@ -4,6 +4,8 @@ import com.keepit.common.controller._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.store.S3ImageStore
 import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
 import com.keepit.commanders._
@@ -14,6 +16,7 @@ import play.api.libs.json.Json.toJson
 
 import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.mvc.{ MaxSizeExceeded, Request }
 import scala.concurrent.Future
 import securesocial.core.{ SecureSocial, Authenticator }
 import play.api.libs.json.JsSuccess
@@ -36,7 +39,9 @@ class MobileUserController @Inject() (
   userConnectionRepo: UserConnectionRepo,
   userValueRepo: UserValueRepo,
   libraryCommander: LibraryCommander,
-  db: Database)
+  db: Database,
+  airbrakeNotifier: AirbrakeNotifier,
+  s3ImageStore: S3ImageStore)
     extends UserActions with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
@@ -303,6 +308,24 @@ class MobileUserController @Inject() (
           "friendsWith" -> profile.isConnected,
           "numKeeps" -> profile.numKeeps
         ))
+    }
+  }
+
+  def uploadBinaryUserPicture() = UserAction(parse.maxLength(1024 * 1024 * 15, parse.temporaryFile)) { implicit request =>
+    request.body match {
+      case Right(tempFile) =>
+        s3ImageStore.uploadTemporaryPicture(tempFile.file) match {
+          case Success((token, _)) =>
+            s3ImageStore.copyTempFileToUserPic(request.userId, request.user.externalId, token, None) match {
+              case Some(picUrl) => Ok(Json.obj("url" -> picUrl))
+              case None => InternalServerError(Json.obj("error" -> "unable_to_resize"))
+            }
+          case Failure(ex) =>
+            airbrakeNotifier.notify("Couldn't upload temporary picture (xhr direct)", ex)
+            BadRequest(JsNumber(0))
+        }
+      case Left(err) =>
+        BadRequest(Json.obj("error" -> "file_too_large", "size" -> err.length))
     }
   }
 
