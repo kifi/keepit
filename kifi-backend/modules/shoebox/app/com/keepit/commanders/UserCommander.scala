@@ -70,7 +70,7 @@ object UpdatableUserInfo {
 
 case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String])
 
-case class UserProfile(user: User, viewer: Option[Id[User]], numKeeps: Int, isConnected: Option[Boolean])
+case class UserProfile(user: User, numKeeps: Int, isConnected: Option[Boolean])
 
 case class UserNotFoundException(username: Username) extends Exception(username.toString)
 
@@ -118,7 +118,7 @@ class UserCommander @Inject() (
           case me if me.id.get == user.id.get => None //if i see my own profile, is connected is not relevant
           case other => Some(userConnectionRepo.getConnectionOpt(user.id.get, other.id.get).isDefined)
         }
-        UserProfile(user = user, viewer = viewer.map(_.id.get), numKeeps = numKeeps, isConnected = isConnected)
+        UserProfile(user = user, numKeeps = numKeeps, isConnected = isConnected)
       }
     }
   }
