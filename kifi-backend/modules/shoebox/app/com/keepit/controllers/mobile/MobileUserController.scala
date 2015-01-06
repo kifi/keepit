@@ -283,31 +283,16 @@ class MobileUserController @Inject() (
     Ok
   }
 
-  /**
-   * ‘firstName’ - User’s first name
-   * lastName’ - User’s last name
-   * pictureName’  - Name of user’s picture file
-   * numLibraries’ - Number of user’s libraries
-   * numKeeps’ - Number of user’s keeps
-   * numFriends’ - Number of user’s friends
-   * numFollowers’ - Number of users following any of the user’s libraries
-   * helpedRekeep’ - Number of times the user’s keeps has been rekept by the user’s friends.
-   */
   def profile(username: String) = MaybeUserAction { request =>
     val viewer = request.userOpt
     userCommander.profile(Username(username), viewer) match {
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
         val numLibraries = libraryCommander.countLibraries(profile.user.id.get, viewer.map(_.id.get))
-        Ok(Json.obj(
-          "id" -> profile.user.externalId,
-          "firstName" -> profile.user.firstName,
-          "lastName" -> profile.user.lastName,
-          "pictureName" -> profile.user.pictureName.map(p => s"$p.jpg"),
+        Ok(Json.toJson(BasicUser.fromUser(profile.user)).asInstanceOf[JsObject] ++ Json.obj(
           "numLibraries" -> numLibraries,
-          "friendsWith" -> profile.isConnected,
           "numKeeps" -> profile.numKeeps
-        ))
+        ) ++ profile.isConnected.map(isF => Json.obj("isFriend" -> isF)).getOrElse(Json.obj()))
     }
   }
 
