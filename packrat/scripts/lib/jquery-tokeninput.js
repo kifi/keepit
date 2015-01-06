@@ -303,7 +303,6 @@
 
     // Keep a reference to the selected token and dropdown item
     var selectedToken = null;
-    var selectedTokenIndex = 0;
     var selectedDropdownItem = null;
 
     // The list to store the token items in
@@ -429,7 +428,6 @@
       $tokenList.children('.' + classes.token).remove();
       tokens.length = 0;
       selectedToken = null;
-      selectedTokenIndex = 0;
       updateHiddenInput();
       $tokenInput.val('').show();
       if (settings.placeholder) {
@@ -634,11 +632,7 @@
     function deleteToken(tokenEl, notify) {
       var $token = $(tokenEl);
       var item = $token.data('tokenInput');
-
       var index = $token.prevAll().length;
-      if (index > selectedTokenIndex) {
-        index--;
-      }
 
       // Delete the token
       $token.remove();
@@ -649,9 +643,6 @@
       if (tokens.length === 0 && settings.placeholder) {
         $tokenInput.attr('placeholder', settings.placeholder);
         resizeInput(true);  // grow the input to show as much of the placeholder as possible
-      }
-      if (index < selectedTokenIndex) {
-        selectedTokenIndex--;
       }
 
       updateHiddenInput();
