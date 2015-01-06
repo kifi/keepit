@@ -164,6 +164,10 @@ angular.module('kifi')
           return loc === path || util.startsWith(loc, path + '/');
         };
 
+        scope.redirectTo = function (path) {
+          $location.path(path);
+        };
+
         scope.toggleMyLibsFirst = function () {
           scope.sortingMenu.myLibsFirst = !scope.sortingMenu.myLibsFirst;
         };
