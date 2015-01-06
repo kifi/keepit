@@ -46,12 +46,6 @@ class RecommendationsController @Inject() (
     commander.updateUriRecommendationFeedback(request.userId, id, feedback).map(fkis => Ok(Json.toJson(fkis)))
   }
 
-  def updateLibraryRecommendationFeedback(pubId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
-    val id = Library.decodePublicId(pubId).get
-    val feedback = request.body.as[LibraryRecommendationFeedback]
-    commander.updateLibraryRecommendationFeedback(request.userId, id, feedback).map(fkis => Ok(Json.toJson(fkis)))
-  }
-
   def trash(id: ExternalId[NormalizedURI]) = UserAction.async { request =>
     commander.updateUriRecommendationFeedback(request.userId, id, UriRecommendationFeedback(trashed = Some(true))).map(fkis => Ok(Json.toJson(fkis)))
   }

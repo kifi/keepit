@@ -68,7 +68,8 @@ class LibraryRecommendationRepoImpl @Inject() (
     def delivered = column[Int]("delivered", O.NotNull)
     def clicked = column[Int]("clicked", O.NotNull)
     def trashed = column[Boolean]("trashed", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, libraryId, userId, masterScore, allScores, followed, delivered, clicked, trashed) <>
+    def vote = column[Option[Boolean]]("vote", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, libraryId, userId, masterScore, allScores, followed, delivered, clicked, trashed, vote) <>
       ((LibraryRecommendation.apply _).tupled, LibraryRecommendation.unapply)
   }
 
@@ -120,14 +121,17 @@ class LibraryRecommendationRepoImpl @Inject() (
       if (feedback.clicked.exists(true ==))
         sql"UPDATE library_recommendation SET clicked=clicked+1, updated_at=$currentDateTime WHERE user_id=$userId AND library_id=$libraryId".asUpdate.first > 0
       else true
-    val trashedResult =
-      if (feedback.trashed.exists(true ==)) rowz.map(row => (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0
-      else true
-    val followedResult =
-      if (feedback.followed.exists(true ==)) rowz.map(row => (row.followed, row.updatedAt)).update((feedback.followed.get, currentDateTime)) > 0
-      else true
+    val trashedResult = feedback.trashed.map { trashed =>
+      rowz.map(row => (row.trashed, row.updatedAt)).update((trashed, currentDateTime)) > 0
+    } getOrElse true
+    val followedResult = feedback.followed.map { followed =>
+      rowz.map(row => (row.followed, row.updatedAt)).update((followed, currentDateTime)) > 0
+    } getOrElse true
+    val voteResult = feedback.vote.map { vote =>
+      rowz.map(row => (row.vote, row.updatedAt)).update((Some(vote), currentDateTime)) > 0
+    } getOrElse true
 
-    clickedResult && trashedResult && followedResult
+    clickedResult && trashedResult && followedResult && voteResult
   }
 
   def incrementDeliveredCount(recoId: Id[LibraryRecommendation])(implicit session: RWSession): Unit = {

@@ -19,7 +19,9 @@ angular.module('kifi')
         recommendation: '=',
         loading: '=',
         toggleEdit: '=',
-        librarySearch: '='
+        librarySearch: '=',
+        followCallback: '&',
+        clickLibraryCallback: '&'
       },
       templateUrl: 'libraries/libraryCard.tpl.html',
       link: function (scope, element/*, attrs*/) {
@@ -776,6 +778,7 @@ angular.module('kifi')
         };
 
         scope.followLibrary = function () {
+          scope.followCallback();
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedFollowButton' });
 
           if (platformService.isSupportedMobilePlatform()) {
