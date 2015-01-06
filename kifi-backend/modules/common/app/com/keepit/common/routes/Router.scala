@@ -407,6 +407,7 @@ object Curator extends Service {
     def refreshUserRecos(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/refreshUserRecos", Param("userId", userId))
     def topLibraryRecos(userId: Id[User], limit: Option[Int]) = ServiceRoute(POST, "/internal/curator/topLibraryRecos", Param("userId", userId), Param("limit", limit))
     def refreshLibraryRecos(userId: Id[User], await: Boolean) = ServiceRoute(POST, "/internal/curator/refreshLibraryRecos", Param("userId", userId), Param("await", await))
+    def notifyLibraryRecosDelivered(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/notifyLibraryRecosDelivered", Param("userId", userId))
   }
 }
 

@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
@@ -231,7 +232,7 @@ class RecommendationsCommander @Inject() (
 
   def topPublicLibraryRecos(userId: Id[User], limit: Int, source: RecommendationSource, subSource: RecommendationSubSource): Future[Seq[FullLibRecoInfo]] = {
     // get extra recos from curator incase we filter out some below
-    curator.topLibraryRecos(userId, Some(limit * 4), source, subSource) flatMap { libInfos =>
+    curator.topLibraryRecos(userId, Some(limit * 4)) flatMap { libInfos =>
       val libIds = libInfos.map(_.libraryId).toSet
       val libraries = db.readOnlyReplica { implicit s =>
         libRepo.getLibraries(libIds).toSeq.filter(_._2.visibility == LibraryVisibility.PUBLISHED)
@@ -243,6 +244,13 @@ class RecommendationsCommander @Inject() (
       }.flatten
 
       val libToRecoInfoMap = libsAndRecoInfos.map { case (lib, info) => info.libraryId -> info }.toMap
+
+      // for analytics and delivery tracking
+      SafeFuture {
+        val deliveredIds = libraries.map(_._1).toSet
+        curator.notifyLibraryRecosDelivered(userId, deliveredIds, source, subSource)
+      }
+
       createFullLibraryInfos(userId, libraries map (_._2), id => Some(libToRecoInfoMap(id).explain))
     }
   }

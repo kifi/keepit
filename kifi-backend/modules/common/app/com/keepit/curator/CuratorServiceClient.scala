@@ -24,8 +24,9 @@ trait CuratorServiceClient extends ServiceClient {
   def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Future[Boolean]
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String]
   def refreshUserRecos(userId: Id[User]): Future[Unit]
-  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None, source: RecommendationSource, subSource: RecommendationSubSource): Future[Seq[LibraryRecoInfo]]
+  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[Seq[LibraryRecoInfo]]
   def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None): Future[Unit]
+  def notifyLibraryRecosDelivered(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource): Future[Unit]
 }
 
 class CuratorServiceClientImpl(
@@ -87,18 +88,21 @@ class CuratorServiceClientImpl(
     callLeader(Curator.internal.refreshUserRecos(userId), callTimeouts = longTimeout).map { x => }
   }
 
-  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None, source: RecommendationSource, subSource: RecommendationSubSource): Future[Seq[LibraryRecoInfo]] = {
-    val payload = Json.obj(
-      "source" -> source,
-      "subSource" -> subSource
-    )
-    call(Curator.internal.topLibraryRecos(userId, limit), body = payload).map { response =>
-      response.json.as[Seq[LibraryRecoInfo]]
-    }
+  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[Seq[LibraryRecoInfo]] = {
+    call(Curator.internal.topLibraryRecos(userId, limit)).map { response => response.json.as[Seq[LibraryRecoInfo]] }
   }
 
   def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None) = {
     val payload = Json.toJson(selectionParams)
     call(Curator.internal.refreshLibraryRecos(userId, await), body = payload).map { _ => Unit }
+  }
+
+  def notifyLibraryRecosDelivered(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource) = {
+    val payload = Json.obj(
+      "libraryIds" -> libraryIds,
+      "source" -> source,
+      "subSource" -> subSource
+    )
+    call(Curator.internal.notifyLibraryRecosDelivered(userId), body = payload).map { _ => Unit }
   }
 }
