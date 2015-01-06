@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', '$timeout', '$window',
+  '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$timeout', '$window',
   'env', 'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService', 'modalService', 'libraryService',
-  function ($scope, $rootScope, $state, $stateParams, $timeout, $window,
+  function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $timeout, $window,
             env, inviteService, keepWhoService, profileService, userProfileActionService, modalService, libraryService) {
     //
     // Configs.
@@ -68,6 +68,10 @@ angular.module('kifi')
         initProfile(profile);
         initViewingUserStatus();
         initUserNavLinks();
+
+        // This function should be called last because some of the attributes
+        // that we're tracking are initialized by the above functions.
+        trackPageView();
       });
     }
 
@@ -100,6 +104,36 @@ angular.module('kifi')
           routeState: config.routeState
         };
       });
+    }
+
+    function trackPageView() {
+      return;
+
+      /* TODO(yiping): Uncomment this after tracking review with product.
+      var url = $analytics.settings.pageTracking.basePath + $location.url();
+
+      var profilePageTrackAttributes = {
+        type: 'profile',
+        profileOwnerUserId: $scope.profile.id,
+        profileOwnedBy: $scope.viewingOwnProfile ? 'viewer' : ($scope.profile.friendsWith ? 'viewersFriend' : 'other'),
+        libraryCount: $scope.profile.numLibraries
+      };
+
+      $analytics.pageTrack(url, profilePageTrackAttributes);
+      */
+    }
+
+    function trackPageClick(/* attributes */) {
+      return;
+
+      /* TODO(yiping): Uncomment this after tracking review with product.
+      var profileEventTrackAttributes = _.extend(attributes || {}, {
+        type: 'profile',
+        profileOwnedBy: $scope.viewingOwnProfile ? 'viewer' : ($scope.profile.friendsWith ? 'viewersFriend' : 'other')
+      });
+
+      $analytics.eventTrack('user_clicked_page', profileEventTrackAttributes);
+      */
     }
 
     function enableConnectClick() {
@@ -155,6 +189,36 @@ angular.module('kifi')
         }
       });
     };
+
+    $scope.trackUplCardClick = function (lib) {
+      trackPageClick({
+        action: 'clickedLibrary',
+        libraryOwnerUserId: lib.owner.id,
+
+        // lib.owner.friendsWith needs backend support.
+        libraryOwnedBy: lib.owner.id === profileService.me.id ? 'viewer' : (lib.owner.friendsWith ? 'viewersFriend' : 'other')
+      });
+    };
+
+    $scope.trackProfileClick = function () {
+      trackPageClick({
+        action: 'clickedProfile'
+      });
+    };
+
+
+    //
+    // Watches and listeners.
+    //
+    var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
+      // When routing among the nested states, track page view again.
+      if ((/^userProfile/.test(toState.name)) && (/^userProfile/.test(fromState.name)) && (toParams.username === fromParams.username)) {
+        trackPageView();
+      }
+    });
+
+    $scope.$on('$destroy', deregister$stateChangeSuccess);
+
 
     // Initialize controller.
     init();
