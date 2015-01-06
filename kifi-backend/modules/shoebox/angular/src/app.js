@@ -143,10 +143,10 @@ angular.module('kifi', [
       // setting be false, or we will duplicate 2 page-track events
       if (!$analytics.settings.pageTracking.autoTrackVirtualPages) {
         $rootScope.$on('$stateChangeSuccess', function (event, toState) {
-          // we cannot track the current page yet because we have not loaded
-          // information about the library to be loaded; therefore, libraries need
-          // to be responsible for calling pageTrack for themselves
-          if (!util.startsWith(toState.name, 'library')) {
+          // We cannot track the library and profile pages yet because we have not loaded
+          // information about the library/profile; therefore, libraries and profiles are
+          // responsible for calling pageTrack themselves.
+          if (!util.startsWith(toState.name, 'library') && !util.startsWith(toState.name, 'userProfile')) {
             var url = $analytics.settings.pageTracking.basePath + $location.url();
             $analytics.pageTrack(url);
           }
