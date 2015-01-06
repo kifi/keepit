@@ -43,6 +43,14 @@ angular.module('kifi')
       });
     }, clutchParamsPopularRecos);
 
+    function recoFeedbackUrl(reco) {
+      if (reco.recoData.kind === 'library') {
+        return routeService.libraryRecoFeedback(reco.recoLib.id);
+      } else {
+        return routeService.recoFeedback(reco.recoKeep.urlId);
+      }
+    }
+
     var api = {
       get: function () {
         return rawRecos.length > 0 ?
@@ -60,21 +68,25 @@ angular.module('kifi')
           kifiPopularRecommendationService.get();
       },
 
-      trash: function (recoKeep) {
-        $http.post(routeService.recoFeedback(recoKeep.urlId), { trashed: true });
+      trash: function (reco) {
+        $http.post(recoFeedbackUrl(reco), { trashed: true });
       },
 
-      vote: function (recoKeep, vote) {
+      vote: function (reco, vote) {
         // vote === true -> upvote; vote === false -> downvote
-        $http.post(routeService.recoFeedback(recoKeep.urlId), { vote: vote });
+        $http.post(recoFeedbackUrl(reco), { vote: vote });
       },
 
       trackKeep: function (recoKeep) {
         $http.post(routeService.recoFeedback(recoKeep.urlId), { kept: true });
       },
 
-      trackClick: function (recoKeep) {
-        $http.post(routeService.recoFeedback(recoKeep.urlId), { clicked: true });
+      trackFollow: function (recoLib) {
+        $http.post(routeService.libraryRecoFeedback(recoLib.id), { followed: true });
+      },
+
+      trackClick: function (reco) {
+        $http.post(recoFeedbackUrl(reco), { clicked: true });
       },
 
       improve: function (recoKeep, improvement) {
