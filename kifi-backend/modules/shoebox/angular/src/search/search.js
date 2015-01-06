@@ -245,6 +245,9 @@ angular.module('kifi')
       }
 
       newSearchPromise = $timeout(function () {
+        // Use $state.params instead of $stateParams because changes to $stateParams
+        // does not propagate to HeaderCtrl when it is injected there.
+        // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
         _.assign($state.params, $location.search());
         init();
       }, 250);
