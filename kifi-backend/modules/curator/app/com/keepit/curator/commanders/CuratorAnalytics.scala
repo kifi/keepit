@@ -69,18 +69,18 @@ class CuratorAnalytics @Inject() (
 
       var contexts = List.empty[RecommendationUserActionContext]
 
-      feedback.clicked.filter { x => x }.foreach { _ => contexts = UriRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.Clicked, None, keepers) :: contexts }
+      feedback.clicked.filter { x => x }.foreach { _ => contexts = KeepRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.Clicked, None, keepers) :: contexts }
       if (!modelOpt.get.kept) {
-        feedback.kept.filter { x => x }.foreach { _ => contexts = UriRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.Kept, None, keepers) :: contexts }
+        feedback.kept.filter { x => x }.foreach { _ => contexts = KeepRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.Kept, None, keepers) :: contexts }
       }
 
       feedback.vote.foreach { isThumbUp =>
         val action = if (isThumbUp) RecommendationUserAction.MarkedGood else RecommendationUserAction.MarkedBad
-        contexts = UriRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, action) :: contexts
+        contexts = KeepRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, action) :: contexts
       }
 
-      feedback.trashed.filter { x => x }.foreach { _ => contexts = UriRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.Trashed) :: contexts }
-      feedback.comment.foreach { text => contexts = UriRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.ImprovementSuggested, Some(text)) :: contexts }
+      feedback.trashed.filter { x => x }.foreach { _ => contexts = KeepRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.Trashed) :: contexts }
+      feedback.comment.foreach { text => contexts = KeepRecommendationUserActionContext(userId, uriId, masterScore, source, subSource, RecommendationUserAction.ImprovementSuggested, Some(text)) :: contexts }
 
       contexts
     } else {
@@ -133,12 +133,21 @@ class CuratorAnalytics @Inject() (
 
 object RecommendationUserActionContext {
   implicit def toRecoUserActionContext(item: UriRecommendation)(source: RecommendationSource, subSource: RecommendationSubSource): RecommendationUserActionContext = {
-    UriRecommendationUserActionContext(item.userId, item.uriId, item.masterScore.toInt, source, subSource, RecommendationUserAction.Delivered, None)
+    KeepRecommendationUserActionContext(item.userId, item.uriId, item.masterScore.toInt, source, subSource, RecommendationUserAction.Delivered, None)
   }
 
   implicit def toRecoUserActionContext(item: LibraryRecommendation)(source: RecommendationSource, subSource: RecommendationSubSource): RecommendationUserActionContext = {
     LibraryRecommendationUserActionContext(item.userId, item.libraryId, item.masterScore.toInt, source, subSource, RecommendationUserAction.Delivered, None)
   }
+}
+
+sealed trait RecommendationType {
+  def value: String
+}
+
+object RecommendationType {
+  object Library extends RecommendationType { val value = "library" }
+  object Keep extends RecommendationType { val value = "keep" }
 }
 
 trait RecommendationUserActionContext {
@@ -154,6 +163,8 @@ trait RecommendationUserActionContext {
 
   def suggestion: Option[String]
 
+  def recommendationType: RecommendationType
+
   require((userAction == RecommendationUserAction.ImprovementSuggested) == suggestion.isDefined,
     s"invalid arguments: userAction = $userAction, suggestion = $suggestion}")
 
@@ -163,14 +174,16 @@ trait RecommendationUserActionContext {
       ("master_score", truncatedMasterScore),
       ("source", source.value),
       ("subsource", subSource.value),
-      ("action", userAction.value)
+      ("action", userAction.value),
+      ("recommendationType", recommendationType.value)
     )
     suggestion.map { suggest => baseData :+ ("user_suggestion", suggest: SimpleContextData) } getOrElse baseData
   }
 }
 
-case class UriRecommendationUserActionContext(userId: Id[User], uriId: Id[NormalizedURI], truncatedMasterScore: Int, source: RecommendationSource,
+case class KeepRecommendationUserActionContext(userId: Id[User], uriId: Id[NormalizedURI], truncatedMasterScore: Int, source: RecommendationSource,
     subSource: RecommendationSubSource, userAction: RecommendationUserAction, suggestion: Option[String] = None, keepers: Option[Seq[Id[User]]] = None) extends RecommendationUserActionContext {
+  val recommendationType = RecommendationType.Keep
 
   override def contextData = {
     val uriContextData: (String, SimpleContextData) = ("uriId", uriId.id)
@@ -181,6 +194,8 @@ case class UriRecommendationUserActionContext(userId: Id[User], uriId: Id[Normal
 
 case class LibraryRecommendationUserActionContext(userId: Id[User], libraryId: Id[Library], truncatedMasterScore: Int, source: RecommendationSource,
     subSource: RecommendationSubSource, userAction: RecommendationUserAction, suggestion: Option[String] = None) extends RecommendationUserActionContext {
+  val recommendationType = RecommendationType.Library
+
   override def contextData = {
     val libraryContextData: (String, SimpleContextData) = ("libraryId", libraryId.id)
     super.contextData :+ libraryContextData
