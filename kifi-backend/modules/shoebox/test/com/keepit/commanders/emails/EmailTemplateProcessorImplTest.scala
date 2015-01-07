@@ -117,7 +117,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         text must contain("unsub2 https://www.kifi.com/unsubscribe/")
         text must contain("unsub3 https://www.kifi.com/unsubscribe/")
         text must contain("Unsubscribe here: https://www.kifi.com/unsubscribe/")
-        text must contain("Kifi.com | 883 N Shoreline Blvd, Mountain View, CA 94043, USA")
+        text must contain("Kifi.com | 709 N Shoreline Blvd, Mountain View, CA 94043, USA")
 
       }
     }

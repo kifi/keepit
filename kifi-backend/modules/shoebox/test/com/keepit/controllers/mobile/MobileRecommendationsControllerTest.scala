@@ -29,7 +29,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationLike
 import play.api.libs.json.{ JsArray, Json }
-import play.api.mvc.{ Call, Result }
+import play.api.mvc.{ AnyContent, Request, Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
@@ -137,11 +137,10 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
           |   "followers":[],"keeps":[],"numKeeps":10,"numCollaborators":0,"numFollowers":10}}
         """.stripMargin
 
-      def runCommonTopRecosTests(call: Call, version: Int)(implicit injector: Injector): Future[Result] = {
+      def runCommonTopRecosTests(call: Call, requestFn: Request[AnyContent] => Future[Result])(implicit injector: Injector): Future[Result] = {
         val request = FakeRequest(call).withHeaders(USER_AGENT -> "iKeefee/0.0.0 (Device-Type: NA, OS: iOS NA)")
-        val controller = inject[MobileRecommendationsController]
 
-        val result: Future[Result] = controller.topRecos(true, 0.75f, version)(request)
+        val result: Future[Result] = requestFn(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -152,7 +151,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
         recoCommander.recoInfos = recoInfos
         recoCommander.libRecoInfos = libRecoInfos
 
-        val result2: Future[Result] = controller.topRecos(true, 0.75f, version)(request)
+        val result2: Future[Result] = requestFn(request)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
@@ -163,11 +162,11 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
         withDb(modules: _*) { implicit injector =>
           topRecosSetup()
 
-          val call = com.keepit.controllers.mobile.routes.MobileRecommendationsController.topRecos(true, 0.75f, 1)
+          val call = com.keepit.controllers.mobile.routes.MobileRecommendationsController.topRecosV1(true, 0.75f)
           call.url === "/m/1/recos/top?more=true&recency=0.75"
           call.method === "GET"
 
-          val result = runCommonTopRecosTests(call, 1)
+          val result = runCommonTopRecosTests(call, request => inject[MobileRecommendationsController].topRecosV1(true, 0.75f)(request))
           val json = Json.parse(contentAsString(result))
           json === Json.parse("[" + expectedRecoInfosJson + "]")
         }
@@ -177,11 +176,11 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
         withDb(modules: _*) { implicit injector =>
           topRecosSetup()
 
-          val call = com.keepit.controllers.mobile.routes.MobileRecommendationsController.topRecos(true, 0.75f, 2)
+          val call = com.keepit.controllers.mobile.routes.MobileRecommendationsController.topRecosV2(true, 0.75f)
           call.url === "/m/2/recos/top?more=true&recency=0.75"
           call.method === "GET"
 
-          val result = runCommonTopRecosTests(call, 2)
+          val result = runCommonTopRecosTests(call, request => inject[MobileRecommendationsController].topRecosV2(true, 0.75f)(request))
           val json = Json.parse(contentAsString(result)).asInstanceOf[JsArray]
           json.value.size == 2
 

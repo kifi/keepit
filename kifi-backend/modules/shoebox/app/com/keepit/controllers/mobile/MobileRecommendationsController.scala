@@ -19,19 +19,21 @@ class MobileRecommendationsController @Inject() (
     userExperimentCommander: LocalUserExperimentCommander,
     db: Database) extends UserActions with ShoeboxServiceController {
 
-  def topRecos(more: Boolean, recencyWeight: Float, version: Int) = UserAction.async { request =>
+  def topRecosV1(more: Boolean, recencyWeight: Float) = UserAction.async { request =>
+    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight)
+    uriRecosF map { recos => Ok(Json.toJson(recos)) }
+  }
+
+  def topRecosV2(more: Boolean, recencyWeight: Float) = UserAction.async { request =>
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight)
 
-    // only version 2 (/m/2) includes library recommendations
-    val sendLibRecos = version == 2 && userExperimentCommander.getExperimentsByUser(request.userId).exists(ExperimentType.CURATOR_LIBRARY_RECOS ==)
+    val sendLibRecos = userExperimentCommander.getExperimentsByUser(request.userId).exists(ExperimentType.CURATOR_LIBRARY_RECOS ==)
     val libRecosF =
       if (sendLibRecos) commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed)
       else Future.successful(Seq.empty)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
-      // version 1 didn't shuffle keep recos, so let's keep it that way
-      val shuffledRecos = if (version == 2) util.Random.shuffle(uris ++ libs) else uris
-      Json.toJson(shuffledRecos)
+      Json.toJson(util.Random.shuffle(uris ++ libs))
     }
   }
 
