@@ -14,7 +14,7 @@ object UserFactory {
 
   def users(count: Int): Seq[PartialUser] = List.fill(count)(user())
 
-  class PartialUser private[UserFactory] (user: User) {
+  class PartialUser private[UserFactory] (user: User, _experiments: Seq[ExperimentType] = Seq.empty) {
     def withId(id: Id[User]) = new PartialUser(user.copy(id = Some(id)))
     def withId(id: Int) = new PartialUser(user.copy(id = Some(Id[User](id))))
     def withId(id: ExternalId[User]) = new PartialUser(user.copy(externalId = id))
@@ -24,7 +24,9 @@ object UserFactory {
     def withUsername(name: Username) = new PartialUser(user.copy(username = name))
     def withPictureName(name: String) = new PartialUser(user.copy(pictureName = Some(name)))
     def withState(state: State[User]) = new PartialUser(user.copy(state = state))
+    def withExperiments(experiments: ExperimentType*) = new PartialUser(user, experiments ++ _experiments)
     def get: User = user
+    def experiments: Seq[ExperimentType] = _experiments
   }
 
   implicit class PartialUserSeq(users: Seq[PartialUser]) {
