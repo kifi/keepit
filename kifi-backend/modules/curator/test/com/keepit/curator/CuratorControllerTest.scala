@@ -50,7 +50,8 @@ class CuratorControllerTest extends Specification with CuratorTestInjector with 
 
         val request = FakeRequest(call).withBody(payload)
         val result = inject[CuratorController].updateLibraryRecommendationFeedback(userId, libId)(request)
-        status(result) === NO_CONTENT
+        status(result) === OK
+        contentAsString(result) === "true"
 
         db.readOnlyMaster { implicit s =>
           val actual = libRecRepo.getByLibraryAndUserId(libId, userId).get

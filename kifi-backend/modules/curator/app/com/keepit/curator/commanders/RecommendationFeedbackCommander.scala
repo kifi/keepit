@@ -22,7 +22,7 @@ class RecommendationFeedbackCommander @Inject() (
     future
   }
 
-  def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Unit = {
+  def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Boolean = {
     db.readWrite { implicit session =>
       libraryRecRepo.updateLibraryRecommendationFeedback(userId, libraryId, feedback)
     }

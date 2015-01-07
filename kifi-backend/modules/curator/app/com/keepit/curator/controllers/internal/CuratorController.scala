@@ -15,7 +15,7 @@ import com.keepit.curator.model.{ RecommendationSubSource, LibraryRecoSelectionP
 import com.keepit.model.{ LibraryRecommendationFeedback, Library, UserValueName, UriRecommendationFeedback, NormalizedURI, ExperimentType, User, UriRecommendationScores }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsValue, JsString, Json }
+import play.api.libs.json.{ JsBoolean, JsValue, JsString, Json }
 import play.api.mvc.Action
 
 import concurrent.Future
@@ -88,11 +88,11 @@ class CuratorController @Inject() (
     recoFeedbackCommander.updateUriRecommendationFeedback(userId, uriId, feedback).map(update => Ok(Json.toJson(update)))
   }
 
-  def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library]) = Action.async[JsValue](parse.tolerantJson) { request =>
+  def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library]) = Action(parse.tolerantJson) { request =>
     val feedback = request.body.as[LibraryRecommendationFeedback]
     curatorAnalytics.trackUserFeedback(userId, libraryId, feedback)
-    recoFeedbackCommander.updateLibraryRecommendationFeedback(userId, libraryId, feedback)
-    Future.successful(NoContent)
+    val updated = recoFeedbackCommander.updateLibraryRecommendationFeedback(userId, libraryId, feedback)
+    Ok(JsBoolean(updated))
   }
 
   def triggerEmailToUser(code: String, userId: Id[User]) = Action.async {
