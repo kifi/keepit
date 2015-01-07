@@ -4,7 +4,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ ClientResponse, CallTimeouts, NonOKResponseException, DirectUrl, HttpClient }
 import com.keepit.common.time._
@@ -86,8 +86,17 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
           case dt => throw new Exception(s"Unknown device type: $dt")
         }
       }
-      httpClient.getFuture(DirectUrl(uaUrl), url => {
-        case e @ NonOKResponseException(url, response, _) if response.status == NOT_FOUND =>
+      httpClient.getFuture(DirectUrl(uaUrl), req => {
+        case e @ NonOKResponseException(req, response, _) if response.status == NOT_FOUND =>
+        case e: Exception =>
+          val fullException = req.tracer.withCause(e)
+          airbrake.notify(
+            AirbrakeError.outgoing(
+              exception = fullException,
+              request = req.req,
+              message = s"Airbrake Client calling ${req.httpUri.summary} for update device $device state failed"
+            )
+          )
       }) map { r =>
         val json = r.json
         log.info(s"device report for $device: $json")

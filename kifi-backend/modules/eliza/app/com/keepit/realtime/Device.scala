@@ -25,7 +25,9 @@ case class Device(
 
 object DeviceStates extends States[Device]
 
-sealed abstract class DeviceType(val name: String)
+sealed abstract class DeviceType(val name: String) {
+  override def toString: String = name
+}
 
 object DeviceType {
   case object Android extends DeviceType("android")
