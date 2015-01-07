@@ -124,7 +124,7 @@ package object template {
 
     def kifiUrl(content: String = "unknown") = htmlUrl(s"$baseUrl/?", content, openInAppIfMobile = true)
 
-    val kifiAddress = "883 N Shoreline Blvd, Mountain View, CA 94043, USA"
+    val kifiAddress = "709 N Shoreline Blvd, Mountain View, CA 94043, USA"
     val kifiLogoUrl = kifiUrl("headerLogo")
     val kifiFooterUrl = kifiUrl("footerKifiLink")
     val privacyUrl = htmlUrl(s"$baseUrl/privacy?", "footerPrivacy", openInAppIfMobile = false)
