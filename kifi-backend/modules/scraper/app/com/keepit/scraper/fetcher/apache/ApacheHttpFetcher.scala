@@ -311,7 +311,10 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
             case HttpStatus.SC_NOT_MODIFIED =>
               HttpFetchStatus(statusCode, None, httpContext)
             case _ =>
-              val content = IOUtils.toString(new HttpInputStream(entity.getContent), UTF8).abbreviate(1000)
+              val content = Option(entity) match {
+                case Some(e) => IOUtils.toString(new HttpInputStream(e.getContent), UTF8).abbreviate(1000)
+                case None => "null content entity"
+              }
               log.info(s"request failed while parsing response, bad error code: [${response.getStatusLine().toString()}][$url] with content: $content")
               HttpFetchStatus(statusCode, Some(s"${response.getStatusLine.toString} : $content"), httpContext)
           }
