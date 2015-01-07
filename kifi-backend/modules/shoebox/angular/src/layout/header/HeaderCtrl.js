@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('HeaderCtrl', [
   '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService',
-    '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state',
+    '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state', 'routeService', 'userService',
   function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService,
-    $location, util, keyIndices, modalService, $timeout, $state) {
+    $location, util, keyIndices, modalService, $timeout, $state, routeService, userService) {
 
     $scope.toggleMenu = function () {
       $rootElement.find('html').toggleClass('kf-sidebar-inactive');
@@ -144,11 +144,6 @@ angular.module('kifi')
     $scope.me = profileService.me;
     $scope.me.picUrl = $scope.me.picUrl || '//www.kifi.com/assets/img/ghost.200.png';
 
-    $scope.isActive = function (path) {
-      var loc = $location.path();
-      return loc === path || util.startsWith(loc, path + '/');
-    };
-
     $scope.logout = function () {
       profileService.logout();
     };
@@ -175,17 +170,9 @@ angular.module('kifi')
     friendService.getRequests();
     $scope.friendRequests = friendService.requests;
 
-    $scope.navigateToFriends = function () {
-      $location.path('/friends');  // TODO: put directly in <a href="">
-    };
+    $scope.inUserProfileBeta = userService.inUserProfileBeta();
+    $scope.userProfileUrl = routeService.getProfileUrl($scope.me.username);
 
-    $scope.navigateToInvite = function () {
-      $location.path('/invite');  // TODO: put directly in <a href="">
-    };
-
-    $scope.navigateToManageTags = function () {
-      $location.path('/tags/manage');
-    };
-
+    $scope.logout = profileService.logout;
   }
 ]);
