@@ -43,14 +43,6 @@ class UserGraphsSearcher(
     Future { new SearchFriendSearcher(searchFriendGraph.getSearcher).getUnfriended(userId) }
   }
 
-  def getConnectedUsers(): Set[Long] = {
-    Await.result(getConnectedUsersFuture(), 5 seconds)
-  }
-
-  def getUnfriended(): Set[Long] = {
-    Await.result(getUnfriendedFuture(), 5 seconds)
-  }
-
   def getSearchFriendsFuture(): Future[Set[Long]] = {
     (getUnfriendedFuture() zip getConnectedUsersFuture()).map {
       case (unfriends, friends) =>
