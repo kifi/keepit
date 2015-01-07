@@ -10,7 +10,14 @@ object UserFactoryHelper {
 
   implicit class UserPersister(partialUser: PartialUser) {
     def saved(implicit injector: Injector, session: RWSession): User = {
-      injector.getInstance(classOf[UserRepo]).save(partialUser.get.copy(id = None))
+      val user = injector.getInstance(classOf[UserRepo]).save(partialUser.get.copy(id = None))
+      if (partialUser.experiments.nonEmpty) {
+        val experimentRepo = injector.getInstance(classOf[UserExperimentRepo])
+        partialUser.experiments.foreach { experimentType =>
+          experimentRepo.save(UserExperiment(userId = user.id.get, experimentType = experimentType))
+        }
+      }
+      user
     }
   }
 
@@ -23,8 +30,7 @@ object UserFactoryHelper {
 
   implicit class UsersPersister(partialUsers: Seq[PartialUser]) {
     def saved(implicit injector: Injector, session: RWSession): Seq[User] = {
-      val repo = injector.getInstance(classOf[UserRepo])
-      partialUsers.map(u => repo.save(u.get.copy(id = None)))
+      partialUsers.map(u => new UserPersister(u).saved)
     }
   }
 }

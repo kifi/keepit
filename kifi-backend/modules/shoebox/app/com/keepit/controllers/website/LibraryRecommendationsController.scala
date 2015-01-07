@@ -28,7 +28,8 @@ class LibraryRecommendationsController @Inject() (
 
   def updateLibraryRecommendationFeedback(pubId: PublicId[Library]): Action[JsValue] = UserAction.async[JsValue](parse.tolerantJson) { request =>
     Library.decodePublicId(pubId) map { id =>
-      val feedback = request.body.as[LibraryRecommendationFeedback]
+      val feedback = request.body.as[LibraryRecommendationFeedback].
+        copy(source = Some(RecommendationSource.Site), subSource = Some(RecommendationSubSource.RecommendationsFeed))
       commander.updateLibraryRecommendationFeedback(request.userId, id, feedback).map(bool => Ok(Json.toJson(bool)))
     } getOrElse Future.successful(BadRequest(Json.obj("error" -> "bad library ID")))
   }

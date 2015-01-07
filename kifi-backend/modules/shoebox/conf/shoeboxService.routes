@@ -228,7 +228,7 @@ POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.M
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
-GET     /m/1/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecos(more: Boolean, recency: Float)
+GET     /m/$version<[12]>/recos/top             @com.keepit.controllers.mobile.MobileRecommendationsController.topRecos(more: Boolean, recency: Float, version: Int)
 GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
 POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
 
