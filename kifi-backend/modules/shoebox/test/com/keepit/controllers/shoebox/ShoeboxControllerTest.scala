@@ -143,36 +143,6 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "return mutual friends of 2 users" in {
-      withDb(shoeboxControllerTestModules: _*) { implicit injector =>
-        val (user1: Id[User], user2: Id[User], commonUserIds) = db.readWrite { implicit rw =>
-          val saveUser = inject[UserRepo].save _
-          val users = for (i <- 0 to 9) yield saveUser(User(firstName = s"first$i", lastName = s"last$i", username = Username(s"test$i"), normalizedUsername = s"test$i"))
-
-          val thisUserId = users(0).id.get
-          val thatUserId = users(1).id.get
-          val saveConn = inject[UserConnectionRepo].save _
-
-          for (i <- 2 to 7) yield saveConn(UserConnection(user1 = thisUserId, user2 = users(i).id.get))
-          for (i <- 5 to 9) yield saveConn(UserConnection(user1 = thatUserId, user2 = users(i).id.get))
-
-          (thisUserId, thatUserId, users.drop(5).take(3).map(_.id.get))
-        }
-
-        val call = com.keepit.controllers.internal.routes.ShoeboxController.getMutualFriends(user1, user2)
-        s"/internal/shoebox/database/getMutualFriends?user1Id=$user1&user2Id=$user2" === call.url
-
-        val ctrl = inject[ShoeboxController]
-        val result = ctrl.getMutualFriends(user1, user2)(FakeRequest())
-        status(result) must equalTo(OK)
-        contentType(result) must beSome("application/json")
-
-        val json = Json.parse(contentAsString(result))
-        val userIds = Json.fromJson[Set[Id[User]]](json).get
-        commonUserIds.toSet === userIds
-      }
-    }
-
     "getPrimaryEmailAddressForUsers" should {
       "return a map of user id -> EmailAddress" in {
         withDb(shoeboxControllerTestModules: _*) { implicit injector =>

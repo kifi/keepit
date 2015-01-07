@@ -148,7 +148,7 @@ trait SearchControllerUtil {
     for {
       libId <- libraryIds
       record <- LibraryIndexable.getRecord(librarySearcher, libId)
-      visibility <- LibraryIndexable.getVisibility(librarySearcher, libId)
+      visibility <- LibraryIndexable.getVisibility(librarySearcher, libId.id)
     } yield {
       libId -> (record, visibility)
     }

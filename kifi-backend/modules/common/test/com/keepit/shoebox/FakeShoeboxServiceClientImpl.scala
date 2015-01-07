@@ -752,8 +752,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]] =
     Future.successful(newKeepsInLibrariesExpectation(userId).take(max))
 
-  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = Future.successful(Set.empty)
-
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]] = Future.successful {
     (allUserBookmarks(userId).map(allBookmarks(_)).groupBy(_.uriId) -- uriIds).mapValues(_.map { keep =>
       BasicKeep(

@@ -232,7 +232,7 @@ class UriSearchCommanderImpl @Inject() (
       context,
       predefinedConfig,
       debug)
-    val friendIdsFuture = searchFactory.getFriendIdsFuture(userId)
+    val friendIdsFuture = searchFactory.getSearchFriends(userId)
 
     val result = monitoredAwait.result(future, 3 seconds, "getting result")
     val friendIds = monitoredAwait.result(friendIdsFuture, 3 seconds, "getting friend ids")
@@ -370,7 +370,7 @@ class UriSearchCommanderImpl @Inject() (
 
     val searches = if (userId.id < 0 || (debugOption.debugFlags & DebugOption.AsNonUser.flag) != 0) {
       try {
-        searchFactory.getKifiNonUserSearch(localShards, query, firstLang, secondLang, maxHits, searchFilter, config)
+        searchFactory.getNonUserUriSearches(localShards, query, firstLang, secondLang, maxHits, searchFilter, config)
       } catch {
         case e: Exception =>
           log.error("unable to create KifiNonUserSearch", e)
@@ -378,7 +378,7 @@ class UriSearchCommanderImpl @Inject() (
       }
     } else {
       // logged in user
-      searchFactory.getKifiSearch(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+      searchFactory.getUriSearches(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
     }
 
     Future.traverse(searches) { search =>
@@ -408,14 +408,14 @@ class UriSearchCommanderImpl @Inject() (
         findShard(uriId).flatMap { shard =>
           val searchOpt = if (userId.id < 0) {
             try {
-              searchFactory.getKifiNonUserSearch(Set(shard), query, firstLang, secondLang, 0, SearchFilter.default(), config).headOption
+              searchFactory.getNonUserUriSearches(Set(shard), query, firstLang, secondLang, 0, SearchFilter.default(), config).headOption
             } catch {
               case e: Exception =>
                 log.error("unable to create KifiNonUserSearch", e)
                 None
             }
           } else {
-            searchFactory.getKifiSearch(Set(shard), userId, query, firstLang, secondLang, 0, SearchFilter.default(), config).headOption
+            searchFactory.getUriSearches(Set(shard), userId, query, firstLang, secondLang, 0, SearchFilter.default(), config).headOption
           }
           searchOpt.map { search =>
             debug.map(search.debug(_))

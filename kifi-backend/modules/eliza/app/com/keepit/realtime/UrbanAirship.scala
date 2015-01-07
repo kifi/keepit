@@ -31,7 +31,7 @@ case class NotificationSound(name: String) extends AnyVal
 object UrbanAirship {
   val DefaultNotificationSound = NotificationSound("notification.aiff")
   val MoreMessageNotificationSound = NotificationSound("newnotificationoutsidemessage.aiff")
-  val RecheckPeriod = Days.ONE
+  val RecheckPeriod = Days.SEVEN
 }
 
 @ImplementedBy(classOf[UrbanAirshipImpl])

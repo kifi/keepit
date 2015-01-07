@@ -486,11 +486,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(keeps))
   }
 
-  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = Action { request =>
-    val mutualFriendIds = userConnectionsCommander.getMutualFriends(user1Id, user2Id)
-    Ok(Json.toJson(mutualFriendIds))
-  }
-
   def getBasicKeeps(userId: Id[User]) = Action(parse.tolerantJson) { request =>
     val uriIds = request.body.as[Set[Id[NormalizedURI]]]
     val keepDataByUriId = keepsCommander.getBasicKeeps(userId, uriIds)

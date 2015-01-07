@@ -28,7 +28,7 @@ class AdminLibraryRecommendationsController @Inject() (
   def view() = AdminUserAction.async { implicit request =>
     val userId = request.request.getQueryString("userId")
       .filter(_.nonEmpty) map (s => Id[User](s.toInt)) getOrElse request.userId
-    val recosF = curator.topLibraryRecos(userId, Some(100), RecommendationSource.Admin, RecommendationSubSource.Unknown) map { libRecos =>
+    val recosF = curator.topLibraryRecos(userId, Some(100)) map { libRecos =>
       val libIds = libRecos.map(_.libraryId)
       val libInfos = (libIds zip libCommander.getLibrarySummaries(libIds)).toMap
 

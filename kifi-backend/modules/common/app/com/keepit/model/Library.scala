@@ -61,9 +61,42 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     case _ => name
   }
 
-  // is_primary: trueOrNull in db
-  def applyFromDbRow(id: Option[Id[Library]], createdAt: DateTime, updatedAt: DateTime, name: String, ownerId: Id[User], visibility: LibraryVisibility, description: Option[String], slug: LibrarySlug, color: Option[HexColor], state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind, universalLink: String, memberCount: Int, lastKept: Option[DateTime]) = {
+  def applyFromDbRow(
+    id: Option[Id[Library]],
+    createdAt: DateTime,
+    updatedAt: DateTime,
+    state: State[Library],
+    name: String,
+    ownerId: Id[User],
+    description: Option[String],
+    visibility: LibraryVisibility,
+    slug: LibrarySlug,
+    color: Option[HexColor],
+    seq: SequenceNumber[Library],
+    kind: LibraryKind,
+    memberCount: Int,
+    universalLink: String,
+    lastKept: Option[DateTime]) = {
     Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept)
+  }
+
+  def unapplyToDbRow(lib: Library) = {
+    Some(
+      lib.id,
+      lib.createdAt,
+      lib.updatedAt,
+      lib.state,
+      lib.name,
+      lib.ownerId,
+      lib.description,
+      lib.visibility,
+      lib.slug,
+      lib.color,
+      lib.seq,
+      lib.kind,
+      lib.memberCount,
+      lib.universalLink,
+      lib.lastKept)
   }
 
   protected[this] val publicIdPrefix = "l"

@@ -4,7 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton, Provider }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ DbSequenceAssigner, Id, State }
+import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
@@ -12,8 +12,7 @@ import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import org.joda.time.DateTime
 import scala.concurrent.duration._
-import scala.slick.jdbc.StaticQuery
-import scala.slick.jdbc.StaticQuery.interpolation
+import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
@@ -25,7 +24,15 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
+  def countLibrariesOfUserFromAnonymous(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int
+  def countLibrariesToSelf(userId: Id[User])(implicit session: RSession): Int
+  def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int
   def getLibrariesOfUserFromAnonymous(ownerId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
+  def getOwnedLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
+  def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
+  def getFollowingLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
+  def getFollowingLibrariesFromAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
+  def getInvitedLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getAllPublishedLibraries()(implicit session: RSession): Seq[Library]
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library]
@@ -59,11 +66,31 @@ class LibraryRepoImpl @Inject() (
     def memberCount = column[Int]("member_count", O.NotNull)
     def lastKept = column[Option[DateTime]]("last_kept", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, color.?, state, seq, kind, universalLink, memberCount, lastKept) <> ((Library.applyFromDbRow _).tupled, Library.unapply)
+    def * = (id.?, createdAt, updatedAt, state, name, ownerId, description, visibility, slug, color.?, seq, kind, memberCount, universalLink, lastKept) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new LibraryTable(tag)
   initTable()
+
+  private implicit val getLibraryResult: GetResult[com.keepit.model.Library] = GetResult { r: PositionedResult =>
+    Library.applyFromDbRow(
+      id = r.<<[Option[Id[Library]]],
+      createdAt = r.<<[DateTime],
+      updatedAt = r.<<[DateTime],
+      state = r.<<[State[Library]],
+      name = r.<<[String],
+      ownerId = r.<<[Id[User]],
+      description = r.<<[Option[String]],
+      visibility = r.<<[LibraryVisibility],
+      slug = LibrarySlug(r.<<[String]),
+      color = r.<<[Option[String]].map(HexColor(_)),
+      seq = r.<<[SequenceNumber[Library]],
+      kind = LibraryKind(r.<<[String]),
+      memberCount = r.<<[Int],
+      universalLink = r.<<[String],
+      lastKept = r.<<[Option[DateTime]]
+    )
+  }
 
   override def save(library: Library)(implicit session: RWSession): Library = {
     val toSave = library.copy(seq = deferredSeqNum())
@@ -158,6 +185,41 @@ class LibraryRepoImpl @Inject() (
     getOptCompiled(ownerId, slug).firstOption
   }
 
+  //non user: number of public libraries that are “displayable on profile” (see library pref) plus libraries i follow that are public unless I oped in the "don't show libraries I follow" pref
+  def countLibrariesOfUserFromAnonymous(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+    val query = if (countFollowLibraries) {
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published'"
+    } else {
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access='owner'"
+    }
+    query.as[Int].firstOption.getOrElse(0)
+  }
+
+  //my own profile view: total number of libraries I own and I follow, including main and secret, not including pending invites to libs
+  def countLibrariesToSelf(userId: Id[User])(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active'"
+    query.as[Int].firstOption.getOrElse(0)
+  }
+
+  //logged in user viewing another’s profile: Everything in countLibrariesOfUserFromAnonymos + libraries user has access to (even if private)
+  def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+    val libsFriendFollow = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $userId and lm.user_id = $friendId and lib.state = 'active' and lm.state = 'active'".as[Id[Library]].list
+    val libVisibility = libsFriendFollow.size match {
+      case 0 => ""
+      case 1 => s"or (lib.id = ${libsFriendFollow.head})"
+      case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
+    }
+    val query = if (countFollowLibraries) {
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lm.listed and lib.visibility = 'published') #$libVisibility)"
+    } else {
+      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lm.listed and lib.visibility = 'published' and lm.access='owner') #$libVisibility)"
+    }
+    query.as[Int].firstOption.getOrElse(0)
+  }
+
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {
     if (libraryIds.isEmpty) {
       Map.empty
@@ -171,13 +233,56 @@ class LibraryRepoImpl @Inject() (
   def getLibrariesOfUserFromAnonymous(ownerId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
     val q = (for {
       lib <- rows if lib.ownerId === ownerId && lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && lib.state === LibraryStates.ACTIVE
-      lm <- libraryMembershipRepo.get.rows if lm.libraryId === lib.id && lm.userId === ownerId && lm.listed
-    } yield lib).sortBy(_.id.desc).drop(page.itemsToDrop).take(page.size)
+      lm <- libraryMembershipRepo.get.rows if lm.libraryId === lib.id && lm.userId === ownerId && lm.listed && lm.state === LibraryMembershipStates.ACTIVE
+    } yield lib).sortBy(x => (x.memberCount.desc, x.lastKept.desc, x.id.desc)).drop(page.itemsToDrop).take(page.size)
     q.list
   }
 
+  //logged in user viewing another’s profile: Everything in countLibrariesOfUserFromAnonymos + libraries user has access to (even if private)
+  def getOwnedLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+    import StaticQuery.interpolation
+    val libsFriendFollow = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $userId and lm.user_id = $friendId and lib.state = 'active' and lm.state = 'active'".as[Id[Library]].list
+    val libVisibility = libsFriendFollow.size match {
+      case 0 => ""
+      case 1 => s"or (lib.id = ${libsFriendFollow.head})"
+      case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
+    }
+    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access = 'owner' and ((lm.listed and lib.visibility = 'published') #$libVisibility) order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    query.as[Library].list
+  }
+
+  def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+    import StaticQuery.interpolation
+    val libsFriendFollow = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $friendId and lib.state = 'active' and lm.state = 'active'".as[Id[Library]].list
+    val libVisibility = libsFriendFollow.size match {
+      case 0 => ""
+      case 1 => s"or (lib.id = ${libsFriendFollow.head})"
+      case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
+    }
+    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access != 'owner' and ((lm.listed and lib.visibility = 'published' and lm.access != 'owner') #$libVisibility) order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    query.as[Library].list
+  }
+
+  def getFollowingLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+    import StaticQuery.interpolation
+    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access != 'owner' order by lm.id desc limit ${page.itemsToDrop}, ${page.size}"
+    query.as[Library].list
+  }
+
+  def getFollowingLibrariesFromAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+    import StaticQuery.interpolation
+    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access != 'owner' order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    query.as[Library].list
+  }
+
+  def getInvitedLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+    import StaticQuery.interpolation
+    val query = sql"select distinct lib.* from library lib, library_invite li where li.user_id=$userId and li.state='active' and lib.id = li.library_id and lib.state='active' order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    query.as[Library].list
+  }
+
   def getLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
-    (for (r <- rows if r.ownerId === userId && r.state === LibraryStates.ACTIVE) yield r).sortBy(_.id.desc).drop(page.itemsToDrop).take(page.size).list
+    (for (r <- rows if r.ownerId === userId && r.state === LibraryStates.ACTIVE) yield r).sortBy(x => (x.kind, x.memberCount.desc, x.lastKept.desc, x.id.desc)).drop(page.itemsToDrop).take(page.size).list
   }
 
   def getAllPublishedLibraries()(implicit session: RSession): Seq[Library] = {
