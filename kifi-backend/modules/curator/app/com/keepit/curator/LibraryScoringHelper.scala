@@ -124,7 +124,7 @@ class LibraryScoringHelper @Inject() (
 
   private def getContentScore(candidate: CuratorLibraryInfo): Float = {
     // prefer >= 20 characters in description
-    (candidate.descriptionLength / 10f).max(2f) / 2
+    (candidate.descriptionLength / 10f).min(2f) / 2
   }
 
 }
