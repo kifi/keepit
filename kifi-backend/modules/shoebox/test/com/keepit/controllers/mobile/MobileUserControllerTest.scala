@@ -23,7 +23,7 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social._
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.controllers.website.{ routes, UserController }
+import com.keepit.controllers.website.UserController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model.KeepFactory._
