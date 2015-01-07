@@ -307,7 +307,7 @@ class AdminUserController @Inject() (
     val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
     val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(user.id.get)
     val emails = emailRepo.getAllByUser(user.id.get)
-    val librariesCountsByAccess = libraryMembershipRepo.countsByLibraryAccess(user.id.get, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY))
+    val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY))
     val librariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) - 2 //ignoring main and secret
     val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
 

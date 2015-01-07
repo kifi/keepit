@@ -25,7 +25,6 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
   def countLibrariesOfUserFromAnonymous(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int
-  def countLibrariesToSelf(userId: Id[User])(implicit session: RSession): Int
   def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int
   def getLibrariesOfUserFromAnonymous(ownerId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getOwnedLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
@@ -193,13 +192,6 @@ class LibraryRepoImpl @Inject() (
     } else {
       sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access='owner'"
     }
-    query.as[Int].firstOption.getOrElse(0)
-  }
-
-  //my own profile view: total number of libraries I own and I follow, including main and secret, not including pending invites to libs
-  def countLibrariesToSelf(userId: Id[User])(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
-    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active'"
     query.as[Int].firstOption.getOrElse(0)
   }
 

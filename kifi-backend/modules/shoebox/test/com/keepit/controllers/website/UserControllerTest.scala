@@ -335,11 +335,11 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           val ret2 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4 and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published'".as[Int].firstOption.getOrElse(0)
           ret2 === 1
 
-          libraryRepo.countLibrariesToSelf(user1.id.get) === 6
-          libraryRepo.countLibrariesToSelf(user2.id.get) === 1
-          libraryRepo.countLibrariesToSelf(user3.id.get) === 1
-          libraryRepo.countLibrariesToSelf(user4.id.get) === 1
-          libraryRepo.countLibrariesToSelf(user5.id.get) === 3
+          libraryMembershipRepo.countWithUserIdAndAccess(user1.id.get, LibraryAccess.OWNER) === 4
+          libraryMembershipRepo.countWithUserIdAndAccess(user2.id.get, LibraryAccess.OWNER) === 0
+          libraryMembershipRepo.countWithUserIdAndAccess(user3.id.get, LibraryAccess.OWNER) === 1
+          libraryMembershipRepo.countWithUserIdAndAccess(user4.id.get, LibraryAccess.OWNER) === 0
+          libraryMembershipRepo.countWithUserIdAndAccess(user5.id.get, LibraryAccess.OWNER) === 2
 
           libraryRepo.countLibrariesOfUserFromAnonymous(user1.id.get, countFollowLibraries = true) === 2
           libraryRepo.countLibrariesOfUserFromAnonymous(user1.id.get, countFollowLibraries = false) === 1
@@ -398,7 +398,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
               "username": "GDubs",
-              "numLibraries": 2,
+              "numLibraries": 1,
               "numKeeps": 5
             }
           """)
@@ -416,7 +416,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
               "username": "GDubs",
-              "numLibraries": 6,
+              "numLibraries": 4,
               "numKeeps": 5
             }
           """)
@@ -434,7 +434,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
               "username": "GDubs",
-              "numLibraries": 3,
+              "numLibraries": 2,
               "numKeeps": 5,
               "isFriend": true
             }

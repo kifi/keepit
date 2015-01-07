@@ -37,10 +37,10 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
         val all = db.readOnlyMaster(implicit session => libraryMembershipRepo.all)
         all.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY, LibraryAccess.OWNER, LibraryAccess.OWNER)
         db.readOnlyMaster { implicit session =>
-          libraryMembershipRepo.countByLibraryAccess(user1.id.get, LibraryAccess.OWNER) === 2
-          libraryMembershipRepo.countByLibraryAccess(user1.id.get, LibraryAccess.READ_ONLY) === 0
-          libraryMembershipRepo.countByLibraryAccess(user2.id.get, LibraryAccess.OWNER) === 1
-          libraryMembershipRepo.countByLibraryAccess(user2.id.get, LibraryAccess.READ_ONLY) === 1
+          libraryMembershipRepo.countWithUserIdAndAccess(user1.id.get, LibraryAccess.OWNER) === 2
+          libraryMembershipRepo.countWithUserIdAndAccess(user1.id.get, LibraryAccess.READ_ONLY) === 0
+          libraryMembershipRepo.countWithUserIdAndAccess(user2.id.get, LibraryAccess.OWNER) === 1
+          libraryMembershipRepo.countWithUserIdAndAccess(user2.id.get, LibraryAccess.READ_ONLY) === 1
         }
       }
     }
