@@ -39,13 +39,6 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countByLibraryAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
   def countsByLibraryAccess(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
   def countFollowersWithOwnerId(ownerId: Id[User])(implicit session: RSession): Int
-  def countLibrariesOfUserFromAnonymous(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int
-  def countLibrariesToSelf(userId: Id[User])(implicit session: RSession): Int
-  def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int
-  def getOwnedLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]]
-  def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]]
-  def getFollowingLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]]
-  def getFollowingLibrariesFromAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]]
 }
 
 @Singleton
@@ -269,78 +262,6 @@ class LibraryMembershipRepoImpl @Inject() (
       import StaticQuery.interpolation
       sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.state = 'active'".as[Int].firstOption.getOrElse(0)
     }
-  }
-
-  //non user: number of public libraries that are “displayable on profile” (see library pref) plus libraries i follow that are public unless I oped in the "don't show libraries I follow" pref
-  def countLibrariesOfUserFromAnonymous(userId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
-    val query = if (countFollowLibraries) {
-      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published'"
-    } else {
-      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access='owner'"
-    }
-    query.as[Int].firstOption.getOrElse(0)
-  }
-
-  //my own profile view: total number of libraries I own and I follow, including main and secret, not including pending invites to libs
-  def countLibrariesToSelf(userId: Id[User])(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
-    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active'"
-    query.as[Int].firstOption.getOrElse(0)
-  }
-
-  //logged in user viewing another’s profile: Everything in countLibrariesOfUserFromAnonymos + libraries user has access to (even if private)
-  def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User], countFollowLibraries: Boolean)(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
-    val libsFriendFollow = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $userId and lm.user_id = $friendId and lib.state = 'active' and lm.state = 'active'".as[Id[Library]].list
-    val libVisibility = libsFriendFollow.size match {
-      case 0 => ""
-      case 1 => s"or (lib.id = ${libsFriendFollow.head})"
-      case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
-    }
-    val query = if (countFollowLibraries) {
-      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lm.listed and lib.visibility = 'published') #$libVisibility)"
-    } else {
-      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lm.listed and lib.visibility = 'published' and lm.access='owner') #$libVisibility)"
-    }
-    query.as[Int].firstOption.getOrElse(0)
-  }
-
-  //logged in user viewing another’s profile: Everything in countLibrariesOfUserFromAnonymos + libraries user has access to (even if private)
-  def getOwnedLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]] = {
-    import StaticQuery.interpolation
-    val libsFriendFollow = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $userId and lm.user_id = $friendId and lib.state = 'active' and lm.state = 'active'".as[Id[Library]].list
-    val libVisibility = libsFriendFollow.size match {
-      case 0 => ""
-      case 1 => s"or (lib.id = ${libsFriendFollow.head})"
-      case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
-    }
-    val query = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access = 'owner' and ((lm.listed and lib.visibility = 'published') #$libVisibility) order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
-    query.as[Id[Library]].list
-  }
-
-  def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]] = {
-    import StaticQuery.interpolation
-    val libsFriendFollow = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $friendId and lib.state = 'active' and lm.state = 'active'".as[Id[Library]].list
-    val libVisibility = libsFriendFollow.size match {
-      case 0 => ""
-      case 1 => s"or (lib.id = ${libsFriendFollow.head})"
-      case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
-    }
-    val query = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access != 'owner' and ((lm.listed and lib.visibility = 'published' and lm.access != 'owner') #$libVisibility) order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
-    query.as[Id[Library]].list
-  }
-
-  def getFollowingLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]] = {
-    import StaticQuery.interpolation
-    val query = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access != 'owner' order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
-    query.as[Id[Library]].list
-  }
-
-  def getFollowingLibrariesFromAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]] = {
-    import StaticQuery.interpolation
-    val query = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access != 'owner' order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
-    query.as[Id[Library]].list
   }
 
 }
