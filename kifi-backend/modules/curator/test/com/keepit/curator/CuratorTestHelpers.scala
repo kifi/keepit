@@ -212,7 +212,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         recencyScore = 1,
         popularityScore = 1,
         sizeScore = 1,
-        _contentScore = None
+        contentScore = None
       )
     )
   }

@@ -233,7 +233,7 @@ class NonLinearLibraryRecoScoringStrategy(selectionParams: LibraryRecoSelectionP
       scores.socialScore * selectionParams.socialScoreWeight +
       scores.popularityScore * selectionParams.popularityScoreWeight +
       scores.sizeScore * selectionParams.sizeScoreWeight +
-      scores.contentScore * selectionParams.contentScoreWeight
+      scores.contentScoreOrDefault * selectionParams.contentScoreWeight
 
     interestPart + factor * otherPart
   }
