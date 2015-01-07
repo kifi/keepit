@@ -247,7 +247,7 @@ class LibraryRepoImpl @Inject() (
       case 1 => s"or (lib.id = ${libsFriendFollow.head})"
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
-    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access = 'owner' and ((lm.listed and lib.visibility = 'published') #$libVisibility) order by lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access = 'owner' and ((lm.listed and lib.visibility = 'published') #$libVisibility) order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
     query.as[Library].list
   }
 
@@ -259,7 +259,7 @@ class LibraryRepoImpl @Inject() (
       case 1 => s"or (lib.id = ${libsFriendFollow.head})"
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
-    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access != 'owner' and ((lm.listed and lib.visibility = 'published' and lm.access != 'owner') #$libVisibility) order by lm.id desc limit ${page.itemsToDrop}, ${page.size}"
+    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access != 'owner' and ((lm.listed and lib.visibility = 'published' and lm.access != 'owner') #$libVisibility) order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
     query.as[Library].list
   }
 
@@ -271,7 +271,7 @@ class LibraryRepoImpl @Inject() (
 
   def getFollowingLibrariesFromAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
     import StaticQuery.interpolation
-    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access != 'owner' order by lm.id desc limit ${page.itemsToDrop}, ${page.size}"
+    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access != 'owner' order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
     query.as[Library].list
   }
 
