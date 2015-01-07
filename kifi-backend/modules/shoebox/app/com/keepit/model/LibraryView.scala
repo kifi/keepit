@@ -69,17 +69,15 @@ object BasicUserWithFriendStatus {
     (__ \ 'friendRequestReceivedAt).formatNullable[DateTime]
   )(BasicUserWithFriendStatus.apply, unlift(BasicUserWithFriendStatus.unapply))
 
-  def from(u: User): BasicUserWithFriendStatus = from(BasicUser.fromUser(u))
+  def fromWithoutFriendStatus(u: User): BasicUserWithFriendStatus = fromWithoutFriendStatus(BasicUser.fromUser(u))
+  def fromWithoutFriendStatus(u: BasicUser): BasicUserWithFriendStatus = from(u, None, None, None)
   def from(u: User, isFriend: Boolean): BasicUserWithFriendStatus = from(BasicUser.fromUser(u), isFriend)
-  def from(u: User, friendRequestSentAt: Option[DateTime] = None, friendRequestReceivedAt: Option[DateTime] = None): BasicUserWithFriendStatus = {
-    from(BasicUser.fromUser(u), friendRequestSentAt, friendRequestReceivedAt)
-  }
-  def from(u: BasicUser): BasicUserWithFriendStatus = from(u, None, None, None)
-  def from(u: BasicUser, isFriend: Boolean): BasicUserWithFriendStatus = from(u, Some(isFriend), None, None)
-  def from(u: BasicUser, friendRequestSentAt: Option[DateTime], friendRequestReceivedAt: Option[DateTime]): BasicUserWithFriendStatus = {
-    from(u, Some(false), friendRequestSentAt, friendRequestReceivedAt)
-  }
-  def from(u: BasicUser, isFriend: Option[Boolean], friendRequestSentAt: Option[DateTime], friendRequestReceivedAt: Option[DateTime]): BasicUserWithFriendStatus = {
+  def from(u: BasicUser, isFriend: Boolean): BasicUserWithFriendStatus = from(u, Some(isFriend))
+  def fromWithRequestSentAt(u: User, at: DateTime): BasicUserWithFriendStatus = fromWithRequestSentAt(BasicUser.fromUser(u), at)
+  def fromWithRequestSentAt(u: BasicUser, at: DateTime): BasicUserWithFriendStatus = from(u, Some(false), friendRequestSentAt = Some(at))
+  def fromWithRequestReceivedAt(u: User, at: DateTime): BasicUserWithFriendStatus = fromWithRequestReceivedAt(BasicUser.fromUser(u), at)
+  def fromWithRequestReceivedAt(u: BasicUser, at: DateTime): BasicUserWithFriendStatus = from(u, Some(false), friendRequestReceivedAt = Some(at))
+  private def from(u: BasicUser, isFriend: Option[Boolean], friendRequestSentAt: Option[DateTime] = None, friendRequestReceivedAt: Option[DateTime] = None): BasicUserWithFriendStatus = {
     BasicUserWithFriendStatus(
       externalId = u.externalId,
       firstName = u.firstName,

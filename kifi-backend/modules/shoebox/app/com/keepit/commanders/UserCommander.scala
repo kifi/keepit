@@ -116,17 +116,17 @@ class UserCommander @Inject() (
             BasicUserWithFriendStatus.from(user, true)
           } else {
             friendRequestRepo.getBySenderAndRecipient(user.id.get, viewer.id.get, Set(FriendRequestStates.ACTIVE)) map { req =>
-              BasicUserWithFriendStatus.from(user, friendRequestReceivedAt = Some(req.createdAt))
+              BasicUserWithFriendStatus.fromWithRequestReceivedAt(user, req.createdAt)
             } getOrElse {
               friendRequestRepo.getBySenderAndRecipient(viewer.id.get, user.id.get, Set(FriendRequestStates.ACTIVE, FriendRequestStates.IGNORED)) map { req =>
-                BasicUserWithFriendStatus.from(user, friendRequestSentAt = Some(req.createdAt))
+                BasicUserWithFriendStatus.fromWithRequestSentAt(user, req.createdAt)
               } getOrElse {
                 BasicUserWithFriendStatus.from(user, false)
               }
             }
           }
         }
-      } getOrElse BasicUserWithFriendStatus.from(user)
+      } getOrElse BasicUserWithFriendStatus.fromWithoutFriendStatus(user)
       db.readOnlyReplica { implicit session =>
         //not in v1
         //    val friends = userConnectionRepo.getConnectionCount(user.id.get) //cached
