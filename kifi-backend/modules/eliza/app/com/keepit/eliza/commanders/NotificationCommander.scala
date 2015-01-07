@@ -170,7 +170,7 @@ class NotificationCommander @Inject() (
   def sendToUser(userId: Id[User], data: JsArray): Unit =
     notificationRouter.sendToUser(userId, data)
 
-  def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) = {
+  def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, extra: Option[JsObject]) = {
     val (message, thread) = db.readWrite { implicit session =>
       val mtps = MessageThreadParticipants(userIds)
       val thread = threadRepo.save(MessageThread(
@@ -213,7 +213,8 @@ class NotificationCommander @Inject() (
             "linkText" -> linkText,
             "url" -> linkUrl,
             "isSticky" -> sticky,
-            "image" -> imageUrl
+            "image" -> imageUrl,
+            "extra" -> extra
           )
           notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
 
