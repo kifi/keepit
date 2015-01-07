@@ -122,7 +122,6 @@ angular.module('kifi')
         return;
       }
 
-
       $scope.loading = true;
       searchActionService.find(query, filter, library, lastResult && lastResult.context, $rootScope.userLoggedIn).then(function (q, result) {
         if (q !== query) {  // query was updated
@@ -136,40 +135,55 @@ angular.module('kifi')
           $scope.resultTotals.othersTotal = 0;
         }
 
+        function processHit() {
+          if (q !== query) {
+            return;
+          }
+
+          if (hitIndex >= hits.length) {
+            processHitDeferred.resolve();
+            return;
+          }
+
+          var hit = hits[hitIndex];
+          var searchKeep = new keepDecoratorService.Keep(hit);
+          if (!!searchKeep.id) {
+            searchKeep.buildKeep(searchKeep);
+          }
+
+          // TODO remove after we get rid of the deprecated code and update new code to use 'tags' instead of 'hashtags'
+          searchKeep.hashtags = searchKeep.tags;
+          $scope.resultKeeps.push(searchKeep);
+
+          hitIndex++;
+          $timeout(processHit);
+        }
+
         var hits = result.hits;
-        hits.forEach(function (hit) {
-          // Break up this update-query-results loop so that the event loop has
-          // a chance to pick up keystrokes from the search input.
+        var hitIndex = 0;
+
+        // Process one hit per event loop turn to allow other events to come through.
+        $timeout(processHit);
+
+        var processHitDeferred = $q.defer();
+        var processHitPromise = processHitDeferred.promise;
+
+        // Wait for results to be rendered before displaying totals.
+        processHitPromise.then(function () {
+          // Another segment to be executed on the next turn of the event loop for keystrokes to come through.
           $timeout(function () {
             if (q !== query) { // query was updated
               return;
             }
 
-            var searchKeep = new keepDecoratorService.Keep(hit);
-            if (!!searchKeep.id) {
-              searchKeep.buildKeep(searchKeep);
-            }
+            $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.myTotal;
+            $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.friendsTotal;
+            $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
 
-            // TODO remove after we get rid of the deprecated code and update new code to use 'tags' instead of 'hashtags'
-            searchKeep.hashtags = searchKeep.tags;
-
-            $scope.resultKeeps.push(searchKeep);
+            $scope.hasMore = !!result.mayHaveMore;
+            lastResult = result;
+            $scope.loading = false;
           });
-        });
-
-        // Another segment to be executed on the next turn of the event loop for keystrokes to come through.
-        $timeout(function () {
-          if (q !== query) { // query was updated
-            return;
-          }
-
-          $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.myTotal;
-          $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.friendsTotal;
-          $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
-
-          $scope.hasMore = !!result.mayHaveMore;
-          lastResult = result;
-          $scope.loading = false;
         });
       }.bind(null, query));
     };
