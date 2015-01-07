@@ -16,6 +16,7 @@ angular.module('kifi')
     var lastResult = null;
     var selectedCount = 0;
     var authToken = $location.search().authToken || '';
+    var numResults = 0;
 
 
     //
@@ -123,39 +124,55 @@ angular.module('kifi')
       }
 
       $scope.loading = true;
-      var searchedQuery = query;
-
-      searchActionService.find(query, filter, library, lastResult && lastResult.context, $rootScope.userLoggedIn).then(function (result) {
-        if (searchedQuery !== query) { // query was updated
+      searchActionService.find(query, filter, library, lastResult && lastResult.context, $rootScope.userLoggedIn).then(function (q, result) {
+        if (q !== query) {  // query was updated
           return;
         }
+
+        $scope.hasMore = !!result.mayHaveMore;
+        lastResult = result;
+
         if (resetExistingResults) {
           $scope.resultKeeps.length = 0;
           $scope.resultTotals.myTotal = 0;
           $scope.resultTotals.friendsTotal = 0;
           $scope.resultTotals.othersTotal = 0;
+          numResults = 0;
         }
+        $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.myTotal;
+        $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.friendsTotal;
+        $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
+        numResults = result.hits.length;
 
         var hits = result.hits;
+        var hitIndex = 0;
 
-        hits.forEach(function (hit) {
+        function processHit() {
+          // If query has changed or if we've finished processing all the hits, exit.
+          if ((q !== query) ||  (hitIndex >= hits.length)) {
+            return;
+          }
+
+          var hit = hits[hitIndex];
           var searchKeep = new keepDecoratorService.Keep(hit);
           if (!!searchKeep.id) {
             searchKeep.buildKeep(searchKeep);
           }
+
           // TODO remove after we get rid of the deprecated code and update new code to use 'tags' instead of 'hashtags'
           searchKeep.hashtags = searchKeep.tags;
           $scope.resultKeeps.push(searchKeep);
+
+          hitIndex++;
+          $timeout(processHit);
+        }
+
+        // Process one hit per event loop turn to allow other events to come through.
+        $timeout(function () {
+          processHit();
+          $scope.loading = false;
         });
-
-        $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.myTotal;
-        $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.friendsTotal;
-        $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
-
-        $scope.hasMore = !!result.mayHaveMore;
-        lastResult = result;
-        $scope.loading = false;
-      });
+      }.bind(null, query));
     };
 
     $scope.getFilterUrl = function (type) {
@@ -195,14 +212,13 @@ angular.module('kifi')
 
       // If there are no selected keep, the display the number of
       // search results in the subtitle.
-      var numShown = $scope.resultKeeps.length;
-      switch (numShown) {
+      switch (numResults) {
         case 0:
           return 'Sorry, no results found for “' + query + '”';
         case 1:
           return '1 result found';
         default:
-          return 'Top ' + numShown + ' results';
+          return 'Top ' + numResults + ' results';
       }
     };
 
@@ -227,10 +243,7 @@ angular.module('kifi')
         // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
         _.assign($state.params, $location.search());
         init();
-      },
-      250,
-      { 'leading': true }
-    );
+      }, 250);
     $scope.$on('$locationChangeSuccess', newSearch);
 
 
