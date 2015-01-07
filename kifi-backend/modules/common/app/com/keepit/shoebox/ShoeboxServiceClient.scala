@@ -118,7 +118,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
-  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]): Future[Set[Id[User]]]
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]]
 }
@@ -739,9 +738,6 @@ class ShoeboxServiceClientImpl @Inject() (
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]] = {
     call(Shoebox.internal.newKeepsInLibraryForEmail(userId, max)).map(_.json.as[Seq[Keep]])
   }
-
-  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) =
-    call(Shoebox.internal.getMutualFriends(user1Id, user2Id)).map(_.json.as[Set[Id[User]]])
 
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]] = {
     if (uriIds.isEmpty) Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]]) else {

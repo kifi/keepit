@@ -820,7 +820,6 @@ GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controlle
 GET     /internal/shoebox/database/sessionViewByExternalId @com.keepit.controllers.internal.ShoeboxController.getSessionViewByExternalId(sessionId: UserSessionExternalId)
 GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.internal.ShoeboxController.searchFriends(userId: Id[User])
 GET     /internal/shoebox/database/unfriends     @com.keepit.controllers.internal.ShoeboxController.getUnfriends(userId: Id[User])
-GET     /internal/shoebox/database/getMutualFriends   @com.keepit.controllers.internal.ShoeboxController.getMutualFriends(user1Id: Id[User], user2Id: Id[User])
 
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()

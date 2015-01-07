@@ -46,7 +46,7 @@ class AugmentationCommanderImpl @Inject() (
   def getAugmentedItems(itemAugmentationRequest: ItemAugmentationRequest): Future[Map[AugmentableItem, AugmentedItem]] = {
     val futureAugmentationResponse = augmentation(itemAugmentationRequest)
     val userId = itemAugmentationRequest.context.userId
-    val futureFriends = searchFactory.getFriendIdsFuture(userId).imap(_.map(Id[User](_)))
+    val futureFriends = searchFactory.getSearchFriends(userId).imap(_.map(Id[User](_)))
     val futureLibraries = searchFactory.getLibraryIdsFuture(userId, LibraryContext.None).imap(_._2.map(Id[Library](_)))
     for {
       augmentationResponse <- futureAugmentationResponse
@@ -92,7 +92,7 @@ class AugmentationCommanderImpl @Inject() (
         case (_, followedLibraries, _, _) => followedLibraries.map(Id[Library](_))
       }
 
-      val futureUserFilter = searchFactory.getFriendIdsFuture(context.userId).imap(_.map(Id[User](_)) + context.userId)
+      val futureUserFilter = searchFactory.getSearchFriends(context.userId).imap(_.map(Id[User](_)) + context.userId)
 
       for {
         libraryFilter <- futureLibraryFilter
