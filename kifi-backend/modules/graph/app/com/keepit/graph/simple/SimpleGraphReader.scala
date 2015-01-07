@@ -44,7 +44,7 @@ trait SimpleLocalEdgeReader extends LocalEdgeReader {
   def data: EdgeDataReader = edge._3
   def kind: EdgeType = component._3
   def moveToNextComponent(): Boolean = {
-    if (components == null) throw new UninitializedReaderException(s"$this is not initialized over a valid vertex")
+    if (components == null) components = getComponentIterator()
     if (components.hasNext) {
       currentComponent = components.next()
       edges = null
@@ -63,7 +63,7 @@ trait SimpleLocalEdgeReader extends LocalEdgeReader {
     }
   }
   def reset(): Unit = {
-    components = getComponentIterator()
+    components = null
     edges = null
     currentComponent = null
     currentEdge = null

@@ -173,7 +173,8 @@ class PageCommander @Inject() (
           (basicUserMap, qualityLibraries.take(2), keepCounts)
         }
 
-        val keepers = info.keepers.filterNot(_ == userId).map(basicUserMap) // preserving ordering
+        val keeperIdsToExclude = Set(userId) ++ libraries.map(_.ownerId)
+        val keepers = info.keepers.filterNot(id => keeperIdsToExclude.contains(id)).map(basicUserMap) // preserving ordering
         val otherKeepersTotal = info.keepersTotal - (if (userIdSet.contains(userId)) 1 else 0)
         val followerCounts = db.readOnlyReplica { implicit session =>
           libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_.id.get).toSet, LibraryAccess.READ_ONLY)

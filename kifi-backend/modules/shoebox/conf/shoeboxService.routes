@@ -386,6 +386,7 @@ POST    /site/libraries/:id/image/position  @com.keepit.controllers.website.Libr
 DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.LibraryImageController.removeLibraryImage(id: PublicId[Library])
 
 GET     /site/libraries/recos/top           @com.keepit.controllers.website.LibraryRecommendationsController.topLibRecos()
+POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)

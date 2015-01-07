@@ -48,6 +48,10 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful()
   }
 
+  def notifyLibraryRecosDelivered(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource): Future[Unit] = {
+    Future.successful()
+  }
+
   // test helpers
   val updatedUriRecommendationFeedback = ListBuffer[(Id[User], Id[NormalizedURI], UriRecommendationFeedback)]()
   val updatedLibraryRecommendationFeedback = ListBuffer[(Id[User], Id[Library], LibraryRecommendationFeedback)]()

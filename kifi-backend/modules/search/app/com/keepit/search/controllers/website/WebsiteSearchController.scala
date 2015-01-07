@@ -1,5 +1,6 @@
 package com.keepit.search.controllers.website
 
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.{ PublicIdConfiguration }
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -27,8 +28,9 @@ class WebsiteSearchController @Inject() (
     val shoeboxClient: ShoeboxServiceClient,
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
-    searchCommander: UriSearchCommander,
+    uriSearchCommander: UriSearchCommander,
     librarySearchCommander: LibrarySearchCommander,
+    userSearchCommander: UserSearchCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
   def search2(
@@ -47,7 +49,7 @@ class WebsiteSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { kifiPlainResult =>
+    uriSearchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { kifiPlainResult =>
 
       val futureWebsiteSearchHits = if (kifiPlainResult.hits.isEmpty) {
         Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[BasicLibrary]))
@@ -121,36 +123,162 @@ class WebsiteSearchController @Inject() (
 
   //external (from the website)
   def warmUp() = UserAction { request =>
-    searchCommander.warmUp(request.userId)
+    uriSearchCommander.warmUp(request.userId)
     Ok
   }
 
-  def librarySearch(
+  def search(
     query: String,
     filter: Option[String],
-    maxHits: Int,
-    context: Option[String],
+    maxUris: Int,
+    uriContext: Option[String],
+    lastUUIDStr: Option[String],
+    maxLibraries: Int,
+    libraryContext: Option[String],
+    maxUsers: Int,
+    userContext: Option[String],
     debug: Option[String]) = UserAction.async { request =>
 
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
-
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, context, maxHits, None, debugOpt, None).map { libraryShardResult =>
-      val librarySearcher = libraryIndexer.getSearcher
-      val libraries = libraryShardResult.hits.map(_.id).map { libId => libId -> LibraryIndexable.getRecord(librarySearcher, libId) }.toMap
-      val json = JsArray(libraryShardResult.hits.map { hit =>
-        val library = libraries(hit.id)
-        Json.obj(
-          "id" -> Library.publicId(hit.id),
-          "score" -> hit.score,
-          "name" -> library.map(_.name),
-          "description" -> library.map(_.description.getOrElse("")),
-          "mostRelevantKeep" -> hit.keep.map { case (_, keepRecord) => Json.obj("id" -> keepRecord.externalId, "title" -> JsString(keepRecord.title.getOrElse("")), "url" -> keepRecord.url) }
-        )
-      })
-      Ok(Json.toJson(json))
+    // Uri Search
+
+    val futureUriSearchResult = if (maxUris <= 0) Future.successful(JsNull) else {
+      uriSearchCommander.search2(userId, acceptLangs, experiments, query, filter, Future.successful(LibraryContext.None), maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
+
+        val futureUriSearchHits = if (uriSearchResult.hits.isEmpty) {
+          Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[BasicLibrary]))
+        } else {
+
+          val uriIds = uriSearchResult.hits.map(hit => Id[NormalizedURI](hit.id))
+          val futureUriSummaries = shoeboxClient.getUriSummaries(uriIds)
+          val futureBasicKeeps = {
+            if (userId == SearchControllerUtil.nonUser) {
+              Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]].withDefaultValue(Set.empty))
+            } else {
+              shoeboxClient.getBasicKeeps(userId, uriIds.toSet)
+            }
+          }
+
+          getAugmentedItems(augmentationCommander)(userId, uriSearchResult).flatMap { augmentedItems =>
+            val librarySearcher = libraryIndexer.getSearcher
+            val (allSecondaryFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+
+            val futureJsHits = for {
+              summaries <- futureUriSummaries
+              basicKeeps <- futureBasicKeeps
+            } yield {
+              uriSearchResult.hits.zipWithIndex.map {
+                case (hit, index) => {
+                  val uriId = Id[NormalizedURI](hit.id)
+                  val keeps = basicKeeps.getOrElse(uriId, Set.empty)
+                  val secret = augmentedItems(index).isSecret(librarySearcher)
+                  val primaryFields = Json.obj(
+                    "title" -> hit.title,
+                    "url" -> hit.url,
+                    "score" -> hit.finalScore,
+                    "summary" -> summaries(uriId),
+                    "keeps" -> keeps
+                  )
+                  val secondaryFields = allSecondaryFields(index)
+                  primaryFields ++ secondaryFields
+                }
+              }
+            }
+            for {
+              (users, libraries) <- futureBasicUsersAndLibraries
+              jsHits <- futureJsHits
+            } yield {
+              (jsHits, users, libraries)
+            }
+          }
+
+        }
+
+        futureUriSearchHits.imap {
+          case (hits, users, libraries) =>
+            val librariesJson = libraries.map { library =>
+              Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility)
+            }
+            Json.obj(
+              "uuid" -> uriSearchResult.uuid,
+              "context" -> IdFilterCompressor.fromSetToBase64(uriSearchResult.idFilter),
+              "mayHaveMore" -> uriSearchResult.mayHaveMoreHits,
+              "myTotal" -> uriSearchResult.myTotal,
+              "friendsTotal" -> uriSearchResult.friendsTotal,
+              "othersTotal" -> uriSearchResult.othersTotal,
+              "hits" -> hits,
+              "libraries" -> librariesJson,
+              "users" -> users
+            )
+        }
+      }
+    }
+
+    // Library Search
+
+    val futureLibrarySearchResult = if (maxLibraries <= 0) Future.successful(JsNull) else {
+      librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, libraryContext, maxLibraries, None, debugOpt, None).flatMap { librarySearchResult =>
+        val librarySearcher = libraryIndexer.getSearcher
+        val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
+        val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
+        val futureLibraryStatistics = shoeboxClient.getBasicLibraryStatistics(libraryRecordsAndVisibilityById.keySet)
+        for {
+          usersById <- futureUsers
+          libraryStatisticsById <- futureLibraryStatistics
+        } yield {
+          val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
+            libraryRecordsAndVisibilityById.get(hit.id).map {
+              case (library, visibility) =>
+                val owner = usersById(library.ownerId)
+                val path = Library.formatLibraryPath(owner.username, library.slug)
+                val statistics = libraryStatisticsById(library.id)
+                val description = library.description.getOrElse("")
+                Json.obj(
+                  "id" -> Library.publicId(hit.id),
+                  "score" -> hit.score,
+                  "name" -> library.name,
+                  "description" -> description,
+                  "path" -> path,
+                  "visibility" -> visibility,
+                  "owner" -> owner,
+                  "memberCount" -> statistics.memberCount,
+                  "keepCount" -> statistics.keepCount
+                )
+            }
+          })
+          Json.obj(
+            "context" -> IdFilterCompressor.fromSetToBase64(librarySearchResult.idFilter),
+            "hits" -> hitsArray
+          )
+        }
+      }
+    }
+
+    // User Search
+
+    val futureUserSearchResult = if (maxUsers <= 0) Future.successful(JsNull) else SafeFuture {
+      val userResult = userSearchCommander.searchUsers(Some(userId), query, maxUsers, userContext, filter, excludeSelf = true)
+      Json.obj(
+        "context" -> userResult.context,
+        "hits" -> userResult.hits
+      )
+    }
+
+    for {
+      uriSearchResult <- futureUriSearchResult
+      librarySearchResult <- futureLibrarySearchResult
+      userSearchResult <- futureUserSearchResult
+    } yield {
+      val json = Json.obj(
+        "query" -> query,
+        "uris" -> uriSearchResult,
+        "libraries" -> librarySearchResult,
+        "users" -> userSearchResult
+      )
+      Ok(json)
     }
   }
 }

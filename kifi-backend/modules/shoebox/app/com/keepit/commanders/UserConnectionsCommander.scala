@@ -248,9 +248,9 @@ class UserConnectionsCommander @Inject() (
   def friend(myUserId: Id[User], friendUserId: ExternalId[User]): (Boolean, String) = {
     db.readWrite { implicit s =>
       userRepo.getOpt(friendUserId) map { recipient =>
-        val alreadyConnected = userConnectionRepo.getConnectionOpt(myUserId, recipient.id.get).exists(_.state == UserConnectionStates.ACTIVE)
-        if (alreadyConnected) (true, "alreadyConnected")
-        else {
+        if (userConnectionRepo.areConnected(myUserId, recipient.id.get)) {
+          (true, "alreadyConnected")
+        } else {
           val openFriendRequests = friendRequestRepo.getBySender(myUserId, Set(FriendRequestStates.ACTIVE))
 
           if (openFriendRequests.size > 500) {

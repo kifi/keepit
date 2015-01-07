@@ -23,7 +23,7 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social._
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.controllers.website.{ routes, UserController }
+import com.keepit.controllers.website.UserController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model.KeepFactory._
@@ -76,7 +76,7 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     "change user password" in {
       running(new ShoeboxApplication(mobileControllerTestModules: _*)) {
         val bcrypt = Registry.hashers.get(PasswordHasher.BCryptHasher) getOrElse (new BCryptPasswordHasher(Play.current))
-        val changePwdRoute = com.keepit.controllers.mobile.routes.MobileUserController.changePassword().toString
+        val changePwdRoute = routes.MobileUserController.changePassword().toString
         changePwdRoute === "/m/1/password/change"
         inject[Database].readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test"))
@@ -197,16 +197,15 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         val anonViewer = call(None, user1.username)
         status(anonViewer) must equalTo(OK)
         contentType(anonViewer) must beSome("application/json")
-        val res1 = contentAsJson(anonViewer)
-        res1 === Json.parse(
+        contentAsJson(anonViewer) === Json.parse(
           s"""
             {
               "id":"${user1.externalId.id}",
               "firstName":"George",
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
+              "username": "GDubs",
               "numLibraries":2,
-              "friendsWith": null,
               "numKeeps": 5
             }
           """)
@@ -215,16 +214,15 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         val selfViewer = call(Some(user1), user1.username)
         status(selfViewer) must equalTo(OK)
         contentType(selfViewer) must beSome("application/json")
-        val res2 = contentAsJson(selfViewer)
-        res2 === Json.parse(
+        contentAsJson(selfViewer) === Json.parse(
           s"""
             {
               "id":"${user1.externalId.id}",
               "firstName":"George",
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
+              "username": "GDubs",
               "numLibraries":6,
-              "friendsWith": null,
               "numKeeps": 5
             }
           """)
@@ -233,17 +231,17 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         val friendViewer = call(Some(user2), user1.username)
         status(friendViewer) must equalTo(OK)
         contentType(friendViewer) must beSome("application/json")
-        val res3 = contentAsJson(friendViewer)
-        res3 === Json.parse(
+        contentAsJson(friendViewer) === Json.parse(
           s"""
             {
               "id":"${user1.externalId.id}",
               "firstName":"George",
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
+              "username": "GDubs",
               "numLibraries":3,
-              "friendsWith": true,
-              "numKeeps": 5
+              "numKeeps": 5,
+              "isFriend": true
             }
           """)
       }
@@ -255,7 +253,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
           inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
 
-        val ctrl = com.keepit.controllers.mobile.routes.MobileUserController.currentUser()
+        val ctrl = routes.MobileUserController.currentUser()
         ctrl.toString === "/m/1/user/me"
         ctrl.method === "GET"
 
@@ -298,7 +296,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
 
         inject[FakeUserActionsHelper].setUser(user)
 
-        val ctrl = com.keepit.controllers.mobile.routes.MobileUserController.basicUserInfo(user.externalId, true)
+        val ctrl = routes.MobileUserController.basicUserInfo(user.externalId, true)
         ctrl.toString === s"/m/1/user/${user.externalId}?friendCount=true"
         ctrl.method === "GET"
 
@@ -320,7 +318,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
           inject[UserRepo].save(User(firstName = "Sam", lastName = "Jackson", username = Username("test"), normalizedUsername = "test"))
         }
 
-        val ctrl = com.keepit.controllers.mobile.routes.MobileUserController.updateCurrentUser()
+        val ctrl = routes.MobileUserController.updateCurrentUser()
         ctrl.toString === "/m/1/user/me"
         ctrl.method === "POST"
 
@@ -365,7 +363,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
 
     "return connected users from the database" in {
       withDb(modules: _*) { implicit injector =>
-        val route = com.keepit.controllers.mobile.routes.MobileUserController.friends().toString
+        val route = routes.MobileUserController.friends().toString
         route === "/m/1/user/friendsDetails"
 
         val (user1965, friends) = setupSomeUsers()
@@ -391,7 +389,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
 
     "get socialNetworkInfo" in {
       withDb(modules: _*) { implicit injector =>
-        val route = com.keepit.controllers.mobile.routes.MobileUserController.socialNetworkInfo().toString
+        val route = routes.MobileUserController.socialNetworkInfo().toString
         route === "/m/1/user/networks"
         inject[Database].readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test"))

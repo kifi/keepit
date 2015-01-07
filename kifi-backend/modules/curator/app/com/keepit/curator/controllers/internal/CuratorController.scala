@@ -118,12 +118,11 @@ class CuratorController @Inject() (
     Ok
   }
 
-  def topLibraryRecos(userId: Id[User], limit: Int) = Action.async { request =>
+  def topLibraryRecos(userId: Id[User], limit: Int) = Action.async(parse.tolerantJson) { request =>
     log.info(s"topLibraryRecos called userId=$userId limit=$limit")
 
     userExperimentCommander.getExperimentsByUser(userId) map { experiments =>
-      val sortStrategy =
-        topScoreLibraryRecoStrategy
+      val sortStrategy = topScoreLibraryRecoStrategy
       val scoringStrategy =
         if (experiments.contains(ExperimentType.CURATOR_NONLINEAR_SCORING)) nonlinearLibraryRecoScoringStrategy
         else defaultLibraryRecoScoringStrategy
@@ -139,6 +138,24 @@ class CuratorController @Inject() (
     log.info(s"refreshLibraryRecos called userId=$userId await=$await selectionParams=$selectionParams")
     val precomputeF = libraryRecoGenCommander.precomputeRecommendationsForUser(userId, selectionParams)
     (if (await) precomputeF else Future.successful()) map { _ => Ok }
+  }
+
+  def notifyLibraryRecosDelivered(userId: Id[User]) = Action(parse.tolerantJson) { request =>
+    log.info(s"[notifyLibraryRecosDelivered] called userId=$userId")
+    val libIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
+    val source = (request.body \ "source").asOpt[RecommendationSource]
+    val subSource = (request.body \ "subSource").asOpt[RecommendationSubSource]
+
+    if (source.isEmpty || subSource.isEmpty) {
+      airbrake.notify("[notifyLibraryRecosDelivered] missing source or subSource payload")
+      log.warn("[notifyLibraryRecosDelivered] missing source or subSource payload: " + Json.stringify(request.body))
+    }
+
+    libraryRecoGenCommander.trackDeliveredRecommendations(userId, libIds,
+      source getOrElse RecommendationSource.Unknown,
+      subSource getOrElse RecommendationSubSource.Unknown)
+
+    NoContent
   }
 
   private def scheduleToSendDigestEmail(userId: Id[User]) = {

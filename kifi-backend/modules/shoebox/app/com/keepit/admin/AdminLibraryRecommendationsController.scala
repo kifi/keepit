@@ -7,6 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.curator.CuratorServiceClient
+import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource }
 import com.keepit.model.{ LibraryRepo, User, UserRepo }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsString, JsArray, Json }

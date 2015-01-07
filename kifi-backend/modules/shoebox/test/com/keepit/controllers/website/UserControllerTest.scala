@@ -390,16 +390,15 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val anonViewer = call(None, user1.username)
         status(anonViewer) must equalTo(OK)
         contentType(anonViewer) must beSome("application/json")
-        val res1 = contentAsJson(anonViewer)
-        res1 === Json.parse(
+        contentAsJson(anonViewer) === Json.parse(
           s"""
             {
               "id":"${user1.externalId.id}",
               "firstName":"George",
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
-              "numLibraries":2,
-              "friendsWith": null,
+              "username": "GDubs",
+              "numLibraries": 2,
               "numKeeps": 5
             }
           """)
@@ -416,8 +415,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "firstName":"George",
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
-              "numLibraries":6,
-              "friendsWith": null,
+              "username": "GDubs",
+              "numLibraries": 6,
               "numKeeps": 5
             }
           """)
@@ -434,9 +433,10 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "firstName":"George",
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
-              "numLibraries":3,
-              "friendsWith": true,
-              "numKeeps": 5
+              "username": "GDubs",
+              "numLibraries": 3,
+              "numKeeps": 5,
+              "isFriend": true
             }
           """)
       }

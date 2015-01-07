@@ -27,6 +27,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
     genStateRepo: LibraryRecommendationGenerationStateRepo,
     libMembershipRepo: CuratorLibraryMembershipInfoRepo,
     experimentCommander: RemoteUserExperimentCommander,
+    analytics: CuratorAnalytics,
     serviceDiscovery: ServiceDiscovery) extends Logging {
 
   val recommendationGenerationLock = new ReactiveLock(8)
@@ -36,22 +37,33 @@ class LibraryRecommendationGenerationCommander @Inject() (
     experimentCommander.getUsersByExperiment(ExperimentType.CURATOR_LIBRARY_RECOS).
       map(users => users.map(_.id.get).toSeq)
 
-  def getTopRecommendations(userId: Id[User], howManyMax: Int, recoSortStrategy: LibraryRecoSelectionStrategy, scoringStrategy: LibraryRecoScoringStrategy): Seq[LibraryRecoInfo] = {
+  def getLibraryRecommendations(userId: Id[User], libraryIds: Set[Id[Library]]): Seq[LibraryRecommendation] = {
+    db.readOnlyReplica { implicit s => libraryRecRepo.getByLibraryIdsAndUserId(libraryIds, userId) }
+  }
 
+  def trackDeliveredRecommendations(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource): Future[Unit] = {
+    val recos = getLibraryRecommendations(userId, libraryIds)
+
+    if (recos.size != libraryIds.size) {
+      airbrake.notify(s"[trackDeliveredRecommendations] unexpected # of library recommendations; userId=$userId expected=${libraryIds.size} actual=${recos.size} libIds=$libraryIds")
+    }
+
+    if (source != RecommendationSource.Admin) SafeFuture {
+      analytics.trackDeliveredItems(recos, Some(source), Some(subSource))
+
+      // TODO this can be optimized to only 1 update query but slick doesn't include support for WHERE id IN (...) SQL interpolation
+      recos.map { reco => db.readWrite { implicit rw => libraryRecRepo.incrementDeliveredCount(reco.id.get) } }
+    }
+    else Future.successful(Unit)
+  }
+
+  def getTopRecommendations(userId: Id[User], howManyMax: Int, recoSortStrategy: LibraryRecoSelectionStrategy, scoringStrategy: LibraryRecoScoringStrategy): Seq[LibraryRecoInfo] = {
     def scoreReco(reco: LibraryRecommendation) =
       LibraryRecoScore(scoringStrategy.scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, None, false, 0f), reco)
 
     val recos = db.readOnlyReplica { implicit session =>
       val recosByTopScore = libraryRecRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
       recoSortStrategy.sort(recosByTopScore) take howManyMax
-    }
-
-    SafeFuture {
-      db.readWrite { implicit session =>
-        recos.map { recoScore =>
-          libraryRecRepo.incrementDeliveredCount(recoScore.reco.id.get)
-        }
-      }
     }
 
     recos.map { case LibraryRecoScore(s, r) => LibraryRecommendation.toLibraryRecoInfo(r) }

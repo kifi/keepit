@@ -45,7 +45,7 @@ class CuratorControllerTest extends Specification with CuratorTestInjector with 
         call.method === "POST"
         call.url === s"/internal/curator/updateLibraryRecommendationFeedback?userId=1&libraryId=42"
 
-        val payload = Json.toJson(LibraryRecommendationFeedback(clicked = Some(true), trashed = Some(true), followed = Some(true),
+        val payload = Json.toJson(LibraryRecommendationFeedback(clicked = Some(true), trashed = Some(true), followed = Some(true), vote = Some(false),
           source = Some(RecommendationSource.Site), subSource = Some(RecommendationSubSource.RecommendationsFeed)))
 
         val request = FakeRequest(call).withBody(payload)
@@ -57,6 +57,7 @@ class CuratorControllerTest extends Specification with CuratorTestInjector with 
           actual.followed === true
           actual.clicked === 1
           actual.trashed === true
+          actual.vote.get === false
         }
       }
     }
