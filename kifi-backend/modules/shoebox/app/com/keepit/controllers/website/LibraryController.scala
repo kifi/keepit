@@ -529,7 +529,6 @@ class LibraryController @Inject() (
   def relatedLibraries(pubId: PublicId[Library]) = MaybeUserAction.async { request =>
     val id = Library.decodePublicId(pubId).get
     val userIdOpt = request.userIdOpt
-    val isUserAction = userIdOpt.isDefined
     val t1 = System.currentTimeMillis()
     relatedLibraryCommander.suggestedLibrariesInfo(id, userIdOpt)
       .map {
@@ -545,7 +544,7 @@ class LibraryController @Inject() (
               owner = info.owner,
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
-              followers = LibraryCardInfo.showable(info.followers, isUserAction),
+              followers = LibraryCardInfo.showable(info.followers),
               lastKept = info.lastKept,
               caption = None)
           }
