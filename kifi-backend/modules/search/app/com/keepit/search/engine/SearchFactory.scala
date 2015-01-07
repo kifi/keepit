@@ -46,7 +46,7 @@ class SearchFactory @Inject() (
   private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Set[Long], Set[Long])](3 seconds)
   private[this] val configReqConsolidator = new RequestConsolidator[(Id[User]), (SearchConfig, Option[Id[SearchConfigExperiment]])](10 seconds)
 
-  def getKifiSearch(
+  def getUriSearches(
     shards: Set[Shard[NormalizedURI]],
     userId: Id[User],
     queryString: String,
@@ -147,7 +147,7 @@ class SearchFactory @Inject() (
     future.map { case (myOwnLibIds, memberLibIds) => (myOwnLibIds, memberLibIds, trustedPublishedLibIds, authorizedLibIds) }(immediate)
   }
 
-  def getKifiNonUserSearch(
+  def getNonUserUriSearches(
     shards: Set[Shard[NormalizedURI]],
     queryString: String,
     lang1: Lang,
