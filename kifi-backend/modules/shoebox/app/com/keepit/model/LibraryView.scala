@@ -3,11 +3,11 @@ package com.keepit.model
 import com.keepit.commanders.KeepInfo
 import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.BasicContact
-import com.keepit.social.BasicUser
+import com.keepit.social.{ BasicUser, BasicUserFields }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -33,7 +33,8 @@ object LibraryError {
 
 case class LibraryFail(status: Int, message: String)
 
-@json case class LibraryAddRequest(
+@json
+case class LibraryAddRequest(
   name: String,
   visibility: LibraryVisibility,
   description: Option[String] = None,
@@ -41,13 +42,55 @@ case class LibraryFail(status: Int, message: String)
   color: Option[HexColor] = None,
   listed: Option[Boolean] = None)
 
-@json case class LibraryModifyRequest(
+@json
+case class LibraryModifyRequest(
   name: Option[String] = None,
   slug: Option[String] = None,
   visibility: Option[LibraryVisibility] = None,
   description: Option[String] = None,
   color: Option[HexColor] = None,
   listed: Option[Boolean] = None)
+
+case class BasicUserWithFriendStatus(
+  externalId: ExternalId[User],
+  firstName: String,
+  lastName: String,
+  pictureName: String,
+  username: Username,
+  isFriend: Option[Boolean],
+  friendRequestSentAt: Option[DateTime],
+  friendRequestReceivedAt: Option[DateTime]) extends BasicUserFields
+
+object BasicUserWithFriendStatus {
+  implicit val format = (
+    BasicUserFields.format and
+    (__ \ 'isFriend).formatNullable[Boolean] and
+    (__ \ 'friendRequestSentAt).formatNullable[DateTime] and
+    (__ \ 'friendRequestReceivedAt).formatNullable[DateTime]
+  )(BasicUserWithFriendStatus.apply, unlift(BasicUserWithFriendStatus.unapply))
+
+  def from(u: User): BasicUserWithFriendStatus = from(BasicUser.fromUser(u))
+  def from(u: User, isFriend: Boolean): BasicUserWithFriendStatus = from(BasicUser.fromUser(u), isFriend)
+  def from(u: User, friendRequestSentAt: Option[DateTime] = None, friendRequestReceivedAt: Option[DateTime] = None): BasicUserWithFriendStatus = {
+    from(BasicUser.fromUser(u), friendRequestSentAt, friendRequestReceivedAt)
+  }
+  def from(u: BasicUser): BasicUserWithFriendStatus = from(u, None, None, None)
+  def from(u: BasicUser, isFriend: Boolean): BasicUserWithFriendStatus = from(u, Some(isFriend), None, None)
+  def from(u: BasicUser, friendRequestSentAt: Option[DateTime], friendRequestReceivedAt: Option[DateTime]): BasicUserWithFriendStatus = {
+    from(u, Some(false), friendRequestSentAt, friendRequestReceivedAt)
+  }
+  def from(u: BasicUser, isFriend: Option[Boolean], friendRequestSentAt: Option[DateTime], friendRequestReceivedAt: Option[DateTime]): BasicUserWithFriendStatus = {
+    BasicUserWithFriendStatus(
+      externalId = u.externalId,
+      firstName = u.firstName,
+      lastName = u.lastName,
+      pictureName = u.pictureName,
+      username = u.username,
+      isFriend = isFriend,
+      friendRequestSentAt = friendRequestSentAt,
+      friendRequestReceivedAt = friendRequestReceivedAt)
+  }
+}
 
 case class LibraryInfo(id: PublicId[Library],
   name: String,
@@ -133,7 +176,7 @@ case class LibraryCardInfo(
   color: Option[HexColor],
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
-  owner: BasicUser,
+  owner: BasicUserWithFriendStatus,
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],

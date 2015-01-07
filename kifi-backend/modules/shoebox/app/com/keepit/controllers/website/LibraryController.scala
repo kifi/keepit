@@ -542,7 +542,7 @@ class LibraryController @Inject() (
               color = info.color,
               image = info.image,
               slug = info.slug,
-              owner = info.owner,
+              owner = BasicUserWithFriendStatus.from(info.owner),
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
               followers = LibraryCardInfo.showable(info.followers, isUserAction),

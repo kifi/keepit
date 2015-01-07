@@ -36,8 +36,8 @@ object BasicNonUser {
   //    )(BasicNonUser.apply, unlift(BasicNonUser.unapply))
 
   // Be aware that BasicUserLikeEntity uses the `kind` field to detect if its a BasicUser or BasicNonUser
-  implicit val nonUserKindFormat = NonUserKind.nonUserKindFormat
-  implicit val basicNonUserFormat = new Format[BasicNonUser] {
+  private implicit val nonUserKindFormat = NonUserKind.nonUserKindFormat
+  implicit val format = new Format[BasicNonUser] {
     def reads(json: JsValue): JsResult[BasicNonUser] = {
       JsSuccess(BasicNonUser(
         kind = NonUserKind((json \ "kind").as[String]),
