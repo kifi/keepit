@@ -46,7 +46,8 @@ class LibraryScoringHelper @Inject() (
           recencyScore = getRecencyScore(candidate),
           interestScore = interestScore(idx),
           popularityScore = getPopularityScore(candidate),
-          sizeScore = getSizeScore(candidate))
+          sizeScore = getSizeScore(candidate),
+          contentScore = getContentScore(candidate))
         val masterScore = computeMasterScore(allScores, selectionParams)
         ScoredLibraryInfo(candidate, masterScore, allScores)
       }
@@ -59,7 +60,8 @@ class LibraryScoringHelper @Inject() (
       allScores.recencyScore * selectionParams.recencyScoreWeight +
       allScores.socialScore * selectionParams.socialScoreWeight +
       allScores.popularityScore * selectionParams.popularityScoreWeight +
-      allScores.sizeScore * selectionParams.sizeScoreWeight
+      allScores.sizeScore * selectionParams.sizeScoreWeight +
+      allScores.contentScore * selectionParams.contentScoreWeight
   }
 
   private def getLibraryInterestScores(userId: Id[User], candidates: Seq[CuratorLibraryInfo]): Future[Seq[Float]] = {
@@ -118,6 +120,11 @@ class LibraryScoringHelper @Inject() (
 
   private def getSizeScore(candidate: CuratorLibraryInfo): Float = {
     1 / (1 + Math.exp(-candidate.keepCount / 15)).toFloat
+  }
+
+  private def getContentScore(candidate: CuratorLibraryInfo): Float = {
+    // prefer >= 20 characters in description
+    (candidate.descriptionLength / 10f).max(2f) / 2
   }
 
 }

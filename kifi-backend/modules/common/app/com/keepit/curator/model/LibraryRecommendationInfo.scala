@@ -16,6 +16,7 @@ import com.kifi.macros.json
   sizeScoreWeight: Float,
   popularityScoreWeight: Float,
   socialScoreWeight: Float,
+  contentScoreWeight: Float,
   minMembers: Int,
   minKeeps: Int,
   reset: Boolean = false)
@@ -27,6 +28,7 @@ object LibraryRecoSelectionParams {
     sizeScoreWeight = 0.7f,
     popularityScoreWeight = 0.8f,
     socialScoreWeight = 0.9f,
+    contentScoreWeight = 0.5f,
     minKeeps = 3,
     minMembers = 1,
     reset = false)

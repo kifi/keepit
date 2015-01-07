@@ -6,21 +6,22 @@ import com.keepit.model.{ LibraryKind, LibraryVisibility, Library, User }
 import org.joda.time.DateTime
 
 case class CuratorLibraryInfo(
-  id: Option[Id[CuratorLibraryInfo]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  libraryId: Id[Library],
-  ownerId: Id[User],
-  memberCount: Int,
-  keepCount: Int,
-  visibility: LibraryVisibility,
-  lastKept: Option[DateTime] = None,
-  lastFollowed: Option[DateTime] = None,
-  state: State[CuratorLibraryInfo],
-  kind: LibraryKind,
-  libraryLastUpdated: DateTime,
-  seq: SequenceNumber[CuratorLibraryInfo] = SequenceNumber.ZERO)
-    extends Model[CuratorLibraryInfo] with ModelWithState[CuratorLibraryInfo] with ModelWithSeqNumber[CuratorLibraryInfo] {
+    id: Option[Id[CuratorLibraryInfo]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    libraryId: Id[Library],
+    ownerId: Id[User],
+    memberCount: Int,
+    keepCount: Int,
+    visibility: LibraryVisibility,
+    lastKept: Option[DateTime] = None,
+    lastFollowed: Option[DateTime] = None,
+    state: State[CuratorLibraryInfo],
+    kind: LibraryKind,
+    libraryLastUpdated: DateTime,
+    seq: SequenceNumber[CuratorLibraryInfo] = SequenceNumber.ZERO,
+    name: String,
+    descriptionLength: Int) extends Model[CuratorLibraryInfo] with ModelWithState[CuratorLibraryInfo] with ModelWithSeqNumber[CuratorLibraryInfo] {
 
   def withId(id: Id[CuratorLibraryInfo]): CuratorLibraryInfo = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): CuratorLibraryInfo = this.copy(updatedAt = updateTime)

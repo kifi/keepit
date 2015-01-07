@@ -11,7 +11,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.curator.model._
-import com.keepit.curator.{ LibraryScoringHelper, ScoredLibraryInfo }
+import com.keepit.curator.{ LibraryQualityHelper, LibraryScoringHelper, ScoredLibraryInfo }
 import com.keepit.model.{ LibraryKind, ExperimentType, Library, LibraryVisibility, User }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -28,6 +28,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
     libMembershipRepo: CuratorLibraryMembershipInfoRepo,
     experimentCommander: RemoteUserExperimentCommander,
     analytics: CuratorAnalytics,
+    libraryQualityHelper: LibraryQualityHelper,
     serviceDiscovery: ServiceDiscovery) extends Logging {
 
   val recommendationGenerationLock = new ReactiveLock(8)
@@ -146,7 +147,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
         libraryInfo.keepCount >= selectionParams.minKeeps &&
         libraryInfo.memberCount >= selectionParams.minMembers &&
         libraryInfo.kind == LibraryKind.USER_CREATED &&
-        !usersFollowedLibraries.contains(libraryInfo.libraryId)
+        !usersFollowedLibraries.contains(libraryInfo.libraryId) &&
+        !libraryQualityHelper.isBadLibraryName(libraryInfo.name)
     }
 
     private def getCandidateLibrariesForUser(state: LibraryRecommendationGenerationState): (Seq[CuratorLibraryInfo], SequenceNumber[CuratorLibraryInfo]) = {
@@ -221,19 +223,18 @@ class NonLinearLibraryRecoScoringStrategy(selectionParams: LibraryRecoSelectionP
   }
 
   private def recomputeScore(scores: LibraryScores): Float = {
-    val interestPart = (scores.interestScore * selectionParams.interestScoreWeight)
+    val interestPart = scores.interestScore * selectionParams.interestScoreWeight
     val factor = {
       val normalizer = selectionParams.interestScoreWeight
       interestPart / normalizer
     }
 
-    val socialPart = (
-      scores.recencyScore * selectionParams.recencyScoreWeight +
+    val otherPart = scores.recencyScore * selectionParams.recencyScoreWeight +
       scores.socialScore * selectionParams.socialScoreWeight +
       scores.popularityScore * selectionParams.popularityScoreWeight +
-      scores.sizeScore * selectionParams.sizeScoreWeight
-    )
+      scores.sizeScore * selectionParams.sizeScoreWeight +
+      scores.contentScore * selectionParams.contentScoreWeight
 
-    (interestPart + factor * socialPart)
+    interestPart + factor * otherPart
   }
 }

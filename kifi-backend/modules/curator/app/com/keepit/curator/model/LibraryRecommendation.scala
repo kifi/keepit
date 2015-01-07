@@ -44,7 +44,8 @@ object LibraryRecommendationStates extends States[LibraryRecommendation]
     interestScore: Float,
     recencyScore: Float,
     popularityScore: Float,
-    sizeScore: Float) {
+    sizeScore: Float,
+    contentScore: Float) {
 
   override def toString() =
     f"""
@@ -52,6 +53,7 @@ object LibraryRecommendationStates extends States[LibraryRecommendation]
        |i:$interestScore%1.2f-
        |r:$recencyScore%1.2f-
        |p:$popularityScore%1.2f-
-       |si:$sizeScore%1.2f
+       |si:$sizeScore%1.2f-
+       |c:$contentScore%1.2f
      """.stripMargin.replace("\n", "").trim()
 }

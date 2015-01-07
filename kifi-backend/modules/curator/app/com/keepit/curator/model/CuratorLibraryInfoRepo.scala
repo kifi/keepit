@@ -39,8 +39,11 @@ class CuratorLibraryInfoRepoImpl @Inject() (
     def lastFollowed = column[DateTime]("last_followed", O.Nullable)
     def kind = column[LibraryKind]("kind", O.NotNull)
     def libraryLastUpdated = column[DateTime]("library_last_updated", O.NotNull)
+    def name = column[String]("name", O.NotNull)
+    def descriptionLength = column[Int]("description_length", O.NotNull)
     def * = (id.?, createdAt, updatedAt, libraryId, ownerId, memberCount, keepCount, visibility, lastKept.?,
-      lastFollowed.?, state, kind, libraryLastUpdated, seq) <> ((CuratorLibraryInfo.apply _).tupled, CuratorLibraryInfo.unapply)
+      lastFollowed.?, state, kind, libraryLastUpdated, seq, name, descriptionLength) <>
+      ((CuratorLibraryInfo.apply _).tupled, CuratorLibraryInfo.unapply)
   }
 
   def table(tag: Tag) = new CuratorLibraryInfoTable(tag)
@@ -90,7 +93,9 @@ class CuratorLibraryInfoRepoImpl @Inject() (
       state = r.<<[State[CuratorLibraryInfo]],
       kind = r.<<[LibraryKind],
       libraryLastUpdated = r.<<[DateTime],
-      seq = r.<<[SequenceNumber[CuratorLibraryInfo]]
+      seq = r.<<[SequenceNumber[CuratorLibraryInfo]],
+      name = r.<<[String],
+      descriptionLength = r.<<[Int]
     )
   }
 
