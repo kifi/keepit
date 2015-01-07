@@ -13,7 +13,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.RichContact
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.mail.{ ElectronicMailRepo, EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
@@ -47,6 +47,18 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     FakeElizaServiceClientModule(),
     FakeHeimdalServiceClientModule()
   )
+
+  private val profileLibraryOrdering = new Ordering[Library] {
+    def compare(self: Library, that: Library): Int =
+      (self.kind.value compare that.kind.value) match {
+        case 0 =>
+          (self.memberCount compare that.memberCount) match {
+            case 0 => -(self.id.get.id compare that.id.get.id)
+            case c => -c
+          }
+        case c => c
+      }
+  }
 
   def setupUsers()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -1293,20 +1305,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraries(10).map(_.published().withUser(other).withMemberCount(6)).saved
           val ownerLibs3 = libraries(3).map(_.published().withUser(owner)).saved
           libraries(3).map(_.published().withUser(other)).saved
-          (owner, ownerLibs1 ++ ownerLibs3 ++ ownerLibs2)
+          (owner, ownerLibs1 ++ ownerLibs2 ++ ownerLibs3)
         }
 
-        val ord = new Ordering[Library] {
-          def compare(self: Library, that: Library): Int =
-            (self.kind.value compare that.kind.value) match {
-              case 0 =>
-                (self.memberCount compare that.memberCount) match {
-                  case 0 => -(self.id.get.id compare that.id.get.id)
-                  case c => -c
-                }
-              case c => c
-            }
-        }
+        val ord = profileLibraryOrdering
 
         val libsP1 = libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 5), ImageSize("100x100"))
         libsP1.size === 5

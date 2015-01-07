@@ -64,26 +64,6 @@ class LibraryRepoImpl @Inject() (
   def table(tag: Tag) = new LibraryTable(tag)
   initTable()
 
-  private implicit val getLibraryResult: GetResult[com.keepit.model.Library] = GetResult { r: PositionedResult =>
-    Library.applyFromDbRow(
-      id = r.<<[Option[Id[Library]]],
-      createdAt = r.<<[DateTime],
-      updatedAt = r.<<[DateTime],
-      name = r.<<[String],
-      ownerId = r.<<[Id[User]],
-      visibility = r.<<[LibraryVisibility],
-      description = r.<<[Option[String]],
-      slug = LibrarySlug(r.<<[String]),
-      color = r.<<[Option[String]].map(HexColor(_)),
-      state = r.<<[State[Library]],
-      seq = r.<<[SequenceNumber[Library]],
-      kind = LibraryKind(r.<<[String]),
-      universalLink = r.<<[String],
-      memberCount = r.<<[Int],
-      lastKept = r.<<[Option[DateTime]]
-    )
-  }
-
   override def save(library: Library)(implicit session: RWSession): Library = {
     val toSave = library.copy(seq = deferredSeqNum())
     super.save(toSave)
