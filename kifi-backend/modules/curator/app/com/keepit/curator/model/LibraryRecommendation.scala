@@ -45,7 +45,10 @@ object LibraryRecommendationStates extends States[LibraryRecommendation]
     recencyScore: Float,
     popularityScore: Float,
     sizeScore: Float,
-    contentScore: Float) {
+    private val _contentScore: Option[Float]) {
+
+  // _contentScore is temporary until all recos have been updated with this score
+  val contentScore: Float = _contentScore.getOrElse(1f)
 
   override def toString() =
     f"""

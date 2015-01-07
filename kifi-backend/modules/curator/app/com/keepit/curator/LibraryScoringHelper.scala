@@ -47,7 +47,7 @@ class LibraryScoringHelper @Inject() (
           interestScore = interestScore(idx),
           popularityScore = getPopularityScore(candidate),
           sizeScore = getSizeScore(candidate),
-          contentScore = getContentScore(candidate))
+          _contentScore = Some(getContentScore(candidate)))
         val masterScore = computeMasterScore(allScores, selectionParams)
         ScoredLibraryInfo(candidate, masterScore, allScores)
       }
