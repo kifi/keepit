@@ -764,7 +764,8 @@ class LibraryCommander @Inject() (
       linkUrl = "https://www.kifi.com" + Library.formatLibraryPath(owner.username, lib.slug),
       imageUrl = s3ImageStore.avatarUrlByUser(follower),
       sticky = false,
-      category = NotificationCategory.User.LIBRARY_FOLLOWED
+      category = NotificationCategory.User.LIBRARY_FOLLOWED,
+      extra = Some(Json.obj("follower" -> BasicUser.fromUser(follower)))
     )
   }
 
