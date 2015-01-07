@@ -70,7 +70,7 @@ object UpdatableUserInfo {
 
 case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String])
 
-case class UserProfile(user: User, numKeeps: Int, isConnected: Option[Boolean])
+case class UserProfile(user: User, numKeeps: Int, connection: Option[Either[FriendRequest, Boolean]])
 
 case class UserNotFoundException(username: Username) extends Exception(username.toString)
 
@@ -82,6 +82,7 @@ class UserCommander @Inject() (
     emailRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
     userConnectionRepo: UserConnectionRepo,
+    friendRequestRepo: FriendRequestRepo,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
@@ -109,9 +110,14 @@ class UserCommander @Inject() (
 
   def profile(username: Username, viewer: Option[User]): Option[UserProfile] = {
     userFromUsername(username) map { user =>
-      val isConnected: Option[Boolean] = viewer.filter(_.id != user.id).map { viewer =>
+      val connectionOpt: Option[Either[FriendRequest, Boolean]] = viewer.filter(_.id != user.id).map { viewer =>
         db.readOnlyMaster { implicit session =>
-          userConnectionRepo.areConnected(viewer.id.get, user.id.get)
+          if (userConnectionRepo.areConnected(viewer.id.get, user.id.get)) {
+            Right(true)
+          } else {
+            friendRequestRepo.getBySenderAndRecipient(user.id.get, viewer.id.get, Set(FriendRequestStates.ACTIVE)) orElse
+              friendRequestRepo.getBySenderAndRecipient(viewer.id.get, user.id.get, Set(FriendRequestStates.ACTIVE, FriendRequestStates.IGNORED)) toLeft false
+          }
         }
       }
       db.readOnlyReplica { implicit session =>
@@ -119,7 +125,7 @@ class UserCommander @Inject() (
         //    val friends = userConnectionRepo.getConnectionCount(user.id.get) //cached
         //    val numFollowers = libraryMembershipRepo.countFollowersWithOwnerId(user.id.get) //cached
         val numKeeps = keepRepo.getCountByUser(user.id.get)
-        UserProfile(user = user, numKeeps = numKeeps, isConnected = isConnected)
+        UserProfile(user = user, numKeeps = numKeeps, connection = connectionOpt)
       }
     }
   }

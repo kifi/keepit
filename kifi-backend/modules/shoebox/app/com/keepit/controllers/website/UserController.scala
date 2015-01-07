@@ -594,10 +594,18 @@ class UserController @Inject() (
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
         val numLibraries = libraryCommander.countLibraries(profile.user.id.get, viewer.map(_.id.get))
+        val connectionStatusObj = profile.connection.map {
+          case Right(isFriend) =>
+            Json.obj("isFriend" -> isFriend)
+          case Left(req) if req.senderId == profile.user.id.get =>
+            Json.obj("isFriend" -> false, "friendRequestReceivedAt" -> req.createdAt)
+          case Left(req) =>
+            Json.obj("isFriend" -> false, "friendRequestSentAt" -> req.createdAt)
+        } getOrElse Json.obj()
         Ok(Json.toJson(BasicUser.fromUser(profile.user)).asInstanceOf[JsObject] ++ Json.obj(
           "numLibraries" -> numLibraries,
           "numKeeps" -> profile.numKeeps
-        ) ++ profile.isConnected.map(isF => Json.obj("isFriend" -> isF)).getOrElse(Json.obj()))
+        ) ++ connectionStatusObj)
     }
   }
 
