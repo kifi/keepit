@@ -1163,34 +1163,15 @@ class LibraryCommander @Inject() (
     }
   }
 
-  /**
-   * 1. non user: number of public libraries that are “displayable on profile” (see library pref) plus libraries i follow that are public
-   * 2. my own profile view: total number of libraries I own and I follow, including main and secret, not including pending invites to libs
-   * 3. logged in user viewing another’s profile: Everything in 1 (above) + libraries user has access to (even if private)
-   */
-  def countLibraries(userId: Id[User], viewer: Option[Id[User]]): Int = viewer match {
-    case None => countLibrariesForAnonymous(userId)
-    case Some(id) if id == userId => countLibrariesForSelf(userId)
-    case Some(id) => countLibrariesForOtherUser(userId, id)
-  }
-
-  private def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User]): Int = {
-    db.readOnlyReplica { implicit s =>
-      val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
-      libraryRepo.countLibrariesForOtherUser(userId, friendId, countFollowLibraries = showFollowLibraries)
-    }
-  }
-
-  private def countLibrariesForSelf(userId: Id[User]): Int = {
-    db.readOnlyReplica { implicit s =>
-      libraryRepo.countLibrariesToSelf(userId)
-    }
-  }
-
-  private def countLibrariesForAnonymous(userId: Id[User]): Int = {
-    db.readOnlyReplica { implicit s =>
-      val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
-      libraryRepo.countLibrariesOfUserFromAnonymous(userId, countFollowLibraries = showFollowLibraries)
+  /* always number of libraries (that I own) that are viewable on my profile */
+  def countLibraries(userId: Id[User], viewer: Option[Id[User]]): Int = db.readOnlyReplica { implicit s =>
+    viewer match {
+      case None =>
+        libraryRepo.countLibrariesOfUserFromAnonymous(userId)
+      case Some(id) if id == userId =>
+        libraryMembershipRepo.countWithUserIdAndAccess(userId, LibraryAccess.OWNER)
+      case Some(friendId) =>
+        libraryRepo.countLibrariesForOtherUser(userId, friendId)
     }
   }
 

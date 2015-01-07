@@ -15,7 +15,6 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[LibraryInviteRepoImpl])
 trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryInvite] {
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
-  def getActiveWithUserId(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]]
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def countWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int
   def countWithLibraryIdAndEmail(libraryId: Id[Library], email: EmailAddress, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int
@@ -66,12 +65,6 @@ class LibraryInviteRepoImpl @Inject() (
   }
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
     getWithLibraryIdCompiled(libraryId, excludeState).list
-  }
-
-  def getActiveWithUserId(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Id[Library]] = {
-    import StaticQuery.interpolation
-    val query = sql"select distinct library_id from library_invite where user_id = $userId and state = 'active' order by library_id desc limit ${page.itemsToDrop}, ${page.size}"
-    query.as[Id[Library]].list
   }
 
   private def getWithLibraryIdAndUserIdCompiled(libraryId: Column[Id[Library]], userId: Column[Id[User]], excludeState: Option[State[LibraryInvite]]) = Compiled {
