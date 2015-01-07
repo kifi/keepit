@@ -33,6 +33,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getFollowingLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getFollowingLibrariesFromAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
+  def getInvitedLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getAllPublishedLibraries()(implicit session: RSession): Seq[Library]
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library]
@@ -272,6 +273,12 @@ class LibraryRepoImpl @Inject() (
   def getFollowingLibrariesFromAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
     import StaticQuery.interpolation
     val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access != 'owner' order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    query.as[Library].list
+  }
+
+  def getInvitedLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+    import StaticQuery.interpolation
+    val query = sql"select distinct lib.* from library lib, library_invite li where li.user_id=$userId and li.state='active' and lib.id = li.library_id and lib.state='active' order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
     query.as[Library].list
   }
 

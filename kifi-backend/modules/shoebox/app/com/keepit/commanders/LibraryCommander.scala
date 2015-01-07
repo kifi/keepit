@@ -1263,21 +1263,12 @@ class LibraryCommander @Inject() (
   def getInvitedLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
     if (viewer.exists(_.id == user.id)) {
       db.readOnlyMaster { implicit session =>
-        val libs = getLibrariesBatch(libraryInviteRepo.getActiveWithUserId(user.id.get, page))
+        val libs = libraryRepo.getInvitedLibrariesOfSelf(user.id.get, page)
         val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
         createLibraryCardInfos(libs, owners, idealSize)
       }
     } else {
       ParSeq.empty
-    }
-  }
-
-  private def getLibrariesBatch(ids: Seq[Id[Library]])(implicit session: RSession): Seq[Library] = {
-    if (ids.isEmpty) Seq.empty
-    else if (ids.size == 1) Seq(libraryRepo.get(ids.head))
-    else {
-      val libs = libraryRepo.getLibraries(ids.toSet)
-      ids.map(id => libs(id))
     }
   }
 
