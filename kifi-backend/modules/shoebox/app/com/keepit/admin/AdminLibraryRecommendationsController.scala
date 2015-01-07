@@ -41,6 +41,7 @@ class AdminLibraryRecommendationsController @Inject() (
             case "r" => "recency"
             case "p" => "popularity"
             case "si" => "size"
+            case "c" => "content"
             case x => x
           }
           (key, parts(1))

@@ -1,5 +1,7 @@
 package com.keepit.curator
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.google.inject.{ Module, Injector }
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.DBSession.RWSession
@@ -189,10 +191,13 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
     seedItem1 :: seedItem2 :: seedItem3 :: seedItem4 :: Nil
   }
 
+  val libraryNameSuffix = new AtomicInteger(1)
+
   def saveLibraryInfo(libraryId: Int, ownerId: Int, keepCount: Int = 3, memberCount: Int = 9)(implicit rw: RWSession, injector: Injector): CuratorLibraryInfo = {
     val libInfo = CuratorLibraryInfo(libraryId = Id[Library](libraryId), ownerId = Id[User](ownerId), state = CuratorLibraryInfoStates.ACTIVE,
       keepCount = keepCount, memberCount = memberCount, visibility = LibraryVisibility.PUBLISHED, lastKept = None, lastFollowed = None,
-      kind = LibraryKind.USER_CREATED, libraryLastUpdated = currentDateTime)
+      kind = LibraryKind.USER_CREATED, libraryLastUpdated = currentDateTime, name = "Library Name " + libraryNameSuffix.getAndIncrement.toString,
+      descriptionLength = 30)
     inject[CuratorLibraryInfoRepo].save(libInfo)
   }
 
@@ -206,7 +211,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         interestScore = 1,
         recencyScore = 1,
         popularityScore = 1,
-        sizeScore = 1
+        sizeScore = 1,
+        contentScore = 1
       )
     )
   }

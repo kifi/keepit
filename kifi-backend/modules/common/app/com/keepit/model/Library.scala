@@ -132,7 +132,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
 
   def toDetailedLibraryView(lib: Library, keepCount: Int = 0): DetailedLibraryView = DetailedLibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state,
     seq = lib.seq, kind = lib.kind, memberCount = lib.memberCount, keepCount = keepCount, lastKept = lib.lastKept, lastFollowed = None, visibility = lib.visibility,
-    updatedAt = lib.updatedAt)
+    updatedAt = lib.updatedAt, name = lib.name, description = lib.description)
 }
 
 case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
@@ -222,7 +222,7 @@ object LibraryView {
 
 case class DetailedLibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[Library], seq: SequenceNumber[Library],
   kind: LibraryKind, memberCount: Int, keepCount: Int, lastKept: Option[DateTime] = None, lastFollowed: Option[DateTime] = None,
-  visibility: LibraryVisibility, updatedAt: DateTime)
+  visibility: LibraryVisibility, updatedAt: DateTime, name: String, description: Option[String])
 
 object DetailedLibraryView {
   implicit val format = Json.format[DetailedLibraryView]

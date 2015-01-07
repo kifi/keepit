@@ -28,6 +28,7 @@ class AllLibrarySeedIngestionHelper @Inject() (
     libraryInfoRepo.save(CuratorLibraryInfo(
       libraryId = library.id.get,
       ownerId = library.ownerId,
+      name = library.name,
       memberCount = library.memberCount,
       keepCount = library.keepCount,
       visibility = library.visibility,
@@ -35,6 +36,7 @@ class AllLibrarySeedIngestionHelper @Inject() (
       lastFollowed = library.lastFollowed,
       kind = library.kind,
       libraryLastUpdated = library.updatedAt,
+      descriptionLength = library.description.map(_.size).getOrElse(0),
       state = State[CuratorLibraryInfo](library.state.value)
     ))
   }
@@ -42,6 +44,7 @@ class AllLibrarySeedIngestionHelper @Inject() (
   private def processUpdatedLibrary(library: DetailedLibraryView, libraryInfo: CuratorLibraryInfo)(implicit session: RWSession): Unit = {
     libraryInfoRepo.save(libraryInfo.copy(
       ownerId = library.ownerId,
+      name = library.name,
       memberCount = library.memberCount,
       keepCount = library.keepCount,
       visibility = library.visibility,
@@ -49,6 +52,7 @@ class AllLibrarySeedIngestionHelper @Inject() (
       lastFollowed = library.lastFollowed,
       kind = library.kind,
       libraryLastUpdated = library.updatedAt,
+      descriptionLength = library.description.map(_.size).getOrElse(0),
       state = State[CuratorLibraryInfo](library.state.value)
     ))
   }

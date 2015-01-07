@@ -9,6 +9,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URI
 import com.keepit.common.social._
+import com.keepit.curator.LibraryQualityHelper
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationService }
 import com.keepit.search.{ SearchServiceClient }
@@ -36,6 +37,7 @@ class PageCommander @Inject() (
     historyTracker: SliderHistoryTracker,
     normalizedURIInterner: NormalizedURIInterner,
     searchClient: SearchServiceClient,
+    libraryQualityHelper: LibraryQualityHelper,
     implicit val config: PublicIdConfiguration) extends Logging {
 
   private def getKeepersFuture(userId: Id[User], uri: NormalizedURI): Future[(Seq[BasicUser], Int)] = {
@@ -135,8 +137,7 @@ class PageCommander @Inject() (
     libraries.filterNot { lib =>
       require(lib.state == LibraryStates.ACTIVE, s"library is not active: $lib")
       require(lib.kind == LibraryKind.USER_CREATED, s"library is not user created: $lib")
-      val badName = lib.name.size <= 2 || PageCommander.LowQualityLibraryNamesRe.findFirstIn(lib.name).isDefined //name looks bad...
-      badName
+      libraryQualityHelper.isBadLibraryName(lib.name)
     }
   }
 
@@ -211,10 +212,6 @@ class PageCommander @Inject() (
         Left("parse_url_error")
     }
   }
-}
-
-object PageCommander {
-  val LowQualityLibraryNamesRe = "(?i)(test|delicious|bookmark|pocket|kippt|asdf|pinboard|import)".r
 }
 
 case class KeeperPagePartialInfo(
