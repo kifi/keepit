@@ -146,13 +146,8 @@ object LibraryCardInfo {
     JsObject((Json.toJson(o).asInstanceOf[JsObject].value - "owner").toSeq)
   }
 
-  def showable(followers: Seq[BasicUser], isAuthenticatedRequest: Boolean): Seq[BasicUser] = {
-    if (isAuthenticatedRequest) {
-      val goodLooking = followers.filter(_.pictureName != "0.jpg")
-      if (goodLooking.size <= 7) goodLooking else goodLooking.take(3) // only 7 can fit
-    } else {
-      Seq.empty
-    }
+  def showable(followers: Seq[BasicUser]): Seq[BasicUser] = {
+    followers.filter(_.pictureName != "0.jpg").take(3)
   }
 }
 
