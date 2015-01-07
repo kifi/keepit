@@ -1167,11 +1167,11 @@ class LibraryCommander @Inject() (
   def countLibraries(userId: Id[User], viewer: Option[Id[User]]): Int = db.readOnlyReplica { implicit s =>
     viewer match {
       case None =>
-        libraryRepo.countLibrariesOfUserFromAnonymous(userId, false)
+        libraryRepo.countLibrariesOfUserFromAnonymous(userId)
       case Some(id) if id == userId =>
         libraryMembershipRepo.countWithUserIdAndAccess(userId, LibraryAccess.OWNER)
       case Some(friendId) =>
-        libraryRepo.countLibrariesForOtherUser(userId, friendId, false)
+        libraryRepo.countLibrariesForOtherUser(userId, friendId)
     }
   }
 

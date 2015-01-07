@@ -341,38 +341,17 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.countWithUserIdAndAccess(user4.id.get, LibraryAccess.OWNER) === 0
           libraryMembershipRepo.countWithUserIdAndAccess(user5.id.get, LibraryAccess.OWNER) === 2
 
-          libraryRepo.countLibrariesOfUserFromAnonymous(user1.id.get, countFollowLibraries = true) === 2
-          libraryRepo.countLibrariesOfUserFromAnonymous(user1.id.get, countFollowLibraries = false) === 1
-
-          libraryRepo.countLibrariesOfUserFromAnonymous(user2.id.get, countFollowLibraries = true) === 0
-          libraryRepo.countLibrariesOfUserFromAnonymous(user2.id.get, countFollowLibraries = false) === 0
-
-          libraryRepo.countLibrariesOfUserFromAnonymous(user3.id.get, countFollowLibraries = true) === 1
-          libraryRepo.countLibrariesOfUserFromAnonymous(user3.id.get, countFollowLibraries = false) === 1
-
-          libraryRepo.countLibrariesOfUserFromAnonymous(user4.id.get, countFollowLibraries = true) === 1
-          libraryRepo.countLibrariesOfUserFromAnonymous(user4.id.get, countFollowLibraries = false) === 0
-
-          libraryRepo.countLibrariesOfUserFromAnonymous(user5.id.get, countFollowLibraries = true) === 3
-          libraryRepo.countLibrariesOfUserFromAnonymous(user5.id.get, countFollowLibraries = false) === 2
-
-          libraryRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get, countFollowLibraries = true) === 2
-          libraryRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get, countFollowLibraries = false) === 1
-
-          libraryRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get, countFollowLibraries = true) === 3
-          libraryRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get, countFollowLibraries = false) === 2
-
-          libraryRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get, countFollowLibraries = true) === 0
-          libraryRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get, countFollowLibraries = false) === 0
-
-          libraryRepo.countLibrariesForOtherUser(user3.id.get, user5.id.get, countFollowLibraries = true) === 1
-          libraryRepo.countLibrariesForOtherUser(user3.id.get, user5.id.get, countFollowLibraries = false) === 1
-
-          libraryRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get, countFollowLibraries = true) === 1
-          libraryRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get, countFollowLibraries = false) === 0
-
-          libraryRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get, countFollowLibraries = true) === 3
-          libraryRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get, countFollowLibraries = false) === 2
+          libraryRepo.countLibrariesOfUserFromAnonymous(user1.id.get) === 1
+          libraryRepo.countLibrariesOfUserFromAnonymous(user2.id.get) === 0
+          libraryRepo.countLibrariesOfUserFromAnonymous(user3.id.get) === 1
+          libraryRepo.countLibrariesOfUserFromAnonymous(user4.id.get) === 0
+          libraryRepo.countLibrariesOfUserFromAnonymous(user5.id.get) === 2
+          libraryRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get) === 1
+          libraryRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get) === 2
+          libraryRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get) === 0
+          libraryRepo.countLibrariesForOtherUser(user3.id.get, user5.id.get) === 1
+          libraryRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get) === 0
+          libraryRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get) === 2
         }
         val userController = inject[UserController]
         def call(viewer: Option[User], viewing: Username) = {
