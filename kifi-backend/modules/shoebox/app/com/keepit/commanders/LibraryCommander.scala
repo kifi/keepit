@@ -1176,20 +1176,20 @@ class LibraryCommander @Inject() (
   private def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User]): Int = {
     db.readOnlyReplica { implicit s =>
       val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
-      libraryMembershipRepo.countLibrariesForOtherUser(userId, friendId, countFollowLibraries = showFollowLibraries)
+      libraryRepo.countLibrariesForOtherUser(userId, friendId, countFollowLibraries = showFollowLibraries)
     }
   }
 
   private def countLibrariesForSelf(userId: Id[User]): Int = {
     db.readOnlyReplica { implicit s =>
-      libraryMembershipRepo.countLibrariesToSelf(userId)
+      libraryRepo.countLibrariesToSelf(userId)
     }
   }
 
   private def countLibrariesForAnonymous(userId: Id[User]): Int = {
     db.readOnlyReplica { implicit s =>
       val showFollowLibraries = getUserValueSetting(userId, UserValueName.SHOW_FOLLOWED_LIBRARIES)
-      libraryMembershipRepo.countLibrariesOfUserFromAnonymous(userId, countFollowLibraries = showFollowLibraries)
+      libraryRepo.countLibrariesOfUserFromAnonymous(userId, countFollowLibraries = showFollowLibraries)
     }
   }
 
@@ -1232,7 +1232,7 @@ class LibraryCommander @Inject() (
         case None =>
           libraryRepo.getLibrariesOfUserFromAnonymous(owner.id.get, page)
         case Some(other) =>
-          getLibrariesBatch(libraryMembershipRepo.getOwnedLibrariesForOtherUser(owner.id.get, other.id.get, page))
+          libraryRepo.getOwnedLibrariesForOtherUser(owner.id.get, other.id.get, page)
       }
       val owners = Map(owner.id.get -> BasicUser.fromUser(owner))
       createLibraryCardInfos(libs, owners, idealSize, viewer.isDefined)
@@ -1245,14 +1245,14 @@ class LibraryCommander @Inject() (
         case None =>
           val showFollowLibraries = getUserValueSetting(owner.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
           if (showFollowLibraries) {
-            getLibrariesBatch(libraryMembershipRepo.getFollowingLibrariesFromAnonymous(owner.id.get, page))
+            libraryRepo.getFollowingLibrariesFromAnonymous(owner.id.get, page)
           } else Seq.empty
         case Some(other) if other.id == owner.id =>
-          getLibrariesBatch(libraryMembershipRepo.getFollowingLibrariesOfSelf(owner.id.get, page))
+          libraryRepo.getFollowingLibrariesOfSelf(owner.id.get, page)
         case Some(other) =>
           val showFollowLibraries = getUserValueSetting(owner.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
           if (showFollowLibraries) {
-            getLibrariesBatch(libraryMembershipRepo.getFollowingLibrariesForOtherUser(owner.id.get, other.id.get, page))
+            libraryRepo.getFollowingLibrariesForOtherUser(owner.id.get, other.id.get, page)
           } else Seq.empty
       }
       val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
