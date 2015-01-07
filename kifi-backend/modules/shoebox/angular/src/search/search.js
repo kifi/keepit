@@ -16,6 +16,7 @@ angular.module('kifi')
     var lastResult = null;
     var selectedCount = 0;
     var authToken = $location.search().authToken || '';
+    var numResults = 0;
 
 
     //
@@ -128,20 +129,27 @@ angular.module('kifi')
           return;
         }
 
+        $scope.hasMore = !!result.mayHaveMore;
+        lastResult = result;
+
         if (resetExistingResults) {
           $scope.resultKeeps.length = 0;
           $scope.resultTotals.myTotal = 0;
           $scope.resultTotals.friendsTotal = 0;
           $scope.resultTotals.othersTotal = 0;
+          numResults = 0;
         }
+        $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.myTotal;
+        $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.friendsTotal;
+        $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
+        numResults = result.hits.length;
+
+        var hits = result.hits;
+        var hitIndex = 0;
 
         function processHit() {
-          if (q !== query) {
-            return;
-          }
-
-          if (hitIndex >= hits.length) {
-            processHitDeferred.resolve();
+          // If query has changed or if we've finished processing all the hits, exit.
+          if ((q !== query) ||  (hitIndex >= hits.length)) {
             return;
           }
 
@@ -159,31 +167,10 @@ angular.module('kifi')
           $timeout(processHit);
         }
 
-        var hits = result.hits;
-        var hitIndex = 0;
-
         // Process one hit per event loop turn to allow other events to come through.
-        $timeout(processHit);
-
-        var processHitDeferred = $q.defer();
-        var processHitPromise = processHitDeferred.promise;
-
-        // Wait for results to be rendered before displaying totals.
-        processHitPromise.then(function () {
-          // Another segment to be executed on the next turn of the event loop for keystrokes to come through.
-          $timeout(function () {
-            if (q !== query) { // query was updated
-              return;
-            }
-
-            $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.myTotal;
-            $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.friendsTotal;
-            $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
-
-            $scope.hasMore = !!result.mayHaveMore;
-            lastResult = result;
-            $scope.loading = false;
-          });
+        $timeout(function () {
+          processHit();
+          $scope.loading = false;
         });
       }.bind(null, query));
     };
@@ -225,14 +212,13 @@ angular.module('kifi')
 
       // If there are no selected keep, the display the number of
       // search results in the subtitle.
-      var numShown = $scope.resultKeeps.length;
-      switch (numShown) {
+      switch (numResults) {
         case 0:
           return 'Sorry, no results found for “' + query + '”';
         case 1:
           return '1 result found';
         default:
-          return 'Top ' + numShown + ' results';
+          return 'Top ' + numResults + ' results';
       }
     };
 
