@@ -5,9 +5,9 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ SequenceNumber, State }
 import com.keepit.common.logging.Logging
-import com.keepit.curator.model.{ CuratorLibraryMembershipInfoStates, LibraryRecommendationRepo, CuratorLibraryMembershipInfo, CuratorLibraryMembershipInfoRepo }
+import com.keepit.curator.model.{ CuratorLibraryMembershipInfo, CuratorLibraryMembershipInfoRepo, CuratorLibraryMembershipInfoStates, LibraryRecommendationRepo, LibraryRecommendationStates }
 import com.keepit.model.view.LibraryMembershipView
-import com.keepit.model.{ LibraryMembershipStates, LibraryMembership, Name, SystemValueRepo }
+import com.keepit.model.{ LibraryMembership, Name, SystemValueRepo }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -38,7 +38,12 @@ class LibraryMembershipIngestionHelper @Inject() (
     }
 
     libRecoRepo.getByLibraryAndUserId(libMembership.libraryId, libMembership.userId).map { reco =>
-      libRecoRepo.save(reco.copy(followed = membershipInfo.state == CuratorLibraryMembershipInfoStates.ACTIVE))
+      // sets the state to inactive instead of followed to true so we know whether the reco was followed directly
+      // from a recommendation or another way; does not set the state from inactive to active because it could've
+      // been set to inactive for another reason (and it's possible they've already seen the library reco)
+      if (!reco.followed && membershipInfo.state == CuratorLibraryMembershipInfoStates.ACTIVE) {
+        libRecoRepo.save(reco.copy(state = LibraryRecommendationStates.INACTIVE))
+      }
     }
   }
 
