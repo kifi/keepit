@@ -141,7 +141,7 @@ angular.module('kifi')
             q: query || void 0,
             f: filter || 'm',
             l: library || void 0,
-            maxHits: 10,
+            maxHits: 5,
             context: context || void 0
           }
         };
@@ -187,7 +187,6 @@ angular.module('kifi')
           pageSession: pageSession
         };
 
-        resData.query = query;
         return resData;
       });
     }
