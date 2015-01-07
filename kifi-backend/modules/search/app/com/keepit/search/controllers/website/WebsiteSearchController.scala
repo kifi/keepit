@@ -3,6 +3,7 @@ package com.keepit.search.controllers.website
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.{ PublicIdConfiguration }
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
+import com.keepit.search.engine.SearchFactory
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
 import com.keepit.common.controller._
@@ -31,6 +32,7 @@ class WebsiteSearchController @Inject() (
     uriSearchCommander: UriSearchCommander,
     librarySearchCommander: LibrarySearchCommander,
     userSearchCommander: UserSearchCommander,
+    searchFactory: SearchFactory,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
   def search2(
@@ -259,12 +261,30 @@ class WebsiteSearchController @Inject() (
 
     // User Search
 
-    val futureUserSearchResult = if (maxUsers <= 0) Future.successful(JsNull) else SafeFuture {
-      val userResult = userSearchCommander.searchUsers(Some(userId), query, maxUsers, userContext, filter, excludeSelf = true)
-      Json.obj(
-        "context" -> userResult.context,
-        "hits" -> userResult.hits
-      )
+    val futureUserSearchResult = if (maxUsers <= 0) Future.successful(JsNull) else {
+      SafeFuture { userSearchCommander.searchUsers(Some(userId), query, maxUsers, userContext, filter, excludeSelf = true) }.flatMap { userResult =>
+        val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userResult.hits.map(_.id).toSet)
+        val publishedLibrariesCountByUser = {
+          val librarySearcher = libraryIndexer.getSearcher
+          userResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByMember(librarySearcher, hit.id) }.toMap
+        }
+        futureMutualFriendsByUser.map { mutualFriendsByUser =>
+          Json.obj(
+            "context" -> userResult.context,
+            "hits" -> JsArray(userResult.hits.map { hit =>
+              Json.obj(
+                "id" -> hit.basicUser.externalId,
+                "name" -> hit.basicUser.fullName,
+                "username" -> hit.basicUser.username.value,
+                "pictureName" -> hit.basicUser.pictureName,
+                "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
+                "libraryCount" -> publishedLibrariesCountByUser(hit.id)
+              //"keepCount" todo(Léo): define valid keep count definition
+              )
+            })
+          )
+        }
+      }
     }
 
     for {
