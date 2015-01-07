@@ -5,6 +5,8 @@ import com.keepit.model.view.LibraryMembershipView
 import com.keepit.model._
 import com.keepit.search.index.{ Searcher, DefaultAnalyzer, Indexable, FieldDecoder }
 import com.keepit.search.LangDetector
+import com.keepit.search.util.LongArraySet
+import org.apache.lucene.index.Term
 
 object LibraryFields {
   val nameField = "t"
@@ -43,15 +45,31 @@ object LibraryFields {
 
 object LibraryIndexable {
   def isSecret(librarySearcher: Searcher, libraryId: Id[Library]): Boolean = {
-    librarySearcher.getLongDocValue(LibraryFields.visibilityField, libraryId.id).exists(_ == LibraryFields.Visibility.SECRET)
+    getVisibility(librarySearcher, libraryId.id).exists(_ == LibraryVisibility.SECRET)
   }
 
-  def getVisibility(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryVisibility] = {
-    librarySearcher.getLongDocValue(LibraryFields.visibilityField, libraryId.id).map(LibraryFields.Visibility.fromNumericCode(_))
+  def isPublished(librarySearcher: Searcher, libId: Long): Boolean = {
+    getVisibility(librarySearcher, libId).exists(_ == LibraryVisibility.PUBLISHED)
+  }
+
+  def getVisibility(librarySearcher: Searcher, libId: Long): Option[LibraryVisibility] = {
+    librarySearcher.getLongDocValue(LibraryFields.visibilityField, libId).map(LibraryFields.Visibility.fromNumericCode(_))
   }
 
   def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
     librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
+  }
+
+  def getLibrariesByOwner(librarySearcher: Searcher, ownerId: Id[User]): Set[Long] = {
+    LongArraySet.from(librarySearcher.findPrimaryIds(new Term(LibraryFields.ownerField, ownerId.id.toString)).toArray)
+  }
+
+  def getLibrariesByMember(librarySearcher: Searcher, memberId: Id[User]): Set[Long] = {
+    LongArraySet.from(librarySearcher.findPrimaryIds(new Term(LibraryFields.usersField, memberId.id.toString)).toArray)
+  }
+
+  def countPublishedLibrariesByMember(librarySearcher: Searcher, memberId: Id[User]): Int = {
+    librarySearcher.findPrimaryIds(new Term(LibraryFields.usersField, memberId.id.toString)).toArray().count(isPublished(librarySearcher, _))
   }
 }
 

@@ -13,7 +13,7 @@ import com.keepit.search.engine.library.LibrarySearch
 import com.keepit.search.engine.parser.KQueryParser
 import com.keepit.search.engine.uri.{ UriSearch, UriSearchImpl, UriSearchNonUserImpl }
 import com.keepit.search.index.graph.keep.{ KeepFields, ShardedKeepIndexer }
-import com.keepit.search.index.graph.library.{ LibraryFields, LibraryIndexer }
+import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.phrase.PhraseDetector
 import com.keepit.search.util.LongArraySet
@@ -133,13 +133,8 @@ class SearchFactory @Inject() (
   def getLibraryIdsFuture(userId: Id[User], library: LibraryContext): Future[(Set[Long], Set[Long], Set[Long], Set[Long])] = {
     val librarySearcher = libraryIndexer.getSearcher
 
-    def isPublishedLibrary(libId: Long): Boolean = {
-      val visibility = librarySearcher.getLongDocValue(LibraryFields.visibilityField, libId)
-      (visibility.isDefined && visibility.get == LibraryFields.Visibility.PUBLISHED)
-    }
-
     val trustedPublishedLibIds = library match {
-      case LibraryContext.NotAuthorized(libId) if isPublishedLibrary(libId) => LongArraySet.from(Array(libId))
+      case LibraryContext.NotAuthorized(libId) if LibraryIndexable.isPublished(librarySearcher, libId) => LongArraySet.from(Array(libId))
       case _ => LongArraySet.empty // we may want to get a set of published libraries that are trusted (or featured) somehow
     }
 
@@ -150,8 +145,8 @@ class SearchFactory @Inject() (
 
     val future = libraryIdsReqConsolidator(userId) { userId =>
       SafeFuture {
-        val myOwnLibIds = LongArraySet.from(librarySearcher.findPrimaryIds(new Term(LibraryFields.ownerField, userId.id.toString)).toArray)
-        val memberLibIds = LongArraySet.from(librarySearcher.findPrimaryIds(new Term(LibraryFields.usersField, userId.id.toString)).toArray)
+        val myOwnLibIds = LibraryIndexable.getLibrariesByOwner(librarySearcher, userId)
+        val memberLibIds = LibraryIndexable.getLibrariesByMember(librarySearcher, userId)
 
         (myOwnLibIds, memberLibIds) // myOwnLibIds is a subset of memberLibIds
       }
