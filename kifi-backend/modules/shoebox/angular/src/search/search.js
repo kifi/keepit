@@ -58,6 +58,10 @@ angular.module('kifi')
           return library.id;
         });
       } else {
+        if (!query) { // No query or blank query.
+          $state.go('home');
+        }
+
         libraryIdPromise = $q.when('');
         $rootScope.$emit('libraryUrl', {});
       }
@@ -65,9 +69,6 @@ angular.module('kifi')
       libraryIdPromise.then(function (libraryId) {
         library = libraryId;
 
-        if (!query) { // No query or blank query.
-          $location.path('/');
-        }
         lastResult = null;
         selectedCount = 0;
 
