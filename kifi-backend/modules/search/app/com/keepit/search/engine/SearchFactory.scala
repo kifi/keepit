@@ -26,6 +26,7 @@ import com.keepit.search.tracking.ClickHistoryTracker
 import com.keepit.search.tracking.ResultClickTracker
 import com.keepit.search.index.graph.user.UserGraphsSearcherFactory
 import com.keepit.search.index.sharding._
+import com.keepit.common.core._
 
 @Singleton
 class SearchFactory @Inject() (
@@ -62,7 +63,7 @@ class SearchFactory @Inject() (
     val clickHistoryFuture = clickHistoryTracker.getClickHistoryFuture(userId)
 
     val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryContext)
-    val friendIdsFuture = getFriendIdsFuture(userId)
+    val friendIdsFuture = getSearchFriends(userId)
 
     val parser = new KQueryParser(
       DefaultAnalyzer.getAnalyzer(lang1),
@@ -115,7 +116,19 @@ class SearchFactory @Inject() (
     }
   }
 
-  def getFriendIdsFuture(userId: Id[User]): Future[Set[Long]] = userGraphsSearcherFactory(userId).getSearchFriendsFuture()
+  def getSearchFriends(userId: Id[User]): Future[Set[Long]] = userGraphsSearcherFactory(userId).getSearchFriendsFuture()
+
+  def getMutualFriends(userId: Id[User], otherUserIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[User]]]] = {
+    def getFriends(userId: Id[User]): Future[Set[Long]] = userGraphsSearcherFactory(userId).getConnectedUsersFuture()
+    getFriends(userId).flatMap { userFriends =>
+      val futureMutualFriendsByUserId = otherUserIds.map { otherUserId =>
+        getFriends(otherUserId).imap { otherUserFriends =>
+          otherUserId -> (userFriends intersect otherUserFriends).map(Id[User](_))
+        }
+      }
+      Future.sequence(futureMutualFriendsByUserId).map(_.toMap)
+    }
+  }
 
   def getLibraryIdsFuture(userId: Id[User], library: LibraryContext): Future[(Set[Long], Set[Long], Set[Long], Set[Long])] = {
     val librarySearcher = libraryIndexer.getSearcher
@@ -228,7 +241,7 @@ class SearchFactory @Inject() (
     val currentTime = System.currentTimeMillis()
 
     val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryContext)
-    val friendIdsFuture = getFriendIdsFuture(userId)
+    val friendIdsFuture = getSearchFriends(userId)
 
     val parser = new KQueryParser(
       DefaultAnalyzer.getAnalyzer(lang1),

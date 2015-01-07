@@ -232,7 +232,7 @@ class UriSearchCommanderImpl @Inject() (
       context,
       predefinedConfig,
       debug)
-    val friendIdsFuture = searchFactory.getFriendIdsFuture(userId)
+    val friendIdsFuture = searchFactory.getSearchFriends(userId)
 
     val result = monitoredAwait.result(future, 3 seconds, "getting result")
     val friendIds = monitoredAwait.result(friendIdsFuture, 3 seconds, "getting friend ids")
