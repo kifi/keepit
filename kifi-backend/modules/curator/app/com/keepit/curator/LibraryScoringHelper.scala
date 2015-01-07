@@ -47,7 +47,7 @@ class LibraryScoringHelper @Inject() (
           interestScore = interestScore(idx),
           popularityScore = getPopularityScore(candidate),
           sizeScore = getSizeScore(candidate),
-          _contentScore = Some(getContentScore(candidate)))
+          contentScore = Some(getContentScore(candidate)))
         val masterScore = computeMasterScore(allScores, selectionParams)
         ScoredLibraryInfo(candidate, masterScore, allScores)
       }
@@ -61,7 +61,7 @@ class LibraryScoringHelper @Inject() (
       allScores.socialScore * selectionParams.socialScoreWeight +
       allScores.popularityScore * selectionParams.popularityScoreWeight +
       allScores.sizeScore * selectionParams.sizeScoreWeight +
-      allScores.contentScore * selectionParams.contentScoreWeight
+      allScores.contentScoreOrDefault * selectionParams.contentScoreWeight
   }
 
   private def getLibraryInterestScores(userId: Id[User], candidates: Seq[CuratorLibraryInfo]): Future[Seq[Float]] = {
