@@ -368,7 +368,7 @@ class LibraryCommander @Inject() (
           case Some(lib) if lib.slug == validSlug =>
             Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
           case None =>
-            val newListed = (libAddReq.visibility == LibraryVisibility.PUBLISHED) && libAddReq.listed.getOrElse(true)
+            val newListed = libAddReq.listed.getOrElse(true)
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {
@@ -453,7 +453,7 @@ class LibraryCommander @Inject() (
         val newDescription = modifyReq.description.orElse(targetLib.description)
         val newVisibility = modifyReq.visibility.getOrElse(targetLib.visibility)
         val newColor = modifyReq.color.orElse(targetLib.color)
-        val newListed = (newVisibility == LibraryVisibility.PUBLISHED) && modifyReq.listed.getOrElse(targetMembership.listed)
+        val newListed = modifyReq.listed.getOrElse(targetMembership.listed)
         future {
           val keeps = db.readOnlyMaster { implicit s =>
             keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, None)

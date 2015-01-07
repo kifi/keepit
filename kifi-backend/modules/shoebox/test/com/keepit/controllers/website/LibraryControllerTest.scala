@@ -90,7 +90,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         (parseLibrary \ "visibility").as[LibraryVisibility].value === "secret"
         (parseLibrary \ "keeps").as[Seq[JsValue]].size === 0
         (parseLibrary \ "owner").as[BasicUser].externalId === user.externalId
-        (contentAsJson(result1) \ "listed").asOpt[Boolean].get === false
+        (contentAsJson(result1) \ "listed").asOpt[Boolean].get === true
 
         val inputJson2 = Json.obj(
           "name" -> "Invalid Library - Slug",
