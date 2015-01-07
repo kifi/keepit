@@ -36,9 +36,9 @@ class PeopleRecommendationController @Inject() (
 
         val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
           val mutualFriendsArray = JsArray(mutualFriends(recommendedUserId).toSeq.map { mutualFriendId =>
-            BasicUser.basicUserFormat.writes(basicUsers(mutualFriendId)) + ("numFriends" -> JsNumber(mutualFriendConnectionCounts(mutualFriendId)))
+            BasicUser.format.writes(basicUsers(mutualFriendId)) + ("numFriends" -> JsNumber(mutualFriendConnectionCounts(mutualFriendId)))
           })
-          BasicUser.basicUserFormat.writes(basicUsers(recommendedUserId)) + ("mutualFriends" -> mutualFriendsArray)
+          BasicUser.format.writes(basicUsers(recommendedUserId)) + ("mutualFriends" -> mutualFriendsArray)
         })
         val json = Json.obj("users" -> recommendedUsersArray)
         Ok(json)

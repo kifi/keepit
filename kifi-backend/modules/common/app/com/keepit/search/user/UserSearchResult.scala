@@ -11,9 +11,9 @@ case class UserSearchResult(hits: Array[UserHit], context: String)
 case class UserSearchRequest(userId: Option[Id[User]], queryText: String, maxHits: Int, context: String, filter: String) // userId is the id of the user who sends user search request
 
 object UserHit {
-  implicit val userIdFormat = Id.format[User]
-  implicit val basicUserFormat = BasicUser.basicUserFormat
-  implicit val userHitFormat = (
+  private implicit val userIdFormat = Id.format[User]
+  private implicit val basicUserFormat = BasicUser.format
+  implicit val format = (
     (__ \ 'userId).format[Id[User]] and
     (__ \ 'basicUser).format[BasicUser] and
     (__ \ 'isFriend).format[Boolean]
@@ -21,16 +21,16 @@ object UserHit {
 }
 
 object UserSearchResult {
-  implicit val userHitFormat = UserHit.userHitFormat
-  implicit val userSearchResultFormat = (
+  private implicit val userHitFormat = UserHit.format
+  implicit val format = (
     (__ \ 'hits).format[Array[UserHit]] and
     (__ \ 'context).format[String]
   )(UserSearchResult.apply, unlift(UserSearchResult.unapply))
 }
 
 object UserSearchRequest {
-  implicit val userIdFormat = Id.format[User]
-  implicit val userSearchRequestFormat = (
+  private implicit val userIdFormat = Id.format[User]
+  implicit val format = (
     (__ \ 'userId).format[Option[Id[User]]] and
     (__ \ 'queryText).format[String] and
     (__ \ 'maxHits).format[Int] and
@@ -38,4 +38,3 @@ object UserSearchRequest {
     (__ \ 'filter).format[String]
   )(UserSearchRequest.apply, unlift(UserSearchRequest.unapply))
 }
-

@@ -16,22 +16,40 @@ trait BasicUserLikeEntity {
 }
 
 object BasicUserLikeEntity {
-  implicit val nonUserTypeFormat = Json.format[NonUserKind]
-  implicit val basicUserLikeEntityFormat = new Format[BasicUserLikeEntity] {
+  private implicit val nonUserTypeFormat = Json.format[NonUserKind]
+  implicit val format = new Format[BasicUserLikeEntity] {
     def reads(json: JsValue): JsResult[BasicUserLikeEntity] = {
       // Detect if this is a BasicUser or BasicNonUser
       (json \ "kind").asOpt[String] match {
-        case Some(kind) => BasicNonUser.basicNonUserFormat.reads(json)
-        case None => BasicUser.basicUserFormat.reads(json)
+        case Some(kind) => BasicNonUser.format.reads(json)
+        case None => BasicUser.format.reads(json)
       }
     }
     def writes(entity: BasicUserLikeEntity): JsValue = {
       entity match {
-        case b: BasicUser => BasicUser.basicUserFormat.writes(b)
-        case b: BasicNonUser => BasicNonUser.basicNonUserFormat.writes(b)
+        case b: BasicUser => BasicUser.format.writes(b)
+        case b: BasicNonUser => BasicNonUser.format.writes(b)
       }
     }
   }
+}
+
+trait BasicUserFields {
+  def externalId: ExternalId[User]
+  def firstName: String
+  def lastName: String
+  def pictureName: String
+  def username: Username
+  def fullName: String = s"$firstName $lastName"
+}
+
+object BasicUserFields {
+  val format =
+    (__ \ 'id).format[ExternalId[User]] and
+      (__ \ 'firstName).format[String] and
+      (__ \ 'lastName).format[String] and
+      (__ \ 'pictureName).format[String] and
+      (__ \ 'username).format[Username]
 }
 
 case class BasicUser(
@@ -39,24 +57,16 @@ case class BasicUser(
     firstName: String,
     lastName: String,
     pictureName: String,
-    username: Username) extends BasicUserLikeEntity {
-
+    username: Username) extends BasicUserLikeEntity with BasicUserFields {
   override def asBasicUser = Some(this)
-  def fullName = s"$firstName $lastName"
 }
 
 object BasicUser {
-  implicit val userExternalIdFormat = ExternalId.format[User]
-  implicit val usernameFormat = Username.jsonAnnotationFormat
+  private implicit val userExternalIdFormat = ExternalId.format[User]
+  private implicit val usernameFormat = Username.jsonAnnotationFormat
 
   // Be aware that BasicUserLikeEntity uses the `kind` field to detect if its a BasicUser or BasicNonUser
-  implicit val basicUserFormat = (
-    (__ \ 'id).format[ExternalId[User]] and
-    (__ \ 'firstName).format[String] and
-    (__ \ 'lastName).format[String] and
-    (__ \ 'pictureName).format[String] and
-    (__ \ 'username).format[Username]
-  )(BasicUser.apply, unlift(BasicUser.unapply))
+  implicit val format = (BasicUserFields.format)(BasicUser.apply, unlift(BasicUser.unapply))
 
   implicit val mapUserIdToInt = mapOfIdToObjectFormat[User, Int]
   implicit val mapUserIdToBasicUser = mapOfIdToObjectFormat[User, BasicUser]
@@ -91,8 +101,8 @@ case class TypeaheadUserHit(
   pictureName: String)
 
 object TypeaheadUserHit {
-  implicit val userIdFormat = Id.format[User]
-  implicit val userExternalIdFormat = ExternalId.format[User]
+  private implicit val userIdFormat = Id.format[User]
+  private implicit val userExternalIdFormat = ExternalId.format[User]
 
   implicit val basicUserWithUserIdFormat = (
     (__ \ 'userId).format[Id[User]] and
