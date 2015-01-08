@@ -110,7 +110,7 @@ angular.module('kifi')
           $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
         }
       });
-    }, 100);
+    }, 250);
 
     $scope.onSearchBarClicked = function () {
       if ($scope.library && $scope.library.id) {
