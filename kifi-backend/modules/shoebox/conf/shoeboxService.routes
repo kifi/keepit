@@ -354,8 +354,6 @@ POST    /site/libraries/add         @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryController.copyKeeps()
 POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
 
-POST    /site/libraries/colorAll    @com.keepit.controllers.website.LibraryController.colorAllUserLibraries()
-
 GET     /site/libraries/marketing-suggestions   @com.keepit.controllers.website.LibraryController.marketingSiteSuggestedLibraries()
 
 GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibraryById(id: PublicId[Library], showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None)
@@ -670,7 +668,7 @@ POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminL
 POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminLibraryController.updateLibraries
 POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepImageController.loadPrevImageForKeep(startUserId: Long, endUserId: Long)
 POST    /admin/libraries/updateLibraryOwner @com.keepit.controllers.admin.AdminLibraryController.updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User])
-
+POST    /admin/libraries/colorAll           @com.keepit.controllers.admin.AdminLibraryController.colorAllUserLibraries()
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")

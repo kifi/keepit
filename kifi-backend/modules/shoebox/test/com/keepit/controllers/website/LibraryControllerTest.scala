@@ -13,6 +13,7 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ FakeShoeboxStoreModule, ImageSize }
 import com.keepit.common.time._
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
+import com.keepit.controllers.admin.AdminLibraryController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
@@ -89,9 +90,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           user1
         }
 
-        val libraryController = inject[LibraryController]
+        val libraryController = inject[AdminLibraryController]
         inject[FakeUserActionsHelper].setUser(user1)
-        val request1 = FakeRequest("POST", com.keepit.controllers.website.routes.LibraryController.colorAllUserLibraries().url)
+        val request1 = FakeRequest("POST", "/admin/libraries/colorAll")
         val result1 = libraryController.colorAllUserLibraries()(request1)
         status(result1) must equalTo(NO_CONTENT)
 
