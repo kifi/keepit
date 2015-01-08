@@ -501,4 +501,9 @@ class ShoeboxController @Inject() (
     val result = Json.toJson(basicStatisticsByLibraryId.toSeq)
     Ok(result)
   }
+
+  def getLibrariesWithWriteAccess(userId: Id[User]) = Action { request =>
+    val libraryIds = libraryCommander.getLibrariesWithWriteAccess(userId)
+    Ok(Json.toJson(libraryIds))
+  }
 }

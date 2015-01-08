@@ -171,4 +171,8 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   def userThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserThreadStatsForUserIdCache(stats, accessLog, (outerRepo, 30 days))
 
+  @Provides @Singleton
+  def librariesWithWriteAccessCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new LibrariesWithWriteAccessCache(stats, accessLog, (outerRepo, 10 minutes))
+
 }

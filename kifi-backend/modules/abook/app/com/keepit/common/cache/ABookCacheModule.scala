@@ -175,4 +175,8 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides @Singleton
   def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SociallyRelatedEntitiesCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 day))
+
+  @Provides @Singleton
+  def librariesWithWriteAccessCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new LibrariesWithWriteAccessCache(stats, accessLog, (outerRepo, 10 minutes))
 }
