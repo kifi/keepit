@@ -594,19 +594,17 @@ class UserController @Inject() (
     userCommander.profile(Username(username), viewer) match {
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
-        val numLibraries = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
+        val (numLibraries, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
 
         val json = Json.toJson(profile.basicUserWithFriendStatus).asInstanceOf[JsObject] ++ Json.obj(
           "numLibraries" -> numLibraries,
           "numKeeps" -> profile.numKeeps
         )
-        viewer match {
-          case Some(user) if user.id.get == profile.userId =>
-            val numInvitedLibs = db.readOnlyMaster { implicit s =>
-              libraryInviteRepo.countDistinctWithUserId(profile.userId)
-            }
-            Ok(json ++ Json.obj("numInvitedLibraries" -> numInvitedLibs))
-          case _ => Ok(json)
+        numInvitedLibs match {
+          case Some(numInvited) =>
+            Ok(json ++ Json.obj("numInvitedLibraries" -> numInvited))
+          case _ =>
+            Ok(json)
         }
     }
   }
