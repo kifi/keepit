@@ -60,6 +60,7 @@ angular.module('kifi')
         $state.go('home');
         $window.location = '/';
       }
+      $rootScope.$emit('libraryUrl', {});
 
       var username = $stateParams.username;
 
