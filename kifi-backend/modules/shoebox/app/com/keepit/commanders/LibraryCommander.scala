@@ -1183,15 +1183,19 @@ class LibraryCommander @Inject() (
     }
   }
 
-  /* always number of libraries (that I own) that are viewable on my profile */
-  def countLibraries(userId: Id[User], viewer: Option[Id[User]]): Int = db.readOnlyReplica { implicit s =>
+  /* always number of libraries (that I own) that are viewable on my profile
+   * and show invited libraries only if I am viewing my own profile
+   */
+  def countLibraries(userId: Id[User], viewer: Option[Id[User]]): (Int, Option[Int]) = db.readOnlyReplica { implicit s =>
     viewer match {
       case None =>
-        libraryRepo.countLibrariesOfUserFromAnonymous(userId)
+        (libraryRepo.countLibrariesOfUserFromAnonymous(userId), None)
       case Some(id) if id == userId =>
-        libraryMembershipRepo.countWithUserIdAndAccess(userId, LibraryAccess.OWNER)
+        val numLibsCreated = libraryMembershipRepo.countWithUserIdAndAccess(userId, LibraryAccess.OWNER)
+        val numLibsInvited = libraryInviteRepo.countDistinctWithUserId(userId)
+        (numLibsCreated, Some(numLibsInvited))
       case Some(friendId) =>
-        libraryRepo.countLibrariesForOtherUser(userId, friendId)
+        (libraryRepo.countLibrariesForOtherUser(userId, friendId), None)
     }
   }
 

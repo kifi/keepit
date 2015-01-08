@@ -38,7 +38,6 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def pagePublished(page: Paginator)(implicit session: RSession): Seq[Library]
   def countPublished(implicit session: RSession): Int
   def filterPublishedByMemberCount(minCount: Int, limit: Int = 100)(implicit session: RSession): Seq[Library]
-  def pageByKindAndNoColor(kind: LibraryKind, page: Paginator)(implicit session: RSession): Seq[Library]
 }
 
 @Singleton
@@ -295,12 +294,6 @@ class LibraryRepoImpl @Inject() (
     (for {
       t <- rows if t.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && t.state === LibraryStates.ACTIVE && t.memberCount >= minCount
     } yield t).sortBy(_.updatedAt.desc).take(limit).list
-  }
-
-  def pageByKindAndNoColor(kind: LibraryKind, page: Paginator)(implicit session: RSession): Seq[Library] = {
-    (for {
-      t <- rows if t.kind === (LibraryKind.USER_CREATED: LibraryKind) && t.state === LibraryStates.ACTIVE && t.color.isNull
-    } yield t).drop(page.itemsToDrop).take(page.size).list
   }
 }
 

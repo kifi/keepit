@@ -18,6 +18,7 @@ trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryI
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def countWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int
   def countWithLibraryIdAndEmail(libraryId: Id[Library], email: EmailAddress, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int
+  def countDistinctWithUserId(userId: Id[User])(implicit session: RSession): Int
   def getByUser(userId: Id[User], excludeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(LibraryInvite, Library)]
   def getByEmailAddress(email: EmailAddress, excludeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite]
   def getByLibraryIdAndAuthToken(libraryId: Id[Library], authToken: String, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
@@ -79,6 +80,13 @@ class LibraryInviteRepoImpl @Inject() (
   }
   def countWithLibraryIdAndEmail(libraryId: Id[Library], email: EmailAddress, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int = {
     (for (b <- rows if b.libraryId === libraryId && b.emailAddress === email && !b.state.inSet(excludeSet)) yield b).sortBy(_.createdAt).length.run
+  }
+
+  def countDistinctWithUserId(userId: Id[User])(implicit session: RSession): Int = {
+    //(for (b <- rows if b.userId === userId && !b.state.inSet(excludeSet)) yield b).groupBy(x => x).map(_._1).length.run
+    import StaticQuery.interpolation
+    val query = sql"select count(distinct library_id) from library_invite where user_id=$userId and state='active'"
+    query.as[Int].firstOption.getOrElse(0)
   }
 
   def getByLibraryIdAndAuthToken(libraryId: Id[Library], authToken: String, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
