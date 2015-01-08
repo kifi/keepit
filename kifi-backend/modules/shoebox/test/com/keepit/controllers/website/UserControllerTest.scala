@@ -2,6 +2,8 @@ package com.keepit.controllers.website
 
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
+import com.keepit.model.LibraryInviteFactory._
+import com.keepit.model.LibraryInviteFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserConnectionFactoryHelper._
@@ -318,6 +320,10 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
           membership().withLibraryFollower(library().withUser(user5).published().saved, user1).unlisted().saved
 
+          invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved
+          invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved // duplicate library invite
+          invite().fromLibraryOwner(user5lib).toUser(user1.id.get).withState(LibraryInviteStates.ACCEPTED).saved
+
           keeps(2).map(_.withLibrary(user1secretLib)).saved
           keeps(3).map(_.withLibrary(user1lib)).saved
           keep().withLibrary(user3lib).saved
@@ -396,7 +402,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "pictureName":"pic1.jpg",
               "username": "GDubs",
               "numLibraries": 4,
-              "numKeeps": 5
+              "numKeeps": 5,
+              "numInvitedLibraries": 1
             }
           """)
 
