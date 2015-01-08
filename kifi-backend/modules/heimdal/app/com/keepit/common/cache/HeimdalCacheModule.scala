@@ -188,4 +188,8 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   def uriReKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UriReKeepCountCache(stats, accessLog, (outerRepo, 7 days))
 
+  @Provides @Singleton
+  def librariesWithWriteAccessCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new LibrariesWithWriteAccessCache(stats, accessLog, (outerRepo, 10 minutes))
+
 }
