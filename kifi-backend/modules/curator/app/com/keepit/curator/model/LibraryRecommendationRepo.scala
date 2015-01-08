@@ -17,7 +17,7 @@ import scala.slick.jdbc.StaticQuery
 trait LibraryRecommendationRepo extends DbRepo[LibraryRecommendation] {
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[LibraryRecommendation]
   def getByLibraryAndUserId(libraryId: Id[Library], userId: Id[User], LibraryRecommendationState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Option[LibraryRecommendation]
-  def getByLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], LibraryRecommendationState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Seq[LibraryRecommendation]
+  def getByLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeLibraryRecommendationState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Seq[LibraryRecommendation]
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, LibraryRecommendationState: Option[State[LibraryRecommendation]] = Some(LibraryRecommendationStates.ACTIVE))(implicit session: RSession): Seq[LibraryRecommendation]
   def getRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[LibraryRecommendation]
   def cleanupLowMasterScoreRecos(userId: Id[User], minNumRecosToKeep: Int, before: DateTime)(implicit session: RWSession): Unit
@@ -25,6 +25,7 @@ trait LibraryRecommendationRepo extends DbRepo[LibraryRecommendation] {
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]]
   def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback)(implicit session: RWSession): Boolean
   def incrementDeliveredCount(recoId: Id[LibraryRecommendation])(implicit session: RWSession): Unit
+  def updateLibraryRecommendationState(ids: Seq[Id[LibraryRecommendation]], state: State[LibraryRecommendation])(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -144,6 +145,10 @@ class LibraryRecommendationRepoImpl @Inject() (
   def incrementDeliveredCount(recoId: Id[LibraryRecommendation])(implicit session: RWSession): Unit = {
     import StaticQuery.interpolation
     sqlu"UPDATE library_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
+  }
+
+  def updateLibraryRecommendationState(ids: Seq[Id[LibraryRecommendation]], state: State[LibraryRecommendation])(implicit session: RWSession): Int = {
+    { for (row <- rows if row.id.inSet(ids)) yield (row.state, row.updatedAt) }.update(state, currentDateTime)
   }
 
   def deleteCache(model: LibraryRecommendation)(implicit session: RSession): Unit = {}

@@ -115,7 +115,10 @@ class LibraryRecommendationGenerationCommander @Inject() (
     private def precomputeRecommendationsForUser(alwaysInclude: Set[Id[Library]], recoGenState: LibraryRecommendationGenerationState): Future[Unit] = {
       if (serviceDiscovery.isLeader()) {
         log.info(s"precomputeRecommendationsForUser called userId=$userId seq=${recoGenState.seq}")
-        val (candidateLibraries, newSeqNum) = getCandidateLibrariesForUser(recoGenState)
+        val (candidateLibraries, excludedLibraries, newSeqNum) = getCandidateLibrariesForUser(recoGenState)
+
+        // these libraries were excluded, but it's possible they already exist as library recommendations from a previous precompute
+        if (excludedLibraries.nonEmpty) inactivateLibraryRecommendations(excludedLibraries)
 
         val newState = recoGenState.copy(seq = newSeqNum)
         if (candidateLibraries.isEmpty) {
@@ -126,6 +129,16 @@ class LibraryRecommendationGenerationCommander @Inject() (
       } else {
         log.warn("precomputeRecommendationsForUser doing nothing on non-leader")
         Future.successful()
+      }
+    }
+
+    private def inactivateLibraryRecommendations(libraries: Seq[CuratorLibraryInfo]) = db.readWrite { implicit rw =>
+      val libraryIds = libraries.map(_.libraryId).toSet
+      val recos = libraryRecRepo.getByLibraryIdsAndUserId(libraryIds, userId, Some(LibraryRecommendationStates.INACTIVE))
+
+      if (recos.nonEmpty) {
+        log.info(s"inactivateLibraryRecommendations userId=$userId setting ${recos.size} existing recos to inactive")
+        libraryRecRepo.updateLibraryRecommendationState(recos.map(_.id.get), LibraryRecommendationStates.INACTIVE)
       }
     }
 
@@ -150,13 +163,13 @@ class LibraryRecommendationGenerationCommander @Inject() (
         !libraryQualityHelper.isBadLibraryName(libraryInfo.name)
     }
 
-    private def getCandidateLibrariesForUser(state: LibraryRecommendationGenerationState): (Seq[CuratorLibraryInfo], SequenceNumber[CuratorLibraryInfo]) = {
+    private def getCandidateLibrariesForUser(state: LibraryRecommendationGenerationState): (Seq[CuratorLibraryInfo], Seq[CuratorLibraryInfo], SequenceNumber[CuratorLibraryInfo]) = {
       val libs = db.readOnlyReplica { implicit session => libraryInfoRepo.getBySeqNum(state.seq, 200) }
-      val filteredLibs = libs filter initialLibraryRecoFilterForUser
+      val (filteredLibs, excludedLibs) = libs partition initialLibraryRecoFilterForUser
       val maxLibSeqNum = libs.lastOption map (_.seq) getOrElse state.seq
 
       // returns the last seq number we looked at whether we're using it or not, to ensure we don't keep fetching it
-      (filteredLibs, maxLibSeqNum)
+      (filteredLibs, excludedLibs, maxLibSeqNum)
     }
 
     private def saveLibraryRecommendations(scoredLibraryInfos: Seq[ScoredLibraryInfo]): Unit =
