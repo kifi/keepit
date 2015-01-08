@@ -48,6 +48,28 @@ class LibraryController @Inject() (
   implicit val config: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController with Logging {
 
+  def colorAllUserLibraries() = UserAction { request =>
+    val pageSize = 500
+    var c = 0
+    var paginator = Paginator(c, pageSize)
+    var libs = db.readOnlyMaster { implicit s =>
+      libraryRepo.pageByKind(LibraryKind.USER_CREATED, paginator)
+    }
+    while (libs.nonEmpty) {
+      db.readWriteBatch(libs) { (session, lib) =>
+        if (lib.color.isEmpty) {
+          libraryRepo.save(lib.copy(color = Some(HexColor.pickRandomLibraryColor)))(session)
+        }
+      }
+      c += 1
+      paginator = Paginator(c, pageSize)
+      libs = db.readOnlyMaster { implicit s =>
+        libraryRepo.pageByKind(LibraryKind.USER_CREATED, paginator)
+      }
+    }
+    NoContent
+  }
+
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
     val addRequest = request.body.as[LibraryAddRequest]
 

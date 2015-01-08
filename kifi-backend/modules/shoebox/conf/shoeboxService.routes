@@ -354,6 +354,8 @@ POST    /site/libraries/add         @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryController.copyKeeps()
 POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
 
+POST    /site/libraries/colorAll    @com.keepit.controllers.website.LibraryController.colorAllUserLibraries()
+
 GET     /site/libraries/marketing-suggestions   @com.keepit.controllers.website.LibraryController.marketingSiteSuggestedLibraries()
 
 GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibraryById(id: PublicId[Library], showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None)

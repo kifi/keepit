@@ -368,13 +368,14 @@ class LibraryCommander @Inject() (
           case Some(lib) if lib.slug == validSlug =>
             Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
           case None =>
+            val newColor = libAddReq.color.orElse(Some(HexColor.pickRandomLibraryColor))
             val newListed = libAddReq.listed.getOrElse(true)
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                    visibility = libAddReq.visibility, slug = validSlug, color = libAddReq.color, kind = LibraryKind.USER_CREATED, memberCount = 1))
+                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = LibraryKind.USER_CREATED, memberCount = 1))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed))
                   lib
                 case Some(lib) =>

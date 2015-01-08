@@ -18,6 +18,8 @@ import scala.concurrent.duration.Duration
 import com.keepit.social.BasicUser
 import com.keepit.common.json
 
+import scala.util.Random
+
 case class Library(
     id: Option[Id[Library]] = None,
     createdAt: DateTime = currentDateTime,
@@ -254,4 +256,18 @@ object HexColor {
 
   val regex = "^#[0-9a-f]{6}$".r
   def apply(hex: String): HexColor = new HexColor(hex.toLowerCase)
+
+  val allColors = Seq(
+    HexColor("#C764A2"), // magenta (pink)
+    HexColor("#E35957"), // red
+    HexColor("#FF9430"), // orange (a bit darker)
+    HexColor("#2EC89A"), // indigo (light green)
+    HexColor("#3975BF"), // blue
+    HexColor("#955CB4"), // purple
+    HexColor("#FAB200")) // light orange (more yellow-ish)
+
+  def pickRandomLibraryColor(): HexColor = {
+    val rnd = new Random
+    allColors(rnd.nextInt(allColors.size))
+  }
 }

@@ -251,6 +251,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val allLibs = libraryRepo.all
           allLibs.length === 3
           allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
+          allLibs.map(_.color.nonEmpty === true)
         }
       }
 
