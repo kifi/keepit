@@ -386,8 +386,10 @@ class LibraryCommander @Inject() (
                   newLib
               }
             }
-            libraryAnalytics.createLibrary(ownerId, library, context)
-            searchClient.updateLibraryIndex()
+            SafeFuture {
+              libraryAnalytics.createLibrary(ownerId, library, context)
+              searchClient.updateLibraryIndex()
+            }
             Right(library)
         }
       }
@@ -481,7 +483,9 @@ class LibraryCommander @Inject() (
           libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, state = LibraryStates.ACTIVE))
         }
       }
-      searchClient.updateLibraryIndex()
+      future {
+        searchClient.updateLibraryIndex()
+      }
       result
     }
   }
@@ -748,15 +752,16 @@ class LibraryCommander @Inject() (
         }
         val (invites, inviteesWithAccess) = invitesAndInvitees.flatten.unzip
         processInvites(invites)
-
-        libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
+        future {
+          libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
+        }
 
         Right(inviteesWithAccess)
       }
     }
   }
 
-  def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Unit = {
+  def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Future[Unit] = SafeFuture {
     val (follower, owner) = db.readOnlyReplica { implicit session =>
       userRepo.get(newFollowerId) -> userRepo.get(lib.ownerId)
     }
@@ -822,14 +827,18 @@ class LibraryCommander @Inject() (
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
-
-        val keepCount = keepRepo.getCountByLibrary(libraryId)
-        libraryAnalytics.acceptLibraryInvite(userId, libraryId, eventContext)
-        libraryAnalytics.followLibrary(userId, lib, keepCount, eventContext)
-        searchClient.updateLibraryIndex()
+        updateLibraryJoin(userId, lib, eventContext)
         Right(updatedLib)
       }
     }
+  }
+
+  private def updateLibraryJoin(userId: Id[User], library: Library, eventContext: HeimdalContext): Future[Unit] = SafeFuture {
+    val libraryId = library.id.get
+    val keepCount = db.readOnlyMaster { implicit s => keepRepo.getCountByLibrary(libraryId) }
+    libraryAnalytics.acceptLibraryInvite(userId, libraryId, eventContext)
+    libraryAnalytics.followLibrary(userId, library, keepCount, eventContext)
+    searchClient.updateLibraryIndex()
   }
 
   def declineLibrary(userId: Id[User], libraryId: Id[Library]) = {
@@ -848,10 +857,11 @@ class LibraryCommander @Inject() (
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           val lib = libraryRepo.get(libraryId)
           libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
-
-          val keepCount = keepRepo.getCountByLibrary(libraryId)
-          libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
-          searchClient.updateLibraryIndex()
+          SafeFuture {
+            val keepCount = keepRepo.getCountByLibrary(libraryId)
+            libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
+            searchClient.updateLibraryIndex()
+          }
           Right()
         }
       }
@@ -972,7 +982,9 @@ class LibraryCommander @Inject() (
           }
         }
         val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(), saveKeep)
-        libraryAnalytics.editLibrary(userId, toLibrary, context, Some("copy_keeps"))
+        future {
+          libraryAnalytics.editLibrary(userId, toLibrary, context, Some("copy_keeps"))
+        }
         keepResults
     }
   }
@@ -1021,7 +1033,9 @@ class LibraryCommander @Inject() (
           }
         }
         val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
-        libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
+        future {
+          libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
+        }
         keepResults
     }
   }
