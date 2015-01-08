@@ -39,7 +39,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.typeahead.{ HashtagTypeahead, HashtagHit, TypeaheadHit }
-import com.keepit.search.augmentation.{LimitedAugmentationInfo, RestrictedKeepInfo, ItemAugmentationRequest, AugmentableItem}
+import com.keepit.search.augmentation.{ LimitedAugmentationInfo, RestrictedKeepInfo, ItemAugmentationRequest, AugmentableItem }
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.store.ImageSize
 import com.keepit.common.CollectionHelpers
@@ -135,6 +135,7 @@ class KeepsCommander @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
     hashtagTypeahead: HashtagTypeahead,
+    userCommander: UserCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getKeepsCountFuture(): Future[Int] = {
@@ -269,12 +270,23 @@ class KeepsCommander @Inject() (
     }.toMap
   }
 
-  private def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo] = {
-    infos map { info =>
+  def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo] = {
+    val allUsers = (infos flatMap { info =>
       val keepers = info.keepers
       val libs = info.libraries
-      val allUsers: Set[Id[User]] = Set(libs.map(_._2) ++ keepers)
-
+      (libs.map(_._2) ++ keepers)
+    }).toSet
+    if (allUsers.isEmpty) infos
+    else {
+      val fakeUsers = userCommander.getAllFakeUsers().intersect(allUsers)
+      if (fakeUsers.isEmpty) infos
+      else {
+        infos map { info =>
+          val keepers = info.keepers.filterNot(u => fakeUsers.contains(u))
+          val libs = info.libraries.filterNot(t => fakeUsers.contains(t._2))
+          info.copy(keepers = keepers, libraries = libs)
+        }
+      }
     }
   }
 

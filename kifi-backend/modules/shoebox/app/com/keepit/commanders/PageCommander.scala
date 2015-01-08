@@ -38,6 +38,7 @@ class PageCommander @Inject() (
     normalizedURIInterner: NormalizedURIInterner,
     searchClient: SearchServiceClient,
     libraryQualityHelper: LibraryQualityHelper,
+    userCommander: UserCommander,
     implicit val config: PublicIdConfiguration) extends Logging {
 
   private def getKeepersFuture(userId: Id[User], uri: NormalizedURI): Future[(Seq[BasicUser], Int)] = {
@@ -171,7 +172,13 @@ class PageCommander @Inject() (
           val keepCounts = keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet)
           val qualityLibraries = secondQualityFilter(libraries, keepCounts)
           val basicUserMap = basicUserRepo.loadAll(userIdSet ++ qualityLibraries.map(_.ownerId) - userId)
-          (basicUserMap, qualityLibraries.take(2), keepCounts)
+          val topLibs = if (qualityLibraries.isEmpty) {
+            qualityLibraries
+          } else {
+            val fakeUsers = userCommander.getAllFakeUsers()
+            qualityLibraries.takeWhile(lib => !fakeUsers.contains(lib.ownerId)).take(2)
+          }
+          (basicUserMap, topLibs, keepCounts)
         }
 
         val keeperIdsToExclude = Set(userId) ++ libraries.map(_.ownerId)
