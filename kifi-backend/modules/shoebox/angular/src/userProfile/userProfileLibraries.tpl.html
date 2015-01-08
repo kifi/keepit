@@ -2,7 +2,7 @@
   <nav class="kf-upl-nav">
     <a class="kf-upl-nav-link" ui-sref="userProfile.libraries.own" ng-class="{'kf-selected': libraryType === 'own', 'kf-my': viewingOwnProfile}">Libraries</a>
     <a class="kf-upl-nav-link" ui-sref="userProfile.libraries.following" ng-class="{'kf-selected': libraryType === 'following'}">Following</a>
-    <a class="kf-upl-nav-link" ui-sref="userProfile.libraries.invited" ng-class="{'kf-selected': libraryType === 'invited'}">Invited</a>
+    <a ng-if="showInvitedLibraries()" class="kf-upl-nav-link" ui-sref="userProfile.libraries.invited" ng-class="{'kf-selected': libraryType === 'invited'}">Invited</a>
   </nav>
 </div>
 

@@ -167,7 +167,7 @@ angular.module('kifi')
     };
 
     $scope.isMyLibrary = function(libraryOwnerId) {
-      return libraryOwnerId === $scope.profile.id;
+      return $scope.profile && (libraryOwnerId === $scope.profile.id);
     };
 
     $scope.isHidden = function(library) {
@@ -228,8 +228,8 @@ angular.module('kifi')
 
 
 .controller('UserProfileLibrariesCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', 'routeService', 'keepWhoService', 'profileService', 'userProfileActionService',
-  function ($scope, $rootScope, $state, $stateParams, routeService, keepWhoService, profileService, userProfileActionService) {
+  '$scope', '$rootScope', '$state', '$stateParams', 'routeService', 'keepWhoService', 'profileService', 'userProfileActionService', 'libraryService',
+  function ($scope, $rootScope, $state, $stateParams, routeService, keepWhoService, profileService, userProfileActionService, libraryService) {
     var colors = ['#C764A2', '#E35957', '#FF9430', '#2EC89A', '#3975BF', '#955CB4', '#FAB200'];
     var username = $stateParams.username;
     var fetchPageSize = 12;
@@ -270,6 +270,12 @@ angular.module('kifi')
 
     $scope.hasMoreLibraries = function () {
       return hasMoreLibraries;
+    };
+
+    $scope.showInvitedLibraries = function () {
+      // TODO: modify the profile endpoint to return number of invited libraries instead of relying
+      // on libraryService.invitedSummaries.length.
+      return $scope.viewingOwnProfile && libraryService.invitedSummaries.length;
     };
 
     $scope.getUserProfileUrl = function (user) {
