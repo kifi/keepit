@@ -22,6 +22,10 @@ angular.module('kifi')
       // { name: 'Helped', routeState: 'userProfile.helped', countFieldName: 'numRekeeps' }
     ];
 
+    var kifiCuratorUsernames = [
+      'kifi-eng'
+    ];
+
 
     //
     // Internal data.
@@ -43,6 +47,7 @@ angular.module('kifi')
     $scope.canConnectToUser = false;
     $scope.userNavLinks = [];
     $scope.optionalAction = null;
+    $scope.isKifiCurator = false;
 
 
     //
@@ -63,6 +68,7 @@ angular.module('kifi')
       $rootScope.$emit('libraryUrl', {});
 
       var username = $stateParams.username;
+      $scope.isKifiCurator = isKifiCurator(username);
 
       userProfileActionService.getProfile(username).then(function (profile) {
         setTitle(profile);
@@ -74,6 +80,10 @@ angular.module('kifi')
         // that we're tracking are initialized by the above functions.
         trackPageView();
       });
+    }
+
+    function isKifiCurator(username) {
+      return kifiCuratorUsernames.indexOf(username) !== -1;
     }
 
     function setTitle(profile) {
