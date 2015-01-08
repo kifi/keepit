@@ -31,9 +31,11 @@
       <div class="kf-upl-followers" ng-if="lib.followers.length > 0">
         <a href="{{getUserProfileUrl(user)}}" class="kf-upl-follower" ng-repeat="user in lib.followers" ng-click="trackProfileClick()"
            ng-attr-style="background-image:url({{user.picUrl}})"></a>
-        <span ng-if="lib.followers.length===1"> follows this library</span>
-        <span ng-if="lib.followers.length > 1">
-          <ng-pluralize count="lib.numFollowers - lib.followers.length" when="{'0':' follow this library','1':'+{} follower','other':'+{} followers'}"></ng-pluralize>
+        <span ng-if="lib.numFollowers === lib.followers.length">
+          <ng-pluralize class="kf-upl-all-followers" count="lib.numFollowers" when="{'1':'follows this library','other':'are following'}"></ng-pluralize>
+        </span>
+        <span ng-if="lib.numFollowers > lib.followers.length">
+          + {{lib.numFollowers - lib.followers.length}} are following
         </span>
       </div>
       <div class="kf-upl-updated" ng-if="lib.followers.length === 0 && lib.lastKept">

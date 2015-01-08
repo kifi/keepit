@@ -190,10 +190,11 @@ name-line-height = 25px
 
 .kf-upl-count
   font-size: 10px
-  color: rgba(255,255,255,.6)
+  color: rgba(255,255,255,.7)
 
   .kf-upl-count+&::before
-    content: ' \00a0\00b7\00a0 '
+    content: '\00b7'
+    padding: 0 4px
 
 .kf-upl-card-byline
   position: absolute
@@ -233,10 +234,10 @@ name-line-height = 25px
 
 .kf-upl-card-cover-image
   position: absolute
-  top: 0
-  left: 0
-  right: 0
-  bottom: 0
+  top: -3px
+  left: -3px
+  right: -3px
+  bottom: -3px
   background-size: cover
   -webkit-filter: blur(3px)
   -moz-filter: blur(3px)
@@ -258,14 +259,14 @@ name-line-height = 25px
   left: 0
   right: 0
   bottom: 0
-  height: 34px
+  height: 35px
   border-top: 1px solid rgba(255,255,255,.3)
   -webkit-font-smoothing: antialiased
 
 follower-pic-diameter = 23px
 
 .kf-upl-followers
-  padding: 4px 16px 0
+  padding: 5px 16px 0
   text-align: left
   line-height: follower-pic-diameter
   font-size: 11px
@@ -283,10 +284,13 @@ follower-pic-diameter = 23px
   margin-right: 4px
 
   &:last-of-type
-    margin-right: 6px
+    margin-right: 3px
+
+.kf-upl-all-followers
+  margin-left: 1px
 
 .kf-upl-updated
-  line-height: 32px
+  line-height: 33px
   font-size: 12px
   color: rgba(255,255,255,.4)
 
