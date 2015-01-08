@@ -21,7 +21,7 @@
       <div class="kf-upl-card-byline"><span class="kf-upl-card-by">by</span> {{lib.owner.firstName}} {{lib.owner.lastName}}</div>
     </a>
     <div itemscope itemtype="http://data-vocabulary.org/Person">
-      <a href="{{getUserProfileUrl(lib.owner)}}" ng-click="trackProfileClick()" itemprop="url">
+      <a href="{{getUserProfileUrl(lib.owner)}}" ng-click="trackProfileClick()" itemprop="url" ng-if="libraryType !== 'own'">
         <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" itemprop="photo">
       </a>
       <meta itemprop="name" content="{{lib.owner.firstName}} {{lib.owner.lastName}}" />
@@ -41,8 +41,8 @@
     </div>
   </div>
   <div class="kf-upl-empty" ng-if="libraries && libraries.length === 0">
-    <span ng-if="libraryType == 'own'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} not created any publicly viewable libraries.</span>
-    <span ng-if="libraryType == 'following'">{{viewingOwnProfile ? 'You are' : profile.firstName + ' is'}} not following any libraries.</span>
-    <span ng-if="libraryType == 'invited'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} no pending invitations to follow a library.</span>
+    <span ng-if="libraryType === 'own'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} not created any publicly viewable libraries.</span>
+    <span ng-if="libraryType === 'following'">{{viewingOwnProfile ? 'You are' : profile.firstName + ' is'}} not following any libraries.</span>
+    <span ng-if="libraryType === 'invited'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} no pending invitations to follow a library.</span>
   </div>
 </div>
