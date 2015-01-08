@@ -2,6 +2,7 @@ desktopBorderRadius = 19px
 mobileBorderRadius = 54px
 
 .kf-small-library-card {
+  display: block;
   position: relative;
   border-radius: desktopBorderRadius desktopBorderRadius;
   z-index: 1;
@@ -11,10 +12,6 @@ mobileBorderRadius = 54px
 
   .kf-mobile & {
     border-radius: mobileBorderRadius mobileBorderRadius;
-  }
-
-  &:hover {
-    cursor: pointer;
   }
 }
 
