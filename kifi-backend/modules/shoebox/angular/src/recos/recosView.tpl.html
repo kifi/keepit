@@ -30,8 +30,10 @@
         <span ng-if="reco.recoData.kind === 'keep'" class="kf-reco-top-title">
           {{reco.recoData.type | titlecase}}
         </span>
-        <span ng-if="reco.recoData.kind === 'library' && $root.userLoggedIn === false">Featured</span>
-        <span ng-if="reco.recoData.kind === 'library' && $root.userLoggedIn === true">Recommended Library</span>
+        <span ng-switch on="reco.recoData.type" ng-if="reco.recoData.kind === 'library'">
+          <span ng-switch-when="popular">Featured</span>
+          <span ng-switch-default>Recommended Library</span>
+        </span>
       </header>
 
       <div ng-if="reco.recoData.kind === 'keep'" kf-keep-card keep="reco.recoKeep" keep-callback="trackRecoKeep(keep)" click-callback="trackRecoClick(reco)" libraries="libraries"></div>
