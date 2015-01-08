@@ -22,7 +22,7 @@ case class MessageWithBasicUser(
   participants: Seq[BasicUserLikeEntity])
 
 object MessageWithBasicUser {
-  implicit val basicUserLikeEntityFormat = BasicUserLikeEntity.basicUserLikeEntityFormat
+  implicit val basicUserLikeEntityFormat = BasicUserLikeEntity.format
   implicit val format = (
     (__ \ 'id).format(ExternalId.format[Message]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
