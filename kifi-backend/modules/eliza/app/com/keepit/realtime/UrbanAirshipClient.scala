@@ -94,9 +94,12 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
             AirbrakeError.outgoing(
               exception = fullException,
               request = req.req,
-              message = s"Airbrake Client calling ${req.httpUri.summary} for update device $device state failed"
+              message = s"UrbanAirship Client calling ${req.httpUri.summary} for update device $device state failed"
             )
           )
+          //there was a problem with UrbanAirship getting updates for this device.
+          //touching the device update timestamp so we won't try it again in the near future, hope that they recover by next time we'll try it.
+          db.readWrite { implicit s => deviceRepo.save(device) }
       }) map { r =>
         val json = r.json
         log.info(s"device report for $device: $json")
