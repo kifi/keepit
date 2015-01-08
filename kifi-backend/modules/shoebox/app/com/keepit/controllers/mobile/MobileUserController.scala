@@ -289,11 +289,16 @@ class MobileUserController @Inject() (
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
         val (numLibraries, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-        Ok(Json.toJson(profile.basicUserWithFriendStatus).asInstanceOf[JsObject] ++ Json.obj(
+        val json = Json.toJson(profile.basicUserWithFriendStatus).asInstanceOf[JsObject] ++ Json.obj(
           "numLibraries" -> numLibraries,
-          "numInvitedLibraries" -> numInvitedLibs,
           "numKeeps" -> profile.numKeeps)
-        )
+
+        numInvitedLibs match {
+          case Some(numInvited) =>
+            Ok(json ++ Json.obj("numInvitedLibraries" -> numInvited))
+          case _ =>
+            Ok(json)
+        }
     }
   }
 
