@@ -4,19 +4,24 @@ import com.google.inject.Inject
 import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
+import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.{ UriSearchCommander }
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
-import com.keepit.search.augmentation.{ AugmentationCommander }
+import com.keepit.search.augmentation.{ AugmentedItem, AugmentationCommander }
 import com.keepit.common.json
 import com.keepit.common.core._
+
+import scala.concurrent.Future
 
 object ExtSearchController {
   private[ExtSearchController] val maxKeepersShown = 20
@@ -79,13 +84,9 @@ class ExtSearchController @Inject() (
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
       getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>
         val librarySearcher = libraryIndexer.getSearcher
-        val (allSecondaryFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+        val (augmentationFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
 
-        val hitsJson = allSecondaryFields.zipWithIndex.map {
-          case (secondaryFields, index) =>
-            val secret = augmentedItems(index).isSecret(librarySearcher)
-            json.minify(Json.obj("secret" -> secret) ++ secondaryFields - "librariesTotal")
-        }
+        val hitsJson = augmentationFields.map(json.minify)
 
         futureBasicUsersAndLibraries.imap {
           case (users, libraries) =>
@@ -109,6 +110,64 @@ class ExtSearchController @Inject() (
         .andThen(Enumerator(",")).andThen(augmentationEnumerator)
         .andThen(Enumerator("]").andThen(Enumerator.eof))).as(JSON)
     } withHeaders ("Cache-Control" -> "private, max-age=10")
+  }
+
+  private def writesAugmentationFields(
+    librarySearcher: Searcher,
+    userId: Id[User],
+    maxKeepersShown: Int,
+    maxLibrariesShown: Int,
+    maxTagsShown: Int,
+    augmentedItems: Seq[AugmentedItem]): (Seq[JsObject], Future[(Seq[BasicUser], Seq[BasicLibrary])]) = {
+
+    val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
+
+    val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
+    val allLibrariesShown = limitedAugmentationInfos.map(_.libraries)
+
+    val userIds = ((allKeepersShown.flatten ++ allLibrariesShown.flatMap(_.map(_._2))).toSet - userId).toSeq
+    val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
+
+    val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, allLibrariesShown.flatMap(_.map(_._1)).toSet)
+
+    val libraryIds = libraryRecordsAndVisibilityById.keys.toSeq // libraries that are missing from the index are implicitly dropped here (race condition)
+    val libraryIndexById = libraryIds.zipWithIndex.toMap
+
+    val futureBasicUsersAndLibraries = {
+      val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
+      shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds).map { usersById =>
+        val users = userIds.map(usersById(_))
+        val libraries = libraryIds.map { libId =>
+          val (library, visibility) = libraryRecordsAndVisibilityById(libId)
+          val owner = usersById(library.ownerId)
+          makeBasicLibrary(library, visibility, owner)
+        }
+        (users, libraries)
+      }
+    }
+
+    val secrecies = augmentedItems.map(_.isSecret(librarySearcher))
+
+    val augmentationFields = (limitedAugmentationInfos zip secrecies).map {
+      case (limitedInfo, secret) =>
+
+        val keepersIndices = limitedInfo.keepers.map(userIndexById(_))
+        val librariesIndices = limitedInfo.libraries.collect {
+          case (libraryId, keeperId) if libraryIndexById.contains(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId))
+        }.flatten
+
+        Json.obj(
+          "keepers" -> keepersIndices,
+          "keepersOmitted" -> limitedInfo.keepersOmitted,
+          "keepersTotal" -> limitedInfo.keepersTotal,
+          "libraries" -> librariesIndices,
+          "librariesOmitted" -> limitedInfo.librariesOmitted,
+          "tags" -> limitedInfo.tags,
+          "tagsOmitted" -> limitedInfo.tagsOmitted,
+          "secret" -> secret
+        )
+    }
+    (augmentationFields, futureBasicUsersAndLibraries)
   }
 
   //external (from the extension)
