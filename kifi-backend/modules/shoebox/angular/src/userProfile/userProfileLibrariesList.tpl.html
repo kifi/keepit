@@ -18,13 +18,14 @@
         <ng-pluralize class="kf-upl-count" count="lib.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}" ng-if="lib.numKeeps > 0"></ng-pluralize>
         <ng-pluralize class="kf-upl-count" count="lib.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}" ng-if="lib.numFollowers > 0"></ng-pluralize>
       </div>
-      <div class="kf-upl-card-byline"><span class="kf-upl-card-by">by</span> {{lib.owner.firstName}} {{lib.owner.lastName}}</div>
     </a>
     <div itemscope itemtype="http://data-vocabulary.org/Person">
       <a href="{{getUserProfileUrl(lib.owner)}}" ng-click="trackProfileClick()" itemprop="url" ng-if="libraryType !== 'own'">
         <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" itemprop="photo">
       </a>
-      <meta itemprop="name" content="{{lib.owner.firstName}} {{lib.owner.lastName}}" />
+      <a class="kf-upl-card-byline" href="{{getUserProfileUrl(lib.owner)}}" ng-click="trackProfileClick()">
+        <span class="kf-upl-card-by">by</span> <span itemprop="name">{{lib.owner.firstName}} {{lib.owner.lastName}}</span>
+      </a>
     </div>
     <div class="kf-upl-card-foot">
       <div class="kf-upl-followers" ng-if="lib.followers.length > 0">
