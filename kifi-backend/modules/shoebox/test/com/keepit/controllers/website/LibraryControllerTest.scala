@@ -517,7 +517,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                     "firstName":"second",
                     "lastName":"user",
                     "pictureName":"alf.jpg",
-                    "username":"seconduser"
+                    "username":"seconduser",
+                    "isFriend":false
                   },
                   "numKeeps":0,
                   "numFollowers":1,
