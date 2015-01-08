@@ -53,6 +53,11 @@ angular.module('kifi')
       var libraryIdPromise = null;
 
       if (userName && librarySlug) {
+        if (!query) {
+          $state.go('library.keeps');
+          return;
+        }
+
         libraryIdPromise = libraryService.getLibraryByUserSlug(userName, librarySlug, authToken, false).then(function (library) {
           $rootScope.$emit('libraryUrl', library);
           return library.id;
@@ -60,6 +65,7 @@ angular.module('kifi')
       } else {
         if (!query) { // No query or blank query.
           $state.go('home');
+          return;
         }
 
         libraryIdPromise = $q.when('');
@@ -239,12 +245,12 @@ angular.module('kifi')
     // Watches and event listeners.
     //
     var newSearch = _.debounce(function () {
-        // Use $state.params instead of $stateParams because changes to $stateParams
-        // does not propagate to HeaderCtrl when it is injected there.
-        // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
-        _.assign($state.params, $location.search());
-        init();
-      }, 250);
+      // Use $state.params instead of $stateParams because changes to $stateParams
+      // does not propagate to HeaderCtrl when it is injected there.
+      // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
+      _.assign($state.params, $location.search());
+      init();
+    }, 250);
     $scope.$on('$locationChangeSuccess', newSearch);
 
 
