@@ -23,6 +23,8 @@ angular.module('kifi')
     ];
 
     var kifiCuratorUsernames = [
+      'kifi',
+      'kifi-editorial',
       'kifi-eng'
     ];
 
