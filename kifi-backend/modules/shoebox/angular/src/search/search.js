@@ -86,11 +86,9 @@ angular.module('kifi')
 
         searchActionService.reset();
         $scope.getNextKeeps(true);
-      })['catch'](function (resp) {
-        if (resp.status && resp.status === 403) {
-          // TODO(yiping): how should we handle this case?
-        }
-      });  //jshint ignore:line
+      })['catch'](function (/* resp */) {
+        // TODO(yiping): handle (resp.status === 403) somehow
+      });
 
       $timeout(function () {
         $window.document.body.scrollTop = 0;
