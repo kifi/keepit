@@ -13,7 +13,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ FakeShoeboxStoreModule, ImageSize }
 import com.keepit.common.time._
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
-import com.keepit.controllers.admin.AdminLibraryController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
@@ -22,7 +21,6 @@ import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
-import com.keepit.model.UserConnectionFactory._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
