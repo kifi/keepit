@@ -67,44 +67,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
   "LibraryController" should {
 
-    "assign colors to libraries" in {
-      withDb(modules: _*) { implicit injector =>
-        val user1 = db.readWrite { implicit s =>
-          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
-          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
-          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
-          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
-          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
-
-          library().withUser(user1.id.get).published().withColor(HexColor("#ffffff")).saved
-          libraries(3).map(_.withUser(user2.id.get).published()).saved
-          library().withUser(user3.id.get).secret().saved
-          libraries(2).map(_.withUser(user4.id.get).secret()).saved
-          library().withUser(user5.id.get).withKind(LibraryKind.SYSTEM_MAIN).discoverable().saved
-          library().withUser(user5.id.get).withKind(LibraryKind.SYSTEM_SECRET).secret().saved
-
-          libraryRepo.count === 9
-          val allLibs = libraryRepo.all
-          allLibs.count(_.color.isEmpty) === 8
-          allLibs.count(_.color.nonEmpty) === 1
-          user1
-        }
-
-        val libraryController = inject[AdminLibraryController]
-        inject[FakeUserActionsHelper].setUser(user1)
-        val request1 = FakeRequest("POST", "/admin/libraries/colorAll")
-        val result1 = libraryController.colorAllUserLibraries()(request1)
-        status(result1) must equalTo(NO_CONTENT)
-
-        db.readOnlyMaster { implicit s =>
-          val allLibs = libraryRepo.all
-          allLibs.count(_.color.isEmpty) === 2
-          allLibs.count(_.color.nonEmpty) === 7
-        }
-
-      }
-    }
-
     "create library" in {
       withDb(modules: _*) { implicit injector =>
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -482,7 +444,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
           val user1 = user().withName("first", "user").withUsername("firstuser").saved
           val user2 = user().withName("second", "user").withUsername("seconduser").withPictureName("alf").saved
-          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("#e3e3e3").withDesc("My first library!").saved.savedFollowerMembership(user2)
+          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor(HexColor.BLUE).withDesc("My first library!").saved.savedFollowerMembership(user2)
           val library2 = library().withName("lib2").withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
           val library3 = library().withName("lib3").withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
           keep().withLibrary(library1).saved
@@ -521,7 +483,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   "slug": "lib1",
                   "kind": "user_created",
                   "visibility": "published",
-                  "color": "#e3e3e3",
+                  "color": "${HexColor.BLUE.hex}",
                   "image": {"path": "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x": 50, "y": 50},
                   "numKeeps": 1,
                   "numFollowers": 1,
@@ -1398,8 +1360,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               value = s"""
                    |[
                    |  { "id": 424242, "caption": "does not exist" },
-                   |  { "id": ${lib2.id.get}, "color": "#abcdef" },
-                   |  { "id": ${lib1.id.get}, "caption": "yo dawg", "color": "#ffffff" },
+                   |  { "id": ${lib2.id.get}, "color": "${HexColor.BLUE.hex}" },
+                   |  { "id": ${lib1.id.get}, "caption": "yo dawg", "color": "${HexColor.RED.hex}" },
                    |  { "id": ${lib3.id.get} }
                    |]
                  """.stripMargin))
@@ -1418,12 +1380,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libInfos(0).numFollowers === 1
           libInfos(0).id.id must beMatching("^l.+") // tests public id
           libInfos(0).caption must beNone
-          libInfos(0).color.get.hex === "#abcdef"
+          libInfos(0).color.get === HexColor.BLUE
           libInfos(1).name === "Scala"
           libInfos(1).numFollowers === 2
           libInfos(1).owner.fullName === "John Doe"
           libInfos(1).caption must beSome("yo dawg")
-          libInfos(1).color.get.hex === "#ffffff"
+          libInfos(1).color.get === HexColor.RED
         }
       }
     }
