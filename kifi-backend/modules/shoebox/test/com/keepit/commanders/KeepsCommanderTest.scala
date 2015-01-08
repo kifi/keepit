@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
@@ -7,11 +8,13 @@ import com.keepit.common.controller._
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
+import com.keepit.common.db.Id
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.search.augmentation.LimitedAugmentationInfo
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -35,6 +38,27 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
     Nil
 
   "KeepsCommander" should {
+
+    "filter fake users and libs" in {
+      withDb(modules: _*) { implicit injector =>
+        inject[KeepsCommander].filterLibraries(Seq()) === Seq()
+        val (real, fake) = db.readWrite { implicit s =>
+          val user1 = user().saved
+          val user2 = user().saved
+          userExperimentRepo.save(UserExperiment(experimentType = ExperimentType.FAKE, userId = user2.id.get))
+          (user1.id.get, user2.id.get)
+        }
+        val seq1 = Seq(LimitedAugmentationInfo(Seq(real), 0, 0, Seq(Id[Library](1) -> real), 0, 0, Seq.empty, 0),
+          LimitedAugmentationInfo(Seq(real), 0, 0, Seq(Id[Library](2) -> real), 0, 0, Seq.empty, 0),
+          LimitedAugmentationInfo(Seq(), 0, 0, Seq(), 0, 0, Seq.empty, 0))
+        inject[KeepsCommander].filterLibraries(seq1) === seq1
+        val seq2 = Seq(LimitedAugmentationInfo(Seq(real), 0, 0, Seq(Id[Library](1) -> real), 0, 0, Seq.empty, 0),
+          LimitedAugmentationInfo(Seq(real, fake), 0, 0, Seq(Id[Library](2) -> real, Id[Library](3) -> fake), 0, 0, Seq.empty, 0),
+          LimitedAugmentationInfo(Seq(), 0, 0, Seq(Id[Library](3) -> fake), 0, 0, Seq.empty, 0))
+        inject[KeepsCommander].filterLibraries(seq2) === seq1
+      }
+    }
+
     "export keeps" in {
       withDb() { implicit injector =>
         val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
