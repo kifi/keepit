@@ -107,4 +107,10 @@ trait DestinationWeightsQuerier {
       }
     }
   }
+
+  def getTotalDestinationWeight(wanderer: GlobalVertexReader, scout: GlobalVertexReader, component: Component, resolver: EdgeResolver): Double = {
+    var total = 0.0
+    getDestinationWeights(wanderer, scout, component, resolver) { (_, weight) => total += weight }
+    total
+  }
 }
