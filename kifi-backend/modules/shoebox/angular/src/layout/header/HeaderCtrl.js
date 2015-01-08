@@ -85,29 +85,21 @@ angular.module('kifi')
 
     $scope.search.text = $state.params.q || '';
     $scope.changeSearchInput = _.debounce(function () {
-      $timeout(function() {
-        // We are not already on the search page.
-        if ($location.path() !== '/find') {
-          if ($scope.library && $scope.library.url) {
-            if ($scope.search.text) {
-              /* jshint ignore:start */
-              if ($state.params.q) {
-                $location.search('q', $scope.search.text).replace();
-              } else {
-                $location.url($scope.library.url + '/find?q=' + $scope.search.text + '&f=a');
-              }
-              /* jshint ignore:end */
-            } else {  // jshint ignore:line
-              $location.url($scope.library.url);
-            }
-          } else if ($scope.search.text) {
-            $location.url('/find?q=' + $scope.search.text);
-          }
-        }
-
-        // We are already on the search page.
-        else {
+      $timeout(function () {
+        if ($location.path() === '/find') {
           $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
+        } else if ($scope.library && $scope.library.url) {
+          if ($scope.search.text) {
+            if ($state.params.q) {
+              $location.search('q', $scope.search.text).replace();
+            } else {
+              $location.url($scope.library.url + '/find?q=' + $scope.search.text + '&f=a');
+            }
+          } else {
+            $location.url($scope.library.url);
+          }
+        } else if ($scope.search.text) {
+          $location.url('/find?q=' + $scope.search.text);
         }
       });
     }, 250);

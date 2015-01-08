@@ -242,5 +242,25 @@ class AdminLibraryController @Inject() (
     Redirect(request.request.referer)
   }
 
+  def colorAllUserLibraries() = UserAction { request =>
+    val pageSize = 500
+    var c = 0
+    var paginator = Paginator(c, pageSize)
+    var libs = db.readOnlyMaster { implicit s =>
+      libraryRepo.pageByKindAndNoColor(LibraryKind.USER_CREATED, paginator)
+    }
+    while (libs.nonEmpty) {
+      db.readWriteBatch(libs) { (session, lib) =>
+        libraryRepo.save(lib.copy(color = Some(HexColor.pickRandomLibraryColor)))(session)
+      }
+      c += 1
+      paginator = Paginator(c, pageSize)
+      libs = db.readOnlyMaster { implicit s =>
+        libraryRepo.pageByKindAndNoColor(LibraryKind.USER_CREATED, paginator)
+      }
+    }
+    NoContent
+  }
+
 }
 
