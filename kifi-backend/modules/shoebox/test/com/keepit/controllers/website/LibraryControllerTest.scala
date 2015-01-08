@@ -13,6 +13,7 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ FakeShoeboxStoreModule, ImageSize }
 import com.keepit.common.time._
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
+import com.keepit.controllers.admin.AdminLibraryController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
@@ -21,6 +22,7 @@ import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.UserConnectionFactory._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
@@ -64,6 +66,44 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   }
 
   "LibraryController" should {
+
+    "assign colors to libraries" in {
+      withDb(modules: _*) { implicit injector =>
+        val user1 = db.readWrite { implicit s =>
+          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
+          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          library().withUser(user1.id.get).published().withColor(HexColor("#ffffff")).saved
+          libraries(3).map(_.withUser(user2.id.get).published()).saved
+          library().withUser(user3.id.get).secret().saved
+          libraries(2).map(_.withUser(user4.id.get).secret()).saved
+          library().withUser(user5.id.get).withKind(LibraryKind.SYSTEM_MAIN).discoverable().saved
+          library().withUser(user5.id.get).withKind(LibraryKind.SYSTEM_SECRET).secret().saved
+
+          libraryRepo.count === 9
+          val allLibs = libraryRepo.all
+          allLibs.count(_.color.isEmpty) === 8
+          allLibs.count(_.color.nonEmpty) === 1
+          user1
+        }
+
+        val libraryController = inject[AdminLibraryController]
+        inject[FakeUserActionsHelper].setUser(user1)
+        val request1 = FakeRequest("POST", "/admin/libraries/colorAll")
+        val result1 = libraryController.colorAllUserLibraries()(request1)
+        status(result1) must equalTo(NO_CONTENT)
+
+        db.readOnlyMaster { implicit s =>
+          val allLibs = libraryRepo.all
+          allLibs.count(_.color.isEmpty) === 2
+          allLibs.count(_.color.nonEmpty) === 7
+        }
+
+      }
+    }
 
     "create library" in {
       withDb(modules: _*) { implicit injector =>
