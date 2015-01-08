@@ -295,10 +295,9 @@ class KeepsCommander @Inject() (
     else {
       val augmentationFuture = {
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
-        searchClient.augment(perspectiveUserIdOpt, showPublishedLibraries, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items)
+        searchClient.augment(perspectiveUserIdOpt, showPublishedLibraries, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
       }
-      val basicInfosFuture = augmentationFuture.map { fullAugmentationInfos =>
-        val augmentationInfos = filterLibraries(fullAugmentationInfos)
+      val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
         val idToLibrary = {
           val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
           db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) }
