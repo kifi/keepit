@@ -65,8 +65,6 @@ class LibraryCommander @Inject() (
     countByLibraryCache: CountByLibraryCache,
     typeaheadCommander: TypeaheadCommander,
     collectionRepo: CollectionRepo,
-    connectionRepo: UserConnectionRepo,
-    friendRequestRepo: FriendRequestRepo,
     s3ImageStore: S3ImageStore,
     emailOptOutCommander: EmailOptOutCommander,
     airbrake: AirbrakeNotifier,
@@ -80,6 +78,7 @@ class LibraryCommander @Inject() (
     libraryImageCommander: LibraryImageCommander,
     uriSummaryCommander: URISummaryCommander,
     experimentCommander: LocalUserExperimentCommander,
+    friendStatusCommander: FriendStatusCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -1261,7 +1260,11 @@ class LibraryCommander @Inject() (
   }
 
   private def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewer: Option[User], idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
-    val ownersWFS = augmentWithFriendStatus(owners, viewer.flatMap(_.id))
+    val ownersWFS = if (viewer.isDefined && owners.keySet.exists(_ != viewer.get.id.get)) {
+      friendStatusCommander.augmentWithFriendStatus(viewer.get.id.get, owners)
+    } else {
+      owners mapValues BasicUserWithFriendStatus.fromWithoutFriendStatus
+    }
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getForLibraryId(lib.id.get))
       val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
@@ -1292,36 +1295,6 @@ class LibraryCommander @Inject() (
       followers = LibraryCardInfo.showable(followers),
       lastKept = lib.lastKept,
       caption = None)
-  }
-
-  private def augmentWithFriendStatus(owners: Map[Id[User], BasicUser], viewerId: Option[Id[User]])(implicit session: RSession): Map[Id[User], BasicUserWithFriendStatus] = {
-    val otherOwnerIds = owners.keySet -- viewerId.toSet
-    if (viewerId.isDefined && otherOwnerIds.nonEmpty) {
-      val friendIds = connectionRepo.getConnectedUsers(viewerId.get)
-      val nonFriendOwnerIds = otherOwnerIds -- friendIds
-      if (nonFriendOwnerIds.nonEmpty) {
-        val reqsSent = friendRequestRepo.getBySender(viewerId.get, Set(FriendRequestStates.ACTIVE, FriendRequestStates.IGNORED))
-        val reqsReceived = friendRequestRepo.getByRecipient(viewerId.get, Set(FriendRequestStates.ACTIVE))
-        owners.map {
-          case (id, owner) =>
-            val reqSent = reqsSent.find(_.recipientId == id)
-            val reqReceived = reqsReceived.find(_.senderId == id)
-            if (friendIds.contains(id)) {
-              (id, BasicUserWithFriendStatus.from(owner, true))
-            } else if (reqSent.isDefined) {
-              (id, BasicUserWithFriendStatus.fromWithRequestSentAt(owner, reqSent.get.createdAt))
-            } else if (reqReceived.isDefined) {
-              (id, BasicUserWithFriendStatus.fromWithRequestReceivedAt(owner, reqReceived.get.createdAt))
-            } else {
-              (id, BasicUserWithFriendStatus.from(owner, false))
-            }
-        }
-      } else {
-        owners.mapValues(owner => BasicUserWithFriendStatus.from(owner, true))
-      }
-    } else {
-      owners mapValues BasicUserWithFriendStatus.fromWithoutFriendStatus
-    }
   }
 
 }
