@@ -166,7 +166,7 @@ angular.module('kifi')
     };
 
     $scope.isMyLibrary = function(libraryOwnerId) {
-      return libraryOwnerId === $scope.profile.id;
+      return $scope.profile && (libraryOwnerId === $scope.profile.id);
     };
 
     $scope.isHidden = function(library) {
