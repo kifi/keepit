@@ -171,7 +171,8 @@ class WebsiteSearchController @Inject() (
           val keepersIndices = limitedInfo.keepers.collect { case keeperId if doShowKeeper(keeperId) => userIndexById(keeperId) }
 
           def doShowLibrary(libraryId: Id[Library]): Boolean = { // ensuring consistency of libraries shown with the user's latest database data (race condition)
-            libraryIndexById.contains(libraryId) && (!librariesWithWriteAccess.contains(libraryId) || keeps.exists(_.libraryId == libraryId))
+            lazy val publicId = Library.publicId(libraryId)
+            libraryIndexById.contains(libraryId) && (!librariesWithWriteAccess.contains(libraryId) || keeps.exists(_.libraryId == publicId))
           }
           val librariesIndices = limitedInfo.libraries.collect {
             case (libraryId, keeperId) if doShowLibrary(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId))
