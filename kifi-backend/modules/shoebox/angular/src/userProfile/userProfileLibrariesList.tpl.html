@@ -1,5 +1,5 @@
 <div class="kf-upl-card-list" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreLibraries()" scroll-next="fetchLibraries()">
-  <div class="kf-upl-card" ng-repeat="lib in libraries track by lib.id" ng-style="{'background-color': lib.color}">
+  <div class="kf-upl-card" ng-repeat="lib in libraries" ng-style="{'background-color': lib.color}">
     <div class="kf-upl-card-setting svg-settings-gear" ng-if="isMyLibrary(lib.owner.id) && lib.kind==='user_created'" ng-click="openModifyLibrary(lib)"></div>
     <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib)">
       <div class="kf-upl-card-icon" ng-class="lib.kind === 'system_main' ? 'svg-card-star' : 'svg-card-lock'" ng-if="lib.system"></div>
@@ -20,11 +20,11 @@
       </div>
     </a>
     <div itemscope itemtype="http://data-vocabulary.org/Person">
-      <a href="{{getUserProfileUrl(lib.owner)}}" ng-click="trackProfileClick()" itemprop="url" ng-if="libraryType !== 'own'">
+      <a class="kf-upl-card-owner-pic-a" href="{{getUserProfileUrl(lib.owner)}}" ng-click="trackProfileClick()" itemprop="url" ng-if="libraryType !== 'own'">
         <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" itemprop="photo">
       </a>
       <a class="kf-upl-card-byline" href="{{getUserProfileUrl(lib.owner)}}" ng-click="trackProfileClick()">
-        <span class="kf-upl-card-by">by</span> <span itemprop="name">{{lib.owner.firstName}} {{lib.owner.lastName}}</span>
+        <span class="kf-upl-card-by">by</span> <span class="kf-upl-card-by-name" itemprop="name">{{lib.owner.firstName}} {{lib.owner.lastName}}</span>
       </a>
     </div>
     <div class="kf-upl-card-foot">

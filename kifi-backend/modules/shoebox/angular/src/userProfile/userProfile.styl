@@ -217,6 +217,9 @@ name-line-height = 25px
   letter-spacing: normal
   margin-right: 2px
 
+:hover>.kf-upl-card-by-name
+  text-decoration: underline
+
 .kf-upl-card-cover
   position: absolute
   left: 0
@@ -245,7 +248,7 @@ name-line-height = 25px
   -moz-filter: blur(3px)
   filter: blur(3px)
 
-.kf-upl-card-owner-pic
+.kf-upl-card-owner-pic-a
   diameter = 60px
   position: absolute
   width: diameter
@@ -253,6 +256,17 @@ name-line-height = 25px
   top: 50%
   left: 50%
   margin-left: -(diameter / 2)
+  border-radius: 50%
+
+  &:hover
+    transform: scale(1.03)
+
+.kf-upl-card-owner-pic
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+  height: 100%
   border-radius: 50%
   box-shadow: 0 0 3px rgba(0,0,0,.3) inset
 
