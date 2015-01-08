@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.cortex.{ CortexServiceClient, FakeCortexServiceClientImpl, FakeCortexServiceClientModule }
 import com.keepit.curator.commanders.LibraryRecommendationGenerationCommander
-import com.keepit.curator.model.{ CuratorLibraryMembershipInfoStates, CuratorLibraryMembershipInfo, CuratorLibraryMembershipInfoRepo, LibraryRecommendationGenerationStateRepo, LibraryRecommendationGenerationState, CuratorLibraryInfoRepo, CuratorLibraryInfoSequenceNumberAssigner, LibraryRecommendationRepo }
+import com.keepit.curator.model._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.{ FakeGraphServiceClientImpl, FakeGraphServiceModule, GraphServiceClient }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
@@ -50,20 +50,29 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
       val libRecoRepo = inject[LibraryRecommendationRepo]
       val libInfoRepo = inject[CuratorLibraryInfoRepo]
 
-      val (lib1, lib2, lib3, lib4) = db.readWrite { implicit s =>
+      val (lib0, lib1, lib2, lib3, lib4) = db.readWrite { implicit s =>
+        val lib0 = saveLibraryInfo(105, 604, name = Some("Bookmarks"))
         val lib1 = saveLibraryInfo(100, 600)
         val lib2 = saveLibraryInfo(101, 601)
         val lib3 = saveLibraryInfo(102, 602)
         val lib4 = saveLibraryInfo(103, 603, keepCount = 2)
 
-        (lib1, lib2, lib3, lib4)
+        (lib0, lib1, lib2, lib3, lib4)
       }
       inject[CuratorLibraryInfoSequenceNumberAssigner].assignSequenceNumbers()
-      val lib5 = db.readWrite { implicit s =>
-        val lib5 = saveLibraryInfo(104, 604)
-        lib5
-      }
+      val lib5 = db.readWrite { implicit s => saveLibraryInfo(104, 604) }
       inject[CuratorLibraryInfoSequenceNumberAssigner].assignSequenceNumbers()
+
+      // these are existing recommendations with a bad name
+      val (badReco1, badReco2) = db.readWrite { implicit s =>
+        (
+          libRecoRepo.save(makeLibraryRecommendation(lib0.libraryId.id.toInt, user1Id.id.toInt, 5).copy(id = None)),
+          libRecoRepo.save(makeLibraryRecommendation(lib0.libraryId.id.toInt, user2Id.id.toInt, 5).copy(id = None))
+        )
+      }
+
+      badReco1.state === LibraryRecommendationStates.ACTIVE
+      badReco2.state === LibraryRecommendationStates.ACTIVE
 
       // interest scoring
       val cortex = inject[CortexServiceClient].asInstanceOf[FakeCortexServiceClientImpl]
@@ -84,14 +93,17 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
 
       libRecoGenCommander.recommendationGenerationLock.waiting === 0
 
+      def isActive(reco: LibraryRecommendation): Boolean = reco.state == LibraryRecommendationStates.ACTIVE
+
       db.readOnlyMaster { implicit s =>
         val stateRepo = inject[LibraryRecommendationGenerationStateRepo]
 
         val maxLibSeq = libInfoRepo.getByLibraryId(lib5.libraryId).get.seq
         allUsers.foreach { userId => stateRepo.getByUserId(userId).get.seq === maxLibSeq }
 
-        val libRecosUser1 = libRecoRepo.getByUserId(user1Id).sortBy(_.masterScore)
+        val (libRecosUser1, inactiveLibRecos1) = libRecoRepo.getByUserId(user1Id).sortBy(_.masterScore).partition(isActive)
         libRecosUser1.size === 3
+        inactiveLibRecos1.size === 1
 
         libRecosUser1.exists(_.libraryId == lib4.libraryId) must beFalse // keepCount too low
         libRecosUser1(0).allScores.socialScore === 0
@@ -100,12 +112,17 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
         // highest social score is because a connected user is the owner of the recommended library
         libRecosUser1(2).allScores.socialScore > libRecosUser1(1).allScores.socialScore
 
-        val libRecosUser2 = libRecoRepo.getByUserId(user2Id).sortBy(_.masterScore)
+        val (libRecosUser2, inactiveLibRecos2) = libRecoRepo.getByUserId(user2Id).sortBy(_.masterScore).partition(isActive)
         libRecosUser2.size === 4
+        inactiveLibRecos2.size === 1
 
         // test that lower interest score has the lowest master score (everything else is the same)
         libRecosUser2(0).libraryId === lib3.libraryId
         libRecosUser2(0).allScores.interestScore < libRecosUser2(1).allScores.interestScore
+
+        // ensure that this "badly named" reco were set to inactive
+        inactiveLibRecos1.find(_.id == badReco1.id).get.state === LibraryRecommendationStates.INACTIVE
+        inactiveLibRecos2.find(_.id == badReco2.id).get.state === LibraryRecommendationStates.INACTIVE
       }
     }
   }
