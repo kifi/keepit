@@ -465,6 +465,10 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]] = {
+    db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) }
+  }
+
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest): Either[LibraryFail, Library] = {
 
     val (targetLib, targetMembershipOpt) = db.readOnlyMaster { implicit s =>

@@ -23,6 +23,7 @@ import scala.concurrent.duration.FiniteDuration
 trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[LibraryMembership] with SeqNumberFunction[LibraryMembership] {
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
+  def getLibrariesWithWriteAccess(userId: Id[User])(implicit session: RSession): Set[Id[Library]]
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Option[LibraryMembership]
   def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Library], LibraryMembership]
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership]
@@ -52,10 +53,11 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
 class LibraryMembershipRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  val libraryRepo: LibraryRepo,
-  val libraryMembershipCountCache: LibraryMembershipCountCache,
-  val followersCountCache: FollowersCountCache,
-  val memberIdCache: LibraryMembershipIdCache)
+  libraryRepo: LibraryRepo,
+  libraryMembershipCountCache: LibraryMembershipCountCache,
+  followersCountCache: FollowersCountCache,
+  memberIdCache: LibraryMembershipIdCache,
+  librariesWithWriteAccessCache: LibrariesWithWriteAccessCache)
     extends DbRepo[LibraryMembership] with DbRepoWithDelete[LibraryMembership] with LibraryMembershipRepo with SeqNumberDbFunction[LibraryMembership] with Logging {
 
   import DBSession._
@@ -118,6 +120,12 @@ class LibraryMembershipRepoImpl @Inject() (
     excludeState match {
       case None => getWithUserIdCompiled(userId).list
       case Some(exclude) => getWithUserIdWithExcludeCompiled(userId, exclude).list
+    }
+  }
+
+  def getLibrariesWithWriteAccess(userId: Id[User])(implicit session: RSession): Set[Id[Library]] = {
+    librariesWithWriteAccessCache.getOrElse(LibrariesWithWriteAccessUserKey(userId)) {
+      getWithUserId(userId, Some(LibraryMembershipStates.INACTIVE)).collect { case membership if membership.canWrite => membership.libraryId }.toSet
     }
   }
 
@@ -231,6 +239,7 @@ class LibraryMembershipRepoImpl @Inject() (
     libMem.id.map { id =>
       memberIdCache.remove(LibraryMembershipIdKey(id))
       libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
+      if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
       // ugly! but the library is in an in memory cache so the cost is low
       followersCountCache.remove(FollowersCountKey(libraryRepo.get(libMem.libraryId).ownerId))
     }
@@ -243,6 +252,7 @@ class LibraryMembershipRepoImpl @Inject() (
       } else {
         memberIdCache.set(LibraryMembershipIdKey(id), libMem)
         libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
+        if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
         // ugly! but the library is in an in memory cache so the cost is low
         followersCountCache.remove(FollowersCountKey(libraryRepo.get(libMem.libraryId).ownerId))
       }

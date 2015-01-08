@@ -113,3 +113,11 @@ case class FollowersCountKey(userId: Id[User]) extends Key[Int] {
 class FollowersCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[FollowersCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
+case class LibrariesWithWriteAccessUserKey(userId: Id[User]) extends Key[Set[Id[Library]]] {
+  override val version = 1
+  val namespace = "libraries_with_write_access_by_user"
+  def toKey(): String = s"$userId"
+}
+
+class LibrariesWithWriteAccessCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LibrariesWithWriteAccessUserKey, Set[Id[Library]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
