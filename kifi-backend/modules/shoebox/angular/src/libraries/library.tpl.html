@@ -1,6 +1,7 @@
 <div>
   <!-- Library page -->
-  <div ng-if="!librarySearch || !$root.userLoggedIn" class="kf-library-card-header-container">
+  <div ng-if="(!librarySearch || !$root.userLoggedIn) && (page !== 'permission_denied' && page !== 'not_found') && initialized"
+       class="kf-library-card-header-container">
     <div kf-library-card
       library="library"
       username="username"

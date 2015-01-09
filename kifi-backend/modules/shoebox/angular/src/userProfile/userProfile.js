@@ -42,6 +42,7 @@ angular.module('kifi')
     //
     // Scope data.
     //
+    $scope.userProfileStatus = null;
     $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
     $scope.profile = null;
     $scope.userLoggedIn = false;
@@ -73,6 +74,8 @@ angular.module('kifi')
       $scope.isKifiCurator = isKifiCurator(username);
 
       userProfileActionService.getProfile(username).then(function (profile) {
+        $scope.userProfileStatus = 'found';
+
         setTitle(profile);
         initProfile(profile);
         initViewingUserStatus();
@@ -81,6 +84,8 @@ angular.module('kifi')
         // This function should be called last because some of the attributes
         // that we're tracking are initialized by the above functions.
         trackPageView();
+      })['catch'](function () {
+        $scope.userProfileStatus = 'not-found';
       });
     }
 
