@@ -136,11 +136,22 @@
   bottom: 0
 
 .kf-upl-card-icon
-  margin-top: 20px
+  position: absolute
+  left: 50%
+  width: 20px
   height: 21px
+  margin-left: -10px
+  opacity: .5
   background-position: center
   background-size: auto 21px
   background-repeat: no-repeat
+
+  &.kf-sys
+    top: 20px
+
+  &.kf-user
+    top: 160px
+    z-index: 1
 
 name-line-height = 25px
 
@@ -250,6 +261,7 @@ name-line-height = 25px
 .kf-upl-card-owner-pic-a
   diameter = 60px
   position: absolute
+  z-index: 1
   width: diameter
   height: diameter
   top: 50%
