@@ -55,7 +55,6 @@ class LibraryScoringHelper @Inject() (
   }
 
   private def computeMasterScore(allScores: LibraryScores, selectionParams: LibraryRecoSelectionParams): Float = {
-    // TODO(josh) initial weights are arbitrary and will need updating
     allScores.interestScore * selectionParams.interestScoreWeight +
       allScores.recencyScore * selectionParams.recencyScoreWeight +
       allScores.socialScore * selectionParams.socialScoreWeight +
@@ -84,7 +83,7 @@ class LibraryScoringHelper @Inject() (
   private def getRecencyScore(candidate: CuratorLibraryInfo): Float = {
     candidate.lastKept.map { keptDate =>
       val interval = new Interval(keptDate.toInstant, currentDateTime.toInstant)
-      ((maxIntervalMillis - Math.min(interval.toDurationMillis, maxIntervalMillis)) / maxIntervalMillis).toFloat
+      (maxIntervalMillis - Math.min(interval.toDurationMillis, maxIntervalMillis)).toFloat / maxIntervalMillis
     } getOrElse 0f
   }
 
