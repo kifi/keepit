@@ -212,7 +212,8 @@ class UserConnectionsCommander @Inject() (
       linkUrl = "https://www.kifi.com/friends/invite",
       imageUrl = respondingUserImage,
       sticky = false,
-      category = NotificationCategory.User.FRIEND_ACCEPTED
+      category = NotificationCategory.User.FRIEND_ACCEPTED,
+      extra = Some(Json.obj("friend" -> BasicUser.fromUser(friend)))
     )
 
     emailF flatMap (_ => notifF)

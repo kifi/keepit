@@ -23,19 +23,9 @@
       <span class="kf-slc-card-by">by</span> <span class="kf-slc-card-by-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</span>
     </a>
   </div>
-  <div class="kf-slc-card-foot">
-    <div class="kf-slc-followers" ng-if="library.followers.length > 0">
-      <a href="{{user.profileUrl}}" class="kf-slc-follower" ng-repeat="user in library.followers" ng-click="trackProfileClick()"
-         ng-attr-style="background-image:url({{user.picUrl}})"></a>
-      <span ng-if="library.numFollowers === library.followers.length">
-        <ng-pluralize class="kf-slc-all-followers" count="library.numFollowers" when="{'1':'follows this library','other':'are following'}"></ng-pluralize>
-      </span>
-      <span ng-if="library.numFollowers > library.followers.length">
-        + {{library.numFollowers - library.followers.length}} are following
-      </span>
-    </div>
-    <div class="kf-slc-updated" ng-if="library.followers.length === 0 && library.lastKept">
-      Updated&nbsp;<time ng-attr-datetime="{{library.lastKept}}" am-time-ago="library.lastKept"></time>
-    </div>
+  <div class="kf-slc-card-foot" ng-switch on="library.reason">
+    <span ng-switch-when="owner">More from this curator</span>
+    <span ng-switch-when="popular">Globally popular</span>
+    <span ng-switch-when="topic">Related</span>
   </div>
 </div>
