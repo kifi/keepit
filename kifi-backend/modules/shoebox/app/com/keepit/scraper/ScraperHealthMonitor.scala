@@ -120,7 +120,7 @@ class ScraperHealthMonitorPluginImpl @Inject() (
 
   override def onStart() {
     log.info(s"[onStart] starting ScraperHealthMonitorPlugin with scraperConfig=$scraperConfig}")
-    scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, CheckOverdues)
-    scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.checkOverdueCountFrequency minutes, actor.ref, CheckOverdueCount)
+    scheduleTaskOnLeader(actor.system, 6 minutes, scraperConfig.scrapePendingFrequency seconds, actor.ref, CheckOverdues)
+    scheduleTaskOnLeader(actor.system, 7 minutes, scraperConfig.checkOverdueCountFrequency minutes, actor.ref, CheckOverdueCount)
   }
 }

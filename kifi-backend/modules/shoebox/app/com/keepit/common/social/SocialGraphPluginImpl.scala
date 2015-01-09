@@ -170,7 +170,7 @@ class SocialGraphPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 10 seconds, 1 minute, actor.ref, FetchAndRefreshAll)
+    scheduleTaskOnLeader(actor.system, 100 seconds, 71 seconds, actor.ref, FetchAndRefreshAll)
   }
 
   def asyncRevokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
