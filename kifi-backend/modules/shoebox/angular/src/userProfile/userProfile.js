@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('UserProfileCtrl', [
   '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$timeout', '$window',
-  'env', 'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService', 'modalService', 'libraryService',
+  'env', 'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService', 'modalService', 'libraryService', 'friendService',
   function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $timeout, $window,
-            env, inviteService, keepWhoService, profileService, userProfileActionService, modalService, libraryService) {
+            env, inviteService, keepWhoService, profileService, userProfileActionService, modalService, libraryService, friendService) {
     //
     // Configs.
     //
@@ -26,12 +26,21 @@ angular.module('kifi')
     //
     // Internal data.
     //
+    /*
     var ignoreClick = {
       'connect': true
     };
+
     var $connectEl = null;
     var connectElSelector = '.kf-user-profile-connect';
-
+    var userConnectionActions = {
+      'self' : 'Settings',
+      'not_friends' : 'Connect',
+      'request_sent' : 'Friend Request Sent',
+      'request_received' : 'Accept Friend Request',
+      'friends' : 'Friends'
+    };
+    */
 
     //
     // Scope data.
@@ -40,9 +49,18 @@ angular.module('kifi')
     $scope.profile = null;
     $scope.userLoggedIn = false;
     $scope.viewingOwnProfile = false;
-    $scope.canConnectToUser = false;
+
+    // for user connection, potential (states -> actions):
+    //   'self' -> setting
+    //   'not_friends' -> send request
+    //   'request_sent' -> (nothing)
+    //   'request_received' -> accept request
+    //   'friends' -> defriend
+    $scope.connectionWithUser = '';
+    //$scope.availableAction = '';
+
     $scope.userNavLinks = [];
-    $scope.optionalAction = null;
+    $scope.isKifiCurator = false;
 
 
     //
@@ -86,15 +104,28 @@ angular.module('kifi')
 
       // User id from profile is needed for connection.
       // Use timeout to wait until the connect element is added to the DOM with ng-if.
-      $timeout(enableConnectClick);
+      //$timeout(enableConnectClick);
     }
 
     function initViewingUserStatus() {
       $scope.userLoggedIn = $rootScope.userLoggedIn;
       $scope.viewingOwnProfile = $scope.profile.id === profileService.me.id;
-      $scope.canConnectToUser = $scope.userLoggedIn && !$scope.viewingOwnProfile && !$scope.profile.friendsWith;
-      $scope.optionalAction = ($scope.viewingOwnProfile ? 'settings' : false) ||
-                              ($scope.canConnectToUser ? 'connect' : false);
+
+      if ($scope.userLoggedIn) {
+        if ($scope.viewingOwnProfile) {
+          $scope.connectionWithUser = 'self';
+        } else {
+          if ($scope.profile.isFriend) {
+            $scope.connectionWithUser = 'friends';
+          } else if ($scope.profile.friendRequestSentAt) {
+            $scope.connectionWithUser = 'request_sent';
+          } else if ($scope.profile.friendRequestReceivedAt) {
+            $scope.connectionWithUser = 'request_received';
+          } else {
+            $scope.connectionWithUser = 'not_friends';
+          }
+        }
+      }
     }
 
     function initUserNavLinks() {
@@ -137,6 +168,7 @@ angular.module('kifi')
       */
     }
 
+/*
     function enableConnectClick() {
       ignoreClick.connect = false;
       $connectEl = $connectEl || angular.element(connectElSelector);
@@ -148,10 +180,12 @@ angular.module('kifi')
       $connectEl = $connectEl || angular.element(connectElSelector);
       $connectEl.removeAttr('href');
     }
+    */
 
     //
     // Scope methods.
     //
+    /*
     $scope.connect = function () {
       if (ignoreClick.connect) {
         return;
@@ -163,6 +197,26 @@ angular.module('kifi')
 
       inviteService.friendRequest($scope.profile.id).then(function () {
         $connectEl.text('SENT!');
+      });
+    };
+    */
+    $scope.sendFriendRequest = function() {
+      inviteService.friendRequest($scope.profile.id).then(function(res) {
+        if (res.sentRequest) {
+          // show success!
+        }
+      });
+    };
+
+    $scope.acceptFriendRequest = function() {
+      friendService.acceptRequest($scope.profile.id).then(function() {
+        // success (no response)
+      });
+    };
+
+    $scope.unfriend = function() {
+      friendService.unfriend($scope.profile.id).then(function() {
+        // success (no response)
       });
     };
 
@@ -217,9 +271,13 @@ angular.module('kifi')
         trackPageView();
       }
     });
-
     $scope.$on('$destroy', deregister$stateChangeSuccess);
 
+/*
+    $scope.$watch('connectionWithUser', function(newState) {
+      $scope.availableAction = userConnectionActions[newState];
+    });
+    */
 
     // Initialize controller.
     init();

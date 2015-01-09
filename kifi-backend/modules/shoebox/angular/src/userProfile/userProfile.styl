@@ -23,32 +23,59 @@
   padding: 50px 0 25px
 
 .kf-up-basic-info-main-content
-  position: relative
   margin: 0 auto
   width: 500px
 
-.kf-user-profile-optional-action
+.kf-user-profile-available-action
   position: absolute
-  top: 35px
-  right: 30px
+  width: 135px
+  top: 10px
+  left: calc(100% - 145px)
+  cursor: pointer
 
-.kf-user-profile-user-settings
+  & a
+    color: white
+    font-size: 18px
+
+.kf-user-profile-settings-gear
   position: relative
-  right: 100px
-  display: block
+  top: 3px
+  display: inline-block
   width: 20px
   height: 20px
-  background-repeat: no-repeat
+  margin-right: 5px
+
+.kf-user-profile-settings-link
+  position: relative
+  top: -2px
+  left: 15px
 
 .kf-user-profile-connect
   display: block
-  padding: 10px 0 0 50px
-  height: 39px
+  padding: 7px 0 0 60px
+  height: 40px
   background-repeat: no-repeat
   text-align: left
+  font-size: 17px
+  transition: 0.1s linear all
+  overflow: hidden
 
-  a&
-    color: #fff
+  & .profile-friends
+    height: 40px
+    overflow: hidden
+    //transition: 0.1s linear all
+
+  & .profile-unfriend-button
+    height: 40px
+
+  &:hover .profile-friends
+    height: 0px
+
+
+
+
+
+
 
 .kf-user-profile-picture
   height: 100px
