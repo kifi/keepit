@@ -104,20 +104,19 @@ angular.module('kifi')
     }
 
     function RelatedLibraryDecorator(library) {
-      this.ownerFullName = library.owner.firstName + ' ' + library.owner.lastName;
+      this.owner = library.owner;
       this.numFollowers = library.numFollowers;
       this.numKeeps = library.numKeeps;
       this.ownerPicUrl = routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 200);
       this.name = library.name;
       this.description = library.description;
+      this.color = library.color;
       this.image = library.image;
       this.imageUrl = library.image ? routeService.libraryImageUrl(library.image.path) : null;
-      this.libraryPath = '/' + library.owner.username + '/' + library.slug;
+      this.path = '/' + library.owner.username + '/' + library.slug;
       this.followers = library.followers.map(function (user) {
         return _.merge(user, { picUrl: routeService.formatPicUrl(user.id, user.pictureName, 200) });
       });
-      // default color until we're passed colors from the backend
-      this.color = library.color || '#73c785';
     }
 
 

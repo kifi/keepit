@@ -1,32 +1,41 @@
-<a class="kf-small-library-card" ng-href="{{library.libraryPath}}" ng-attr-style="background-color: {{library.color}}" ng-attr-title="{{library.description}}" ng-click="clickCard($event)">
-  <div class="kf-small-library-card-header">
-    <div class="kf-small-library-name">{{library.name}}</div>
-    <div class="kf-small-library-counts-row">
-      <span class="kf-small-library-count" ng-if="library.numKeeps > 0">
-        <ng-pluralize count="library.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}"></ng-pluralize>
-      </span>
-      <span class="kf-small-library-count-sep" ng-if="library.numFollowers > 0 && library.numKeeps > 0">·</span>
-      <span class="kf-small-library-count" ng-if="library.numFollowers > 0">
-        <ng-pluralize count="library.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}"></ng-pluralize>
-      </span>
+<div class="kf-slc-card" ng-style="{'background-color': library.color}">
+  <a class="kf-slc-card-link" href="{{library.path}}" ng-click="clickCard($event)" ng-attr-title="{{library.description}}">
+    <div class="kf-slc-card-cover">
+      <div class="kf-slc-card-cover-image" ng-attr-style="background-image:url({{library.imageUrl}});background-position:{{library.image.x}}% {{library.image.y}}%" ng-if="library.image"></div>
     </div>
-  </div>
-  <div class="kf-small-library-image-wrapper" ng-class="{'has-image': library.image}" ng-attr-style="background-color: {{library.color}}">
-    <div class="kf-small-library-owner">
-      <div class="kf-small-library-owner-pic" ng-attr-style="background-image: url({{library.ownerPicUrl}})"></div>
-      <div class="kf-small-library-owner-name">by <b>{{ library.ownerFullName }}</b></div>
-      <div class="kf-small-library-followers" ng-if="followersToShow">
-        <span ng-repeat="user in followersToShow" ng-attr-style="background-image:url({{user.picUrl}})"
-          class="kf-small-library-followers-chip"></span>
-        <span ng-if="otherFollowersCount > 0" class="kf-small-library-followers-text">
-          + &nbsp;<ng-pluralize count="otherFollowersCount" when="{'1':'{} other ','other':'{} others '}"></ng-pluralize>
-          follow this
-        </span>
+    <div class="kf-slc-card-name-align">
+      <div class="kf-slc-card-name">
+        <div class="kf-slc-card-name-clip">
+          {{library.name}}
+        </div>
       </div>
     </div>
-    <div ng-if="library.image"  class="kf-small-library-image"
-      ng-attr-style="background-image: url({{library.imageUrl}});background-position:{{library.image.x + '% ' + library.image.y + '%'}};"></div>
+    <div class="kf-slc-counts">
+      <ng-pluralize class="kf-slc-count" count="library.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}" ng-if="library.numKeeps > 0"></ng-pluralize>
+      <ng-pluralize class="kf-slc-count" count="library.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}" ng-if="library.numFollowers > 0"></ng-pluralize>
+    </div>
+  </a>
+  <div itemscope itemtype="http://data-vocabulary.org/Person">
+    <a class="kf-slc-card-owner-pic-a" href="{{getUserProfileUrl(library.owner)}}" itemprop="url">
+      <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}" itemprop="photo">
+    </a>
+    <a class="kf-slc-card-byline" href="{{getUserProfileUrl(library.owner)}}">
+      <span class="kf-slc-card-by">by</span> <span class="kf-slc-card-by-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</span>
+    </a>
   </div>
-  <div class="kf-small-library-card-bottom card-1"></div>
-  <div class="kf-small-library-card-bottom card-2"></div>
-</a>
+  <div class="kf-slc-card-foot">
+    <div class="kf-slc-followers" ng-if="library.followers.length > 0">
+      <a href="{{getUserProfileUrl(user)}}" class="kf-slc-follower" ng-repeat="user in library.followers" ng-click="trackProfileClick()"
+         ng-attr-style="background-image:url({{user.picUrl}})"></a>
+      <span ng-if="library.numFollowers === library.followers.length">
+        <ng-pluralize class="kf-slc-all-followers" count="library.numFollowers" when="{'1':'follows this library','other':'are following'}"></ng-pluralize>
+      </span>
+      <span ng-if="library.numFollowers > library.followers.length">
+        + {{library.numFollowers - library.followers.length}} are following
+      </span>
+    </div>
+    <div class="kf-slc-updated" ng-if="library.followers.length === 0 && library.lastKept">
+      Updated&nbsp;<time ng-attr-datetime="{{library.lastKept}}" am-time-ago="library.lastKept"></time>
+    </div>
+  </div>
+</div>
