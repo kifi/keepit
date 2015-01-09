@@ -235,7 +235,8 @@ class NonLinearLibraryRecoScoringStrategy(selectionParams: LibraryRecoSelectionP
   }
 
   private def recomputeScore(scores: LibraryScores): Float = {
-    val interestPart = scores.interestScore * selectionParams.interestScoreWeight
+    // the min(0.01) prevents the algorithm from returning a 0 score if the topic is 0
+    val interestPart = (scores.interestScore * selectionParams.interestScoreWeight).min(0.01f)
     val factor = {
       val normalizer = selectionParams.interestScoreWeight
       interestPart / normalizer
