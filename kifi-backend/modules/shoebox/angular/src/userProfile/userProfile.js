@@ -240,8 +240,8 @@ angular.module('kifi')
 
 
 .controller('UserProfileLibrariesCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', 'routeService', 'keepWhoService', 'profileService', 'userProfileActionService', 'libraryService',
-  function ($scope, $rootScope, $state, $stateParams, routeService, keepWhoService, profileService, userProfileActionService, libraryService) {
+  '$scope', '$rootScope', '$state', '$stateParams', 'routeService', 'keepWhoService', 'profileService', 'userProfileActionService',
+  function ($scope, $rootScope, $state, $stateParams, routeService, keepWhoService, profileService, userProfileActionService) {
     var colors = ['#C764A2', '#E35957', '#FF9430', '#2EC89A', '#3975BF', '#955CB4', '#FAB200'];
     var username = $stateParams.username;
     var fetchPageSize = 12;
