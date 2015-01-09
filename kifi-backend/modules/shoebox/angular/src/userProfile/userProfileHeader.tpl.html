@@ -5,7 +5,7 @@
         <img class="kf-user-profile-picture" ng-src="{{profile.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" alt="{{profile.firstName}} {{profile.lastName}}" itemprop="photo">
       </a>
 
-      <div ng-switch="optionalAction" class="kf-user-profile-optional-action">
+      <div ng-if="!isKifiCurator" ng-switch="optionalAction" class="kf-user-profile-optional-action">
         <a ng-switch-when="connect" class="kf-user-profile-connect svg-connect-to-user" ng-click="connect()">
           CONNECT
         </a>

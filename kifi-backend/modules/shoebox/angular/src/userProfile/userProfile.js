@@ -22,6 +22,12 @@ angular.module('kifi')
       // { name: 'Helped', routeState: 'userProfile.helped', countFieldName: 'numRekeeps' }
     ];
 
+    var kifiCuratorUsernames = [
+      'kifi',
+      'kifi-editorial',
+      'kifi-eng'
+    ];
+
 
     //
     // Internal data.
@@ -43,6 +49,7 @@ angular.module('kifi')
     $scope.canConnectToUser = false;
     $scope.userNavLinks = [];
     $scope.optionalAction = null;
+    $scope.isKifiCurator = false;
 
 
     //
@@ -63,6 +70,7 @@ angular.module('kifi')
       $rootScope.$emit('libraryUrl', {});
 
       var username = $stateParams.username;
+      $scope.isKifiCurator = isKifiCurator(username);
 
       userProfileActionService.getProfile(username).then(function (profile) {
         setTitle(profile);
@@ -74,6 +82,10 @@ angular.module('kifi')
         // that we're tracking are initialized by the above functions.
         trackPageView();
       });
+    }
+
+    function isKifiCurator(username) {
+      return kifiCuratorUsernames.indexOf(username) !== -1;
     }
 
     function setTitle(profile) {
@@ -170,10 +182,6 @@ angular.module('kifi')
       return $scope.profile && (libraryOwnerId === $scope.profile.id);
     };
 
-    $scope.isHidden = function(library) {
-      return library.visibility === 'published' && library.listed === false;
-    };
-
     $scope.openModifyLibrary = function (library) {
       modalService.open({
         template: 'libraries/manageLibraryModal.tpl.html',
@@ -228,9 +236,8 @@ angular.module('kifi')
 
 
 .controller('UserProfileLibrariesCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', 'routeService', 'keepWhoService', 'profileService', 'userProfileActionService', 'libraryService',
-  function ($scope, $rootScope, $state, $stateParams, routeService, keepWhoService, profileService, userProfileActionService, libraryService) {
-    var colors = ['#C764A2', '#E35957', '#FF9430', '#2EC89A', '#3975BF', '#955CB4', '#FAB200'];
+  '$scope', '$rootScope', '$state', '$stateParams', 'routeService', 'keepWhoService', 'profileService', 'userProfileActionService',
+  function ($scope, $rootScope, $state, $stateParams, routeService, keepWhoService, profileService, userProfileActionService) {
     var username = $stateParams.username;
     var fetchPageSize = 12;
     var fetchPageNumber = 0;
@@ -273,13 +280,7 @@ angular.module('kifi')
     };
 
     $scope.showInvitedLibraries = function () {
-      // TODO: modify the profile endpoint to return number of invited libraries instead of relying
-      // on libraryService.invitedSummaries.length.
-      return $scope.viewingOwnProfile && libraryService.invitedSummaries.length;
-    };
-
-    $scope.getUserProfileUrl = function (user) {
-      return routeService.getProfileUrl(user.username);
+      return $scope.profile && $scope.profile.numInvitedLibraries && $scope.viewingOwnProfile;
     };
 
     function resetFetchState() {
@@ -299,17 +300,12 @@ angular.module('kifi')
       lib.path = '/' + owner.username + '/' + lib.slug;
       lib.owner = owner;
       lib.ownerPicUrl = keepWhoService.getPicUrl(owner, 200);
-      if (/^system_/.test(lib.kind)) {
-        lib.system = true;
-      } else {
-        lib.color = lib.color || _.sample(colors);
-      }
-      lib.imageCss = lib.image ? {
-          'background-image': 'url(' + routeService.libraryImageUrl(lib.image.path) + ')',
-          'background-position': lib.image.x + '% ' + lib.image.y + '%'
-        } : {};
+      lib.ownerProfileUrl = routeService.getProfileUrl(owner.username);
+      lib.system = /^system_/.test(lib.kind);
+      lib.imageUrl = lib.image ? routeService.libraryImageUrl(lib.image.path) : null;
       lib.followers.forEach(function (user) {
         user.picUrl = keepWhoService.getPicUrl(user, 100);
+        user.profileUrl = routeService.getProfileUrl(user.username);
       });
       return lib;
     }

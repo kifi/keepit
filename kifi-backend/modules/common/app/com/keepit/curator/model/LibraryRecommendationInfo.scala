@@ -24,7 +24,7 @@ import com.kifi.macros.json
 object LibraryRecoSelectionParams {
   val default = LibraryRecoSelectionParams(
     recencyScoreWeight = 0.8f,
-    interestScoreWeight = 1f,
+    interestScoreWeight = 1.8f,
     sizeScoreWeight = 0.7f,
     popularityScoreWeight = 0.8f,
     socialScoreWeight = 0.9f,

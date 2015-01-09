@@ -63,6 +63,7 @@ class UserController @Inject() (
     abookUploadConf: ABookUploadConf,
     emailSender: EmailSenderProvider,
     libraryCommander: LibraryCommander,
+    libraryInviteRepo: LibraryInviteRepo,
     fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
@@ -593,11 +594,18 @@ class UserController @Inject() (
     userCommander.profile(Username(username), viewer) match {
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
-        val numLibraries = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-        Ok(Json.toJson(profile.basicUserWithFriendStatus).asInstanceOf[JsObject] ++ Json.obj(
+        val (numLibraries, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
+
+        val json = Json.toJson(profile.basicUserWithFriendStatus).asInstanceOf[JsObject] ++ Json.obj(
           "numLibraries" -> numLibraries,
           "numKeeps" -> profile.numKeeps
-        ))
+        )
+        numInvitedLibs match {
+          case Some(numInvited) =>
+            Ok(json ++ Json.obj("numInvitedLibraries" -> numInvited))
+          case _ =>
+            Ok(json)
+        }
     }
   }
 

@@ -247,24 +247,33 @@ object BasicLibraryStatistics {
   implicit val format = Json.format[BasicLibraryStatistics]
 }
 
-class HexColor private (val hex: String) {
-  require(HexColor.regex.findFirstIn(hex).isDefined, "hex color must be in format '#aaaaaa'")
-}
+sealed abstract class HexColor(val hex: String)
 object HexColor {
+
   implicit def format[T]: Format[HexColor] =
     Format(__.read[String].map(HexColor(_)), new Writes[HexColor] { def writes(o: HexColor) = JsString(o.hex) })
 
-  val regex = "^#[0-9a-f]{6}$".r
-  def apply(hex: String): HexColor = new HexColor(hex.toLowerCase)
+  case object MAGENTA extends HexColor("#c764a2")
+  case object RED extends HexColor("#e35957")
+  case object ORANGE extends HexColor("#ff9430")
+  case object ORANGE_YELLOW extends HexColor("#fab200")
+  case object INDIGO extends HexColor("#2ec89a")
+  case object BLUE extends HexColor("#3975bf")
+  case object PURPLE extends HexColor("#955cb4")
 
-  val allColors = Seq(
-    HexColor("#C764A2"), // magenta (pink)
-    HexColor("#E35957"), // red
-    HexColor("#FF9430"), // orange (a bit darker)
-    HexColor("#2EC89A"), // indigo (light green)
-    HexColor("#3975BF"), // blue
-    HexColor("#955CB4"), // purple
-    HexColor("#FAB200")) // light orange (more yellow-ish)
+  def apply(str: String) = {
+    str.toLowerCase match {
+      case MAGENTA.hex => MAGENTA
+      case RED.hex => RED
+      case ORANGE.hex => ORANGE
+      case ORANGE_YELLOW.hex => ORANGE_YELLOW
+      case INDIGO.hex => INDIGO
+      case BLUE.hex => BLUE
+      case PURPLE.hex => PURPLE
+    }
+  }
+
+  val allColors = Seq(MAGENTA, RED, ORANGE, ORANGE_YELLOW, INDIGO, BLUE, PURPLE)
 
   def pickRandomLibraryColor(): HexColor = {
     val rnd = new Random

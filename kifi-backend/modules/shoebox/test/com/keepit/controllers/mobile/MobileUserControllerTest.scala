@@ -210,23 +210,6 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
             }
           """)
 
-        //seeing a profile of my own
-        val selfViewer = call(Some(user1), user1.username)
-        status(selfViewer) must equalTo(OK)
-        contentType(selfViewer) must beSome("application/json")
-        contentAsJson(selfViewer) === Json.parse(
-          s"""
-            {
-              "id":"${user1.externalId.id}",
-              "firstName":"George",
-              "lastName":"Washington",
-              "pictureName":"pic1.jpg",
-              "username": "GDubs",
-              "numLibraries":4,
-              "numKeeps": 5
-            }
-          """)
-
         //seeing a profile from another user (friend)
         val friendViewer = call(Some(user2), user1.username)
         status(friendViewer) must equalTo(OK)
@@ -242,6 +225,24 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
               "numLibraries":2,
               "numKeeps": 5,
               "isFriend": true
+            }
+          """)
+
+        //seeing a profile of my own
+        val selfViewer = call(Some(user1), user1.username)
+        status(selfViewer) must equalTo(OK)
+        contentType(selfViewer) must beSome("application/json")
+        contentAsJson(selfViewer) === Json.parse(
+          s"""
+            {
+              "id":"${user1.externalId.id}",
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1.jpg",
+              "username": "GDubs",
+              "numLibraries":4,
+              "numKeeps": 5,
+              "numInvitedLibraries": 0
             }
           """)
       }
