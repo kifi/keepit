@@ -391,13 +391,6 @@ angular.module('kifi')
       getRelatedLibraries: function (libraryId) {
         var deferred = $q.defer();
 
-        // temporary - put ?grl=1 in URL to see related libraries
-        // using a query param so it's easy to test on mobile devices
-        if ($location.url().indexOf('grl=1') < 0) {
-          deferred.resolve([]);
-          return deferred.promise;
-        }
-
         $http.get(routeService.getRelatedLibraries(libraryId)).then(function (resp) {
           var libsWithKind = _.zip(resp.data.libs, resp.data.kinds);
           var decoratedLibs = libsWithKind.map(function (libData) {
