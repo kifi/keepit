@@ -37,14 +37,17 @@ class LibraryMembershipIngestionHelper @Inject() (
         state = State[CuratorLibraryMembershipInfo](libMembership.state.value)))
     }
 
-    libRecoRepo.getByLibraryAndUserId(libMembership.libraryId, libMembership.userId).map { reco =>
-      // sets the state to inactive instead of followed to true so we know whether the reco was followed directly
-      // from a recommendation or another way; does not set the state from inactive to active because it could've
-      // been set to inactive for another reason (and it's possible they've already seen the library reco)
-      if (!reco.followed && membershipInfo.state == CuratorLibraryMembershipInfoStates.ACTIVE) {
-        libRecoRepo.save(reco.copy(state = LibraryRecommendationStates.INACTIVE))
+    libRecoRepo.getByLibraryAndUserId(libMembership.libraryId, libMembership.userId).
+      filter(_.state == CuratorLibraryMembershipInfoStates.ACTIVE).map { reco =>
+        // sets the state to inactive instead of followed to true so we know whether the reco was followed directly
+        // from a recommendation or another way; does not set the state from inactive to active because it could've
+        // been set to inactive for another reason (and it's possible they've already seen the library reco)
+        if (0 == reco.delivered) {
+          libRecoRepo.save(reco.copy(state = LibraryRecommendationStates.INACTIVE))
+        } else {
+          libRecoRepo.save(reco.copy(followed = true))
+        }
       }
-    }
   }
 
   def apply(maxItems: Int): Future[Boolean] = {
