@@ -182,10 +182,6 @@ angular.module('kifi')
       return $scope.profile && (libraryOwnerId === $scope.profile.id);
     };
 
-    $scope.isHidden = function(library) {
-      return library.visibility === 'published' && library.listed === false;
-    };
-
     $scope.openModifyLibrary = function (library) {
       modalService.open({
         template: 'libraries/manageLibraryModal.tpl.html',
