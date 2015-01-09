@@ -441,10 +441,7 @@ class ShoeboxController @Inject() (
   }
 
   def getAllFakeUsers() = Action { request =>
-    val fakeUsers = db.readOnlyMaster { implicit session =>
-      userExperimentRepo.getByType(ExperimentType.FAKE).map(_.userId).toSet
-    }
-    Ok(Json.toJson(fakeUsers))
+    Ok(Json.toJson(userCommander.getAllFakeUsers()))
   }
 
   def getInvitations(senderId: Id[User]) = Action { request =>

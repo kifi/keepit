@@ -76,16 +76,6 @@ angular.module('kifi')
         }
       }
 
-      function initializeOthersCount(numTotalKeepers, numFriendKeepers, numOmittedFriendKeepers, numKeptInUserLibraries) {
-        // "others" is the number of Kifi users who kept a keep besides the user and the user's Kifi friends.
-        var others = numTotalKeepers  - numFriendKeepers - numOmittedFriendKeepers;
-        if (numKeptInUserLibraries > 0) {
-          others--;
-        }
-
-        return others;
-      }
-
       // Add new properties to the keep.
       this.titleAttr = this.title || this.url;
       this.titleHtml = this.title || util.formatTitleFromUrl(this.url);
@@ -94,7 +84,6 @@ angular.module('kifi')
       }
       this.readTime = getKeepReadTime(this.summary);
       this.showSocial = this.keepersTotal || (this.keepers && this.keepers.length > 0) || (this.libraries && this.libraries.length > 0);
-      this.others = initializeOthersCount(this.keepersTotal, this.keepers.length, this.keepersOmitted, this.keeps.length);
     }
 
     // Add properties that are specific to a really kept Keep.

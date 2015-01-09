@@ -39,7 +39,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.typeahead.{ HashtagTypeahead, HashtagHit, TypeaheadHit }
-import com.keepit.search.augmentation.{ RestrictedKeepInfo, ItemAugmentationRequest, AugmentableItem }
+import com.keepit.search.augmentation.{ LimitedAugmentationInfo, RestrictedKeepInfo, ItemAugmentationRequest, AugmentableItem }
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.store.ImageSize
 import com.keepit.common.CollectionHelpers
@@ -135,6 +135,7 @@ class KeepsCommander @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
     hashtagTypeahead: HashtagTypeahead,
+    userCommander: UserCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getKeepsCountFuture(): Future[Int] = {
@@ -269,12 +270,32 @@ class KeepsCommander @Inject() (
     }.toMap
   }
 
+  def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo] = {
+    val allUsers = (infos flatMap { info =>
+      val keepers = info.keepers
+      val libs = info.libraries
+      (libs.map(_._2) ++ keepers)
+    }).toSet
+    if (allUsers.isEmpty) infos
+    else {
+      val fakeUsers = userCommander.getAllFakeUsers().intersect(allUsers)
+      if (fakeUsers.isEmpty) infos
+      else {
+        infos map { info =>
+          val keepers = info.keepers.filterNot(u => fakeUsers.contains(u))
+          val libs = info.libraries.filterNot(t => fakeUsers.contains(t._2))
+          info.copy(keepers = keepers, libraries = libs)
+        }
+      }
+    }
+  }
+
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keeps: Seq[Keep], idealImageSize: ImageSize): Future[Seq[KeepInfo]] = {
     if (keeps.isEmpty) Future.successful(Seq.empty[KeepInfo])
     else {
       val augmentationFuture = {
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
-        searchClient.augment(perspectiveUserIdOpt, showPublishedLibraries, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items)
+        searchClient.augment(perspectiveUserIdOpt, showPublishedLibraries, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
       }
       val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
         val idToLibrary = {

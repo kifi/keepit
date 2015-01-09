@@ -102,6 +102,8 @@ class UserCommander @Inject() (
     friendStatusCommander: FriendStatusCommander,
     emailSender: EmailSenderProvider,
     usernameCache: UsernameCache,
+    userExperimentRepo: UserExperimentRepo,
+    allFakeUsersCache: AllFakeUsersCache,
     airbrake: AirbrakeNotifier) extends Logging { self =>
 
   def userFromUsername(username: Username): Option[User] = db.readOnlyReplica { implicit session =>
@@ -734,4 +736,12 @@ class UserCommander @Inject() (
     }
   }
 
+  def getAllFakeUsers(): Set[Id[User]] = {
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+    allFakeUsersCache.getOrElse(AllFakeUsersKey) {
+      db.readOnlyMaster { implicit session =>
+        userExperimentRepo.getByType(ExperimentType.FAKE).map(_.userId).toSet
+      }
+    }
+  }
 }

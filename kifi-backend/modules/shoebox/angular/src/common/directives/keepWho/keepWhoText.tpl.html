@@ -1,8 +1,3 @@
-<div class="kf-keep-who-text">
-  <span class="kf-keep-who-text-prefix svg-button-keep-heart-green">Kept by:</span>
-  <span class="kf-keep-libraries" ng-show="hasLibraries()">{{getLibrariesText()}}</span>
-  <span class="kf-keep-dot" ng-if="hasLibraries() && hasKeepers()">‧</span>
-  <span class="kf-keep-friends" ng-show="hasKeepers()">{{getFriendText()}}</span>
-  <span class="kf-keep-dot" ng-if="hasOthers() && hasKeepers()">‧</span>
-  <span class="kf-keep-others" ng-show="hasOthers()">{{getOthersText()}}</span>
+<div ng-if="keep.keepersTotal" class="kf-keep-who-text">
+  Kept&nbsp;<ng-pluralize count="keep.keepersTotal" when="{'one': '1 time', 'other': '{} times'}"></ng-pluralize>
 </div>
