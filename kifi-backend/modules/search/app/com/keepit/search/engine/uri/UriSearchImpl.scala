@@ -122,11 +122,7 @@ class UriSearchImpl(
 
     var othersHighScore = -1.0f
     var othersTotal = othersHits.totalHits
-
-    debugLog(s"filter include others = ${filter.includeOthers}. hitsSize = ${hits.size}, othersHits size = ${othersHits.size}")
-
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
-      debugLog(s"ready to return. step1.")
       var othersNorm = Float.NaN
       var rank = 0 // compute the rank on the fly (there may be hits not kept public)
       othersHits.toSortedList.forall { hit =>
@@ -140,18 +136,11 @@ class UriSearchImpl(
           hit.normalizedScore = (hit.score / othersNorm) * UriSearch.dampFunc(rank, dampingHalfDecayOthers)
           hits.insert(hit)
           rank += 1
-
-          debugLog(s"ready to return. step2a. discoverable")
-
         } else {
-          debugLog(s"ready to return. step2b. uri not discoverable: ${hit.id}")
           othersTotal -= 1
         }
         hits.size < numHitsToReturn // until we fill up the queue
       }
-
-      debugLog(s"ready to return. step3. hitsSize = ${hits.size}, othersHits size = ${othersHits.size}")
-
     }
 
     val show = if (filter.isDefault && isInitialSearch && noFriendlyHits) false else (highScore > 0.6f || othersHighScore > 0.8f)
