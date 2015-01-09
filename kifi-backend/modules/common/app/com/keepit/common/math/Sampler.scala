@@ -4,34 +4,33 @@ import java.util.Arrays
 
 import scala.util.Random
 
-trait Sampler[A] {
+trait Sampler {
   val sampleSize: Int
-  def put(outcome: A, probability: Double)
-}
+  def collect(probability: Double): Int
 
-object Sampler {
-
-  val segmentSize: Int = 2000
-
-  def apply[A](sampleSize: Int, out: (A, Int) => Unit) = {
-    require(sampleSize > 0, "the sample size must be greater than 0")
-
-    if (sampleSize <= segmentSize) new SimpleSampler[A](sampleSize, out)
-    else new CombinedSampler[A](sampleSize, out)
-  }
-
-  private[math] def randomize(rnd: Array[Double], base: Double, width: Double): Unit = {
+  protected def randomize(rnd: Array[Double], low: Double, high: Double): Unit = {
     var i = 0
     while (i < rnd.length) {
-      rnd(i) = Random.nextDouble() * width + base
+      rnd(i) = Random.nextDouble() * (high - low) + low
       i += 1
     }
     Arrays.sort(rnd)
   }
 }
 
-private[math] class SimpleSampler[A](val sampleSize: Int, out: (A, Int) => Unit) extends Sampler[A] {
-  import Sampler._
+object Sampler {
+
+  val segmentSize: Int = 2000
+
+  def apply(sampleSize: Int) = {
+    require(sampleSize > 0, "the sample size must be greater than 0")
+
+    if (sampleSize <= segmentSize) new SimpleSampler(sampleSize)
+    else new CombinedSampler(sampleSize)
+  }
+}
+
+private[math] class SimpleSampler(val sampleSize: Int) extends Sampler {
 
   require(sampleSize > 0, "the sample size must be greater than 0")
 
@@ -43,7 +42,7 @@ private[math] class SimpleSampler[A](val sampleSize: Int, out: (A, Int) => Unit)
 
   private[this] var cumulative: Double = 0.0
 
-  def put(outcome: A, probability: Double): Unit = {
+  def collect(probability: Double): Int = {
     cumulative += probability
     val lastCount = sampledCount
 
@@ -51,34 +50,36 @@ private[math] class SimpleSampler[A](val sampleSize: Int, out: (A, Int) => Unit)
       sampledCount += 1
     }
 
-    if (sampledCount > lastCount) out(outcome, sampledCount - lastCount)
+    sampledCount - lastCount
   }
 }
 
-private[this] class CombinedSampler[A](val sampleSize: Int, out: (A, Int) => Unit) extends Sampler[A] {
-  import Sampler._
+private[this] class CombinedSampler(val sampleSize: Int) extends Sampler {
+  import Sampler.segmentSize
 
   require(sampleSize > 0, "the sample size must be greater than 0")
 
   private[this] var sampledCount: Int = 0
 
-  private[this] val numSegments = sampleSize - 1 / segmentSize
+  private[this] val numSegments = (sampleSize - 1) / segmentSize
 
-  private[this] val segmentedSampler = new SegmentedSampler[A](numSegments, (_, c) => { sampledCount += c })
-  private[this] val simpleSampler = new SimpleSampler[A](sampleSize - segmentedSampler.sampleSize, (_, c) => { sampledCount += c })
+  private[this] val segmentedSampler = new SegmentedSampler(numSegments)
+  private[this] val simpleSampler = new SimpleSampler(sampleSize - segmentedSampler.sampleSize)
 
   require(simpleSampler.sampleSize <= segmentSize, "the sample size for SimpleSampler is too big")
 
-  def put(outcome: A, probability: Double): Unit = {
+  def collect(probability: Double): Int = {
     val lastCount = sampledCount
-    simpleSampler.put(outcome, probability)
-    segmentedSampler.put(outcome, probability)
-    if (sampledCount > lastCount) out(outcome, sampledCount - lastCount)
+
+    sampledCount += simpleSampler.collect(probability)
+    sampledCount += segmentedSampler.collect(probability)
+
+    sampledCount - lastCount
   }
 }
 
-private[math] class SegmentedSampler[A](numSegments: Int, out: (A, Int) => Unit) extends Sampler[A] {
-  import Sampler._
+private[math] class SegmentedSampler(numSegments: Int) extends Sampler {
+  import Sampler.segmentSize
 
   require(numSegments > 0, "the number of segments must be greater than 0")
 
@@ -95,19 +96,20 @@ private[math] class SegmentedSampler[A](numSegments: Int, out: (A, Int) => Unit)
 
   private[this] var cumulative: Double = 0.0
 
-  def put(outcome: A, probability: Double): Unit = {
+  def collect(probability: Double): Int = {
     cumulative += probability
     val lastCount = sampledCount
 
     while (segNo < numSegments && cumulative > rnd(segSampledCount)) {
       sampledCount += 1
+      segSampledCount += 1
       if (segSampledCount % segmentSize == 0) {
         segNo += 1
         segSampledCount = 0
-        if (segNo < numSegments) Sampler.randomize(rnd, segWidth * segNo, segWidth)
+        if (segNo < numSegments) randomize(rnd, segWidth * segNo, segWidth * (segNo + 1))
       }
     }
 
-    if (sampledCount > lastCount) out(outcome, sampledCount - lastCount)
+    sampledCount - lastCount
   }
 }

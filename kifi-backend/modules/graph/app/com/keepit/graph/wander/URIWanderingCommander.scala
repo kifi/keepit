@@ -108,12 +108,16 @@ class URIWanderingCommander @Inject() (
       val scout = reader.getNewVertexReader()
       wanderer.moveTo(source)
 
-      var totalWeight = getTotalDestinationWeight(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver)
+      val totalWeight = getTotalDestinationWeight(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver)
       val scores = mutable.Map[VertexDataId[D], Int]().withDefaultValue(0)
       var i = 0
       while (i < trials) {
-        val sampler = Sampler[VertexId](trials - i, (vertex, count) => { i += count; scores(vertex.asId[D]) += count })
-        getDestinationWeights(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver) { (vertexId, weight) => sampler.put(vertexId, weight / totalWeight) }
+        val sampler = Sampler(trials - i)
+        getDestinationWeights(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver) { (vertexId, weight) =>
+          val count = sampler.collect(weight / totalWeight)
+          i += count
+          scores(vertexId.asId[D]) += count
+        }
       }
       scores.toMap
     }
