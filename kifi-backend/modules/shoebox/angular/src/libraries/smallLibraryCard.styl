@@ -1,198 +1,174 @@
-desktopBorderRadius = 19px
-mobileBorderRadius = 54px
-
-.kf-small-library-card
-  display: block
+.kf-slc-card
+  width: 210px
+  height: 280px
+  background: gray
+  background-size: cover
+  border-radius: 16px
+  vertical-align: top
   position: relative
-  border-radius: desktopBorderRadius desktopBorderRadius
-  z-index: 1
+  overflow: hidden
   text-align: center
-  color: #fff
-  font-family: Lato
+  box-shadow: 0 3px #f5f5f5, 0 4px #c9ccc0, 0 6px #e5e5e5, 0 7px #c4c6cb, 0 8px #d4d4d4, 0 9px #bec1c5
 
-  .kf-mobile &
-    border-radius: mobileBorderRadius mobileBorderRadius
-
-.kf-small-library-card-bottom
+.kf-slc-card-link
   position: absolute
-  top: desktopBorderRadius * 2
+  top: 0
   left: 0
   right: 0
-  background: transparent
-  border: 1px solid #CCC
-  border-radius: desktopBorderRadius
-  border-width: 0 0 1px
-  z-index: 0
-  &.card-1
-    bottom: -3px
+  bottom: 0
 
-  &.card-2
-    bottom: -6px
+.kf-slc-card-icon
+  margin-top: 20px
+  height: 21px
+  background-position: center
+  background-size: auto 21px
+  background-repeat: no-repeat
 
-  .kf-mobile &
-    top: mobileBorderRadius * 2
-    border-radius: mobileBorderRadius
-    border-color: #999
+name-line-height = 25px
 
-    &.card-1
-      bottom -8px
+.kf-slc-card-name-align
+  display: table
+  position: absolute
+  top: 22px
+  left: 0
+  width: 100%
 
-    &.card-2
-      bottom -16px
+.kf-slc-card-name
+  display: table-cell
+  color: #fff
+  font-weight: bold
+  font-size: 20px
+  line-height: name-line-height
+  height: 2 * name-line-height
+  vertical-align: bottom
+  padding: 0 16px
 
-.kf-small-library-card-header
-  border-radius: desktopBorderRadius desktopBorderRadius 0 0
-  padding-top: 36px
-  height: 122px
-  box-sizing: border-box
-  position: relative
-  z-index: 1
-
-  .kf-mobile &
-    border-radius: mobileBorderRadius mobileBorderRadius 0 0
-    padding-top: 100px
-    height: 432px
-
-.kf-small-library-name
-  &, &:link, &:visited, &:hover
-    color: #fff
-    text-decoration: none
-
-  display: block
-  font: 21px Lato
-  font-weight: 900
-  text-align: center
-  padding: 0 15px
-  line-height: 25px
-  max-height: 50px
+.kf-slc-card-name-clip
+  max-height: 2 * name-line-height
   overflow: hidden
 
-  .kf-mobile &
-    font-size: 72px
-    padding: 0 15%
-    line-height: 74px
-    max-height: 148px
+.kf-slc-counts
+  position: absolute
+  top: 78px
+  left: 0
+  right: 0
 
-.kf-small-library-counts-row
-  margin-top: 6px
-  font-family: 'Helvetica Neue'
-  color: rgba(255,255,255,0.70)
-  font-size: 11px
+.kf-slc-count
+  font-size: 10px
+  color: rgba(255,255,255,.7)
 
-  .kf-mobile &
-    margin-top: 38px
-    font-size: 35px
+  .kf-slc-count+&::before
+    content: '\00b7'
+    padding: 0 4px
 
-.kf-small-library-count
-  padding: 0 4px
+.kf-slc-card-byline
+  position: absolute
+  top: 210px
+  left: 20px
+  right: 20px
+  color: #fff
+  font-size: 12px
+  font-weight: bold
+  letter-spacing: .6px
+  text-transform: uppercase
+  text-shadow: 0 0 3px rgba(0,0,0,.6)
 
-.kf-small-library-owner
-  margin-top: 16px
-  position: relative
-  z-index: 1
+.kf-slc-card-by
+  font-style: italic
+  font-weight: normal
+  text-transform: none
+  letter-spacing: normal
+  margin-right: 2px
 
-  .kf-mobile &
-    margin-top: 100px
+:hover>.kf-slc-card-by-name
+  text-decoration: underline
 
-.kf-small-library-owner-pic
-  width: 70px
-  height: 70px
-  display: inline-block
-  border-radius: 100%
-  background-size: 100%
-
-  .kf-mobile &
-    width: 200px
-    height: 200px
-
-.kf-small-library-owner-name
-  margin: 10px 0 0
-  padding: 0 6px 14px
-  font: 10px 'Helvetica Neue'
-  color: #FFFFFF
-  white-space: nowrap
-  border-bottom: 1px solid rgba(255,255,255,.3)
-
-  b
-    font-family: Lato
-    padding-left: 2px
-    font-weight: normal
-    text-transform: uppercase
-    letter-spacing: 1px
-
-  .kf-mobile &
-    margin: 46px 0 0
-    padding: 0 10px 88px
-    font-size: 36px
-
-    b
-      letter-spacing: 3px
-      padding-left: 6px
-
-.kf-small-library-image-wrapper
-  border-radius: 0 0 desktopBorderRadius desktopBorderRadius
-  position: relative
+.kf-slc-card-cover
+  position: absolute
+  left: 0
+  right: 0
+  bottom: 0
+  height: 56%
   overflow: hidden
-  position: relative
-  z-index: 1
-  height: 167px
 
-  &.has-image::after
+  &::after
     position: absolute
-    background: rgba(0,0,0,.5)
     top: 0
-    bottom: 0
     left: 0
     right: 0
+    bottom: 0
+    background-color: rgba(0,0,0,.3)
     content: ''
 
-  .kf-mobile &
-    border-radius: 0 0 mobileBorderRadius mobileBorderRadius
-    height: 611px
-
-.kf-small-library-image
+.kf-slc-card-cover-image
   position: absolute
-  z-index: 0
+  top: -3px
+  left: -3px
+  right: -3px
+  bottom: -3px
   background-size: cover
-  background-position: center center
-  top: -2px
-  bottom: -2px
-  left: -2px
-  right: -2px
-  filter: blur(1px)
-  -webkit-filter: blur(1px)
+  -webkit-filter: blur(3px)
+  -moz-filter: blur(3px)
+  filter: blur(3px)
 
-.kf-small-library-followers
+.kf-slc-card-owner-pic-a
+  diameter = 60px
+  position: absolute
+  width: diameter
+  height: diameter
+  top: 50%
+  left: 50%
+  margin-left: -(diameter / 2)
+  border-radius: 50%
+
+  &:hover
+    transform: scale(1.03)
+
+.kf-slc-card-owner-pic
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+  height: 100%
+  border-radius: 50%
+  box-shadow: 0 0 3px rgba(0,0,0,.3) inset
+
+.kf-slc-card-foot
+  position: absolute
+  left: 0
+  right: 0
+  bottom: 0
+  height: 35px
   border-top: 1px solid rgba(255,255,255,.3)
+  -webkit-font-smoothing: antialiased
+
+follower-pic-diameter = 23px
+
+.kf-slc-followers
+  padding: 5px 16px 0
   text-align: left
-  padding: 9px 10px 0
+  line-height: follower-pic-diameter
+  font-size: 11px
+  vertical-align: middle
+  color: rgba(255,255,255,.7)
 
-  .kf-mobile &
-    border-color: #fff
-    padding: 26px 26px 0
-
-.kf-small-library-followers-chip
-  width: 23px
-  height: 23px
+.kf-slc-follower
+  display: inline-block
+  vertical-align: top
+  width: follower-pic-diameter
+  height: follower-pic-diameter
   background-size: cover
-  background-position: center center
-  float: left
-  display: block
+  background-position: center
   border-radius: 100%
   margin-right: 4px
 
-  .kf-mobile &
-    width: 80px
-    height: 80px
-    margin-right: 12px
+  &:last-of-type
+    margin-right: 3px
 
-.kf-small-library-followers-text
-  float: left
-  line-height: 23px
+.kf-slc-all-followers
+  margin-left: 1px
+
+.kf-slc-updated
+  line-height: 33px
   font-size: 12px
-
-  .kf-mobile &
-    padding-left: 10px
-    font-size: 30px
-    line-height: 80px
-    font-size: 38px
+  color: rgba(255,255,255,.4)

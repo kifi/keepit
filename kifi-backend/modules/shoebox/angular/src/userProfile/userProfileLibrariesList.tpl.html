@@ -4,7 +4,7 @@
     <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib)">
       <div class="kf-upl-card-icon" ng-class="lib.kind === 'system_main' ? 'svg-card-star' : 'svg-card-lock'" ng-if="lib.system"></div>
       <div class="kf-upl-card-cover">
-        <div class="kf-upl-card-cover-image" ng-style="{{lib.imageCss}}" ng-if="lib.image"></div>
+        <div class="kf-upl-card-cover-image" ng-attr-style="background-image:url({{lib.imageUrl}});background-position:{{lib.image.x}}% {{lib.image.y}}%" ng-if="lib.image"></div>
       </div>
       <span class="kf-upl-card-listed" ng-if="isHidden(lib)">Hidden on Public Profile</span>
       <div class="kf-upl-card-name-align">
