@@ -19,7 +19,7 @@
       <th>Public Id</th><td>@publicId.id</td>
     </tr>
     <tr>
-      <th>Owner</th><td><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(100, owner.externalId)" height=25 width=25>@owner.firstName @owner.lastName</td>
+      <th>Owner</th><td><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(100, owner.externalId)" height=25 width=25>@adminHelper.userDisplay(owner)</td>
     </tr>
     <tr>
       <th>Description</th><td>@library.description</td>
