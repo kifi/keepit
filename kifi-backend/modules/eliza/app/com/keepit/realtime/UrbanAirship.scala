@@ -24,7 +24,7 @@ import scala.concurrent.future
 case class UrbanAirshipConfig(key: String, secret: String, devKey: String, devSecret: String, baseUrl: String = "https://go.urbanairship.com")
 
 // Add fields to this object and handle them properly for each platform
-case class PushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound])
+case class PushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound], type, payload)
 
 case class NotificationSound(name: String) extends AnyVal
 
