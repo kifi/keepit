@@ -301,7 +301,6 @@ angular.module('kifi')
       lib.owner = owner;
       lib.ownerPicUrl = keepWhoService.getPicUrl(owner, 200);
       lib.ownerProfileUrl = routeService.getProfileUrl(owner.username);
-      lib.system = /^system_/.test(lib.kind);
       lib.imageUrl = lib.image ? routeService.libraryImageUrl(lib.image.path) : null;
       lib.followers.forEach(function (user) {
         user.picUrl = keepWhoService.getPicUrl(user, 100);
