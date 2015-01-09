@@ -199,7 +199,7 @@ class MailToKeepPluginImpl @Inject() (
     actor.ref ! FetchNewKeeps
   }
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 10 seconds, 1 minute, actor.ref, FetchNewKeeps)
+    scheduleTaskOnLeader(actor.system, 80 seconds, 311 seconds, actor.ref, FetchNewKeeps)
   }
 }
 
