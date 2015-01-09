@@ -108,6 +108,7 @@ angular.module('kifi')
       this.numFollowers = library.numFollowers;
       this.numKeeps = library.numKeeps;
       this.ownerPicUrl = routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 200);
+      this.ownerProfileUrl = routeService.getProfileUrl(library.owner.username);
       this.name = library.name;
       this.description = library.description;
       this.color = library.color;
@@ -115,7 +116,10 @@ angular.module('kifi')
       this.imageUrl = library.image ? routeService.libraryImageUrl(library.image.path) : null;
       this.path = '/' + library.owner.username + '/' + library.slug;
       this.followers = library.followers.map(function (user) {
-        return _.merge(user, { picUrl: routeService.formatPicUrl(user.id, user.pictureName, 200) });
+        return _.merge(user, {
+          picUrl: routeService.formatPicUrl(user.id, user.pictureName, 200),
+          profileUrl: routeService.getProfileUrl(user.username)
+        });
       });
     }
 

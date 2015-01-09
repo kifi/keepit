@@ -20,16 +20,16 @@
       </div>
     </a>
     <div itemscope itemtype="http://data-vocabulary.org/Person">
-      <a class="kf-upl-card-owner-pic-a" href="{{getUserProfileUrl(lib.owner)}}" ng-click="trackProfileClick()" itemprop="url" ng-if="libraryType !== 'own'">
+      <a class="kf-upl-card-owner-pic-a" href="{{lib.ownerProfileUrl}}" ng-click="trackProfileClick()" itemprop="url" ng-if="libraryType !== 'own'">
         <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" itemprop="photo">
       </a>
-      <a class="kf-upl-card-byline" href="{{getUserProfileUrl(lib.owner)}}" ng-click="trackProfileClick()">
+      <a class="kf-upl-card-byline" href="{{lib.ownerProfileUrl}}" ng-click="trackProfileClick()">
         <span class="kf-upl-card-by">by</span> <span class="kf-upl-card-by-name" itemprop="name">{{lib.owner.firstName}} {{lib.owner.lastName}}</span>
       </a>
     </div>
     <div class="kf-upl-card-foot">
       <div class="kf-upl-followers" ng-if="lib.followers.length > 0">
-        <a href="{{getUserProfileUrl(user)}}" class="kf-upl-follower" ng-repeat="user in lib.followers" ng-click="trackProfileClick()"
+        <a href="{{user.profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" ng-click="trackProfileClick()"
            ng-attr-style="background-image:url({{user.picUrl}})"></a>
         <span ng-if="lib.numFollowers === lib.followers.length">
           <ng-pluralize class="kf-upl-all-followers" count="lib.numFollowers" when="{'1':'follows this library','other':'are following'}"></ng-pluralize>
