@@ -155,10 +155,6 @@
   text-align: center
   box-shadow: 0 3px #f5f5f5, 0 4px #c9ccc0, 0 6px #e5e5e5, 0 7px #c4c6cb, 0 8px #d4d4d4, 0 9px #bec1c5
 
-  &:hover .kf-upl-card-setting {
-    display: block
-  }
-
 .kf-upl-card-link
   position: absolute
   top: 0
@@ -183,14 +179,22 @@ name-line-height = 25px
   width: 100%
 
 .kf-upl-card-setting
-  display: none
   position: absolute
-  top: 7px
-  left: calc(100% - 27px)
+  top: 5px
+  right: 5px
   width: 20px
   height: 20px
   z-index: 2
-  cursor: pointer
+  background-position: center
+  background-size: 15px 15px
+  background-repeat: no-repeat
+
+  :not(:hover)>&
+    display: none
+
+  &:not(:hover):not(:focus)
+  &:active
+    opacity: .7
 
 .kf-upl-card-listed
   position: absolute
