@@ -168,7 +168,7 @@ class AdminBookmarksController @Inject() (
     val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
 
     def bookmarksInfos() = {
-      future { timing(s"load $PAGE_SIZE bookmarks") { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } } } flatMap { bookmarks =>
+      future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } } flatMap { bookmarks =>
         val usersFuture = future {
           timing("load user") {
             db.readOnlyMaster { implicit s =>
@@ -193,14 +193,11 @@ class AdminBookmarksController @Inject() (
           }
         }
 
-        val keywordsFut = Future.sequence(bookmarks.map { x => uriSummaryCommander.getKeywordsSummary(x.uriId) })
-
         for {
           users <- usersFuture
           uris <- urisFuture
           scrapes <- scrapesFuture
-          keywords <- keywordsFut
-        } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq, keywords).zipped.toList.seq
+        } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
       }
     }
 
@@ -222,7 +219,7 @@ class AdminBookmarksController @Inject() (
     }
 
     for {
-      bookmarksAndUsers <- timing("load full bookmarksInfos") { bookmarksInfos() }
+      bookmarksAndUsers <- bookmarksInfos()
       overallCount <- bookmarkTotalCountFuture
       counts <- bookmarkTodayAllCountsFuture
       privateKeeperKeepCount <- privateKeeperKeepCountFuture
