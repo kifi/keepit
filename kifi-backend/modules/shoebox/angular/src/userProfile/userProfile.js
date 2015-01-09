@@ -287,10 +287,6 @@ angular.module('kifi')
       return $scope.profile && $scope.profile.numInvitedLibraries && $scope.viewingOwnProfile;
     };
 
-    $scope.getUserProfileUrl = function (user) {
-      return routeService.getProfileUrl(user.username);
-    };
-
     function resetFetchState() {
       $scope.libraries = null;
       fetchPageNumber = 0;
@@ -308,10 +304,12 @@ angular.module('kifi')
       lib.path = '/' + owner.username + '/' + lib.slug;
       lib.owner = owner;
       lib.ownerPicUrl = keepWhoService.getPicUrl(owner, 200);
+      lib.ownerProfileUrl = routeService.getProfileUrl(owner.username);
       lib.system = /^system_/.test(lib.kind);
       lib.imageUrl = lib.image ? routeService.libraryImageUrl(lib.image.path) : null;
       lib.followers.forEach(function (user) {
         user.picUrl = keepWhoService.getPicUrl(user, 100);
+        user.profileUrl = routeService.getProfileUrl(user.username);
       });
       return lib;
     }
