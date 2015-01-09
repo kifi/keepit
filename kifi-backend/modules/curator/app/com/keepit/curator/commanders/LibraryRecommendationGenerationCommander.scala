@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ReactiveLock
-import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.db.{ State, Id, SequenceNumber }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -142,7 +142,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
       }
     }
 
-    private def shouldInclude(scoredLibrary: ScoredLibraryInfo): Boolean = {
+    private def isRecommendable(scoredLibrary: ScoredLibraryInfo): Boolean = {
       scoredLibrary.masterScore > 1 // TODO(josh) improve this cutoff
     }
 
@@ -172,13 +172,13 @@ class LibraryRecommendationGenerationCommander @Inject() (
       (filteredLibs, excludedLibs, maxLibSeqNum)
     }
 
-    private def saveLibraryRecommendations(scoredLibraryInfos: Seq[ScoredLibraryInfo]): Unit =
+    private def saveLibraryRecommendations(scoredLibraryInfos: Seq[ScoredLibraryInfo], state: State[LibraryRecommendation]): Unit =
       db.readWrite { implicit s =>
         scoredLibraryInfos foreach { scoredLibraryInfo =>
           val recoOpt = libraryRecRepo.getByLibraryAndUserId(scoredLibraryInfo.libraryId, userId, None)
           recoOpt.map { reco =>
             libraryRecRepo.save(reco.copy(
-              state = LibraryRecommendationStates.ACTIVE,
+              state = state,
               masterScore = scoredLibraryInfo.masterScore,
               allScores = scoredLibraryInfo.allScores
             ))
@@ -195,8 +195,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
     private def processLibraries(candidates: Seq[CuratorLibraryInfo], newState: LibraryRecommendationGenerationState,
       alwaysInclude: Set[Id[Library]]): Future[Unit] = {
       scoringHelper(userId, candidates, selectionParams) flatMap { scores =>
-        val toBeSaved = scores filter (si => alwaysInclude.contains(si.libraryId) || shouldInclude(si))
-        saveLibraryRecommendations(toBeSaved)
+        val toBeSaved = scores filter (si => alwaysInclude.contains(si.libraryId) || isRecommendable(si))
+        saveLibraryRecommendations(toBeSaved, LibraryRecommendationStates.ACTIVE)
         precomputeRecommendationsForUser(alwaysInclude, newState)
       }
     }
