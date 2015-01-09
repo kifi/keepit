@@ -82,7 +82,6 @@ class UserCommander @Inject() (
     emailRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
     userConnectionRepo: UserConnectionRepo,
-    friendRequestRepo: FriendRequestRepo,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
@@ -100,8 +99,11 @@ class UserCommander @Inject() (
     userImageUrlCache: UserImageUrlCache,
     libraryCommander: LibraryCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
+    friendStatusCommander: FriendStatusCommander,
     emailSender: EmailSenderProvider,
     usernameCache: UsernameCache,
+    userExperimentRepo: UserExperimentRepo,
+    allFakeUsersCache: AllFakeUsersCache,
     airbrake: AirbrakeNotifier) extends Logging { self =>
 
   def userFromUsername(username: Username): Option[User] = db.readOnlyReplica { implicit session =>
@@ -112,19 +114,7 @@ class UserCommander @Inject() (
     userFromUsername(username) map { user =>
       val basicUserWithFriendStatus = viewer.filter(_.id != user.id) map { viewer =>
         db.readOnlyMaster { implicit session =>
-          if (userConnectionRepo.areConnected(viewer.id.get, user.id.get)) {
-            BasicUserWithFriendStatus.from(user, true)
-          } else {
-            friendRequestRepo.getBySenderAndRecipient(user.id.get, viewer.id.get, Set(FriendRequestStates.ACTIVE)) map { req =>
-              BasicUserWithFriendStatus.fromWithRequestReceivedAt(user, req.createdAt)
-            } getOrElse {
-              friendRequestRepo.getBySenderAndRecipient(viewer.id.get, user.id.get, Set(FriendRequestStates.ACTIVE, FriendRequestStates.IGNORED)) map { req =>
-                BasicUserWithFriendStatus.fromWithRequestSentAt(user, req.createdAt)
-              } getOrElse {
-                BasicUserWithFriendStatus.from(user, false)
-              }
-            }
-          }
+          friendStatusCommander.augmentWithFriendStatus(viewer.id.get, user.id.get, BasicUser.fromUser(user))
         }
       } getOrElse BasicUserWithFriendStatus.fromWithoutFriendStatus(user)
       db.readOnlyReplica { implicit session =>
@@ -746,4 +736,12 @@ class UserCommander @Inject() (
     }
   }
 
+  def getAllFakeUsers(): Set[Id[User]] = {
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+    allFakeUsersCache.getOrElse(AllFakeUsersKey) {
+      db.readOnlyMaster { implicit session =>
+        userExperimentRepo.getByType(ExperimentType.FAKE).map(_.userId).toSet
+      }
+    }
+  }
 }

@@ -10,18 +10,6 @@
         class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-follow kf-keep-lib-footer-button-follow-in-search">Follow Library</button>
       <div class="kf-keep-lib-body">
         <div class="kf-keep-lib-header">
-          <div ng-if="!isUserLoggedOut" ng-switch="library.kind" class="kf-keep-lib-icon-container">
-            <div ng-switch-when="system_main" class="kf-keep-lib-icon svg-main-library-big"></div>
-            <div ng-switch-when="system_secret" class="kf-keep-lib-icon svg-secret-library-big"></div>
-            <div ng-switch-default ng-switch="library.visibility">
-              <div ng-switch-when="published" class="kf-keep-lib-icon svg-public-library-big"></div>
-              <div ng-switch-when="secret" class="kf-keep-lib-icon svg-private-library-big"></div>
-
-              <!-- TODO: remove this when we've converted all discoverable libraries to public libraries in the db. -->
-              <div ng-switch-when="discoverable" class="kf-keep-lib-icon svg-yellow-card-with-globe"></div>
-            </div>
-          </div>
-
           <div ng-switch="recommendation" class="kf-keep-lib-name-container kf-keep-title">
             <a ng-switch-when="true" class="kf-keep-lib-name" ng-href="{{library.url}}" ng-attr-title="{{library.name}}" ng-bind-html="library.name" ng-click="clickLibraryCallback()"></a>
             <span ng-switch-when="false" class="kf-keep-lib-name" title="{{library.name}}" kf-ellipsis full-text="library.name" max-num-lines=2 num-reloads=3></span>

@@ -39,7 +39,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.typeahead.{ HashtagTypeahead, HashtagHit, TypeaheadHit }
-import com.keepit.search.augmentation.{ RestrictedKeepInfo, ItemAugmentationRequest, AugmentableItem }
+import com.keepit.search.augmentation.{ LimitedAugmentationInfo, RestrictedKeepInfo, ItemAugmentationRequest, AugmentableItem }
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.store.ImageSize
 import com.keepit.common.CollectionHelpers
@@ -135,6 +135,7 @@ class KeepsCommander @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
     hashtagTypeahead: HashtagTypeahead,
+    userCommander: UserCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getKeepsCountFuture(): Future[Int] = {
@@ -269,12 +270,32 @@ class KeepsCommander @Inject() (
     }.toMap
   }
 
+  def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo] = {
+    val allUsers = (infos flatMap { info =>
+      val keepers = info.keepers
+      val libs = info.libraries
+      (libs.map(_._2) ++ keepers)
+    }).toSet
+    if (allUsers.isEmpty) infos
+    else {
+      val fakeUsers = userCommander.getAllFakeUsers().intersect(allUsers)
+      if (fakeUsers.isEmpty) infos
+      else {
+        infos map { info =>
+          val keepers = info.keepers.filterNot(u => fakeUsers.contains(u))
+          val libs = info.libraries.filterNot(t => fakeUsers.contains(t._2))
+          info.copy(keepers = keepers, libraries = libs)
+        }
+      }
+    }
+  }
+
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keeps: Seq[Keep], idealImageSize: ImageSize): Future[Seq[KeepInfo]] = {
     if (keeps.isEmpty) Future.successful(Seq.empty[KeepInfo])
     else {
       val augmentationFuture = {
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
-        searchClient.augment(perspectiveUserIdOpt, showPublishedLibraries, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items)
+        searchClient.augment(perspectiveUserIdOpt, showPublishedLibraries, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
       }
       val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
         val idToLibrary = {
@@ -301,6 +322,8 @@ class KeepsCommander @Inject() (
 
       val allMyKeeps = perspectiveUserIdOpt.map { userId => getBasicKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[BasicKeep]]
 
+      val librariesWithWriteAccess = perspectiveUserIdOpt.map(libraryCommander.getLibrariesWithWriteAccess) getOrElse Set.empty
+
       for {
         augmentationInfos <- augmentationFuture
         pageInfos <- pageInfosFuture
@@ -311,6 +334,15 @@ class KeepsCommander @Inject() (
           case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
             val others = augmentationInfoForKeep.keepersTotal - augmentationInfoForKeep.keepers.size - augmentationInfoForKeep.keepersOmitted
             val keepers = perspectiveUserIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_ == userId) } getOrElse augmentationInfoForKeep.keepers
+            val keeps = allMyKeeps.get(keep.uriId) getOrElse Set.empty
+            val libraries = {
+              def doShowLibrary(libraryId: Id[Library]): Boolean = { // ensuring consistency of libraries returned by search with the user's latest database data (race condition)
+                lazy val publicId = Library.publicId(libraryId)
+                !librariesWithWriteAccess.contains(libraryId) || keeps.exists(_.libraryId == publicId)
+              }
+              augmentationInfoForKeep.libraries.collect { case (libraryId, contributorId) if doShowLibrary(libraryId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId)) }
+            }
+
             KeepInfo(
               id = Some(keep.externalId),
               title = keep.title,
@@ -318,11 +350,11 @@ class KeepsCommander @Inject() (
               isPrivate = keep.isPrivate,
               createdAt = Some(keep.createdAt),
               others = Some(others),
-              keeps = allMyKeeps.get(keep.uriId),
+              keeps = Some(keeps),
               keepers = Some(keepers.map(idToBasicUser)),
               keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
               keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
-              libraries = Some(augmentationInfoForKeep.libraries.map { case (libraryId, contributorId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId)) }),
+              libraries = Some(libraries),
               librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
               librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
               collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is this still used?

@@ -28,6 +28,7 @@ object LibraryFactory {
     def withSlug(slug: String) = new PartialLibrary(library.copy(slug = LibrarySlug(slug)))
     def withColor(color: String): PartialLibrary = withColor(HexColor(color))
     def withColor(color: HexColor) = new PartialLibrary(library.copy(color = Some(color)))
+    def withKind(kind: LibraryKind) = new PartialLibrary(library.copy(kind = kind))
     def withState(state: State[Library]) = new PartialLibrary(library.copy(state = state))
     def secret() = new PartialLibrary(library.copy(visibility = SECRET))
     def published() = new PartialLibrary(library.copy(visibility = PUBLISHED))

@@ -1,12 +1,11 @@
 <div class="kf-upl-card-list" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreLibraries()" scroll-next="fetchLibraries()">
-  <div class="kf-upl-card" ng-repeat="lib in libraries track by lib.id" ng-style="{'background-color': lib.color}">
-    <div class="kf-upl-card-setting svg-settings-gear" ng-if="isMyLibrary(lib.owner.id) && lib.kind==='user_created'" ng-click="openModifyLibrary(lib)"></div>
+  <div class="kf-upl-card" ng-repeat="lib in libraries" ng-style="{'background-color': lib.color}">
+    <a class="kf-upl-card-setting svg-settings-gear" ng-if="isMyLibrary(lib.owner.id) && lib.kind==='user_created'" href="javascript:" ng-click="openModifyLibrary(lib)"></a>
     <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib)">
-      <div class="kf-upl-card-icon" ng-class="lib.kind === 'system_main' ? 'svg-card-star' : 'svg-card-lock'" ng-if="lib.system"></div>
+      <div class="kf-upl-card-icon" ng-class="{system_main: 'kf-sys svg-card-star', system_secret: 'kf-sys svg-card-lock'}[lib.kind] || 'kf-user svg-card-lock'" ng-if="lib.visibility === 'secret' || lib.kind === 'system_main'"></div>
       <div class="kf-upl-card-cover">
-        <div class="kf-upl-card-cover-image" ng-style="{{lib.imageCss}}" ng-if="lib.image"></div>
+        <div class="kf-upl-card-cover-image" ng-attr-style="background-image:url({{lib.imageUrl}});background-position:{{lib.image.x}}% {{lib.image.y}}%" ng-if="lib.image"></div>
       </div>
-      <span class="kf-upl-card-listed" ng-if="isHidden(lib)">Hidden on Public Profile</span>
       <div class="kf-upl-card-name-align">
         <div class="kf-upl-card-name">
           <div class="kf-upl-card-name-clip">
@@ -18,31 +17,37 @@
         <ng-pluralize class="kf-upl-count" count="lib.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}" ng-if="lib.numKeeps > 0"></ng-pluralize>
         <ng-pluralize class="kf-upl-count" count="lib.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}" ng-if="lib.numFollowers > 0"></ng-pluralize>
       </div>
-      <div class="kf-upl-card-byline"><span class="kf-upl-card-by">by</span> {{lib.owner.firstName}} {{lib.owner.lastName}}</div>
     </a>
     <div itemscope itemtype="http://data-vocabulary.org/Person">
-      <a href="{{getUserProfileUrl(lib.owner)}}" ng-click="trackProfileClick()" itemprop="url">
+      <a class="kf-upl-card-owner-pic-a" href="{{lib.ownerProfileUrl}}" ng-click="trackProfileClick()" itemprop="url" ng-if="libraryType !== 'own'">
         <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" itemprop="photo">
       </a>
-      <meta itemprop="name" content="{{lib.owner.firstName}} {{lib.owner.lastName}}" />
+      <a class="kf-upl-card-byline" href="{{lib.ownerProfileUrl}}" ng-click="trackProfileClick()">
+        <span class="kf-upl-card-by">by</span> <span class="kf-upl-card-by-name" itemprop="name">{{lib.owner.firstName}} {{lib.owner.lastName}}</span>
+      </a>
     </div>
-    <div class="kf-upl-card-foot">
-      <div class="kf-upl-followers" ng-if="lib.followers.length > 0">
-        <a href="{{getUserProfileUrl(user)}}" class="kf-upl-follower" ng-repeat="user in lib.followers" ng-click="trackProfileClick()"
+    <div class="kf-upl-card-foot" ng-switch="lib.visibility === 'published' && !lib.listed ? 'unlisted' : lib.followers.length ? 'followers' : lib.lastKept ? 'updated' : ''">
+      <div class="kf-upl-followers" ng-switch-when="followers">
+        <a href="{{user.profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" ng-click="trackProfileClick()"
            ng-attr-style="background-image:url({{user.picUrl}})"></a>
-        <span ng-if="lib.followers.length===1"> follows this library</span>
-        <span ng-if="lib.followers.length > 1">
-          <ng-pluralize count="lib.numFollowers - lib.followers.length" when="{'0':' follow this library','1':'+{} follower','other':'+{} followers'}"></ng-pluralize>
+        <span ng-if="lib.numFollowers === lib.followers.length">
+          <ng-pluralize class="kf-upl-all-followers" count="lib.numFollowers" when="{'1':'follows this library','other':'are following'}"></ng-pluralize>
+        </span>
+        <span ng-if="lib.numFollowers > lib.followers.length">
+          + {{lib.numFollowers - lib.followers.length}} are following
         </span>
       </div>
-      <div class="kf-upl-updated" ng-if="lib.followers.length === 0 && lib.lastKept">
+      <div class="kf-upl-updated" ng-switch-when="updated">
         Updated&nbsp;<time ng-attr-datetime="{{lib.lastKept}}" am-time-ago="lib.lastKept"></time>
+      </div>
+      <div class="kf-upl-unlisted" ng-switch-when="unlisted">
+        Hidden on public profile
       </div>
     </div>
   </div>
   <div class="kf-upl-empty" ng-if="libraries && libraries.length === 0">
-    <span ng-if="libraryType == 'own'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} not created any publicly viewable libraries.</span>
-    <span ng-if="libraryType == 'following'">{{viewingOwnProfile ? 'You are' : profile.firstName + ' is'}} not following any libraries.</span>
-    <span ng-if="libraryType == 'invited'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} no pending invitations to follow a library.</span>
+    <span ng-if="libraryType === 'own'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} not created any publicly viewable libraries.</span>
+    <span ng-if="libraryType === 'following'">{{viewingOwnProfile ? 'You are' : profile.firstName + ' is'}} not following any libraries.</span>
+    <span ng-if="libraryType === 'invited'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} no pending invitations to follow a library.</span>
   </div>
 </div>

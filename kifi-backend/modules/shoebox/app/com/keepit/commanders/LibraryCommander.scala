@@ -78,6 +78,7 @@ class LibraryCommander @Inject() (
     libraryImageCommander: LibraryImageCommander,
     uriSummaryCommander: URISummaryCommander,
     experimentCommander: LocalUserExperimentCommander,
+    friendStatusCommander: FriendStatusCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -368,13 +369,14 @@ class LibraryCommander @Inject() (
           case Some(lib) if lib.slug == validSlug =>
             Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
           case None =>
+            val newColor = libAddReq.color.orElse(Some(HexColor.pickRandomLibraryColor))
             val newListed = libAddReq.listed.getOrElse(true)
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                    visibility = libAddReq.visibility, slug = validSlug, color = libAddReq.color, kind = LibraryKind.USER_CREATED, memberCount = 1))
+                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = LibraryKind.USER_CREATED, memberCount = 1))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed))
                   lib
                 case Some(lib) =>
@@ -386,8 +388,10 @@ class LibraryCommander @Inject() (
                   newLib
               }
             }
-            libraryAnalytics.createLibrary(ownerId, library, context)
-            searchClient.updateLibraryIndex()
+            SafeFuture {
+              libraryAnalytics.createLibrary(ownerId, library, context)
+              searchClient.updateLibraryIndex()
+            }
             Right(library)
         }
       }
@@ -481,7 +485,9 @@ class LibraryCommander @Inject() (
           libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, state = LibraryStates.ACTIVE))
         }
       }
-      searchClient.updateLibraryIndex()
+      future {
+        searchClient.updateLibraryIndex()
+      }
       result
     }
   }
@@ -748,15 +754,16 @@ class LibraryCommander @Inject() (
         }
         val (invites, inviteesWithAccess) = invitesAndInvitees.flatten.unzip
         processInvites(invites)
-
-        libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
+        future {
+          libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
+        }
 
         Right(inviteesWithAccess)
       }
     }
   }
 
-  def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Unit = {
+  def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Future[Unit] = SafeFuture {
     val (follower, owner) = db.readOnlyReplica { implicit session =>
       userRepo.get(newFollowerId) -> userRepo.get(lib.ownerId)
     }
@@ -822,14 +829,18 @@ class LibraryCommander @Inject() (
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
-
-        val keepCount = keepRepo.getCountByLibrary(libraryId)
-        libraryAnalytics.acceptLibraryInvite(userId, libraryId, eventContext)
-        libraryAnalytics.followLibrary(userId, lib, keepCount, eventContext)
-        searchClient.updateLibraryIndex()
+        updateLibraryJoin(userId, lib, eventContext)
         Right(updatedLib)
       }
     }
+  }
+
+  private def updateLibraryJoin(userId: Id[User], library: Library, eventContext: HeimdalContext): Future[Unit] = SafeFuture {
+    val libraryId = library.id.get
+    val keepCount = db.readOnlyMaster { implicit s => keepRepo.getCountByLibrary(libraryId) }
+    libraryAnalytics.acceptLibraryInvite(userId, libraryId, eventContext)
+    libraryAnalytics.followLibrary(userId, library, keepCount, eventContext)
+    searchClient.updateLibraryIndex()
   }
 
   def declineLibrary(userId: Id[User], libraryId: Id[Library]) = {
@@ -848,10 +859,11 @@ class LibraryCommander @Inject() (
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           val lib = libraryRepo.get(libraryId)
           libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
-
-          val keepCount = keepRepo.getCountByLibrary(libraryId)
-          libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
-          searchClient.updateLibraryIndex()
+          SafeFuture {
+            val keepCount = keepRepo.getCountByLibrary(libraryId)
+            libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
+            searchClient.updateLibraryIndex()
+          }
           Right()
         }
       }
@@ -972,7 +984,9 @@ class LibraryCommander @Inject() (
           }
         }
         val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(), saveKeep)
-        libraryAnalytics.editLibrary(userId, toLibrary, context, Some("copy_keeps"))
+        future {
+          libraryAnalytics.editLibrary(userId, toLibrary, context, Some("copy_keeps"))
+        }
         keepResults
     }
   }
@@ -1021,7 +1035,9 @@ class LibraryCommander @Inject() (
           }
         }
         val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
-        libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
+        future {
+          libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
+        }
         keepResults
     }
   }
@@ -1167,15 +1183,19 @@ class LibraryCommander @Inject() (
     }
   }
 
-  /* always number of libraries (that I own) that are viewable on my profile */
-  def countLibraries(userId: Id[User], viewer: Option[Id[User]]): Int = db.readOnlyReplica { implicit s =>
+  /* always number of libraries (that I own) that are viewable on my profile
+   * and show invited libraries only if I am viewing my own profile
+   */
+  def countLibraries(userId: Id[User], viewer: Option[Id[User]]): (Int, Option[Int]) = db.readOnlyReplica { implicit s =>
     viewer match {
       case None =>
-        libraryRepo.countLibrariesOfUserFromAnonymous(userId)
+        (libraryRepo.countLibrariesOfUserFromAnonymous(userId), None)
       case Some(id) if id == userId =>
-        libraryMembershipRepo.countWithUserIdAndAccess(userId, LibraryAccess.OWNER)
+        val numLibsCreated = libraryMembershipRepo.countWithUserIdAndAccess(userId, LibraryAccess.OWNER)
+        val numLibsInvited = libraryInviteRepo.countDistinctWithUserId(userId)
+        (numLibsCreated, Some(numLibsInvited))
       case Some(friendId) =>
-        libraryRepo.countLibrariesForOtherUser(userId, friendId)
+        (libraryRepo.countLibrariesForOtherUser(userId, friendId), None)
     }
   }
 
@@ -1190,7 +1210,7 @@ class LibraryCommander @Inject() (
       val libraryIds = libs.map(_.id.get).toSet
       val owners = Map(user.id.get -> BasicUser.fromUser(user))
       val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
-      val libraryInfos = createLibraryCardInfos(libs, owners, idealSize) zip libs
+      val libraryInfos = createLibraryCardInfos(libs, owners, Some(user), idealSize) zip libs
       (libraryInfos, memberships)
     }
     libraryInfos map {
@@ -1221,7 +1241,7 @@ class LibraryCommander @Inject() (
           libraryRepo.getOwnedLibrariesForOtherUser(owner.id.get, other.id.get, page)
       }
       val owners = Map(owner.id.get -> BasicUser.fromUser(owner))
-      createLibraryCardInfos(libs, owners, idealSize)
+      createLibraryCardInfos(libs, owners, viewer, idealSize)
     }
   }
 
@@ -1242,7 +1262,7 @@ class LibraryCommander @Inject() (
           } else Seq.empty
       }
       val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
-      createLibraryCardInfos(libs, owners, idealSize)
+      createLibraryCardInfos(libs, owners, viewer, idealSize)
     }
   }
 
@@ -1251,14 +1271,19 @@ class LibraryCommander @Inject() (
       db.readOnlyMaster { implicit session =>
         val libs = libraryRepo.getInvitedLibrariesOfSelf(user.id.get, page)
         val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
-        createLibraryCardInfos(libs, owners, idealSize)
+        createLibraryCardInfos(libs, owners, viewer, idealSize)
       }
     } else {
       ParSeq.empty
     }
   }
 
-  private def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
+  private def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewer: Option[User], idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
+    val ownersWFS = if (viewer.isDefined && owners.keySet.exists(_ != viewer.get.id.get)) {
+      friendStatusCommander.augmentWithFriendStatus(viewer.get.id.get, owners)
+    } else {
+      owners mapValues BasicUserWithFriendStatus.fromWithoutFriendStatus
+    }
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getForLibraryId(lib.id.get))
       val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
@@ -1270,11 +1295,11 @@ class LibraryCommander @Inject() (
       } else {
         (0, Seq.empty)
       }
-      createLibraryCardInfo(lib, image, owners(lib.ownerId), numKeeps, numFollowers, followersSample)
+      createLibraryCardInfo(lib, image, ownersWFS(lib.ownerId), numKeeps, numFollowers, followersSample)
     }
   }
 
-  private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numKeeps: Int, numFollowers: Int,
+  private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUserWithFriendStatus, numKeeps: Int, numFollowers: Int,
     followers: Seq[BasicUser]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
@@ -1283,7 +1308,7 @@ class LibraryCommander @Inject() (
       color = lib.color,
       image = image.map(LibraryImageInfo.createInfo),
       slug = lib.slug,
-      owner = BasicUserWithFriendStatus.fromWithoutFriendStatus(owner),
+      owner = owner,
       numKeeps = numKeeps,
       numFollowers = numFollowers,
       followers = LibraryCardInfo.showable(followers),
