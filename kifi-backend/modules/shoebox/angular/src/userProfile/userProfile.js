@@ -285,9 +285,7 @@ angular.module('kifi')
     };
 
     $scope.showInvitedLibraries = function () {
-      // TODO: modify the profile endpoint to return number of invited libraries instead of relying
-      // on libraryService.invitedSummaries.length.
-      return $scope.viewingOwnProfile && libraryService.invitedSummaries.length;
+      return $scope.profile && $scope.profile.numInvitedLibraries && $scope.viewingOwnProfile;
     };
 
     $scope.getUserProfileUrl = function (user) {
