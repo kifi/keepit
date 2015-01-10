@@ -30,6 +30,7 @@ class RelatedLibraryCommanderImpl @Inject() (
     libMemRepo: LibraryMembershipRepo,
     libCommander: LibraryCommander,
     cortex: CortexServiceClient,
+    experimentCommander: LocalUserExperimentCommander,
     airbrake: AirbrakeNotifier) extends RelatedLibraryCommander {
 
   private val DEFAULT_MIN_FOLLOW = 5
@@ -40,11 +41,25 @@ class RelatedLibraryCommanderImpl @Inject() (
   // main method
   def suggestedLibrariesInfo(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[FullLibraryInfo], Seq[RelatedLibraryKind])] = {
     val suggestedLibsFut = suggestedLibraries(libId)
+
+    val fakeOwnersFut = suggestedLibsFut.map { libs =>
+      val owners = libs.map { _.library.ownerId }.distinct
+      owners.filter { id => experimentCommander.getExperimentsByUser(id).contains(ExperimentType.FAKE) }.toSet
+    }
+
+    val nonFakeUserLibsFut = for {
+      suggestLibs <- suggestedLibsFut
+      fakeOwners <- fakeOwnersFut
+    } yield {
+      suggestLibs.filter { case relatedLib => !fakeOwners.contains(relatedLib.library.ownerId) }
+    }
+
     val userLibs: Set[Id[Library]] = userIdOpt match {
       case Some(userId) => db.readOnlyReplica { implicit s => libMemRepo.getWithUserId(userId) }.map { _.libraryId }.toSet
       case None => Set()
     }
-    suggestedLibsFut
+
+    nonFakeUserLibsFut
       .map { libs => libs.filter { case RelatedLibrary(lib, kind) => !userLibs.contains(lib.id.get) }.take(RETURN_SIZE) }
       .flatMap { relatedLibs =>
         val libs = relatedLibs.map { _.library }
