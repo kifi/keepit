@@ -15,7 +15,7 @@
       <ng-pluralize class="kf-slc-count" count="library.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}" ng-if="library.numFollowers > 0"></ng-pluralize>
     </div>
     <div itemscope itemtype="http://data-vocabulary.org/Person">
-      <span class="kf-slc-card-owner-pic-a" href="{{library.ownerProfileUrl}}">
+      <span class="kf-slc-card-owner-pic-a">
         <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}" itemprop="photo">
       </span>
       <span class="kf-slc-card-byline">
