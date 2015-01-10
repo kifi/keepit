@@ -44,6 +44,7 @@ angular.module('kifi')
     $scope.librarySlug = $stateParams.librarySlug;
     $scope.keeps = [];
     $scope.library = {};
+    $scope.initialized = false;
     $scope.scrollDistance = '100%';
     $scope.loading = false;
     $scope.hasMore = true;
@@ -216,6 +217,7 @@ angular.module('kifi')
       if ($scope.loading) {
         return;
       }
+
       $scope.loading = true;
 
       // Request for library object also retrieves an initial set of keeps in the library.
@@ -246,7 +248,7 @@ angular.module('kifi')
         if ($scope.hasMore) {
           $scope.$evalAsync($scope.getNextKeeps.bind(null, library.keeps.length)); // fetch the next page
         }
-      }, function onError(resp) {
+      })['catch'](function onError(resp) {
         if (resp.data && resp.data.error) {
           $scope.loading = false;
           $scope.page = 'permission_denied';
@@ -258,6 +260,8 @@ angular.module('kifi')
             }
           }
         }
+      })['finally'](function () {
+        $scope.initialized = true;
       });
     };
 

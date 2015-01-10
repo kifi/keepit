@@ -41,7 +41,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
     "filter fake users and libs" in {
       withDb(modules: _*) { implicit injector =>
-        inject[KeepsCommander].filterLibraries(Seq()) === Seq()
+        inject[KeepDecorator].filterLibraries(Seq()) === Seq()
         val (real, fake) = db.readWrite { implicit s =>
           val user1 = user().saved
           val user2 = user().saved
@@ -51,11 +51,11 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
         val seq1 = Seq(LimitedAugmentationInfo(Seq(real), 0, 0, Seq(Id[Library](1) -> real), 0, 0, Seq.empty, 0),
           LimitedAugmentationInfo(Seq(real), 0, 0, Seq(Id[Library](2) -> real), 0, 0, Seq.empty, 0),
           LimitedAugmentationInfo(Seq(), 0, 0, Seq(), 0, 0, Seq.empty, 0))
-        inject[KeepsCommander].filterLibraries(seq1) === seq1
+        inject[KeepDecorator].filterLibraries(seq1) === seq1
         val seq2 = Seq(LimitedAugmentationInfo(Seq(real), 0, 0, Seq(Id[Library](1) -> real), 0, 0, Seq.empty, 0),
           LimitedAugmentationInfo(Seq(real, fake), 0, 0, Seq(Id[Library](2) -> real, Id[Library](3) -> fake), 0, 0, Seq.empty, 0),
           LimitedAugmentationInfo(Seq(), 0, 0, Seq(Id[Library](3) -> fake), 0, 0, Seq.empty, 0))
-        inject[KeepsCommander].filterLibraries(seq2) === seq1
+        inject[KeepDecorator].filterLibraries(seq2) === seq1
       }
     }
 

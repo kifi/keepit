@@ -14,18 +14,18 @@
       <ng-pluralize class="kf-slc-count" count="library.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}" ng-if="library.numKeeps > 0"></ng-pluralize>
       <ng-pluralize class="kf-slc-count" count="library.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}" ng-if="library.numFollowers > 0"></ng-pluralize>
     </div>
+    <div itemscope itemtype="http://data-vocabulary.org/Person">
+      <span class="kf-slc-card-owner-pic-a">
+        <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}" itemprop="photo">
+      </span>
+      <span class="kf-slc-card-byline">
+        <span class="kf-slc-card-by">by</span> <span class="kf-slc-card-by-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</span>
+      </span>
+    </div>
+    <div class="kf-slc-card-foot" ng-switch on="library.reason">
+      <span ng-switch-when="owner">More from this curator</span>
+      <span ng-switch-when="popular">Globally popular</span>
+      <span ng-switch-when="topic">Related</span>
+    </div>
   </a>
-  <div itemscope itemtype="http://data-vocabulary.org/Person">
-    <a class="kf-slc-card-owner-pic-a" href="{{library.ownerProfileUrl}}" itemprop="url">
-      <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}" itemprop="photo">
-    </a>
-    <a class="kf-slc-card-byline" href="{{library.ownerProfileUrl}}">
-      <span class="kf-slc-card-by">by</span> <span class="kf-slc-card-by-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</span>
-    </a>
-  </div>
-  <div class="kf-slc-card-foot" ng-switch on="library.reason">
-    <span ng-switch-when="owner">More from this curator</span>
-    <span ng-switch-when="popular">Globally popular</span>
-    <span ng-switch-when="topic">Related</span>
-  </div>
 </div>
