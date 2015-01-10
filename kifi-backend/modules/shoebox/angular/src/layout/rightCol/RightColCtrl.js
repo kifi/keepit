@@ -152,6 +152,14 @@ angular.module('kifi')
       $scope.relatedLibraries = relatedLibraries;
     });
 
+    var deregisterStateChange = $scope.$on('$stateChangeSuccess', function (event, toState) {
+      // the current page is not a library, remove related libraries
+      if (!toState.name.match(/^library\./)) {
+        $scope.relatedLibraries = [];
+      }
+    });
+    $scope.$on('$destroy', deregisterStateChange);
+
     $scope.$watch(function () {
       return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide);
     }, function (show) {
