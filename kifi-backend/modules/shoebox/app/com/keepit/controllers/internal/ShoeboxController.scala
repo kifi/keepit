@@ -42,6 +42,7 @@ class ShoeboxController @Inject() (
   userExperimentRepo: UserExperimentRepo,
   postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
+  keepDecorator: KeepDecorator,
   phraseRepo: PhraseRepo,
   collectionRepo: CollectionRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
@@ -51,7 +52,6 @@ class ShoeboxController @Inject() (
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: UserEmailAddressRepo,
-  keepsCommander: KeepsCommander,
   friendRequestRepo: FriendRequestRepo,
   invitationRepo: InvitationRepo,
   userValueRepo: UserValueRepo,
@@ -485,7 +485,7 @@ class ShoeboxController @Inject() (
 
   def getBasicKeeps(userId: Id[User]) = Action(parse.tolerantJson) { request =>
     val uriIds = request.body.as[Set[Id[NormalizedURI]]]
-    val keepDataByUriId = keepsCommander.getBasicKeeps(userId, uriIds)
+    val keepDataByUriId = keepDecorator.getBasicKeeps(userId, uriIds)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[NormalizedURI], Set[BasicKeep]]
     val result = Json.toJson(keepDataByUriId.toSeq)
     Ok(result)

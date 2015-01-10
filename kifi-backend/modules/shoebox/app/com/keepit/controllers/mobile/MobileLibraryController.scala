@@ -32,6 +32,7 @@ class MobileLibraryController @Inject() (
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
   pageCommander: PageCommander,
+  keepDecorator: KeepDecorator,
   userCommander: UserCommander,
   keepImageCommander: KeepImageCommander,
   normalizedUriInterner: NormalizedURIInterner,
@@ -279,7 +280,7 @@ class MobileLibraryController @Inject() (
         } getOrElse ProcessedImageSize.Large.idealSize
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
-          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, false, keeps, idealImageSize)
+          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, keeps, idealImageSize)
         } yield {
           Ok(Json.obj("keeps" -> keepInfos))
         }
