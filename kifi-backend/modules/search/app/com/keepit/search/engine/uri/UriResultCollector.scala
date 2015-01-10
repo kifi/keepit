@@ -8,6 +8,7 @@ import com.keepit.search.tracking.ResultClickBoosts
 
 object UriResultCollector {
   val MIN_MATCHING = 0.6f
+  val OVER_FETCH_BOOST = 10 // for certain categories, e.g. othersHits, 'survival rate' after fetching is low. Need to boost a bit.
 
   def createQueue(sz: Int): HitQueue = new HitQueue(sz)
 }
@@ -25,7 +26,7 @@ class UriResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, 
   private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, UriResultCollector.MIN_MATCHING)
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
-  private[this] val othersHits = createQueue(maxHitsPerCategory)
+  private[this] val othersHits = createQueue(maxHitsPerCategory * OVER_FETCH_BOOST)
 
   private[this] lazy val clickBoosts: ResultClickBoosts = clickBoostsProvider()
 
@@ -83,7 +84,7 @@ class UriResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: 
   private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, UriResultCollector.MIN_MATCHING)
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
-  private[this] val othersHits = createQueue(maxHitsPerCategory)
+  private[this] val othersHits = createQueue(maxHitsPerCategory * OVER_FETCH_BOOST)
 
   override def collect(ctx: ScoreContext): Unit = {
     val id = ctx.id
