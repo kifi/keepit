@@ -161,12 +161,12 @@ class LibraryCommander @Inject() (
   }
 
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int,
-    idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepCreateTime: Boolean = true): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
+    idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
           val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
-          keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, withKeepCreateTime)
+          keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, withKeepTime)
         } else Future.successful(Seq.empty)
       }
     }.toMap
@@ -1140,7 +1140,7 @@ class LibraryCommander @Inject() (
         maxKeepsShown = 0,
         idealKeepImageSize = ProcessedImageSize.Medium.idealSize,
         libraries = libIdsMap.values.toSeq,
-        idealLibraryImageSize = ProcessedImageSize.Medium.idealSize)
+        idealLibraryImageSize = ProcessedImageSize.Medium.idealSize, withKeepTime = true)
 
       fullLibInfosF map { libInfos =>
         libInfos map {
