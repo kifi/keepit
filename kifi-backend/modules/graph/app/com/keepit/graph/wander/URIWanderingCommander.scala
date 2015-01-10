@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.math.{ ProbabilityDensityBuilder, ProbabilityDensity }
+import com.keepit.common.math.{ Sampler, ProbabilityDensityBuilder, ProbabilityDensity }
 import com.keepit.common.time._
 
 import com.keepit.graph.manager.GraphManager
@@ -21,6 +21,7 @@ class URIWanderingCommander @Inject() (
     graph: GraphManager,
     wanderingCommander: WanderingCommander) extends DestinationWeightsQuerier with Logging {
 
+  var useSampler = false
   val uriWanderLock = new ReactiveLock(5)
 
   def wander(user: Id[User], trials: Int): Future[Map[Id[NormalizedURI], Int]] = {
@@ -108,14 +109,25 @@ class URIWanderingCommander @Inject() (
       val scout = reader.getNewVertexReader()
       wanderer.moveTo(source)
 
-      val builder = new ProbabilityDensityBuilder[VertexId]
-      getDestinationWeights(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver) { (vertexId, weight) => builder.add(vertexId, weight) }
-      val density = builder.build()
       val scores = mutable.Map[VertexDataId[D], Int]().withDefaultValue(0)
-      var i = 0
-      while (i < trials) {
-        density.sample(Math.random()) foreach { vertex => scores(vertex.asId[D]) += 1 }
-        i += 1
+      if (useSampler) {
+        val totalWeight = getTotalDestinationWeight(wanderer, scout, Component(component._1, component._2, component._3), resolver)
+        if (totalWeight > 0.0) {
+          val sampler = Sampler(trials)
+          getDestinationWeights(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver) { (vertexId, weight) =>
+            val count = sampler.collect(weight / totalWeight)
+            if (count > 0) scores(vertexId.asId[D]) += count
+          }
+        }
+      } else {
+        val builder = new ProbabilityDensityBuilder[VertexId]
+        getDestinationWeights(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver) { (vertexId, weight) => builder.add(vertexId, weight) }
+        val density = builder.build()
+        var i = 0
+        while (i < trials) {
+          density.sample(Math.random()) foreach { vertex => scores(vertex.asId[D]) += 1 }
+          i += 1
+        }
       }
       scores.toMap
     }
