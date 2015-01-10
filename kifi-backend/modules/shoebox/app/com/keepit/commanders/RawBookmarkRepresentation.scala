@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{ Library, Normalization, URLFactory }
+import com.keepit.model.{ KeepInfo, Library, Normalization, URLFactory }
 import com.kifi.macros.json
 import play.api.libs.json.{ JsArray, JsObject, JsValue }
 import org.joda.time.DateTime

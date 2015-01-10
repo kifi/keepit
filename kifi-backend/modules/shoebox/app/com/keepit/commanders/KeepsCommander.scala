@@ -44,49 +44,6 @@ import com.keepit.common.json.TupleFormat
 import com.keepit.common.store.ImageSize
 import com.keepit.common.CollectionHelpers
 
-case class KeepInfo(
-  id: Option[ExternalId[Keep]] = None,
-  title: Option[String],
-  url: String,
-  isPrivate: Boolean, // deprecated
-  createdAt: Option[DateTime] = None,
-  others: Option[Int] = None, // deprecated
-  keeps: Option[Set[BasicKeep]] = None,
-  keepers: Option[Seq[BasicUser]] = None,
-  keepersOmitted: Option[Int] = None,
-  keepersTotal: Option[Int] = None,
-  libraries: Option[Seq[(BasicLibrary, BasicUser)]] = None,
-  librariesOmitted: Option[Int] = None,
-  librariesTotal: Option[Int] = None,
-  collections: Option[Set[String]] = None, // deprecated
-  tags: Option[Set[BasicCollection]] = None, // deprecated
-  hashtags: Option[Set[Hashtag]] = None,
-  summary: Option[URISummary] = None,
-  siteName: Option[String] = None,
-  clickCount: Option[Int] = None, // deprecated
-  rekeepCount: Option[Int] = None, // deprecated
-  libraryId: Option[PublicId[Library]] = None)
-
-object KeepInfo {
-
-  val maxKeepersShown = 20
-  val maxLibrariesShown = 10
-
-  implicit val writes = {
-    implicit val libraryWrites = Writes[BasicLibrary] { library =>
-      Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "secret" -> library.isSecret) //todo(Léo): remove secret field
-    }
-    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[BasicLibrary, BasicUser]
-    Json.writes[KeepInfo]
-  }
-
-  // Are you looking for a decorated keep (with tags, rekeepers, etc)?
-  // Use KeepsCommander#decorateKeepsIntoKeepInfos(userId, keeps)
-  def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
-    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, libraryId = bookmark.libraryId.map(Library.publicId))
-  }
-}
-
 case class RawBookmarksWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[RawBookmarkRepresentation])
 
@@ -119,23 +76,18 @@ class KeepsCommander @Inject() (
     searchClient: SearchServiceClient,
     globalKeepCountCache: GlobalKeepCountCache,
     keepToCollectionRepo: KeepToCollectionRepo,
-    basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
     heimdalClient: HeimdalServiceClient,
     airbrake: AirbrakeNotifier,
-    uriSummaryCommander: URISummaryCommander,
-    collectionCommander: CollectionCommander,
     normalizedURIInterner: NormalizedURIInterner,
     curator: CuratorServiceClient,
     clock: Clock,
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    keepImageCommander: KeepImageCommander,
     hashtagTypeahead: HashtagTypeahead,
-    userCommander: UserCommander,
     keepDecorator: KeepDecorator,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
@@ -242,67 +194,6 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
-    val (allKeeps, libraryMemberships) = db.readOnlyMaster { implicit session =>
-      val allKeeps = keepRepo.getByUserAndUriIds(userId, uriIds)
-      val libraryMemberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(allKeeps.map(_.libraryId.get).toSet, userId)
-      (allKeeps, libraryMemberships)
-    }
-    val grouped = allKeeps.groupBy(_.uriId)
-    uriIds.map { uriId =>
-      grouped.get(uriId) match {
-        case Some(keeps) =>
-          val userKeeps = keeps.map { keep =>
-            val mine = userId == keep.userId
-            val libraryId = keep.libraryId.get
-            val removable = libraryMemberships.get(libraryId).exists(_.canWrite)
-            BasicKeep(
-              id = keep.externalId,
-              mine = mine,
-              removable = removable,
-              visibility = keep.visibility,
-              libraryId = Library.publicId(libraryId)
-            )
-          }.toSet
-          uriId -> userKeeps
-        case _ =>
-          uriId -> Set.empty[BasicKeep]
-      }
-    }.toMap
-  }
-
-  def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo] = {
-    val allUsers = (infos flatMap { info =>
-      val keepers = info.keepers
-      val libs = info.libraries
-      (libs.map(_._2) ++ keepers)
-    }).toSet
-    if (allUsers.isEmpty) infos
-    else {
-      val fakeUsers = userCommander.getAllFakeUsers().intersect(allUsers)
-      if (fakeUsers.isEmpty) infos
-      else {
-        infos map { info =>
-          val keepers = info.keepers.filterNot(u => fakeUsers.contains(u))
-          val libs = info.libraries.filterNot(t => fakeUsers.contains(t._2))
-          info.copy(keepers = keepers, libraries = libs)
-        }
-      }
-    }
-  }
-
-  private def getKeepSummary(keep: Keep, idealImageSize: ImageSize, waiting: Boolean = false): Future[URISummary] = {
-    val futureSummary = uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting)
-    val keepImageOpt = keepImageCommander.getBestImageForKeep(keep.id.get, idealImageSize)
-    futureSummary.map { summary =>
-      keepImageOpt match {
-        case None => summary
-        case Some(keepImage) =>
-          summary.copy(imageUrl = keepImage.map(keepImageCommander.getUrl(_)), imageWidth = keepImage.map(_.width), imageHeight = keepImage.map(_.height))
-      }
-    }
-  }
-
   // Please do not add to this. It mixes concerns and data sources.
   def allKeeps(
     before: Option[ExternalId[Keep]],
@@ -328,7 +219,7 @@ class KeepsCommander @Inject() (
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
 
-        decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize).map { keepInfos =>
+        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize).map { keepInfos =>
           (keepInfos, clickCounts, rkCounts).zipped.map {
             case (keepInfo, clickCount, rkCount) =>
               keepInfo.copy(clickCount = clickCount, rekeepCount = rkCount)

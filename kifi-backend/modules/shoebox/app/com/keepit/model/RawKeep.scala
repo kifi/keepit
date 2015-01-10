@@ -6,7 +6,6 @@ import play.api.libs.json.{ JsArray, JsObject, JsValue }
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.commanders.KeepInfo
 
 case class RawKeep(
     id: Option[Id[RawKeep]] = None,
