@@ -22,7 +22,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{ SocialNetworks, BasicUser }
+import com.keepit.social.{ BasicNonUser, SocialNetworks, BasicUser }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
@@ -231,9 +231,16 @@ class LibraryCommander @Inject() (
     Future.sequence(futureFullLibraryInfos)
   }
 
+  def sortUsersByImage(users: Seq[BasicUser]): Seq[BasicUser] =
+    users.sortBy(_.pictureName == BasicNonUser.DefaultPictureName)
+
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, showKeepCreateTime: Boolean = true): Future[FullLibraryInfo] = {
-    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize, showKeepCreateTime).imap {
-      case Seq((_, info)) => info
+    val maxMembersShown = 10
+    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, maxMembersShown = maxMembersShown * 2, maxKeepsShown = 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize, showKeepCreateTime).imap {
+      case Seq((_, info)) =>
+        val followers = info.followers
+        val sortedFollowers = sortUsersByImage(followers)
+        info.copy(followers = sortedFollowers.take(maxMembersShown))
     }
   }
 
