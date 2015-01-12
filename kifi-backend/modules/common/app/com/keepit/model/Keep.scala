@@ -30,7 +30,7 @@ case class Keep(
     kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
     seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
     libraryId: Option[Id[Library]],
-    keptAt: Option[DateTime] = Some(currentDateTime)) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    keptAt: DateTime = currentDateTime) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def sanitizeForDelete(): Keep = copy(title = None, bookmarkPath = None, state = KeepStates.INACTIVE, kifiInstallation = None)
 
@@ -84,7 +84,7 @@ object Keep {
   }
 
   // is_primary: trueOrNull in db
-  def applyFromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep], title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], inDisjointLib: Option[Boolean], urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, userId: Id[User], state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]], seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: Option[LibraryVisibility], keptAt: Option[DateTime]) = {
+  def applyFromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep], title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], inDisjointLib: Option[Boolean], urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, userId: Id[User], state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]], seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: Option[LibraryVisibility], keptAt: DateTime) = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), inDisjointLib.exists(b => b), urlId, url, bookmarkPath, visibility.getOrElse(isPrivateToVisibility(isPrivate)), userId, state, source, kifiInstallation, seq, libraryId, keptAt)
   }
   def unapplyToDbRow(k: Keep) = {
@@ -110,7 +110,7 @@ object Keep {
     (__ \ 'kifiInstallation).formatNullable(ExternalId.format[KifiInstallation]) and
     (__ \ 'seq).format(SequenceNumber.format[Keep]) and
     (__ \ 'libraryId).formatNullable(Id.format[Library]) and
-    (__ \ 'keptAt).formatNullable(DateTimeJsonFormat)
+    (__ \ 'keptAt).format(DateTimeJsonFormat)
   )(Keep.apply, unlift(Keep.unapply))
 
   // Remove when all services use the new Keep object
@@ -175,7 +175,7 @@ class GlobalKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends PrimitiveCacheImpl[GlobalKeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 8
+  override val version = 9
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -193,7 +193,7 @@ class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
-  override val version = 6
+  override val version = 7
   val namespace = "latest_keep_uri"
   def toKey(): String = uriId.toString
 }
@@ -202,7 +202,7 @@ class LatestKeepUriCache(stats: CacheStatistics, accessLog: AccessLog, innermost
   extends JsonCacheImpl[LatestKeepUriKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LatestKeepUrlKey(url: String) extends Key[Keep] {
-  override val version = 5
+  override val version = 6
   val namespace = "latest_keep_url"
   def toKey(): String = NormalizedURI.hashUrl(url).hash
 }

@@ -105,13 +105,13 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), keptAt = Some(t1.plusMinutes(3)), state = KeepStates.ACTIVE,
+            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
           val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), keptAt = Some(t1.plusHours(50)), state = KeepStates.ACTIVE,
+            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
           val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = Some(t2.plusDays(1)), state = KeepStates.ACTIVE,
+            uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = t2.plusDays(1), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
           (user1, user2, bookmark1, bookmark2, bookmark3)
@@ -220,7 +220,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
           val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), keptAt = Some(t1.plusHours(50)), state = KeepStates.ACTIVE,
+            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
           val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE,
@@ -313,7 +313,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "id":"${keeps1(1).externalId.toString}",
                       "url":"${keeps1(1).url}",
                       "isPrivate":${keeps1(1).isPrivate},
-                      "createdAt":"${keeps1(1).createdAt.toStandardTimeString}",
+                      "createdAt":"${keeps1(1).keptAt.toStandardTimeString}",
                       "others":1,
                       "keeps":[{"id":"${keeps1(1).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(1).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
@@ -336,7 +336,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "id":"${keeps1(0).externalId.toString}",
                       "url":"${keeps1(0).url}",
                       "isPrivate":${keeps1(0).isPrivate},
-                      "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
+                      "createdAt":"${keeps1(0).keptAt.toStandardTimeString}",
                       "others":0,
                       "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(0).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[],
@@ -398,7 +398,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "id":"${keeps1(0).externalId.toString}",
                       "url":"${keeps1(0).url}",
                       "isPrivate":${keeps1(0).isPrivate},
-                      "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
+                      "createdAt":"${keeps1(0).keptAt.toStandardTimeString}",
                       "others":1,
                       "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(0).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
@@ -458,7 +458,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "id":"${keeps3(2).externalId.toString}",
                                       "url":"${keeps3(2).url}",
                                       "isPrivate":${keeps3(2).isPrivate},
-                                      "createdAt":"${keeps3(2).createdAt.toStandardTimeString}",
+                                      "createdAt":"${keeps3(2).keptAt.toStandardTimeString}",
                                       "others":0,
                                       "keeps":[{"id":"${keeps3(2).externalId}", "mine":true, "removable":true, "visibility":"${keeps3(2).visibility.value}", "libraryId":"lzmfsKLJyou6"}],
                                       "keepers":[],
@@ -479,7 +479,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "id":"${keeps3(0).externalId.toString}",
                                       "url":"${keeps3(0).url}",
                                       "isPrivate":${keeps3(0).isPrivate},
-                                      "createdAt":"${keeps3(0).createdAt.toStandardTimeString}",
+                                      "createdAt":"${keeps3(0).keptAt.toStandardTimeString}",
                                       "others":0,
                                       "keeps":[{"id":"${keeps3(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps3(0).visibility.value}", "libraryId":"lzmfsKLJyou6"}],
                                       "keepers":[],

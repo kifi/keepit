@@ -86,7 +86,7 @@ class ExtBookmarksController @Inject() (
     }
     db.readWrite { implicit s =>
       collectionRepo.getOpt(id) map { tag =>
-        bookmarksCommander.tagUrl(tag, Seq(RawBookmarkRepresentation(url = url, isPrivate = None)), request.userId, libraryId, KeepSource.keeper, request.kifiInstallationId)
+        bookmarksCommander.tagUrl(tag, Seq(RawBookmarkRepresentation(url = url, isPrivate = None, keptAt = Some(clock.now))), request.userId, libraryId, KeepSource.keeper, request.kifiInstallationId)
         Ok(Json.toJson(SendableTag from tag.summary))
       } getOrElse {
         BadRequest(Json.obj("error" -> "noSuchTag"))
@@ -111,7 +111,7 @@ class ExtBookmarksController @Inject() (
     }
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
-    bookmarksCommander.tagUrl(tag, Seq(RawBookmarkRepresentation(url = url, isPrivate = None)), request.userId, libraryId, KeepSource.keeper, request.kifiInstallationId)
+    bookmarksCommander.tagUrl(tag, Seq(RawBookmarkRepresentation(url = url, isPrivate = None, keptAt = Some(clock.now))), request.userId, libraryId, KeepSource.keeper, request.kifiInstallationId)
     Ok(Json.toJson(SendableTag from tag.summary))
   }
 

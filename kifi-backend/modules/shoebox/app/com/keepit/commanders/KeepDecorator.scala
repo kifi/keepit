@@ -87,7 +87,7 @@ class KeepDecorator @Inject() (
 
             val keptAt = if (withKeepTime) {
               //rather use the kept at, if not exist using the created at
-              Some(keep.keptAt.getOrElse(keep.createdAt))
+              Some(keep.keptAt)
             } else {
               None
             }
