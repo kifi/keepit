@@ -115,10 +115,13 @@ class LDARelatedLibraryActor @Inject() (
   }
 }
 
+@ImplementedBy(classOf[LDARelatedLibraryPluginImpl])
+trait LDARelatedLibraryPlugin extends SchedulerPlugin
+
 @Singleton
-class LDARelatedLibraryPlugin @Inject() (
+class LDARelatedLibraryPluginImpl @Inject() (
     actor: ActorInstance[LDARelatedLibraryActor],
-    val scheduling: SchedulingProperties) extends SchedulerPlugin {
+    val scheduling: SchedulingProperties) extends LDARelatedLibraryPlugin {
 
   override def enabled = true
 
