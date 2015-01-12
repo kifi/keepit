@@ -2,15 +2,16 @@ package com.keepit.curator
 
 import com.google.inject.Injector
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.cortex.{ CortexServiceClient, FakeCortexServiceClientImpl, FakeCortexServiceClientModule }
-import com.keepit.curator.commanders.LibraryRecommendationGenerationCommander
+import com.keepit.curator.commanders.{ SeedIngestionCommander, LibraryRecommendationGenerationCommander }
 import com.keepit.curator.model._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.{ FakeGraphServiceClientImpl, FakeGraphServiceModule, GraphServiceClient }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ LibraryAccess, ExperimentType, UserExperiment }
+import com.keepit.model.{ Keep, NormalizedURI, LibraryAccess, ExperimentType, UserExperiment }
 import com.keepit.search.FakeSearchServiceClientModule
 import org.specs2.mutable.Specification
 
@@ -39,12 +40,17 @@ class LibraryRecommendationGenerationCommanderTest extends Specification with Cu
   "pre-compute library recommendations" in {
     withDb(modules: _*) { implicit injector =>
       val (user1Id, user2Id, shoebox) = setup()
-      shoebox.saveUserExperiment(UserExperiment(userId = user1Id, experimentType = ExperimentType.CURATOR_LIBRARY_RECOS))
-      shoebox.saveUserExperiment(UserExperiment(userId = user2Id, experimentType = ExperimentType.CURATOR_LIBRARY_RECOS))
 
       // more users to sanity check reactive lock
       val moreUsers = (44 to 54) map { i => makeUser(i, shoebox).id.get }
       val allUsers = Seq(user1Id, user2Id) ++ moreUsers
+
+      val keepRepo = inject[CuratorKeepInfoRepo]
+      db.readWrite { implicit rw =>
+        for (userId <- allUsers; i <- 1 to 5) yield keepRepo.save(
+          CuratorKeepInfo(uriId = Id[NormalizedURI](i), userId = userId, keepId = Id[Keep](i), libraryId = None,
+            discoverable = true, state = CuratorKeepInfoStates.ACTIVE))
+      }
 
       val libRecoGenCommander = inject[LibraryRecommendationGenerationCommander]
       val libRecoRepo = inject[LibraryRecommendationRepo]
