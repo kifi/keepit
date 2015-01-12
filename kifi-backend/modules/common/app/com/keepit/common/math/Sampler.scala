@@ -43,14 +43,18 @@ private[math] class SimpleSampler(val sampleSize: Int) extends Sampler {
   private[this] var cumulative: Double = 0.0
 
   def collect(probability: Double): Int = {
-    cumulative += probability
-    val lastCount = sampledCount
+    if (probability >= 0.0) {
+      cumulative += probability
+      val lastCount = sampledCount
 
-    while (sampledCount < sampleSize && cumulative > rnd(sampledCount)) {
-      sampledCount += 1
+      while (sampledCount < sampleSize && cumulative > rnd(sampledCount)) {
+        sampledCount += 1
+      }
+
+      sampledCount - lastCount
+    } else {
+      throw new IllegalArgumentException(s"probability must be zero or positive: $probability")
     }
-
-    sampledCount - lastCount
   }
 }
 
@@ -97,19 +101,23 @@ private[math] class SegmentedSampler(numSegments: Int) extends Sampler {
   private[this] var cumulative: Double = 0.0
 
   def collect(probability: Double): Int = {
-    cumulative += probability
-    val lastCount = sampledCount
+    if (probability >= 0.0) {
+      cumulative += probability
+      val lastCount = sampledCount
 
-    while (segNo < numSegments && cumulative > rnd(segSampledCount)) {
-      sampledCount += 1
-      segSampledCount += 1
-      if (segSampledCount % segmentSize == 0) {
-        segNo += 1
-        segSampledCount = 0
-        if (segNo < numSegments) randomize(rnd, segWidth * segNo, segWidth * (segNo + 1))
+      while (segNo < numSegments && cumulative > rnd(segSampledCount)) {
+        sampledCount += 1
+        segSampledCount += 1
+        if (segSampledCount % segmentSize == 0) {
+          segNo += 1
+          segSampledCount = 0
+          if (segNo < numSegments) randomize(rnd, segWidth * segNo, segWidth * (segNo + 1))
+        }
       }
-    }
 
-    sampledCount - lastCount
+      sampledCount - lastCount
+    } else {
+      throw new IllegalArgumentException(s"probability must be zero or positive: $probability")
+    }
   }
 }

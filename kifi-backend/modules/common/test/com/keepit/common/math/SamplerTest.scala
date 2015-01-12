@@ -59,5 +59,13 @@ class SamplerTest extends Specification {
 
       stddev must beLessThan(avg * 0.01)
     }
+
+    "throw an exception when the probability is not zero or positive" in {
+      val sampler = Sampler(sampleSize)
+
+      sampler.collect(0.0) === 0
+      sampler.collect(Double.NaN) must throwA[IllegalArgumentException]
+      sampler.collect(-.01) must throwA[IllegalArgumentException]
+    }
   }
 }
