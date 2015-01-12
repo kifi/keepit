@@ -16,6 +16,7 @@
   left: 0
   right: 0
   bottom: 0
+  user-select: none
 
 .kf-slc-card-icon
   margin-top: 20px
@@ -24,28 +25,17 @@
   background-size: auto 21px
   background-repeat: no-repeat
 
-name-line-height = 25px
-
-.kf-slc-card-name-align
-  display: table
-  position: absolute
-  top: 22px
-  left: 0
-  width: 100%
-
 .kf-slc-card-name
-  display: table-cell
+  line-height = 25px
+  position: absolute
+  bottom: 208px
+  left: 16px
+  right: 16px
   color: #fff
   font-weight: bold
   font-size: 20px
-  line-height: name-line-height
-  height: 2 * name-line-height
-  vertical-align: bottom
-  padding: 0 16px
-
-.kf-slc-card-name-clip
-  max-height: 2 * name-line-height
-  overflow: hidden
+  line-height: line-height
+  word-wrap: break-word
 
 .kf-slc-counts
   position: absolute
