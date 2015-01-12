@@ -28,9 +28,9 @@ class LDARelatedLibraryRepoImpl @Inject() (
   type RepoImpl = LDARelatedLibraryTable
 
   class LDARelatedLibraryTable(tag: Tag) extends RepoTable[LDARelatedLibrary](db, tag, "lda_related_library") {
+    def version = column[ModelVersion[DenseLDA]]("version")
     def sourceId = column[Id[Library]]("source_id")
     def destId = column[Id[Library]]("dest_id")
-    def version = column[ModelVersion[DenseLDA]]("version")
     def weight = column[Float]("weight")
     def * = (id.?, createdAt, updatedAt, version, sourceId, destId, weight, state) <> ((LDARelatedLibrary.apply _).tupled, LDARelatedLibrary.unapply _)
   }
