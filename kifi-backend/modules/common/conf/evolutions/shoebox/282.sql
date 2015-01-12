@@ -13,7 +13,7 @@ create table lda_related_library(
   state varchar(20) NOT NULL,
 
   PRIMARY KEY (id),
-  unique index lda_related_library_i_version_source (version, sourceId)
+  unique index lda_related_library_i_version_source (version, source_Id, dest_id)
 );
 
 insert into evolutions (name, description) values('282.sql', 'adding lda_related_library');
