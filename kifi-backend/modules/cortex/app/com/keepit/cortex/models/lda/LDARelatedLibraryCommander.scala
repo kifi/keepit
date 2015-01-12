@@ -8,29 +8,30 @@ import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.Library
 
-@ImplementedBy(classOf[LDARelatedLibraryUpdaterImpl])
-trait LDARelatedLibraryUpdater {
+@ImplementedBy(classOf[LDARelatedLibraryCommanderImpl])
+trait LDARelatedLibraryCommander {
   type AdjacencyList = Seq[(Id[Library], Float)]
 
   def update(version: ModelVersion[DenseLDA]): Unit
   protected def computeEdgeWeight(source: LibraryLDATopic, dest: LibraryLDATopic): Float
   protected def computeFullAdjacencyList(source: LibraryLDATopic, libs: Seq[LibraryLDATopic]): AdjacencyList
-  protected def sparsify(adjacencyLists: AdjacencyList, topK: Int, minWeight: Float): AdjacencyList
+  protected def sparsify(adjacencyList: AdjacencyList, topK: Int, minWeight: Float): AdjacencyList
   protected def saveAdjacencyList(sourceId: Id[Library], neighbors: AdjacencyList, version: ModelVersion[DenseLDA]): Unit
 }
 
 @Singleton
-class LDARelatedLibraryUpdaterImpl @Inject() (
+class LDARelatedLibraryCommanderImpl @Inject() (
     db: Database,
     libTopicRepo: LibraryLDATopicRepo,
-    relatedLibRepo: LDARelatedLibraryRepo) extends LDARelatedLibraryUpdater {
+    relatedLibRepo: LDARelatedLibraryRepo) extends LDARelatedLibraryCommander {
 
   private val TOP_K = 50
-  private val MIN_WEIGHT = 0.6f
+  private val MIN_WEIGHT = 0.7f
+  private val MIN_EVIDENCE = 5
 
   // completely reconstruct an asymetric graph
   def update(version: ModelVersion[DenseLDA]): Unit = {
-    val libTopics = db.readOnlyReplica { implicit s => libTopicRepo.getAllActiveByVersion(version) }
+    val libTopics = db.readOnlyReplica { implicit s => libTopicRepo.getAllActiveByVersion(version, MIN_EVIDENCE) }
     libTopics.foreach { source =>
       val sourceId = source.libraryId
       val full = computeFullAdjacencyList(source, libTopics)
@@ -55,10 +56,10 @@ class LDARelatedLibraryUpdaterImpl @Inject() (
     libs.map { dest => (dest.libraryId, computeEdgeWeight(source, dest)) }
   }
 
-  def sparsify(adjacencyLists: AdjacencyList, topK: Int, minWeight: Float): AdjacencyList = {
-    val kthLarge = adjacencyLists.map { _._2 }.sortBy(x => -x).take(topK).last
+  def sparsify(adjacencyList: AdjacencyList, topK: Int, minWeight: Float): AdjacencyList = {
+    val kthLarge = adjacencyList.map { _._2 }.sortBy(x => -x).take(topK).last
     val thresh = kthLarge max minWeight
-    adjacencyLists.filter(_._2 >= thresh)
+    adjacencyList.filter(_._2 >= thresh)
   }
 
   def saveAdjacencyList(sourceId: Id[Library], neighbors: AdjacencyList, version: ModelVersion[DenseLDA]): Unit = {

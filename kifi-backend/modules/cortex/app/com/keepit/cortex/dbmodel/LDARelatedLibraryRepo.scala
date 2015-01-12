@@ -1,6 +1,6 @@
 package com.keepit.cortex.dbmodel
 
-import com.google.inject.{ Singleton, Inject }
+import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, Database, DbRepo }
@@ -11,6 +11,7 @@ import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.cortex.sql.CortexTypeMappers
 import com.keepit.model.Library
 
+@ImplementedBy(classOf[LDARelatedLibraryRepoImpl])
 trait LDARelatedLibraryRepo extends DbRepo[LDARelatedLibrary] {
   def getRelatedLibraries(sourceId: Id[Library], version: ModelVersion[DenseLDA], excludeState: Option[State[LDARelatedLibrary]])(implicit session: RSession): Seq[LDARelatedLibrary]
   def getNeighborIdsAndWeights(sourceId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Id[Library], Float)]

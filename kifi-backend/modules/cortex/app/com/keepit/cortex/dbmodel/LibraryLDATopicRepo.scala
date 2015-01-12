@@ -20,7 +20,7 @@ trait LibraryLDATopicRepo extends DbRepo[LibraryLDATopic] {
   def getActiveByLibraryIds(libIds: Seq[Id[Library]], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LibraryLDATopic]
   def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryTopicMean]
   def getLibraryByTopics(firstTopic: LDATopic, secondTopic: Option[LDATopic] = None, thirdTopic: Option[LDATopic] = None, version: ModelVersion[DenseLDA], minKeeps: Int = 5, limit: Int)(implicit session: RSession): Seq[LibraryLDATopic]
-  def getAllActiveByVersion(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LibraryLDATopic]
+  def getAllActiveByVersion(version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryLDATopic]
 }
 
 @Singleton
@@ -88,7 +88,7 @@ class LibraryLDATopicRepoImpl @Inject() (
     }
   }
 
-  def getAllActiveByVersion(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LibraryLDATopic] = {
-    (for { r <- rows if r.version === version && r.state === LibraryLDATopicStates.ACTIVE } yield r).list
+  def getAllActiveByVersion(version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryLDATopic] = {
+    (for { r <- rows if r.version === version && r.state === LibraryLDATopicStates.ACTIVE && r.numOfEvidence >= minEvidence } yield r).list
   }
 }
