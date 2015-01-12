@@ -1,5 +1,6 @@
 package com.keepit.social
 
+import com.keepit.common.store.S3UserPictureConfig
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
@@ -27,6 +28,7 @@ case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String]
 }
 
 object BasicNonUser {
+  val DefaultPictureName = S3UserPictureConfig.defaultName + ".jpg"
   // The following formatter can be replaced with the functional Play formatter once we can break backwards compatibility.
   //  (
   //    (__ \ 'kind).format[NonUserKind] and
@@ -52,7 +54,7 @@ object BasicNonUser {
         "id" -> entity.id,
         "firstName" -> (entity.firstName.getOrElse(entity.id): String),
         "lastName" -> (entity.lastName.getOrElse(""): String),
-        "pictureName" -> "0.jpg" // todo: remove! So it's not undefined for old extensions. The icon will be broken though.
+        "pictureName" -> DefaultPictureName
       )
     }
   }

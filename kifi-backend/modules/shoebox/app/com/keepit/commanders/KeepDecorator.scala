@@ -30,7 +30,7 @@ class KeepDecorator @Inject() (
     searchClient: SearchServiceClient,
     implicit val publicIdConfig: PublicIdConfiguration) {
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keeps: Seq[Keep], idealImageSize: ImageSize, withKeepCreateTime: Boolean = true): Future[Seq[KeepInfo]] = {
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keeps: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]] = {
     if (keeps.isEmpty) Future.successful(Seq.empty[KeepInfo])
     else {
       val augmentationFuture = {
@@ -85,12 +85,19 @@ class KeepDecorator @Inject() (
               augmentationInfoForKeep.libraries.collect { case (libraryId, contributorId) if doShowLibrary(libraryId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId)) }
             }
 
+            val keptAt = if (withKeepTime) {
+              //rather use the kept at, if not exist using the created at
+              Some(keep.keptAt)
+            } else {
+              None
+            }
+
             KeepInfo(
               id = Some(keep.externalId),
               title = keep.title,
               url = keep.url,
               isPrivate = keep.isPrivate,
-              createdAt = Some(keep.createdAt),
+              createdAt = keptAt,
               others = Some(others),
               keeps = Some(keeps),
               keepers = Some(keepers.map(idToBasicUser)),
