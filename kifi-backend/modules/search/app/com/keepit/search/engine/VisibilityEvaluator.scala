@@ -36,11 +36,12 @@ trait VisibilityEvaluator { self: DebugOption =>
       visibilityDocValues)
   }
 
-  protected def getLibraryVisibilityEvaluator(visibilityDocValues: NumericDocValues): LibraryVisibilityEvaluator = {
+  protected def getLibraryVisibilityEvaluator(ownerIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): LibraryVisibilityEvaluator = {
     new LibraryVisibilityEvaluator(
       myOwnLibraryIds,
       memberLibraryIds,
       authorizedLibraryIds,
+      ownerIdDocValues,
       visibilityDocValues)
   }
 
@@ -96,7 +97,8 @@ final class KeepVisibilityEvaluator(
 final class LibraryVisibilityEvaluator(
     myOwnLibraryIds: LongArraySet,
     memberLibraryIds: LongArraySet,
-    authorizedLibraryIds: LongArraySet,
+    myFriendIds: LongArraySet,
+    ownerIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
@@ -104,15 +106,17 @@ final class LibraryVisibilityEvaluator(
   def apply(docId: Int, libId: Long): Int = {
     if (memberLibraryIds.findIndex(libId) >= 0) {
       if (myOwnLibraryIds.findIndex(libId) >= 0) {
-        Visibility.OWNER // my own library
+        Visibility.OWNER // my library
       } else {
         Visibility.MEMBER // a library I am a member of
       }
-    } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
-      Visibility.MEMBER // the keep is in an authorized library
     } else {
       if (visibilityDocValues.get(docId) == published) {
-        Visibility.OTHERS // a published library
+        if (myFriendIds.findIndex(ownerIdDocValues.get(docId)) >= 0) {
+          Visibility.NETWORK // a published library owned by my friend
+        } else {
+          Visibility.OTHERS // another published library
+        }
       } else {
         Visibility.RESTRICTED
       }
