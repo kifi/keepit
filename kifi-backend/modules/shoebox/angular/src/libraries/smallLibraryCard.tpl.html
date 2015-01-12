@@ -3,15 +3,9 @@
     <div class="kf-slc-card-cover">
       <div class="kf-slc-card-cover-image" ng-attr-style="background-image:url({{library.imageUrl}});background-position:{{library.image.x}}% {{library.image.y}}%" ng-if="library.image"></div>
     </div>
-    <div class="kf-slc-card-name-align">
-      <div class="kf-slc-card-name">
-        <div class="kf-slc-card-name-clip">
-          {{library.name}}
-        </div>
-      </div>
-    </div>
+    <div class="kf-slc-card-name" kf-fit 1="[[24,29],[28,32]]" 2="[[19,25],[18,24],[17,23],[16,22]]" 3="[[15,19]]">{{library.name}}</div>
     <div class="kf-slc-counts">
-      <ng-pluralize class="kf-slc-count" count="library.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}" ng-if="library.numKeeps > 0"></ng-pluralize>
+      <ng-pluralize class="kf-slc-count" count="library.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}"></ng-pluralize>
       <ng-pluralize class="kf-slc-count" count="library.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}" ng-if="library.numFollowers > 0"></ng-pluralize>
     </div>
     <div itemscope itemtype="http://data-vocabulary.org/Person">
