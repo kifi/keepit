@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import scala.math.sqrt
 
 class SamplerTest extends Specification {
-  private val sampleSize = (Sampler.segmentSize.toDouble * 2.111).toInt
+  private val sampleSize = (Sampler.stratumSize.toDouble * 2.111).toInt
   private val repeat = 100
 
   "Sampler" should {
