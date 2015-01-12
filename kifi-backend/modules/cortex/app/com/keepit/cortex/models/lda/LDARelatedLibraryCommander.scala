@@ -1,12 +1,19 @@
 package com.keepit.cortex.models.lda
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.{ SchedulingProperties, SchedulerPlugin }
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.utils.MatrixUtils._
+import com.keepit.cortex.ModelVersions._
 import com.keepit.model.Library
+import scala.concurrent.duration._
 
 @ImplementedBy(classOf[LDARelatedLibraryCommanderImpl])
 trait LDARelatedLibraryCommander {
@@ -23,7 +30,7 @@ trait LDARelatedLibraryCommander {
 class LDARelatedLibraryCommanderImpl @Inject() (
     db: Database,
     libTopicRepo: LibraryLDATopicRepo,
-    relatedLibRepo: LDARelatedLibraryRepo) extends LDARelatedLibraryCommander {
+    relatedLibRepo: LDARelatedLibraryRepo) extends LDARelatedLibraryCommander with Logging {
 
   private val TOP_K = 50
   private val MIN_WEIGHT = 0.7f
@@ -31,13 +38,19 @@ class LDARelatedLibraryCommanderImpl @Inject() (
 
   // completely reconstruct an asymetric graph
   def update(version: ModelVersion[DenseLDA]): Unit = {
+    log.info(s"update LDA related library graph for version ${version.version}")
+    var edgeCnt = 0
+
     val libTopics = db.readOnlyReplica { implicit s => libTopicRepo.getAllActiveByVersion(version, MIN_EVIDENCE) }
     libTopics.foreach { source =>
       val sourceId = source.libraryId
       val full = computeFullAdjacencyList(source, libTopics)
       val sparse = sparsify(full, TOP_K, MIN_WEIGHT)
+      edgeCnt += sparse.size
       saveAdjacencyList(sourceId, sparse, version)
     }
+
+    log.info(s"finished updating LDA related library graph for version ${version.version}. total edges number = ${edgeCnt}")
   }
 
   def computeEdgeWeight(source: LibraryLDATopic, dest: LibraryLDATopic): Float = {
@@ -85,5 +98,31 @@ class LDARelatedLibraryCommanderImpl @Inject() (
       }
     }
 
+  }
+}
+
+trait LDARelatedLibraryMessage
+case object UpdateLDARelatedLibrary extends LDARelatedLibraryMessage
+
+class LDARelatedLibraryActor @Inject() (
+    relatedLibCommander: LDARelatedLibraryCommander,
+    airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
+
+  def receive() = {
+    case UpdateLDARelatedLibrary =>
+      availableLDAVersions.foreach { version => relatedLibCommander.update(version) }
+    case m => throw new UnsupportedActorMessage(m)
+  }
+}
+
+@Singleton
+class LDARelatedLibraryPlugin @Inject() (
+    actor: ActorInstance[LDARelatedLibraryActor],
+    val scheduling: SchedulingProperties) extends SchedulerPlugin {
+
+  override def enabled = true
+
+  override def onStart() {
+    scheduleTaskOnLeader(actor.system, 10 minutes, 12 hours, actor.ref, UpdateLDARelatedLibrary)
   }
 }
