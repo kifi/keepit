@@ -35,6 +35,7 @@ trait CortexServices { self: FortyTwoGlobal =>
     require(injector.instance[LDALibraryUpdaterPlugin] != null)
     //require(injector.instance[RichWord2VecURIFeatureUpdatePlugin] != null)
     require(injector.instance[LDACommander] != null)
+    require(injector.instance[LDARelatedLibraryPlugin] != null)
     require(injector.instance[CortexDataIngestionPlugin] != null)
     require(POSTagger.enabled)
   }
