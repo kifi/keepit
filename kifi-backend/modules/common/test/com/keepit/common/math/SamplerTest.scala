@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import scala.math.sqrt
 
 class SamplerTest extends Specification {
-  private val sampleSize = (Sampler.segmentSize.toDouble * 2.111).toInt
+  private val sampleSize = (Sampler.stratumSize.toDouble * 2.111).toInt
   private val repeat = 100
 
   "Sampler" should {
@@ -58,6 +58,14 @@ class SamplerTest extends Specification {
       val stddev = sqrt(errorSquareSum / counts.size)
 
       stddev must beLessThan(avg * 0.01)
+    }
+
+    "throw an exception when the probability is not zero or positive" in {
+      val sampler = Sampler(sampleSize)
+
+      sampler.collect(0.0) === 0
+      sampler.collect(Double.NaN) must throwA[IllegalArgumentException]
+      sampler.collect(-.01) must throwA[IllegalArgumentException]
     }
   }
 }
