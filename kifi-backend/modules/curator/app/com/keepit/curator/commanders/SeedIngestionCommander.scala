@@ -219,12 +219,11 @@ class SeedIngestionCommander @Inject() (
     }
   }
 
-  def getUsersWithSufficientData(): Set[Id[User]] = {
+  def getUsersWithSufficientData(minUserKeepCount: Int = MIN_KEEPS_FOR_RECOS): Set[Id[User]] = {
     db.readOnlyReplica { implicit session =>
       keepInfoRepo.getUsersWithKeepsCounts()
     }.filter {
-      case (userId, keepCount) =>
-        keepCount > MIN_KEEPS_FOR_RECOS
+      case (userId, keepCount) => keepCount >= minUserKeepCount
     }.map(_._1).toSet ++ db.readOnlyReplica { implicit session => libMembershipRepo.getUsersFollowingALibrary() }
   }
 
