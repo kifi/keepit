@@ -32,8 +32,9 @@ class LibraryFromKeepsScoreVectorSource(
     if (pq.size <= 0) return // no scorer
 
     val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
+    val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
     val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
-    val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(visibilityDocValues)
+    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(userIdDocValues, visibilityDocValues)
 
     val recencyScorer = getRecencyScorer(readerContext)
     if (recencyScorer == null) log.warn("RecencyScorer is null")
@@ -48,7 +49,7 @@ class LibraryFromKeepsScoreVectorSource(
       val libId = libraryIdDocValues.get(docId)
 
       if (idFilter.findIndex(libId) < 0) { // use findIndex to avoid boxing
-        val visibility = libraryVisibilityEvaluator(docId, libId)
+        val visibility = keepVisibilityEvaluator(docId, libId)
 
         if (visibility != Visibility.RESTRICTED) {
           val boost = getRecencyBoost(recencyScorer, docId)
