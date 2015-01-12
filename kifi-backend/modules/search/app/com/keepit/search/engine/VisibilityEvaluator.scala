@@ -40,7 +40,7 @@ trait VisibilityEvaluator { self: DebugOption =>
     new LibraryVisibilityEvaluator(
       myOwnLibraryIds,
       memberLibraryIds,
-      authorizedLibraryIds,
+      myFriendIds,
       ownerIdDocValues,
       visibilityDocValues)
   }
