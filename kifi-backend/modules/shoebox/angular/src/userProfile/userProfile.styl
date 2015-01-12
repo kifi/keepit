@@ -28,53 +28,109 @@
 
 .kf-user-profile-available-action
   position: absolute
-  width: 135px
   top: 10px
-  left: calc(100% - 145px)
+  right: 12px
+
+.kf-user-profile-connect
+  display: inline-block
   cursor: pointer
 
-  & a
-    color: white
-    font-size: 18px
+  &.friends
+    padding: 0 0
+    text-align: right
 
-.kf-user-profile-settings-gear
-  position: relative
-  top: 3px
+  &.connect:hover .kf-user-profile-action.connect
+    width: 60px
+
+  &.request-sent
+    cursor: initial
+
+.kf-user-profile-connect-image
   display: inline-block
-  width: 20px
+  width: 34px
   height: 20px
-  margin-right: 5px
+  background-size: cover
+  background-repeat: no-repeat
+
+  &.add-friend
+    background-image: url('../img/addfriend@3x.png')
+
+  &.already-friends
+    background-image: url('../img/addfriend_active@3x.png')
+
+.kf-user-profile-action
+  position: relative
+  top: 2px
+  margin-left: 5px
+  vertical-align: top
+  font-size: 0.8em
+  overflow: hidden
+
+  &.connect
+    display: inline-block
+    width: 0px
+    transition: 0.1s linear all
+
+  &.hidden
+    display: inline-block
+    width: 0px
+    height: 15px
+    margin-left: 0px
+
+.kf-user-profile-progress
+  position: absolute
+  top: 30px
+  right: 85px
+
+.kf-user-profile-progress-bar
+  position: absolute
+  height: 2px
+  width: 0px
+  background-color: white
+
+.kf-user-profile-progress-check
+  position: absolute
+  top: -5px
+  left: 70px
+  width: 13px
+  height: 9px
+  opacity: 0
+  background-size: cover
+  background-repeat: no-repeat
+  background-image: url('../img/checkmark.png')
+
+.kf-user-profile-action-menu
+  height: 0px
+  overflow: hidden
+  transition: 0.1s linear all
+
+  &.on
+    height: 50px
+
+  .kf-user-profile-action-selection
+    padding: 2px 10px 2px 10px
+    margin-left: 30px
+    margin-right: -10px
+    font-size: 0.7em
+    font-weight: 100
+    line-height: 20px
+
+    &:hover
+      background-color: #37414b
 
 .kf-user-profile-settings-link
   position: relative
-  top: -2px
-  left: 15px
+  font-size: 1.2em
+  color: white
 
-.kf-user-profile-connect
-  display: block
-  padding: 7px 0 0 60px
-  height: 40px
-  background-repeat: no-repeat
-  text-align: left
-  font-size: 10px
-  transition: 0.1s linear all
-  overflow: hidden
+  .kf-user-profile-settings-gear
+    display: inline-block
+    width: 20px
+    height: 20px
 
-  & .profile-friends
-    height: 40px
-    overflow: hidden
-    //transition: 0.1s linear all
-
-  & .profile-unfriend-button
-    height: 40px
-
-  &:hover .profile-friends
-    height: 0px
-
-
-
-
-
+  .kf-user-profile-action
+    position: relative
+    top: 1px
 
 
 .kf-user-profile-picture

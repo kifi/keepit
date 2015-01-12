@@ -1,6 +1,11 @@
 <div class="kf-user-profile">
-  <div class="kf-user-profile-header" ng-include="'userProfile/userProfileHeader.tpl.html'"></div>
-  <div class="kf-user-profile-content">
+
+  <div class="kf-user-profile-header">
+    <div kf-user-profile-header profile="profile"></div>
+  </div>
+
+  <div class="kf-user-profile-content"></div>
+
     <div ui-view></div>
   </div>
 </div>
