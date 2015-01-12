@@ -16,6 +16,7 @@
   left: 0
   right: 0
   bottom: 0
+  user-select: none
 
 .kf-slc-card-icon
   margin-top: 20px
@@ -24,28 +25,17 @@
   background-size: auto 21px
   background-repeat: no-repeat
 
-name-line-height = 25px
-
-.kf-slc-card-name-align
-  display: table
-  position: absolute
-  top: 22px
-  left: 0
-  width: 100%
-
 .kf-slc-card-name
-  display: table-cell
+  line-height = 25px
+  position: absolute
+  bottom: 208px
+  left: 16px
+  right: 16px
   color: #fff
   font-weight: bold
   font-size: 20px
-  line-height: name-line-height
-  height: 2 * name-line-height
-  vertical-align: bottom
-  padding: 0 16px
-
-.kf-slc-card-name-clip
-  max-height: 2 * name-line-height
-  overflow: hidden
+  line-height: line-height
+  word-wrap: break-word
 
 .kf-slc-counts
   position: absolute
@@ -79,9 +69,6 @@ name-line-height = 25px
   text-transform: none
   letter-spacing: normal
   margin-right: 2px
-
-:hover>.kf-slc-card-by-name
-  text-decoration: underline
 
 .kf-slc-card-cover
   position: absolute
@@ -121,9 +108,6 @@ name-line-height = 25px
   margin-left: -(diameter / 2)
   border-radius: 50%
 
-  &:hover
-    transform: scale(1.03)
-
 .kf-slc-card-owner-pic
   position: absolute
   top: 0
@@ -141,34 +125,7 @@ name-line-height = 25px
   height: 35px
   border-top: 1px solid rgba(255,255,255,.3)
   -webkit-font-smoothing: antialiased
-
-follower-pic-diameter = 23px
-
-.kf-slc-followers
-  padding: 5px 16px 0
-  text-align: left
-  line-height: follower-pic-diameter
-  font-size: 11px
-  vertical-align: middle
+  text-align: center
   color: rgba(255,255,255,.7)
-
-.kf-slc-follower
-  display: inline-block
-  vertical-align: top
-  width: follower-pic-diameter
-  height: follower-pic-diameter
-  background-size: cover
-  background-position: center
-  border-radius: 100%
-  margin-right: 4px
-
-  &:last-of-type
-    margin-right: 3px
-
-.kf-slc-all-followers
-  margin-left: 1px
-
-.kf-slc-updated
-  line-height: 33px
-  font-size: 12px
-  color: rgba(255,255,255,.4)
+  font-size: 13px
+  line-height: 35px

@@ -1,4 +1,4 @@
-@(bookmarksAndUsers: Seq[(User, (Keep, NormalizedURI, Option[ScrapeInfo]), KeywordsSummary)], page: Int, overallCount: Int, pageCount: Int, keeperKeepCount: Option[Int], privateKeeperKeepCount: Int, counts: Seq[(String, Int)], total: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
+@(bookmarksAndUsers: Seq[(User, (Keep, NormalizedURI, Option[ScrapeInfo]))], page: Int, overallCount: Int, pageCount: Int, keeperKeepCount: Option[Int], privateKeeperKeepCount: Int, counts: Seq[(String, Int)], total: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 @import com.keepit.model.NormalizedURIStates._
 @import com.keepit.controllers.admin.routes
 
@@ -73,19 +73,17 @@
       <th>#</th>
       <th>User</th>
       <th>Title</th>
-      <th>keywords</th>
       <th>Source</th>
       <th>Creation</th>
       <th>State</th>
       <th>Last Scrape</th>
       <th>URI Restriction</th>
     </tr>
-    @for(((user, (bookmark, uri, scrapeInfo), keyword), i) <- bookmarksAndUsers.zipWithIndex) {
+    @for(((user, (bookmark, uri, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
       <td>@adminHelper.userDisplay(user)</td>
       <td>@adminHelper.bookmarkDisplay(bookmark)</td>
-      <td>@keyword.bestGuess.mkString(" ")</td>
       <td>
         @{bookmark.source.value match {
           case "INIT_LOAD" => {

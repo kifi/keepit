@@ -1,9 +1,10 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Singleton, Inject }
+import com.keepit.common.time._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{ Library, Normalization, URLFactory }
+import com.keepit.model.{ KeepInfo, Library, Normalization, URLFactory }
 import com.kifi.macros.json
 import play.api.libs.json.{ JsArray, JsObject, JsValue }
 import org.joda.time.DateTime
@@ -24,11 +25,13 @@ import org.joda.time.DateTime
   keptAt: Option[DateTime] = None)
 
 @Singleton
-class RawBookmarkFactory @Inject() (airbrake: AirbrakeNotifier) {
+class RawBookmarkFactory @Inject() (
+    airbrake: AirbrakeNotifier,
+    clock: Clock) {
 
   @deprecated("KeepInfo was never intended to be an input value class. Use RawBookmarkRepresentation.", "2014-08-29")
   def toRawBookmark(keepInfos: Seq[KeepInfo]): Seq[RawBookmarkRepresentation] =
-    keepInfos map { k => RawBookmarkRepresentation(title = k.title, url = k.url, isPrivate = Some(k.isPrivate)) }
+    keepInfos map { k => RawBookmarkRepresentation(title = k.title, url = k.url, isPrivate = Some(k.isPrivate), keptAt = k.createdAt) }
 
   private[commanders] def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
     case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten
@@ -48,6 +51,6 @@ class RawBookmarkFactory @Inject() (airbrake: AirbrakeNotifier) {
     val isPrivate = (json \ "isPrivate").asOpt[Boolean]
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-    RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph)
+    RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph, Some(clock.now))
   }
 }

@@ -115,7 +115,7 @@ class MailToKeepActor @Inject() (
                     main
                   }
                 }
-                val bms = uris.map(uri => RawBookmarkRepresentation(url = uri.toString(), isPrivate = None))
+                val bms = uris.map(uri => RawBookmarkRepresentation(url = uri.toString(), isPrivate = None, keptAt = Some(clock.now)))
                 for (uri <- uris) {
                   implicit val context = HeimdalContext.empty
                   val (bookmarks, _) = bookmarkInterner.internRawBookmarks(bms, user.id.get, library, KeepSource.email)
@@ -199,7 +199,7 @@ class MailToKeepPluginImpl @Inject() (
     actor.ref ! FetchNewKeeps
   }
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 10 seconds, 1 minute, actor.ref, FetchNewKeeps)
+    scheduleTaskOnLeader(actor.system, 80 seconds, 311 seconds, actor.ref, FetchNewKeeps)
   }
 }
 

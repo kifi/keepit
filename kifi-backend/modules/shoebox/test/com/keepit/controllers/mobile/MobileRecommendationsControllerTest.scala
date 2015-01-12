@@ -62,9 +62,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     "topRecos" should {
 
       def topRecosSetup()(implicit injector: Injector) = {
-        val user1 = db.readWrite { implicit s =>
-          user().withExperiments(ExperimentType.CURATOR_LIBRARY_RECOS).saved
-        }
+        val user1 = db.readWrite { implicit s => user().saved }
         inject[UserActionsHelper].asInstanceOf[FakeUserActionsHelper].setUser(user1, Set())
       }
 

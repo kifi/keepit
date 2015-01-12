@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import com.keepit.controllers.mobile.ImplicitHelper._
 import com.keepit.heimdal.HeimdalContextBuilderFactory
@@ -32,10 +33,12 @@ class MobileLibraryController @Inject() (
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
   pageCommander: PageCommander,
+  keepDecorator: KeepDecorator,
   userCommander: UserCommander,
   keepImageCommander: KeepImageCommander,
   normalizedUriInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
+  clock: Clock,
   val libraryCommander: LibraryCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
@@ -279,7 +282,7 @@ class MobileLibraryController @Inject() (
         } getOrElse ProcessedImageSize.Large.idealSize
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
-          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, false, keeps, idealImageSize)
+          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, keeps, idealImageSize, withKeepTime = true)
         } yield {
           Ok(Json.obj("keeps" -> keepInfos))
         }
@@ -293,7 +296,7 @@ class MobileLibraryController @Inject() (
     val url = (jsonBody \ "url").as[String]
     val tagNames = (jsonBody \ "hashtags").as[Seq[String]]
     val imageUrlOpt = (jsonBody \ "imageUrl").asOpt[String]
-    val rawKeep = RawBookmarkRepresentation(title, url, None)
+    val rawKeep = RawBookmarkRepresentation(title, url, None, keptAt = Some(clock.now))
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
     keepsCommander.keepWithSelectedTags(request.userId, rawKeep, libraryId, source, tagNames) match {

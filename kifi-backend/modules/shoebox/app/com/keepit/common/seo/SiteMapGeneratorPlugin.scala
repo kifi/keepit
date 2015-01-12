@@ -33,8 +33,8 @@ class SiteMapGeneratorPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     for (app <- Play.maybeApplication) {
-      scheduleTaskOnLeader(actor.system, 1 hour, 6 hours, actor.ref, GenerateLibrarySitemap)
-      scheduleTaskOnLeader(actor.system, 2 hour, 6 hours, actor.ref, GenerateUserSitemap)
+      scheduleTaskOnLeader(actor.system, 3 hour, 12 hours, actor.ref, GenerateLibrarySitemap)
+      scheduleTaskOnLeader(actor.system, 4 hour, 12 hours, actor.ref, GenerateUserSitemap)
     }
   }
 

@@ -22,7 +22,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{ SocialNetworks, BasicUser }
+import com.keepit.social.{ BasicNonUser, SocialNetworks, BasicUser }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
@@ -61,7 +61,7 @@ class LibraryCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
-    keepsCommanderProvider: Provider[KeepsCommander],
+    keepDecorator: KeepDecorator,
     countByLibraryCache: CountByLibraryCache,
     typeaheadCommander: TypeaheadCommander,
     collectionRepo: CollectionRepo,
@@ -160,12 +160,13 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int,
+    idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
           val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
-          keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize)
+          keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, withKeepTime)
         } else Future.successful(Seq.empty)
       }
     }.toMap
@@ -230,9 +231,16 @@ class LibraryCommander @Inject() (
     Future.sequence(futureFullLibraryInfos)
   }
 
-  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize): Future[FullLibraryInfo] = {
-    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, 10, 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize).imap {
-      case Seq((_, info)) => info
+  def sortUsersByImage(users: Seq[BasicUser]): Seq[BasicUser] =
+    users.sortBy(_.pictureName == BasicNonUser.DefaultPictureName)
+
+  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, showKeepCreateTime: Boolean = true): Future[FullLibraryInfo] = {
+    val maxMembersShown = 10
+    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, maxMembersShown = maxMembersShown * 2, maxKeepsShown = 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize, showKeepCreateTime).imap {
+      case Seq((_, info)) =>
+        val followers = info.followers
+        val sortedFollowers = sortUsersByImage(followers)
+        info.copy(followers = sortedFollowers.take(maxMembersShown))
     }
   }
 
@@ -1139,7 +1147,7 @@ class LibraryCommander @Inject() (
         maxKeepsShown = 0,
         idealKeepImageSize = ProcessedImageSize.Medium.idealSize,
         libraries = libIdsMap.values.toSeq,
-        idealLibraryImageSize = ProcessedImageSize.Medium.idealSize)
+        idealLibraryImageSize = ProcessedImageSize.Medium.idealSize, withKeepTime = true)
 
       fullLibInfosF map { libInfos =>
         libInfos map {

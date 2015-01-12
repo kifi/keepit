@@ -44,49 +44,6 @@ import com.keepit.common.json.TupleFormat
 import com.keepit.common.store.ImageSize
 import com.keepit.common.CollectionHelpers
 
-case class KeepInfo(
-  id: Option[ExternalId[Keep]] = None,
-  title: Option[String],
-  url: String,
-  isPrivate: Boolean, // deprecated
-  createdAt: Option[DateTime] = None,
-  others: Option[Int] = None, // deprecated
-  keeps: Option[Set[BasicKeep]] = None,
-  keepers: Option[Seq[BasicUser]] = None,
-  keepersOmitted: Option[Int] = None,
-  keepersTotal: Option[Int] = None,
-  libraries: Option[Seq[(BasicLibrary, BasicUser)]] = None,
-  librariesOmitted: Option[Int] = None,
-  librariesTotal: Option[Int] = None,
-  collections: Option[Set[String]] = None, // deprecated
-  tags: Option[Set[BasicCollection]] = None, // deprecated
-  hashtags: Option[Set[Hashtag]] = None,
-  summary: Option[URISummary] = None,
-  siteName: Option[String] = None,
-  clickCount: Option[Int] = None, // deprecated
-  rekeepCount: Option[Int] = None, // deprecated
-  libraryId: Option[PublicId[Library]] = None)
-
-object KeepInfo {
-
-  val maxKeepersShown = 20
-  val maxLibrariesShown = 10
-
-  implicit val writes = {
-    implicit val libraryWrites = Writes[BasicLibrary] { library =>
-      Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "secret" -> library.isSecret) //todo(Léo): remove secret field
-    }
-    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[BasicLibrary, BasicUser]
-    Json.writes[KeepInfo]
-  }
-
-  // Are you looking for a decorated keep (with tags, rekeepers, etc)?
-  // Use KeepsCommander#decorateKeepsIntoKeepInfos(userId, keeps)
-  def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
-    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, libraryId = bookmark.libraryId.map(Library.publicId))
-  }
-}
-
 case class RawBookmarksWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[RawBookmarkRepresentation])
 
@@ -119,23 +76,19 @@ class KeepsCommander @Inject() (
     searchClient: SearchServiceClient,
     globalKeepCountCache: GlobalKeepCountCache,
     keepToCollectionRepo: KeepToCollectionRepo,
-    basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
     heimdalClient: HeimdalServiceClient,
     airbrake: AirbrakeNotifier,
-    uriSummaryCommander: URISummaryCommander,
-    collectionCommander: CollectionCommander,
     normalizedURIInterner: NormalizedURIInterner,
     curator: CuratorServiceClient,
     clock: Clock,
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    keepImageCommander: KeepImageCommander,
     hashtagTypeahead: HashtagTypeahead,
-    userCommander: UserCommander,
+    keepDecorator: KeepDecorator,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getKeepsCountFuture(): Future[Int] = {
@@ -241,149 +194,6 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
-    val (allKeeps, libraryMemberships) = db.readOnlyMaster { implicit session =>
-      val allKeeps = keepRepo.getByUserAndUriIds(userId, uriIds)
-      val libraryMemberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(allKeeps.map(_.libraryId.get).toSet, userId)
-      (allKeeps, libraryMemberships)
-    }
-    val grouped = allKeeps.groupBy(_.uriId)
-    uriIds.map { uriId =>
-      grouped.get(uriId) match {
-        case Some(keeps) =>
-          val userKeeps = keeps.map { keep =>
-            val mine = userId == keep.userId
-            val libraryId = keep.libraryId.get
-            val removable = libraryMemberships.get(libraryId).exists(_.canWrite)
-            BasicKeep(
-              id = keep.externalId,
-              mine = mine,
-              removable = removable,
-              visibility = keep.visibility,
-              libraryId = Library.publicId(libraryId)
-            )
-          }.toSet
-          uriId -> userKeeps
-        case _ =>
-          uriId -> Set.empty[BasicKeep]
-      }
-    }.toMap
-  }
-
-  def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo] = {
-    val allUsers = (infos flatMap { info =>
-      val keepers = info.keepers
-      val libs = info.libraries
-      (libs.map(_._2) ++ keepers)
-    }).toSet
-    if (allUsers.isEmpty) infos
-    else {
-      val fakeUsers = userCommander.getAllFakeUsers().intersect(allUsers)
-      if (fakeUsers.isEmpty) infos
-      else {
-        infos map { info =>
-          val keepers = info.keepers.filterNot(u => fakeUsers.contains(u))
-          val libs = info.libraries.filterNot(t => fakeUsers.contains(t._2))
-          info.copy(keepers = keepers, libraries = libs)
-        }
-      }
-    }
-  }
-
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keeps: Seq[Keep], idealImageSize: ImageSize): Future[Seq[KeepInfo]] = {
-    if (keeps.isEmpty) Future.successful(Seq.empty[KeepInfo])
-    else {
-      val augmentationFuture = {
-        val items = keeps.map { keep => AugmentableItem(keep.uriId) }
-        searchClient.augment(perspectiveUserIdOpt, showPublishedLibraries, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
-      }
-      val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
-        val idToLibrary = {
-          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
-          db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) }
-        }
-        val idToBasicUser = {
-          val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
-          val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
-          val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
-          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners) }
-        }
-        val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
-
-        (idToBasicUser, idToBasicLibrary)
-      }
-      val pageInfosFuture = Future.sequence(keeps.map { keep =>
-        getKeepSummary(keep, idealImageSize)
-      })
-
-      val colls = db.readOnlyMaster { implicit s =>
-        keepToCollectionRepo.getCollectionsForKeeps(keeps)
-      }.map(collectionCommander.getBasicCollections)
-
-      val allMyKeeps = perspectiveUserIdOpt.map { userId => getBasicKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[BasicKeep]]
-
-      val librariesWithWriteAccess = perspectiveUserIdOpt.map(libraryCommander.getLibrariesWithWriteAccess) getOrElse Set.empty
-
-      for {
-        augmentationInfos <- augmentationFuture
-        pageInfos <- pageInfosFuture
-        (idToBasicUser, idToBasicLibrary) <- basicInfosFuture
-      } yield {
-
-        val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.map {
-          case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
-            val others = augmentationInfoForKeep.keepersTotal - augmentationInfoForKeep.keepers.size - augmentationInfoForKeep.keepersOmitted
-            val keepers = perspectiveUserIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_ == userId) } getOrElse augmentationInfoForKeep.keepers
-            val keeps = allMyKeeps.get(keep.uriId) getOrElse Set.empty
-            val libraries = {
-              def doShowLibrary(libraryId: Id[Library]): Boolean = { // ensuring consistency of libraries returned by search with the user's latest database data (race condition)
-                lazy val publicId = Library.publicId(libraryId)
-                !librariesWithWriteAccess.contains(libraryId) || keeps.exists(_.libraryId == publicId)
-              }
-              augmentationInfoForKeep.libraries.collect { case (libraryId, contributorId) if doShowLibrary(libraryId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId)) }
-            }
-
-            KeepInfo(
-              id = Some(keep.externalId),
-              title = keep.title,
-              url = keep.url,
-              isPrivate = keep.isPrivate,
-              createdAt = Some(keep.createdAt),
-              others = Some(others),
-              keeps = Some(keeps),
-              keepers = Some(keepers.map(idToBasicUser)),
-              keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
-              keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
-              libraries = Some(libraries),
-              librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
-              librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
-              collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is this still used?
-              tags = Some(collsForKeep.toSet),
-              hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }),
-              summary = Some(pageInfoForKeep),
-              siteName = DomainToNameMapper.getNameFromUrl(keep.url),
-              clickCount = None,
-              rekeepCount = None,
-              libraryId = keep.libraryId.map(l => Library.publicId(l))
-            )
-        }
-        keepsInfo
-      }
-    }
-  }
-
-  private def getKeepSummary(keep: Keep, idealImageSize: ImageSize, waiting: Boolean = false): Future[URISummary] = {
-    val futureSummary = uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting)
-    val keepImageOpt = keepImageCommander.getBestImageForKeep(keep.id.get, idealImageSize)
-    futureSummary.map { summary =>
-      keepImageOpt match {
-        case None => summary
-        case Some(keepImage) =>
-          summary.copy(imageUrl = keepImage.map(keepImageCommander.getUrl(_)), imageWidth = keepImage.map(_.width), imageHeight = keepImage.map(_.height))
-      }
-    }
-  }
-
   // Please do not add to this. It mixes concerns and data sources.
   def allKeeps(
     before: Option[ExternalId[Keep]],
@@ -409,7 +219,7 @@ class KeepsCommander @Inject() (
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
 
-        decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize).map { keepInfos =>
+        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, withKeepTime = true).map { keepInfos =>
           (keepInfos, clickCounts, rkCounts).zipped.map {
             case (keepInfo, clickCount, rkCount) =>
               keepInfo.copy(clickCount = clickCount, rekeepCount = rkCount)

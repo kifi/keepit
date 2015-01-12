@@ -15,6 +15,7 @@ angular.module('kifi')
     //
     // Scope data.
     //
+    $scope.userProfileStatus = null;
     $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
     $scope.profile = null;
     $scope.userLoggedIn = false;
@@ -41,12 +42,16 @@ angular.module('kifi')
       var username = $stateParams.username;
 
       userProfileActionService.getProfile(username).then(function (profile) {
+        $scope.userProfileStatus = 'found';
+
         setTitle(profile);
         initProfile(profile);
 
         // This function should be called last because some of the attributes
         // that we're tracking are initialized by the above functions.
         trackPageView();
+      })['catch'](function () {
+        $scope.userProfileStatus = 'not-found';
       });
     }
 
@@ -97,10 +102,6 @@ angular.module('kifi')
 
     $scope.isMyLibrary = function(libraryOwnerId) {
       return $scope.profile && (libraryOwnerId === $scope.profile.id);
-    };
-
-    $scope.isHidden = function(library) {
-      return library.visibility === 'published' && library.listed === false;
     };
 
     $scope.openModifyLibrary = function (library) {
@@ -221,7 +222,6 @@ angular.module('kifi')
       lib.owner = owner;
       lib.ownerPicUrl = keepWhoService.getPicUrl(owner, 200);
       lib.ownerProfileUrl = routeService.getProfileUrl(owner.username);
-      lib.system = /^system_/.test(lib.kind);
       lib.imageUrl = lib.image ? routeService.libraryImageUrl(lib.image.path) : null;
       lib.followers.forEach(function (user) {
         user.picUrl = keepWhoService.getPicUrl(user, 100);

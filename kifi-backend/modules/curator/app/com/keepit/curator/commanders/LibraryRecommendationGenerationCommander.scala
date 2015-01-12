@@ -11,10 +11,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.curator.model._
 import com.keepit.curator.{ LibraryQualityHelper, LibraryScoringHelper, ScoredLibraryInfo }
-import com.keepit.model.{ LibraryKind, ExperimentType, Library, LibraryVisibility, User }
+import com.keepit.model.{ LibraryKind, Library, LibraryVisibility, User }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
+import scala.util.Random
 
 @Singleton
 class LibraryRecommendationGenerationCommander @Inject() (
@@ -28,14 +29,16 @@ class LibraryRecommendationGenerationCommander @Inject() (
     experimentCommander: RemoteUserExperimentCommander,
     analytics: CuratorAnalytics,
     libraryQualityHelper: LibraryQualityHelper,
+    seedCommander: SeedIngestionCommander,
     serviceDiscovery: ServiceDiscovery) extends Logging {
 
   val recommendationGenerationLock = new ReactiveLock(8)
   val defaultLibraryScoreParams = LibraryRecoSelectionParams.default
 
-  private def usersToPrecomputeRecommendationsFor(): Future[Seq[Id[User]]] =
-    experimentCommander.getUsersByExperiment(ExperimentType.CURATOR_LIBRARY_RECOS).
-      map(users => users.map(_.id.get).toSeq)
+  val MIN_KEEPS_PER_USER = 5
+
+  private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] =
+    Random.shuffle(seedCommander.getUsersWithSufficientData(MIN_KEEPS_PER_USER).toSeq)
 
   def getLibraryRecommendations(userId: Id[User], libraryIds: Set[Id[Library]]): Seq[LibraryRecommendation] = {
     db.readOnlyReplica { implicit s => libraryRecRepo.getByLibraryIdsAndUserId(libraryIds, userId) }
@@ -73,24 +76,22 @@ class LibraryRecommendationGenerationCommander @Inject() (
    * @param userIds override the users to generate library recommendations for
    */
   def precomputeRecommendations(userIds: Option[Seq[Id[User]]] = None): Future[Unit] = {
-    val usersToPrecomputeForF = userIds.map { ids => Future.successful(ids) } getOrElse usersToPrecomputeRecommendationsFor()
+    val usersToPrecomputeFor = userIds getOrElse usersToPrecomputeRecommendationsFor()
 
-    usersToPrecomputeForF flatMap { userIds =>
-      Future.sequence {
-        if (recommendationGenerationLock.waiting < userIds.length + 1) {
-          userIds map { userId =>
-            statsd.time("curator.libRecosGenForUser", 1) { _ =>
-              recommendationGenerationLock.withLockFuture {
-                precomputeRecommendationsForUser(userId)
-              }
+    Future.sequence {
+      if (recommendationGenerationLock.waiting < usersToPrecomputeFor.length + 1) {
+        usersToPrecomputeFor map { userId =>
+          statsd.time("curator.libRecosGenForUser", 1) { _ =>
+            recommendationGenerationLock.withLockFuture {
+              precomputeRecommendationsForUser(userId)
             }
           }
-        } else {
-          log.info(s"precomputeRecommendations skipping: lock.waiting=${recommendationGenerationLock.waiting} userIds.length=${userIds.length}}")
-          Seq.empty
         }
+      } else {
+        log.info(s"precomputeRecommendations skipping: lock.waiting=${recommendationGenerationLock.waiting} userIds.length=${usersToPrecomputeFor.length}}")
+        Seq.empty
       }
-    } map (_ => ())
+    } map (_ => Unit)
   }
 
   // public for admin/adhoc purpose only
@@ -235,7 +236,8 @@ class NonLinearLibraryRecoScoringStrategy(selectionParams: LibraryRecoSelectionP
   }
 
   private def recomputeScore(scores: LibraryScores): Float = {
-    val interestPart = scores.interestScore * selectionParams.interestScoreWeight
+    // the min(0.01) prevents the algorithm from returning a 0 score if the topic is 0
+    val interestPart = (scores.interestScore * selectionParams.interestScoreWeight).min(0.01f)
     val factor = {
       val normalizer = selectionParams.interestScoreWeight
       interestPart / normalizer

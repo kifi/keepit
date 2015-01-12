@@ -30,6 +30,7 @@ class RelatedLibraryCommanderImpl @Inject() (
     libMemRepo: LibraryMembershipRepo,
     libCommander: LibraryCommander,
     cortex: CortexServiceClient,
+    userCommander: UserCommander,
     airbrake: AirbrakeNotifier) extends RelatedLibraryCommander {
 
   private val DEFAULT_MIN_FOLLOW = 5
@@ -40,16 +41,20 @@ class RelatedLibraryCommanderImpl @Inject() (
   // main method
   def suggestedLibrariesInfo(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[FullLibraryInfo], Seq[RelatedLibraryKind])] = {
     val suggestedLibsFut = suggestedLibraries(libId)
+    val fakeUsers = userCommander.getAllFakeUsers()
+    val nonFakeUserLibsFut = suggestedLibsFut.map { libs => libs.filter(lib => !fakeUsers.contains(lib.library.ownerId)) }
+
     val userLibs: Set[Id[Library]] = userIdOpt match {
       case Some(userId) => db.readOnlyReplica { implicit s => libMemRepo.getWithUserId(userId) }.map { _.libraryId }.toSet
       case None => Set()
     }
-    suggestedLibsFut
+
+    nonFakeUserLibsFut
       .map { libs => libs.filter { case RelatedLibrary(lib, kind) => !userLibs.contains(lib.id.get) }.take(RETURN_SIZE) }
       .flatMap { relatedLibs =>
         val libs = relatedLibs.map { _.library }
         val kinds = relatedLibs.map { _.kind }
-        val fullInfosFut = libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize).map { _.map { _._2 } }
+        val fullInfosFut = libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize, withKeepTime = true).map { _.map { _._2 } }
         fullInfosFut.map { info =>
           try {
             assert(info.size == kinds.size)

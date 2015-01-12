@@ -28,6 +28,7 @@ class MobileKeepsController @Inject() (
   pageInfoRepo: PageInfoRepo,
   keepRepo: KeepRepo,
   val userActionsHelper: UserActionsHelper,
+  keepDecorator: KeepDecorator,
   keepsCommander: KeepsCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
@@ -167,15 +168,14 @@ class MobileKeepsController @Inject() (
 
     keepOpt match {
       case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
-      case Some(keep) if withFullInfo => {
+      case Some(keep) if withFullInfo =>
         val idealImageSize = {
           for {
             w <- idealImageWidth
             h <- idealImageHeight
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
-        keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), idealImageSize).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
-      }
+        keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
       case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
     }
   }

@@ -9,7 +9,7 @@ object MatrixUtils {
 
   def L2Normalize(vec: Array[Double]): Array[Double] = {
     var s = 0.0
-    var n = vec.size
+    val n = vec.size
     var i = 0
     while (i < n) {
       s += vec(i) * vec(i)

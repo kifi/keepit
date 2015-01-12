@@ -103,7 +103,9 @@ angular.module('kifi')
       });
     }
 
-    function RelatedLibraryDecorator(library) {
+    function RelatedLibraryDecorator(libData) {
+      var library = libData[0], reason = libData[1];
+
       this.owner = library.owner;
       this.numFollowers = library.numFollowers;
       this.numKeeps = library.numKeeps;
@@ -115,6 +117,7 @@ angular.module('kifi')
       this.image = library.image;
       this.imageUrl = library.image ? routeService.libraryImageUrl(library.image.path) : null;
       this.path = '/' + library.owner.username + '/' + library.slug;
+      this.reason = reason;
       this.followers = library.followers.map(function (user) {
         return _.merge(user, {
           picUrl: routeService.formatPicUrl(user.id, user.pictureName, 200),
@@ -388,16 +391,10 @@ angular.module('kifi')
       getRelatedLibraries: function (libraryId) {
         var deferred = $q.defer();
 
-        // temporary - put ?grl=1 in URL to see related libraries
-        // using a query param so it's easy to test on mobile devices
-        if ($location.url().indexOf('grl=1') < 0) {
-          deferred.resolve([]);
-          return deferred.promise;
-        }
-
         $http.get(routeService.getRelatedLibraries(libraryId)).then(function (resp) {
-          var decoratedLibs = resp.data.libs.map(function (lib) {
-            return new RelatedLibraryDecorator(lib);
+          var libsWithKind = _.zip(resp.data.libs, resp.data.kinds);
+          var decoratedLibs = libsWithKind.map(function (libData) {
+            return new RelatedLibraryDecorator(libData);
           });
           deferred.resolve(decoratedLibs);
         });

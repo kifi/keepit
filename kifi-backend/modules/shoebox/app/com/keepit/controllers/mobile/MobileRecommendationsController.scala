@@ -26,11 +26,7 @@ class MobileRecommendationsController @Inject() (
 
   def topRecosV2(more: Boolean, recencyWeight: Float) = UserAction.async { request =>
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight)
-
-    val sendLibRecos = userExperimentCommander.getExperimentsByUser(request.userId).exists(ExperimentType.CURATOR_LIBRARY_RECOS ==)
-    val libRecosF =
-      if (sendLibRecos) commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed)
-      else Future.successful(Seq.empty)
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
       Json.toJson(util.Random.shuffle(uris ++ libs))

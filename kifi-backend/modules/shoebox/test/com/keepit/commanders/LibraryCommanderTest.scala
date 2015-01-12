@@ -1236,6 +1236,19 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
     }
 
+    "sortFollowers" in {
+      withDb(modules: _*) { implicit injector =>
+        val libraryCommander = inject[LibraryCommander]
+        val user1 = BasicUser.fromUser(user().get)
+        val user2 = BasicUser.fromUser(user().withPictureName("a").get)
+        val user3 = BasicUser.fromUser(user().get)
+        val user4 = BasicUser.fromUser(user().withPictureName("g").get)
+        val user5 = BasicUser.fromUser(user().withPictureName("b").get)
+        val sorted = libraryCommander.sortUsersByImage(user1 :: user2 :: user3 :: user4 :: user5 :: Nil)
+        sorted.map(_.pictureName) === (user2 :: user4 :: user5 :: user1 :: user3 :: Nil).map(_.pictureName)
+      }
+    }
+
     "get ownerLibraries for friend" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]

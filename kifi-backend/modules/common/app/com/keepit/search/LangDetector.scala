@@ -7,6 +7,7 @@ import java.util.jar.JarFile
 import java.util.{ HashMap => JHashMap }
 
 import scala.collection.JavaConversions._
+import scala.math.min
 
 import com.keepit.common.logging.Logging
 import com.keepit.search.langdetector.DetectorFactory
@@ -52,7 +53,7 @@ object LangDetector extends Logging {
   private def makePriorMap(given: Map[Lang, Double]): JHashMap[String, JDouble] = {
     val givenMap = given.map { case (k, v) => k.lang -> v }
     val siz = given.size
-    val sum = given.values.sum
+    val sum = min(given.values.sum, 1.0)
     val langList = DetectorFactory.getLangList
     val langListSize = langList.size
     val prob = (1.0d - sum) / (langListSize - siz)

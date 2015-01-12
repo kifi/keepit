@@ -1,9 +1,9 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.search.index.graph.library.LibraryFields
+import com.keepit.search.index.graph.library.{ LibraryRecord, LibraryIndexable, LibraryFields }
 import com.keepit.search.util.LongArraySet
-import org.apache.lucene.index.NumericDocValues
+import org.apache.lucene.index.{ BinaryDocValues, NumericDocValues }
 import scala.concurrent.duration._
 import scala.concurrent.Future
 
@@ -36,11 +36,12 @@ trait VisibilityEvaluator { self: DebugOption =>
       visibilityDocValues)
   }
 
-  protected def getLibraryVisibilityEvaluator(visibilityDocValues: NumericDocValues): LibraryVisibilityEvaluator = {
+  protected def getLibraryVisibilityEvaluator(libraryRecordDocValues: BinaryDocValues, visibilityDocValues: NumericDocValues): LibraryVisibilityEvaluator = {
     new LibraryVisibilityEvaluator(
       myOwnLibraryIds,
       memberLibraryIds,
-      authorizedLibraryIds,
+      myFriendIds,
+      libraryRecordDocValues,
       visibilityDocValues)
   }
 
@@ -96,7 +97,8 @@ final class KeepVisibilityEvaluator(
 final class LibraryVisibilityEvaluator(
     myOwnLibraryIds: LongArraySet,
     memberLibraryIds: LongArraySet,
-    authorizedLibraryIds: LongArraySet,
+    myFriendIds: LongArraySet,
+    libraryRecordDocValues: BinaryDocValues,
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
@@ -104,15 +106,21 @@ final class LibraryVisibilityEvaluator(
   def apply(docId: Int, libId: Long): Int = {
     if (memberLibraryIds.findIndex(libId) >= 0) {
       if (myOwnLibraryIds.findIndex(libId) >= 0) {
-        Visibility.OWNER // my own library
+        Visibility.OWNER // my library
       } else {
         Visibility.MEMBER // a library I am a member of
       }
-    } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
-      Visibility.MEMBER // the keep is in an authorized library
     } else {
       if (visibilityDocValues.get(docId) == published) {
-        Visibility.OTHERS // a published library
+        val ownerId = {
+          val ref = libraryRecordDocValues.get(docId)
+          LibraryRecord.fromByteArray(ref.bytes, ref.offset, ref.length).ownerId
+        }
+        if (myFriendIds.findIndex(ownerId.id) >= 0) {
+          Visibility.NETWORK // a published library owned by my friend
+        } else {
+          Visibility.OTHERS // another published library
+        }
       } else {
         Visibility.RESTRICTED
       }

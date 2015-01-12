@@ -6,8 +6,6 @@ import com.google.inject.Inject
 
 import com.keepit.heimdal._
 import com.keepit.commanders._
-import com.keepit.commanders.RawBookmarksWithCollection._
-import com.keepit.commanders.KeepInfo._
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, UserRequest, ShoeboxServiceController }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, ExternalId }
@@ -31,6 +29,7 @@ class KeepsController @Inject() (
   db: Database,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
+  keepDecorator: KeepDecorator,
   collectionRepo: CollectionRepo,
   uriRepo: NormalizedURIRepo,
   pageInfoRepo: PageInfoRepo,
@@ -123,7 +122,7 @@ class KeepsController @Inject() (
     val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
     keepOpt match {
       case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
-      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), ProcessedImageSize.Large.idealSize).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+      case Some(keep) if withFullInfo => keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), ProcessedImageSize.Large.idealSize, withKeepTime = true).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
       case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
     }
   }
