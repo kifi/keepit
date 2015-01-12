@@ -380,8 +380,8 @@ angular.module('kifi')
           defaultAttributes.libraryName = library.name;
         }
 
-        // o=lr shorthand for origin=libraryRec
-        if ($location.url().indexOf('o=lr') > -1) {
+        // o=rl is a query parameter for the origin=libraryRec property
+        if ($location.search().o === 'rl') {
           defaultAttributes.origin = 'libraryRec';
         }
 
