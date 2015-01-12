@@ -23,7 +23,7 @@
   </div>
 
   <div class="kf-recos" ng-hide="loading">
-    <div class="kf-reco kf-reco-recommended" ng-repeat="reco in recos" reco="reco" ng-controller="RecoCtrl">
+    <div class="kf-reco kf-reco-recommended" ng-repeat="reco in recos" reco="reco" ng-controller="RecoCtrl" ng-class="{'kf-reco-with-invite':!!reco.recoLib.invite}">
       <header class="kf-reco-top">
         <span class="kf-reco-icon kf-reco-close-x" ng-click="trash(reco)" ng-if="reco.recoData.type === 'recommended'"></span>
         <div ng-if="reco.recoData.type === 'recommended'" kf-reco-dropdown-menu reco="reco" show-improvement-modal="showImprovementModal()"></div>
