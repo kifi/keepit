@@ -25,13 +25,14 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
     FakeHealthcheckModule())
 
   def setupRecos(): Seq[UriRecommendation] = {
-    val rec1 = makeUriRecommendationWithUpdateTimestamp(1, 42, 0.15f, currentDateTime.minusDays(30))
-    val rec2 = makeUriRecommendationWithUpdateTimestamp(2, 42, 0.99f, currentDateTime.minusDays(30))
-    val rec3 = makeUriRecommendationWithUpdateTimestamp(3, 42, 0.5f, currentDateTime.minusDays(30))
-    val rec4 = makeUriRecommendationWithUpdateTimestamp(4, 42, 0.75f, currentDateTime.minusDays(30))
-    val rec5 = makeUriRecommendationWithUpdateTimestamp(5, 42, 0.65f, currentDateTime.minusDays(30))
-    val rec6 = makeUriRecommendationWithUpdateTimestamp(6, 42, 0.35f, currentDateTime.minusDays(30))
-    Seq(rec1, rec2, rec3, rec4, rec5, rec6)
+    val rec1 = makeUriRecommendationWithUpdateTimestamp(1, 42, 0.15f, currentDateTime.minusDays(20))
+    val rec2 = makeUriRecommendationWithUpdateTimestamp(2, 42, 0.99f, currentDateTime.minusDays(20))
+    val rec3 = makeUriRecommendationWithUpdateTimestamp(3, 42, 0.5f, currentDateTime.minusDays(20))
+    val rec4 = makeUriRecommendationWithUpdateTimestamp(4, 42, 0.75f, currentDateTime.minusDays(20))
+    val rec5 = makeUriRecommendationWithUpdateTimestamp(5, 42, 0.65f, currentDateTime.minusDays(20))
+    val rec6 = makeUriRecommendationWithUpdateTimestamp(6, 42, 0.35f, currentDateTime.minusDays(20))
+    val rec7 = makeUriRecommendationWithUpdateTimestamp(7, 42, 0.99f, currentDateTime.minusDays(100))
+    Seq(rec1, rec2, rec3, rec4, rec5, rec6, rec7)
   }
 
   def setupPublicFeeds(): Seq[PublicFeed] = {
@@ -44,21 +45,18 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
     Seq(feed1, feed2, feed3, feed4, feed5)
   }
   "RecommendationCleanupCommander" should {
-    "delete old low master score items" in {
+    "delete old / low master score items" in {
       withDb(modules: _*) { implicit injector =>
         val repo = inject[UriRecommendationRepo]
         db.readWrite { implicit s =>
-          val recs = setupRecos()
-          repo.save(recs(0))
-          repo.save(recs(1))
-          repo.save(recs(2))
-          repo.save(recs(3))
-          repo.save(recs(4))
-          repo.save(recs(5))
+          setupRecos() foreach { rec =>
+            val saved = repo.save(rec)
+            repo.setUpdatedAt(saved.id.get, rec.updatedAt)
+          }
         }
 
         val commander = inject[RecommendationCleanupCommander]
-        commander.cleanupLowMasterScoreRecos(Some(4), Some(currentDateTime))
+        commander.cleanup(Some(4), Some(currentDateTime))
 
         db.readOnlyMaster { implicit s =>
           val recos = repo.getByTopMasterScore(Id[User](42), 6)

@@ -33,7 +33,7 @@ class CuratorTasksPlugin @Inject() (
       uriRecoGenerationCommander.precomputeRecommendations()
     }
     scheduleTaskOnLeader(system, 10 minutes, 10 minutes, "recommendation reaper") {
-      uriRecoCleanupCommander.cleanupLowMasterScoreRecos()
+      uriRecoCleanupCommander.cleanup()
     }
 
     scheduleTaskOnLeader(system, 1 hours, 5 hours, "public feed reaper") {
