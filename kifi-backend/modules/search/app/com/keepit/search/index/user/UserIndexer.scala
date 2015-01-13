@@ -19,12 +19,12 @@ import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 
 object UserIndexer {
 
-  val FULLNAME_FIELD = "u_fullname"
-  val EMAILS_FIELD = "u_emails"
-  val BASIC_USER_FIELD = "u_basic_user"
-  val USER_EXPERIMENTS = "u_experiments"
-  val PREFIX_FIELD = "u_prefix"
   val PREFIX_MAX_LEN = 8 // do not change this number unless you do reindexing immediately
+  val nameField = "t"
+  val namePrefixField = "tp"
+  val emailsField = "e"
+  val recordField = "rec"
+  val experimentsField = "exp"
 
   val toBeDeletedStates = Set[State[User]](INACTIVE, PENDING, BLOCKED, INCOMPLETE_SIGNUP)
 }
@@ -167,19 +167,19 @@ class UserIndexer(
     override def buildDocument = {
       val doc = super.buildDocument
 
-      val userNameField = buildTextField(FULLNAME_FIELD, user.firstName + " " + user.lastName, analyzer)
+      val userNameField = buildTextField(nameField, user.firstName + " " + user.lastName, analyzer)
       doc.add(userNameField)
 
-      val emailField = buildIteratorField[String](EMAILS_FIELD, emails.map { _.address.toLowerCase }.toIterator)(x => x)
+      val emailField = buildIteratorField[String](emailsField, emails.map { _.address.toLowerCase }.toIterator)(x => x)
       doc.add(emailField)
 
-      val expField = buildIteratorField[String](USER_EXPERIMENTS, experiments.map { _.value }.toIterator)(x => x)
+      val expField = buildIteratorField[String](experimentsField, experiments.map { _.value }.toIterator)(x => x)
       doc.add(expField)
 
-      val basicUserField = buildBinaryDocValuesField(BASIC_USER_FIELD, BasicUserSerializer.toByteArray(basicUser))
+      val basicUserField = buildBinaryDocValuesField(recordField, BasicUserSerializer.toByteArray(basicUser))
       doc.add(basicUserField)
 
-      val prefixField = buildIteratorField[String](PREFIX_FIELD, genPrefix(user).toIterator)(x => x)
+      val prefixField = buildIteratorField[String](namePrefixField, genPrefix(user).toIterator)(x => x)
       doc.add(prefixField)
 
       doc
