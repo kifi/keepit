@@ -528,7 +528,7 @@ var api = (function createApi() {
             if (b.children) {
               b.children.forEach(traverse);
             } else if (httpRe.test(b.url)) {
-              arr.push({id: b.id, url: b.url, title: b.title});
+              arr.push({id: b.id, url: b.url, title: b.title, addedAt: b.dateAdded});
             }
           }(bm && bm[0]);
           callback(arr);
