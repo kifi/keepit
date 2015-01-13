@@ -5,7 +5,6 @@ angular.module('kifi')
 .directive('kfUserProfileHeader', ['$rootScope', 'profileService', 'inviteService', 'friendService', '$document',
   function ($rootScope, profileService, inviteService, friendService, $document) {
     return {
-      //replace: true,
       restrict: 'A',
       scope: {
         profile: '='
