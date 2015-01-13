@@ -61,7 +61,7 @@
 .kf-user-profile-action
   position: relative
   top: 2px
-  margin-left: 5px
+  margin-left: 0px
   vertical-align: top
   font-size: 0.8em
   overflow: hidden
@@ -69,18 +69,23 @@
   &.connect
     display: inline-block
     width: 0px
+    margin-left: 5px
     transition: 0.1s linear width
+
+  &.respond
+    margin-left: 5px
 
   &.hidden
     display: inline-block
     width: 0px
     height: 15px
-    margin-left: 0px
+    margin-left: 3px
+    opacity: 0
 
 .kf-user-profile-progress
   position: absolute
   top: 40px
-  right: 0px
+  right: 5px
   width: 100px
 
 .kf-user-profile-progress-bar

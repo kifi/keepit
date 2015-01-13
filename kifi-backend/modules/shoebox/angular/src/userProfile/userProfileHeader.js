@@ -173,10 +173,13 @@ angular.module('kifi')
                   var requestSentMsg = connectBlock.find('.kf-user-profile-action.hidden');
 
                   connectMsg.css('display', 'none');
-                  requestSentMsg.animate({width: '118px'}, 200, function() {
-                    scope.$evalAsync(function() {
-                      scope.connectionWithUser = 'request_sent';
+                  requestSentMsg.animate({width: '113px'}, 80, function() { // size of Friend Request Sent message
+                    requestSentMsg.animate({opacity: 1}, 200, function() {
+                      scope.$evalAsync(function() {
+                        scope.connectionWithUser = 'request_sent';
+                      });
                     });
+
                   });
                 });
 
