@@ -15,7 +15,6 @@ import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceTy
 import com.keepit.common.store.ImageSize
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
-import com.keepit.scraper.embedly.EmbedlyInfo
 import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.search.Article
 import org.joda.time.DateTime
@@ -131,7 +130,6 @@ trait ScraperServiceClient extends ServiceClient {
   def detectPorn(query: String): Future[Map[String, Float]]
   def whitelist(words: String): Future[String]
   def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]]
-  def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]]
   def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]]
   def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int]
   def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int]
@@ -209,13 +207,6 @@ class ScraperServiceClientImpl @Inject() (
     val payload = Json.obj("uriId" -> uriId.id, "url" -> url)
     call(Scraper.internal.getEmbedlyImageInfos, payload).map { r =>
       Json.fromJson[Seq[ImageInfo]](r.json).get
-    }
-  }
-
-  def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = {
-    val payload = Json.obj("url" -> url)
-    call(Scraper.internal.getEmbedlyInfo, payload, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
-      Json.fromJson[Option[EmbedlyInfo]](r.json).get
     }
   }
 

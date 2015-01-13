@@ -1,11 +1,12 @@
 package com.keepit.controllers.scraper
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ ScraperURISummaryCommander, WordCountCommander }
+import com.keepit.commanders.{ NormalizedURIRef, ScraperURISummaryCommander, WordCountCommander }
 import com.keepit.common.controller.ScraperServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.store.ImageSize
 import com.keepit.model.NormalizedURI
+import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
@@ -16,7 +17,7 @@ class URISummaryController @Inject() (
 
   def getURISummaryFromEmbedly() = Action.async(parse.tolerantJson) { request =>
     val js = request.body
-    val uri = (js \ "uri").as[NormalizedURI]
+    val uri = (js \ "uri").as[NormalizedURIRef]
     val minSize = (js \ "minSize").as[ImageSize]
     val descOnly = (js \ "descriptionOnly").as[Boolean]
     summaryCmdr.fetchFromEmbedly(uri, minSize, descOnly).map { res =>
