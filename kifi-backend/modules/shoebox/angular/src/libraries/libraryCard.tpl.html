@@ -70,7 +70,7 @@
                 <span class="kf-keep-lib-stats-number">{{library.numKeeps}}</span>
               </div>
 
-              <div ng-if="isUserCreatedLibrary()" class="kf-keep-lib-keeps-followers-stats">
+              <div ng-if="isUserCreatedLibrary()" class="kf-keep-lib-keeps-followers-stats kf-keep-lib-followers-stats" ng-click="showFollowers()">
                 <span class="kf-keep-lib-stats-heading">Followers</span>
                 <span class="kf-keep-lib-stats-number">{{library.numFollowers}}</span>
               </div>
