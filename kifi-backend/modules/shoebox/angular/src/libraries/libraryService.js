@@ -380,9 +380,13 @@ angular.module('kifi')
           defaultAttributes.libraryName = library.name;
         }
 
-        // o=rl is a query parameter for the origin=libraryRec property
-        if ($location.search().o === 'rl') {
-          defaultAttributes.origin = 'libraryRec';
+        function setOrigin(str) {
+          defaultAttributes.origin = str;
+        }
+
+        switch ($location.search().o) {
+          case 'rl': setOrigin('libraryRec'); break;
+          case 'lac': setOrigin('libraryAttributionChip'); break;
         }
 
         return defaultAttributes;
