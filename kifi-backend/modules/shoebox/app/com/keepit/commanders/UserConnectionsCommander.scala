@@ -213,7 +213,7 @@ class UserConnectionsCommander @Inject() (
       imageUrl = respondingUserImage,
       sticky = false,
       category = NotificationCategory.User.FRIEND_ACCEPTED,
-      extra = Some(Json.obj("friend" -> BasicUser.fromUser(friend)))
+      extra = Some(Json.obj("friend" -> BasicUser.fromUser(respondingUser)))
     )
 
     emailF flatMap (_ => notifF)
@@ -236,7 +236,8 @@ class UserConnectionsCommander @Inject() (
       linkUrl = "https://www.kifi.com/friends",
       imageUrl = requestingUserImage,
       sticky = false,
-      category = NotificationCategory.User.FRIEND_REQUEST
+      category = NotificationCategory.User.FRIEND_REQUEST,
+      extra = Some(Json.obj("friend" -> BasicUser.fromUser(requestingUser)))
     ) map { id =>
         db.readWrite { implicit session =>
           friendRequestRepo.save(request.copy(messageHandle = Some(id)))
