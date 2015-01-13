@@ -71,29 +71,34 @@
 
         <div class="manage-lib-members-content" smart-scroll scroll-distance="memberScrollDistance" scroll-disabled="isMemberScrollDisabled()" scroll-next="memberScrollNext()">
           <ul class="manage-lib-members">
-            <li class="manage-lib-member manage-lib-owner">
-              <a ng-if="inUserProfileBeta" href="{{library.owner.profileUrl}}" ng-click="close()">
-                <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">
-              </a>
-              <img ng-if="!inUserProfileBeta" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">
+            <a ng-if="inUserProfileBeta" href="{{library.owner.profileUrl}}" class="manage-lib-member manage-lib-owner" ng-click="close()">
+              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">
+              <div class="manage-lib-member-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+              <div class="manage-lib-member-status">Owner</div>
+            </a>
+            <li ng-if="!inUserProfileBeta" class="manage-lib-member manage-lib-owner">
+              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">
               <div class="manage-lib-member-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
               <div class="manage-lib-member-status">Owner</div>
             </li>
 
             <li class="manage-lib-member" ng-repeat="member in memberList">
-              <div class="manage-lib-member-user" ng-if="member.id">
-                <a ng-if="inUserProfileBeta" href="{{member.profileUrl}}" ng-click="close()">
-                  <img ng-src="{{member.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">
-                </a>
-                <img ng-if="!inUserProfileBeta" ng-src="{{member.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">
+              <a ng-if="inUserProfileBeta && member.id" href="{{member.profileUrl}}" ng-click="close()" class="manage-lib-member-user">
+                <img ng-src="{{member.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">
+                <div class="manage-lib-member-name">{{member.firstName}} {{member.lastName}}</div>
+              </a>
+              <div ng-if="!inUserProfileBeta && member.id" class="manage-lib-member-user">
+                <img ng-src="{{member.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">
                 <div class="manage-lib-member-name">{{member.firstName}} {{member.lastName}}</div>
               </div>
+
               <div class="manage-lib-member-email" ng-if="member.email">
                 <div class="manage-lib-member-email-image svg-envelope"></div>
                 <div class="manage-lib-member-name">{{member.email}}</div>
               </div>
               <div class="manage-lib-member-status" ng-class="{'invitee': member.status=='Invitation Pending'}">{{member.status}}</div>
             </li>
+
           </ul>
         </div>
       </div>
