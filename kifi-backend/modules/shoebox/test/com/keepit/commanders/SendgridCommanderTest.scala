@@ -128,7 +128,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
           val trackingParam = EmailTrackingParam(subAction = Some("clickedArticleTitle"))
 
           val sgEvent = mockSendgridEvent(email.externalId, Some(email)).copy(
-            url = Some(s"http://www.kifi.com/?${EmailTrackingParam.paramName}=${EmailTrackingParam.encode(trackingParam)}"),
+            url = Some(s"http://www.kifi.com/?foo=bar&amp;baz=moo&${EmailTrackingParam.paramName}=${EmailTrackingParam.encode(trackingParam)}"),
             event = Some(SendgridEventTypes.CLICK))
 
           commander.processNewEvents(Seq(sgEvent))
