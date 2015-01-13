@@ -29,7 +29,6 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]]
   def getGeneralRecommendationScore(uriId: Id[NormalizedURI], minClickedUsers: Int = 3)(implicit session: RSession): Option[Float]
   def getGeneralRecommendationCandidates(limit: Int, minClickedUsers: Int = 3)(implicit session: RSession): Seq[Id[NormalizedURI]]
-  def setUpdatedAt(id: Id[UriRecommendation], updatedAt: DateTime)(implicit session: RWSession): Unit // for test
 }
 
 @Singleton
@@ -181,11 +180,5 @@ class UriRecommendationRepoImpl @Inject() (
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
 
   def invalidateCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
-
-  // for test
-  def setUpdatedAt(id: Id[UriRecommendation], updatedAt: DateTime)(implicit session: RWSession): Unit = {
-    import StaticQuery.interpolation
-    sqlu"UPDATE uri_recommendation SET updated_at=$updatedAt WHERE id=$id".first
-  }
 }
 
