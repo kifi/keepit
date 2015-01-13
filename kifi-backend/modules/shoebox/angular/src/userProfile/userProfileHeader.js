@@ -175,12 +175,12 @@ angular.module('kifi')
           var progressCheckmark = angular.element('.kf-user-profile-progress-check');
 
           var promise = inviteService.friendRequest(scope.profile.id);
-          progressBar.animate({width: '15px'}, 80);
+          progressBar.animate({width: '15%'}, 80);
 
           promise.then(function(res) {
             if (res.sentRequest || res.acceptedRequest) {
-              progressBar.animate({width: '65px'}, 300, function() {
-                progressCheckmark.animate({opacity: 1}, 250, function() {
+              progressBar.animate({width: '100%'}, 200, function() {
+                progressCheckmark.animate({opacity: 1}, 150, function() {
                   var connectBlock = angular.element('.kf-user-profile-connect');
                   var connectMsg = connectBlock.find('.kf-user-profile-action.connect');
                   var requestSentMsg = connectBlock.find('.kf-user-profile-action.hidden');

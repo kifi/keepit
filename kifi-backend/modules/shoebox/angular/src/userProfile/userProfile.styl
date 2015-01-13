@@ -36,7 +36,7 @@
   cursor: pointer
 
   &.friends
-    padding: 0 0
+    padding: 0
     text-align: right
 
   &.connect:hover .kf-user-profile-action.connect
@@ -69,7 +69,7 @@
   &.connect
     display: inline-block
     width: 0px
-    transition: 0.1s linear all
+    transition: 0.1s linear width
 
   &.hidden
     display: inline-block
@@ -79,19 +79,21 @@
 
 .kf-user-profile-progress
   position: absolute
-  top: 30px
-  right: 85px
+  top: 40px
+  right: 0px
+  width: 100px
 
 .kf-user-profile-progress-bar
   position: absolute
   height: 2px
-  width: 0px
+  width: 0%
+  max-width: 70px
   background-color: white
 
 .kf-user-profile-progress-check
   position: absolute
   top: -5px
-  left: 70px
+  left: 75px
   width: 13px
   height: 9px
   opacity: 0
@@ -102,7 +104,7 @@
 .kf-user-profile-action-menu
   height: 0px
   overflow: hidden
-  transition: 0.1s linear all
+  transition: 0.1s linear height
 
   &.on
     height: 50px

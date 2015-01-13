@@ -7,15 +7,9 @@
 
       <div ng-switch="connectionWithUser" class="kf-user-profile-available-action">
         <div ng-switch-when="not_friends" class="kf-user-profile-connect connect" ng-click="sendFriendRequest()">
-
           <div class="kf-user-profile-action connect">Connect</div>
           <span class="kf-user-profile-connect-image add-friend"></span>
-          <div class="kf-user-profile-action hidden">Friend Request Sent!</div>
-
-        </div>
-        <div class="kf-user-profile-progress" ng-if="connectionWithUser==='not_friends'">
-          <div class="kf-user-profile-progress-bar"></div>
-          <div class="kf-user-profile-progress-check"></div>
+          <div class="kf-user-profile-action hidden">Friend Request Sent</div>
         </div>
 
         <div ng-switch-when="request_sent" class="kf-user-profile-connect request-sent">
@@ -44,6 +38,10 @@
           <span class="kf-user-profile-action">Settings</span>
         </a>
 
+      </div>
+      <div class="kf-user-profile-progress" ng-if="connectionWithUser==='not_friends'">
+        <div class="kf-user-profile-progress-bar"></div>
+        <div class="kf-user-profile-progress-check"></div>
       </div>
 
     </div>
