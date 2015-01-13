@@ -22,7 +22,7 @@ object IndexerVersionProviders {
   case object Article extends IndexerVersionProvider(1, 1)
   case object URIGraph extends IndexerVersionProvider(0, 0)
   case object Collection extends IndexerVersionProvider(0, 0)
-  case object User extends IndexerVersionProvider(0, 0)
+  case object User extends IndexerVersionProvider(0, 1)
   case object UserGraph extends IndexerVersionProvider(0, 0)
   case object SearchFriend extends IndexerVersionProvider(0, 0)
   case object Message extends IndexerVersionProvider(0, 0)

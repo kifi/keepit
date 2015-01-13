@@ -49,7 +49,7 @@ class UserSearcher(searcher: Searcher) {
     val pq = new ScoredUserHitPQ(queueSize)
 
     searcher.search(query) { (scorer, reader) =>
-      val bv = reader.getBinaryDocValues(UserIndexer.BASIC_USER_FIELD)
+      val bv = reader.getBinaryDocValues(UserIndexer.recordField)
       val mapper = reader.getIdMapper
       var doc = scorer.nextDoc()
       while (doc != NO_MORE_DOCS) {
