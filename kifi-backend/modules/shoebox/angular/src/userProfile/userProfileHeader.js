@@ -167,13 +167,13 @@ angular.module('kifi')
           promise.then(function(res) {
             if (res.sentRequest || res.acceptedRequest) {
               progressBar.animate({width: '100%'}, 200, function() {
-                progressCheckmark.animate({opacity: 1}, 150, function() {
+                progressCheckmark.animate({opacity: 1}, 100, function() {
                   var connectBlock = angular.element('.kf-user-profile-connect');
                   var connectMsg = connectBlock.find('.kf-user-profile-action.connect');
                   var requestSentMsg = connectBlock.find('.kf-user-profile-action.hidden');
 
                   connectMsg.css('display', 'none');
-                  requestSentMsg.animate({width: '113px'}, 80, function() { // size of Friend Request Sent message
+                  requestSentMsg.animate({width: '113px'}, 350, function() { // size of Friend Request Sent message
                     requestSentMsg.animate({opacity: 1}, 200, function() {
                       scope.$evalAsync(function() {
                         scope.connectionWithUser = 'request_sent';
