@@ -25,7 +25,8 @@ class LDACommander @Inject() (
     topicInfoRepo: LDAInfoRepo,
     userLDAStatRepo: UserLDAStatsRepo,
     libTopicRepo: LibraryLDATopicRepo,
-    userStatUpdatePlugin: LDAUserStatDbUpdatePlugin) extends Logging {
+    userStatUpdatePlugin: LDAUserStatDbUpdatePlugin,
+    ldaRelatedLibRepo: LDARelatedLibraryRepo) extends Logging {
 
   def numOfTopics(implicit version: ModelVersion[DenseLDA]): Int = infoCommander.getLDADimension
 
@@ -402,7 +403,10 @@ class LDACommander @Inject() (
       case Some(feat) =>
         val candidates = getCandidates(libId, feat)
         val ranked = rankCandidates(feat, candidates)
-        ranked.take(limit)
+        val additional = if (ranked.size < limit) {
+          db.readOnlyReplica { implicit s => ldaRelatedLibRepo.getNeighborIdsAndWeights(libId, version) }.sortBy(-_._2).map { _._1 }.take(limit - ranked.size)
+        } else Seq()
+        ranked.take(limit) ++ additional
     }
   }
 
