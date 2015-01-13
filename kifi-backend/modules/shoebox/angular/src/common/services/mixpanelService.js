@@ -61,8 +61,8 @@
   function trackPage(path, attributes) {
     var mixpanel = $window.mixpanel;
     if (mixpanel) { // TODO: fake implementation for tests
-      var origin = $window.location.origin;
       attributes = attributes || {};
+      var origin = attributes.origin || $window.location.origin;
 
       pageTrackForVisitor(mixpanel, path, origin, attributes);
       pageTrackForUser(mixpanel, path, origin, attributes);
