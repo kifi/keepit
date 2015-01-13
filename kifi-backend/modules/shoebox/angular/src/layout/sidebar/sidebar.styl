@@ -2,10 +2,7 @@
   position: fixed
   width: 270px
   padding: 0 0 0 20px
-  z-index: 1
-
-  .kf-tag-count
-    float: right
+  z-index: 2
 
 .kf-sidebar-inner
   margin-top: 15px
@@ -20,14 +17,11 @@
 
 @media only screen and (max-width: 1024px)
   .kf-sidebar
-    left: 0
-    z-index: 1
-    -webkit-transition: left sidebarTransitionDuration, z-index sidebarTransitionDuration 0
-    transition: left sidebarTransitionDuration, z-index sidebarTransitionDuration 0
+    transition: transform, opacity, visibility
+    transition-duration: sidebarTransitionDuration
 
-    .kf-tag-count
-      position: static
-
-  .kf-sidebar-inactive .kf-sidebar
-    left: -135px
-    z-index: -1
+    .kf-sidebar-inactive &
+      transform: translate(-50%)
+      opacity: 0
+      visibility: hidden
+      transition-delay: 0, 0, sidebarTransitionDuration
