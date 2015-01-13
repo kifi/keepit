@@ -15,40 +15,123 @@
   margin-top: 15px  // Push down profile if we're showing the delighted survey.
 
 .kf-user-profile-header
+  position: relative
+  padding: 50px 0 25px
   color: #fff
   background: #3e4954
 
-.kf-user-profile-header-content
-  position: relative
-  padding: 50px 0 25px
-
 .kf-up-basic-info-main-content
-  position: relative
   margin: 0 auto
   width: 500px
 
-.kf-user-profile-optional-action
+.kf-user-profile-available-action
   position: absolute
-  top: 35px
-  right: 30px
-
-.kf-user-profile-user-settings
-  position: relative
-  right: 100px
-  display: block
-  width: 20px
-  height: 20px
-  background-repeat: no-repeat
+  top: 10px
+  right: 12px
 
 .kf-user-profile-connect
-  display: block
-  padding: 10px 0 0 50px
-  height: 39px
-  background-repeat: no-repeat
-  text-align: left
+  display: inline-block
+  cursor: pointer
 
-  a&
-    color: #fff
+  &.friends
+    padding: 0
+    text-align: right
+
+  &.connect:hover .kf-user-profile-action.connect
+    width: 60px
+
+  &.request-sent
+    cursor: initial
+
+.kf-user-profile-connect-image
+  display: inline-block
+
+  &.add-friend
+    sprite2x($add-friend)
+
+  &.already-friends
+    sprite2x($add-friend-active)
+    width: 36px
+
+.kf-user-profile-action
+  position: relative
+  top: 3px
+  margin-left: 0px
+  vertical-align: top
+  font-size: 0.8em
+  overflow: hidden
+
+  &.connect
+    display: inline-block
+    width: 0px
+    margin-top: 1px
+    margin-left: 5px
+    transition: 0.1s linear width
+
+  &.hidden
+    display: inline-block
+    width: 0px
+    height: 15px
+    margin-left: 3px
+    opacity: 0
+
+.kf-user-profile-progress
+  position: absolute
+  top: 40px
+  right: 5px
+  width: 100px
+
+.kf-user-profile-progress-bar
+  position: absolute
+  height: 2px
+  width: 0%
+  max-width: 70px
+  background-color: white
+
+.kf-user-profile-progress-check
+  position: absolute
+  top: -5px
+  left: 75px
+  width: 13px
+  height: 9px
+  opacity: 0
+  background-size: cover
+  background-repeat: no-repeat
+  background-image: url('../img/checkmark.png')
+
+.kf-user-profile-action-menu
+  height: 0px
+  overflow: hidden
+  transition: 0.1s linear height
+
+  &.on
+    height: 50px
+
+  .kf-user-profile-action-selection
+    padding: 2px 10px 2px 10px
+    margin-left: 30px
+    margin-right: -8px
+    font-size: 0.7em
+    font-weight: 100
+    line-height: 20px
+
+    &:hover
+      background-color: #37414b
+
+.kf-user-profile-settings-link
+  position: relative
+  font-size: 1.2em
+  color: white
+
+  .kf-user-profile-settings-gear
+    display: inline-block
+    width: 20px
+    height: 20px
+
+  .kf-user-profile-action
+    position: relative
+    top: 1px
+
 
 .kf-user-profile-picture
   height: 100px
@@ -326,7 +409,7 @@ follower-pic-diameter = 23px
   .kf-user-profile
     font-size: 1.5em
 
-  .kf-user-profile-header-content
+  .kf-user-profile-header
     padding: 55px 0 30px
 
   .kf-upl-nav-container
