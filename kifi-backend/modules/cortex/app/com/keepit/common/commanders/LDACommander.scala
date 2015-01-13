@@ -406,7 +406,7 @@ class LDACommander @Inject() (
         val additional = if (ranked.size < limit) {
           db.readOnlyReplica { implicit s => ldaRelatedLibRepo.getNeighborIdsAndWeights(libId, version) }.sortBy(-_._2).map { _._1 }.take(limit - ranked.size)
         } else Seq()
-        ranked.take(limit) ++ additional
+        (ranked.take(limit) ++ additional).distinct
     }
   }
 
