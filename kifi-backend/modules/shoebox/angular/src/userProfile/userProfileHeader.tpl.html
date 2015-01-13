@@ -17,7 +17,7 @@
           <span class="kf-user-profile-action">Friend Request Sent</span>
         </div>
 
-        <div ng-switch-when="request_received" class="kf-user-profile-connect request-received">
+        <div ng-switch-when="request_received" class="kf-user-profile-connect request-received" ng-click="toggleRespondMenu()">
           <span class="kf-user-profile-connect-image add-friend"></span>
           <span class="kf-user-profile-action">Respond to Friend Request</span>
           <div class="kf-user-profile-action-menu" ng-class="{on: showRespondMenu}">
@@ -26,7 +26,7 @@
           </div>
         </div>
 
-        <div ng-switch-when="friends" class="kf-user-profile-connect friends">
+        <div ng-switch-when="friends" class="kf-user-profile-connect friends" ng-click="toggleFriendMenu()">
           <span class="kf-user-profile-connect-image already-friends"></span>
           <div class="kf-user-profile-action-menu" ng-class="{on: showFriendMenu}">
             <div class="kf-user-profile-action-selection">Unfriend?</div>

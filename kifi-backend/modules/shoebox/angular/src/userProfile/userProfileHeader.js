@@ -74,26 +74,28 @@ angular.module('kifi')
 
         function toggleFriendMenuOn() {
           scope.showFriendMenu = true;
+          $document.on('mousedown', onClickFriendMenu);
         }
         function toggleFriendMenuOff() {
           scope.showFriendMenu = false;
+          $document.off('mousedown', onClickFriendMenu);
         }
 
         function toggleRespondMenuOn() {
           scope.showRespondMenu = true;
+          $document.on('mousedown', onClickRespondMenu);
         }
         function toggleRespondMenuOff() {
           scope.showRespondMenu = false;
+          $document.off('mousedown', onClickRespondMenu);
         }
 
         function onClickFriendMenu(event) {
           var clickTarget = angular.element(event.target);
-          if (clickTarget.is('.kf-user-profile-connect-image')) {
-            scope.$evalAsync(scope.toggleFriendMenu);
-          } else if (scope.showFriendMenu && clickTarget.is('.kf-user-profile-action-menu .kf-user-profile-action-selection')) {
+          if (scope.showFriendMenu && clickTarget.is('.kf-user-profile-action-menu .kf-user-profile-action-selection')) {
             scope.unfriend();
             scope.$evalAsync(toggleFriendMenuOff);
-          } else {
+          } else if (!clickTarget.is('.kf-user-profile-connect-image')) {
             scope.$evalAsync(toggleFriendMenuOff);
           }
         }
@@ -103,33 +105,18 @@ angular.module('kifi')
           var acceptClass = '.kf-user-profile-action-menu .kf-user-profile-action-selection.accept';
           var declineClass = '.kf-user-profile-action-menu .kf-user-profile-action-selection.decline';
 
-          if (clickTarget.is('.kf-user-profile-connect-image') || clickTarget.is('.kf-user-profile-action')) {
-            scope.$evalAsync(scope.toggleRespondMenu);
-          } else if (scope.showRespondMenu && clickTarget.is(acceptClass)) {
+          if (scope.showRespondMenu && clickTarget.is(acceptClass)) {
             scope.acceptFriendRequest();
             scope.$evalAsync(toggleRespondMenuOff);
           } else if (scope.showRespondMenu && clickTarget.is(declineClass)) {
             scope.ignoreFriendRequest();
             scope.$evalAsync(toggleRespondMenuOff);
-          } else {
+          } else if (!(clickTarget.is('.kf-user-profile-connect-image') ||
+                        clickTarget.is('.kf-user-profile-action') ||
+                        clickTarget.is('.kf-user-profile-connect'))) {
             scope.$evalAsync(toggleRespondMenuOff);
           }
         }
-
-        function onClickMenu(event) {
-          if (scope.connectionWithUser === 'friends') {
-            onClickFriendMenu(event);
-          } else if (scope.connectionWithUser === 'request_received') {
-            onClickRespondMenu(event);
-          }
-        }
-
-        $document.on('mousedown', onClickMenu);
-
-        scope.$on('$destroy', function () {
-          $document.off('mousedown', onClickMenu);
-        });
-
 
 
         //
