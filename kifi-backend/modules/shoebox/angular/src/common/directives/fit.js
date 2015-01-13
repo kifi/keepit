@@ -82,7 +82,7 @@ angular.module('kifi')
             for (var j = i + 1; j < n; j++) {
               var line2Width = rects[j - 1].right - rects[i].left;
               var line3Width = rects[n - 1].right - rects[j].left;
-              if (line2Width <= boxWidth && line3Width <= boxWidth) {
+              if (line2Width <= boxWidth && line3Width <= boxWidth) {  // jshint ignore:line
                 var error =
                   Math.abs(line1Width - line2Width) +
                   Math.abs(line2Width - line3Width) +
