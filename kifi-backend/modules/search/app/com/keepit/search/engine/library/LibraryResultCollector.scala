@@ -1,11 +1,14 @@
 package com.keepit.search.engine.library
 
 import com.keepit.common.logging.Logging
+import com.keepit.model.LibraryKind
 import com.keepit.search.engine.uri.UriResultCollector
 import com.keepit.search.engine.{ Visibility, ScoreContext }
 import com.keepit.search.engine.result.{ HitQueue, ResultCollector }
+import com.keepit.search.index.Searcher
+import com.keepit.search.index.graph.library.LibraryIndexable
 
-class LibraryResultCollector(maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float, explanation: Option[LibrarySearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
+class LibraryResultCollector(librarySearcher: Searcher, maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float, explanation: Option[LibrarySearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
 
   import UriResultCollector._
 
@@ -38,7 +41,11 @@ class LibraryResultCollector(maxHitsPerCategory: Int, myLibraryBoost: Float, mat
         } else {
           othersHits
         }
-        if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) score = score * myLibraryBoost
+        if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) {
+          val kind = LibraryIndexable.getKind(librarySearcher, id)
+          if (kind.exists(_ != LibraryKind.USER_CREATED)) score = 0f // exclude main and private
+          else score = score * myLibraryBoost
+        }
         relevantQueue.insert(id, score, visibility, ctx.secondaryId)
       }
 
