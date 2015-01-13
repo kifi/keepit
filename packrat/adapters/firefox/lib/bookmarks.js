@@ -18,7 +18,7 @@ function runQuery(query) {
   result.containerOpen = true;
   for (let i = 0, n = result.childCount; i < n; ++i) {
     let node = result.getChild(i);
-    resultArray.push({id: node.itemId, title: node.title, url: node.uri});
+    resultArray.push({id: node.itemId, title: node.title, url: node.uri, addedAt: Math.round(node.dateAdded / 1000)});
   }
   return resultArray;
 }
