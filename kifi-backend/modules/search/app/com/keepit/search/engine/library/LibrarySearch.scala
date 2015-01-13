@@ -60,7 +60,7 @@ class LibrarySearch(
         new LibrarySearchExplanationBuilder(libraryId, (firstLang, secondLang), query, labels)
     }
 
-    val collector = new LibraryResultCollector(numHitsToReturn * 5, myLibraryBoost, percentMatch / 100.0f, explanation)
+    val collector = new LibraryResultCollector(librarySearcher, numHitsToReturn * 5, myLibraryBoost, percentMatch / 100.0f, explanation)
 
     val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait, explanation)
     val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait, explanation)
