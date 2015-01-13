@@ -2136,16 +2136,9 @@ function updateIconSilence(tab) {
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource, libraryId) {
-  log('[postBookmarks]');
+  log('[postBookmarks]', libraryId);
   supplyBookmarks(function (bookmarks) {
-    if (libraryId === 'main') {  // deprecated magic value
-      bookmarks.forEach(function (bookmark) {
-        bookmark.isPrivate = false;
-      });
-    }
-    log('[postBookmarks] bookmarks:', bookmarks);
-    var path = !libraryId || libraryId === 'main' ? '/bookmarks/add' : '/ext/libraries/' + libraryId + '/bookmarks';
-    ajax('POST', path, {bookmarks: bookmarks, source: bookmarkSource}, function (o) {
+    ajax('POST', '/ext/libraries/' + libraryId + '/bookmarks', {bookmarks: bookmarks, source: bookmarkSource}, function (o) {
       log('[postBookmarks] resp:', o);
     });
   });

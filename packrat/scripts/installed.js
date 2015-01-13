@@ -39,9 +39,6 @@
       case 'import_bookmarks':
         api.port.emit('import_bookmarks', data.libraryId);
         break;
-      case 'import_bookmarks_public':  // deprecated
-        api.port.emit('import_bookmarks', 'main');
-        break;
       case 'open_deep_link':
         api.port.emit('open_deep_link', {nUri: data.url, locator: data.locator});
         break;
