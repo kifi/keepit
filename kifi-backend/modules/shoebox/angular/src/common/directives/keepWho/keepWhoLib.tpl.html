@@ -8,7 +8,7 @@
         <meta itemprop="name" content="{{library.keeperName}}" />
       </span>
       <span ng-if="!inUserProfileBeta" class="kf-keep-who-pic" ng-attr-style="background-image: url({{library.keeperPic}})"></span>
-      <a href="{{library.absPath}}" ng-click="onLibraryAttributionClicked()">
+      <a href="{{library.absPath}}" ng-click="onLibraryAttributionClicked($event)">
         <span class="kf-keep-who-lib">{{library.name}}</span>
       </a>
       <span kf-tooltip position="top" padding="10">
