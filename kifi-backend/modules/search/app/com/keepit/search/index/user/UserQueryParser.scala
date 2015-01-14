@@ -46,7 +46,7 @@ class UserQueryParser(
     if (queryText == null) None
     else {
       val bq = new BooleanQuery
-      val tq = new TermQuery(new Term(UserIndexer.emailsField, queryText.toString.toLowerCase))
+      val tq = new TermQuery(new Term(UserFields.emailsField, queryText.toString.toLowerCase))
       bq.add(tq, Occur.MUST)
       Some(bq)
     }
@@ -56,14 +56,14 @@ class UserQueryParser(
   private def genNameQuery(queryText: CharSequence): Option[BooleanQuery] = {
 
     val bq = new BooleanQuery
-    val ts = analyzer.tokenStream(UserIndexer.nameField, new StringReader(queryText.toString))
+    val ts = analyzer.tokenStream(UserFields.nameField, new StringReader(queryText.toString))
     try {
       ts.reset()
 
       val termAttr = ts.getAttribute(classOf[CharTermAttribute])
 
       while (ts.incrementToken) {
-        val tq = new PrefixQuery(new Term(UserIndexer.nameField, new String(termAttr.buffer(), 0, termAttr.length())))
+        val tq = new PrefixQuery(new Term(UserFields.nameField, new String(termAttr.buffer(), 0, termAttr.length())))
         bq.add(tq, Occur.MUST)
       }
       ts.end()
@@ -77,7 +77,7 @@ class UserQueryParser(
   private def genPrefixNameQuery(queryText: CharSequence): Option[BooleanQuery] = {
     val bq = new BooleanQuery
     PrefixFilter.tokenize(queryText.toString).foreach { q =>
-      val tq = new TermQuery(new Term(UserIndexer.namePrefixField, q.take(UserIndexer.PREFIX_MAX_LEN)))
+      val tq = new TermQuery(new Term(UserFields.namePrefixField, q.take(UserFields.PREFIX_MAX_LEN)))
       bq.add(tq, Occur.MUST)
     }
     if (bq.clauses.size > 0) Some(bq) else None
@@ -85,7 +85,7 @@ class UserQueryParser(
 
   private def addUserExperimentConstrains(bq: BooleanQuery, exps: Seq[String]) = {
     exps.foreach { exp =>
-      val tq = new TermQuery(new Term(UserIndexer.experimentsField, exp))
+      val tq = new TermQuery(new Term(UserFields.experimentsField, exp))
       bq.add(tq, Occur.MUST_NOT)
     }
   }

@@ -4,15 +4,16 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.search.index.{ VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.inject._
 import com.keepit.test._
 import org.specs2.mutable._
-import play.api.test.Helpers._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.common.mail.EmailAddress
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class UserIndexerTest extends Specification with CommonTestInjector {
   private def setup(implicit client: FakeShoeboxServiceClientImpl) = {
@@ -41,7 +42,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
   }
 
   def mkUserIndexer(dir: IndexDirectory = new VolatileIndexDirectory, airbrake: AirbrakeNotifier, shoebox: ShoeboxServiceClient): UserIndexer = {
-    new UserIndexer(dir, airbrake, shoebox)
+    new UserIndexer(dir, shoebox, airbrake)
   }
 
   "UserIndxer" should {
@@ -50,12 +51,12 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
-        val updates = indexer.update()
+        val updates = Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
         indexer.sequenceNumber.value === 5
 
         val newUsers = client.saveUsers(User(firstName = "abc", lastName = "xyz", username = Username("test"), normalizedUsername = "test"))
         client.addEmails(newUsers(0).id.get -> EmailAddress("abc@xyz.com"))
-        indexer.update()
+        Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
         indexer.sequenceNumber.value === 6
       }
     }
@@ -66,7 +67,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
       val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
       setup(client)
       val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
-      indexer.update()
+      Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
       val searcher = indexer.getSearcher
       val analyzer = DefaultAnalyzer.defaultAnalyzer
       val parser = new UserQueryParser(analyzer)
@@ -89,7 +90,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
       val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
       setup(client)
       val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
-      indexer.update()
+      Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
       val searcher = indexer.getSearcher
       val analyzer = DefaultAnalyzer.defaultAnalyzer
       val parser = new UserQueryParser(analyzer)
@@ -105,7 +106,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
-        indexer.update()
+        Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
         indexer.numDocs === 5
 
         val searcher = new UserSearcher(indexer.getSearcher)
@@ -131,7 +132,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
-        indexer.update()
+        Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
         indexer.numDocs === 5
 
         val searcher = new UserSearcher(indexer.getSearcher)
@@ -161,11 +162,11 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
-        indexer.update()
+        Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
         indexer.numDocs === 5
 
         client.saveUsers(users(0).withState(UserStates.INACTIVE))
-        indexer.update()
+        Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
 
         val searcher = new UserSearcher(indexer.getSearcher)
         val analyzer = DefaultAnalyzer.defaultAnalyzer
@@ -183,7 +184,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
-        indexer.update()
+        Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
 
         val searcher = indexer.getSearcher
         val analyzer = DefaultAnalyzer.defaultAnalyzer
@@ -214,7 +215,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         )
 
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
-        indexer.update()
+        Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
 
         val searcher = new UserSearcher(indexer.getSearcher)
         val analyzer = DefaultAnalyzer.defaultAnalyzer
@@ -260,7 +261,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         )
 
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
-        indexer.update()
+        Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
 
         val searcher = new UserSearcher(indexer.getSearcher)
         val analyzer = DefaultAnalyzer.defaultAnalyzer

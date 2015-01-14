@@ -1,7 +1,7 @@
 package com.keepit.search.controllers.mobile
 
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.search.test.{ SearchApplication, SearchTestInjector }
+import com.keepit.search.test.SearchTestInjector
 import org.specs2.mutable._
 
 import com.keepit.model._
@@ -13,8 +13,6 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json.Json
 
-import akka.actor.ActorSystem
-
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.FakeShoeboxServiceModule
 
@@ -25,6 +23,9 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.util.PlayAppConfigurationModule
 
 import com.google.inject.Injector
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class MobileUserSearchControllerTest extends Specification with SearchTestInjector {
 
@@ -71,7 +72,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
-        indexer.update()
+        Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
 
         val path = com.keepit.search.controllers.mobile.routes.MobileUserSearchController.searchV1("woody", None, None, 3).toString
         path === "/m/1/search/users/search?query=woody&maxHits=3"
@@ -112,7 +113,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
-        indexer.update()
+        Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
 
         val path = com.keepit.search.controllers.mobile.routes.MobileUserSearchController.pageV1("firstNa", None, 0, 10).toString
         path === "/m/1/search/users/page?query=firstNa&pageNum=0&pageSize=10"
@@ -165,7 +166,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
-        indexer.update()
+        Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
 
         val path = com.keepit.search.controllers.mobile.routes.MobileUserSearchController.pageV1("woody@fox.com", None, 0, 10).toString
         path === "/m/1/search/users/page?query=woody%40fox.com&pageNum=0&pageSize=10"

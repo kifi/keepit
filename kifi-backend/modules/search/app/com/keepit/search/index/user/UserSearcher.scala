@@ -3,7 +3,6 @@ package com.keepit.search.index.user
 import com.keepit.search.index.Searcher
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
-import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.PriorityQueue
 import com.keepit.common.db.Id
 import com.keepit.model.User
@@ -38,9 +37,9 @@ class UserSearcher(searcher: Searcher) {
   }
 
   private def genMatchingFilter(queryTerms: Array[String]): Function1[UserHit, Boolean] = {
-    if (queryTerms.forall(_.length() <= UserIndexer.PREFIX_MAX_LEN)) (u: UserHit) => true // prefix index guarantees correctness
+    if (queryTerms.forall(_.length() <= UserFields.PREFIX_MAX_LEN)) (u: UserHit) => true // prefix index guarantees correctness
     else {
-      val longQueries = queryTerms.filter(_.length() > UserIndexer.PREFIX_MAX_LEN)
+      val longQueries = queryTerms.filter(_.length() > UserFields.PREFIX_MAX_LEN)
       (hit: UserHit) => longQueries.forall(query => query.contains("@") || hit.basicUser.firstName.toLowerCase.startsWith(query) || hit.basicUser.lastName.toLowerCase.startsWith(query)) // don't match email address with names. need test pass
     }
   }
@@ -49,7 +48,7 @@ class UserSearcher(searcher: Searcher) {
     val pq = new ScoredUserHitPQ(queueSize)
 
     searcher.search(query) { (scorer, reader) =>
-      val bv = reader.getBinaryDocValues(UserIndexer.recordField)
+      val bv = reader.getBinaryDocValues(UserFields.recordField)
       val mapper = reader.getIdMapper
       var doc = scorer.nextDoc()
       while (doc != NO_MORE_DOCS) {
