@@ -84,6 +84,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       shardedArticleIndexer,
       shardedKeepIndexer,
       libraryIndexer,
+      userIndexer,
       userGraphsSearcherFactory,
       phraseDetector,
       resultClickTracker,

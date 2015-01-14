@@ -22,6 +22,7 @@ class LibrarySearch(
     engineBuilder: QueryEngineBuilder,
     librarySearcher: Searcher,
     keepSearcher: Searcher,
+    userSearcher: Searcher,
     friendIdsFuture: Future[Set[Long]],
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     monitoredAwait: MonitoredAwait,
@@ -62,6 +63,7 @@ class LibrarySearch(
 
     val collector = new LibraryResultCollector(librarySearcher, numHitsToReturn * 5, myLibraryBoost, percentMatch / 100.0f, explanation)
 
+    val userScoreSource = new LibraryFromUserScoreVectorSource(librarySearcher, userSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait, explanation)
     val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait, explanation)
     val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait, explanation)
 
@@ -70,7 +72,7 @@ class LibrarySearch(
       keepScoreSource.debug(this)
     }
 
-    engine.execute(collector, keepScoreSource, libraryScoreSource)
+    engine.execute(collector, userScoreSource, keepScoreSource, libraryScoreSource)
 
     timeLogs.search()
 
