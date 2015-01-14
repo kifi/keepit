@@ -1,7 +1,7 @@
 package com.keepit.curator.commanders
 
 import com.keepit.model.{ SystemValueRepo, Name, Keep, NormalizedURI, KeepStates }
-import com.keepit.curator.model.{ CuratorKeepInfoRepo, RawSeedItemRepo, RawSeedItem, CuratorKeepInfoStates, CuratorKeepInfo }
+import com.keepit.curator.model._
 import com.keepit.common.db.{ SequenceNumber, State }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.RWSession
@@ -23,6 +23,7 @@ class AllKeepSeedIngestionHelper @Inject() (
     systemValueRepo: SystemValueRepo,
     keepInfoRepo: CuratorKeepInfoRepo,
     rawSeedsRepo: RawSeedItemRepo,
+    uriRecommendationRepo: UriRecommendationRepo,
     db: Database,
     airbrake: AirbrakeNotifier,
     shoebox: ShoeboxServiceClient) extends GlobalSeedIngestionHelper with Logging {
@@ -65,6 +66,7 @@ class AllKeepSeedIngestionHelper @Inject() (
           discoverable = discoverable
         ))
         rawSeedsRepo.delete(seedItem)
+        uriRecommendationRepo.deleteByUriId(seedItem.uriId)
       } getOrElse {
         //no exisitng item for this uriId (and possibly userId). Good to just move over.
         rawSeedsRepo.save(seedItem.copy(

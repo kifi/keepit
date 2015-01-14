@@ -29,6 +29,7 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]]
   def getGeneralRecommendationScore(uriId: Id[NormalizedURI], minClickedUsers: Int = 3)(implicit session: RSession): Option[Float]
   def getGeneralRecommendationCandidates(limit: Int, minClickedUsers: Int = 3)(implicit session: RSession): Seq[Id[NormalizedURI]]
+  def deleteByUriId(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -175,6 +176,11 @@ class UriRecommendationRepoImpl @Inject() (
       select uri_id from uri_recommendation where uri_id >= 0 and clicked > 0
       group by uri_id having count(*) >= $minClickedUsers limit $limit
     """.as[Id[NormalizedURI]].list
+  }
+
+  def deleteByUriId(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
+    import StaticQuery.interpolation
+    sqlu"""DELETE FROM uri_recommendation WHERE uri_id=$uriId""".first()
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
