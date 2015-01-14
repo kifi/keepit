@@ -46,6 +46,7 @@ angular.module('kifi')
 
         setTitle(profile);
         initProfile(profile);
+        initViewingUserStatus();
 
         // This function should be called last because some of the attributes
         // that we're tracking are initialized by the above functions.
@@ -55,7 +56,6 @@ angular.module('kifi')
       });
     }
 
-
     function setTitle(profile) {
       $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi' ;
     }
@@ -63,6 +63,10 @@ angular.module('kifi')
     function initProfile(profile) {
       $scope.profile = _.cloneDeep(profile);
       $scope.profile.picUrl = keepWhoService.getPicUrl($scope.profile, 200);
+    }
+
+    function initViewingUserStatus() {
+      $scope.viewingOwnProfile = $scope.profile.id === profileService.me.id;
     }
 
     function trackPageView() {
