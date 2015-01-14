@@ -204,13 +204,23 @@ class LibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        val res = libraryCommander.joinLibrary(request.userId, libId)
-        res match {
-          case Left(fail) =>
-            Status(fail.status)(Json.obj("error" -> fail.message))
-          case Right(lib) =>
-            val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
-            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)))
+        db.readOnlyMaster { implicit s => libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId) } match {
+          case None =>
+            libraryCommander.joinLibrary(request.userId, libId) match {
+              case Left(fail) =>
+                Status(fail.status)(Json.obj("error" -> fail.message))
+              case Right(lib) =>
+                val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
+                Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)))
+            }
+          case Some(membership) =>
+            log.info(s"user ${request.userId} is already following library $libId, possible race condition")
+            val (lib, owner, numKeeps) = db.readOnlyMaster { implicit s =>
+              val lib = libraryRepo.get(libId)
+              (lib, basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId))
+            }
+            val res = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None))
+            Ok(res.as[JsObject] + ("alreadyJoined" -> JsBoolean(true)))
         }
     }
   }
