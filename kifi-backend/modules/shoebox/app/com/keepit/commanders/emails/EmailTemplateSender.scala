@@ -1,7 +1,7 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailTrackingParam, EmailTip, EmailToSend }
@@ -11,6 +11,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ User, UserEmailAddressRepo, UserValueName, UserValueRepo }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
+import play.twirl.api.Html
 
 import scala.concurrent.Future
 
@@ -55,14 +56,12 @@ class EmailTemplateSenderImpl @Inject() (
         extraHeaders = headers
       )
 
-      db.readWrite(attempts = 3) { implicit rw =>
-        result.toUser foreach { userId =>
-          trackUserEvent(userId, result, email, emailToSend)
-          result.includedTip foreach { tip => recordSentTip(tip, userId) }
-        }
-
-        postOffice.sendMail(email)
+      result.toUser foreach { userId =>
+        trackUserEvent(userId, result, email, emailToSend)
+        result.includedTip foreach { tip => recordSentTip(tip, userId) }
       }
+
+      db.readWrite { implicit rw => postOffice.sendMail(email) }
     }
   }
 
