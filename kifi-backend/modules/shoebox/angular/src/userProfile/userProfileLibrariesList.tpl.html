@@ -6,7 +6,7 @@
       <div class="kf-upl-card-cover">
         <div class="kf-upl-card-cover-image" ng-attr-style="background-image:url({{lib.imageUrl}});background-position:{{lib.image.x}}% {{lib.image.y}}%" ng-if="lib.image"></div>
       </div>
-      <div class="kf-upl-card-name" ng-attr-kf-fit="{{['system_main','system_secret'].indexOf(lib.kind) < 0}}" 1="[[24,29],[28,32]]" 2="[[19,25],[18,24],[17,23],[16,22]]" 3="[[15,19]]">{{lib.name}}</div>
+      <div class="kf-upl-card-name" ng-attr-kf-fit="{{['system_main','system_secret'].indexOf(lib.kind) < 0}}" 1="[[24,29],[28,32]]" 2="[[19,25],[18,24],[17,23],[16,22]]" 3="[[15,19]]" block="3">{{lib.name}}</div>
       <div class="kf-upl-counts">
         <ng-pluralize class="kf-upl-count" count="lib.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}"></ng-pluralize>
         <ng-pluralize class="kf-upl-count" count="lib.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}" ng-if="lib.numFollowers > 0"></ng-pluralize>
