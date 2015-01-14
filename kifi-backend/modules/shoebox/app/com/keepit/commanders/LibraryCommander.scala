@@ -1294,7 +1294,7 @@ class LibraryCommander @Inject() (
       owners mapValues BasicUserWithFriendStatus.fromWithoutFriendStatus
     }
 
-    val isViewingOtherUserProfile = viewer.map { v =>
+    val isUserViewingOtherProfile = viewer.map { v =>
       v.id.get != profileUser.id.get
     }.getOrElse(false)
 
@@ -1310,7 +1310,7 @@ class LibraryCommander @Inject() (
         (0, Seq.empty)
       }
 
-      val isFollowing = if (isViewingOtherUserProfile) {
+      val isFollowing = if (isUserViewingOtherProfile) {
         Some(libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, viewer.get.id.get).isDefined)
       } else {
         None
