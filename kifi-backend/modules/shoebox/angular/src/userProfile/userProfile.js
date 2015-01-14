@@ -158,8 +158,10 @@ angular.module('kifi')
 
 
 .controller('UserProfileLibrariesCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', 'routeService', 'keepWhoService', 'profileService', 'userProfileActionService',
-  function ($scope, $rootScope, $state, $stateParams, routeService, keepWhoService, profileService, userProfileActionService) {
+  '$scope', '$rootScope', '$state', '$stateParams',
+  'routeService', 'keepWhoService', 'profileService', 'userProfileActionService', 'modalService',
+  function ($scope, $rootScope, $state, $stateParams,
+    routeService, keepWhoService, profileService, userProfileActionService, modalService) {
     var username = $stateParams.username;
     var fetchPageSize = 12;
     var fetchPageNumber = 0;
@@ -237,6 +239,15 @@ angular.module('kifi')
       });
       return lib;
     }
+
+    $scope.openFollowersList = function (lib) {
+      modalService.open({
+        template: 'libraries/libraryFollowersModal.tpl.html',
+        modalData: {
+          library: lib
+        }
+      });
+    };
   }
 ])
 
