@@ -136,7 +136,10 @@ object DefaultAnalyzer {
       "sv" -> langAnalyzers("sv").withFilter[SwedishLightStemFilter],
       "tr" -> langAnalyzers("tr").withStemFilter(_.Turkish)
     )
-  }.mapValues(_.withFilter[ICUFoldingFilter])
+  }.map {
+    case (lang, analyzer) if lang == "ja" => lang -> analyzer // ICUFoldingFilter too aggressive with Japanese characters
+    case (lang, analyzer) => lang -> analyzer.withFilter[ICUFoldingFilter]
+  }
 
   val languages: Set[Lang] = langAnalyzers.keySet.map(Lang(_))
 
