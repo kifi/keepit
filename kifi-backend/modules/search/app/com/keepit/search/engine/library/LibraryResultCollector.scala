@@ -6,6 +6,7 @@ import com.keepit.search.engine.uri.UriResultCollector
 import com.keepit.search.engine.{ Visibility, ScoreContext }
 import com.keepit.search.engine.result.{ HitQueue, ResultCollector }
 import com.keepit.search.index.Searcher
+import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryIndexable
 
 class LibraryResultCollector(librarySearcher: Searcher, maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float, explanation: Option[LibrarySearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
@@ -18,6 +19,10 @@ class LibraryResultCollector(librarySearcher: Searcher, maxHitsPerCategory: Int,
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory)
+
+  @inline private def isUserCreated(libId: Long): Boolean = {
+    LibraryIndexable.getKind(librarySearcher, libId).exists(_ == LibraryKind.USER_CREATED)
+  }
 
   override def collect(ctx: ScoreContext): Unit = {
     val id = ctx.id
@@ -32,7 +37,7 @@ class LibraryResultCollector(librarySearcher: Searcher, maxHitsPerCategory: Int,
         score = ctx.score() * matching
       }
 
-      if (score > 0.0f) {
+      if (score > 0.0f && isUserCreated(id)) {
         val visibility = ctx.visibility
         val relevantQueue = if ((visibility & Visibility.OWNER) != 0) {
           myHits
@@ -41,11 +46,7 @@ class LibraryResultCollector(librarySearcher: Searcher, maxHitsPerCategory: Int,
         } else {
           othersHits
         }
-        if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) {
-          val kind = LibraryIndexable.getKind(librarySearcher, id)
-          if (kind.exists(_ != LibraryKind.USER_CREATED)) score = 0f // exclude main and private
-          else score = score * myLibraryBoost
-        }
+        if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) score = score * myLibraryBoost
         relevantQueue.insert(id, score, visibility, ctx.secondaryId)
       }
 
