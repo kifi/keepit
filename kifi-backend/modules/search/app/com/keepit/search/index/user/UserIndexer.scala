@@ -27,6 +27,7 @@ object UserIndexer {
   val experimentsField = "exp"
 
   val toBeDeletedStates = Set[State[User]](INACTIVE, PENDING, BLOCKED, INCOMPLETE_SIGNUP)
+  val nameSearchFields = Set(nameField)
 }
 
 object BasicUserSerializer {
