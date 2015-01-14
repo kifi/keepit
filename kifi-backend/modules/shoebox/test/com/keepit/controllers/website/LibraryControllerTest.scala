@@ -787,6 +787,32 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
 
+        val result11 = libraryController.joinLibrary(pubLibId1)(request1)
+        status(result11) must equalTo(OK)
+        contentType(result11) must beSome("application/json")
+
+        val expected11 = Json.parse(
+          s"""
+             |{
+             |"id":"${Library.publicId(lib1.id.get).id}",
+             |"name":"Library1",
+             |"visibility":"discoverable",
+             |"url":"/bulbasaur/lib1",
+             |"owner":{
+             |  "id":"${basicUser2.externalId}",
+             |  "firstName":"${basicUser2.firstName}",
+             |  "lastName":"${basicUser2.lastName}",
+             |  "pictureName":"${basicUser2.pictureName}",
+             |  "username":"${basicUser2.username.value}"
+             |  },
+             |"numKeeps":0,
+             |"numFollowers":1,
+             |"kind":"user_created",
+             |"alreadyJoined":true
+             |}
+           """.stripMargin)
+        Json.parse(contentAsString(result11)) must equalTo(expected11)
+
         val request2 = FakeRequest("POST", testPathDecline)
         val result2 = libraryController.declineLibrary(pubLibId2)(request2)
         status(result2) must equalTo(OK)
