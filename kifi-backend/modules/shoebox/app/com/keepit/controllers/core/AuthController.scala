@@ -436,6 +436,13 @@ class AuthController @Inject() (
               ))
             } else {
               // No user exists, has social network identity, must finalize
+
+              // Check if request.identityOpt.get.identityId.providerId == "twitter"
+              // if so, do signup2 page below (need to get email)
+              // else, finalize
+
+              // This is where we will finalize and redirect to home? install? (Aaron!!)
+
               Ok(views.html.auth.authGrey(
                 view = "signup2Social",
                 firstName = User.sanitizeName(identity.firstName),

@@ -272,23 +272,20 @@ angular.module('kifi')
       },
 
       joinLibrary: function (libraryId) {
-        return this.fetchLibrarySummaries(true).then(function () {
-          var alreadyJoined = _.some(librarySummaries, { id: libraryId });
+        return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
+          var library = response.data;
 
-          if (!alreadyJoined) {
-            return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
-              var library = response.data;
-              augmentLibrarySummary(library);
+          if (!library.alreadyJoined) {
+            augmentLibrarySummary(library);
 
-              librarySummaries.push(library);
-              _.remove(invitedSummaries, { id: libraryId });
+            librarySummaries.push(library);
+            _.remove(invitedSummaries, { id: libraryId });
 
-              $rootScope.$emit('librarySummariesChanged');
-              $rootScope.$emit('libraryUpdated', library);
-            });
+            $rootScope.$emit('librarySummariesChanged');
+            $rootScope.$emit('libraryUpdated', library);
+          } else {
+            return ('already_joined');
           }
-
-          return $q.when('already_joined');
         });
       },
 
@@ -380,9 +377,13 @@ angular.module('kifi')
           defaultAttributes.libraryName = library.name;
         }
 
-        // o=rl is a query parameter for the origin=libraryRec property
-        if ($location.search().o === 'rl') {
-          defaultAttributes.origin = 'libraryRec';
+        function setOrigin(str) {
+          defaultAttributes.origin = str;
+        }
+
+        switch ($location.search().o) {
+          case 'rl': setOrigin('libraryRec'); break;
+          case 'lac': setOrigin('libraryAttributionChip'); break;
         }
 
         return defaultAttributes;

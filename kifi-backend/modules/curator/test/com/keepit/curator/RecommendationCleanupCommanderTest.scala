@@ -11,6 +11,7 @@ import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ NormalizedURI, User }
 import com.keepit.search.FakeSearchServiceClientModule
+import org.joda.time.Days
 import org.specs2.mutable.Specification
 import com.keepit.common.time._
 
@@ -25,12 +26,12 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
     FakeHealthcheckModule())
 
   def setupRecos(): Seq[UriRecommendation] = {
-    val rec1 = makeUriRecommendationWithUpdateTimestamp(1, 42, 0.15f, currentDateTime.minusDays(30))
-    val rec2 = makeUriRecommendationWithUpdateTimestamp(2, 42, 0.99f, currentDateTime.minusDays(30))
-    val rec3 = makeUriRecommendationWithUpdateTimestamp(3, 42, 0.5f, currentDateTime.minusDays(30))
-    val rec4 = makeUriRecommendationWithUpdateTimestamp(4, 42, 0.75f, currentDateTime.minusDays(30))
-    val rec5 = makeUriRecommendationWithUpdateTimestamp(5, 42, 0.65f, currentDateTime.minusDays(30))
-    val rec6 = makeUriRecommendationWithUpdateTimestamp(6, 42, 0.35f, currentDateTime.minusDays(30))
+    val rec1 = makeUriRecommendationWithUpdateTimestamp(1, 42, 0.15f, currentDateTime.minusDays(20))
+    val rec2 = makeUriRecommendationWithUpdateTimestamp(2, 42, 0.99f, currentDateTime.minusDays(20))
+    val rec3 = makeUriRecommendationWithUpdateTimestamp(3, 42, 0.5f, currentDateTime.minusDays(20))
+    val rec4 = makeUriRecommendationWithUpdateTimestamp(4, 42, 0.75f, currentDateTime.minusDays(20))
+    val rec5 = makeUriRecommendationWithUpdateTimestamp(5, 42, 0.65f, currentDateTime.minusDays(20))
+    val rec6 = makeUriRecommendationWithUpdateTimestamp(6, 42, 0.35f, currentDateTime.minusDays(20))
     Seq(rec1, rec2, rec3, rec4, rec5, rec6)
   }
 
@@ -48,17 +49,11 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
       withDb(modules: _*) { implicit injector =>
         val repo = inject[UriRecommendationRepo]
         db.readWrite { implicit s =>
-          val recs = setupRecos()
-          repo.save(recs(0))
-          repo.save(recs(1))
-          repo.save(recs(2))
-          repo.save(recs(3))
-          repo.save(recs(4))
-          repo.save(recs(5))
+          setupRecos().foreach(repo.save(_))
         }
 
         val commander = inject[RecommendationCleanupCommander]
-        commander.cleanupLowMasterScoreRecos(Some(4), Some(currentDateTime))
+        commander.cleanup(Some(4), Some(currentDateTime))
 
         db.readOnlyMaster { implicit s =>
           val recos = repo.getByTopMasterScore(Id[User](42), 6)
@@ -67,6 +62,32 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
           recos(1).masterScore === 0.75f
           recos(2).masterScore === 0.65f
           recos(3).masterScore === 0.5f
+        }
+      }
+    }
+    "delete old items" in {
+      withDb(modules: _*) { implicit injector =>
+        val clock = inject[Clock].asInstanceOf[FakeClock]
+        val repo = inject[UriRecommendationRepo]
+        db.readWrite { implicit s =>
+          val recs = setupRecos()
+
+          clock -= Days.days(30)
+          recs.take(3).foreach(repo.save(_))
+
+          clock += Days.days(30)
+          recs.drop(3).foreach(repo.save(_))
+        }
+
+        val commander = inject[RecommendationCleanupCommander]
+        commander.cleanup(Some(4), Some(currentDateTime))
+
+        db.readOnlyMaster { implicit s =>
+          val recos = repo.getByTopMasterScore(Id[User](42), 6)
+          recos.size === 3
+          recos(0).masterScore === 0.75f
+          recos(1).masterScore === 0.65f
+          recos(2).masterScore === 0.35f
         }
       }
     }

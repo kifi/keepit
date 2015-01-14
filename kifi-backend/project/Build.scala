@@ -19,7 +19,8 @@ object ApplicationBuild extends Build {
     "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
     "org.apache.lucene" % "lucene-core" % "4.10.2",
     "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2",
-    "org.apache.lucene" % "lucene-analyzers-kuromoji" % "4.10.2"
+    "org.apache.lucene" % "lucene-analyzers-kuromoji" % "4.10.2",
+    "org.apache.lucene" % "lucene-analyzers-icu" % "4.10.2"
   )
 
   lazy val elizaDependencies = Seq(

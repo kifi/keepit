@@ -1,7 +1,7 @@
 <div ng-switch="userProfileStatus" class="kf-user-profile">
   <div ng-switch-when="not-found" kf-error-not-found></div>
   <div ng-switch-when="found">
-    <div class="kf-user-profile-header" ng-include="'userProfile/userProfileHeader.tpl.html'"></div>
+    <div kf-user-profile-header profile="profile"></div>
     <div class="kf-user-profile-content">
       <div ui-view></div>
     </div>

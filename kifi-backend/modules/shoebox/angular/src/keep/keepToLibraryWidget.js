@@ -448,9 +448,10 @@ angular.module('kifi')
             libraryService.fetchLibrarySummaries(true).then(function () {
               scope.$evalAsync(function () {
                 invokeWidgetCallbacks(_.find(libraryService.librarySummaries, { 'name': library.name }));
-                removeWidget();
               });
             });
+
+            removeWidget();
           })['catch'](function (err) {
             var error = err.data && err.data.error;
             switch (error) {

@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .directive('kfManageLibrary', [
-  '$location', '$window', '$rootScope', 'friendService', 'libraryService', 'modalService',
+  '$location', '$rootScope', '$state', 'friendService', 'libraryService', 'modalService',
   'profileService', 'routeService', 'userService', 'util',
-  function ($location, $window, $rootScope, friendService, libraryService, modalService,
+  function ($location, $rootScope, $state, friendService, libraryService, modalService,
     profileService, routeService, userService, util) {
     return {
       restrict: 'A',
@@ -74,19 +74,17 @@ angular.module('kifi')
           }
 
           promise.then(function (resp) {
+            libraryService.fetchLibrarySummaries(true);
+
             scope.$error = {};
-
             submitting = false;
+            scope.close();
 
-            libraryService.fetchLibrarySummaries(true).then(function () {
-              scope.close();
-
-              if (!returnAction) {
-                $location.path(resp.data.url);
-              } else {
-                returnAction();
-              }
-            });
+            if (!returnAction) {
+              $location.path(resp.data.url);
+            } else {
+              returnAction();
+            }
           })['catch'](function (err) {
             submitting = false;
 
@@ -126,8 +124,13 @@ angular.module('kifi')
           submitting = true;
           libraryService.deleteLibrary(scope.library.id).then(function () {
             $rootScope.$emit('librarySummariesChanged');
+            $rootScope.$emit('libraryDeleted', scope.library.id);
             scope.close();
-            $location.path('/');
+
+            // If we were on the deleted library's page, return to the homepage.
+            if ($state.is('library.keeps')) {
+              $location.path('/');
+            }
           })['catch'](modalService.openGenericErrorModal)['finally'](function () {
             submitting = false;
           });

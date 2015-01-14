@@ -549,6 +549,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         (resultJson4 \ "own").as[Seq[JsObject]].length === 1
         (resultJson4 \ "following").as[Seq[JsObject]].length === 1
         (resultJson4 \ "invited").as[Seq[JsObject]].length === 0
+
+        val request5 = FakeRequest("GET", testPath)
+        val result5 = libraryController.getProfileLibraries(user2.username, 0, 10, "following")(request5)
+        status(result5) must equalTo(OK)
+        contentType(result5) must beSome("application/json")
+        val result5Json = (contentAsJson(result5) \ "following").as[Seq[JsObject]]
+        (result5Json.head \ "name").as[String] === "lib1"
+        (result5Json.head \ "numFollowers").as[Int] === 1
+        (result5Json.head \ "following").as[Boolean] === true
       }
     }
 
@@ -786,6 +795,32 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |}
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
+
+        val result11 = libraryController.joinLibrary(pubLibId1)(request1)
+        status(result11) must equalTo(OK)
+        contentType(result11) must beSome("application/json")
+
+        val expected11 = Json.parse(
+          s"""
+             |{
+             |"id":"${Library.publicId(lib1.id.get).id}",
+             |"name":"Library1",
+             |"visibility":"discoverable",
+             |"url":"/bulbasaur/lib1",
+             |"owner":{
+             |  "id":"${basicUser2.externalId}",
+             |  "firstName":"${basicUser2.firstName}",
+             |  "lastName":"${basicUser2.lastName}",
+             |  "pictureName":"${basicUser2.pictureName}",
+             |  "username":"${basicUser2.username.value}"
+             |  },
+             |"numKeeps":0,
+             |"numFollowers":1,
+             |"kind":"user_created",
+             |"alreadyJoined":true
+             |}
+           """.stripMargin)
+        Json.parse(contentAsString(result11)) must equalTo(expected11)
 
         val request2 = FakeRequest("POST", testPathDecline)
         val result2 = libraryController.declineLibrary(pubLibId2)(request2)

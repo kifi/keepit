@@ -1,11 +1,15 @@
 package com.keepit.search.engine.library
 
 import com.keepit.common.logging.Logging
+import com.keepit.model.LibraryKind
 import com.keepit.search.engine.uri.UriResultCollector
 import com.keepit.search.engine.{ Visibility, ScoreContext }
 import com.keepit.search.engine.result.{ HitQueue, ResultCollector }
+import com.keepit.search.index.Searcher
+import com.keepit.search.index.graph.keep.KeepFields
+import com.keepit.search.index.graph.library.LibraryIndexable
 
-class LibraryResultCollector(maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float, explanation: Option[LibrarySearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
+class LibraryResultCollector(librarySearcher: Searcher, maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float, explanation: Option[LibrarySearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
 
   import UriResultCollector._
 
@@ -15,6 +19,10 @@ class LibraryResultCollector(maxHitsPerCategory: Int, myLibraryBoost: Float, mat
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory)
+
+  @inline private def isUserCreated(libId: Long): Boolean = {
+    LibraryIndexable.getKind(librarySearcher, libId).exists(_ == LibraryKind.USER_CREATED)
+  }
 
   override def collect(ctx: ScoreContext): Unit = {
     val id = ctx.id
@@ -29,7 +37,7 @@ class LibraryResultCollector(maxHitsPerCategory: Int, myLibraryBoost: Float, mat
         score = ctx.score() * matching
       }
 
-      if (score > 0.0f) {
+      if (score > 0.0f && isUserCreated(id)) {
         val visibility = ctx.visibility
         val relevantQueue = if ((visibility & Visibility.OWNER) != 0) {
           myHits

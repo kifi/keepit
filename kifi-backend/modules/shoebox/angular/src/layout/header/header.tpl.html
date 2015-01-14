@@ -11,7 +11,10 @@
       <div class="kf-query-lib-container" ng-class="{empty: isEmpty()}">
         <div class="kf-query-lib-icon" ng-class="{'focused': isFocused}"></div>
 
-        <img class="kf-search-bar-lib-owner-img" ng-show="search.showName" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+        <a ng-if="inUserProfileBeta" href="{{userProfileUrl}}">
+          <img class="kf-search-bar-lib-owner-img" ng-show="search.showName" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+        </a>
+        <img ng-if="!inUserProfileBeta" class="kf-search-bar-lib-owner-img" ng-show="search.showName" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
 
         <div class="kf-search-bar-lib-name" ng-show="search.showName" ng-class="library.kind != 'user_created' ? 'system-created' : library.visibility == 'secret' ? 'secret' : 'published'"> {{library.name}} </div>
         <div class="kf-search-bar-lib-name-clear" ng-show="search.showName" ng-class="library.kind != 'user_created' ? 'system-created' : library.visibility == 'secret' ? 'secret' : 'published'" ng-click="clearLibraryName()">&times;</div>

@@ -1165,6 +1165,7 @@ class LibraryCommander @Inject() (
               numFollowers = info.numFollowers,
               followers = Seq.empty,
               lastKept = info.lastKept,
+              following = None,
               caption = extraInfo.caption)
             card -> idx
         } sortBy (_._2) map (_._1)
@@ -1218,7 +1219,7 @@ class LibraryCommander @Inject() (
       val libraryIds = libs.map(_.id.get).toSet
       val owners = Map(user.id.get -> BasicUser.fromUser(user))
       val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
-      val libraryInfos = createLibraryCardInfos(libs, owners, Some(user), idealSize) zip libs
+      val libraryInfos = createLibraryCardInfos(libs, owners, user, Some(user), idealSize) zip libs
       (libraryInfos, memberships)
     }
     libraryInfos map {
@@ -1240,37 +1241,37 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getOwnProfileLibraries(owner: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
+  def getOwnProfileLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
-          libraryRepo.getLibrariesOfUserFromAnonymous(owner.id.get, page)
+          libraryRepo.getLibrariesOfUserFromAnonymous(user.id.get, page)
         case Some(other) =>
-          libraryRepo.getOwnedLibrariesForOtherUser(owner.id.get, other.id.get, page)
+          libraryRepo.getOwnedLibrariesForOtherUser(user.id.get, other.id.get, page)
       }
-      val owners = Map(owner.id.get -> BasicUser.fromUser(owner))
-      createLibraryCardInfos(libs, owners, viewer, idealSize)
+      val owners = Map(user.id.get -> BasicUser.fromUser(user))
+      createLibraryCardInfos(libs, owners, user, viewer, idealSize)
     }
   }
 
-  def getFollowingLibraries(owner: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
+  def getFollowingLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
-          val showFollowLibraries = getUserValueSetting(owner.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
+          val showFollowLibraries = getUserValueSetting(user.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
           if (showFollowLibraries) {
-            libraryRepo.getFollowingLibrariesFromAnonymous(owner.id.get, page)
+            libraryRepo.getFollowingLibrariesFromAnonymous(user.id.get, page)
           } else Seq.empty
-        case Some(other) if other.id == owner.id =>
-          libraryRepo.getFollowingLibrariesOfSelf(owner.id.get, page)
+        case Some(other) if other.id == user.id =>
+          libraryRepo.getFollowingLibrariesOfSelf(user.id.get, page)
         case Some(other) =>
-          val showFollowLibraries = getUserValueSetting(owner.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
+          val showFollowLibraries = getUserValueSetting(user.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
           if (showFollowLibraries) {
-            libraryRepo.getFollowingLibrariesForOtherUser(owner.id.get, other.id.get, page)
+            libraryRepo.getFollowingLibrariesForOtherUser(user.id.get, other.id.get, page)
           } else Seq.empty
       }
       val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
-      createLibraryCardInfos(libs, owners, viewer, idealSize)
+      createLibraryCardInfos(libs, owners, user, viewer, idealSize)
     }
   }
 
@@ -1279,19 +1280,24 @@ class LibraryCommander @Inject() (
       db.readOnlyMaster { implicit session =>
         val libs = libraryRepo.getInvitedLibrariesOfSelf(user.id.get, page)
         val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
-        createLibraryCardInfos(libs, owners, viewer, idealSize)
+        createLibraryCardInfos(libs, owners, user, viewer, idealSize)
       }
     } else {
       ParSeq.empty
     }
   }
 
-  private def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewer: Option[User], idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
+  private def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], profileUser: User, viewer: Option[User], idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     val ownersWFS = if (viewer.isDefined && owners.keySet.exists(_ != viewer.get.id.get)) {
       friendStatusCommander.augmentWithFriendStatus(viewer.get.id.get, owners)
     } else {
       owners mapValues BasicUserWithFriendStatus.fromWithoutFriendStatus
     }
+
+    val isUserViewingOtherProfile = viewer.map { v =>
+      v.id.get != profileUser.id.get
+    }.getOrElse(false)
+
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getForLibraryId(lib.id.get))
       val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
@@ -1303,12 +1309,18 @@ class LibraryCommander @Inject() (
       } else {
         (0, Seq.empty)
       }
-      createLibraryCardInfo(lib, image, ownersWFS(lib.ownerId), numKeeps, numFollowers, followersSample)
+
+      val isFollowing = if (isUserViewingOtherProfile) {
+        Some(libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, viewer.get.id.get).isDefined)
+      } else {
+        None
+      }
+      createLibraryCardInfo(lib, image, ownersWFS(lib.ownerId), numKeeps, numFollowers, followersSample, isFollowing)
     }
   }
 
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUserWithFriendStatus, numKeeps: Int, numFollowers: Int,
-    followers: Seq[BasicUser]): LibraryCardInfo = {
+    followers: Seq[BasicUser], isFollowing: Option[Boolean]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -1321,6 +1333,7 @@ class LibraryCommander @Inject() (
       numFollowers = numFollowers,
       followers = LibraryCardInfo.showable(followers),
       lastKept = lib.lastKept,
+      following = isFollowing,
       caption = None)
   }
 

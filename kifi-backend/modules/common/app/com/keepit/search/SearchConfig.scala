@@ -20,6 +20,7 @@ object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
       "libraryNameBoost" -> "0.5",
+      "userNameBoost" -> "0.5",
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
       "concatBoost" -> "0.8",
@@ -49,6 +50,7 @@ object SearchConfig {
   private[this] val descriptions =
     Map[String, String](
       "libraryNameBoost" -> "boost value for library name in Kifi search",
+      "userNameBoost" -> "boost value for user name in Kifi search",
       "phraseBoost" -> "boost value for the detected phrase [0f,1f]",
       "siteBoost" -> "boost value for matching website names and domains",
       "concatBoost" -> "boost value for concatenated terms",
