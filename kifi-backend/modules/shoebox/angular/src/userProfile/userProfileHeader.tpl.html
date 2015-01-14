@@ -1,3 +1,13 @@
+<div class="kf-user-profile-friend-request-header" ng-if="connectionWithUser==='request_received'">
+  <span class="kf-user-profile-friend-respond accept" ng-click="acceptFriendRequest()">
+    Accept
+  </span>
+  <span class="kf-user-profile-friend-respond decline" ng-click="ignoreFriendRequest()">
+    Decline
+  </span>
+  <span class="kf-user-profile-friend-request-msg">{{profile.firstName}} has sent you a friend request</span>
+</div>
+
 <div class="kf-user-profile-header"><!-- limit to 800px or so -->
   <div class="kf-user-profile-basic-info" itemscope itemtype="http://data-vocabulary.org/Person">
     <div class="kf-up-basic-info-main-content">
@@ -17,13 +27,8 @@
           <span class="kf-user-profile-action">Friend Request Sent</span>
         </div>
 
-        <div ng-switch-when="request_received" class="kf-user-profile-connect request-received" ng-click="toggleRespondMenu()">
-          <span class="kf-user-profile-connect-image add-friend"></span>
-          <span class="kf-user-profile-action respond">Respond to Friend Request</span>
-          <div class="kf-user-profile-action-menu" ng-class="{on: showRespondMenu}">
-            <div class="kf-user-profile-action-selection accept">Accept Friend Request</div>
-            <div class="kf-user-profile-action-selection decline">Decline Friend Request</div>
-          </div>
+        <div ng-switch-when="request_received" class="kf-user-profile-connect request-received">
+          <span class="kf-user-profile-connect-image already-friends hidden"></span>
         </div>
 
         <div ng-switch-when="friends" class="kf-user-profile-connect friends" ng-click="toggleFriendMenu()">
