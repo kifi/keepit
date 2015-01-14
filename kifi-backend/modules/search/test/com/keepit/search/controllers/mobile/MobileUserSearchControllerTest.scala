@@ -1,6 +1,7 @@
 package com.keepit.search.controllers.mobile
 
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.search.engine.user.UserSearchFilterFactory
 import com.keepit.search.test.SearchTestInjector
 import org.specs2.mutable._
 
@@ -18,7 +19,6 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.index.user.UserIndexer
-import com.keepit.search.index.user.UserSearchFilterFactory
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.util.PlayAppConfigurationModule
 

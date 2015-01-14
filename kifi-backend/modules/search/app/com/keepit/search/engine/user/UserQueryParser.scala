@@ -1,17 +1,15 @@
-package com.keepit.search.index.user
+package com.keepit.search.engine.user
 
+import java.io.StringReader
+
+import com.keepit.search.engine.parser.{ QueryParser, QuerySpec }
 import com.keepit.search.index.Analyzer
-import com.keepit.search.engine.parser.QueryParser
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.TermQuery
+import com.keepit.search.index.user.UserFields
+import com.keepit.typeahead.PrefixFilter
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
-import org.apache.lucene.search.PrefixQuery
-import com.keepit.search.engine.parser.QuerySpec
-import java.io.StringReader
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
-import com.keepit.typeahead.PrefixFilter
+import org.apache.lucene.search.{ BooleanQuery, PrefixQuery, Query, TermQuery }
 
 class UserQueryParser(
     analyzer: Analyzer) extends QueryParser(analyzer, analyzer) {

@@ -48,7 +48,7 @@ class UserIndexable(user: User, emails: Set[EmailAddress], experiments: Set[Expe
 
     doc.add(buildTextField(nameField, user.fullName, DefaultAnalyzer.defaultAnalyzer))
 
-    doc.add(buildTextField(nameStemmedField, user.fullName, DefaultAnalyzer.defaultAnalyserWithDefaultStemmer))
+    doc.add(buildTextField(nameStemmedField, user.fullName, DefaultAnalyzer.defaultAnalyserWithStemmer))
 
     doc.add(buildIteratorField[String](namePrefixField, genPrefixes(user).toIterator)(x => x))
 
