@@ -16,6 +16,7 @@ import com.keepit.search.index.graph.keep.{ KeepFields, ShardedKeepIndexer }
 import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.phrase.PhraseDetector
+import com.keepit.search.index.user.UserIndexer
 import com.keepit.search.util.LongArraySet
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.TermQuery
@@ -33,6 +34,7 @@ class SearchFactory @Inject() (
     shardedArticleIndexer: ShardedArticleIndexer,
     shardedKeepIndexer: ShardedKeepIndexer,
     libraryIndexer: LibraryIndexer,
+    userIndexer: UserIndexer,
     userGraphsSearcherFactory: UserGraphsSearcherFactory,
     phraseDetector: PhraseDetector,
     resultClickTracker: ResultClickTracker,
@@ -252,6 +254,7 @@ class SearchFactory @Inject() (
       case Some(engBuilder) =>
         val parseDoneAt = System.currentTimeMillis()
         val librarySearcher = libraryIndexer.getSearcher
+        val userSearcher = userIndexer.getSearcher
         shards.toSeq.map { shard =>
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
 
@@ -266,6 +269,7 @@ class SearchFactory @Inject() (
             engBuilder,
             librarySearcher,
             keepSearcher,
+            userSearcher,
             friendIdsFuture,
             libraryIdsFuture,
             monitoredAwait,

@@ -24,6 +24,7 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RWSession): Boolean
   def incrementDeliveredCount(recoId: Id[UriRecommendation], withLastPushedAt: Boolean = false)(implicit session: RWSession): Unit
   def cleanupLowMasterScoreRecos(userId: Id[User], limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Unit
+  def cleanupOldRecos(userId: Id[User], expiration: DateTime)(implicit session: RWSession): Unit
   def getUriIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[NormalizedURI]]
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]]
   def getGeneralRecommendationScore(uriId: Id[NormalizedURI], minClickedUsers: Int = 3)(implicit session: RSession): Option[Float]
@@ -131,11 +132,6 @@ class UriRecommendationRepoImpl @Inject() (
     else sqlu"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
   }
 
-  def incrementDeliveredCount(recoId: Id[UriRecommendation])(implicit session: RWSession): Unit = {
-    import StaticQuery.interpolation
-    sqlu"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
-  }
-
   def cleanupLowMasterScoreRecos(userId: Id[User], limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Unit = {
     import StaticQuery.interpolation
     sqlu"""
@@ -143,6 +139,11 @@ class UriRecommendationRepoImpl @Inject() (
         SELECT master_score FROM uri_recommendation WHERE user_id=$userId ORDER BY master_score DESC LIMIT $limitNumRecosForUser
       ) AS mScoreTable) AND updated_at < $before""".first()
 
+  }
+
+  def cleanupOldRecos(userId: Id[User], expiration: DateTime)(implicit session: RWSession): Unit = {
+    import StaticQuery.interpolation
+    sqlu"""DELETE FROM uri_recommendation WHERE user_id=$userId AND updated_at < $expiration""".first()
   }
 
   def getUriIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[NormalizedURI]] = {

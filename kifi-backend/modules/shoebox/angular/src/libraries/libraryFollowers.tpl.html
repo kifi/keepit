@@ -14,30 +14,32 @@
 
       <div class="lib-followers-content">
         <div class="lib-followers-content-list" smart-scroll scroll-distance="followerScrollDistance" scroll-disabled="isFollowerScrollDisabled()" scroll-next="followerScrollNext()">
-
-          <ul class="lib-followers-list" itemscope itemtype="http://data-vocabulary.org/Person">
-            <li class="lib-follower lib-owner">
-              <a ng-if="inUserProfileBeta" href="{{library.owner.profileUrl}}" ng-click="close()" itemprop="url">
-                <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
-              </a>
-              <img ng-if="!inUserProfileBeta" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
+          <ul class="lib-followers-list">
+            <a ng-if="inUserProfileBeta" href="{{library.owner.profileUrl}}" class="lib-follower lib-owner" ng-click="close()"
+               itemscope itemtype="http://data-vocabulary.org/Person" itemprop="url">
+              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
+              <div class="lib-follower-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+            </a>
+            <li ng-if="!inUserProfileBeta" class="lib-follower lib-owner" itemscope itemtype="http://data-vocabulary.org/Person">
+              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
               <div class="lib-follower-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
             </li>
 
-            <li class="lib-follower" ng-repeat="follower in followerList" itemscope itemtype="http://data-vocabulary.org/Person">
-              <div class="lib-follower-user" ng-if="follower.id">
-                <a ng-if="inUserProfileBeta" href="{{follower.profileUrl}}" ng-click="close()" itemprop="url">
-                  <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{follower.firstName}} {{follower.lastName}}">
-                </a>
-                <img ng-if="!inUserProfileBeta" ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{follower.firstName}} {{follower.lastName}}">
-                <div class="lib-follower-name" itemprop="name">{{follower.firstName}} {{follower.lastName}}</div>
-              </div>
+            <a ng-if="inUserProfileBeta && follower.id" ng-repeat="follower in followerList" href="{{follower.profileUrl}}" ng-click="close()"
+               class="lib-follower" itemscope itemtype="http://data-vocabulary.org/Person" itemprop="url" >
+              <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{follower.firstName}} {{follower.lastName}}">
+              <div class="lib-follower-name" itemprop="name">{{follower.firstName}} {{follower.lastName}}</div>
+            </li>
+            <li ng-if="!inUserProfileBeta && follower.id" class="lib-follower" ng-repeat="follower in followerList" itemscope itemtype="http://data-vocabulary.org/Person">
+              <a ng-if="inUserProfileBeta" href="{{follower.profileUrl}}" ng-click="close()" itemprop="url">
+                <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{follower.firstName}} {{follower.lastName}}">
+              </a>
+              <img ng-if="!inUserProfileBeta" ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{follower.firstName}} {{follower.lastName}}">
+              <div class="lib-follower-name" itemprop="name">{{follower.firstName}} {{follower.lastName}}</div>
             </li>
           </ul>
         </div>
-
       </div>
-
     </div>
   </div>
 </div>

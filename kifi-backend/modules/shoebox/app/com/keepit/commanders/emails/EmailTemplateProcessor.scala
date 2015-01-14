@@ -5,20 +5,43 @@ import com.keepit.commanders.UserCommander
 import com.keepit.commanders.emails.tips.EmailTipProvider
 import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.template.Tag.tagRegex
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.mail.template.{ EmailLayout, EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
 import com.keepit.common.mail.template.EmailLayout._
 import com.keepit.common.mail.template.helpers.{ toHttpsUrl, fullName }
-import com.keepit.model.{ Library, LibraryRepo, NotificationCategory, UserEmailAddressRepo, UserRepo, User }
+import com.keepit.model.{ Library, LibraryRepo, UserEmailAddressRepo, UserRepo, User }
 import com.keepit.social.BasicUser
+import org.jsoup.Jsoup
 import play.api.libs.json.{ Json, JsValue }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.twirl.api.Html
-import views.html.admin.library
+import org.jsoup.nodes.Element
+
+import scala.collection.JavaConversions.asScalaIterator
 
 import scala.concurrent.Future
+
+sealed trait EmailHtmlError
+case class EmailHtmlMissingImgAlt(element: Element) extends EmailHtmlError
+
+class EmailTemplateHtmlDecorator @Inject() () {
+  def apply(html: String)(onError: EmailHtmlError => Unit): String = {
+    val doc = Jsoup.parse(html)
+    val imgElements = doc.getElementsByTag("img")
+    val imgIter: Iterator[Element] = imgElements.iterator()
+
+    imgIter.filterNot(_.hasAttr("alt")).foreach { imgEle =>
+      imgEle.attr("alt", "")
+      onError(EmailHtmlMissingImgAlt(imgEle))
+    }
+
+    doc.outerHtml
+  }
+}
 
 case class ProcessedEmailResult(
   toUser: Option[Id[User]],
@@ -40,8 +63,10 @@ class EmailTemplateProcessorImpl @Inject() (
     userCommander: Provider[UserCommander],
     emailAddressRepo: UserEmailAddressRepo,
     config: FortyTwoConfig,
+    htmlDecorator: EmailTemplateHtmlDecorator,
     emailTipProvider: Provider[EmailTipProvider],
-    emailOptOutCommander: EmailOptOutCommander) extends EmailTemplateProcessor {
+    emailOptOutCommander: EmailOptOutCommander,
+    private val airbrake: AirbrakeNotifier) extends EmailTemplateProcessor with Logging {
 
   /* for the lack of a better name, this is just a trait that encapsulates
      the type of object(s) needed to replace a placeholder */
@@ -100,10 +125,20 @@ class EmailTemplateProcessorImpl @Inject() (
       } yield {
         val input = DataNeededResult(users = users, imageUrls = userImageUrls, libraries = libraries)
         val includedTip = tipHtmlOpt.map(_._1)
+
+        val decoratedHtml = htmlDecorator(evalTemplate(htmlBody.body, input, emailToSend, includedTip)) {
+          case EmailHtmlMissingImgAlt(ele) =>
+            val msg = s"img element missing @alt in ${emailToSend.category.category} email"
+            airbrake.notify(msg)
+            // additional information about the email to logs for debugging
+            log.warn(msg + " subject=\"" + emailToSend.subject + "\" html=" + ele)
+            ()
+        }
+
         ProcessedEmailResult(
           toUser = emailToSend.to.left.toOption,
           subject = evalTemplate(emailToSend.subject, input, emailToSend, includedTip),
-          htmlBody = LargeString(evalTemplate(htmlBody.body, input, emailToSend, includedTip)),
+          htmlBody = LargeString(decoratedHtml),
           textBody = textBody.map(text => LargeString(evalTemplate(text.body, input, emailToSend, includedTip))),
           fromName = fromName.map(text => evalTemplate(text, input, emailToSend, includedTip)),
           includedTip = includedTip
@@ -218,6 +253,5 @@ class EmailTemplateProcessorImpl @Inject() (
   }
 
   private def jsValueAsUserId(arg: JsValue) = arg.as[Id[User]]
-
 }
 

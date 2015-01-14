@@ -61,8 +61,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepWhoLib', ['$rootScope', 'platformService', 'userService',
-  function ($rootScope, platformService, userService) {
+.directive('kfKeepWhoLib', ['$rootScope', 'platformService', 'userService', '$location',
+  function ($rootScope, platformService, userService, $location) {
     return {
       restrict: 'A',
       replace: true,
@@ -71,7 +71,9 @@ angular.module('kifi')
         library: '='
       },
       link: function (scope) {
-        scope.onLibraryAttributionClicked = function () {
+        scope.onLibraryAttributionClicked = function ($event) {
+          $event.preventDefault();
+          $location.path(scope.library.path).search('o', 'lac');
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedLibraryAttribution' });
         };
         scope.isBot = platformService.isBot();

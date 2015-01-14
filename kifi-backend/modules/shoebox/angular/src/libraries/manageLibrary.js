@@ -74,19 +74,17 @@ angular.module('kifi')
           }
 
           promise.then(function (resp) {
+            libraryService.fetchLibrarySummaries(true);
+
             scope.$error = {};
-
             submitting = false;
+            scope.close();
 
-            libraryService.fetchLibrarySummaries(true).then(function () {
-              scope.close();
-
-              if (!returnAction) {
-                $location.path(resp.data.url);
-              } else {
-                returnAction();
-              }
-            });
+            if (!returnAction) {
+              $location.path(resp.data.url);
+            } else {
+              returnAction();
+            }
           })['catch'](function (err) {
             submitting = false;
 

@@ -14,7 +14,9 @@ object LibraryFields {
   val descriptionField = "c"
   val descriptionStemmedField = "cs"
   val visibilityField = "v"
+  val kindField = "k"
   val ownerField = "o"
+  val ownerIdField = "oid"
   val usersField = "u"
   val allUsersField = "a"
   val recordField = "rec"
@@ -40,6 +42,24 @@ object LibraryFields {
     }
   }
 
+  object Kind {
+    val SYSTEM_MAIN = 0
+    val SYSTEM_SECRET = 1
+    val USER_CREATED = 2
+
+    @inline def toNumericCode(kind: LibraryKind) = kind match {
+      case LibraryKind.SYSTEM_MAIN => SYSTEM_MAIN
+      case LibraryKind.SYSTEM_SECRET => SYSTEM_SECRET
+      case LibraryKind.USER_CREATED => USER_CREATED
+    }
+
+    @inline def fromNumericCode(kind: Long) = {
+      if (kind == SYSTEM_MAIN) LibraryKind.SYSTEM_MAIN
+      else if (kind == SYSTEM_SECRET) LibraryKind.SYSTEM_SECRET
+      else LibraryKind.USER_CREATED
+    }
+  }
+
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
 
@@ -53,7 +73,11 @@ object LibraryIndexable {
   }
 
   def getVisibility(librarySearcher: Searcher, libId: Long): Option[LibraryVisibility] = {
-    librarySearcher.getLongDocValue(LibraryFields.visibilityField, libId).map(LibraryFields.Visibility.fromNumericCode(_))
+    librarySearcher.getLongDocValue(LibraryFields.visibilityField, libId).map(LibraryFields.Visibility.fromNumericCode)
+  }
+
+  def getKind(librarySearcher: Searcher, libId: Long): Option[LibraryKind] = {
+    librarySearcher.getLongDocValue(LibraryFields.kindField, libId).map(LibraryFields.Kind.fromNumericCode)
   }
 
   def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
@@ -111,7 +135,9 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]
     doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
     doc.add(buildIteratorField(allUsersField, allUsers.iterator) { id => id.id.toString })
 
+    doc.add(buildIdValueField(ownerIdField, library.ownerId))
     doc.add(buildLongValueField(visibilityField, Visibility.toNumericCode(library.visibility)))
+    doc.add(buildLongValueField(kindField, Kind.toNumericCode(library.kind)))
 
     doc.add(buildBinaryDocValuesField(recordField, LibraryRecord(library)))
 

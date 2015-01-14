@@ -4,13 +4,14 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.SystemEmailAddress
-import com.keepit.common.mail.template.{ helpers, EmailToSend }
+import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.template.helpers._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.model.{ LibraryVisibility, LibrarySlug, Library, LibraryRepo, NotificationCategory }
+import com.keepit.model.{ Library, LibrarySlug, LibraryVisibility, NotificationCategory }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
@@ -18,7 +19,6 @@ import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.twirl.api.Html
-import com.keepit.common.mail.template.helpers._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -65,6 +65,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           |<a href="$unsubscribeUrl">Unsubscribe Me</a>
           |<a href="${unsubscribeUrl(id3)}">Unsubscribe User</a>
           |<a href="${unsubscribeUrl(user3.primaryEmail.get)}">Unsubscribe Email</a>
+          |<img src="img.jpg">
         """.stripMargin)
 
         val text1 = Html(
@@ -98,15 +99,16 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         processed.fromName === Some("Bryan!!!")
 
         val output = processed.htmlBody.value
-        output must contain("privacy?utm_source=aboutFriends&utm_medium=email&utm_campaign=socialFriendJoined&utm_content=footerPrivacy")
+        output must contain("privacy?utm_source=aboutFriends&amp;utm_medium=email&amp;utm_campaign=socialFriendJoined&amp;utm_content=footerPrivacy")
         output must contain("<title>Test Email!!!</title>")
         output must contain("Aaron Paul and Bryan Cranston joined!")
         output must contain("Join my library: Avengers Missions")
         output must contain("liburl: http://dev.ezkeep.com:9000/test/avengers")
-        output must contain("""<img src="https://cloudfront/users/1/pics/100/0.jpg" alt="Aaron Paul"/>""")
-        output must contain("""<img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Bryan Cranston"/>""")
-        output must contain("""<img src="https://cloudfront/users/3/pics/100/0.jpg" alt="Anna Gunn"/>""")
-        output must contain("""<img src="https://cloudfront/users/4/pics/100/0.jpg" alt="Dean Norris"/>""")
+        output must contain("""<img src="https://cloudfront/users/1/pics/100/0.jpg" alt="Aaron Paul" />""")
+        output must contain("""<img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Bryan Cranston" />""")
+        output must contain("""<img src="https://cloudfront/users/3/pics/100/0.jpg" alt="Anna Gunn" />""")
+        output must contain("""<img src="https://cloudfront/users/4/pics/100/0.jpg" alt="Dean Norris" />""")
+        output must contain("""<img src="img.jpg" alt="" />""")
 
         val text = processed.textBody.get.value
         text must contain("Bryan Cranston and Aaron Paul joined!")

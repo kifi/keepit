@@ -36,14 +36,6 @@ angular.module('kifi')
         return $document[0].createElement('br');
       }
 
-      function sum(arr, i, j) {
-        var total = 0;
-        for (var k = i; k < j; k++) {
-          total += arr[k];
-        }
-        return total;
-      }
-
       function sizeTo(element, pair) {
         element.css({'font-size': pair[0] + 'px', 'line-height': pair[1] + 'px'});
       }
@@ -58,73 +50,87 @@ angular.module('kifi')
         }
       }
 
-      function balanceTwoLines(element, words) {
-        var widths = measure(element, words);
-        var diff = widths.total - 2 * widths.words[0] - widths.space;
-        for (var i = 1; i < words.length && diff > 0; i++) {
-          var delta = widths.words[i] + widths.space;
-          if (delta < 0.9 * diff) {  // .9 to favor bottom-heavy titles
-            diff -= 2 * delta;
-          } else {
-            break;
-          }
-        }
-        if (i < words.length) {
-          element.empty().append(
-            textNode(words.slice(0, i).join(' ')), br(),
-            textNode(words.slice(i).join(' ')));
-        }
-      }
-
-      function balanceThreeLines(element, words) {
-        var numWords = words.length;
-        var widths = measure(element, words);
-        var ideal = (widths.total - 2 * widths.space) / 3;
-        var best = [0, 0], leastError = Infinity;
-        for (var i = 1; i < numWords - 1; i++) {
-          var line1Error = Math.abs(sum(widths.words, 0, i) - ideal);
-          for (var j = i + 1; j < numWords; j++) {
-            var line2Error = Math.abs(sum(widths.words, i, j) - ideal);
-            var line3Error = Math.abs(sum(widths.words, j, numWords) - ideal);
-            var error = line1Error + line2Error + line3Error;
+      function balanceTwoLines(element, words, boxWidth) {
+        var n = words.length;
+        var rects = measureWords(element, words);
+        var best, leastError = Infinity;
+        for (var i = 1; i < n; i++) {
+          var line1Width = rects[i - 1].right - rects[0].left;
+          var line2Width = rects[n - 1].right - rects[i].left;
+          if (line1Width <= boxWidth && line2Width <= boxWidth) {
+            var error = Math.abs(line1Width - line2Width);
             if (error < leastError) {
               leastError = error;
-              best = [i, j];
+              best = i;
             }
           }
         }
-        element.empty().append(
-          textNode(words.slice(0, best[0]).join(' ')), br(),
-          textNode(words.slice(best[0], best[1]).join(' ')), br(),
-          textNode(words.slice(best[1]).join(' ')));
+        if (best) {
+          element.empty().append(
+            textNode(words.slice(0, best).join(' ')), br(),
+            textNode(words.slice(best).join(' ')));
+        }
       }
 
-      function measure(element, words) {
-        var wordEls = words.map(span);
-        var clone = element.clone().empty().append(wordEls[0]);
-        for (var i = 1; i < wordEls.length; i++) {
-          clone.append(textNode(' '), wordEls[i]);
+      function balanceThreeLines(element, words, boxWidth) {
+        var n = words.length;
+        var rects = measureWords(element, words);
+        var best, leastError = Infinity;
+        for (var i = 1; i < n - 1; i++) {
+          var line1Width = rects[i - 1].right - rects[0].left;
+          if (line1Width <= boxWidth) {
+            for (var j = i + 1; j < n; j++) {
+              var line2Width = rects[j - 1].right - rects[i].left;
+              var line3Width = rects[n - 1].right - rects[j].left;
+              if (line2Width <= boxWidth && line3Width <= boxWidth) {  // jshint ignore:line
+                var error =
+                  Math.abs(line1Width - line2Width) +
+                  Math.abs(line2Width - line3Width) +
+                  Math.abs(line3Width - line1Width);
+                if (error < leastError) {
+                  leastError = error;
+                  best = [i, j];
+                }
+              }
+            }
+          }
         }
-        clone
-          .css({
-            'position': 'absolute',
-            'top': '-99999px',
-            'left': '-99999px',
-            'right': 'auto',
-            'bottom': 'auto',
-            'width': 'auto',
-            'height': 'auto',
-            'visibility': 'hidden'
-          })
-          .insertAfter(element);
-        var totalWidth = clone[0].getBoundingClientRect().width;
-        var wordWidths = wordEls.map(function (el) { return el.getBoundingClientRect().width; });
+        if (best) {
+          element.empty().append(
+            textNode(words.slice(0, best[0]).join(' ')), br(),
+            textNode(words.slice(best[0], best[1]).join(' ')), br(),
+            textNode(words.slice(best[1]).join(' ')));
+        }
+      }
+
+      var measuringCss = {
+        'position': 'absolute',
+        'top': '-99999px',
+        'left': '-99999px',
+        'right': 'auto',
+        'bottom': 'auto',
+        'width': 'auto',
+        'height': 'auto',
+        'visibility': 'hidden'
+      };
+
+      function measureWidth(element, text) {
+        var clone = element.clone().text(text).css(measuringCss).insertAfter(element);
+        var width = clone[0].getBoundingClientRect().width;
         clone.remove();
-        return {
-          words: wordWidths,
-          space: wordWidths.reduce(function (t, w) { return t - w; }, totalWidth) / (words.length - 1),
-          total: totalWidth
-        };
+        return width;
+      }
+
+      function measureWords(element, words) {
+        var wordEls = words.map(span);
+        var nodes = [wordEls[0]];
+        for (var i = 1; i < wordEls.length; i++) {
+          nodes.push(textNode(' '), wordEls[i]);
+        }
+        var clone = element.clone().empty().append(nodes).css(measuringCss).insertAfter(element);
+        var rects = wordEls.map(function (el) { return el.getBoundingClientRect(); });
+        clone.remove();
+        return rects;
       }
 
       function fit(element) {
@@ -135,38 +141,45 @@ angular.module('kifi')
         if (words.length) {
           var lineHeight = parseFloat(element.css('line-height'), 10);
           if (Math.round(element[0].clientHeight / lineHeight) === 1) { // one line
-            var widthPct = measure(element, words).total / boxWidth;
+            var widthPct = measureWidth(element, text) / boxWidth;
             if (widthPct <= 0.75) {
               sizeTo(element, sizes[1][widthPct <= 0.6 ? 1 : 0]);
             } else if (words.length > 1) {
-              balanceTwoLines(element, words);
+              balanceTwoLines(element, words, boxWidth);
             }
           } else if (words.length > 1) {  // multiple words, multiple lines
             // TODO: shrink any long words to container width?
             if (Math.round(boxHeight / lineHeight) === 2 || sizeToUntil(element, sizes[2], 2)) {
-              balanceTwoLines(element, words);
-            } else {
-              sizeToUntil(element, sizes[3], 3);
-              balanceThreeLines(element, words);
+              balanceTwoLines(element, words, boxWidth);
+            } else if (sizeToUntil(element, sizes[3], 3) && words.length > 2) {
+              balanceThreeLines(element, words, boxWidth);
             }
           }
         }
       }
 
+      var block = +attr.block || 0;
       var sizes = {
         1: angular.fromJson(attr[1]).sort(fontSizeAsc),
         2: angular.fromJson(attr[2]).sort(fontSizeDesc),
         3: angular.fromJson(attr[3]).sort(fontSizeDesc)
       };
-      elem.removeAttr('1 2 3').css('visibility', 'hidden');
+      elem.removeAttr('1 2 3 block').css('visibility', 'hidden');
 
       return function postLink(scope, element) {
-        $timeout(function () {  // allowing binding/interpolation to complete
+        function fitAndShow() {
           if (element.attr('kf-fit') !== 'false') {
             fit(element);
           }
           element.css('visibility', '');
-        });
+        }
+
+        if (block > 0) {
+          block--;
+          scope.$evalAsync(fitAndShow);  // blocking on binding/interpolation for first few only
+        } else {
+          $timeout(fitAndShow);
+        }
       };
     }
   };

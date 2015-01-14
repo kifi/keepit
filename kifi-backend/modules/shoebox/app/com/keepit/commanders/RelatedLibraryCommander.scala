@@ -5,8 +5,10 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.cortex.CortexServiceClient
+import com.keepit.curator.LibraryQualityHelper
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
@@ -31,7 +33,8 @@ class RelatedLibraryCommanderImpl @Inject() (
     libCommander: LibraryCommander,
     cortex: CortexServiceClient,
     userCommander: UserCommander,
-    airbrake: AirbrakeNotifier) extends RelatedLibraryCommander {
+    libQualityHelper: LibraryQualityHelper,
+    airbrake: AirbrakeNotifier) extends RelatedLibraryCommander with Logging {
 
   private val DEFAULT_MIN_FOLLOW = 5
   private val RETURN_SIZE = 5
@@ -40,29 +43,38 @@ class RelatedLibraryCommanderImpl @Inject() (
 
   // main method
   def suggestedLibrariesInfo(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[FullLibraryInfo], Seq[RelatedLibraryKind])] = {
+    val t0 = System.currentTimeMillis
     val suggestedLibsFut = suggestedLibraries(libId)
-    val fakeUsers = userCommander.getAllFakeUsers()
-    val nonFakeUserLibsFut = suggestedLibsFut.map { libs => libs.filter(lib => !fakeUsers.contains(lib.library.ownerId)) }
 
+    val fakeUsers = userCommander.getAllFakeUsers()
     val userLibs: Set[Id[Library]] = userIdOpt match {
       case Some(userId) => db.readOnlyReplica { implicit s => libMemRepo.getWithUserId(userId) }.map { _.libraryId }.toSet
       case None => Set()
     }
 
-    nonFakeUserLibsFut
-      .map { libs => libs.filter { case RelatedLibrary(lib, kind) => !userLibs.contains(lib.id.get) }.take(RETURN_SIZE) }
+    def filterUnwantedRelatedLibs(relatedLibs: Seq[RelatedLibrary]) = {
+      relatedLibs.filter {
+        case RelatedLibrary(lib, kind) =>
+          !fakeUsers.contains(lib.ownerId) &&
+            !userLibs.contains(lib.id.get) &&
+            !libQualityHelper.isBadLibraryName(lib.name)
+      }
+    }
+
+    suggestedLibsFut
+      .map { libs => filterUnwantedRelatedLibs(libs).take(RETURN_SIZE) }
       .flatMap { relatedLibs =>
-        val libs = relatedLibs.map { _.library }
-        val kinds = relatedLibs.map { _.kind }
+        val t1 = System.currentTimeMillis
+        val (libs, kinds) = relatedLibs.map { x => (x.library, x.kind) }.unzip
         val fullInfosFut = libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize, withKeepTime = true).map { _.map { _._2 } }
         fullInfosFut.map { info =>
-          try {
-            assert(info.size == kinds.size)
-            (info, kinds)
-          } catch {
-            case ex: Exception =>
-              airbrake.notify(s"error in getting suggested libraries for lib ${libId}, user: ${userIdOpt}. Assertion failed.")
-              (Seq(), Seq())
+          val t2 = System.currentTimeMillis
+          statsd.timing("commander.RelatedLibraryCommander.getSuggestedLibs", t1 - t0, 1.0)
+          statsd.timing("commander.RelatedLibraryCommander.getFullLibInfo", t2 - t1, 1.0)
+          if (info.size == kinds.size) (info, kinds)
+          else {
+            airbrake.notify(s"error in getting suggested libraries for lib ${libId}, user: ${userIdOpt}. info array and kinds array do not match in size.")
+            (Seq(), Seq())
           }
         }
       }
