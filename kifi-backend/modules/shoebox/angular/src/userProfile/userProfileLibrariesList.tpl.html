@@ -7,11 +7,15 @@
         <div class="kf-upl-card-cover-image" ng-attr-style="background-image:url({{lib.imageUrl}});background-position:{{lib.image.x}}% {{lib.image.y}}%" ng-if="lib.image"></div>
       </div>
       <div class="kf-upl-card-name" ng-attr-kf-fit="{{['system_main','system_secret'].indexOf(lib.kind) < 0}}" 1="[[24,29],[28,32]]" 2="[[19,25],[18,24],[17,23],[16,22]]" 3="[[15,19]]" block="3">{{lib.name}}</div>
-      <div class="kf-upl-counts">
-        <ng-pluralize class="kf-upl-count" count="lib.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}"></ng-pluralize>
-        <ng-pluralize class="kf-upl-count" count="lib.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}" ng-if="lib.numFollowers > 0"></ng-pluralize>
-      </div>
     </a>
+    <div class="kf-upl-counts">
+      <a href="{{lib.path}}" ng-click="trackUplCardClick(lib)">
+        <ng-pluralize class="kf-upl-count" count="lib.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}"></ng-pluralize>
+      </a>
+      <a href="javascript:" ng-click="openFollowersList(lib)">
+        <ng-pluralize class="kf-upl-count" count="lib.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}" ng-if="lib.numFollowers > 0"></ng-pluralize>
+      </a>
+    </div>
     <div itemscope itemtype="http://data-vocabulary.org/Person">
       <a class="kf-upl-card-owner-pic-a" href="{{lib.ownerProfileUrl}}" ng-click="trackProfileClick()" itemprop="url" ng-if="libraryType !== 'own'">
         <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" itemprop="photo">
@@ -28,7 +32,7 @@
           <ng-pluralize class="kf-upl-all-followers" count="lib.numFollowers" when="{'1':'follows this library','other':'are following'}"></ng-pluralize>
         </span>
         <span ng-if="lib.numFollowers > lib.followers.length">
-          + {{lib.numFollowers - lib.followers.length}} are following
+          <a href="javascript:" ng-click="openFollowersList(lib)" class="kf-upl-followers-number">+ {{lib.numFollowers - lib.followers.length}}</a> are following
         </span>
       </div>
       <div class="kf-upl-updated" ng-switch-when="updated">
