@@ -169,6 +169,10 @@ angular.module('kifi')
     $scope.libraryType = $state.current.data.libraryType;
     $scope.libraries = null;
 
+    function removeDeletedLibrary(event, libraryId) {
+      _.remove($scope.libraries, { id: libraryId });
+    }
+
     var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
       if (/^userProfile\.libraries\./.test(toState.name)) {
         $scope.libraryType = toState.data.libraryType;
@@ -176,6 +180,9 @@ angular.module('kifi')
       }
     });
     $scope.$on('$destroy', deregister$stateChangeSuccess);
+
+    var deregisterLibraryDeleted = $rootScope.$on('libraryDeleted', removeDeletedLibrary);
+    $scope.$on('$destroy', deregisterLibraryDeleted);
 
     $scope.fetchLibraries = function () {
       if (loading) {
