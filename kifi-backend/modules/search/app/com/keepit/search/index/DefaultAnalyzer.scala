@@ -108,40 +108,40 @@ object DefaultAnalyzer {
         }
     }
 
-  val defaultAnalyserWithDefaultStemmer = defaultAnalyzer.withFilter[ICUFoldingFilter]
+  val defaultAnalyserWithStemmer = defaultAnalyzer.withFilter[ICUFoldingFilter]
 
-  val langAnalyzerWithDefaultStemmer = langAnalyzers.mapValues(_.withFilter[ICUFoldingFilter])
-
-  val langAnalyzerWithStemmer = langAnalyzerWithDefaultStemmer ++ Map[String, Analyzer](
-    "ar" -> langAnalyzers("ar").withFilter[ArabicStemFilter],
-    "bg" -> langAnalyzers("bg").withFilter[BulgarianStemFilter],
-    "cs" -> langAnalyzers("cs").withFilter[CzechStemFilter],
-    "da" -> langAnalyzers("da").withStemFilter(_.Danish),
-    "de" -> langAnalyzers("de").withFilter[GermanLightStemFilter],
-    "el" -> langAnalyzers("el").withFilter[GreekStemFilter],
-    "en" -> langAnalyzers("en").withFilter[KStemFilter].withFilter[EnglishMinimalStemFilter].withFilter[ApostropheFilter],
-    "es" -> langAnalyzers("es").withFilter[SpanishLightStemFilter],
-    "fi" -> langAnalyzers("fi").withFilter[FinnishLightStemFilter],
-    "fr" -> langAnalyzers("fr").withFilter[FrenchLightStemFilter],
-    "hi" -> langAnalyzers("hi").withFilter[HindiStemFilter],
-    "hu" -> langAnalyzers("hu").withFilter[HungarianLightStemFilter],
-    "id" -> langAnalyzers("id").withFilter[IndonesianStemFilter],
-    "it" -> langAnalyzers("it").withFilter[ItalianLightStemFilter],
-    "ja" -> langAnalyzers("ja").withFilter[JapaneseReadingFormFilter],
-    "lv" -> langAnalyzers("lv").withFilter[LatvianStemFilter],
-    "nl" -> langAnalyzers("nl").withStemFilter(_.Dutch),
-    "no" -> langAnalyzers("no").withFilter[NorwegianLightStemFilter],
-    "pt" -> langAnalyzers("pt").withFilter[PortugueseLightStemFilter],
-    "ro" -> langAnalyzers("ro").withStemFilter(_.Romanian),
-    "ru" -> langAnalyzers("ru").withFilter[RussianLightStemFilter],
-    "sv" -> langAnalyzers("sv").withFilter[SwedishLightStemFilter],
-    "tr" -> langAnalyzers("tr").withStemFilter(_.Turkish)
-  )
+  val langAnalyzerWithStemmer = {
+    langAnalyzers ++ Map[String, Analyzer](
+      "ar" -> langAnalyzers("ar").withFilter[ArabicStemFilter],
+      "bg" -> langAnalyzers("bg").withFilter[BulgarianStemFilter],
+      "cs" -> langAnalyzers("cs").withFilter[CzechStemFilter],
+      "da" -> langAnalyzers("da").withStemFilter(_.Danish),
+      "de" -> langAnalyzers("de").withFilter[GermanLightStemFilter],
+      "el" -> langAnalyzers("el").withFilter[GreekStemFilter],
+      "en" -> langAnalyzers("en").withFilter[KStemFilter].withFilter[EnglishMinimalStemFilter].withFilter[ApostropheFilter],
+      "es" -> langAnalyzers("es").withFilter[SpanishLightStemFilter],
+      "fi" -> langAnalyzers("fi").withFilter[FinnishLightStemFilter],
+      "fr" -> langAnalyzers("fr").withFilter[FrenchLightStemFilter],
+      "hi" -> langAnalyzers("hi").withFilter[HindiStemFilter],
+      "hu" -> langAnalyzers("hu").withFilter[HungarianLightStemFilter],
+      "id" -> langAnalyzers("id").withFilter[IndonesianStemFilter],
+      "it" -> langAnalyzers("it").withFilter[ItalianLightStemFilter],
+      "ja" -> langAnalyzers("ja").withFilter[JapaneseReadingFormFilter],
+      "lv" -> langAnalyzers("lv").withFilter[LatvianStemFilter],
+      "nl" -> langAnalyzers("nl").withStemFilter(_.Dutch),
+      "no" -> langAnalyzers("no").withFilter[NorwegianLightStemFilter],
+      "pt" -> langAnalyzers("pt").withFilter[PortugueseLightStemFilter],
+      "ro" -> langAnalyzers("ro").withStemFilter(_.Romanian),
+      "ru" -> langAnalyzers("ru").withFilter[RussianLightStemFilter],
+      "sv" -> langAnalyzers("sv").withFilter[SwedishLightStemFilter],
+      "tr" -> langAnalyzers("tr").withStemFilter(_.Turkish)
+    )
+  }.mapValues(_.withFilter[ICUFoldingFilter])
 
   val languages: Set[Lang] = langAnalyzers.keySet.map(Lang(_))
 
   def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, defaultAnalyzer)
-  def getAnalyzerWithStemmer(lang: Lang): Analyzer = langAnalyzerWithStemmer.getOrElse(lang.lang, defaultAnalyserWithDefaultStemmer)
+  def getAnalyzerWithStemmer(lang: Lang): Analyzer = langAnalyzerWithStemmer.getOrElse(lang.lang, defaultAnalyserWithStemmer)
 }
 
 class Analyzer(tokenizerFactory: TokenizerFactory,
