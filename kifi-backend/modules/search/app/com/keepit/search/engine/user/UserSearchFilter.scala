@@ -1,14 +1,14 @@
-package com.keepit.search.index.user
+package com.keepit.search.engine.user
 
-import com.keepit.search.util.IdFilterCompressor
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.model.User
-import com.google.inject.{ Inject, Singleton }
+import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future, Promise }
 
 abstract case class UserSearchFilter(
     userId: Option[Id[User]],

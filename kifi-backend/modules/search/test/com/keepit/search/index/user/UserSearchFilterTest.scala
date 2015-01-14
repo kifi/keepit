@@ -1,5 +1,6 @@
 package com.keepit.search.index.user
 
+import com.keepit.search.engine.user.UserSearchFilterFactory
 import org.specs2.mutable.Specification
 import com.keepit.model.{ Username, User }
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
