@@ -211,6 +211,7 @@ class ScraperServiceClientImpl @Inject() (
   }
 
   def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
+    // todo: Bad API, NormalizedURI isn't needed anymore. Just JSON with id, uri, and externalId. Fix soon?
     val payload = Json.obj("uri" -> uri, "minSize" -> minSize, "descriptionOnly" -> descriptionOnly)
     call(Scraper.internal.getURISummaryFromEmbedly, payload, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
       r.json.as[Option[URISummary]]
