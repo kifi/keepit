@@ -549,6 +549,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         (resultJson4 \ "own").as[Seq[JsObject]].length === 1
         (resultJson4 \ "following").as[Seq[JsObject]].length === 1
         (resultJson4 \ "invited").as[Seq[JsObject]].length === 0
+
+        val request5 = FakeRequest("GET", testPath)
+        val result5 = libraryController.getProfileLibraries(user2.username, 0, 10, "following")(request5)
+        status(result5) must equalTo(OK)
+        contentType(result5) must beSome("application/json")
+        val result5Json = (contentAsJson(result5) \ "following").as[Seq[JsObject]]
+        (result5Json.head \ "name").as[String] === "lib1"
+        (result5Json.head \ "numFollowers").as[Int] === 1
+        (result5Json.head \ "following").as[Boolean] === true
       }
     }
 
