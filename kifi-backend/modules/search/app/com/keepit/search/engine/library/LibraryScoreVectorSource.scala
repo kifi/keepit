@@ -33,8 +33,8 @@ class LibraryScoreVectorSource(
     if (pq.size <= 0) return // no scorer
 
     val visibilityDocValues = reader.getNumericDocValues(LibraryFields.visibilityField)
-    val libraryRecordDocValues = reader.getBinaryDocValues(LibraryFields.recordField)
-    val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(libraryRecordDocValues, visibilityDocValues)
+    val ownerIdDocValues = reader.getNumericDocValues(LibraryFields.ownerIdField)
+    val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(ownerIdDocValues, visibilityDocValues)
 
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter

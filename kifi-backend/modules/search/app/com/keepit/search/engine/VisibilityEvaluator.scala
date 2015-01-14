@@ -36,12 +36,12 @@ trait VisibilityEvaluator { self: DebugOption =>
       visibilityDocValues)
   }
 
-  protected def getLibraryVisibilityEvaluator(libraryRecordDocValues: BinaryDocValues, visibilityDocValues: NumericDocValues): LibraryVisibilityEvaluator = {
+  protected def getLibraryVisibilityEvaluator(ownerIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): LibraryVisibilityEvaluator = {
     new LibraryVisibilityEvaluator(
       myOwnLibraryIds,
       memberLibraryIds,
       myFriendIds,
-      libraryRecordDocValues,
+      ownerIdDocValues,
       visibilityDocValues)
   }
 
@@ -98,7 +98,7 @@ final class LibraryVisibilityEvaluator(
     myOwnLibraryIds: LongArraySet,
     memberLibraryIds: LongArraySet,
     myFriendIds: LongArraySet,
-    libraryRecordDocValues: BinaryDocValues,
+    ownerIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
@@ -112,11 +112,8 @@ final class LibraryVisibilityEvaluator(
       }
     } else {
       if (visibilityDocValues.get(docId) == published) {
-        val ownerId = {
-          val ref = libraryRecordDocValues.get(docId)
-          LibraryRecord.fromByteArray(ref.bytes, ref.offset, ref.length).ownerId
-        }
-        if (myFriendIds.findIndex(ownerId.id) >= 0) {
+        val ownerId = ownerIdDocValues.get(docId)
+        if (myFriendIds.findIndex(ownerId) >= 0) {
           Visibility.NETWORK // a published library owned by my friend
         } else {
           Visibility.OTHERS // another published library
