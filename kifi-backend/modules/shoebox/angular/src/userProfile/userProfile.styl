@@ -48,6 +48,7 @@
 
   &.add-friend
     sprite2x($add-friend)
+    width: 36px
 
   &.already-friends
     sprite2x($add-friend-active)
@@ -94,12 +95,10 @@
   position: absolute
   top: -5px
   left: 75px
-  width: 13px
-  height: 9px
+  sprite2x($white-checkmark)
+  width: 14px
+  height: 10px
   opacity: 0
-  background-size: cover
-  background-repeat: no-repeat
-  background-image: url('../img/checkmark.png')
 
 .kf-user-profile-action-menu
   height: 0px
