@@ -20,7 +20,7 @@ object UserFields {
   val recordField = "rec"
   val experimentsField = "exp"
 
-  val nameSearchFields = Set(nameField)
+  val nameSearchFields = Set(nameField, nameStemmedField)
 
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
