@@ -112,9 +112,8 @@ angular.module('kifi')
           library: library,
           returnAction: function () {
             libraryService.getLibraryById(library.id, true).then(function (data) {
-              var followersList = library.followers; // contains userPicture
-              _.assign(library, data.library); // replaces all new data (data.library.followers does not have userPicture)
-              library.followers = followersList; // reset userPicture
+              var followersList = library.followers; // contains picUrl for each follower
+              _.assign(library, data.library, {followers: followersList}); // replaces all new data (but data.library.followers does not have picUrl)
               library.listed = data.listed;
               library.path = data.library.url;
             })['catch'](modalService.openGenericErrorModal);
