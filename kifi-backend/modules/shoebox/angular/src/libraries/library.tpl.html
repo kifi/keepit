@@ -14,7 +14,7 @@
   </div>
 
   <div class="kf-main-library-keeps" ng-if="page === 'library'" ng-class="{'library-search': librarySearch}">
-    <div class="kf-library-body">
+    <div class="kf-library-body clearfix">
       <div ui-view></div>
       <div kf-related-libraries ng-if="!userLoggedIn && relatedLibraries" ng-hide="librarySearch"
         related-libraries="relatedLibraries" parent-library="library">
