@@ -69,7 +69,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
     }
     val shardedCollectionIndexer = new ShardedCollectionIndexer(collectionIndexers.toMap, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
-    val userIndexer = new UserIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val userIndexer = new UserIndexer(new VolatileIndexDirectory, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
     val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val userGraphsSearcherFactory = new UserGraphsSearcherFactory(userGraphIndexer, searchFriendIndexer)

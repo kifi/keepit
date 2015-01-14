@@ -90,7 +90,7 @@ class KeepImageCommanderImpl @Inject() (
   def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String] = {
     imageInfoRepo.getLargestByUriWithPriority(nUriId).flatMap { imageInfo =>
       val nuri = normalizedUriRepo.get(nUriId)
-      s3UriImageStore.getImageURL(imageInfo, nuri)
+      s3UriImageStore.getImageURL(imageInfo, nuri.externalId)
     }
   }
 

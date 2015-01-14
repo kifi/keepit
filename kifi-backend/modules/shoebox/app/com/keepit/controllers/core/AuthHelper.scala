@@ -254,6 +254,9 @@ class AuthHelper @Inject() (
 
   def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo, libraryPublicId: Option[PublicId[Library]])(implicit request: MaybeUserRequest[JsValue]): Result = {
     require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
+
+    // The below logic needs to happen for password-less social signups (Aaron!!)
+
     val identity = request.identityOpt.get
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build

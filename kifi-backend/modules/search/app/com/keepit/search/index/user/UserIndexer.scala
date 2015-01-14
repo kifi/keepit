@@ -1,190 +1,78 @@
 package com.keepit.search.index.user
 
-import com.keepit.common.db.{ ExternalId, Id, SequenceNumber, State }
-import com.keepit.model.{ Username, User, ExperimentType }
-import com.keepit.social.BasicUser
-import com.keepit.search.index.{ IndexDirectory, Indexable, Indexer, DefaultAnalyzer }
-import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
+import com.google.inject.Inject
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.db.SequenceNumber
+import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.SchedulingProperties
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.model.User
+import com.keepit.search.index._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.concurrent.Future
-import com.keepit.model.UserStates._
-import com.keepit.search.index.IndexInfo
-import com.keepit.typeahead.PrefixFilter
-import com.keepit.common.mail.EmailAddress
-import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 
-object UserIndexer {
+class UserIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient, val airbrake: AirbrakeNotifier) extends Indexer[User, User, UserIndexer](indexDirectory, UserFields.decoders) {
+  val name = "UserIndexer"
+  def update(): Int = throw new UnsupportedOperationException()
 
-  val PREFIX_MAX_LEN = 8 // do not change this number unless you do reindexing immediately
-  val nameField = "t"
-  val namePrefixField = "tp"
-  val emailsField = "e"
-  val recordField = "rec"
-  val experimentsField = "exp"
+  import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-  val toBeDeletedStates = Set[State[User]](INACTIVE, PENDING, BLOCKED, INCOMPLETE_SIGNUP)
-  val nameSearchFields = Set(nameField)
-}
-
-object BasicUserSerializer {
-  def toByteArray(basicUser: BasicUser): Array[Byte] = {
-    val bos = new ByteArrayOutputStream()
-    val oos = new OutputStreamDataOutput(bos)
-    oos.writeByte(2) // version
-    oos.writeString(basicUser.externalId.toString)
-    oos.writeString(basicUser.firstName)
-    oos.writeString(basicUser.lastName)
-    oos.writeString(basicUser.pictureName)
-    oos.writeString(basicUser.username.value)
-    oos.close()
-    bos.close()
-    bos.toByteArray()
-  }
-
-  def fromByteArray(bytes: Array[Byte], offset: Int, length: Int): BasicUser = {
-    val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
-
-    val version = in.readByte().toInt
-
-    version match {
-      case 1 => // pre-username
-        BasicUser(
-          externalId = ExternalId[User](in.readString),
-          firstName = in.readString,
-          lastName = in.readString,
-          pictureName = in.readString,
-          username = Username("")
-        )
-      case 2 => // with username
-        BasicUser(
-          externalId = ExternalId[User](in.readString),
-          firstName = in.readString,
-          lastName = in.readString,
-          pictureName = in.readString,
-          username = {
-            val u = in.readString
-            Username(u)
-          }
-        )
-      case _ =>
-        throw new Exception(s"invalid data [version=${version}]")
-    }
-  }
-}
-
-class UserIndexer(
-    indexDirectory: IndexDirectory,
-    override val airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient) extends Indexer[User, User, UserIndexer](indexDirectory) {
-
-  import UserIndexer._
-
-  override val commitBatchSize = 50
-  private val fetchSize = 250
-
-  def update(): Int = updateLock.synchronized {
+  def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
-
-    var total = 0
-    var done = false
-    while (!done) {
-      total += doUpdate("UserIndex") {
-        val info = getUsersInfo(fetchSize)
-        log.info(s"${info.size} users to be indexed")
-        done = info.isEmpty
-        info.toIterator.map { x => buildIndexable(x.user, x.basicUser, x.emails, x.experiments) }
-      }
+    val fetchSize = commitBatchSize
+    fetchIndexables(sequenceNumber, fetchSize).map {
+      case (indexables, exhausted) =>
+        processIndexables(indexables)
+        exhausted
     }
-    total
+  }
+
+  private def fetchIndexables(seq: SequenceNumber[User], fetchSize: Int): Future[(Seq[UserIndexable], Boolean)] = {
+    shoebox.getUserIndexable(sequenceNumber, fetchSize).flatMap {
+      case Seq() => Future.successful((Seq.empty[UserIndexable], true))
+      case users =>
+        val userIds = users.map(_.id.get)
+        val futureEmails = shoebox.getEmailAddressesForUsers(userIds)
+        val futureExperiments = shoebox.getExperimentsByUserIds(userIds)
+        for {
+          emailsByUserId <- futureEmails
+          experimentsByUserId <- futureExperiments
+        } yield {
+          val indexables = users.map { user =>
+            val emails = emailsByUserId.getOrElse(user.id.get, Seq.empty).toSet
+            val experiments = experimentsByUserId.getOrElse(user.id.get, Set.empty)
+            new UserIndexable(user, emails, experiments)
+          }
+
+          val exhausted = users.length < fetchSize
+          (indexables, exhausted)
+        }
+    }
+  }
+
+  private def processIndexables(indexables: Seq[UserIndexable]): Int = updateLock.synchronized {
+    doUpdate(name)(indexables.iterator)
   }
 
   override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos("UserIndex" + name)
-  }
-
-  case class UserInfo(user: User, basicUser: BasicUser, emails: Seq[EmailAddress], experiments: Seq[ExperimentType])
-
-  private def getUsersInfo(fetchSize: Int): Seq[UserInfo] = {
-    val usersFuture = shoeboxClient.getUserIndexable(sequenceNumber, fetchSize)
-
-    val infoFuture = usersFuture.flatMap { users =>
-      if (users.isEmpty) Future.successful(Seq[UserInfo]())
-      else {
-        val userIds = users.map(_.id.get)
-        val emailsFuture = shoeboxClient.getEmailAddressesForUsers(userIds)
-        val experimentsFuture = shoeboxClient.getExperimentsByUserIds(userIds)
-
-        val infoFuture = for {
-          emails <- emailsFuture
-          experiments <- experimentsFuture
-        } yield {
-          users.flatMap { user =>
-            val id = user.id.get
-            (BasicUser.fromUser(user), emails.get(id), experiments.get(id)) match {
-              case (basicUser, Some(emails), Some(exps)) => Some(UserInfo(user, basicUser, emails, exps.toSeq))
-              case _ => None
-            }
-          }
-        }
-        infoFuture
-      }
-    }
-    Await.result(infoFuture, 5 seconds)
-  }
-
-  def buildIndexable(user: User, basicUser: BasicUser, emails: Seq[EmailAddress], experiments: Seq[ExperimentType]): UserIndexable = {
-    new UserIndexable(
-      id = user.id.get,
-      sequenceNumber = user.seq,
-      isDeleted = toBeDeletedStates.contains(user.state),
-      user = user,
-      basicUser = basicUser,
-      emails = emails,
-      experiments = experiments
-    )
-  }
-
-  val analyzer = DefaultAnalyzer.defaultAnalyzer
-
-  class UserIndexable(
-      override val id: Id[User],
-      override val sequenceNumber: SequenceNumber[User],
-      override val isDeleted: Boolean,
-      val user: User,
-      val basicUser: BasicUser,
-      val emails: Seq[EmailAddress],
-      val experiments: Seq[ExperimentType]) extends Indexable[User, User] {
-
-    private def genPrefix(user: User): Set[String] = {
-      val tokens = PrefixFilter.tokenize(user.firstName + " " + user.lastName).map { _.take(PREFIX_MAX_LEN) }
-      val prefixes = tokens.flatMap { token => (0 until token.length).map { i => token.slice(0, i + 1) } }
-      prefixes.toSet
-    }
-
-    override def buildDocument = {
-      val doc = super.buildDocument
-
-      val userNameField = buildTextField(nameField, user.firstName + " " + user.lastName, analyzer)
-      doc.add(userNameField)
-
-      val emailField = buildIteratorField[String](emailsField, emails.map { _.address.toLowerCase }.toIterator)(x => x)
-      doc.add(emailField)
-
-      val expField = buildIteratorField[String](experimentsField, experiments.map { _.value }.toIterator)(x => x)
-      doc.add(expField)
-
-      val basicUserField = buildBinaryDocValuesField(recordField, BasicUserSerializer.toByteArray(basicUser))
-      doc.add(basicUserField)
-
-      val prefixField = buildIteratorField[String](namePrefixField, genPrefix(user).toIterator)(x => x)
-      doc.add(prefixField)
-
-      doc
-    }
+    super.indexInfos(this.name)
   }
 }
+
+class UserIndexerActor @Inject() (
+    airbrake: AirbrakeNotifier,
+    indexer: UserIndexer) extends CoordinatingIndexerActor(airbrake, indexer) with Logging {
+
+  protected def update(): Future[Boolean] = indexer.asyncUpdate()
+}
+
+trait UserIndexerPlugin extends IndexerPlugin[User, UserIndexer]
+
+class UserIndexerPluginImpl @Inject() (
+  actor: ActorInstance[UserIndexerActor],
+  indexer: UserIndexer,
+  airbrake: AirbrakeNotifier,
+  serviceDiscovery: ServiceDiscovery,
+  val scheduling: SchedulingProperties) extends IndexerPluginImpl(indexer, actor, serviceDiscovery) with UserIndexerPlugin
 

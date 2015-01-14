@@ -1,10 +1,12 @@
 package com.keepit.commanders
 
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.performance._
 
 import java.awt.image.BufferedImage
 
 import com.keepit.common.logging.Logging
+import com.kifi.macros.json
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
@@ -22,8 +24,7 @@ import com.keepit.common.net.URI
 
 @ImplementedBy(classOf[ScraperURISummaryCommanderImpl])
 trait ScraperURISummaryCommander {
-  def fetchFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]]
-  def fetchPageInfoAndImageInfo(nUri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[(Option[PageInfo], Option[ImageInfo])]
+  def fetchFromEmbedly(uri: NormalizedURIRef, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]]
 }
 
 class ScraperURISummaryCommanderImpl @Inject() (
@@ -33,57 +34,7 @@ class ScraperURISummaryCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander with Logging {
 
-  private def partitionImages(imgsInfo: Seq[ImageInfo], minSize: ImageSize): (Seq[ImageInfo], Option[ImageInfo]) = {
-    val smallImages = imgsInfo.takeWhile(!meetsSizeConstraint(_, minSize))
-    (smallImages, imgsInfo.drop(smallImages.size).headOption)
-  }
-
-  private def fetchAndSaveImage(uri: NormalizedURI, imageInfo: ImageInfo): Future[Option[ImageInfo]] = {
-    imageInfo.url match {
-      case Some(imageUrl) => imageFetcher.fetchRawImage(URI.parse(imageUrl).get) map { rawImageOpt =>
-        rawImageOpt flatMap { rawImage => storeImage(imageInfo, rawImage, uri) }
-      }
-      case None => Future.successful(None)
-    }
-  }
-
-  /**
-   * Stores image to S3
-   */
-  private def storeImage(info: ImageInfo, image: BufferedImage, nUri: NormalizedURI): Option[ImageInfo] = {
-    uriImageStore.storeImage(info, image, nUri) match {
-      case Success(result) =>
-        val (url, size) = result
-        val imageInfoWithUrl = if (info.url.isEmpty) info.copy(url = Some(url), size = Some(size)) else info
-        Some(imageInfoWithUrl)
-      case Failure(ex) =>
-        airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage}")
-        None
-    }
-  }
-
-  /**
-   * Get S3 url for image info
-   */
-  private def getS3URL(info: ImageInfo, nUri: NormalizedURI): Option[String] = uriImageStore.getImageURL(info, nUri)
-
-  private def meetsSizeConstraint(info: ImageInfo, size: ImageSize): Boolean = {
-    for {
-      width <- info.width
-      height <- info.height
-    } yield {
-      return (width > size.width && height > size.height)
-    }
-    false
-  }
-
-  private def fetchSmallImage(uri: NormalizedURI, imageInfo: ImageInfo): Unit = {
-    fetchAndSaveImage(uri, imageInfo) map { imageInfoOpt =>
-      imageInfoOpt foreach { info => callback.saveImageInfo(info) }
-    }
-  }
-
-  override def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
+  def fetchFromEmbedly(nUri: NormalizedURIRef, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
     fetchPageInfoAndImageInfo(nUri, minSize, descriptionOnly) map {
       case (Some(pageInfo), imageInfoOpt) =>
         callback.savePageInfo(pageInfo) // no wait
@@ -103,20 +54,19 @@ class ScraperURISummaryCommanderImpl @Inject() (
     }
   }
 
-  override def fetchPageInfoAndImageInfo(nUri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[(Option[PageInfo], Option[ImageInfo])] = {
+  private def fetchPageInfoAndImageInfo(nUri: NormalizedURIRef, minSize: ImageSize, descriptionOnly: Boolean): Future[(Option[PageInfo], Option[ImageInfo])] = {
     val watch = Stopwatch(s"[embedly] asking for $nUri with minSize $minSize, descriptionOnly $descriptionOnly")
     val fullEmbedlyInfo = embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
       watch.logTimeWith(s"got info: $embedlyInfoOpt") //this could be lots of logging, should remove it after problems resolved
 
       val summaryOptF = for {
-        nUriId <- nUri.id
         embedlyInfo <- embedlyInfoOpt
       } yield {
         val imageInfoOptF: Future[Option[ImageInfo]] = {
           if (descriptionOnly) {
             Future.successful(None)
           } else {
-            val images = embedlyInfo.buildImageInfo(nUriId)
+            val images = embedlyInfo.buildImageInfo(nUri.id)
             val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.filterImageByUrl) }
             val (smallImages, selectedImageOpt) = partitionImages(nonBlankImages, minSize)
 
@@ -141,7 +91,7 @@ class ScraperURISummaryCommanderImpl @Inject() (
             }
           }
         }
-        imageInfoOptF map { imageInfoOpt => (Some(embedlyInfo.toPageInfo(nUriId)), imageInfoOpt) }
+        imageInfoOptF map { imageInfoOpt => (Some(embedlyInfo.toPageInfo(nUri.id)), imageInfoOpt) }
       }
       summaryOptF getOrElse Future.successful((None, None))
     }
@@ -149,6 +99,56 @@ class ScraperURISummaryCommanderImpl @Inject() (
       watch.stop()
     }
     fullEmbedlyInfo
+  }
+
+  private def partitionImages(imgsInfo: Seq[ImageInfo], minSize: ImageSize): (Seq[ImageInfo], Option[ImageInfo]) = {
+    val smallImages = imgsInfo.takeWhile(!meetsSizeConstraint(_, minSize))
+    (smallImages, imgsInfo.drop(smallImages.size).headOption)
+  }
+
+  private def fetchAndSaveImage(uri: NormalizedURIRef, imageInfo: ImageInfo): Future[Option[ImageInfo]] = {
+    imageInfo.url match {
+      case Some(imageUrl) => imageFetcher.fetchRawImage(URI.parse(imageUrl).get) map { rawImageOpt =>
+        rawImageOpt flatMap { rawImage => storeImage(imageInfo, rawImage, uri) }
+      }
+      case None => Future.successful(None)
+    }
+  }
+
+  /**
+   * Stores image to S3
+   */
+  private def storeImage(info: ImageInfo, image: BufferedImage, nUri: NormalizedURIRef): Option[ImageInfo] = {
+    uriImageStore.storeImage(info, image, nUri.externalId) match {
+      case Success(result) =>
+        val (url, size) = result
+        val imageInfoWithUrl = if (info.url.isEmpty) info.copy(url = Some(url), size = Some(size)) else info
+        Some(imageInfoWithUrl)
+      case Failure(ex) =>
+        airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage}")
+        None
+    }
+  }
+
+  /**
+   * Get S3 url for image info
+   */
+  private def getS3URL(info: ImageInfo, nUri: NormalizedURIRef): Option[String] = uriImageStore.getImageURL(info, nUri.externalId)
+
+  private def meetsSizeConstraint(info: ImageInfo, size: ImageSize): Boolean = {
+    for {
+      width <- info.width
+      height <- info.height
+    } yield {
+      return (width > size.width && height > size.height)
+    }
+    false
+  }
+
+  private def fetchSmallImage(uri: NormalizedURIRef, imageInfo: ImageInfo): Unit = {
+    fetchAndSaveImage(uri, imageInfo) map { imageInfoOpt =>
+      imageInfoOpt foreach { info => callback.saveImageInfo(info) }
+    }
   }
 
 }
@@ -168,3 +168,6 @@ object ScraperURISummaryCommander {
     }
   }
 }
+
+@json case class NormalizedURIRef(id: Id[NormalizedURI], url: String, externalId: ExternalId[NormalizedURI])
+

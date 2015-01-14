@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfSticky', [
-  '$window', '$timeout',
-  function ($window, $timeout) {
+  '$window', '$timeout', 'platformService',
+  function ($window, $timeout, platformService) {
     return {
       restrict: 'A',
       scope: {
@@ -35,6 +35,7 @@ angular.module('kifi')
         }
 
         var isWidthCalculated = scope.stickyWidthMode === 'calculated';
+        var isMobile = platformService.isSupportedMobilePlatform();
 
         var marginTop, marginLeft,
           borderLeftWidth, borderTopWidth, borderRightWidth, borderBottomWidth,
@@ -49,8 +50,7 @@ angular.module('kifi')
           borderRightWidth = getCssPixelProperty('borderRightWidth');
           borderBottomWidth = getCssPixelProperty('borderBottomWidth');
 
-          // This timeout is needed for mobile Safari.
-          $timeout(function () {
+          function update() {
             offsetTop = element.offset().top - marginTop;
             offsetLeft = element.offset().left - marginLeft;
 
@@ -58,7 +58,16 @@ angular.module('kifi')
               width = element.width() + borderLeftWidth + borderRightWidth;
             }
             height = element.height() + borderTopWidth + borderBottomWidth;
-          });
+          }
+
+          // This timeout is needed for mobile Safari.
+          if (isMobile) {
+            $timeout(update);
+          } else {
+            // on desktop, the offsetTop calculation gradually increases in value every time updateProperties is called
+            // and becomes very different from what the actual offset is
+            update();
+          }
         }
         updateProperties();
 
@@ -74,6 +83,11 @@ angular.module('kifi')
         var unregister;
 
         function onScroll(e) {
+          // delay offset calculation until the first scroll b/c the initial value is off for libraries with images
+          if (!offsetTop) {
+            updateProperties();
+          }
+
           var deltaY = e && e.originalEvent.deltaY || 0;
           var originalWindowTopOffset = offsetTop - $win.scrollTop() - deltaY;
           if (originalWindowTopOffset <= scope.maxTop) {
@@ -168,8 +182,17 @@ angular.module('kifi')
           }, 2000);
         }
 
+        // changes to the page, such as images loading before the sticky element, may change the offset,
+        // so update the properties periodically
+        var debouncedUpdateProperties = _.debounce(function () {
+          if (!sticking) {
+            updateProperties();
+          }
+        }, 100);
+
         // This timeout is needed for mobile Safari.
         $timeout(function () {
+          $win.on('scroll', debouncedUpdateProperties);
           $win.on('mousewheel', onScroll);
           $win.on('touchmove', onScrollTouch);
           $win.on('touchend', onTouchEnd);

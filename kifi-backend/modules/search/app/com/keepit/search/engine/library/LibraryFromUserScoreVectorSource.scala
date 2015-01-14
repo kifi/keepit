@@ -7,7 +7,7 @@ import com.keepit.model.User
 import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.index.graph.library.LibraryFields
-import com.keepit.search.index.user.UserIndexer
+import com.keepit.search.index.user.{ UserFields, UserIndexer }
 import com.keepit.search.{ SearchConfig, SearchFilter }
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBufferReader, DataBuffer, DataBufferWriter }
@@ -99,7 +99,7 @@ class LibraryFromUserScoreVectorSource(
 
   private class UserSource(protected val searcher: Searcher, userNameBoost: Float) extends ScoreVectorSourceLike {
 
-    override protected def preprocess(query: Query): Query = QueryProjector.project(query, UserIndexer.nameSearchFields) // trim down to name fields
+    override protected def preprocess(query: Query): Query = QueryProjector.project(query, UserFields.nameSearchFields) // trim down to name fields
 
     protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]

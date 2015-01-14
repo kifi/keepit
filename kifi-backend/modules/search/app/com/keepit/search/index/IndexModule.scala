@@ -136,7 +136,7 @@ trait IndexModule extends ScalaModule with Logging {
     val version = IndexerVersionProviders.User.getVersionByStatus(serviceDisovery)
     val dir = getIndexDirectory("index.user.directory", noShard, version, backup, conf, IndexerVersionProviders.User.getVersionsForCleanup())
     log.info(s"storing user index ${indexNameSuffix(noShard, version)} in $dir")
-    new UserIndexer(dir, airbrake, shoeboxClient)
+    new UserIndexer(dir, shoeboxClient, airbrake)
   }
 
   @Singleton

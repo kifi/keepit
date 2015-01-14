@@ -9,7 +9,7 @@ import com.google.inject.Injector
 import com.keepit.common.store.{ S3URIImageStore, FakeS3URIImageStore, ImageSize }
 import com.keepit.scraper.embedly._
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.awt.image.BufferedImage
 import com.keepit.common.images.ImageFetcher
@@ -41,8 +41,6 @@ object URISummaryCommanderTestDummyValues {
   );
   val dummyEmbedlyImageUrl = "http://www.testimg.com/thedummyembedlyimage.jpg"
   val dummyPagePeekerImageUrl = "http://www.testimg.com/thedummypagepeekerscreenshot.jpg"
-  private val embedlyImage = EmbedlyImage(dummyEmbedlyImageUrl, None, Some(200), Some(100), Some(4242))
-  val dummyEmbedlyInfo = EmbedlyInfo.EMPTY.copy(images = Seq(embedlyImage))
   val dummyPagePeekerImage = dummyImage.copy(provider = Some(ImageProvider.PAGEPEEKER), url = Some(dummyPagePeekerImageUrl))
 
   val dummyBufferedImage = new BufferedImage(1000, 1000, BufferedImage.TYPE_INT_RGB)
@@ -58,16 +56,13 @@ class URISummaryCommanderTestImageFetcher extends ImageFetcher {
 }
 
 case class URISummaryCommanderTestS3URIImageStore() extends S3URIImageStore {
-  def storeImage(info: ImageInfo, rawImage: BufferedImage, nUri: NormalizedURI): Try[(String, Int)] = Success((FakeS3URIImageStore.placeholderImageURL, FakeS3URIImageStore.placeholderSize))
-  def getDefaultScreenshotURL(nUri: NormalizedURI): Option[String] = Some(FakeS3URIImageStore.placeholderScreenshotURL)
-  def getImageURL(imageInfo: ImageInfo, nUri: NormalizedURI): Option[String] = imageInfo.url // returns the original ImageInfo url (important!)
+  def storeImage(info: ImageInfo, rawImage: BufferedImage, extNormUriId: ExternalId[NormalizedURI]): Try[(String, Int)] = Success((FakeS3URIImageStore.placeholderImageURL, FakeS3URIImageStore.placeholderSize))
+  def getImageURL(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI]): Option[String] = imageInfo.url // returns the original ImageInfo url (important!)
 }
 
 case class MockScraperServiceClient(override val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends FakeScraperServiceClientImpl(airbrakeNotifier, scheduler) {
-  override def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = Future.successful(Some(URISummaryCommanderTestDummyValues.dummyEmbedlyInfo))
   override def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-    val embedlyInfo = URISummaryCommanderTestDummyValues.dummyEmbedlyInfo
-    val summary = Some(URISummary(Some(URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl), embedlyInfo.title, embedlyInfo.description))
+    val summary = Some(URISummary(Some(URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl), None, None))
     Future.successful(summary)
   }
 }

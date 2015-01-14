@@ -5,6 +5,7 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.LibraryQualityHelper
@@ -33,7 +34,7 @@ class RelatedLibraryCommanderImpl @Inject() (
     cortex: CortexServiceClient,
     userCommander: UserCommander,
     libQualityHelper: LibraryQualityHelper,
-    airbrake: AirbrakeNotifier) extends RelatedLibraryCommander {
+    airbrake: AirbrakeNotifier) extends RelatedLibraryCommander with Logging {
 
   private val DEFAULT_MIN_FOLLOW = 5
   private val RETURN_SIZE = 5
@@ -42,6 +43,7 @@ class RelatedLibraryCommanderImpl @Inject() (
 
   // main method
   def suggestedLibrariesInfo(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[FullLibraryInfo], Seq[RelatedLibraryKind])] = {
+    val t0 = System.currentTimeMillis
     val suggestedLibsFut = suggestedLibraries(libId)
 
     val fakeUsers = userCommander.getAllFakeUsers()
@@ -62,9 +64,13 @@ class RelatedLibraryCommanderImpl @Inject() (
     suggestedLibsFut
       .map { libs => filterUnwantedRelatedLibs(libs).take(RETURN_SIZE) }
       .flatMap { relatedLibs =>
+        val t1 = System.currentTimeMillis
         val (libs, kinds) = relatedLibs.map { x => (x.library, x.kind) }.unzip
         val fullInfosFut = libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize, withKeepTime = true).map { _.map { _._2 } }
         fullInfosFut.map { info =>
+          val t2 = System.currentTimeMillis
+          statsd.timing("commander.RelatedLibraryCommander.getSuggestedLibs", t1 - t0, 1.0)
+          statsd.timing("commander.RelatedLibraryCommander.getFullLibInfo", t2 - t1, 1.0)
           if (info.size == kinds.size) (info, kinds)
           else {
             airbrake.notify(s"error in getting suggested libraries for lib ${libId}, user: ${userIdOpt}. info array and kinds array do not match in size.")
