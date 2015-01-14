@@ -158,20 +158,28 @@ angular.module('kifi')
         }
       }
 
+      var block = +attr.block || 0;
       var sizes = {
         1: angular.fromJson(attr[1]).sort(fontSizeAsc),
         2: angular.fromJson(attr[2]).sort(fontSizeDesc),
         3: angular.fromJson(attr[3]).sort(fontSizeDesc)
       };
-      elem.removeAttr('1 2 3').css('visibility', 'hidden');
+      elem.removeAttr('1 2 3 block').css('visibility', 'hidden');
 
       return function postLink(scope, element) {
-        $timeout(function () {  // allowing binding/interpolation to complete
+        function fitAndShow() {
           if (element.attr('kf-fit') !== 'false') {
             fit(element);
           }
           element.css('visibility', '');
-        });
+        }
+
+        if (block > 0) {
+          block--;
+          scope.$evalAsync(fitAndShow);  // blocking on binding/interpolation for first few only
+        } else {
+          $timeout(fitAndShow);
+        }
       };
     }
   };

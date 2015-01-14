@@ -80,15 +80,6 @@ angular.module('kifi')
           $document.off('mousedown', onClickFriendMenu);
         }
 
-        function toggleRespondMenuOn() {
-          scope.showRespondMenu = true;
-          $document.on('mousedown', onClickRespondMenu);
-        }
-        function toggleRespondMenuOff() {
-          scope.showRespondMenu = false;
-          $document.off('mousedown', onClickRespondMenu);
-        }
-
         function onClickFriendMenu(event) {
           var clickTarget = angular.element(event.target);
           if (scope.showFriendMenu && clickTarget.is('.kf-user-profile-action-menu .kf-user-profile-action-selection')) {
@@ -99,22 +90,9 @@ angular.module('kifi')
           }
         }
 
-        function onClickRespondMenu(event) {
-          var clickTarget = angular.element(event.target);
-          var acceptClass = '.kf-user-profile-action-menu .kf-user-profile-action-selection.accept';
-          var declineClass = '.kf-user-profile-action-menu .kf-user-profile-action-selection.decline';
-
-          if (scope.showRespondMenu && clickTarget.is(acceptClass)) {
-            scope.acceptFriendRequest();
-            scope.$evalAsync(toggleRespondMenuOff);
-          } else if (scope.showRespondMenu && clickTarget.is(declineClass)) {
-            scope.ignoreFriendRequest();
-            scope.$evalAsync(toggleRespondMenuOff);
-          } else if (!(clickTarget.is('.kf-user-profile-connect-image') ||
-                        clickTarget.is('.kf-user-profile-action') ||
-                        clickTarget.is('.kf-user-profile-connect'))) {
-            scope.$evalAsync(toggleRespondMenuOff);
-          }
+        function closeFriendRequestHeader(nextAnimation) {
+          var header = angular.element('.kf-user-profile-friend-request-header');
+          header.animate({height: '0px'}, 150, nextAnimation);
         }
 
 
@@ -126,7 +104,6 @@ angular.module('kifi')
         scope.isKifiCurator = false;
         scope.userNavLinks = [];
 
-        scope.showRespondMenu = false;
         scope.showFriendMenu = false;
 
         // for user connection, potential (states -> actions):
@@ -145,14 +122,6 @@ angular.module('kifi')
             toggleFriendMenuOff();
           } else {
             toggleFriendMenuOn();
-          }
-        };
-
-        scope.toggleRespondMenu = function() {
-          if (scope.showRespondMenu) {
-            toggleRespondMenuOff();
-          } else {
-            toggleRespondMenuOn();
           }
         };
 
@@ -189,12 +158,21 @@ angular.module('kifi')
 
         scope.acceptFriendRequest = function() {
           friendService.acceptRequest(scope.profile.id).then(function() {
-            scope.connectionWithUser = 'friends';
+            var friendsIcon = angular.element('.kf-user-profile-connect-image');
+            var nextAnimation = function() {
+              friendsIcon.animate({opacity: 1}, 300, function() {
+                scope.$evalAsync(function() {
+                  scope.connectionWithUser = 'friends';
+                });
+              });
+            };
+            closeFriendRequestHeader(nextAnimation);
           });
         };
 
         scope.ignoreFriendRequest = function() {
           friendService.ignoreRequest(scope.profile.id).then(function() {
+            closeFriendRequestHeader();
             scope.connectionWithUser = 'not_friends';
           });
         };

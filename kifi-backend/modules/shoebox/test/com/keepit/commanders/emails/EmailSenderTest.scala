@@ -88,8 +88,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           subAction = Some("findMoreFriendsBtn"),
           tip = Some(EmailTip.ConnectFacebook)).encode
 
-        html must contain("utm_source=fromKifi&utm_medium=email&utm_campaign=welcome&utm_content=findMoreFriendsBtn&kcid=welcome-email-fromKifi"
-          + s"&${EmailTrackingParam.paramName}=$trackingCode")
+        html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=findMoreFriendsBtn&amp;kcid=welcome-email-fromKifi"
+          + s"&amp;${EmailTrackingParam.paramName}=$trackingCode")
 
         val text = email.textBody.get.value
         text must contain("Hey Billy,")

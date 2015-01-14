@@ -48,10 +48,14 @@
 
   &.add-friend
     sprite2x($add-friend)
+    width: 36px
 
   &.already-friends
     sprite2x($add-friend-active)
     width: 36px
+
+    &.hidden
+      opacity: 0
 
 .kf-user-profile-action
   position: relative
@@ -64,7 +68,6 @@
   &.connect
     display: inline-block
     width: 0px
-    margin-top: 1px
     margin-left: 5px
     transition: 0.1s linear width
 
@@ -92,12 +95,10 @@
   position: absolute
   top: -5px
   left: 75px
-  width: 13px
-  height: 9px
+  sprite2x($white-checkmark)
+  width: 14px
+  height: 10px
   opacity: 0
-  background-size: cover
-  background-repeat: no-repeat
-  background-image: url('../img/checkmark.png')
 
 .kf-user-profile-action-menu
   height: 0px
@@ -132,6 +133,37 @@
     position: relative
     top: 1px
 
+.kf-user-profile-friend-request-header
+  position: relative
+  height: 40px
+  padding: 0 30px
+  overflow: hidden
+  background-color: libraryGreen
+  font-size: 13px
+  color: white
+  transition: 0.2s linear height
+
+  &.close
+    height: 0px
+
+  .kf-user-profile-friend-request-msg
+    float: left
+    margin-top: 12px
+
+
+  .kf-user-profile-friend-respond
+    float: right
+    padding: 5px 15px
+    margin-left: 10px
+    margin-top: 8px
+    border: 1px solid white
+    border-radius: 5px
+    font-size: 11px
+    cursor: pointer
+
+    &.accept
+      background-color: white
+      color: libraryGreen
 
 .kf-user-profile-picture
   height: 100px
