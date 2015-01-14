@@ -146,10 +146,12 @@ private[model] abstract class BaseLibraryCardInfo(
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],
-  lastKept: Option[DateTime])
+  lastKept: Option[DateTime],
+  following: Option[Boolean] // is viewer following this library? Set to None if viewing anonymously or viewing own profile
+  )
 
 @json
-case class OwnLibraryCardInfo(
+case class OwnLibraryCardInfo( // when viewing own created libraries
   id: PublicId[Library],
   name: String,
   description: Option[String],
@@ -162,8 +164,9 @@ case class OwnLibraryCardInfo(
   numFollowers: Int,
   followers: Seq[BasicUser],
   lastKept: Option[DateTime],
+  following: Option[Boolean] = None,
   listed: Boolean)
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept)
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept, following)
 
 @json
 case class LibraryCardInfo(
@@ -178,8 +181,9 @@ case class LibraryCardInfo(
   numFollowers: Int,
   followers: Seq[BasicUser],
   lastKept: Option[DateTime],
+  following: Option[Boolean],
   caption: Option[String])
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept)
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept, following)
 
 object LibraryCardInfo {
   val writesWithoutOwner = Writes[LibraryCardInfo] { o => // for case when receiving end already knows the owner
