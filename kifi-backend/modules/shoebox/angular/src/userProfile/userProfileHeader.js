@@ -164,7 +164,7 @@ angular.module('kifi')
                 scope.$evalAsync(function() {
                   scope.connectionWithUser = 'friends';
                 });
-              })
+              });
             };
             closeFriendRequestHeader(nextAnimation);
           });
