@@ -191,7 +191,7 @@ class URISummaryCommander @Inject() (
   /**
    * Get S3 url for image info
    */
-  private def getS3URL(info: ImageInfo, nUri: NormalizedURI): Option[String] = uriImageStore.getImageURL(info, nUri)
+  private def getS3URL(info: ImageInfo, nUri: NormalizedURI): Option[String] = uriImageStore.getImageURL(info, nUri.externalId)
 
   def getStoredEmbedlyKeywords(id: Id[NormalizedURI]): Seq[EmbedlyKeyword] = {
     embedlyStore.get(id) match {
