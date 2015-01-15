@@ -58,7 +58,7 @@
     <!-- For testing AngularUI routing, using <a> tags. However, will make into divs for V1 release. -->
     <!-- Switch back to <a> tags in V2. (use: ui-sref="{{userNavLink.routeState}}") -->
     <div class="kf-user-profile-user-nav-link" ng-repeat="userNavLink in userNavLinks">
-      <span class="kf-user-profile-user-nav-item-count">{{userNavLink.count}}</span>
+      <span class="kf-user-profile-user-nav-item-count">{{userNavLink.count|number}}</span>
       <span class="kf-user-profile-user-nav-item-name">{{userNavLink.name}}</span>
     </div>
   </nav>
