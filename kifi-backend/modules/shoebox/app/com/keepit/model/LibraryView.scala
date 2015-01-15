@@ -38,7 +38,7 @@ case class LibraryAddRequest(
   visibility: LibraryVisibility,
   description: Option[String] = None,
   slug: String,
-  color: Option[HexColor] = None,
+  color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None)
 
 @json
@@ -47,7 +47,7 @@ case class LibraryModifyRequest(
   slug: Option[String] = None,
   visibility: Option[LibraryVisibility] = None,
   description: Option[String] = None,
-  color: Option[HexColor] = None,
+  color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None)
 
 case class BasicUserWithFriendStatus(
@@ -94,7 +94,7 @@ case class LibraryInfo(id: PublicId[Library],
   visibility: LibraryVisibility,
   shortDescription: Option[String],
   url: String,
-  color: Option[HexColor] = None,
+  color: Option[LibraryColor], // system libraries have no color
   owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
@@ -109,7 +109,7 @@ object LibraryInfo {
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'url).format[String] and
-    (__ \ 'color).formatNullable[HexColor] and
+    (__ \ 'color).formatNullable[LibraryColor] and
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
@@ -140,20 +140,22 @@ private[model] abstract class BaseLibraryCardInfo(
   id: PublicId[Library],
   name: String,
   description: Option[String],
-  color: Option[HexColor],
+  color: Option[LibraryColor], // system libraries have no color
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],
-  lastKept: Option[DateTime])
+  lastKept: Option[DateTime],
+  following: Option[Boolean] // is viewer following this library? Set to None if viewing anonymously or viewing own profile
+  )
 
 @json
-case class OwnLibraryCardInfo(
+case class OwnLibraryCardInfo( // when viewing own created libraries
   id: PublicId[Library],
   name: String,
   description: Option[String],
-  color: Option[HexColor],
+  color: Option[LibraryColor],
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
   kind: LibraryKind,
@@ -162,15 +164,16 @@ case class OwnLibraryCardInfo(
   numFollowers: Int,
   followers: Seq[BasicUser],
   lastKept: Option[DateTime],
+  following: Option[Boolean] = None,
   listed: Boolean)
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept)
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept, following)
 
 @json
 case class LibraryCardInfo(
   id: PublicId[Library],
   name: String,
   description: Option[String],
-  color: Option[HexColor],
+  color: Option[LibraryColor],
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
   owner: BasicUserWithFriendStatus,
@@ -178,8 +181,9 @@ case class LibraryCardInfo(
   numFollowers: Int,
   followers: Seq[BasicUser],
   lastKept: Option[DateTime],
+  following: Option[Boolean],
   caption: Option[String])
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept)
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept, following)
 
 object LibraryCardInfo {
   val writesWithoutOwner = Writes[LibraryCardInfo] { o => // for case when receiving end already knows the owner
@@ -208,8 +212,8 @@ case class FullLibraryInfo(
   description: Option[String],
   slug: LibrarySlug,
   url: String,
-  color: Option[HexColor] = None,
-  image: Option[LibraryImageInfo] = None,
+  color: Option[LibraryColor], // system libraries have no color
+  image: Option[LibraryImageInfo],
   kind: LibraryKind,
   lastKept: Option[DateTime],
   owner: BasicUser,

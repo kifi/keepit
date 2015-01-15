@@ -59,7 +59,7 @@ class LibraryRepoImpl @Inject() (
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def description = column[Option[String]]("description", O.Nullable)
     def slug = column[LibrarySlug]("slug", O.NotNull)
-    def color = column[HexColor]("color", O.Nullable)
+    def color = column[LibraryColor]("color", O.Nullable)
     def kind = column[LibraryKind]("kind", O.NotNull)
     def universalLink = column[String]("universal_link", O.NotNull)
     def memberCount = column[Int]("member_count", O.NotNull)
@@ -82,7 +82,7 @@ class LibraryRepoImpl @Inject() (
       description = r.<<[Option[String]],
       visibility = r.<<[LibraryVisibility],
       slug = LibrarySlug(r.<<[String]),
-      color = r.<<[Option[String]].map(HexColor(_)),
+      color = r.<<[Option[String]].map(LibraryColor(_)),
       seq = r.<<[SequenceNumber[Library]],
       kind = LibraryKind(r.<<[String]),
       memberCount = r.<<[Int],

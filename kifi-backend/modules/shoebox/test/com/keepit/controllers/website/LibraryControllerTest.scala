@@ -163,7 +163,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         (contentAsJson(result1) \ "library" \ "name").as[String] === "LibraryA"
 
-        val inputJson2 = Json.obj("slug" -> "libA", "description" -> "asdf", "visibility" -> LibraryVisibility.PUBLISHED, "listed" -> true)
+        val inputJson2 = Json.obj("slug" -> "libA", "description" -> "asdf", "visibility" -> LibraryVisibility.PUBLISHED, "listed" -> true, "color" -> "sky_blue")
         val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
         val result2 = libraryController.modifyLibrary(pubId)(request2)
         status(result2) must equalTo(OK)
@@ -174,27 +174,28 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         }
         val expected = Json.parse(
           s"""
-             |{
-               |"library": {
-                 |"id":"${pubId.id}",
-                 |"name":"LibraryA",
-                 |"visibility":"published",
-                 |"shortDescription":"asdf",
-                 |"url":"/ahsu/libA",
-                 |"owner":{
-                 |  "id":"${basicUser1.externalId}",
-                 |  "firstName":"${basicUser1.firstName}",
-                 |  "lastName":"${basicUser1.lastName}",
-                 |  "pictureName":"${basicUser1.pictureName}",
-                 |  "username":"${basicUser1.username.value}"
-                 |  },
-                 |"numKeeps":0,
-                 |"numFollowers":0,
-                 |"kind":"user_created"
-               |},
-               |"listed": true
-             |}
-           """.stripMargin)
+            {
+              "library": {
+                "id":"${pubId.id}",
+                "name":"LibraryA",
+                "visibility":"published",
+                "shortDescription":"asdf",
+                "url":"/ahsu/libA",
+                "color":"${LibraryColor.SKY_BLUE.hex}",
+                "owner":{
+                  "id":"${basicUser1.externalId}",
+                  "firstName":"${basicUser1.firstName}",
+                  "lastName":"${basicUser1.lastName}",
+                  "pictureName":"${basicUser1.pictureName}",
+                  "username":"${basicUser1.username.value}"
+                  },
+                "numKeeps":0,
+                "numFollowers":0,
+                "kind":"user_created"
+              },
+              "listed": true
+            }
+           """)
         Json.parse(contentAsString(result2)) must equalTo(expected)
 
         // modify to existing library name
@@ -442,7 +443,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
           val user1 = user().withName("first", "user").withUsername("firstuser").saved
           val user2 = user().withName("second", "user").withUsername("seconduser").withPictureName("alf").saved
-          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor(HexColor.BLUE).withDesc("My first library!").saved.savedFollowerMembership(user2)
+          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("blue").withDesc("My first library!").saved.savedFollowerMembership(user2)
           val library2 = library().withName("lib2").withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
           val library3 = library().withName("lib3").withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
           keep().withLibrary(library1).saved
@@ -481,7 +482,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   "slug": "lib1",
                   "kind": "user_created",
                   "visibility": "published",
-                  "color": "${HexColor.BLUE.hex}",
+                  "color": "${LibraryColor.BLUE.hex}",
                   "image": {"path": "library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", "x": 50, "y": 50},
                   "numKeeps": 1,
                   "numFollowers": 1,
@@ -549,6 +550,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         (resultJson4 \ "own").as[Seq[JsObject]].length === 1
         (resultJson4 \ "following").as[Seq[JsObject]].length === 1
         (resultJson4 \ "invited").as[Seq[JsObject]].length === 0
+
+        val request5 = FakeRequest("GET", testPath)
+        val result5 = libraryController.getProfileLibraries(user2.username, 0, 10, "following")(request5)
+        status(result5) must equalTo(OK)
+        contentType(result5) must beSome("application/json")
+        val result5Json = (contentAsJson(result5) \ "following").as[Seq[JsObject]]
+        (result5Json.head \ "name").as[String] === "lib1"
+        (result5Json.head \ "numFollowers").as[Int] === 1
+        (result5Json.head \ "following").as[Boolean] === true
       }
     }
 
@@ -786,6 +796,32 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |}
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
+
+        val result11 = libraryController.joinLibrary(pubLibId1)(request1)
+        status(result11) must equalTo(OK)
+        contentType(result11) must beSome("application/json")
+
+        val expected11 = Json.parse(
+          s"""
+             |{
+             |"id":"${Library.publicId(lib1.id.get).id}",
+             |"name":"Library1",
+             |"visibility":"discoverable",
+             |"url":"/bulbasaur/lib1",
+             |"owner":{
+             |  "id":"${basicUser2.externalId}",
+             |  "firstName":"${basicUser2.firstName}",
+             |  "lastName":"${basicUser2.lastName}",
+             |  "pictureName":"${basicUser2.pictureName}",
+             |  "username":"${basicUser2.username.value}"
+             |  },
+             |"numKeeps":0,
+             |"numFollowers":1,
+             |"kind":"user_created",
+             |"alreadyJoined":true
+             |}
+           """.stripMargin)
+        Json.parse(contentAsString(result11)) must equalTo(expected11)
 
         val request2 = FakeRequest("POST", testPathDecline)
         val result2 = libraryController.declineLibrary(pubLibId2)(request2)
@@ -1358,8 +1394,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               value = s"""
                    |[
                    |  { "id": 424242, "caption": "does not exist" },
-                   |  { "id": ${lib2.id.get}, "color": "${HexColor.BLUE.hex}" },
-                   |  { "id": ${lib1.id.get}, "caption": "yo dawg", "color": "${HexColor.RED.hex}" },
+                   |  { "id": ${lib2.id.get}, "color": "${LibraryColor.BLUE.hex}" },
+                   |  { "id": ${lib1.id.get}, "caption": "yo dawg", "color": "${LibraryColor.RED.hex}" },
                    |  { "id": ${lib3.id.get} }
                    |]
                  """.stripMargin))
@@ -1378,12 +1414,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libInfos(0).numFollowers === 1
           libInfos(0).id.id must beMatching("^l.+") // tests public id
           libInfos(0).caption must beNone
-          libInfos(0).color.get === HexColor.BLUE
+          libInfos(0).color === Some(LibraryColor.BLUE)
           libInfos(1).name === "Scala"
           libInfos(1).numFollowers === 2
           libInfos(1).owner.fullName === "John Doe"
-          libInfos(1).caption must beSome("yo dawg")
-          libInfos(1).color.get === HexColor.RED
+          libInfos(1).caption === Some("yo dawg")
+          libInfos(1).color === Some(LibraryColor.RED)
         }
       }
     }

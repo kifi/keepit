@@ -19,6 +19,7 @@ import org.apache.lucene.analysis.fr.FrenchLightStemFilter
 import org.apache.lucene.analysis.hi.HindiNormalizationFilter
 import org.apache.lucene.analysis.hi.HindiStemFilter
 import org.apache.lucene.analysis.hu.HungarianLightStemFilter
+import org.apache.lucene.analysis.icu.ICUFoldingFilter
 import org.apache.lucene.analysis.id.IndonesianStemFilter
 import org.apache.lucene.analysis.in.IndicNormalizationFilter
 import org.apache.lucene.analysis.it.ItalianLightStemFilter
@@ -47,7 +48,6 @@ import scala.reflect.ClassTag
 import java.io.Reader
 import java.io.StringReader
 import java.util.{ HashMap => JMap }
-import org.apache.lucene.util.Version
 
 object DefaultAnalyzer {
   implicit def langCodeToLang(langCode: String): Lang = Lang(langCode)
@@ -108,36 +108,43 @@ object DefaultAnalyzer {
         }
     }
 
-  val langAnalyzerWithStemmer = Map[String, Analyzer](
-    "ar" -> langAnalyzers("ar").withFilter[ArabicStemFilter],
-    "bg" -> langAnalyzers("bg").withFilter[BulgarianStemFilter],
-    "cs" -> langAnalyzers("cs").withFilter[CzechStemFilter],
-    "da" -> langAnalyzers("da").withStemFilter(_.Danish),
-    "de" -> langAnalyzers("de").withFilter[GermanLightStemFilter],
-    "el" -> langAnalyzers("el").withFilter[GreekStemFilter],
-    "en" -> langAnalyzers("en").withFilter[KStemFilter].withFilter[EnglishMinimalStemFilter].withFilter[ApostropheFilter],
-    "es" -> langAnalyzers("es").withFilter[SpanishLightStemFilter],
-    "fi" -> langAnalyzers("fi").withFilter[FinnishLightStemFilter],
-    "fr" -> langAnalyzers("fr").withFilter[FrenchLightStemFilter],
-    "hi" -> langAnalyzers("hi").withFilter[HindiStemFilter],
-    "hu" -> langAnalyzers("hu").withFilter[HungarianLightStemFilter],
-    "id" -> langAnalyzers("id").withFilter[IndonesianStemFilter],
-    "it" -> langAnalyzers("it").withFilter[ItalianLightStemFilter],
-    "ja" -> langAnalyzers("ja").withFilter[JapaneseReadingFormFilter],
-    "lv" -> langAnalyzers("lv").withFilter[LatvianStemFilter],
-    "nl" -> langAnalyzers("nl").withStemFilter(_.Dutch),
-    "no" -> langAnalyzers("no").withFilter[NorwegianLightStemFilter],
-    "pt" -> langAnalyzers("pt").withFilter[PortugueseLightStemFilter],
-    "ro" -> langAnalyzers("ro").withStemFilter(_.Romanian),
-    "ru" -> langAnalyzers("ru").withFilter[RussianLightStemFilter],
-    "sv" -> langAnalyzers("sv").withFilter[SwedishLightStemFilter],
-    "tr" -> langAnalyzers("tr").withStemFilter(_.Turkish)
-  )
+  val defaultAnalyserWithStemmer = defaultAnalyzer.withFilter[ICUFoldingFilter]
+
+  val langAnalyzerWithStemmer = {
+    langAnalyzers ++ Map[String, Analyzer](
+      "ar" -> langAnalyzers("ar").withFilter[ArabicStemFilter],
+      "bg" -> langAnalyzers("bg").withFilter[BulgarianStemFilter],
+      "cs" -> langAnalyzers("cs").withFilter[CzechStemFilter],
+      "da" -> langAnalyzers("da").withStemFilter(_.Danish),
+      "de" -> langAnalyzers("de").withFilter[GermanLightStemFilter],
+      "el" -> langAnalyzers("el").withFilter[GreekStemFilter],
+      "en" -> langAnalyzers("en").withFilter[KStemFilter].withFilter[EnglishMinimalStemFilter].withFilter[ApostropheFilter],
+      "es" -> langAnalyzers("es").withFilter[SpanishLightStemFilter],
+      "fi" -> langAnalyzers("fi").withFilter[FinnishLightStemFilter],
+      "fr" -> langAnalyzers("fr").withFilter[FrenchLightStemFilter],
+      "hi" -> langAnalyzers("hi").withFilter[HindiStemFilter],
+      "hu" -> langAnalyzers("hu").withFilter[HungarianLightStemFilter],
+      "id" -> langAnalyzers("id").withFilter[IndonesianStemFilter],
+      "it" -> langAnalyzers("it").withFilter[ItalianLightStemFilter],
+      "ja" -> langAnalyzers("ja").withFilter[JapaneseReadingFormFilter],
+      "lv" -> langAnalyzers("lv").withFilter[LatvianStemFilter],
+      "nl" -> langAnalyzers("nl").withStemFilter(_.Dutch),
+      "no" -> langAnalyzers("no").withFilter[NorwegianLightStemFilter],
+      "pt" -> langAnalyzers("pt").withFilter[PortugueseLightStemFilter],
+      "ro" -> langAnalyzers("ro").withStemFilter(_.Romanian),
+      "ru" -> langAnalyzers("ru").withFilter[RussianLightStemFilter],
+      "sv" -> langAnalyzers("sv").withFilter[SwedishLightStemFilter],
+      "tr" -> langAnalyzers("tr").withStemFilter(_.Turkish)
+    )
+  }.map {
+    case (lang, analyzer) if lang == "ja" => lang -> analyzer // ICUFoldingFilter too aggressive with Japanese characters
+    case (lang, analyzer) => lang -> analyzer.withFilter[ICUFoldingFilter]
+  }
 
   val languages: Set[Lang] = langAnalyzers.keySet.map(Lang(_))
 
   def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, defaultAnalyzer)
-  def getAnalyzerWithStemmer(lang: Lang): Analyzer = langAnalyzerWithStemmer.getOrElse(lang.lang, getAnalyzer(lang))
+  def getAnalyzerWithStemmer(lang: Lang): Analyzer = langAnalyzerWithStemmer.getOrElse(lang.lang, defaultAnalyserWithStemmer)
 }
 
 class Analyzer(tokenizerFactory: TokenizerFactory,

@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .directive('kfManageLibrary', [
-  '$location', '$window', '$rootScope', 'friendService', 'libraryService', 'modalService',
+  '$location', '$rootScope', '$state', 'friendService', 'libraryService', 'modalService',
   'profileService', 'routeService', 'userService', 'util',
-  function ($location, $window, $rootScope, friendService, libraryService, modalService,
+  function ($location, $rootScope, $state, friendService, libraryService, modalService,
     profileService, routeService, userService, util) {
     return {
       restrict: 'A',
@@ -124,11 +124,18 @@ angular.module('kifi')
           submitting = true;
           libraryService.deleteLibrary(scope.library.id).then(function () {
             $rootScope.$emit('librarySummariesChanged');
-            scope.close();
-            $location.path('/');
+            $rootScope.$emit('libraryDeleted', scope.library.id);
+
+            // If we were on the deleted library's page, return to the homepage.
+            if ($state.is('library.keeps') &&
+                ($state.href('library.keeps') === scope.library.url)) {
+              $location.path('/');
+            }
           })['catch'](modalService.openGenericErrorModal)['finally'](function () {
             submitting = false;
           });
+
+          scope.close();
         };
 
         scope.showFollowersPanel = function () {
