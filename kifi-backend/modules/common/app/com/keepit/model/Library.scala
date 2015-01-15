@@ -263,30 +263,13 @@ object LibraryColor {
 
   def apply(str: String): LibraryColor = {
     str match {
-      case "blue" => BLUE
-      case "sky_blue" => SKY_BLUE
-      case "green" => GREEN
-      case "orange" => ORANGE
-      case "red" => RED
-      case "magenta" => MAGENTA
-      case "purple" => PURPLE
-
-      case BLUE.hex => BLUE
-      case SKY_BLUE.hex => SKY_BLUE
-      case GREEN.hex => GREEN
-      case ORANGE.hex => ORANGE
-      case RED.hex => RED
-      case MAGENTA.hex => MAGENTA
-      case PURPLE.hex => PURPLE
-
-      // TODO: Remove mappings below when migration from old colors is complete.
-      case "#3975bf" => BLUE
-      case "#fab200" => SKY_BLUE // was ORANGE_YELLOW
-      case "#2ec89a" => GREEN
-      case "#ff9430" => ORANGE
-      case "#e35957" => RED
-      case "#c764a2" => MAGENTA
-      case "#955cb4" => PURPLE
+      case "blue" | BLUE.hex => BLUE
+      case "sky_blue" | SKY_BLUE.hex => SKY_BLUE
+      case "green" | GREEN.hex => GREEN
+      case "orange" | ORANGE.hex => ORANGE
+      case "red" | RED.hex => RED
+      case "magenta" | MAGENTA.hex => MAGENTA
+      case "purple" | PURPLE.hex => PURPLE
     }
   }
 
