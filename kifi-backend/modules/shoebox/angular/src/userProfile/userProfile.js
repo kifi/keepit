@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$timeout', '$window',
+  '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window',
   'env', 'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService',
-  function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $timeout, $window,
+  function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window,
             env, inviteService, keepWhoService, profileService, userProfileActionService) {
 
     //
@@ -294,6 +294,18 @@ angular.module('kifi')
         modalData: {
           library: lib
         }
+      });
+    };
+
+    $scope.onFollowButtonClick = function (lib, $event) {
+      $event.target.disabled = true;
+      var following = lib.following;
+      libraryService[following ? 'leaveLibrary' : 'joinLibrary'](lib.id).then(function () {
+        lib.following = !following;
+      })['catch'](function () {
+        modalService.openGenericErrorModal();
+      })['finally'](function () {
+        $event.target.disabled = false;
       });
     };
   }
