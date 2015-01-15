@@ -263,10 +263,10 @@
   background-repeat: no-repeat
 
   &.kf-sys
-    top: 20px
+    top: 25px
 
   &.kf-user
-    top: 160px
+    top: 190px
     z-index: 1
 
 .kf-upl-card-setting
@@ -287,68 +287,102 @@
   &:active
     opacity: .7
 
-.kf-upl-card-name
-  line-height = 25px
+name-line-height = 22px
+
+.kf-upl-card-name-align
+  display: table
   position: absolute
-  bottom: 208px
-  left: 16px
-  right: 16px
-  color: #fff
-  font-weight: bold
-  font-size: 20px
-  line-height: line-height
-  word-wrap: break-word
+  top: 18px
+  left: 0
+  width: 100%
+  height: 3 * name-line-height
 
   .kf-sys~&
-    height: line-height
+    height: name-line-height
+    top: 52px
 
-.kf-upl-counts
-  position: absolute
-  top: 78px
-  left: 0
-  right: 0
-
-.kf-upl-count
-.kf-upl-count-link
-  font-size: 10px
-  color: rgba(255,255,255,.7)
-
-.kf-upl-count-link
-  .kf-upl-count-link+&::before
-    content: '\00b7'
-    padding: 0 4px
-
-.kf-upl-count:hover
-    text-decoration: underline
-
-.kf-upl-card-byline
-  position: absolute
-  top: 210px
-  left: 20px
-  right: 20px
+.kf-upl-card-name
+  display: table-cell
+  padding: 0 16px
   color: #fff
-  font-size: 12px
   font-weight: bold
-  letter-spacing: .6px
-  text-transform: uppercase
-  text-shadow: 0 0 3px rgba(0,0,0,.6)
+  font-size: 18px
+  line-height: name-line-height
+  word-wrap: break-word
+  vertical-align: middle
+
+.kf-upl-card-name-clip
+  max-height: 3 * name-line-height
+  overflow: hidden
+
+owner-pic-diam = 32px
+
+.kf-upl-card-owner
+  position: absolute
+  top: 96px
+  left: 50%
+  padding: 0 0 0 (owner-pic-diam + 6px)
+  transform: translate(-50%)
+  text-align: left
+  white-space: nowrap
+  max-width: 144px
+  overflow: hidden
+  text-overflow: ellipsis
+  font-size: 11px
+  line-height: owner-pic-diam
+  color: rgba(255,255,255,.8)
+
+.kf-upl-card-owner-pic
+  position: absolute
+  top: 0
+  left: 0
+  width: owner-pic-diam
+  height: owner-pic-diam
+  border-radius: 50%
+  box-shadow: 0 0 3px rgba(0,0,0,.3) inset
+  margin-right: 6px
 
 .kf-upl-card-by
   font-style: italic
-  font-weight: normal
-  text-transform: none
-  letter-spacing: normal
   margin-right: 2px
 
-:hover>.kf-upl-card-by-name
-  text-decoration: underline
+.kf-upl-card-by-name
+  font-weight: bold
+  text-transform: uppercase
+  letter-spacing: .2px
+
+  :hover>&
+    text-decoration: underline
+
+.kf-upl-counts
+  position: absolute
+  top: 160px
+  left: 50%
+  transform: translate(-50%)
+  font-size: 0
+  color: #fff
+  white-space: nowrap
+  text-shadow: 0 0 3px rgba(0,0,0,.6)
+
+.kf-upl-count
+  font-size: 13px
+  font-weight: bold
+  color: inherit
+  &:hover
+    color: #fff
+    text-decoration: underline
+
+.kf-upl-count-dot
+  padding: 0 5px
+  font-size: 14px
+  cursor: default
 
 .kf-upl-card-cover
   position: absolute
   left: 0
   right: 0
   bottom: 0
-  height: 56%
+  height: 50%
   overflow: hidden
 
   &::after
@@ -369,29 +403,6 @@
   background-color: #eee
   background-size: cover
 
-.kf-upl-card-owner-pic-a
-  diameter = 60px
-  position: absolute
-  z-index: 1
-  width: diameter
-  height: diameter
-  top: 50%
-  left: 50%
-  margin-left: -(diameter / 2)
-  border-radius: 50%
-
-  &:hover
-    transform: scale(1.03)
-
-.kf-upl-card-owner-pic
-  position: absolute
-  top: 0
-  left: 0
-  width: 100%
-  height: 100%
-  border-radius: 50%
-  box-shadow: 0 0 3px rgba(0,0,0,.3) inset
-
 .kf-upl-card-foot
   position: absolute
   left: 0
@@ -400,6 +411,7 @@
   height: 35px
   border-top: 1px solid rgba(255,255,255,.3)
   -webkit-font-smoothing: antialiased
+  cursor: default
 
 follower-pic-diameter = 23px
 
