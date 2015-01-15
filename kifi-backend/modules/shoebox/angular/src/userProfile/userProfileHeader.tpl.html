@@ -15,7 +15,7 @@
         <img class="kf-user-profile-picture" ng-src="{{profile.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" alt="{{profile.firstName}} {{profile.lastName}}" itemprop="photo">
       </a>
 
-      <div ng-switch="connectionWithUser" class="kf-user-profile-available-action">
+      <div ng-if="!isKifiCurator" ng-switch="connectionWithUser" class="kf-user-profile-available-action">
         <div ng-switch-when="not_friends" class="kf-user-profile-connect connect" ng-click="sendFriendRequest()">
           <div class="kf-user-profile-action connect">Connect</div>
           <span class="kf-user-profile-connect-image add-friend"></span>
