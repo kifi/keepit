@@ -40,8 +40,7 @@ import com.keepit.abook.model.RichContact
 
 @json case class MarketingSuggestedLibrarySystemValue(
   id: Id[Library],
-  caption: Option[String] = None,
-  color: Option[LibraryColor] = None)
+  caption: Option[String] = None)
 
 object MarketingSuggestedLibrarySystemValue {
   // system value that persists the library IDs and additional library data for the marketing site
@@ -1157,7 +1156,7 @@ class LibraryCommander @Inject() (
               id = info.id,
               name = info.name,
               description = None, // not currently used
-              color = info.color.orElse(extraInfo.color),
+              color = info.color,
               image = info.image,
               slug = info.slug,
               owner = BasicUserWithFriendStatus.fromWithoutFriendStatus(info.owner),
