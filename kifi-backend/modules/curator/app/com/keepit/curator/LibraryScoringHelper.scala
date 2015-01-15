@@ -32,26 +32,26 @@ class LibraryScoringHelper @Inject() (
     private val airbrake: AirbrakeNotifier) extends Logging {
 
   def apply(userId: Id[User], libraries: Seq[CuratorLibraryInfo], selectionParams: LibraryRecoSelectionParams): Future[Seq[ScoredLibraryInfo]] = {
+    val socialScoresF = getSocialScores(userId, libraries)
     val userLibrariesScoresF = getLibraryInterestScores(userId, libraries)
 
-    Future.sequence(Seq.tabulate(libraries.size) { idx: Int =>
-      val candidate = libraries(idx)
-
-      for {
-        socialScore <- getSocialScore(userId, candidate)
-        interestScore <- userLibrariesScoresF
-      } yield {
-        val allScores = LibraryScores(
-          socialScore = socialScore,
-          recencyScore = getRecencyScore(candidate),
-          interestScore = interestScore(idx),
-          popularityScore = getPopularityScore(candidate),
-          sizeScore = getSizeScore(candidate),
-          contentScore = Some(getContentScore(candidate)))
-        val masterScore = computeMasterScore(allScores, selectionParams)
-        ScoredLibraryInfo(candidate, masterScore, allScores)
+    for {
+      socialScores <- socialScoresF
+      interestScores <- userLibrariesScoresF
+    } yield {
+      (libraries zip interestScores zip socialScores).map {
+        case ((candidate, interestScore), socialScore) =>
+          val allScores = LibraryScores(
+            socialScore = socialScore,
+            recencyScore = getRecencyScore(candidate),
+            interestScore = interestScore,
+            popularityScore = getPopularityScore(candidate),
+            sizeScore = getSizeScore(candidate),
+            contentScore = Some(getContentScore(candidate)))
+          val masterScore = computeMasterScore(allScores, selectionParams)
+          ScoredLibraryInfo(candidate, masterScore, allScores)
       }
-    })
+    }
   }
 
   private def computeMasterScore(allScores: LibraryScores, selectionParams: LibraryRecoSelectionParams): Float = {
@@ -87,30 +87,32 @@ class LibraryScoringHelper @Inject() (
     } getOrElse 0f
   }
 
-  private def getSocialScore(userId: Id[User], candidate: CuratorLibraryInfo): Future[Float] = {
+  private def getSocialScores(userId: Id[User], candidates: Seq[CuratorLibraryInfo]): Future[Seq[Float]] = {
     graph.getConnectedUserScores(userId, avoidFirstDegreeConnections = false).map { socialScores =>
       val socialScoreMap = socialScores.map { socialScore =>
         (socialScore.userId, socialScore.score.toFloat)
       }.toMap
 
-      // weight scores different if friend follows vs owns
-      val memberships = db.readOnlyReplica { implicit s =>
-        libMembershipRepo.getByLibrary(candidate.libraryId)
-      } filter { m => socialScoreMap.isDefinedAt(m.userId) }
+      candidates.map { candidate =>
+        // weight scores different if friend follows vs owns
+        val memberships = db.readOnlyReplica { implicit s =>
+          libMembershipRepo.getByLibrary(candidate.libraryId)
+        } filter { m => socialScoreMap.isDefinedAt(m.userId) }
 
-      var accScore = 0f
-      memberships map { membership =>
-        // give more weight to the score if the other user owns the library
-        val membershipMultiplier = if (membership.access == LibraryAccess.OWNER) 2 else 1
-        accScore += socialScoreMap(membership.userId) * membershipMultiplier
+        var accScore = 0f
+        memberships map { membership =>
+          // give more weight to the score if the other user owns the library
+          val membershipMultiplier = if (membership.access == LibraryAccess.OWNER) 2 else 1
+          accScore += socialScoreMap(membership.userId) * membershipMultiplier
+        }
+
+        Math.tanh(0.5 * accScore).toFloat
       }
-
-      Math.tanh(0.5 * accScore).toFloat
     }
   } recover {
     case ex: Throwable =>
       airbrake.notify(s"LibraryScoringHelper failed getSocialScore(userId=$userId)", ex)
-      0f
+      Seq.fill[Float](candidates.size)(0.0f)
   }
 
   private def getPopularityScore(candidate: CuratorLibraryInfo): Float = {
