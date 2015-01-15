@@ -38,6 +38,10 @@
           <span class="form-network-icon"></span>
           <span class="form-network-text">Sign up using Facebook</span>
         </a>
+        <a class="form-network twitter" href="@routes.signup("twitter")" data-track-action="clickauthTwitter">
+          <span class="form-network-icon"></span>
+          <span class="form-network-text">Sign up using Twitter</span>
+        </a>
         <a class="form-network linkedin" href="@routes.signup("linkedin")" data-track-action="clickauthLinkedIn">
           <span class="form-network-icon"></span>
           <span class="form-network-text">Sign up using LinkedIn</span>
@@ -100,8 +104,9 @@
       <div class="social-photo form-photo"@if(picturePath != ""){ style="background-image:url(@picturePath)"}></div>
       <div class="social-text-info">
         <div class="social-name">@firstName @lastName</div>
+
         @if(network == Some(SocialNetworkType("twitter"))) {
-          <input class="social-email" type="email" name="signup-2-email" value="@emailAddress" placeholder="Your email address">
+          <input class="social-email twitter-form" type="email" name="signup-2-email" value="@emailAddress" placeholder="Your email address">
         } else {
           <input class="social-email" type="email" name="signup-2-email" value="@emailAddress" placeholder="Your email address" disabled>
           <a class="social-change-email" href="javascript:" data-track-action="clickchangeEmail">Change email</a>

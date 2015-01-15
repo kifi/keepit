@@ -225,7 +225,7 @@ class AuthHelper @Inject() (
       }),
       "firstName" -> text, // todo(ray/andrew): revisit non-empty requirement for twitter
       "lastName" -> text,
-      "password" -> text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray)),
+      "password" -> text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray)), // todo (aaron): for twitter, there's no password. Should client generate random password? or do we do logic here? Cuz then form gets messed up
       "picToken" -> optional(text),
       "picHeight" -> optional(number),
       "picWidth" -> optional(number),

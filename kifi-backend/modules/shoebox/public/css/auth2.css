@@ -318,6 +318,15 @@ a.video-frame {
 .form-network.facebook:active {
   background: #506e9f;
 }
+.form-network.twitter {
+  background: #55acee;
+}
+.form-network.twitter:hover {
+  background: #66b4ef;
+}
+.form-network.twitter:active {
+  background: #55acee;
+}
 .form-network.linkedin {
   background: #2786c5;
 }
@@ -349,6 +358,9 @@ a.video-frame {
   background-position: -187px -294px;
 }
 .linkedin > .form-network-icon:empty:before {
+  background-position: -221px -294px;
+}
+.twitter > .form-network-icon:empty:before {
   background-position: -221px -294px;
 }
 .form-network-pic {
@@ -1165,7 +1177,7 @@ a.video-frame {
 input.social-email {
   display: block;
   width: 100%;
-  margin: 0 -0.8em;
+  margin: 10px -0.8em;
   border: 0;
   height: 30px;
   font-size: 14px;
