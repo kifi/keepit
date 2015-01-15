@@ -455,7 +455,6 @@ class AuthController @Inject() (
           } else {
             temporaryReportSignupLoad()(request)
             Ok(views.html.auth.authGrey("signup"))
-            //.addingToSession(("twitter1", "true"))
           }
 
       }
