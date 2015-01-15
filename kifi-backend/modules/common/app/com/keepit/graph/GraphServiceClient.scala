@@ -52,6 +52,8 @@ class GraphServiceClientImpl @Inject() (
 
   private val longTimeout = CallTimeouts(responseTimeout = Some(300000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
 
+  private[this] val connectedUserScoresReqConsolidator = new RequestConsolidator[(Id[User], Boolean), Seq[ConnectedUserScore]](1 minutes)
+
   private def getSuccessfulResponses(calls: Seq[Future[ClientResponse]]): Future[Seq[ClientResponse]] = {
     val safeCalls = calls.map { call =>
       call.map(Some(_)).recover {
@@ -101,9 +103,11 @@ class GraphServiceClientImpl @Inject() (
   }
 
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]] = {
-    cacheProvider.userScoreCache.getOrElseFuture(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnections)) {
-      call(Graph.internal.getUserAndScores(userId, avoidFirstDegreeConnections), callTimeouts = longTimeout).map { response =>
-        response.json.as[Seq[ConnectedUserScore]]
+    connectedUserScoresReqConsolidator((userId, avoidFirstDegreeConnections)) { _ =>
+      cacheProvider.userScoreCache.getOrElseFuture(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnections)) {
+        call(Graph.internal.getUserAndScores(userId, avoidFirstDegreeConnections), callTimeouts = longTimeout).map { response =>
+          response.json.as[Seq[ConnectedUserScore]]
+        }
       }
     }
   }
