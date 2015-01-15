@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.curator.CuratorServiceClient
-import com.keepit.curator.model.{ RecommendationSubSource, FullLibRecoInfo, RecommendationSource, FullRecoInfo }
+import com.keepit.curator.model.{ FullUriRecoInfo, RecommendationSubSource, FullLibRecoInfo, RecommendationSource, FullRecoInfo }
 import com.keepit.model.{ User, KeepRepo, UserRepo, LibraryRepo, NormalizedURIRepo }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 
@@ -37,11 +37,11 @@ class FakeRecommendationsCommander @Inject() (
       publicIdConfig,
       userExperimentCommander) {
 
-  var recoInfos: Seq[FullRecoInfo] = Seq.empty
+  var uriRecoInfos: Seq[FullUriRecoInfo] = Seq.empty
   var libRecoInfos: Seq[FullLibRecoInfo] = Seq.empty
 
-  override def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[FullRecoInfo]] =
-    Future.successful(recoInfos)
+  override def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[FullUriRecoInfo]] =
+    Future.successful(uriRecoInfos)
 
   override def topPublicRecos(userId: Id[User]) = Future.successful(Seq.empty)
 

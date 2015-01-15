@@ -146,7 +146,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
         json === Json.parse("[]")
 
         val recoCommander = inject[RecommendationsCommander].asInstanceOf[FakeRecommendationsCommander]
-        recoCommander.recoInfos = recoInfos
+        recoCommander.uriRecoInfos = recoInfos
         recoCommander.libRecoInfos = libRecoInfos
 
         val result2: Future[Result] = requestFn(request)
@@ -231,7 +231,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
             siteName = Some("fafa"),
             summary = URISummary(title = Some("Yo!"))),
           explain = Some("because :-)")))
-        inject[RecommendationsCommander].asInstanceOf[FakeRecommendationsCommander].recoInfos = recoInfos
+        inject[RecommendationsCommander].asInstanceOf[FakeRecommendationsCommander].uriRecoInfos = recoInfos
 
         val result2: Future[Result] = controller.topRecos(true, 0.75f)(request)
         status(result2) must equalTo(OK)
