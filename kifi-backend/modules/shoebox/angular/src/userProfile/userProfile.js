@@ -151,6 +151,7 @@ angular.module('kifi')
 
     $scope.libraryType = $state.current.data.libraryType;
     $scope.libraries = null;
+    $scope.me = profileService.me;
 
     function refetchLibraries() {
       resetFetchState();
@@ -219,10 +220,6 @@ angular.module('kifi')
 
     $scope.showInvitedLibraries = function () {
       return $scope.profile && $scope.profile.numInvitedLibraries && $scope.viewingOwnProfile;
-    };
-
-    $scope.isMyLibrary = function(libraryOwnerId) {
-      return $scope.profile && (libraryOwnerId === $scope.profile.id);
     };
 
     $scope.openModifyLibrary = function (library) {

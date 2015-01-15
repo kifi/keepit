@@ -266,7 +266,7 @@
     top: 25px
 
   &.kf-user
-    top: 190px
+    top: 157px
     z-index: 1
 
 .kf-upl-card-setting
@@ -358,13 +358,16 @@ owner-pic-diam = 32px
 
 .kf-upl-counts
   position: absolute
-  top: 184px
+  top: 158px
   left: 50%
   transform: translate(-50%)
   font-size: 0
   color: #fff
   white-space: nowrap
   text-shadow: 0 0 3px rgba(0,0,0,.6)
+
+  &.kf-mine
+    top: 184px
 
 .kf-upl-count
   font-size: 13px
@@ -378,6 +381,39 @@ owner-pic-diam = 32px
   padding: 0 5px
   font-size: 14px
   cursor: default
+
+.kf-upl-card-follow
+  position: absolute
+  top: 192px
+  left: 50%
+  transform: translate(-50%)
+  height = 28px
+  padding: 0 20px
+  background-color: rgba(220,220,220,.4)
+  border: 1px solid rgba(255,255,255,.5)
+  border-radius: (height / 2)
+  color: #fff
+  font-weight: 500
+  font-size: 11px
+  line-height: height
+  text-transform: uppercase
+  text-shadow: 0 0 2px rgba(0,0,0,.4)
+  letter-spacing: .4px
+
+  &:hover
+    background-color: rgba(235,235,235,.4)
+
+  &:hover:active
+    background-color: rgba(215,215,215,.4)
+
+  &:focus
+    border-style: dotted
+
+  &::before
+    content: 'Follow'
+
+  &.kf-following::before
+    content: 'Following'
 
 .kf-upl-card-cover
   position: absolute
@@ -393,7 +429,7 @@ owner-pic-diam = 32px
     left: 0
     right: 0
     bottom: 0
-    background-color: rgba(0,0,0,.3)
+    background-color: rgba(0,0,0,.2)
     content: ''
 
 .kf-upl-card-cover-image
@@ -423,10 +459,11 @@ follower-pic-diameter = 23px
   line-height: follower-pic-diameter
   font-size: 11px
   vertical-align: middle
-  color: rgba(255,255,255,.7)
+  color: rgba(255,255,255,.8)
+  text-shadow: 0 0 6px rgba(0,0,0,.3)
 
 .kf-upl-followers-number
-  color: rgba(255,255,255,.7)
+  color: inherit
 
   &:hover
     text-decoration: underline
@@ -451,7 +488,8 @@ follower-pic-diameter = 23px
 .kf-upl-unlisted
   line-height: 33px
   font-size: 12px
-  color: rgba(255,255,255,.5)
+  color: rgba(255,255,255,.6)
+  text-shadow: 0 0 6px rgba(0,0,0,.2)
 
 //
 // Mobile styles.
