@@ -163,7 +163,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         (contentAsJson(result1) \ "library" \ "name").as[String] === "LibraryA"
 
-        val inputJson2 = Json.obj("slug" -> "libA", "description" -> "asdf", "visibility" -> LibraryVisibility.PUBLISHED, "listed" -> true)
+        val inputJson2 = Json.obj("slug" -> "libA", "description" -> "asdf", "visibility" -> LibraryVisibility.PUBLISHED, "listed" -> true, "color" -> "sky_blue")
         val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
         val result2 = libraryController.modifyLibrary(pubId)(request2)
         status(result2) must equalTo(OK)
@@ -174,27 +174,28 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         }
         val expected = Json.parse(
           s"""
-             |{
-               |"library": {
-                 |"id":"${pubId.id}",
-                 |"name":"LibraryA",
-                 |"visibility":"published",
-                 |"shortDescription":"asdf",
-                 |"url":"/ahsu/libA",
-                 |"owner":{
-                 |  "id":"${basicUser1.externalId}",
-                 |  "firstName":"${basicUser1.firstName}",
-                 |  "lastName":"${basicUser1.lastName}",
-                 |  "pictureName":"${basicUser1.pictureName}",
-                 |  "username":"${basicUser1.username.value}"
-                 |  },
-                 |"numKeeps":0,
-                 |"numFollowers":0,
-                 |"kind":"user_created"
-               |},
-               |"listed": true
-             |}
-           """.stripMargin)
+            {
+              "library": {
+                "id":"${pubId.id}",
+                "name":"LibraryA",
+                "visibility":"published",
+                "shortDescription":"asdf",
+                "url":"/ahsu/libA",
+                "color":"${LibraryColor.SKY_BLUE.hex}",
+                "owner":{
+                  "id":"${basicUser1.externalId}",
+                  "firstName":"${basicUser1.firstName}",
+                  "lastName":"${basicUser1.lastName}",
+                  "pictureName":"${basicUser1.pictureName}",
+                  "username":"${basicUser1.username.value}"
+                  },
+                "numKeeps":0,
+                "numFollowers":0,
+                "kind":"user_created"
+              },
+              "listed": true
+            }
+           """)
         Json.parse(contentAsString(result2)) must equalTo(expected)
 
         // modify to existing library name
