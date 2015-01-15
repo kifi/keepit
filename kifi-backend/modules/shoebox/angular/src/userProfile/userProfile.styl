@@ -309,14 +309,16 @@
   right: 0
 
 .kf-upl-count
+.kf-upl-count-link
   font-size: 10px
   color: rgba(255,255,255,.7)
 
-  .kf-upl-count+&::before
+.kf-upl-count-link
+  .kf-upl-count-link+&::before
     content: '\00b7'
     padding: 0 4px
 
-  &:hover
+.kf-upl-count:hover
     text-decoration: underline
 
 .kf-upl-card-byline
@@ -410,11 +412,7 @@ follower-pic-diameter = 23px
   color: rgba(255,255,255,.7)
 
 .kf-upl-followers-number
-  &:link
-  &:visited
-  &:hover
-  &:active
-    color: rgba(255,255,255,.7)
+  color: rgba(255,255,255,.7)
 
   &:hover
     text-decoration: underline

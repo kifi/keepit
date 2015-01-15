@@ -125,15 +125,17 @@ angular.module('kifi')
           libraryService.deleteLibrary(scope.library.id).then(function () {
             $rootScope.$emit('librarySummariesChanged');
             $rootScope.$emit('libraryDeleted', scope.library.id);
-            scope.close();
 
             // If we were on the deleted library's page, return to the homepage.
-            if ($state.is('library.keeps')) {
+            if ($state.is('library.keeps') &&
+                ($state.href('library.keeps') === scope.library.url)) {
               $location.path('/');
             }
           })['catch'](modalService.openGenericErrorModal)['finally'](function () {
             submitting = false;
           });
+
+          scope.close();
         };
 
         scope.showFollowersPanel = function () {
