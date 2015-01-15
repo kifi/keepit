@@ -29,7 +29,7 @@ case class Library(
     visibility: LibraryVisibility,
     description: Option[String] = None,
     slug: LibrarySlug,
-    color: Option[HexColor] = None,
+    color: Option[LibraryColor] = None,
     state: State[Library] = LibraryStates.ACTIVE,
     seq: SequenceNumber[Library] = SequenceNumber.ZERO,
     kind: LibraryKind = LibraryKind.USER_CREATED,
@@ -73,7 +73,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     description: Option[String],
     visibility: LibraryVisibility,
     slug: LibrarySlug,
-    color: Option[HexColor],
+    color: Option[LibraryColor],
     seq: SequenceNumber[Library],
     kind: LibraryKind,
     memberCount: Int,
@@ -113,7 +113,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'description).format[Option[String]] and
     (__ \ 'slug).format[LibrarySlug] and
-    (__ \ 'color).formatNullable[HexColor] and
+    (__ \ 'color).formatNullable[LibraryColor] and
     (__ \ 'state).format(State.format[Library]) and
     (__ \ 'seq).format(SequenceNumber.format[Library]) and
     (__ \ 'kind).format[LibraryKind] and
@@ -247,36 +247,55 @@ object BasicLibraryStatistics {
   implicit val format = Json.format[BasicLibraryStatistics]
 }
 
-sealed abstract class HexColor(val hex: String)
-object HexColor {
+sealed abstract class LibraryColor(val hex: String)
+object LibraryColor {
 
-  implicit def format[T]: Format[HexColor] =
-    Format(__.read[String].map(HexColor(_)), new Writes[HexColor] { def writes(o: HexColor) = JsString(o.hex) })
+  implicit def format[T]: Format[LibraryColor] =
+    Format(__.read[String].map(LibraryColor(_)), new Writes[LibraryColor] { def writes(o: LibraryColor) = JsString(o.hex) })
 
-  case object MAGENTA extends HexColor("#c764a2")
-  case object RED extends HexColor("#e35957")
-  case object ORANGE extends HexColor("#ff9430")
-  case object ORANGE_YELLOW extends HexColor("#fab200")
-  case object INDIGO extends HexColor("#2ec89a")
-  case object BLUE extends HexColor("#3975bf")
-  case object PURPLE extends HexColor("#955cb4")
+  case object BLUE extends LibraryColor("#447ab7")
+  case object SKY_BLUE extends LibraryColor("#5ab7e7")
+  case object GREEN extends LibraryColor("#4fc49e")
+  case object ORANGE extends LibraryColor("#f99457")
+  case object RED extends LibraryColor("#dd5c60")
+  case object MAGENTA extends LibraryColor("#c16c9e")
+  case object PURPLE extends LibraryColor("#9166ac")
 
-  def apply(str: String) = {
-    str.toLowerCase match {
-      case MAGENTA.hex => MAGENTA
-      case RED.hex => RED
-      case ORANGE.hex => ORANGE
-      case ORANGE_YELLOW.hex => ORANGE_YELLOW
-      case INDIGO.hex => INDIGO
+  def apply(str: String): LibraryColor = {
+    str match {
+      case "blue" => BLUE
+      case "sky_blue" => SKY_BLUE
+      case "green" => GREEN
+      case "orange" => ORANGE
+      case "red" => RED
+      case "magenta" => MAGENTA
+      case "purple" => PURPLE
+
       case BLUE.hex => BLUE
+      case SKY_BLUE.hex => SKY_BLUE
+      case GREEN.hex => GREEN
+      case ORANGE.hex => ORANGE
+      case RED.hex => RED
+      case MAGENTA.hex => MAGENTA
       case PURPLE.hex => PURPLE
+
+      // TODO: Remove mappings below when migration from old colors is complete.
+      case "#3975bf" => BLUE
+      case "#fab200" => SKY_BLUE // was ORANGE_YELLOW
+      case "#2ec89a" => GREEN
+      case "#ff9430" => ORANGE
+      case "#e35957" => RED
+      case "#c764a2" => MAGENTA
+      case "#955cb4" => PURPLE
     }
   }
 
-  val allColors = Seq(MAGENTA, RED, ORANGE, ORANGE_YELLOW, INDIGO, BLUE, PURPLE)
+  val AllColors = Seq(BLUE, SKY_BLUE, GREEN, ORANGE, RED, MAGENTA, PURPLE)
 
-  def pickRandomLibraryColor(): HexColor = {
-    val rnd = new Random
-    allColors(rnd.nextInt(allColors.size))
+  private lazy val rnd = new Random
+
+  def pickRandomLibraryColor(): LibraryColor = {
+    AllColors(rnd.nextInt(AllColors.size))
   }
+
 }

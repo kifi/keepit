@@ -41,7 +41,7 @@ import com.keepit.abook.model.RichContact
 @json case class MarketingSuggestedLibrarySystemValue(
   id: Id[Library],
   caption: Option[String] = None,
-  color: Option[HexColor] = None)
+  color: Option[LibraryColor] = None)
 
 object MarketingSuggestedLibrarySystemValue {
   // system value that persists the library IDs and additional library data for the marketing site
@@ -377,7 +377,7 @@ class LibraryCommander @Inject() (
           case Some(lib) if lib.slug == validSlug =>
             Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
           case None =>
-            val newColor = libAddReq.color.orElse(Some(HexColor.pickRandomLibraryColor))
+            val newColor = libAddReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor))
             val newListed = libAddReq.listed.getOrElse(true)
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)

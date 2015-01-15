@@ -38,7 +38,7 @@ case class LibraryAddRequest(
   visibility: LibraryVisibility,
   description: Option[String] = None,
   slug: String,
-  color: Option[HexColor] = None,
+  color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None)
 
 @json
@@ -47,7 +47,7 @@ case class LibraryModifyRequest(
   slug: Option[String] = None,
   visibility: Option[LibraryVisibility] = None,
   description: Option[String] = None,
-  color: Option[HexColor] = None,
+  color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None)
 
 case class BasicUserWithFriendStatus(
@@ -94,7 +94,7 @@ case class LibraryInfo(id: PublicId[Library],
   visibility: LibraryVisibility,
   shortDescription: Option[String],
   url: String,
-  color: Option[HexColor] = None,
+  color: Option[LibraryColor], // system libraries have no color
   owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
@@ -109,7 +109,7 @@ object LibraryInfo {
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'url).format[String] and
-    (__ \ 'color).formatNullable[HexColor] and
+    (__ \ 'color).formatNullable[LibraryColor] and
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
@@ -140,7 +140,7 @@ private[model] abstract class BaseLibraryCardInfo(
   id: PublicId[Library],
   name: String,
   description: Option[String],
-  color: Option[HexColor],
+  color: Option[LibraryColor], // system libraries have no color
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
   numKeeps: Int,
@@ -153,7 +153,7 @@ case class OwnLibraryCardInfo(
   id: PublicId[Library],
   name: String,
   description: Option[String],
-  color: Option[HexColor],
+  color: Option[LibraryColor],
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
   kind: LibraryKind,
@@ -170,7 +170,7 @@ case class LibraryCardInfo(
   id: PublicId[Library],
   name: String,
   description: Option[String],
-  color: Option[HexColor],
+  color: Option[LibraryColor],
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
   owner: BasicUserWithFriendStatus,
@@ -208,8 +208,8 @@ case class FullLibraryInfo(
   description: Option[String],
   slug: LibrarySlug,
   url: String,
-  color: Option[HexColor] = None,
-  image: Option[LibraryImageInfo] = None,
+  color: Option[LibraryColor], // system libraries have no color
+  image: Option[LibraryImageInfo],
   kind: LibraryKind,
   lastKept: Option[DateTime],
   owner: BasicUser,
