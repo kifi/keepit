@@ -326,8 +326,6 @@ owner-pic-diam = 32px
   height: height
   background-color: rgba(255,255,255,.1)
   white-space: nowrap
-  overflow: hidden
-  text-overflow: ellipsis
   font-size: 0
   line-height: height
   color: #fff
@@ -347,11 +345,16 @@ owner-pic-diam = 32px
   margin-right: 5px
 
 .kf-upl-card-by-name
+  display: inline-block
   vertical-align: middle
+  text-align: left
+  max-width: 140px
   font-size: 11px
   font-weight: bold
   text-transform: uppercase
   letter-spacing: .2px
+  overflow: hidden
+  text-overflow: ellipsis
 
   :hover>&
     text-decoration: underline
@@ -387,8 +390,10 @@ owner-pic-diam = 32px
   top: 192px
   left: 50%
   transform: translate(-50%)
+  box-sizing: border-box
+  width: 91px
   height = 28px
-  padding: 0 20px
+  padding: 0
   background-color: rgba(220,220,220,.4)
   border: 1px solid rgba(255,255,255,.5)
   border-radius: (height / 2)
@@ -399,6 +404,7 @@ owner-pic-diam = 32px
   text-transform: uppercase
   text-shadow: 0 0 2px rgba(0,0,0,.4)
   letter-spacing: .4px
+  text-align: center
 
   &:hover
     background-color: rgba(235,235,235,.4)
@@ -412,8 +418,14 @@ owner-pic-diam = 32px
   &::before
     content: 'Follow'
 
+  &.kf-following
+    width: 100px
+
   &.kf-following::before
     content: 'Following'
+
+  &.kf-following:hover::before
+    content: 'Unfollow'
 
 .kf-upl-card-cover
   position: absolute

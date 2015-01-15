@@ -28,7 +28,7 @@
         <ng-pluralize count="lib.numFollowers" when="{'1':'{} Follower','other':'{{lib.numFollowers|number}} Followers'}"></ng-pluralize>
       </a>
     </div>
-    <button ng-class="{'kf-upl-card-follow': true, 'kf-following': lib.following}" ng-if="lib.owner.id !== me.id"></button>
+    <button ng-class="{'kf-upl-card-follow': true, 'kf-following': lib.following}" ng-if="lib.owner.id !== me.id" ng-click="onFollowButtonClick(lib, $event)"></button>
     <div class="kf-upl-card-foot" ng-switch="lib.visibility === 'published' && !lib.listed ? 'unlisted' : lib.followers.length ? 'followers' : lib.lastKept ? 'updated' : ''">
       <div class="kf-upl-followers" ng-switch-when="followers">
         <a href="{{user.profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" ng-click="trackProfileClick()"
