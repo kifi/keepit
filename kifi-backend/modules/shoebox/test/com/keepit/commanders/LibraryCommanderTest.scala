@@ -290,6 +290,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           LibraryModifyRequest(name = Some("")))
         mod5.isRight === false
 
+        val mod6 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
+          LibraryModifyRequest(color = Some(LibraryColor.SKY_BLUE)))
+        mod6.isRight === true
+        mod6.right.get.color === Some(LibraryColor.SKY_BLUE)
+
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all
           allLibs.length === 3
@@ -297,6 +302,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           allLibs.map(_.slug.value) === Seq("avengers", "murica_#1", "science")
           allLibs.map(_.description) === Seq(Some("Samuel L. Jackson was here"), None, None)
           allLibs.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.PUBLISHED, LibraryVisibility.PUBLISHED)
+          allLibs.map(_.color) === Seq(None, None, Some(LibraryColor.SKY_BLUE))
         }
       }
     }
