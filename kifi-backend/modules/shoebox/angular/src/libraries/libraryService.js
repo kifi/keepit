@@ -106,6 +106,7 @@ angular.module('kifi')
     function RelatedLibraryDecorator(libData) {
       var library = libData[0], reason = libData[1];
 
+      this.id = library.id;
       this.owner = library.owner;
       this.numFollowers = library.numFollowers;
       this.numKeeps = library.numKeeps;

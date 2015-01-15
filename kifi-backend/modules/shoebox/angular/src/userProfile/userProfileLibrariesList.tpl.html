@@ -9,11 +9,11 @@
       <div class="kf-upl-card-name" ng-attr-kf-fit="{{['system_main','system_secret'].indexOf(lib.kind) < 0}}" 1="[[24,29],[28,32]]" 2="[[19,25],[18,24],[17,23],[16,22]]" 3="[[15,19]]" block="3">{{lib.name}}</div>
     </a>
     <div class="kf-upl-counts">
-      <a href="{{lib.path}}" ng-click="trackUplCardClick(lib)">
+      <a href="{{lib.path}}" class="kf-upl-count-link" ng-click="trackUplCardClick(lib)">
         <ng-pluralize class="kf-upl-count" count="lib.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}"></ng-pluralize>
-      </a>
-      <a href="javascript:" ng-click="openFollowersList(lib)">
-        <ng-pluralize class="kf-upl-count" count="lib.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}" ng-if="lib.numFollowers > 0"></ng-pluralize>
+      </a><a
+      href="javascript:" ng-if="lib.numFollowers > 0" class="kf-upl-count-link" ng-click="openFollowersList(lib)">
+        <ng-pluralize class="kf-upl-count" count="lib.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}"></ng-pluralize>
       </a>
     </div>
     <div itemscope itemtype="http://data-vocabulary.org/Person">

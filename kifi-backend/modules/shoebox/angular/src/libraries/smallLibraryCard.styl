@@ -44,12 +44,17 @@
   right: 0
 
 .kf-slc-count
+.kf-slc-count-link
   font-size: 10px
   color: rgba(255,255,255,.7)
 
-  .kf-slc-count+&::before
+.kf-slc-count-link
+  .kf-slc-count-link+&::before
     content: '\00b7'
     padding: 0 4px
+
+.kf-slc-count:hover
+  text-decoration: underline
 
 .kf-slc-card-byline
   position: absolute
