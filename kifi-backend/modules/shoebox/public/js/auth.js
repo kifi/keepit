@@ -315,18 +315,11 @@ kifi.form = (function () {
     var $email = $form.find('.social-email');
     var email = kifi.form.validateEmailAddress($email);
     var $password = $form.find('.form-password');
-    var password;
-    if ($password.length > 0) {
-      password = kifi.form.validateNewPassword($password);
-    }
-    var isFromTwitter = $form.find('.twitter-form').length > 0;
-    var validForTwitter = isFromTwitter && email; // for twitter, we require an email (password always undefined)
-    if (validForTwitter) {
-      password = Math.random().toString(36).substring(5);
-    }
-    var validForFbAndLi = !isFromTwitter && password; // for fb or li, we require valid password (email will always be true)
+    var password = kifi.form.validateNewPassword($password);
 
-    if (validForFbAndLi || validForTwitter) {
+    // for FbLi we need valid password (already approved email)
+    // for Twitter we need valid password && email
+    if (password && email) {
       Tracker.trackClick($form.find('button')[0]);
       $form.data('promise', $.postJson(this.action, {
         firstName: $form.data('first'),
