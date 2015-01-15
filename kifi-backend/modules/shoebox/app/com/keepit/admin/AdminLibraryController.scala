@@ -242,20 +242,5 @@ class AdminLibraryController @Inject() (
     Redirect(request.request.referer)
   }
 
-  def updateLibraryColors() = AdminUserAction { request =>
-    Seq("#2ec89a", "#3975bf", "#955cb4", "#c764a2", "#e35957", "#fab200", "#ff9430") foreach { oldColor =>
-      val libs = db.readOnlyMaster { implicit s =>
-        libraryRepo.getByColor(oldColor)
-      }
-      val newColor = LibraryColor(oldColor)
-      if (libs.nonEmpty) {
-        db.readWriteBatch(libs) { (session, lib) =>
-          libraryRepo.save(lib.copy(color = Some(newColor)))(session)
-        }
-      }
-    }
-    NoContent
-  }
-
 }
 
