@@ -32,6 +32,34 @@
       </div>
     </div>
 
+    <!-- Twitter -->
+    <div class="social-connect-row" ng-if="onTwitterExperiment">
+      <div ng-if="twitter.profileUrl">
+        <div class="social-connected-button twitter">Twitter Connected</div>
+
+        <span class="social-notice-badge" ng-if="twitterStatus() === 'good'">
+          <span class="notice-button good"></span>
+        </span>
+
+        <span class="social-notice-badge" ng-if="twitterStatus() === 'refreshing'">
+          <span class="notice-message import">
+            <div class="bouncy-ball">
+              <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
+            </div>
+            Importing your contacts
+          </span>
+        </span>
+
+        <span class="social-notice-badge" ng-if="twitterStatus() === 'expired'"  ng-click="connectTwitter()">
+          <span class="notice-button warn">×</span>
+          <span class="notice-message refresh">Refresh connection</span>
+        </span>
+
+      </div>
+      <div ng-if="!twitter.profileUrl">
+        <a class="social-connect-button twitter" href="javascript:" ng-click="connectTwitter()">Connect Twitter</a>
+      </div>
+    </div>
 
     <!-- LinkedIn -->
     <div class="social-connect-row">
