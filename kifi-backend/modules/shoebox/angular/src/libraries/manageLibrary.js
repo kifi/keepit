@@ -18,7 +18,15 @@ angular.module('kifi')
         var nameInput = element.find('.manage-lib-name-input');
         var returnAction = null;
         var submitting = false;
-
+        var colorNames = {
+          "#447ab7": "blue",
+          "#5ab7e7": "sky_blue",
+          "#4fc49e": "green",
+          "#f99457": "orange",
+          "#dd5c60": "red",
+          "#c16c9e": "magenta",
+          "#9166ac": "purple"
+        };
 
         //
         // Scope data.
@@ -28,7 +36,7 @@ angular.module('kifi')
         scope.emptySlug = true;
         scope.$error = {};
         scope.showFollowers = false;
-
+        scope.colors = ["#447ab7","#5ab7e7","#4fc49e","#f99457","#dd5c60","#c16c9e","#9166ac"];
 
         //
         // Scope methods.
@@ -49,8 +57,7 @@ angular.module('kifi')
 
           scope.$error.name = libraryService.getLibraryNameError(
             scope.library.name,
-            scope.modalData && scope.modalData.library && scope.modalData.library.name
-          );
+            scope.modalData && scope.modalData.library && scope.modalData.library.name);
           if (scope.$error.name) {
             return;
           }
@@ -61,22 +68,15 @@ angular.module('kifi')
 
           submitting = true;
 
-          var saveData = {
+          libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
             name: scope.library.name,
             description: scope.library.description,
             slug: scope.library.slug,
             visibility: scope.library.visibility,
-            listed: scope.library.listed
-          };
-          var promise;
-          if (scope.modifyingExistingLibrary && scope.library.id) {
-            promise = libraryService.modifyLibrary(saveData);
-          } else {
-            promise = libraryService.createLibrary(saveData);
-          }
-
-          promise.then(function (resp) {
+            listed: scope.library.listed,
+            color: colorNames[scope.library.color]
+          }).then(function (resp) {
             libraryService.fetchLibrarySummaries(true);
 
             var newLibrary = resp.data.library;
