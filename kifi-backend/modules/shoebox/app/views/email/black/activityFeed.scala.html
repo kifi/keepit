@@ -4,29 +4,43 @@
 
 Hi @fullName(toUserId)
 <br/><br/>
+
 <h1>New in Libraries</h1>
-@activityData.newKeepsInLibraries.map { case (libraryId: Id[Library], uriIds: Seq[Id[NormalizedURI]]) =>
-    <a href="@libraryUrl(libraryId)">@libraryName(libraryId)</a> by
-    @libraryOwnerFullName(libraryId)<br/>
+@activityData.newKeepsInLibraries.map { lib =>
+    <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
+    @lib.ownerName<br/>
+    @lib.description.getOrElse("")<br/>
 
     Keeps:<br/>
-    @uriIds.map { uriId =>
-        @uriId<br/>
+    @lib.keeps.map { keep =>
+        <a href="@keep.url">@keep.title</a><br/>
+        @keep.imageUrlAndWidth.map { case (url, width) =>
+        <img src="@url" alt="@keep.title" width="@width"/><br/>
+        }
     }
     <br/>
 }
+
+<h1>Library Invites</h1>
+@activityData.libraryInvites.map { lib =>
+    Invited by @{Html(lib.invitedByUsers.map(fullName).mkString(", "))}<br/>
+    <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
+    @lib.ownerName<br/>
+    @lib.description.getOrElse("")<br/>
+}
+<br/>
 
 <h1>Recos</h1>
 @activityData.uriRecos.map { reco  =>
     <a href="@reco.itemInfo.url">@reco.itemInfo.title</a><br/>
     @reco.itemInfo.summary.description.getOrElse("")<br/>
     @reco.itemInfo.summary.imageUrl.map { url =>
-        <img src="@url" alt="@reco.itemInfo.title" width="@reco.itemInfo.summary.imageWidth.getOrElse(500)"/>
+        <img src="@url" alt="@reco.itemInfo.title" width="@reco.itemInfo.summary.imageWidth.getOrElse(500)"/><br/>
     }
     <br/><br/>
 }
 
 <h1>Library Recos</h1>
 @activityData.libraryRecos.map { recoInfo =>
-<a href="@baseUrl/@{recoInfo.itemInfo.url}">@recoInfo.itemInfo.name</a>
+    <a href="@baseUrl/@{recoInfo.itemInfo.url}">@recoInfo.itemInfo.name</a><br/>
 }
