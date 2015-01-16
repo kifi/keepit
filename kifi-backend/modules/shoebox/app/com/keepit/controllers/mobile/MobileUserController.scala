@@ -140,7 +140,7 @@ class MobileUserController @Inject() (
   }
 
   def changePassword = UserAction(parse.tolerantJson) { implicit request =>
-    val oldPassword = (request.body \ "oldPassword").as[String] // todo: use char[]
+    val oldPassword = (request.body \ "oldPassword").asOpt[String] // todo: use char[]
     val newPassword = (request.body \ "newPassword").as[String]
     if (newPassword.length < 7) {
       BadRequest(Json.obj("error" -> "bad_new_password"))

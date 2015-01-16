@@ -196,7 +196,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "library_callout_shown" -> JsNull,
           "tag_callout_shown" -> JsNull,
           "guide_callout_shown" -> JsNull,
-          "site_show_library_intro" -> JsNull)
+          "site_show_library_intro" -> JsNull,
+          "has_no_password" -> JsNull)
       }
     }
 
