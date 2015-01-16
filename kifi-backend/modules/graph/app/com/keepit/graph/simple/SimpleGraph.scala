@@ -40,13 +40,13 @@ object SimpleGraph extends Logging {
   implicit val vertexFormat = MutableVertex.lossyFormat
 
   def write(graph: SimpleGraph, graphFile: File): Unit = {
-    val lines: Iterable[String] = graph.vertices.toIterable.map {
+    val lines: Iterable[String] = graph.vertices.iterator.map {
       case (vertexId, vertex) =>
         checkVertexIntegrity(graph.vertices, vertexId, vertex)
         Json.stringify(
           Json.arr(JsNumber(vertexId.id), Json.toJson(vertex))
         )
-    }
+    }.toIterable
     FileUtils.writeLines(graphFile, lines)
   }
 
