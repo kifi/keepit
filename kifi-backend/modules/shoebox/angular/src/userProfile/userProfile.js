@@ -34,18 +34,6 @@ angular.module('kifi')
     // Internal functions.
     //
     function init() {
-      // Logged in users who are in the "profiles_beta" experiment and logged out users
-      // who have the "upb" query parameter can see this page.
-      // Otherwise, redirect to home.
-      if ($rootScope.userLoggedIn &&
-          !(profileService.me.experiments && profileService.me.experiments.indexOf('profiles_beta') > -1)) {
-        $state.go('home');
-      }
-      if (!$rootScope.userLoggedIn && !$stateParams.upb) {
-        $state.go('home');
-        $window.location = '/';
-      }
-
       $rootScope.$emit('libraryUrl', {});
       var pageOrigin = originTrackingService.getAndClear();
       var username = $stateParams.username;
