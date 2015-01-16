@@ -159,7 +159,7 @@ angular.module('kifi')
       $scope.fetchLibraries();
     }
 
-    function augmentLibrary(owner, lib) {
+    function augmentLibrary(owner, following, lib) {
       owner = lib.owner || owner;
       lib.path = '/' + owner.username + '/' + lib.slug;
       lib.owner = owner;
@@ -170,6 +170,9 @@ angular.module('kifi')
         user.picUrl = keepWhoService.getPicUrl(user, 100);
         user.profileUrl = routeService.getProfileUrl(user.username);
       });
+      if (lib.following == null && following != null) {
+        lib.following = following;
+      }
       return lib;
     }
 
@@ -207,16 +210,18 @@ angular.module('kifi')
         if ($scope.libraryType === filter) {
           hasMoreLibraries = data[filter].length === fetchPageSize;
 
+          var isMyProfile = $scope.profile.id === $scope.me.id;
           var owner = filter === 'own' ? _.extend({username: username}, $scope.profile) : null;
-          var filteredLibs = data[filter];
+          var following = isMyProfile ? (filter === 'following' ? true : (filter === 'invited' ? false : null)) : null;
 
-          if (filter === 'own' && profile.id === $scope.me.id && newLibraryIds.length) {
+          var filteredLibs = data[filter];
+          if (filter === 'own' && isMyProfile && newLibraryIds.length) {
             _.remove(filteredLibs, function (lib) {
               return _.contains(newLibraryIds, lib.id);
             });
           }
 
-          $scope.libraries = ($scope.libraries || []).concat(filteredLibs.map(augmentLibrary.bind(null, owner)));
+          $scope.libraries = ($scope.libraries || []).concat(filteredLibs.map(augmentLibrary.bind(null, owner, following)));
 
           fetchPageNumber++;
           loading = false;
