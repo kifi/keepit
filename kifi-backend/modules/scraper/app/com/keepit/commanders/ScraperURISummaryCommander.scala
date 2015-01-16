@@ -15,8 +15,8 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.ImageFetcher
 import com.keepit.common.store.{ ImageSize, S3URIImageStore }
-import com.keepit.model.{ PageInfo, ImageInfo, NormalizedURI, URISummary }
-import com.keepit.scraper.ShoeboxDbCallbackHelper
+import com.keepit.model.{ PageInfo, ImageInfo, URISummary }
+import com.keepit.scraper.{ NormalizedURIRef, ShoeboxDbCallbackHelper }
 import com.keepit.scraper.embedly.EmbedlyClient
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -157,6 +157,3 @@ object ScraperURISummaryCommander {
     }
   }
 }
-
-@json case class NormalizedURIRef(id: Id[NormalizedURI], url: String, externalId: ExternalId[NormalizedURI])
-

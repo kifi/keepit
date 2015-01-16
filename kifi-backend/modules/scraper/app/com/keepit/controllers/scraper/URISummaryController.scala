@@ -1,11 +1,12 @@
 package com.keepit.controllers.scraper
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ NormalizedURIRef, ScraperURISummaryCommander, WordCountCommander }
+import com.keepit.commanders.{ ScraperURISummaryCommander, WordCountCommander }
 import com.keepit.common.controller.ScraperServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.store.ImageSize
 import com.keepit.model.NormalizedURI
+import com.keepit.scraper.NormalizedURIRef
 import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._

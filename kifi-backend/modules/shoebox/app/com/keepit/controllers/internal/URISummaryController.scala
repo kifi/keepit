@@ -35,15 +35,12 @@ class URISummaryController @Inject() (
     val waiting = (request.body \ "waiting").asOpt[Boolean].getOrElse(false)
     val silent = (request.body \ "silent").asOpt[Boolean].getOrElse(false)
     val uriIds = Json.fromJson[Seq[Id[NormalizedURI]]](uriIdsJson).get
-    val nUris = db.readOnlyReplica { implicit session =>
-      uriIds map (normalizedUriRepo.get(_))
-    }
     val uriSummariesFut = if (withDescription && !silent) {
-      Future.sequence(nUris map (uriSummaryCommander.getDefaultURISummary(_, waiting)))
+      Future.sequence(uriIds map (uriSummaryCommander.getDefaultURISummary(_, waiting)))
     } else {
-      Future.sequence(nUris map { nUri =>
-        val uriSummaryRequest = URISummaryRequest(nUri.id.get, ImageType.ANY, ImageSize(0, 0), withDescription, waiting, silent)
-        uriSummaryCommander.getURISummaryForRequest(uriSummaryRequest, nUri)
+      Future.sequence(uriIds map { uriId =>
+        val uriSummaryRequest = URISummaryRequest(uriId, ImageType.ANY, ImageSize(0, 0), withDescription, waiting, silent)
+        uriSummaryCommander.getURISummaryForRequest(uriSummaryRequest)
       })
     }
     uriSummariesFut map { uriSummaries => Ok(Json.toJson(uriSummaries)) }
