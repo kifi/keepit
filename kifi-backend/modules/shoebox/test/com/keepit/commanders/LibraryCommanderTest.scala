@@ -753,6 +753,17 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           keepsRW
         }
 
+        // Test copying keep from library without membership
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libShield.id.get, 0, 20).length === 0
+        }
+        val copy6 = libraryCommander.copyKeeps(userAgent.id.get, libShield.id.get, keeps4, None)
+        copy6._1.size === 2
+        copy6._2.size === 0
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libShield.id.get, 0, 20).length === 2
+        }
+
         // Test Main & Private Library
         val (mainLib, secretLib) = libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
 
