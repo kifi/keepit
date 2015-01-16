@@ -116,20 +116,28 @@
       border: 1px solid blueColor
 
   .manage-lib-slug
-    display: block
+    display: table
     margin: 5px 0 0 122px
+    width: 398px
 
-    .manage-lib-slug-input
-      border-bottom: 1px dotted #c7c7c7
-      width: 75px
-      placeholder secondaryTextGray
+  .manage-lib-slug-1
+    display: table-cell
+    width: 1%
+    color: secondaryTextGray
 
-      &.non-empty-slug
-        border-bottom: none
-        width: 275px
+  .manage-lib-slug-2
+    display: table-cell
 
-        &:focus
-          color: textBlackColor
+  .manage-lib-slug-input
+    border-bottom: 1px dotted #c7c7c7
+    width: 100%
+    placeholder secondaryTextGray
+
+    &.non-empty-slug
+      border-bottom: none
+
+      &:focus
+        color: textBlackColor
 
   .manage-lib-description-title-input
     padding-top: 10px
