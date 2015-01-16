@@ -76,13 +76,13 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
       if (users.size > 40000) airbrake.notify(s"there are ${users.size} libraries for sitemap, need to paginate the list!")
       users
     } map { userIds =>
-      userIds.grouped(500) flatMap { group =>
+      userIds.grouped(500) foreach { group =>
         val realUsers = group.filterNot(fakeUsers.contains)
         db.readOnlyMaster { implicit ro =>
           userRepo.getAllUsers(realUsers.toSeq).values.toSeq
         } filter { user =>
           user.state == UserStates.ACTIVE
-        } map { user =>
+        } foreach { user =>
           xml.append(s"""<url>
                   |  <loc>
                   |    https://www.kifi.com/${user.username.value}
