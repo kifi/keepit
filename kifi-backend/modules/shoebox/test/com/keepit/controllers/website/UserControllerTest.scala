@@ -85,6 +85,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "emails":[],
               "notAuthed":[],
               "experiments":["admin", "libraries"],
+              "signupWithSocial":false,
               "uniqueKeepsClicked":0,
               "totalKeepsClicked":0,
               "clickCount":0,

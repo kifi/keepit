@@ -309,13 +309,18 @@ class UserController @Inject() (
   }
 
   private def getUserInfo[T](userId: Id[User]) = {
-    val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
+    val (user, socialSignup) = db.readOnlyMaster { implicit session =>
+      val user = userRepo.get(userId)
+      val socialSignup = userValueRepo.getValue(user.id.get, UserValues.socialSignup)
+      (user, socialSignup)
+    }
     val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
     val json = toJson(pimpedUser.basicUser).as[JsObject] ++
       toJson(pimpedUser.info).as[JsObject] ++
       Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
-      Json.obj("experiments" -> experiments.map(_.value))
+      Json.obj("experiments" -> experiments.map(_.value)) ++
+      Json.obj("signupWithSocial" -> socialSignup)
     userCommander.getKeepAttributionInfo(userId) map { info =>
       Ok(json ++ Json.obj(
         "uniqueKeepsClicked" -> info.uniqueKeepsClicked,

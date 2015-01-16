@@ -69,6 +69,8 @@ object UserValueName {
   val TWITTER_FRIENDS_CURSOR = UserValueName("twitter_friends_cursor")
   val TWITTER_LOOKUP_CURSOR = UserValueName("twitter_lookup_cursor")
 
+  val SOCIAL_SIGNUP = UserValueName("social_signup")
+
   // User Profile Settings (be sure to add to UserValueSettings.defaultSettings for default values)
   val USER_PROFILE_SETTINGS = UserValueName("user_profile_settings")
   val SHOW_FOLLOWED_LIBRARIES = UserValueName("show_followed_libraries") // show libraries I follow
@@ -158,6 +160,8 @@ object UserValues {
   val recentInteractions = UserValueJsValueHandler(UserValueName.RECENT_INTERACTION, JsArray())
 
   val userProfileSettings = UserValueJsValueHandler(UserValueName.USER_PROFILE_SETTINGS, Json.obj())
+
+  val socialSignup = UserValueBooleanHandler(UserValueName.SOCIAL_SIGNUP, false)
 }
 
 @json case class UserValueSettings(showFollowedLibraries: Boolean)
