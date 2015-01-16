@@ -17,7 +17,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsNull, Json }
 
 import scala.concurrent.Future
-import scala.util.Random
+import scala.util.{ Failure, Success, Random }
 
 class RecommendationsCommander @Inject() (
     curator: CuratorServiceClient,
@@ -157,7 +157,7 @@ class RecommendationsCommander @Inject() (
     libraryAttrInfos ++ topicAttrInfos //++ keepAttrInfos
   }
 
-  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[FullRecoInfo]] = {
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[FullUriRecoInfo]] = {
     curator.topRecos(userId, source, subSource, more, recencyWeight).flatMap { recos =>
       val recosWithUris: Seq[(RecoInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
         recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }
@@ -165,10 +165,10 @@ class RecommendationsCommander @Inject() (
       Future.sequence(recosWithUris.map {
         case (reco, nUri) => uriSummaryCommander.getDefaultURISummary(nUri, waiting = false).map { uriSummary =>
           val itemInfo = constructRecoItemInfo(nUri, uriSummary, reco)
-          val attributionInfo = contstructAttributionInfos(reco.attribution.get)
+          val attributionInfo = (reco.attribution map contstructAttributionInfos) map RecoMetaData.apply
           FullUriRecoInfo(
             kind = RecoKind.Keep,
-            metaData = Some(RecoMetaData(attributionInfo)),
+            metaData = attributionInfo,
             itemInfo = itemInfo,
             explain = reco.explain
           )

@@ -16,8 +16,8 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[LibraryRecommendationRepoImpl])
 trait LibraryRecommendationRepo extends DbRepo[LibraryRecommendation] {
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[LibraryRecommendation]
-  def getByLibraryAndUserId(libraryId: Id[Library], userId: Id[User], LibraryRecommendationState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Option[LibraryRecommendation]
-  def getByLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeLibraryRecommendationState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Seq[LibraryRecommendation]
+  def getByLibraryAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Option[LibraryRecommendation]
+  def getByLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Seq[LibraryRecommendation]
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, LibraryRecommendationState: Option[State[LibraryRecommendation]] = Some(LibraryRecommendationStates.ACTIVE))(implicit session: RSession): Seq[LibraryRecommendation]
   def getRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[LibraryRecommendation]
   def cleanupLowMasterScoreRecos(userId: Id[User], minNumRecosToKeep: Int, before: DateTime)(implicit session: RWSession): Unit
@@ -82,22 +82,24 @@ class LibraryRecommendationRepoImpl @Inject() (
     (for (row <- rows if row.userId === userId) yield row).list
   }
 
-  def getByLibraryAndUserId(libraryId: Id[Library], userId: Id[User], excludeLibraryRecommendationState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Option[LibraryRecommendation] = {
+  def getByLibraryAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Option[LibraryRecommendation] = {
     val q = for {
       row <- byUser(userId)(rows) |> byLibrary(libraryId)
-      if row.state =!= excludeLibraryRecommendationState.orNull
+      if row.state =!= excludeState.orNull
     } yield row
     q.firstOption
   }
 
-  def getByLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeLibraryRecommendationState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Seq[LibraryRecommendation] = {
+  def getByLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeState: Option[State[LibraryRecommendation]] = None)(implicit session: RSession): Seq[LibraryRecommendation] = {
     (for {
-      row <- byUser(userId)(rows) if row.state =!= excludeLibraryRecommendationState.orNull && row.libraryId.inSet(libraryIds)
+      row <- byUser(userId)(rows)
+      if row.state =!= excludeState.orNull && row.libraryId.inSet(libraryIds)
     } yield row).list
   }
 
-  def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, LibraryRecommendationState: Option[State[LibraryRecommendation]] = Some(LibraryRecommendationStates.ACTIVE))(implicit session: RSession): Seq[LibraryRecommendation] = {
-    (for (row <- byUser(userId)(rows) if row.state === LibraryRecommendationState) yield row).sortBy(_.masterScore.desc).take(maxBatchSize).list
+  def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, state: Option[State[LibraryRecommendation]] = Some(LibraryRecommendationStates.ACTIVE))(implicit session: RSession): Seq[LibraryRecommendation] = {
+    (for { row <- byUser(userId)(rows) if row.state === state.orNull } yield row).
+      sortBy(_.masterScore.desc).take(maxBatchSize).list
   }
 
   def getRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[LibraryRecommendation] = {

@@ -1,5 +1,6 @@
 package com.keepit.controllers.admin
 
+import com.keepit.commanders.emails.ActivityFeedEmailSender
 import com.keepit.curator.CuratorServiceClient
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
@@ -110,6 +111,7 @@ class AdminUserController @Inject() (
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
     curator: CuratorServiceClient,
+    activityEmailSender: ActivityFeedEmailSender,
     authCommander: AuthCommander) extends AdminUserActions {
 
   def merge = AdminUserPage { implicit request =>
@@ -871,7 +873,10 @@ class AdminUserController @Inject() (
   }
 
   def sendEmail(toUserId: Id[User], code: String) = AdminUserPage { implicit request =>
-    curator.triggerEmailToUser(code, toUserId)
+    code match {
+      case "activity" => activityEmailSender(Set(toUserId))
+      case _ => curator.triggerEmailToUser(code, toUserId)
+    }
     NoContent
   }
 
