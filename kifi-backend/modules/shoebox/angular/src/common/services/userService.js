@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('userService', [
-  '$http', '$q', '$rootScope', '$stateParams', 'routeService', 'profileService',
-  function ($http, $q, $rootScope, $stateParams, routeService, profileService) {
+  '$http', '$q', '$rootScope', '$stateParams', 'routeService',
+  function ($http, $q, $rootScope, $stateParams, routeService) {
     return {
       getBasicUserInfo: function (id, friendCount) {
         var deferred = $q.defer();
@@ -20,9 +20,7 @@ angular.module('kifi')
       // user profiles beta query parameter is set. Temporarily lodged here because
       // code that needs this also usually needs userService.
       inUserProfileBeta: function () {
-        return ($rootScope.userLoggedIn &&
-                profileService.me.experiments && profileService.me.experiments.indexOf('profiles_beta') > -1) ||
-               (!$rootScope.userLoggedIn && $stateParams.upb);
+        return true;
       }
     };
   }
