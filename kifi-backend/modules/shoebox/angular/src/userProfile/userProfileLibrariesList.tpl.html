@@ -18,7 +18,7 @@
       </div>
     </a>
     <div itemscope itemtype="http://data-vocabulary.org/Person">
-      <a class="kf-upl-card-owner" href="{{lib.ownerProfileUrl}}" ng-click="trackProfileClick()" itemprop="url">
+      <a class="kf-upl-card-owner" href="{{lib.ownerProfileUrl}}" kf-track-origin origin="profile" sub-origin="curator" itemprop="url">
         <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" itemprop="photo" ng-if="libraryType !== 'own'">
         <span class="kf-upl-card-by">by</span>
         <span class="kf-upl-card-by-name" itemprop="name">{{lib.owner.firstName}} {{lib.owner.lastName}}</span>

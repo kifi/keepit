@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('UserProfileCtrl', [
   '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window',
-  'env', 'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService',
+  'env', 'inviteService', 'keepWhoService', 'originTrackingService', 'profileService', 'userProfileActionService',
   function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window,
-            env, inviteService, keepWhoService, profileService, userProfileActionService) {
+            env, inviteService, keepWhoService, originTrackingService, profileService, userProfileActionService) {
 
     //
     // Internal data.
@@ -38,6 +38,8 @@ angular.module('kifi')
         $window.location = '/';
       }
       $rootScope.$emit('libraryUrl', {});
+
+      console.dir(originTrackingService.get());
 
       var username = $stateParams.username;
 
