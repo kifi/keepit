@@ -1,8 +1,8 @@
 <div class="kf-upl-card-list" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreLibraries()" scroll-next="fetchLibraries()">
-  <div ng-if="viewingOwnProfile && libraryType === 'own'" class="kf-upl-card kf-upl-create-card" ng-click="openCreateLibrary()">
+  <button ng-if="viewingOwnProfile && libraryType === 'own'" class="kf-upl-card kf-upl-create-card" ng-click="openCreateLibrary()">
     <span class="kf-upl-create-card-add-icon svg-create-library"></span>
     <div class="kf-upl-create-card-text">CREATE A LIBRARY</div>
-  </div>
+  </button>
   <div class="kf-upl-card kf-upl-lib-card" ng-repeat="lib in libraries" ng-style="{'background-color': lib.color}"
        ng-class="{'justAddedBelow': lib.justAddedBelow, 'justAddedBelowAcross': lib.justAddedBelowAcross}">
     <a class="kf-upl-card-setting svg-settings-gear" ng-if="lib.owner.id === profile.id && lib.kind==='user_created'" href="javascript:" ng-click="openModifyLibrary(lib)"></a>
