@@ -59,10 +59,6 @@
     </header>
     <div class="keep-to-library-create-heading">Name Your Library</div>
     <div class="keep-to-library-create-name-input-container">
-      <span ng-switch="newLibrary.visibility" class="keep-to-library-lib-icon-container">
-        <span ng-switch-default class="keep-to-library-lib-icon svg-public-library-icon"></span>
-        <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
-      </span>
       <input class="keep-to-library-create-name-input" ng-model="newLibrary.name" placeholder="Inspiring videos, Recipes I love...">
       <span ng-show="$error.name" class="keep-to-library-create-name-error">{{$error.name}}</span>
     </div>
@@ -70,8 +66,8 @@
     <div class="keep-to-library-create-visibility">
       <span class="keep-to-library-create-visibility-switch" kf-library-visibility-checkbox library="newLibrary"></span>
       <span class="keep-to-library-create-visibility-explanation" ng-switch="newLibrary.visibility">
-        <span ng-switch-default><strong>Public</strong>. Anyone can see and follow this library.</span>
-        <span ng-switch-when="secret"><strong>Private</strong>. Only people you invite can see this library.</span>
+        <span ng-switch-default>Anyone can see and follow this library</span>
+        <span ng-switch-when="secret">Only people you invite can see this library</span>
       </span>
     </div>
     <div ng-show="$error.general" class="keep-to-library-create-general-error">{{$error.general}}</div>
