@@ -1,7 +1,6 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -10,7 +9,6 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.LibraryQualityHelper
 import com.keepit.model._
-import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._

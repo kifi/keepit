@@ -59,7 +59,8 @@ class PageCommanderTest extends Specification with ShoeboxTestInjector {
         val lib4 = library().withId(4).withName("legit").get
         val lib5 = library().withId(5).withName("this is Pocket imports").get
         val lib6 = library().withId(6).withName("Bookmark").get
-        val filtered = commander.firstQualityFilter(Seq(lib1, lib2, lib3, lib4, lib5, lib6))
+        val lib7 = library().withId(7).withName("Instapaper").get
+        val filtered = commander.firstQualityFilter(Seq(lib1, lib2, lib3, lib4, lib5, lib6, lib7))
         filtered.map(_.id.get) === Seq(lib1, lib2, lib4).map(_.id.get)
       }
     }
