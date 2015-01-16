@@ -60,7 +60,7 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
     res.onSuccess {
       case clientRes =>
         println(s"sent! $clientRes")
-        if (clientRes.status != 200) {
+        if (clientRes.status != 200 && clientRes.status != 202) {
           if (trial < MaxTrials) {
             log.info(s"failure to send notification ${notification.id} to device $device on trial $trial: ${clientRes.body}, trying more")
           } else {
