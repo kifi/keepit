@@ -8,7 +8,7 @@ angular.module('kifi')
 
     return {
       set: function (newOrigin) {
-        pageOrigin = newOrigin;
+        pageOrigin = _.cloneDeep(newOrigin);
       },
 
       get: function () {
