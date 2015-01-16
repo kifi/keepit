@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$timeout', '$window',
+  '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window',
   'env', 'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService',
-  function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $timeout, $window,
+  function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window,
             env, inviteService, keepWhoService, profileService, userProfileActionService) {
 
     //
@@ -139,18 +139,20 @@ angular.module('kifi')
 
 
 .controller('UserProfileLibrariesCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams',
+  '$scope', '$rootScope', '$state', '$stateParams', '$timeout',
   'routeService', 'keepWhoService', 'profileService', 'userProfileActionService', 'libraryService', 'modalService',
-  function ($scope, $rootScope, $state, $stateParams,
+  function ($scope, $rootScope, $state, $stateParams, $timeout,
     routeService, keepWhoService, profileService, userProfileActionService, libraryService, modalService) {
     var username = $stateParams.username;
     var fetchPageSize = 12;
     var fetchPageNumber = 0;
     var hasMoreLibraries = true;
     var loading = false;
+    var newlyAddedLibraryIds = [];
 
     $scope.libraryType = $state.current.data.libraryType;
     $scope.libraries = null;
+    $scope.me = profileService.me;
 
     function refetchLibraries() {
       resetFetchState();
@@ -175,6 +177,7 @@ angular.module('kifi')
       $scope.libraries = null;
       fetchPageNumber = 0;
       hasMoreLibraries = true;
+      newlyAddedLibraryIds.length = 0;
       loading = false;
     }
 
@@ -205,7 +208,17 @@ angular.module('kifi')
           hasMoreLibraries = data[filter].length === fetchPageSize;
 
           var owner = filter === 'own' ? _.extend({username: username}, $scope.profile) : null;
-          $scope.libraries = ($scope.libraries || []).concat(data[filter].map(augmentLibrary.bind(null, owner)));
+          var filteredLibs = data[filter];
+
+          if (filter === 'own' && newlyAddedLibraryIds.length) {
+            _.remove(filteredLibs, function (lib) {
+              return _.some(newlyAddedLibraryIds, function (newlyAddedLibraryId) {
+                return newlyAddedLibraryId === lib.id;
+              });
+            });
+          }
+
+          $scope.libraries = ($scope.libraries || []).concat(filteredLibs.map(augmentLibrary.bind(null, owner)));
 
           fetchPageNumber++;
           loading = false;
@@ -221,8 +234,40 @@ angular.module('kifi')
       return $scope.profile && $scope.profile.numInvitedLibraries && $scope.viewingOwnProfile;
     };
 
-    $scope.isMyLibrary = function(libraryOwnerId) {
-      return $scope.profile && (libraryOwnerId === $scope.profile.id);
+    $scope.openCreateLibrary = function () {
+      function addNewLibAnimationClass(newLibrary) {
+        // If the second system library card is under the create-library card,
+        // then there are two cards across and the new library will be
+        // below and across from the create-library card.
+        if ((Math.abs(angular.element('.kf-upl-create-card').offset().left -
+                      angular.element('.kf-upl-lib-card').eq(1).offset().left)) < 10) {
+          newLibrary.justAddedBelowAcross = true;
+        }
+        // Otherwise, there are three cards across and the new library will be
+        // directly below the create-library-card.
+        else {
+          newLibrary.justAddedBelow = true;
+        }
+
+        $timeout(function () {
+          newLibrary.justAddedBelow = false;
+          newLibrary.justAddedBelowAcross = false;
+        });
+      }
+
+      modalService.open({
+        template: 'libraries/manageLibraryModal.tpl.html',
+        modalData: {
+          returnAction: function (newLibrary) {
+            newLibrary.ownerPicUrl = $scope.profile && $scope.profile.picUrl;
+            addNewLibAnimationClass(newLibrary);
+            newlyAddedLibraryIds.push(newLibrary.id);
+
+             // Add new library to right behind the two system libraries.
+            ($scope.libraries || []).splice(2, 0, newLibrary);
+          }
+        }
+      });
     };
 
     $scope.openModifyLibrary = function (library) {
@@ -249,6 +294,18 @@ angular.module('kifi')
         modalData: {
           library: lib
         }
+      });
+    };
+
+    $scope.onFollowButtonClick = function (lib, $event) {
+      $event.target.disabled = true;
+      var following = lib.following;
+      libraryService[following ? 'leaveLibrary' : 'joinLibrary'](lib.id).then(function () {
+        lib.following = !following;
+      })['catch'](function () {
+        modalService.openGenericErrorModal();
+      })['finally'](function () {
+        $event.target.disabled = false;
       });
     };
   }

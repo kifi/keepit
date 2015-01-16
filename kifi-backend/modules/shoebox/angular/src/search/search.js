@@ -249,7 +249,14 @@ angular.module('kifi')
       _.assign($state.params, $location.search());
       init();
     }, 250);
-    $scope.$on('$locationChangeSuccess', newSearch);
+    $scope.$on('$locationChangeSuccess', function (event, newState, oldState) {
+      var newPath = newState.slice(0, newState.indexOf('?'));
+      var oldPath = oldState.slice(0, oldState.indexOf('?'));
+
+      if (newPath === oldPath) {
+        newSearch();
+      }
+    });
 
 
     // Report search analytics on unload.
@@ -265,7 +272,7 @@ angular.module('kifi')
     $window.addEventListener('beforeunload', onUnload);
 
     $scope.$on('$destroy', function () {
-    onUnload();
+      onUnload();
       $window.removeEventListener('beforeunload', onUnload);
     });
 

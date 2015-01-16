@@ -241,7 +241,41 @@
   position: relative
   overflow: hidden
   text-align: center
+
+.kf-upl-create-card
+  box-sizing: border-box
+  border: 2px #979797 dashed
+  background: #e7e7e7
+  cursor: pointer
+
+.kf-upl-create-card-add-icon
+  position: absolute
+  top: 75px
+  left: 65px
+  width: 70px
+  height: 66px
+
+.kf-upl-create-card-text
+  position: absolute
+  top: 150px
+  left: 62px
+  width: 85px
+  font-size: 14px
+  color: #333539
+  line-height: 23px
+
+  .kf-upl-create-card:hover &
+    text-decoration: underline
+
+.kf-upl-lib-card
   box-shadow: 0 3px #f5f5f5, 0 4px #c9ccc0, 0 6px #e5e5e5, 0 7px #c4c6cb, 0 8px #d4d4d4, 0 9px #bec1c5
+  transition: transform 0.8s
+
+  &.justAddedBelow
+    transform: scale(0.4) translate(0, -765px)
+
+  &.justAddedBelowAcross
+    transform: scale(0.4) translate(-573px, -765px)
 
 .kf-upl-card-link
   position: absolute
@@ -266,7 +300,7 @@
     top: 25px
 
   &.kf-user
-    top: 190px
+    top: 157px
     z-index: 1
 
 .kf-upl-card-setting
@@ -319,50 +353,58 @@ owner-pic-diam = 32px
 
 .kf-upl-card-owner
   position: absolute
-  top: 96px
-  left: 50%
-  padding: 0 0 0 (owner-pic-diam + 6px)
-  transform: translate(-50%)
-  text-align: left
+  top: 98px
+  left: 0
+  right: 0
+  height = 42px
+  height: height
+  background-color: rgba(255,255,255,.1)
   white-space: nowrap
-  max-width: 144px
-  overflow: hidden
-  text-overflow: ellipsis
-  font-size: 11px
-  line-height: owner-pic-diam
-  color: rgba(255,255,255,.8)
+  font-size: 0
+  line-height: height
+  color: #fff
 
 .kf-upl-card-owner-pic
-  position: absolute
-  top: 0
-  left: 0
   width: owner-pic-diam
   height: owner-pic-diam
   border-radius: 50%
   box-shadow: 0 0 3px rgba(0,0,0,.3) inset
+  vertical-align: middle
   margin-right: 6px
 
 .kf-upl-card-by
+  vertical-align: middle
+  font-size: 11px
   font-style: italic
-  margin-right: 2px
+  margin-right: 5px
 
 .kf-upl-card-by-name
+  display: inline-block
+  vertical-align: middle
+  text-align: left
+  max-width: 140px
+  font-size: 11px
   font-weight: bold
   text-transform: uppercase
   letter-spacing: .2px
+  overflow: hidden
+  text-overflow: ellipsis
 
   :hover>&
     text-decoration: underline
 
 .kf-upl-counts
   position: absolute
-  top: 160px
+  top: 158px
   left: 50%
   transform: translate(-50%)
   font-size: 0
   color: #fff
   white-space: nowrap
   text-shadow: 0 0 3px rgba(0,0,0,.6)
+
+  &.kf-mine
+    top: 184px
 
 .kf-upl-count
   font-size: 13px
@@ -376,6 +418,49 @@ owner-pic-diam = 32px
   padding: 0 5px
   font-size: 14px
   cursor: default
+
+.kf-upl-card-follow
+  position: absolute
+  top: 192px
+  left: 50%
+  transform: translate(-50%)
+  box-sizing: border-box
+  width: 91px
+  height = 28px
+  padding: 0
+  background-color: rgba(220,220,220,.4)
+  border: 1px solid rgba(255,255,255,.5)
+  border-radius: (height / 2)
+  color: #fff
+  font-weight: 500
+  font-size: 11px
+  line-height: height
+  text-transform: uppercase
+  text-shadow: 0 0 2px rgba(0,0,0,.4)
+  letter-spacing: .4px
+  text-align: center
+  box-shadow: 0 0 8px rgba(0,0,0,.2)
+
+  &:hover
+    background-color: rgba(235,235,235,.4)
+
+  &:hover:active
+    background-color: rgba(215,215,215,.4)
+
+  &:focus
+    border-style: dotted
+
+  &::before
+    content: 'Follow'
+
+  &.kf-following
+    width: 100px
+
+  &.kf-following::before
+    content: 'Following'
+
+  &.kf-following:hover::before
+    content: 'Unfollow'
 
 .kf-upl-card-cover
   position: absolute
@@ -391,7 +476,7 @@ owner-pic-diam = 32px
     left: 0
     right: 0
     bottom: 0
-    background-color: rgba(0,0,0,.3)
+    background-color: rgba(0,0,0,.2)
     content: ''
 
 .kf-upl-card-cover-image
@@ -421,10 +506,11 @@ follower-pic-diameter = 23px
   line-height: follower-pic-diameter
   font-size: 11px
   vertical-align: middle
-  color: rgba(255,255,255,.7)
+  color: rgba(255,255,255,.8)
+  text-shadow: 0 0 6px rgba(0,0,0,.3)
 
 .kf-upl-followers-number
-  color: rgba(255,255,255,.7)
+  color: inherit
 
   &:hover
     text-decoration: underline
@@ -449,7 +535,8 @@ follower-pic-diameter = 23px
 .kf-upl-unlisted
   line-height: 33px
   font-size: 12px
-  color: rgba(255,255,255,.5)
+  color: rgba(255,255,255,.6)
+  text-shadow: 0 0 6px rgba(0,0,0,.2)
 
 //
 // Mobile styles.

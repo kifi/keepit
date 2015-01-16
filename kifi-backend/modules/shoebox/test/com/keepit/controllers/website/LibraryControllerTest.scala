@@ -1414,12 +1414,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libInfos(0).numFollowers === 1
           libInfos(0).id.id must beMatching("^l.+") // tests public id
           libInfos(0).caption must beNone
-          libInfos(0).color === Some(LibraryColor.BLUE)
           libInfos(1).name === "Scala"
           libInfos(1).numFollowers === 2
           libInfos(1).owner.fullName === "John Doe"
           libInfos(1).caption === Some("yo dawg")
-          libInfos(1).color === Some(LibraryColor.RED)
         }
       }
     }

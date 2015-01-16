@@ -3,6 +3,7 @@ package com.keepit.model
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.{ ExternalId, Id, State }
+import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
 import org.apache.commons.lang3.RandomStringUtils.random
 
 object UserFactory {
@@ -24,6 +25,8 @@ object UserFactory {
     def withUsername(name: Username) = new PartialUser(user.copy(username = name))
     def withPictureName(name: String) = new PartialUser(user.copy(pictureName = Some(name)))
     def withState(state: State[User]) = new PartialUser(user.copy(state = state))
+    def withEmailAddress(address: EmailAddress) = new PartialUser(user.copy(primaryEmail = Some(address)))
+    def withEmailAddress(address: String): PartialUser = this.withEmailAddress(EmailAddress(address))
     def withExperiments(experiments: ExperimentType*) = new PartialUser(user, experiments ++ _experiments)
     def get: User = user
     def experiments: Seq[ExperimentType] = _experiments

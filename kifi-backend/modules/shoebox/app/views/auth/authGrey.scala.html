@@ -100,8 +100,14 @@
       <div class="social-photo form-photo"@if(picturePath != ""){ style="background-image:url(@picturePath)"}></div>
       <div class="social-text-info">
         <div class="social-name">@firstName @lastName</div>
-        <input class="social-email" type="email" name="signup-2-email" value="@emailAddress" placeholder="Your email address" disabled>
-        <a class="social-change-email" href="javascript:" data-track-action="clickchangeEmail">Change email</a>
+
+        @if(emailAddress == "") {
+          <input class="social-email" type="email" name="signup-2-email" value="@emailAddress" placeholder="Your email address">
+        } else {
+          <input class="social-email" type="email" name="signup-2-email" value="@emailAddress" placeholder="Your email address" disabled>
+          <a class="social-change-email" href="javascript:" data-track-action="clickchangeEmail">Change email</a>
+        }
+
       </div>
     </div>
     <div class="form-creds">

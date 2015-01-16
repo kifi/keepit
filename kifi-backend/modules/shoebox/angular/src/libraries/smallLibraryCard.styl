@@ -18,69 +18,103 @@
   bottom: 0
   user-select: none
 
-.kf-slc-card-icon
-  margin-top: 20px
-  height: 21px
-  background-position: center
-  background-size: auto 21px
-  background-repeat: no-repeat
+name-line-height = 22px
+
+.kf-slc-card-name-align
+  display: table
+  position: absolute
+  top: 18px
+  left: 0
+  width: 100%
+  height: 3 * name-line-height
 
 .kf-slc-card-name
-  line-height = 25px
-  position: absolute
-  bottom: 208px
-  left: 16px
-  right: 16px
+  display: table-cell
+  padding: 0 16px
   color: #fff
   font-weight: bold
-  font-size: 20px
-  line-height: line-height
+  font-size: 18px
+  line-height: name-line-height
   word-wrap: break-word
+  vertical-align: middle
+
+.kf-slc-card-name-clip
+  max-height: 3 * name-line-height
+  overflow: hidden
+
+owner-pic-diam = 32px
+
+.kf-slc-card-owner
+  position: absolute
+  top: 98px
+  left: 0
+  right: 0
+  height = 42px
+  height: height
+  background-color: rgba(255,255,255,.1)
+  white-space: nowrap
+  font-size: 0
+  line-height: height
+  color: #fff
+
+.kf-slc-card-owner-pic
+  width: owner-pic-diam
+  height: owner-pic-diam
+  border-radius: 50%
+  box-shadow: 0 0 3px rgba(0,0,0,.3) inset
+  vertical-align: middle
+  margin-right: 6px
+
+.kf-slc-card-by
+  vertical-align: middle
+  font-size: 11px
+  font-style: italic
+  margin-right: 5px
+
+.kf-slc-card-by-name
+  display: inline-block
+  vertical-align: middle
+  text-align: left
+  max-width: 140px
+  font-size: 11px
+  font-weight: bold
+  text-transform: uppercase
+  letter-spacing: .2px
+  overflow: hidden
+  text-overflow: ellipsis
+
+  :hover>&
+    text-decoration: underline
 
 .kf-slc-counts
   position: absolute
-  top: 78px
-  left: 0
-  right: 0
-
-.kf-slc-count
-.kf-slc-count-link
-  font-size: 10px
-  color: rgba(255,255,255,.7)
-
-.kf-slc-count-link
-  .kf-slc-count-link+&::before
-    content: '\00b7'
-    padding: 0 4px
-
-.kf-slc-count:hover
-  text-decoration: underline
-
-.kf-slc-card-byline
-  position: absolute
-  top: 210px
-  left: 20px
-  right: 20px
+  top: 184px
+  left: 50%
+  transform: translate(-50%)
+  font-size: 0
   color: #fff
-  font-size: 12px
-  font-weight: bold
-  letter-spacing: .6px
-  text-transform: uppercase
+  white-space: nowrap
   text-shadow: 0 0 3px rgba(0,0,0,.6)
 
-.kf-slc-card-by
-  font-style: italic
-  font-weight: normal
-  text-transform: none
-  letter-spacing: normal
-  margin-right: 2px
+.kf-slc-count
+  font-size: 13px
+  font-weight: bold
+  color: inherit
+  &:hover
+    color: #fff
+    text-decoration: underline
+
+.kf-slc-count-dot
+  padding: 0 5px
+  font-size: 14px
+  cursor: default
 
 .kf-slc-card-cover
   position: absolute
   left: 0
   right: 0
   bottom: 0
-  height: 56%
+  height: 50%
   overflow: hidden
 
   &::after
@@ -89,7 +123,7 @@
     left: 0
     right: 0
     bottom: 0
-    background-color: rgba(0,0,0,.3)
+    background-color: rgba(0,0,0,.2)
     content: ''
 
 .kf-slc-card-cover-image
@@ -101,25 +135,6 @@
   background-color: #eee
   background-size: cover
 
-.kf-slc-card-owner-pic-a
-  diameter = 60px
-  position: absolute
-  width: diameter
-  height: diameter
-  top: 50%
-  left: 50%
-  margin-left: -(diameter / 2)
-  border-radius: 50%
-
-.kf-slc-card-owner-pic
-  position: absolute
-  top: 0
-  left: 0
-  width: 100%
-  height: 100%
-  border-radius: 50%
-  box-shadow: 0 0 3px rgba(0,0,0,.3) inset
-
 .kf-slc-card-foot
   position: absolute
   left: 0
@@ -129,6 +144,7 @@
   border-top: 1px solid rgba(255,255,255,.3)
   -webkit-font-smoothing: antialiased
   text-align: center
-  color: rgba(255,255,255,.7)
+  color: rgba(255,255,255,.8)
+  text-shadow: 0 0 6px rgba(0,0,0,.3)
   font-size: 13px
   line-height: 35px

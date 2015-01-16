@@ -51,6 +51,10 @@ class LocalUserExperimentCommander @Inject() (
     getExperimentsByUser(userId).contains(experiment)
   }
 
+  def getUserIdsByExperiment(experimentType: ExperimentType): Set[Id[User]] = {
+    db.readOnlyReplica { implicit s => userExperimentRepo.getUserIdsByExperiment(experimentType) }.toSet
+  }
+
   def internProbabilisticExperimentGenerator(
     name: Name[ProbabilisticExperimentGenerator],
     density: ProbabilityDensity[ExperimentType],

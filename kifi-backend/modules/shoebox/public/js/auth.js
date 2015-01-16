@@ -314,8 +314,12 @@ kifi.form = (function () {
     $('.form-error').remove();
     var $email = $form.find('.social-email');
     var email = kifi.form.validateEmailAddress($email);
-    var password = kifi.form.validateNewPassword($form.find('.form-password'));
-    if (password) {
+    var $password = $form.find('.form-password');
+    var password = kifi.form.validateNewPassword($password);
+
+    // for FbLi we need valid password (already approved email)
+    // for Twitter we need valid password && email
+    if (password && email) {
       Tracker.trackClick($form.find('button')[0]);
       $form.data('promise', $.postJson(this.action, {
         firstName: $form.data('first'),

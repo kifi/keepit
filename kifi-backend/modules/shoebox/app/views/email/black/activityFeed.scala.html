@@ -1,0 +1,32 @@
+@(toUserId: Id[User], activityData: com.keepit.commanders.emails.ActivityEmailData)
+@import com.keepit.common.db.Id
+@import com.keepit.common.mail.template.helpers._
+
+Hi @fullName(toUserId)
+<br/><br/>
+<h1>New in Libraries</h1>
+@activityData.newKeepsInLibraries.map { case (libraryId: Id[Library], uriIds: Seq[Id[NormalizedURI]]) =>
+    <a href="@libraryUrl(libraryId)">@libraryName(libraryId)</a> by
+    @libraryOwnerFullName(libraryId)<br/>
+
+    Keeps:<br/>
+    @uriIds.map { uriId =>
+        @uriId<br/>
+    }
+    <br/>
+}
+
+<h1>Recos</h1>
+@activityData.uriRecos.map { reco  =>
+    <a href="@reco.itemInfo.url">@reco.itemInfo.title</a><br/>
+    @reco.itemInfo.summary.description.getOrElse("")<br/>
+    @reco.itemInfo.summary.imageUrl.map { url =>
+        <img src="@url" alt="@reco.itemInfo.title" width="@reco.itemInfo.summary.imageWidth.getOrElse(500)"/>
+    }
+    <br/><br/>
+}
+
+<h1>Library Recos</h1>
+@activityData.libraryRecos.map { recoInfo =>
+<a href="@baseUrl/@{recoInfo.itemInfo.url}">@recoInfo.itemInfo.name</a>
+}

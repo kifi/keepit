@@ -27,6 +27,10 @@ class AdminAuthController @Inject() (
     val user = db.readOnlyMaster { implicit s =>
       userRepo.get(id)
     }
+    val existingImp = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
+    if (existingImp.isDefined) {
+      throw new Exception(s"user ${request.user.firstName} ${request.user.lastName} is trying to impersonate user $id ${user.firstName} ${user.lastName} while the cookie is still in use to impersonate user $existingImp")
+    }
     log.info(s"impersonating user $user")
     systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = s"${request.user.firstName} impersonating user $user",
