@@ -146,9 +146,8 @@ private[model] abstract class BaseLibraryCardInfo(
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],
-  lastKept: Option[DateTime],
-  following: Option[Boolean] // is viewer following this library? Set to None if viewing anonymously or viewing own profile
-  )
+  lastKept: DateTime,
+  following: Option[Boolean]) // is viewer following this library? Set to None if viewing anonymously or viewing own profile
 
 @json
 case class OwnLibraryCardInfo( // when viewing own created libraries
@@ -163,7 +162,7 @@ case class OwnLibraryCardInfo( // when viewing own created libraries
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],
-  lastKept: Option[DateTime],
+  lastKept: DateTime,
   following: Option[Boolean] = None,
   listed: Boolean)
     extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept, following)
@@ -180,7 +179,7 @@ case class LibraryCardInfo(
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],
-  lastKept: Option[DateTime],
+  lastKept: DateTime,
   following: Option[Boolean],
   caption: Option[String])
     extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept, following)
