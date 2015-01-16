@@ -361,28 +361,45 @@ class UserCommander @Inject() (
     } else Future.successful(())
   }
 
-  def doChangePassword(userId: Id[User], oldPassword: String, newPassword: String): Try[Identity] = Try {
-    val resOpt = db.readOnlyMaster { implicit session =>
-      socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO)
-    } map { sui =>
-      val hasher = Registry.hashers.currentHasher
-      val identity = sui.credentials.get
-      if (!hasher.matches(identity.passwordInfo.get, oldPassword)) {
-        log.warn(s"[doChangePassword($userId)] oldPwd=$oldPassword newPwd=$newPassword pwd=${identity.passwordInfo.get}")
-        throw new IllegalArgumentException("bad_old_password")
-      } else {
-        val pwdInfo = Registry.hashers.currentHasher.hash(newPassword)
-        val savedIdentity = UserService.save(UserIdentity(
-          userId = sui.userId,
-          socialUser = sui.credentials.get.copy(passwordInfo = Some(pwdInfo))
-        ))
-        val updatedCred = db.readWrite { implicit session =>
-          userCredRepo.findByUserIdOpt(userId) map { userCred =>
-            userCredRepo.save(userCred.withCredentials(pwdInfo.password))
-          }
+  private def setNewPassword(userId: Id[User], sui: SocialUserInfo, newPassword: String): Identity = {
+    val pwdInfo = Registry.hashers.currentHasher.hash(newPassword)
+    val savedIdentity = UserService.save(UserIdentity(
+      userId = sui.userId,
+      socialUser = sui.credentials.get.copy(passwordInfo = Some(pwdInfo))
+    ))
+    val updatedCred = db.readWrite { implicit session =>
+      userCredRepo.findByUserIdOpt(userId) map { userCred =>
+        userCredRepo.save(userCred.withCredentials(pwdInfo.password))
+      }
+    }
+    log.info(s"[doChangePassword] UserCreds updated=${updatedCred.map(c => s"id=${c.id} userId=${c.userId} login=${c.loginName}")}")
+    savedIdentity
+  }
+
+  def doChangePassword(userId: Id[User], oldPassword: Option[String], newPassword: String): Try[Identity] = Try {
+    val (sfi, hasNoPassword) = db.readOnlyMaster { implicit session =>
+      val sfi = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO)
+      val hasNoPassword = userValueRepo.getValue(userId, UserValues.hasNoPassword)
+      (sfi, hasNoPassword)
+    }
+    val resOpt = sfi map { sui =>
+      if (hasNoPassword) {
+        val identity = setNewPassword(userId, sui, newPassword)
+        db.readWrite { implicit s =>
+          userValueRepo.setValue(userId, UserValueName.HAS_NO_PASSWORD, false)
         }
-        log.info(s"[doChangePassword] UserCreds updated=${updatedCred.map(c => s"id=${c.id} userId=${c.userId} login=${c.loginName}")}")
-        savedIdentity
+        identity
+      } else if (oldPassword.nonEmpty) {
+        val hasher = Registry.hashers.currentHasher
+        val identity = sui.credentials.get
+        if (hasher.matches(identity.passwordInfo.get, oldPassword.get)) {
+          setNewPassword(userId, sui, newPassword)
+        } else {
+          log.warn(s"[doChangePassword($userId)] oldPwd=${oldPassword.get} newPwd=$newPassword pwd=${identity.passwordInfo.get}")
+          throw new IllegalArgumentException("bad_old_password")
+        }
+      } else {
+        throw new IllegalArgumentException("empty_password_and_nonSocialSignup")
       }
     }
     resOpt getOrElse { throw new IllegalArgumentException("no_user") }

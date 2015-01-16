@@ -206,7 +206,7 @@ class AuthCommander @Inject() (
         email = sfi.email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
 
       db.readWrite { implicit s =>
-        userValueRepo.setValue(userId, UserValueName.SOCIAL_SIGNUP, true)
+        userValueRepo.setValue(userId, UserValueName.HAS_NO_PASSWORD, true)
       }
 
       val userPreUsername = db.readOnlyMaster { implicit session =>

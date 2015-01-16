@@ -187,12 +187,12 @@ class UserController @Inject() (
   }
 
   def changePassword = UserAction(parse.tolerantJson) { implicit request =>
-    val oldPassword = (request.body \ "oldPassword").as[String] // todo: use char[]
+    val oldPasswordOpt = (request.body \ "oldPassword").asOpt[String] // todo: use char[]
     val newPassword = (request.body \ "newPassword").as[String]
     if (newPassword.length < 7) {
       BadRequest(Json.obj("error" -> "bad_new_password"))
     } else {
-      userCommander.doChangePassword(request.userId, oldPassword, newPassword) match {
+      userCommander.doChangePassword(request.userId, oldPasswordOpt, newPassword) match {
         case Failure(e) => Forbidden(Json.obj("error" -> e.getMessage))
         case Success(_) => Ok(Json.obj("success" -> true))
       }
@@ -309,20 +309,24 @@ class UserController @Inject() (
   }
 
   private def getUserInfo[T](userId: Id[User]) = {
-    val (user, socialSignup) = db.readOnlyMaster { implicit session =>
+    val (user, hasNoPassword) = db.readOnlyMaster { implicit session =>
       val user = userRepo.get(userId)
-      val socialSignup = userValueRepo.getValue(user.id.get, UserValues.socialSignup)
-      (user, socialSignup)
+      val hasNoPassword = userValueRepo.getValue(user.id.get, UserValues.hasNoPassword)
+      (user, hasNoPassword)
     }
     val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
     val json = toJson(pimpedUser.basicUser).as[JsObject] ++
       toJson(pimpedUser.info).as[JsObject] ++
       Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
-      Json.obj("experiments" -> experiments.map(_.value)) ++
-      Json.obj("signupWithSocial" -> socialSignup)
+      Json.obj("experiments" -> experiments.map(_.value))
+    val json1 = if (hasNoPassword) {
+      json ++ Json.obj("hasNoPassword" -> hasNoPassword)
+    } else {
+      json
+    }
     userCommander.getKeepAttributionInfo(userId) map { info =>
-      Ok(json ++ Json.obj(
+      Ok(json1 ++ Json.obj(
         "uniqueKeepsClicked" -> info.uniqueKeepsClicked,
         "totalKeepsClicked" -> info.totalClicks,
         "clickCount" -> info.clickCount,
