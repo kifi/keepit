@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfSocialConnectNetworks', [
-  'socialService',
-  function (socialService) {
+  'socialService', 'profileService',
+  function (socialService, profileService) {
     return {
       scope: {},
       replace: true,
@@ -17,14 +17,17 @@ angular.module('kifi')
         scope.facebook = socialService.facebook;
         scope.linkedin = socialService.linkedin;
         scope.gmail = socialService.gmail;
+        scope.twitter = socialService.twitter;
         scope.expiredTokens = socialService.expiredTokens;
         scope.connectFacebook = socialService.connectFacebook;
         scope.connectLinkedIn = socialService.connectLinkedIn;
+        scope.connectTwitter = socialService.connectTwitter;
         scope.importGmail = socialService.importGmail;
 
         scope.isRefreshingSocialGraph = socialService.isRefreshingSocialGraph;
         scope.refreshingGraphs = socialService.refreshingGraphs;
 
+        scope.onTwitterExperiment = _.indexOf(profileService.me.experiments, 'twitter_beta') > -1;
 
         scope.facebookStatus = function () {
           if (scope.refreshingGraphs.network.facebook) {
@@ -39,6 +42,15 @@ angular.module('kifi')
           if (scope.refreshingGraphs.network.linkedin) {
             return 'refreshing';
           } else if (scope.expiredTokens.linkedin) {
+            return 'expired';
+          }
+          return 'good';
+        };
+
+        scope.twitterStatus = function () {
+          if (scope.refreshingGraphs.network.twitter) {
+            return 'refreshing';
+          } else if (scope.expiredTokens.twitter) {
             return 'expired';
           }
           return 'good';
