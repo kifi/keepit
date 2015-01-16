@@ -19,13 +19,13 @@ angular.module('kifi')
         var returnAction = null;
         var submitting = false;
         var colorNames = {
-          "#447ab7": "blue",
-          "#5ab7e7": "sky_blue",
-          "#4fc49e": "green",
-          "#f99457": "orange",
-          "#dd5c60": "red",
-          "#c16c9e": "magenta",
-          "#9166ac": "purple"
+          '#447ab7': 'blue',
+          '#5ab7e7': 'sky_blue',
+          '#4fc49e': 'green',
+          '#f99457': 'orange',
+          '#dd5c60': 'red',
+          '#c16c9e': 'magenta',
+          '#9166ac': 'purple'
         };
 
         //
@@ -36,7 +36,7 @@ angular.module('kifi')
         scope.emptySlug = true;
         scope.$error = {};
         scope.showFollowers = false;
-        scope.colors = ["#447ab7","#5ab7e7","#4fc49e","#f99457","#dd5c60","#c16c9e","#9166ac"];
+        scope.colors = ['#447ab7','#5ab7e7','#4fc49e','#f99457','#dd5c60','#c16c9e','#9166ac'];
 
         //
         // Scope methods.
@@ -242,7 +242,7 @@ angular.module('kifi')
             'description': '',
             'slug': '',
 
-            // By default, the create library form selects the "published" visibility for a new library.
+            // By default, the create library form selects the 'published' visibility for a new library.
             'visibility': 'published',
             'listed': true
           };
