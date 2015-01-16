@@ -881,7 +881,7 @@ class LibraryCommander @Inject() (
   private def applyToKeeps(userId: Id[User],
     dstLibraryId: Id[Library],
     keeps: Seq[Keep],
-    excludeFromAccess: Set[LibraryAccess],
+    excludeFromAccess: Set[LibraryAccess], // what membership access does user need?
     saveKeep: (Keep, RWSession) => Either[LibraryError, Keep]): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
 
     val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
@@ -892,13 +892,13 @@ class LibraryCommander @Inject() (
         case (None, keeps) => keeps
         case (Some(fromLibraryId), keeps) =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId) match {
-            case None =>
+            case None if excludeFromAccess.nonEmpty =>
               badKeeps ++= keeps.map(_ -> LibraryError.SourcePermissionDenied)
               Seq.empty[Keep]
             case Some(memFrom) if excludeFromAccess.contains(memFrom.access) =>
               badKeeps ++= keeps.map(_ -> LibraryError.SourcePermissionDenied)
               Seq.empty[Keep]
-            case Some(_) =>
+            case _ =>
               keeps
           }
       }.flatten.foreach { keep =>
