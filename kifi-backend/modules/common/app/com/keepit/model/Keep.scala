@@ -175,7 +175,7 @@ class GlobalKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends PrimitiveCacheImpl[GlobalKeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 9
+  override val version = 10
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -193,7 +193,7 @@ class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
-  override val version = 7
+  override val version = 8
   val namespace = "latest_keep_uri"
   def toKey(): String = uriId.toString
 }
@@ -202,7 +202,7 @@ class LatestKeepUriCache(stats: CacheStatistics, accessLog: AccessLog, innermost
   extends JsonCacheImpl[LatestKeepUriKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LatestKeepUrlKey(url: String) extends Key[Keep] {
-  override val version = 6
+  override val version = 7
   val namespace = "latest_keep_url"
   def toKey(): String = NormalizedURI.hashUrl(url).hash
 }
