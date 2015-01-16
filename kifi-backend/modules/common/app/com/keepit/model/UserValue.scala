@@ -69,7 +69,7 @@ object UserValueName {
   val TWITTER_FRIENDS_CURSOR = UserValueName("twitter_friends_cursor")
   val TWITTER_LOOKUP_CURSOR = UserValueName("twitter_lookup_cursor")
 
-  val HAS_NO_PASSWORD = UserValueName("social_signup")
+  val HAS_NO_PASSWORD = UserValueName("has_no_password")
 
   // User Profile Settings (be sure to add to UserValueSettings.defaultSettings for default values)
   val USER_PROFILE_SETTINGS = UserValueName("user_profile_settings")

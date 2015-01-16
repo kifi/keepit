@@ -309,10 +309,8 @@ class UserController @Inject() (
   }
 
   private def getUserInfo[T](userId: Id[User]) = {
-    val (user, hasNoPassword) = db.readOnlyMaster { implicit session =>
-      val user = userRepo.get(userId)
-      val hasNoPassword = userValueRepo.getValue(user.id.get, UserValues.hasNoPassword)
-      (user, hasNoPassword)
+    val user = db.readOnlyMaster { implicit session =>
+      userRepo.get(userId)
     }
     val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
@@ -320,13 +318,8 @@ class UserController @Inject() (
       toJson(pimpedUser.info).as[JsObject] ++
       Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
       Json.obj("experiments" -> experiments.map(_.value))
-    val json1 = if (hasNoPassword) {
-      json ++ Json.obj("hasNoPassword" -> hasNoPassword)
-    } else {
-      json
-    }
     userCommander.getKeepAttributionInfo(userId) map { info =>
-      Ok(json1 ++ Json.obj(
+      Ok(json ++ Json.obj(
         "uniqueKeepsClicked" -> info.uniqueKeepsClicked,
         "totalKeepsClicked" -> info.totalClicks,
         "clickCount" -> info.clickCount,
@@ -345,7 +338,8 @@ class UserController @Inject() (
       LIBRARY_CALLOUT_SHOWN,
       TAG_CALLOUT_SHOWN,
       GUIDE_CALLOUT_SHOWN,
-      SITE_SHOW_LIBRARY_INTRO)
+      SITE_SHOW_LIBRARY_INTRO,
+      HAS_NO_PASSWORD)
   }
 
   def getPrefs() = UserAction.async { request =>
