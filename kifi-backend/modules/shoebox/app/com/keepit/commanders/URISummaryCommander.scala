@@ -81,15 +81,15 @@ class URISummaryCommander @Inject() (
   }
 
   //todo(Léo): swap url for uriId in URISummaryRequest and stop propagating the entire NormalizedURI in this code
-  private val consolidateFetchURISummary = new RequestConsolidator[(NormalizedURI, ImageType, ImageSize, Boolean), Option[URISummary]](20 seconds)
+  private val consolidateFetchURISummary = new RequestConsolidator[(NormalizedURI, ImageType, Boolean), Option[URISummary]](20 seconds)
 
   def getURISummaryForRequest(request: URISummaryRequest, nUri: NormalizedURI): Future[URISummary] = {
     val existingSummary = getExistingSummaryForRequest(request, nUri)
     if (isCompleteSummary(existingSummary, request) || request.silent) {
       Future.successful(existingSummary)
     } else {
-      val fetchedSummaryFuture = consolidateFetchURISummary((nUri, request.imageType, request.minSize, request.withDescription)) {
-        case (nUri, imageType, minSize, withDescription) => fetchSummaryForRequest(nUri, imageType, minSize, withDescription)
+      val fetchedSummaryFuture = consolidateFetchURISummary((nUri, request.imageType, request.withDescription)) {
+        case (nUri, imageType, withDescription) => fetchSummaryForRequest(nUri, imageType, withDescription)
       }
       if (request.isCacheable) fetchedSummaryFuture.onSuccess {
         case None => // ignore
@@ -151,11 +151,11 @@ class URISummaryCommander @Inject() (
   /**
    * Retrieves URI summary data from external services (Embedly, PagePeeker)
    */
-  private def fetchSummaryForRequest(nUri: NormalizedURI, imageType: ImageType, minSize: ImageSize, withDescription: Boolean): Future[Option[URISummary]] = {
+  private def fetchSummaryForRequest(nUri: NormalizedURI, imageType: ImageType, withDescription: Boolean): Future[Option[URISummary]] = {
     log.info(s"fetchSummaryForRequest for ${nUri.id} -> ${nUri.url}")
     val embedlyResultFut = if (imageType == ImageType.IMAGE || imageType == ImageType.ANY || withDescription) {
       val stopper = Stopwatch("fetching from scraper embedly info for ${nUri.id} -> ${nUri.url}")
-      val future = fetchFromEmbedly(nUri, minSize)
+      val future = fetchFromEmbedly(nUri)
       future.onComplete { res =>
         stopper.stop() tap { _ => log.info(stopper.toString) }
         res.map(_.map(s => resizeImage(nUri, s)))
@@ -175,9 +175,9 @@ class URISummaryCommander @Inject() (
   /**
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
    */
-  private def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize = ImageSize(0, 0), descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
+  private def fetchFromEmbedly(nUri: NormalizedURI, descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
     try {
-      scraper.getURISummaryFromEmbedly(nUri, minSize, descriptionOnly)
+      scraper.getURISummaryFromEmbedly(nUri, descriptionOnly)
     } catch {
       case timeout: TimeoutException =>
         val failImageInfo = db.readWrite { implicit session =>

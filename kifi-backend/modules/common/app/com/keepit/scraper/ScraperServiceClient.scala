@@ -130,7 +130,7 @@ trait ScraperServiceClient extends ServiceClient {
   def detectPorn(query: String): Future[Map[String, Float]]
   def whitelist(words: String): Future[String]
   def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]]
-  def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]]
+  def getURISummaryFromEmbedly(uri: NormalizedURI, descriptionOnly: Boolean): Future[Option[URISummary]]
   def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int]
   def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int]
 }
@@ -210,9 +210,9 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
-  def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
+  def getURISummaryFromEmbedly(uri: NormalizedURI, descriptionOnly: Boolean): Future[Option[URISummary]] = {
     // todo: Bad API, NormalizedURI isn't needed anymore. Just JSON with id, uri, and externalId. Fix soon?
-    val payload = Json.obj("uri" -> uri, "minSize" -> minSize, "descriptionOnly" -> descriptionOnly)
+    val payload = Json.obj("uri" -> uri, "descriptionOnly" -> descriptionOnly)
     call(Scraper.internal.getURISummaryFromEmbedly, payload, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
       r.json.as[Option[URISummary]]
     }

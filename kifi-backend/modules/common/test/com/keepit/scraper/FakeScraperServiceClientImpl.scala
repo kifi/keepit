@@ -22,23 +22,23 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
 
   override def status(): Seq[Future[(AmazonInstanceInfo, Seq[ScrapeJobStatus])]] = Seq.empty
 
-  def getBasicArticle(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = ???
+  def getBasicArticle(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = Future.successful(None)
 
-  def getSignature(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[Signature]] = ???
+  def getSignature(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[Signature]] = Future.successful(None)
 
-  def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = ???
+  def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = Seq.empty
 
-  def getPornDetectorModel(): Future[Map[String, Float]] = ???
+  def getPornDetectorModel(): Future[Map[String, Float]] = Future.successful(Map.empty)
 
-  def detectPorn(query: String): Future[Map[String, Float]] = ???
+  def detectPorn(query: String): Future[Map[String, Float]] = Future.successful(Map.empty)
 
-  def whitelist(words: String): Future[String] = ???
+  def whitelist(words: String): Future[String] = Future.successful("")
 
-  def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = ???
+  def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = Future.successful(Seq.empty)
 
-  def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = Future.successful(None)
+  def getURISummaryFromEmbedly(uri: NormalizedURI, descriptionOnly: Boolean): Future[Option[URISummary]] = Future.successful(None)
 
   def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int] = Future.successful(0)
 
-  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int] = ???
+  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int] = None
 }

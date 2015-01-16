@@ -18,9 +18,8 @@ class URISummaryController @Inject() (
   def getURISummaryFromEmbedly() = Action.async(parse.tolerantJson) { request =>
     val js = request.body
     val uri = (js \ "uri").as[NormalizedURIRef]
-    val minSize = (js \ "minSize").as[ImageSize]
     val descOnly = (js \ "descriptionOnly").as[Boolean]
-    summaryCmdr.fetchFromEmbedly(uri, minSize, descOnly).map { res =>
+    summaryCmdr.fetchFromEmbedly(uri, descOnly).map { res =>
       Ok(Json.toJson(res))
     }
   }
