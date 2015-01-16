@@ -148,7 +148,7 @@ angular.module('kifi')
     var fetchPageNumber = 0;
     var hasMoreLibraries = true;
     var loading = false;
-    var newlyAddedLibraryIds = [];
+    var newLibraryIds = [];
 
     $scope.libraryType = $state.current.data.libraryType;
     $scope.libraries = null;
@@ -177,7 +177,7 @@ angular.module('kifi')
       $scope.libraries = null;
       fetchPageNumber = 0;
       hasMoreLibraries = true;
-      newlyAddedLibraryIds.length = 0;
+      newLibraryIds.length = 0;
       loading = false;
     }
 
@@ -210,11 +210,9 @@ angular.module('kifi')
           var owner = filter === 'own' ? _.extend({username: username}, $scope.profile) : null;
           var filteredLibs = data[filter];
 
-          if (filter === 'own' && newlyAddedLibraryIds.length) {
+          if (filter === 'own' && profile.id === $scope.me.id && newLibraryIds.length) {
             _.remove(filteredLibs, function (lib) {
-              return _.some(newlyAddedLibraryIds, function (newlyAddedLibraryId) {
-                return newlyAddedLibraryId === lib.id;
-              });
+              return _.contains(newLibraryIds, lib.id);
             });
           }
 
@@ -261,7 +259,7 @@ angular.module('kifi')
           returnAction: function (newLibrary) {
             newLibrary.ownerPicUrl = $scope.profile && $scope.profile.picUrl;
             addNewLibAnimationClass(newLibrary);
-            newlyAddedLibraryIds.push(newLibrary.id);
+            newLibraryIds.push(newLibrary.id);
 
              // Add new library to right behind the two system libraries.
             ($scope.libraries || []).splice(2, 0, newLibrary);
