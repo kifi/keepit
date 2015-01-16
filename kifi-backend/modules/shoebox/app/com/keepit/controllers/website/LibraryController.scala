@@ -20,6 +20,9 @@ import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
+
+import org.joda.time.DateTime
+
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
@@ -557,7 +560,7 @@ class LibraryController @Inject() (
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
               followers = LibraryCardInfo.showable(info.followers),
-              lastKept = info.lastKept,
+              lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
               caption = None)
           }
