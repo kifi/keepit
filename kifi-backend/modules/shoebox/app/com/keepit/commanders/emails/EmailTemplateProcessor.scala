@@ -128,10 +128,10 @@ class EmailTemplateProcessorImpl @Inject() (
 
         val decoratedHtml = htmlDecorator(evalTemplate(htmlBody.body, input, emailToSend, includedTip)) {
           case EmailHtmlMissingImgAlt(ele) =>
-            val msg = s"img element missing @alt in ${emailToSend.category.category} email"
+            val msg = s"img element missing @alt in ${emailToSend.category.category} email on image element $ele"
             airbrake.notify(msg)
             // additional information about the email to logs for debugging
-            log.warn(msg + " subject=\"" + emailToSend.subject + "\" html=" + ele)
+            log.warn(s"""$msg on subject="${emailToSend.subject}" html element = $ele""")
             ()
         }
 
