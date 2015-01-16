@@ -2,7 +2,8 @@
   <span ng-if="!isBot">
     <span class="kf-keep-who-pic-box" ng-class="{ 'secret': library.visibility === 'secret' }">
       <span ng-if="inUserProfileBeta" itemscope itemtype="http://data-vocabulary.org/Person">
-        <a href="{{library.keeperProfileUrl}}" itemprop="url">
+        <a href="{{library.keeperProfileUrl}}" itemprop="url"
+           kf-track-origin origin="libraryPage/alsoKeptInLibraryBy">
           <span class="kf-keep-who-pic" ng-attr-style="background-image: url({{library.keeperPic}})" itemprop="photo"></span>
         </a>
         <meta itemprop="name" content="{{library.keeperName}}" />

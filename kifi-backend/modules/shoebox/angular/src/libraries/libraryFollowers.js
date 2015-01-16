@@ -53,6 +53,14 @@ angular.module('kifi')
           }
         }
 
+        function augmentLibrary() {
+          // The passed-in library may have owner information on different properties;
+          // normalize the properties (scope.library properties override scope.library.owner properties).
+          scope.library.owner = scope.library.owner || {};
+          scope.library.owner.picUrl = scope.library.ownerPicUrl || scope.library.owner.picUrl;
+          scope.library.owner.profileUrl = scope.library.ownerProfileUrl || scope.library.owner.profileUrl;
+        }
+
         scope.close = function () {
           kfModalCtrl.close();
         };
@@ -62,7 +70,10 @@ angular.module('kifi')
         //
         if (scope.modalData) {
           scope.library = _.cloneDeep(scope.modalData.library);
+          augmentLibrary();
+
           scope.modalTitle = scope.library.name;
+          scope.currentPageOrigin = scope.modalData.currentPageOrigin;
         }
       }
     };

@@ -885,7 +885,8 @@ angular.module('kifi')
             modalService.open({
               template: 'libraries/libraryFollowersModal.tpl.html',
               modalData: {
-                library: scope.library
+                library: scope.library,
+                currentPageOrigin: 'libraryPage'
               }
             });
           }
