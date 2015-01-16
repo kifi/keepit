@@ -27,9 +27,12 @@
             </div>
             <input class="manage-lib-input manage-lib-name-input ng-pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Type a name for your library..." autocomplete="off" novalidate>
             <span ng-show="$error.name" class="manage-lib-name-error">{{$error.name}}</span>
-            <span class="manage-lib-slug">kifi.com/{{username}}/
-              <input ng-change="editSlug()" class="manage-lib-slug-input ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'non-empty-slug': !emptySlug }" type="text" name="slug" placeholder="new-library" novalidate>
-            </span>
+            <label class="manage-lib-slug">
+              <span class="manage-lib-slug-1">kifi.com/{{username}}/</span>
+              <span class="manage-lib-slug-2">
+                <input ng-change="editSlug()" class="manage-lib-slug-input ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'non-empty-slug': !emptySlug }" type="text" name="slug" placeholder="new-library" novalidate>
+              </span>
+            </label>
           </div>
 
           <div class="manage-lib-input-wrapper">
