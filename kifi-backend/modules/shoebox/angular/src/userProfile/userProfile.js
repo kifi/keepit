@@ -4,13 +4,21 @@ angular.module('kifi')
 
 .controller('UserProfileCtrl', [
   '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window',
-  'env', 'inviteService', 'keepWhoService', 'profileService', 'userProfileActionService',
+  'env', 'inviteService', 'keepWhoService', 'originTrackingService', 'profileService', 'userProfileActionService',
   function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window,
-            env, inviteService, keepWhoService, profileService, userProfileActionService) {
+            env, inviteService, keepWhoService, originTrackingService, profileService, userProfileActionService) {
 
     //
     // Internal data.
     //
+
+    // Mapping of library type to origin contexts for tracking.
+    var originContexts = {
+      'own': 'MyLibraries',
+      'following': 'FollowedLibraries',
+      'invited': 'InvitedLibraries'
+    };
+
 
     //
     // Scope data.
@@ -37,8 +45,9 @@ angular.module('kifi')
         $state.go('home');
         $window.location = '/';
       }
-      $rootScope.$emit('libraryUrl', {});
 
+      $rootScope.$emit('libraryUrl', {});
+      var pageOrigin = originTrackingService.getAndClear();
       var username = $stateParams.username;
 
       userProfileActionService.getProfile(username).then(function (profile) {
@@ -50,10 +59,17 @@ angular.module('kifi')
 
         // This function should be called last because some of the attributes
         // that we're tracking are initialized by the above functions.
-        trackPageView();
+        trackPageView(pageOrigin);
       })['catch'](function () {
         $scope.userProfileStatus = 'not-found';
       });
+
+      $scope.currentPageOrigin = getCurrentPageOrigin();
+    }
+
+    function getCurrentPageOrigin() {
+      var originContext = originContexts[$state.current.data.libraryType];
+      return 'profilePage' +  (originContext ? '.' + originContext : '');
     }
 
     function setTitle(profile) {
@@ -69,21 +85,20 @@ angular.module('kifi')
       $scope.viewingOwnProfile = $scope.profile.id === profileService.me.id;
     }
 
-    function trackPageView() {
-      return;
-
-      /* TODO(yiping): Uncomment this after tracking review with product.
+    function trackPageView(pageOrigin) {
       var url = $analytics.settings.pageTracking.basePath + $location.url();
+      var originsArray = (pageOrigin && pageOrigin.split('/')) || [];
 
       var profilePageTrackAttributes = {
-        type: 'profile',
+        type: 'userProfile',
         profileOwnerUserId: $scope.profile.id,
-        profileOwnedBy: $scope.viewingOwnProfile ? 'viewer' : ($scope.profile.friendsWith ? 'viewersFriend' : 'other'),
+        profileOwnedBy: $scope.viewingOwnProfile ? 'viewer' : ($scope.profile.isFriend ? 'viewersFriend' : 'other'),
+        origin: originsArray[0] || '',
+        subOrigin: originsArray[1] || '',
         libraryCount: $scope.profile.numLibraries
       };
 
       $analytics.pageTrack(url, profilePageTrackAttributes);
-      */
     }
 
     function trackPageClick(/* attributes */) {
@@ -126,7 +141,8 @@ angular.module('kifi')
     var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
       // When routing among the nested states, track page view again.
       if ((/^userProfile/.test(toState.name)) && (/^userProfile/.test(fromState.name)) && (toParams.username === fromParams.username)) {
-        trackPageView();
+        trackPageView(originTrackingService.getAndClear());
+        $scope.currentPageOrigin = getCurrentPageOrigin();
       }
     });
     $scope.$on('$destroy', deregister$stateChangeSuccess);
@@ -290,7 +306,8 @@ angular.module('kifi')
       modalService.open({
         template: 'libraries/libraryFollowersModal.tpl.html',
         modalData: {
-          library: lib
+          library: lib,
+          currentPageOrigin: $scope.currentPageOrigin
         }
       });
     };
