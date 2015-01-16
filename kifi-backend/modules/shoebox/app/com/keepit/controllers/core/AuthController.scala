@@ -461,7 +461,7 @@ class AuthController @Inject() (
 
                 val result = authHelper.handleSocialFinalizeInfo(sfi, None)(request)
                 result.header.headers.get("uri") match {
-                  case Some("/install") => Redirect("/install")
+                  case Some(url) => Redirect(url)
                   case _ => Redirect("/")
                 }
               }
