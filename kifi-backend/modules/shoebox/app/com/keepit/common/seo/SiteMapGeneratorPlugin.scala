@@ -1,5 +1,6 @@
 package com.keepit.common.seo
 
+import com.keepit.commanders.UserCommander
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.DBSession.RSession
@@ -45,6 +46,10 @@ trait SitemapGenerator {
   def generate(): Future[String]
   def generateAndCache(): Future[String]
   def intern(): Future[String]
+  protected val experimentRepo: UserExperimentRepo
+  protected val userCommander: UserCommander
+  protected val db: Database
+  protected val fakeUsers = userCommander.getAllFakeUsers() ++ db.readOnlyReplica { implicit s => experimentRepo.getUserIdsByExperiment(ExperimentType.AUTO_GEN) }
 }
 
 object GenerateUserSitemap
