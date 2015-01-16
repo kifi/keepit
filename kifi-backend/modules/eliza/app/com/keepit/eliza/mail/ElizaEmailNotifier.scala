@@ -30,7 +30,7 @@ object ElizaEmailNotifierActor {
   case class SendNextEmails(maxConcurrentThreadBatches: Int = MAX_CONCURRENT_MESSAGE_THREAD_BATCHES)
   case class DoneWithThread(threadId: Id[MessageThread], result: Try[Unit], maxConcurrentThreadBatches: Int)
   val ALLOWED_ATTEMPTS = 2
-  val MIN_TIME_BETWEEN_NOTIFICATIONS = 4 hours
+  val MIN_TIME_BETWEEN_NOTIFICATIONS = 15 minutes
   val RECENT_ACTIVITY_WINDOW = 24 hours
   val MAX_CONCURRENT_MESSAGE_THREAD_BATCHES = 1
 }
