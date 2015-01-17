@@ -323,7 +323,7 @@ angular.module('kifi')
 
         scope.onClickAddCoverImage = function (event) {
           if (event.which === 1) {
-            angular.element('.kf-keep-lib-pic-file-input').click();
+            angular.element('.kf-keep-lib-cover-image-file').click();
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedAddCoverImage' });
           }
         };
@@ -713,7 +713,7 @@ angular.module('kifi')
         scope.onChangeCoverImageMouseUp = function (event) {
           if (event.which === 1) {
             $timeout(hideCoverImageMenu);
-            angular.element('.kf-keep-lib-pic-file-input').click();
+            angular.element('.kf-keep-lib-cover-image-file').click();
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedChangeCoverImage' });
           }
         };
