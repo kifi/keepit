@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfSmallLibraryCard', [
-  '$location', 'modalService', 'userService',
-  function ($location, modalService, userService) {
+  '$location', 'modalService', 'userService', '$window',
+  function ($location, modalService, userService, $window) {
     return {
       restrict: 'A',
       replace: true,
@@ -20,6 +20,7 @@ angular.module('kifi')
         scope.clickCard = function ($event) {
           $event.preventDefault();
           $location.path(scope.library.path).search('o', scope.origin);
+          $window.scrollTo(0, 0);
           scope.$emit('trackLibraryEvent', 'click', { action: scope.action });
         };
 
