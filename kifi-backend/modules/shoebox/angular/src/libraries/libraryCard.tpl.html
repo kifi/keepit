@@ -16,6 +16,7 @@
           </div>
         </div>
 
+        <div ng-class="{'kf-keep-lib-color': true, 'kf-above-image': coverImageUrl || coverImagePreview}" style="background-color:{{library.color}}"></div>
         <a ng-if="recommendation && coverImageUrl" href="{{library.url}}" class="kf-keep-lib-cover-image" style="background-image:url({{coverImageUrl}});background-position:{{coverImagePos}}"></a>
         <div ng-if="!recommendation && (coverImageUrl || coverImagePreview)" class="kf-keep-lib-cover-image" ng-style="{'background-image':'{{coverImageUrl ? 'url(' + coverImageUrl + ')' : ''}}','background-position':'{{coverImagePos}}'}">
           <a ng-if="isMyLibrary() && !coverImagePreview" class="kf-keep-lib-cover-image-adjust" href="javascript:" ng-mousedown="onCoverImageAdjustEngage($event)" ng-click="onCoverImageAdjustEngage($event)"></a>

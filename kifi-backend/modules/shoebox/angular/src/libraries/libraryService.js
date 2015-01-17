@@ -22,7 +22,6 @@ angular.module('kifi')
 
         libs.forEach(function(lib) {
           augmentLibrarySummary(lib);
-          lib.isMine = lib.owner.id === profileService.me.id;
         });
 
         invites.forEach(function(lib) {
@@ -47,7 +46,9 @@ angular.module('kifi')
         });
       } else {
         return $http.get(routeService.getLibrarySummaryById(libraryId)).then(function (res) {
-          return res.data;
+          var lib = res.data;
+          augmentLibrarySummary(lib);
+          return lib;
         });
       }
     });
@@ -65,6 +66,7 @@ angular.module('kifi')
         if (res.data && res.data.library) {
           res.data.library.access = res.data.membership;
           res.data.library.listed = res.data.listed;
+          augmentLibrarySummary(res.data.library);
           return res.data.library;
         }
         return null;
@@ -92,6 +94,10 @@ angular.module('kifi')
     function augmentLibrarySummary(library) {
       if (library.owner) {
         library.owner.image = friendService.getPictureUrlForUser(library.owner);
+        library.isMine = library.owner.id === profileService.me.id;
+      }
+      if (library.kind !== 'user_created') {
+        library.color = '#808080';
       }
     }
 
