@@ -266,11 +266,12 @@ angular.module('kifi')
         template: 'libraries/manageLibraryModal.tpl.html',
         modalData: {
           returnAction: function (newLibrary) {
-            newLibrary.ownerPicUrl = $scope.profile && $scope.profile.picUrl;
+            augmentLibrary(null, null, newLibrary);
+
             addNewLibAnimationClass(newLibrary);
             newLibraryIds.push(newLibrary.id);
 
-             // Add new library to right behind the two system libraries.
+            // Add new library to right behind the two system libraries.
             ($scope.libraries || []).splice(2, 0, newLibrary);
           }
         }
