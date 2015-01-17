@@ -18,7 +18,9 @@ angular.module('kifi')
     };
 
     $scope.join = function ($event) {
-      $event.preventDefault();
+      if (platformService.isSupportedMobilePlatform()) {
+        $event.preventDefault();
+      }
 
       $scope.$emit('getCurrentLibrary', {
         callback: function (lib) {
