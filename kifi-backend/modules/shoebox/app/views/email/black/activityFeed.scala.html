@@ -15,7 +15,7 @@ Hi @fullName(toUserId)
     @lib.keeps.map { keep =>
         <a href="@keep.url">@keep.title</a><br/>
         @keep.imageUrlAndWidth.map { case (url, width) =>
-        <img src="@url" alt="@keep.title" width="@width"/><br/>
+        <img src="@toHttpsUrl(url)" alt="@keep.title" width="@width"/><br/>
         }
     }
     <br/>
@@ -27,6 +27,9 @@ Hi @fullName(toUserId)
     <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
     @lib.ownerName<br/>
     @lib.description.getOrElse("")<br/>
+    @lib.image.map { image =>
+        <img src="@libraryImageUrl(image.path)" alt="@lib.name" width="400"/>
+    }
 }
 <br/>
 
@@ -35,7 +38,7 @@ Hi @fullName(toUserId)
     <a href="@reco.itemInfo.url">@reco.itemInfo.title</a><br/>
     @reco.itemInfo.summary.description.getOrElse("")<br/>
     @reco.itemInfo.summary.imageUrl.map { url =>
-        <img src="@url" alt="@reco.itemInfo.title" width="@reco.itemInfo.summary.imageWidth.getOrElse(500)"/><br/>
+        <img src="@toHttpsUrl(url)" alt="@reco.itemInfo.title" width="@reco.itemInfo.summary.imageWidth.getOrElse(500)"/><br/>
     }
     <br/><br/>
 }

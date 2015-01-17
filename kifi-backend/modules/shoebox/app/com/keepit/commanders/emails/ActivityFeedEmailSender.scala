@@ -22,6 +22,7 @@ trait LibraryInfoView {
   val description = libInfo.description
   var ownerName = libInfo.owner.fullName
   val keeps = libInfo.keeps map KeepInfoView
+  val image = libInfo.image
 }
 
 case class BaseLibraryInfoView(libraryId: Id[Library], libInfo: FullLibraryInfo) extends LibraryInfoView
