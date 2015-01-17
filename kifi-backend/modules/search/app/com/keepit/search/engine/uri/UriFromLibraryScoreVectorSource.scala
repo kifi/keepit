@@ -208,8 +208,6 @@ class UriFromLibraryScoreVectorSource(
 
       val iterator = libIdFilter.getDocIdSet(readerContext, reader.getLiveDocs).iterator()
 
-      val visibilityDocValues = reader.getNumericDocValues(LibraryFields.visibilityField)
-
       val idMapper = reader.getIdMapper
       val writer: DataBufferWriter = new DataBufferWriter
 

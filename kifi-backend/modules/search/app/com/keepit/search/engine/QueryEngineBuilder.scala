@@ -1,8 +1,7 @@
 package com.keepit.search.engine
 
-import com.keepit.search.engine.query._
 import com.keepit.search.engine.query.core._
-import com.keepit.search.engine.query.{ FixedScoreQuery, HomePageQuery, ProximityQuery }
+import com.keepit.search.engine.query.{ FixedScoreQuery, HomePageQuery }
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanClause.Occur._
 import scala.collection.JavaConversions._

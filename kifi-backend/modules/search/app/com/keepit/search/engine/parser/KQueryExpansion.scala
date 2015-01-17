@@ -2,6 +2,7 @@ package com.keepit.search.engine.parser
 
 import com.keepit.classify.Domain
 import com.keepit.search.Lang
+import com.keepit.search.engine.query.KPrefixQuery
 import com.keepit.search.engine.query.core._
 import com.keepit.search.index.Analyzer
 import com.keepit.search.engine.query.QueryUtil._
@@ -122,17 +123,15 @@ trait KQueryExpansion extends QueryParser {
       }
     }
 
-    getStemmedFieldQuery("ts", queryText).foreach { q =>
-      textQuery.stems = extractTerms(q)
-      if (!quoted) {
+    if (!quoted) {
+      getStemmedFieldQuery("ts", queryText).foreach { q =>
+        textQuery.stems = extractTerms(q)
         val query = mayConvertQuery(q, lang)
         textQuery.addQuery(query, 2.0f)
         textQuery.addQuery(copyFieldQuery(query, "cs"))
         textQuery.addQuery(copyFieldQuery(query, "hs"))
       }
-    }
 
-    if (!quoted) {
       altStemmingAnalyzer.foreach { alt =>
         getFieldQuery("ts", queryText, false, alt).foreach { q =>
           if (!equivalent(textQuery.stems, extractTerms(q))) {

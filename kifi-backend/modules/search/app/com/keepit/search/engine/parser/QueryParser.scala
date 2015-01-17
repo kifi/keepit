@@ -1,10 +1,8 @@
 package com.keepit.search.engine.parser
 
 import org.apache.lucene.analysis.Analyzer
-import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.search.BooleanClause.Occur
-import org.apache.lucene.search.BooleanClause.Occur._
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
