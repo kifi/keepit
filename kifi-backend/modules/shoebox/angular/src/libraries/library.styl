@@ -275,6 +275,49 @@ cover-image-adjust-right = 24px
   &.ng-leave.ng-leave-active
     opacity: 0
 
+.kf-keep-lib-cover-image-add
+  float: right
+  margin-top: 15px
+  line-height: 36px
+  padding: 0 6px 0 40px
+  color: #333
+  font-size: 14px
+  outline: none !important
+  position: relative
+  z-index: 1
+
+  &:hover
+  &:focus
+    color: #006bb2
+
+  .kf-loaded &.ng-enter
+  .kf-loaded &.ng-leave
+    transition: opacity lib-cover-image-dur, transform lib-cover-image-dur
+
+  .kf-loaded &.ng-enter:not(.ng-enter-active)
+  .kf-loaded &.ng-leave.ng-leave-active
+    transform: scale(.4)
+    opacity: 0
+
+  &::before
+    content: ''
+    position: absolute
+    height: 31px
+    width: 35px
+    top: 2px
+    left: 2px
+    background: url(/img/camera-line.svg) center no-repeat
+    background-size: 33px 29px
+    transform: scale(.8)
+
+  &:not(:hover):not(:focus)::before
+    opacity: .8
+
+.kf-keep-lib-cover-image-file
+  position: absolute;
+  height: 0
+  width: 0
+  overflow: hidden
 
 // For library cards that are displayed when there
 // is no logged in user.
@@ -529,49 +572,6 @@ html:not(.kf-mobile)
 
   .kf-keep-lib-owner-name
     color: #939393
-
-  .kf-keep-lib-add-pic
-    display: inline-block
-    vertical-align: top
-    line-height: 36px
-    margin-left: 20px
-    padding: 0 6px 0 40px
-    color: #333
-    font-size: 14px
-    outline: none
-    position: relative
-    &:hover
-    &:focus
-      color: #006bb2
-
-    .kf-loaded &.ng-enter
-    .kf-loaded &.ng-leave
-      transition: opacity lib-cover-image-dur, transform lib-cover-image-dur
-
-    .kf-loaded &.ng-enter:not(.ng-enter-active)
-    .kf-loaded &.ng-leave.ng-leave-active
-      transform: scale(.4)
-      opacity: 0
-
-    &::before
-      content: ''
-      position: absolute
-      height: 31px
-      width: 35px
-      top: 2px
-      left: 2px
-      background: url(/img/camera-line.svg) center no-repeat
-      background-size: 33px 29px
-      transform: scale(.8)
-
-    &:not(:hover):not(:focus)::before
-      opacity: .8
-
-  .kf-keep-lib-pic-file-input
-    position: absolute;
-    height: 0
-    width: 0
-    overflow: hidden
 
   .kf-keep-lib-search
     position: absolute
