@@ -13,6 +13,10 @@ angular.module('kifi')
         scope.isOpen = false;
         scope.inputs = {oldPassword: '', newPassword1: '', newPassword2: ''};
 
+        scope.prefs = profileService.prefs;
+        scope.passwordAction = '';
+        scope.hasNoPassword = false;
+
         scope.toggle = function () {
           scope.isOpen = !scope.isOpen;
           if (scope.isOpen) {
@@ -33,13 +37,13 @@ angular.module('kifi')
 
         scope.updatePassword = function () {
           scope.successMessage = '';
-          if (scope.inputs.oldPassword.length < 7) {
+          if (!scope.hasNoPassword && scope.inputs.oldPassword.length < 7) {
             scope.errorMessage = 'Your current password is not correct.';
           } else if (scope.inputs.newPassword1 !== scope.inputs.newPassword2) {
             scope.errorMessage = 'Your new passwords do not match.';
           } else if (scope.inputs.newPassword1.length < 7) {
             scope.errorMessage = 'Your password needs to be longer than 7 characters.';
-          } else if (scope.inputs.oldPassword === scope.inputs.newPassword1) {
+          } else if (!scope.hasNoPassword && scope.inputs.oldPassword === scope.inputs.newPassword1) {
             scope.errorMessage = 'Your new password needs to be different from your current one.';
           } else {
             scope.errorMessage = '';
@@ -59,6 +63,14 @@ angular.module('kifi')
               });
           }
         };
+
+        scope.$watch(function() {
+          return scope.prefs.has_no_password;
+        }, function(hasNoPassword) {
+          scope.hasNoPassword = Boolean(hasNoPassword);
+          scope.passwordAction = scope.hasNoPassword ? 'Set a password' : 'Change you password';
+        });
+
       }
     };
   }
