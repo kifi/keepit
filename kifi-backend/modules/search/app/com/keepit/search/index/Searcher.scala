@@ -8,13 +8,13 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 
 object Searcher {
-  def apply(indexReader: DirectoryReader) = new Searcher(WrappedIndexReader(indexReader))
+  def apply(indexReader: DirectoryReader, maxPrefixLength: Int) = new Searcher(WrappedIndexReader(indexReader), maxPrefixLength)
   def reopen(oldSearcher: Searcher) = {
-    new Searcher(WrappedIndexReader.reopen(oldSearcher.indexReader))
+    new Searcher(WrappedIndexReader.reopen(oldSearcher.indexReader), oldSearcher.maxPrefixLength)
   }
 }
 
-class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexReader) {
+class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int) extends IndexSearcher(indexReader) {
 
   // search: hits are ordered by score
   def searchAll(query: Query): Seq[SearcherHit] = {

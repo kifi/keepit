@@ -2,6 +2,8 @@ package com.keepit.search.index
 
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.net._
+import com.keepit.model.User
+import com.keepit.typeahead.PrefixFilter
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
@@ -120,6 +122,17 @@ trait Indexable[T, S] extends Logging {
   protected def buildTextField(fieldName: String, fieldValue: Reader, analyzer: Analyzer): Field = {
     val ts = analyzer.createLazyTokenStream(fieldName, fieldValue)
     new Field(fieldName, ts, textFieldType)
+  }
+
+  protected def buildPrefixField(fieldName: String, fieldValue: String, maxPrefixLength: Int, minPrefixLength: Int = 1): Field = {
+    val tokens = PrefixFilter.tokenize(fieldValue).toSet
+    val prefixes = for {
+      token <- tokens
+      prefixLength <- minPrefixLength to maxPrefixLength
+    } yield {
+      token.take(prefixLength)
+    }
+    buildIteratorField(fieldName, prefixes.toIterator)(identity)
   }
 
   def buildIdValueField(typedId: Id[T]): Field = buildIdValueField(Indexer.idValueFieldName, typedId)

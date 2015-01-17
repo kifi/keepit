@@ -37,12 +37,6 @@ class UserIndexable(user: User, emails: Set[EmailAddress], experiments: Set[Expe
   val sequenceNumber: SequenceNumber[User] = user.seq
   val isDeleted: Boolean = UserIndexable.toBeDeletedStates.contains(user.state)
 
-  private def genPrefixes(user: User): Set[String] = {
-    val tokens = PrefixFilter.tokenize(user.fullName).map { _.take(PREFIX_MAX_LEN) }
-    val prefixes = tokens.flatMap { token => (0 until token.length).map { i => token.slice(0, i + 1) } }
-    prefixes.toSet
-  }
-
   override def buildDocument = {
     val doc = super.buildDocument
 
@@ -50,7 +44,7 @@ class UserIndexable(user: User, emails: Set[EmailAddress], experiments: Set[Expe
 
     doc.add(buildTextField(nameStemmedField, user.fullName, DefaultAnalyzer.defaultAnalyserWithStemmer))
 
-    doc.add(buildIteratorField[String](namePrefixField, genPrefixes(user).toIterator)(x => x))
+    doc.add(buildPrefixField(namePrefixField, user.fullName, PREFIX_MAX_LEN))
 
     doc.add(buildIteratorField[String](emailsField, emails.map { _.address.toLowerCase }.toIterator)(x => x))
 

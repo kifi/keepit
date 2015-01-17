@@ -63,6 +63,8 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   val commitBatchSize = 1000
 
+  val maxPrefixLength: Int = Int.MaxValue
+
   protected def indexWriterConfig = new IndexWriterConfig(Version.LATEST, DefaultAnalyzer.defaultAnalyzer)
 
   private[this] var indexWriter: IndexWriter = null
@@ -84,7 +86,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   reopenWriter() // open indexWriter
 
   protected var searcher: Searcher = indexWriterLock.synchronized {
-    val s = Searcher(DirectoryReader.open(indexDirectory))
+    val s = Searcher(DirectoryReader.open(indexDirectory), maxPrefixLength)
     s.setSimilarity(Similarity()) // use our default similarity (not lucene's default similarity)
     s
   }
