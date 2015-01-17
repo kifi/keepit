@@ -11,6 +11,8 @@ import org.apache.lucene.index.Term
 object LibraryFields {
   val nameField = "t"
   val nameStemmedField = "ts"
+  val namePrefixField = "tp"
+  val nameValueField = "tv"
   val descriptionField = "c"
   val descriptionStemmedField = "cs"
   val visibilityField = "v"
@@ -23,6 +25,8 @@ object LibraryFields {
 
   val textSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
   val nameSearchFields = Set(nameField, nameStemmedField)
+
+  val maxPrefixLength = 8
 
   object Visibility {
     val SECRET = 0
@@ -80,6 +84,10 @@ object LibraryIndexable {
     librarySearcher.getLongDocValue(LibraryFields.kindField, libId).map(LibraryFields.Kind.fromNumericCode)
   }
 
+  def getName(librarySearcher: Searcher, libraryId: Id[Library]): Option[String] = {
+    librarySearcher.getStringDocValue(LibraryFields.nameValueField, libraryId.id)
+  }
+
   def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
     librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
   }
@@ -123,6 +131,8 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]
         val nameLang = LangDetector.detect(library.name)
         doc.add(buildTextField(nameField, library.name, DefaultAnalyzer.getAnalyzer(nameLang)))
         doc.add(buildTextField(nameStemmedField, library.name, DefaultAnalyzer.getAnalyzerWithStemmer(nameLang)))
+        doc.add(buildPrefixField(namePrefixField, library.name, maxPrefixLength))
+        doc.add(buildStringDocValuesField(nameValueField, library.name))
     }
 
     library.description.foreach { description =>

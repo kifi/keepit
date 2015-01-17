@@ -1,9 +1,12 @@
 package com.keepit.search.index
 
+import java.io.ByteArrayInputStream
+
 import com.keepit.search.util.LongArrayBuilder
 import org.apache.lucene.index._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Explanation, IndexSearcher, Query, Scorer, Weight }
+import org.apache.lucene.store.InputStreamDataInput
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 
@@ -116,6 +119,13 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int) ex
       if (docid >= 0 && (liveDocs == null || liveDocs.get(docid))) return Some((docid, subReaderContext))
     }
     None
+  }
+
+  def getStringDocValue(field: String, id: Long): Option[String] = {
+    getDecodedDocValue(field, id) { case (bytes, offset, length) =>
+      val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
+      in.readString()
+    }
   }
 
   def getDecodedDocValue[T](field: String, id: Long)(implicit decode: (Array[Byte], Int, Int) => T): Option[T] = {

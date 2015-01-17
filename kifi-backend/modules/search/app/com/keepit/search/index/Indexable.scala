@@ -152,6 +152,10 @@ trait Indexable[T, S] extends Logging {
     new BinaryDocValuesField(fieldName, new BytesRef(bytes))
   }
 
+  def buildStringDocValuesField(fieldName: String, value: String): Field = {
+    new BinaryDocValuesField(fieldName, new BytesRef(value))
+  }
+
   def buildExtraLongBinaryDocValuesField(fieldName: String, bytes: Array[Byte]): Seq[Field] = {
     val batchSize = MAX_BINARY_FIELD_LENGTH_MINUS1
     val batches = bytes.grouped(batchSize).toArray
