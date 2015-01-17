@@ -360,7 +360,7 @@ class MobileLibraryController @Inject() (
       case Some(user) =>
         val viewer = request.userOpt
         val paginator = Paginator(page, pageSize)
-        val imageSize = ProcessedImageSize.Medium.idealSize
+        val imageSize = ProcessedImageSize.Large.idealSize
         filter match {
           case "own" =>
             val libs = if (viewer.exists(_.id == user.id)) {
