@@ -135,6 +135,11 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregister$stateChangeSuccess);
 
+    var deregisterCurrentLibrary = $rootScope.$on('getCurrentLibrary', function (e, args) {
+      args.callback({});
+    });
+    $scope.$on('$destroy', deregisterCurrentLibrary);
+
 
     // Initialize controller.
     init();
