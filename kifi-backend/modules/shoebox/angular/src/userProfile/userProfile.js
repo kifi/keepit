@@ -317,6 +317,7 @@ angular.module('kifi')
       var following = lib.following;
       libraryService[following ? 'leaveLibrary' : 'joinLibrary'](lib.id).then(function () {
         lib.following = !following;
+        lib.numFollowers += following ? -1 : 1;
       })['catch'](function () {
         modalService.openGenericErrorModal();
       })['finally'](function () {
