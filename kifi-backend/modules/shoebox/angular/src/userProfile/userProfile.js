@@ -155,10 +155,10 @@ angular.module('kifi')
 
 
 .controller('UserProfileLibrariesCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', '$timeout',
-  'routeService', 'keepWhoService', 'profileService', 'userProfileActionService', 'libraryService', 'modalService',
-  function ($scope, $rootScope, $state, $stateParams, $timeout,
-    routeService, keepWhoService, profileService, userProfileActionService, libraryService, modalService) {
+  '$scope', '$rootScope', '$state', '$stateParams', '$timeout', '$location',
+  'routeService', 'keepWhoService', 'profileService', 'userProfileActionService', 'libraryService', 'modalService', 'platformService', 'signupService',
+  function ($scope, $rootScope, $state, $stateParams, $timeout, $location,
+    routeService, keepWhoService, profileService, userProfileActionService, libraryService, modalService, platformService, signupService) {
     var username = $stateParams.username;
     var fetchPageSize = 12;
     var fetchPageNumber = 0;
@@ -318,6 +318,13 @@ angular.module('kifi')
     };
 
     $scope.onFollowButtonClick = function (lib, $event) {
+      if (platformService.isSupportedMobilePlatform()) {
+        var url = $location.absUrl();
+        platformService.goToAppOrStore(url + (url.indexOf('?') > 0 ? '&' : '?') + 'follow=true');
+        return;
+      } else if ($rootScope.userLoggedIn === false) {
+        return signupService.register({libraryId: lib.id});
+      }
       $event.target.disabled = true;
       var following = lib.following;
       libraryService[following ? 'leaveLibrary' : 'joinLibrary'](lib.id).then(function () {
