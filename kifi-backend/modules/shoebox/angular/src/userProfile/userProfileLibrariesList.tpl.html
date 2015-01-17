@@ -1,8 +1,8 @@
 <div class="kf-upl-card-list" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreLibraries()" scroll-next="fetchLibraries()">
-  <div ng-if="viewingOwnProfile && libraryType === 'own'" class="kf-upl-card kf-upl-create-card" ng-click="openCreateLibrary()">
+  <button ng-if="viewingOwnProfile && libraryType === 'own'" class="kf-upl-card kf-upl-create-card" ng-click="openCreateLibrary()">
     <span class="kf-upl-create-card-add-icon svg-create-library"></span>
     <div class="kf-upl-create-card-text">CREATE A LIBRARY</div>
-  </div>
+  </button>
   <div class="kf-upl-card kf-upl-lib-card" ng-repeat="lib in libraries" ng-style="{'background-color': lib.color}"
        ng-class="{'justAddedBelow': lib.justAddedBelow, 'justAddedBelowAcross': lib.justAddedBelowAcross}">
     <a class="kf-upl-card-setting svg-settings-gear" ng-if="lib.owner.id === profile.id && lib.kind==='user_created'" href="javascript:" ng-click="openModifyLibrary(lib)"></a>
@@ -18,7 +18,7 @@
       </div>
     </a>
     <div itemscope itemtype="http://data-vocabulary.org/Person">
-      <a class="kf-upl-card-owner" href="{{lib.ownerProfileUrl}}" ng-click="trackProfileClick()" itemprop="url">
+      <a class="kf-upl-card-owner" href="{{lib.ownerProfileUrl}}" kf-track-origin origin="{{currentPageOrigin}}/curator" itemprop="url">
         <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" itemprop="photo" ng-if="libraryType !== 'own'">
         <span class="kf-upl-card-by">by</span>
         <span class="kf-upl-card-by-name" itemprop="name">{{lib.owner.firstName}} {{lib.owner.lastName}}</span>
@@ -36,7 +36,7 @@
     <button ng-class="{'kf-upl-card-follow': true, 'kf-following': lib.following}" ng-if="lib.owner.id !== me.id" ng-click="onFollowButtonClick(lib, $event)"></button>
     <div class="kf-upl-card-foot" ng-switch="lib.visibility === 'published' && !lib.listed ? 'unlisted' : lib.followers.length ? 'followers' : lib.lastKept ? 'updated' : ''">
       <div class="kf-upl-followers" ng-switch-when="followers">
-        <a href="{{user.profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" ng-click="trackProfileClick()"
+        <a href="{{user.profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" kf-track-origin origin="{{currentPageOrigin}}/follower" ng-click="trackProfileClick()"
            ng-attr-style="background-image:url({{user.picUrl}})"></a>
         <span ng-if="lib.numFollowers === lib.followers.length">
           <ng-pluralize class="kf-upl-all-followers" count="lib.numFollowers" when="{'1':'follows this library','other':'are following'}"></ng-pluralize>

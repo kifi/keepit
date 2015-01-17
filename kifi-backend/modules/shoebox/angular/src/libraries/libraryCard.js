@@ -783,12 +783,7 @@ angular.module('kifi')
 
           if (platformService.isSupportedMobilePlatform()) {
             var url = $location.absUrl();
-            if (url.indexOf('?') !== -1) {
-              url = url + '&follow=true';
-            } else {
-              url = url + '?follow=true';
-            }
-            platformService.goToAppOrStore(url);
+            platformService.goToAppOrStore(url + (url.indexOf('?') > 0 ? '&' : '?') + 'follow=true');
             return;
           } else if ($rootScope.userLoggedIn === false) {
             return signupService.register({libraryId: scope.library.id});
@@ -885,7 +880,8 @@ angular.module('kifi')
             modalService.open({
               template: 'libraries/libraryFollowersModal.tpl.html',
               modalData: {
-                library: scope.library
+                library: scope.library,
+                currentPageOrigin: 'libraryPage'
               }
             });
           }

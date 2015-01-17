@@ -480,6 +480,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                   "numKeeps" : 0,
                   "numFollowers" : 0,
                   "followers": [],
+                  "lastKept": ${lib2.createdAt.getMillis},
                   "listed": true
                 },
                 {
@@ -494,6 +495,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                   "numKeeps" : 0,
                   "numFollowers" : 0,
                   "followers": [],
+                  "lastKept": ${lib1.createdAt.getMillis},
                   "listed": true
                 }
               ]

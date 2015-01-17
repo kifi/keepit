@@ -184,7 +184,7 @@ class AuthHelper @Inject() (
     case t: Throwable => airbrakeNotifier.notify(s"fail to save Kifi Campaign Id for user $userId where kcid = $kcid", t)
   }
 
-  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean, libraryPublicId: Option[PublicId[Library]])(implicit request: MaybeUserRequest[JsValue]): Result = {
+  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean, libraryPublicId: Option[PublicId[Library]])(implicit request: MaybeUserRequest[_]): Result = {
     if (!emailConfirmedAlready) {
       val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
       SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = true, Some(unverifiedEmail)) }
@@ -225,7 +225,7 @@ class AuthHelper @Inject() (
       }),
       "firstName" -> text, // todo(ray/andrew): revisit non-empty requirement for twitter
       "lastName" -> text,
-      "password" -> text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray)), // todo (aaron): for twitter, there's no password. Should client generate random password? or do we do logic here? Cuz then form gets messed up
+      "password" -> text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray)),
       "picToken" -> optional(text),
       "picHeight" -> optional(number),
       "picWidth" -> optional(number),
@@ -252,10 +252,8 @@ class AuthHelper @Inject() (
     }
   }
 
-  def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo, libraryPublicId: Option[PublicId[Library]])(implicit request: MaybeUserRequest[JsValue]): Result = {
+  def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo, libraryPublicId: Option[PublicId[Library]])(implicit request: MaybeUserRequest[_]): Result = {
     require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
-
-    // The below logic needs to happen for password-less social signups (Aaron!!)
 
     val identity = request.identityOpt.get
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))

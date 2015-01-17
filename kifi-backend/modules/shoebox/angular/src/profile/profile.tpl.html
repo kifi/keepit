@@ -28,7 +28,7 @@
           (<a class="profile-email-pending-resend" href="javascript:" ng-click="resendVerificationEmail()">Resend verification</a>,
           <a class="profile-email-pending-cancel" href="javascript:" ng-click="cancelPendingPrimary()">Cancel</a>).
         </div>
-        <div kf-profile-manage-settings ng-show="onProfileExperiment"></div>
+        <div kf-profile-manage-settings></div>
         <div kf-profile-change-password></div>
         <div kf-profile-email-addresses input-state="addEmailInput" email-list="me.emails" validate-email-action="validateEmail(value)" add-email-action="addEmail(value)" resend-verification-email-action="resendVerificationEmail(value)"></div>
       </div>

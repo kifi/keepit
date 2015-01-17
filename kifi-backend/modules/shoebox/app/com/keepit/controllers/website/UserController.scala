@@ -187,12 +187,12 @@ class UserController @Inject() (
   }
 
   def changePassword = UserAction(parse.tolerantJson) { implicit request =>
-    val oldPassword = (request.body \ "oldPassword").as[String] // todo: use char[]
+    val oldPasswordOpt = (request.body \ "oldPassword").asOpt[String] // todo: use char[]
     val newPassword = (request.body \ "newPassword").as[String]
     if (newPassword.length < 7) {
       BadRequest(Json.obj("error" -> "bad_new_password"))
     } else {
-      userCommander.doChangePassword(request.userId, oldPassword, newPassword) match {
+      userCommander.doChangePassword(request.userId, oldPasswordOpt, newPassword) match {
         case Failure(e) => Forbidden(Json.obj("error" -> e.getMessage))
         case Success(_) => Ok(Json.obj("success" -> true))
       }
@@ -309,7 +309,9 @@ class UserController @Inject() (
   }
 
   private def getUserInfo[T](userId: Id[User]) = {
-    val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
+    val user = db.readOnlyMaster { implicit session =>
+      userRepo.get(userId)
+    }
     val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
     val json = toJson(pimpedUser.basicUser).as[JsObject] ++
@@ -336,7 +338,8 @@ class UserController @Inject() (
       LIBRARY_CALLOUT_SHOWN,
       TAG_CALLOUT_SHOWN,
       GUIDE_CALLOUT_SHOWN,
-      SITE_SHOW_LIBRARY_INTRO)
+      SITE_SHOW_LIBRARY_INTRO,
+      HAS_NO_PASSWORD)
   }
 
   def getPrefs() = UserAction.async { request =>

@@ -34,6 +34,7 @@ import com.keepit.social.providers.ProviderController
 import securesocial.core.providers.utils.RoutesHelper
 
 import scala.concurrent.Future
+import scala.util.Random
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -419,9 +420,9 @@ class AuthController @Inject() (
             // Haven't run into this one. Redirecting user to logout, ideally to fix their cookie situation
             Redirect(securesocial.controllers.routes.LoginPage.logout)
           }
-        case request: NonUserRequest[_] =>
-          if (request.identityOpt.isDefined) {
-            val identity = request.identityOpt.get
+        case requestNonUser: NonUserRequest[_] =>
+          if (requestNonUser.identityOpt.isDefined) {
+            val identity = requestNonUser.identityOpt.get
             if (identity.email.exists(e => authCommander.emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
               // No user exists, but social network identity’s email address matches a Kifi user
               Ok(views.html.auth.connectToAuthenticate(
@@ -429,7 +430,7 @@ class AuthController @Inject() (
                 network = SocialNetworkType(identity.identityId.providerId),
                 logInAttempted = false
               ))
-            } else if (request.flash.get("signin_error").exists(_ == "no_account")) {
+            } else if (requestNonUser.flash.get("signin_error").exists(_ == "no_account")) {
               // No user exists, social login was attempted. Let user choose what to do next.
               Ok(views.html.auth.loggedInWithWrongNetwork(
                 network = SocialNetworkType(identity.identityId.providerId)
@@ -437,23 +438,37 @@ class AuthController @Inject() (
             } else {
               // No user exists, has social network identity, must finalize
 
-              // Check if request.identityOpt.get.identityId.providerId == "twitter"
-              // if so, do signup2 page below (need to get email)
-              // else, finalize
+              if (requestNonUser.identityOpt.get.identityId.providerId == "twitter") {
+                Ok(views.html.auth.authGrey(
+                  view = "signup2Social",
+                  firstName = User.sanitizeName(identity.firstName),
+                  lastName = User.sanitizeName(identity.lastName),
+                  emailAddress = identity.email.getOrElse(""),
+                  picturePath = identityPicture(identity),
+                  network = Some(SocialNetworkType(identity.identityId.providerId))
+                ))
+              } else {
+                val password = identity.passwordInfo match {
+                  case Some(info) => info.password
+                  case _ => Random.alphanumeric.take(10).mkString
+                }
+                val sfi = SocialFinalizeInfo(
+                  firstName = User.sanitizeName(identity.firstName),
+                  lastName = User.sanitizeName(identity.lastName),
+                  email = EmailAddress(identity.email.getOrElse("")),
+                  password = password.toCharArray,
+                  picToken = None, picHeight = None, picWidth = None, cropX = None, cropY = None, cropSize = None)
 
-              // This is where we will finalize and redirect to home? install? (Aaron!!)
+                val result = authHelper.handleSocialFinalizeInfo(sfi, None)(request)
+                result.header.headers.get("uri") match {
+                  case Some(url) => Redirect(url)
+                  case _ => Redirect("/")
+                }
+              }
 
-              Ok(views.html.auth.authGrey(
-                view = "signup2Social",
-                firstName = User.sanitizeName(identity.firstName),
-                lastName = User.sanitizeName(identity.lastName),
-                emailAddress = identity.email.getOrElse(""),
-                picturePath = identityPicture(identity),
-                network = Some(SocialNetworkType(identity.identityId.providerId))
-              ))
             }
           } else {
-            temporaryReportSignupLoad()(request)
+            temporaryReportSignupLoad()(requestNonUser)
             Ok(views.html.auth.authGrey("signup"))
           }
 

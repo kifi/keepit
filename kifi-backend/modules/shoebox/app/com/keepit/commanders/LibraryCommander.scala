@@ -881,7 +881,7 @@ class LibraryCommander @Inject() (
   private def applyToKeeps(userId: Id[User],
     dstLibraryId: Id[Library],
     keeps: Seq[Keep],
-    excludeFromAccess: Set[LibraryAccess],
+    excludeFromAccess: Set[LibraryAccess], // what membership access does user need?
     saveKeep: (Keep, RWSession) => Either[LibraryError, Keep]): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
 
     val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
@@ -892,13 +892,13 @@ class LibraryCommander @Inject() (
         case (None, keeps) => keeps
         case (Some(fromLibraryId), keeps) =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId) match {
-            case None =>
+            case None if excludeFromAccess.nonEmpty =>
               badKeeps ++= keeps.map(_ -> LibraryError.SourcePermissionDenied)
               Seq.empty[Keep]
             case Some(memFrom) if excludeFromAccess.contains(memFrom.access) =>
               badKeeps ++= keeps.map(_ -> LibraryError.SourcePermissionDenied)
               Seq.empty[Keep]
-            case Some(_) =>
+            case _ =>
               keeps
           }
       }.flatten.foreach { keep =>
@@ -1136,38 +1136,33 @@ class LibraryCommander @Inject() (
       ).zipWithIndex.map { case (value, idx) => value.id -> (value, idx) }.toMap
 
       val libIds = systemValueLibraries.keySet
-      val libIdsMap = db.readOnlyReplica { implicit s => libraryRepo.getLibraries(libIds) } filter {
-        case (_, lib) => lib.visibility == LibraryVisibility.PUBLISHED
+      val libs = db.readOnlyReplica { implicit s =>
+        libraryRepo.getLibraries(libIds).values.toSeq.filter(_.visibility == LibraryVisibility.PUBLISHED)
+      }
+      val infos: ParSeq[LibraryCardInfo] = db.readOnlyMaster { implicit s =>
+        val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
+        createLibraryCardInfos(libs, owners, None, false, ProcessedImageSize.Medium.idealSize)
       }
 
-      val fullLibInfosF = createFullLibraryInfos(viewerUserIdOpt = None,
-        showPublishedLibraries = true,
-        maxMembersShown = 0,
-        maxKeepsShown = 0,
-        idealKeepImageSize = ProcessedImageSize.Medium.idealSize,
-        libraries = libIdsMap.values.toSeq,
-        idealLibraryImageSize = ProcessedImageSize.Medium.idealSize, withKeepTime = true)
-
-      fullLibInfosF map { libInfos =>
-        libInfos map {
-          case (libId, info) =>
-            val (extraInfo, idx) = systemValueLibraries(libId)
-            val card = LibraryCardInfo(
+      SafeFuture {
+        (infos.zip(libs).map {
+          case (info, lib) =>
+            val (extraInfo, idx) = systemValueLibraries(lib.id.get)
+            idx -> LibraryCardInfo(
               id = info.id,
               name = info.name,
               description = None, // not currently used
               color = info.color,
               image = info.image,
               slug = info.slug,
-              owner = BasicUserWithFriendStatus.fromWithoutFriendStatus(info.owner),
+              owner = info.owner,
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
               followers = Seq.empty,
               lastKept = info.lastKept,
               following = None,
               caption = extraInfo.caption)
-            card -> idx
-        } sortBy (_._2) map (_._1)
+        }).seq.sortBy(_._1).map(_._2)
       }
     } getOrElse Future.successful(Seq.empty)
   }
@@ -1218,7 +1213,7 @@ class LibraryCommander @Inject() (
       val libraryIds = libs.map(_.id.get).toSet
       val owners = Map(user.id.get -> BasicUser.fromUser(user))
       val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
-      val libraryInfos = createLibraryCardInfos(libs, owners, user, Some(user), idealSize) zip libs
+      val libraryInfos = createLibraryCardInfos(libs, owners, Some(user), false, idealSize) zip libs
       (libraryInfos, memberships)
     }
     libraryInfos map {
@@ -1235,7 +1230,7 @@ class LibraryCommander @Inject() (
           numKeeps = info.numKeeps,
           numFollowers = info.numFollowers,
           followers = info.followers,
-          lastKept = lib.lastKept,
+          lastKept = lib.lastKept.getOrElse(lib.createdAt),
           listed = memberships(lib.id.get).listed)
     }
   }
@@ -1249,7 +1244,7 @@ class LibraryCommander @Inject() (
           libraryRepo.getOwnedLibrariesForOtherUser(user.id.get, other.id.get, page)
       }
       val owners = Map(user.id.get -> BasicUser.fromUser(user))
-      createLibraryCardInfos(libs, owners, user, viewer, idealSize)
+      createLibraryCardInfos(libs, owners, viewer, viewer.exists(_.id != user.id), idealSize)
     }
   }
 
@@ -1270,7 +1265,7 @@ class LibraryCommander @Inject() (
           } else Seq.empty
       }
       val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
-      createLibraryCardInfos(libs, owners, user, viewer, idealSize)
+      createLibraryCardInfos(libs, owners, viewer, viewer.exists(_.id != user.id), idealSize)
     }
   }
 
@@ -1279,23 +1274,19 @@ class LibraryCommander @Inject() (
       db.readOnlyMaster { implicit session =>
         val libs = libraryRepo.getInvitedLibrariesOfSelf(user.id.get, page)
         val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
-        createLibraryCardInfos(libs, owners, user, viewer, idealSize)
+        createLibraryCardInfos(libs, owners, viewer, false, idealSize)
       }
     } else {
       ParSeq.empty
     }
   }
 
-  private def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], profileUser: User, viewer: Option[User], idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
+  private def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewer: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     val ownersWFS = if (viewer.isDefined && owners.keySet.exists(_ != viewer.get.id.get)) {
       friendStatusCommander.augmentWithFriendStatus(viewer.get.id.get, owners)
     } else {
       owners mapValues BasicUserWithFriendStatus.fromWithoutFriendStatus
     }
-
-    val isUserViewingOtherProfile = viewer.map { v =>
-      v.id.get != profileUser.id.get
-    }.getOrElse(false)
 
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getForLibraryId(lib.id.get))
@@ -1309,12 +1300,13 @@ class LibraryCommander @Inject() (
         (0, Seq.empty)
       }
 
-      val isFollowing = if (isUserViewingOtherProfile) {
+      val ownerWFS = ownersWFS(lib.ownerId)
+      val isFollowing = if (withFollowing && viewer.isDefined && viewer.get.externalId != ownerWFS.externalId) {
         Some(libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, viewer.get.id.get).isDefined)
       } else {
         None
       }
-      createLibraryCardInfo(lib, image, ownersWFS(lib.ownerId), numKeeps, numFollowers, followersSample, isFollowing)
+      createLibraryCardInfo(lib, image, ownerWFS, numKeeps, numFollowers, followersSample, isFollowing)
     }
   }
 
@@ -1331,7 +1323,7 @@ class LibraryCommander @Inject() (
       numKeeps = numKeeps,
       numFollowers = numFollowers,
       followers = LibraryCardInfo.showable(followers),
-      lastKept = lib.lastKept,
+      lastKept = lib.lastKept.getOrElse(lib.createdAt),
       following = isFollowing,
       caption = None)
   }

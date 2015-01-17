@@ -1,5 +1,6 @@
 package com.keepit.common.seo
 
+import com.keepit.commanders.UserCommander
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.DBSession.RSession
@@ -30,12 +31,13 @@ object UserSiteMapGenerator {
 
 @Singleton
 class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
-    db: Database,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
     fortyTwoConfig: FortyTwoConfig,
-    experimentRepo: UserExperimentRepo,
-    siteMapCache: SiteMapCache) extends SitemapGenerator with Logging {
+    siteMapCache: SiteMapCache,
+    protected val db: Database,
+    protected val experimentRepo: UserExperimentRepo,
+    protected val userCommander: UserCommander) extends SitemapGenerator with Logging {
 
   def intern(): Future[String] = {
     siteMapCache.getOrElseFuture(SiteMapKey.users) {
@@ -65,38 +67,33 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
   }
 
   def generate(): Future[String] = {
+    val xml = new StringBuilder(s"""
+         |<?xml-stylesheet type='text/xsl' href='sitemap.xsl'?>
+         |<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+       """.stripMargin.trim)
     db.readOnlyReplicaAsync { implicit ro =>
       val users = userRepo.getAllIds()
       if (users.size > 40000) airbrake.notify(s"there are ${users.size} libraries for sitemap, need to paginate the list!")
       users
     } map { userIds =>
-      val users: Iterator[User] = userIds.grouped(100) flatMap { group =>
+      userIds.grouped(500) foreach { group =>
+        val realUsers = group.filterNot(fakeUsers.contains)
         db.readOnlyMaster { implicit ro =>
-          val realUsers = group.filterNot { id =>
-            val experiments = experimentRepo.getAllUserExperiments(id)
-            experiments.contains(ExperimentType.FAKE) || experiments.contains(ExperimentType.AUTO_GEN)
-          }
           userRepo.getAllUsers(realUsers.toSeq).values.toSeq
+        } filter { user =>
+          user.state == UserStates.ACTIVE
+        } foreach { user =>
+          xml.append(s"""<url>
+                  |  <loc>
+                  |    https://www.kifi.com/${user.username.value}
+                  |  </loc>
+                  |  <lastmod>${ISO_8601_DAY_FORMAT.print(lastMod(user))}</lastmod>
+                  |</url>""".stripMargin)
         }
       }
-      val urlset =
-        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-          {
-            users.map { user =>
-              <url>
-                <loc>
-                  { s"https://www.kifi.com/${user.username.value}" }
-                </loc>
-                <lastmod>{ ISO_8601_DAY_FORMAT.print(lastMod(user)) }</lastmod>
-              </url>
-            }
-          }
-        </urlset>
-      log.info(s"[generate] done with sitemap generation. #libraries=${users.size}")
-      s"""
-         |<?xml-stylesheet type='text/xsl' href='sitemap.xsl'?>
-         |${urlset.toString}
-       """.stripMargin.trim
+      xml.append("</urlset>")
+      log.info(s"[generate] done with sitemap generation")
+      xml.toString()
     }
   }
 

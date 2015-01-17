@@ -494,6 +494,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                       "pictureName": "alf.jpg",
                       "username": "seconduser"
                     }],
+                  "lastKept":${lib1.createdAt.getMillis},
                   "listed": true
                 }
                ]
@@ -523,7 +524,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   },
                   "numKeeps":0,
                   "numFollowers":1,
-                  "followers":[]
+                  "followers":[],
+                  "lastKept":${lib3.createdAt.getMillis}
                 }
               ]
             }
@@ -534,13 +536,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val result3 = libraryController.getProfileLibraries(user1.username, 0, 10, "invited")(request3)
         status(result3) must equalTo(OK)
         contentType(result3) must beSome("application/json")
-        Json.parse(contentAsString(result3)) must equalTo(Json.parse(
-          s"""
-            {
-              "invited": []
-            }
-          """
-        ))
+        Json.parse(contentAsString(result3)) === Json.parse("""{"invited":[]}""")
 
         val request4 = FakeRequest("GET", testPath)
         val result4 = libraryController.getProfileLibraries(user1.username, 0, 10, "all")(request4)
@@ -558,7 +554,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val result5Json = (contentAsJson(result5) \ "following").as[Seq[JsObject]]
         (result5Json.head \ "name").as[String] === "lib1"
         (result5Json.head \ "numFollowers").as[Int] === 1
-        (result5Json.head \ "following").as[Boolean] === true
+        (result5Json.head \ "following").asOpt[Boolean] === None
       }
     }
 
@@ -1375,8 +1371,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             val user1 = user().withName("John", "Doe").saved
             val user2 = user().withName("Joe", "Blow").saved
             val user3 = user().withName("Jack", "Black").saved
-            val lib1 = library().withName("Scala").withUser(user1).published().saved
-            val lib2 = library().withName("Java").withUser(user1).published().saved
+            val lib1 = library().withName("Scala").withUser(user1).published().withMemberCount(3).saved
+            val lib2 = library().withName("Java").withUser(user1).published().withMemberCount(2).saved
 
             // test that private libraries are not returned in the response
             val lib3 = library().withName("Private").withUser(user1).saved

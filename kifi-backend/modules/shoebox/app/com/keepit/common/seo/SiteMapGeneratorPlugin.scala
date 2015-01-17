@@ -1,5 +1,6 @@
 package com.keepit.common.seo
 
+import com.keepit.commanders.UserCommander
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.DBSession.RSession
@@ -45,6 +46,10 @@ trait SitemapGenerator {
   def generate(): Future[String]
   def generateAndCache(): Future[String]
   def intern(): Future[String]
+  protected val experimentRepo: UserExperimentRepo
+  protected val userCommander: UserCommander
+  protected val db: Database
+  protected val fakeUsers = userCommander.getAllFakeUsers() ++ db.readOnlyReplica { implicit s => experimentRepo.getUserIdsByExperiment(ExperimentType.AUTO_GEN) }
 }
 
 object GenerateUserSitemap
@@ -75,7 +80,7 @@ class SiteMapGeneratorActor @Inject() (
       userSiteMapGenerator.generateAndCache().onComplete { sitemap =>
         val sitemapUrl = java.net.URLEncoder.encode(s"${fortyTwoConfig.applicationBaseUrl}assets/sitemap-users-0.xml", "UTF-8")
         log.info(s"when user profile will be alive we'll send sitemap with this url to the search engines: $sitemapUrl")
-        //submitSitemap(sitemapUrl)
+        submitSitemap(sitemapUrl)
       }
   }
 
@@ -85,7 +90,7 @@ class SiteMapCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlugin
   extends StringCacheImpl[SiteMapKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SiteMapKey(modelType: String) extends Key[String] {
-  override val version = 1
+  override val version = 2
   val namespace = "sitemap"
   def toKey(): String = modelType
 }

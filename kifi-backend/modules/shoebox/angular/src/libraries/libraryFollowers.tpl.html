@@ -16,7 +16,8 @@
         <div class="lib-followers-content-list" smart-scroll scroll-distance="followerScrollDistance" scroll-disabled="isFollowerScrollDisabled()" scroll-next="followerScrollNext()">
           <ul class="lib-followers-list">
             <a ng-if="inUserProfileBeta" href="{{library.owner.profileUrl}}" class="lib-follower lib-owner" ng-click="close()"
-               itemscope itemtype="http://data-vocabulary.org/Person" itemprop="url">
+               itemscope itemtype="http://data-vocabulary.org/Person" itemprop="url"
+               kf-track-origin origin="{{currentPageOrigin}}/curator">
               <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
               <div class="lib-follower-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
             </a>
@@ -26,7 +27,8 @@
             </li>
 
             <a ng-if="inUserProfileBeta && follower.id" ng-repeat="follower in followerList" href="{{follower.profileUrl}}" ng-click="close()"
-               class="lib-follower" itemscope itemtype="http://data-vocabulary.org/Person" itemprop="url" >
+               class="lib-follower" itemscope itemtype="http://data-vocabulary.org/Person" itemprop="url"
+               kf-track-origin origin="{{currentPageOrigin}}/follower">
               <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" itemprop="photo" alt="{{follower.firstName}} {{follower.lastName}}">
               <div class="lib-follower-name" itemprop="name">{{follower.firstName}} {{follower.lastName}}</div>
             </li>
