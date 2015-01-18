@@ -41,7 +41,7 @@ class MutableVertex(var data: VertexDataReader, val outgoingEdges: MutableOutgoi
    */
   def write(out: ObjectOutputStream): Unit = {
     out.writeUTF(VertexDataReader.writes.writes(data).toString)
-    out.writeInt(outgoingEdges.edges.foldLeft(0)((_, edges) => edges._2.size))
+    out.writeInt(outgoingEdges.edges.foldLeft(0)((count, edges) => count + edges._2.size))
     outgoingEdges.edges foreach {
       case (component, edges) =>
         edges foreach {
