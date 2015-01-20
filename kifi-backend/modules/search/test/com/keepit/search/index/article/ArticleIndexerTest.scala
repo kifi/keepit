@@ -33,6 +33,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     val altStemmingAnalyzer: Option[Analyzer] = None
     val siteBoost: Float = 1.0f
     val concatBoost: Float = 0.0f
+    val prefixBoost: Float = 0.0f
   }
 
   private class IndexerScope(injector: Injector) extends Scope {

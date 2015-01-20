@@ -23,7 +23,7 @@ object LibraryFields {
   val allUsersField = "a"
   val recordField = "rec"
 
-  val textSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
+  val textSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField, namePrefixField)
   val nameSearchFields = Set(nameField, nameStemmedField)
 
   val maxPrefixLength = 8

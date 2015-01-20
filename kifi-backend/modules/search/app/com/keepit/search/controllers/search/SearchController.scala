@@ -181,10 +181,10 @@ class SearchController @Inject() (
     }
   }
 
-  def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String]) = Action.async { request =>
+  def explainLibraryResult(query: String, doPrefixSearch: Boolean, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String]) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     val langs = acceptLangs.split(",").filter(_.nonEmpty)
-    librarySearchCommander.librarySearch(userId, langs, userExperiments, query, None, None, 1, None, debug, Some(libraryId)).map { result =>
+    librarySearchCommander.librarySearch(userId, langs, userExperiments, query, None, None, 1, doPrefixSearch, None, debug, Some(libraryId)).map { result =>
       Ok(html.admin.explainLibraryResult(userId, libraryId, result.explanation))
     }
   }

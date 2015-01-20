@@ -122,9 +122,10 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int) ex
   }
 
   def getStringDocValue(field: String, id: Long): Option[String] = {
-    getDecodedDocValue(field, id) { case (bytes, offset, length) =>
-      val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
-      in.readString()
+    getDecodedDocValue(field, id) {
+      case (bytes, offset, length) =>
+        val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
+        in.readString()
     }
   }
 
