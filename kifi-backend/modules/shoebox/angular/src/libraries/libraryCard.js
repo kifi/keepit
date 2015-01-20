@@ -843,7 +843,7 @@ angular.module('kifi')
             modalData: {
               pane: 'manage',
               library: scope.library,
-              currentPageOrigin: 'libraryPage',
+              currentPageOrigin: scope.currentPageOrigin,
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
                   return libraryService.getLibraryByUserSlug(scope.username, data.library.slug, authToken, true).then(function (library) {
@@ -875,7 +875,7 @@ angular.module('kifi')
               modalData: {
                 pane: 'members',
                 library: scope.library,
-                currentPageOrigin: 'libraryPage'
+                currentPageOrigin: scope.currentPageOrigin
               }
             });
           } else {
@@ -883,7 +883,7 @@ angular.module('kifi')
               template: 'libraries/libraryFollowersModal.tpl.html',
               modalData: {
                 library: scope.library,
-                currentPageOrigin: 'libraryPage'
+                currentPageOrigin: scope.currentPageOrigin
               }
             });
           }
@@ -999,6 +999,9 @@ angular.module('kifi')
         scope.$on('$destroy', function () {
           $window.removeEventListener('scroll', onScroll);
         });
+
+
+        scope.currentPageOrigin = scope.recommendation ? 'recommendationsPage' : 'libraryPage';
       }
     };
   }

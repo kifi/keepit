@@ -10,7 +10,8 @@ angular.module('kifi')
       replace: true,
       templateUrl: 'common/directives/keepWho/keepWhoLibsAndPics.tpl.html',
       scope: {
-        keep: '='
+        keep: '=',
+        currentPageOrigin: '@'
       },
       link: function (scope) {
         scope.me = profileService.me;
@@ -68,7 +69,8 @@ angular.module('kifi')
       replace: true,
       templateUrl: 'common/directives/keepWho/keepWhoLib.tpl.html',
       scope: {
-        library: '='
+        library: '=',
+        currentPageOrigin: '@'
       },
       link: function (scope) {
         scope.onLibraryAttributionClicked = function ($event) {
@@ -90,7 +92,8 @@ angular.module('kifi')
       replace: true,
       templateUrl: 'common/directives/keepWho/keepWhoPic.tpl.html',
       scope: {
-        keeper: '='
+        keeper: '=',
+        currentPageOrigin: '@'
       },
       link: function (scope) {
         scope.inUserProfileBeta = userService.inUserProfileBeta();

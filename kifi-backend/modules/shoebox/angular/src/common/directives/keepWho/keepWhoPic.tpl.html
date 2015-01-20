@@ -4,7 +4,7 @@
    ng-click="hideTooltip()">
   <a ng-if="inUserProfileBeta" class="kf-keep-who-pic" href="{{keeper.profileUrl}}"
      ng-attr-style="background-image: url({{getPicUrl(keeper)}})"
-     kf-track-origin origin="libraryPage/alsoKeptBy">
+     kf-track-origin origin="{{currentPageOrigin}}/alsoKeptBy">
   </a>
   <span ng-if="!inUserProfileBeta" class="kf-keep-who-pic" href="javascript:"
   	ng-attr-style="background-image: url({{getPicUrl(keeper)}})">
