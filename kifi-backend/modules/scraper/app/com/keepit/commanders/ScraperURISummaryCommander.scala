@@ -15,8 +15,8 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.ImageFetcher
 import com.keepit.common.store.{ ImageSize, S3URIImageStore }
-import com.keepit.model.{ PageInfo, ImageInfo, NormalizedURI, URISummary }
-import com.keepit.scraper.ShoeboxDbCallbackHelper
+import com.keepit.model.{ PageInfo, ImageInfo, URISummary }
+import com.keepit.scraper.{ NormalizedURIRef, ShoeboxDbCallbackHelper }
 import com.keepit.scraper.embedly.EmbedlyClient
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -24,7 +24,7 @@ import com.keepit.common.net.URI
 
 @ImplementedBy(classOf[ScraperURISummaryCommanderImpl])
 trait ScraperURISummaryCommander {
-  def fetchFromEmbedly(uri: NormalizedURIRef, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]]
+  def fetchFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]]
 }
 
 class ScraperURISummaryCommanderImpl @Inject() (
@@ -34,8 +34,8 @@ class ScraperURISummaryCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander with Logging {
 
-  def fetchFromEmbedly(nUri: NormalizedURIRef, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-    fetchPageInfoAndImageInfo(nUri, minSize, descriptionOnly) map {
+  def fetchFromEmbedly(nUri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]] = {
+    fetchPageInfoAndImageInfo(nUri, descriptionOnly) map {
       case (Some(pageInfo), imageInfoOpt) =>
         callback.savePageInfo(pageInfo) // no wait
 
@@ -54,8 +54,8 @@ class ScraperURISummaryCommanderImpl @Inject() (
     }
   }
 
-  private def fetchPageInfoAndImageInfo(nUri: NormalizedURIRef, minSize: ImageSize, descriptionOnly: Boolean): Future[(Option[PageInfo], Option[ImageInfo])] = {
-    val watch = Stopwatch(s"[embedly] asking for $nUri with minSize $minSize, descriptionOnly $descriptionOnly")
+  private def fetchPageInfoAndImageInfo(nUri: NormalizedURIRef, descriptionOnly: Boolean): Future[(Option[PageInfo], Option[ImageInfo])] = {
+    val watch = Stopwatch(s"[embedly] asking for $nUri, descriptionOnly $descriptionOnly")
     val fullEmbedlyInfo = embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
       watch.logTimeWith(s"got info: $embedlyInfoOpt") //this could be lots of logging, should remove it after problems resolved
 
@@ -68,16 +68,10 @@ class ScraperURISummaryCommanderImpl @Inject() (
           } else {
             val images = embedlyInfo.buildImageInfo(nUri.id)
             val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.filterImageByUrl) }
-            val (smallImages, selectedImageOpt) = partitionImages(nonBlankImages, minSize)
 
-            timing(s"fetching ${smallImages.size} small images") {
-              smallImages.foreach {
-                fetchSmallImage(nUri, _)
-              }
-            }
-            watch.logTimeWith(s"all ${smallImages.size} small images")
+            // todo: Upload nonBlankImages to S3.
 
-            selectedImageOpt match {
+            nonBlankImages.headOption match {
               case None =>
                 watch.logTimeWith(s"no selected image")
                 Future.successful(None)
@@ -99,11 +93,6 @@ class ScraperURISummaryCommanderImpl @Inject() (
       watch.stop()
     }
     fullEmbedlyInfo
-  }
-
-  private def partitionImages(imgsInfo: Seq[ImageInfo], minSize: ImageSize): (Seq[ImageInfo], Option[ImageInfo]) = {
-    val smallImages = imgsInfo.takeWhile(!meetsSizeConstraint(_, minSize))
-    (smallImages, imgsInfo.drop(smallImages.size).headOption)
   }
 
   private def fetchAndSaveImage(uri: NormalizedURIRef, imageInfo: ImageInfo): Future[Option[ImageInfo]] = {
@@ -168,6 +157,3 @@ object ScraperURISummaryCommander {
     }
   }
 }
-
-@json case class NormalizedURIRef(id: Id[NormalizedURI], url: String, externalId: ExternalId[NormalizedURI])
-

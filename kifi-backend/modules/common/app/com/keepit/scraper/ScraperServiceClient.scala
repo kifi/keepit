@@ -6,7 +6,7 @@ import java.io.IOException
 
 import com.google.inject.Inject
 import com.keepit.common.amazon.AmazonInstanceInfo
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
@@ -17,6 +17,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.search.Article
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -118,6 +119,8 @@ case class ScraperThreadInstanceInfo(info: AmazonInstanceInfo, jobInfo: Either[S
   }
 }
 
+@json case class NormalizedURIRef(id: Id[NormalizedURI], url: String, externalId: ExternalId[NormalizedURI])
+
 trait ScraperServiceClient extends ServiceClient {
   implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
   final val serviceType = ServiceType.SCRAPER
@@ -130,7 +133,7 @@ trait ScraperServiceClient extends ServiceClient {
   def detectPorn(query: String): Future[Map[String, Float]]
   def whitelist(words: String): Future[String]
   def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]]
-  def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]]
+  def getURISummaryFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]]
   def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int]
   def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int]
 }
@@ -210,9 +213,8 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
-  def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-    // todo: Bad API, NormalizedURI isn't needed anymore. Just JSON with id, uri, and externalId. Fix soon?
-    val payload = Json.obj("uri" -> uri, "minSize" -> minSize, "descriptionOnly" -> descriptionOnly)
+  def getURISummaryFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]] = {
+    val payload = Json.obj("uri" -> uri, "descriptionOnly" -> descriptionOnly)
     call(Scraper.internal.getURISummaryFromEmbedly, payload, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
       r.json.as[Option[URISummary]]
     }
@@ -248,3 +250,4 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 }
+
