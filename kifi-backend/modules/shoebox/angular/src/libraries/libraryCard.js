@@ -843,6 +843,7 @@ angular.module('kifi')
             modalData: {
               pane: 'manage',
               library: scope.library,
+              currentPageOrigin: 'libraryPage',
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
                   return libraryService.getLibraryByUserSlug(scope.username, data.library.slug, authToken, true).then(function (library) {
@@ -873,7 +874,8 @@ angular.module('kifi')
               template: 'libraries/manageLibraryModal.tpl.html',
               modalData: {
                 pane: 'members',
-                library: scope.library
+                library: scope.library,
+                currentPageOrigin: 'libraryPage'
               }
             });
           } else {

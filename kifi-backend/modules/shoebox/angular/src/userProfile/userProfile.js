@@ -289,6 +289,7 @@ angular.module('kifi')
         modalData: {
           pane: 'manage',
           library: library,
+          currentPageOrigin: $scope.currentPageOrigin,
           returnAction: function () {
             libraryService.getLibraryById(library.id, true).then(function (data) {
               var followersList = library.followers; // contains picUrl for each follower
