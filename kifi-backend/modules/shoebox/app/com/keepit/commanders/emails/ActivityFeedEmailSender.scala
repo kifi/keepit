@@ -4,13 +4,14 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model.{ FullUriRecoInfo, FullLibRecoInfo, RecommendationSource, RecommendationSubSource }
-import com.keepit.model.{ LibraryInvite, KeepInfo, FullLibraryInfo, ExperimentType, Library, NormalizedURI, NotificationCategory, User }
+import com.keepit.model._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
@@ -46,7 +47,8 @@ case class ActivityEmailData(
     newKeepsInLibraries: Seq[LibraryInfoView],
     libraryInvites: Seq[LibraryInviteInfoView],
     libraryRecos: Seq[FullLibRecoInfo],
-    uriRecos: Seq[FullUriRecoInfo]) {
+    uriRecos: Seq[FullUriRecoInfo],
+    pendingFriendRequests: Seq[Id[User]]) {
 }
 
 @ImplementedBy(classOf[ActivityFeedEmailSenderImpl])
@@ -61,6 +63,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
     emailTemplateSender: EmailTemplateSender,
     recoCommander: RecommendationsCommander,
     libraryCommander: LibraryCommander,
+    friendRequestRepo: FriendRequestRepo,
+    db: Database,
     private val airbrake: AirbrakeNotifier) extends ActivityFeedEmailSender with Logging {
 
   val reactiveLock = new ReactiveLock(8)
@@ -98,7 +102,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
             LibraryInviteInfoView(inviterUserIds, libId, info)
         },
         libraryRecos = libRecos,
-        uriRecos = uriRecos
+        uriRecos = uriRecos,
+        pendingFriendRequests = pendingFriendRequests
       )
 
       EmailToSend(
@@ -133,6 +138,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
     // max number of invited-to libraries to display
     val maxInvitedLibraries = 3
+
+    // max number of friend requests to display
+    val maxFriendRequests = 3
 
     private lazy val (followedLibraries: Seq[Library], invitedLibraries: Seq[(LibraryInvite, Library)]) = {
       val (rawUserLibs, rawInvitedLibs) = libraryCommander.getLibrariesByUser(toUserId)
@@ -176,7 +184,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
     }
 
     def getPendingFriendRequests(): Future[Seq[Id[User]]] = {
-      Future.successful(Seq.empty) // TODO
+      db.readOnlyReplicaAsync { implicit session =>
+        friendRequestRepo.getByRecipient(userId = toUserId, states = Set(FriendRequestStates.ACTIVE))
+      } map { _ sortBy (-_.updatedAt.toInstant.getMillis) map (_.senderId) take maxFriendRequests }
     }
 
     def getFriendsWhoFollowedLibraries(): Future[Seq[(Id[User], Id[Library])]] = {
