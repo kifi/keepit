@@ -18,5 +18,6 @@ object RecommendationSource {
 
 object RecommendationSubSource {
   object RecommendationsFeed extends RecommendationSubSource("recommendationsFeed")
+  object ActivityFeed extends RecommendationSubSource("activityFeed")
   object Unknown extends RecommendationSubSource("unknown")
 }

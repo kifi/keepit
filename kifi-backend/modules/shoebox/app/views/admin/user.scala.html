@@ -65,6 +65,9 @@
           <form action="@com.keepit.controllers.admin.routes.AdminUserController.refreshRecos(user.id.get)" class="form-inline refresh-recos" method="POST" style="display: inline-block;">
             <input type="submit" value="Refresh Recommendations">
           </form>
+          <form action="@com.keepit.controllers.admin.routes.AdminUserController.sendEmail(user.id.get, "activity")" class="form-inline send-email" method="POST" style="display: inline-block;">
+            <input type="submit" value="Send Activity Email">
+          </form>
         </td>
       </tr>
       <tr>

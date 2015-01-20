@@ -63,248 +63,268 @@
     padding: 0
     overflow: hidden
 
-  .manage-lib-followers-info
-    padding: 25px 115px
-    background-color: #f3f5f7
-    text-align: center
-
-  .manage-lib-followers-stats
-    margin: 0 0 8px 0
-    font-size: 14px
-    font-weight: 700
-    color: #5c6373
-
-  .manage-lib-followers-button
-    border: 0
-    border-radius: 6px
-    padding: 15px 20px
-    background-color: #7eccf9
-    font-size: 12px
-    font-weight: 700
-    color: white
-
   .dialog-text
     padding: 0 35px
-
-  .manage-lib-input-wrapper
-    margin-bottom: 15px
-    margin-top: 25px
-
-  .manage-lib-heading
-    display: block
-    padding-top: 5px
-    font-size: 15px
-    font-weight: bold
-    color: kifiBlack
-
-  .manage-lib-input-title
-    display: inline-block
-    width: 115px
-
-  .manage-lib-input
-    display: inline-block
-    box-sizing: border-box
-    border: 1px solid #c7c7c7
-    border-radius: 5px
-    padding: 10px 15px
-    width: 405px
-    color: textBlackColor
-    vertical-align: top
-    placeholder secondaryTextGray
-
-    &:focus
-      border: 1px solid blueColor
-
-  .manage-lib-slug
-    display: block
-    margin: 5px 0 0 122px
-
-    .manage-lib-slug-input
-      border-bottom: 1px dotted #c7c7c7
-      width: 75px
-      placeholder secondaryTextGray
-
-      &.non-empty-slug
-        border-bottom: none
-        width: 275px
-
-        &:focus
-          color: textBlackColor
-
-  .manage-lib-description-title-input
-    padding-top: 10px
-
-  .manage-lib-description-input
-    height: 100px
-    resize: none
-
-  .manage-lib-visibility
-    position: relative
-    margin: 20px 0
-    min-height: 91px
-    overflow: hidden
-
-  .manage-lib-create-visibility-input-container
-    display: inline-block
-    margin: 0 20px 0 10px
-    width: 90px
-
-  .manage-lib-visibility-description
-    display: inline-block
-    width: 310px
-    vertical-align: top
-
-  .manage-lib-visibility-description-content
-    font-size: 15px
-    line-height: 18px
-    overflow: auto
-
-  .manage-lib-listed-visibility
-    margin-top: 8px
-    color: #9b9b9b
-    text-align: center
-
-    input[type="checkbox"]
-      display: none;
-
-    input[type="checkbox"] + label span
-      position: relative
-      display: inline-block
-      margin: -5px 5px 0 0
-      border-radius: 3px
-      width: 12px
-      height: 12px
-      background-color: #3b99fa
-      vertical-align: middle
-      cursor: pointer
-
-    input[type="checkbox"]:checked + label span
-      &::before
-      &::after
-        content: ' '
-        position: absolute;
-        border-radius: 2px
-        width: 2px;
-        background: #fff
-        font-size: 0
-
-      &::before
-        left: 60%
-        top: 2px
-        bottom: 2px
-        transform: translate(-1px) rotate(35deg)
-
-      &::after
-        left: 35%
-        top: 5px
-        bottom: 2px
-        transform: translate(-1px) rotate(-45deg)
-
-  .manage-lib-choice-card
-    display: inline-block
-    margin-right: 15px
-    width: 80px
-    vertical-align: top
-
-  .manage-lib-choice-card-img
-    margin: 0 auto 5px
-    width: 58px
-    height: 77px
-    background-repeat: no-repeat
 
   .dialog-buttons
     text-align: left
 
-  .manage-lib-create-button
-    display: block
-    margin: 0 auto
+.manage-lib-followers-info
+  padding: 25px 115px
+  background-color: #f3f5f7
+  text-align: center
 
-  .manage-lib-save-button
-  .manage-lib-delete-button
-    box-sizing: border-box
+.manage-lib-followers-stats
+  margin: 0 0 8px 0
+  font-size: 14px
+  font-weight: 700
+  color: #5c6373
+
+.manage-lib-followers-button
+  border: 0
+  border-radius: 6px
+  padding: 15px 20px
+  background-color: #7eccf9
+  font-size: 12px
+  font-weight: 700
+  color: white
+
+.manage-lib-input-wrapper
+  margin-bottom: 15px
+  margin-top: 25px
+
+  &.kf-color
+    font-size: 0
+
+.manage-lib-heading
+  display: inline-block
+  width: 115px
+  padding-top: 10px
+  font-size: 15px
+  font-weight: bold
+  color: kifiBlack
+
+  .kf-color>&
+    padding-top: 8px
+
+input.manage-lib-input
+textarea.manage-lib-input
+  display: inline-block
+  box-sizing: border-box
+  border: 1px solid #c7c7c7
+  border-radius: 5px
+  padding: 10px 15px
+  width: 405px
+  color: textBlackColor
+  vertical-align: top
+  placeholder secondaryTextGray
+
+  &:focus
+    border: 1px solid blueColor
+
+.manage-lib-slug
+  display: table
+  margin: 5px 0 0 122px
+  width: 398px
+
+.manage-lib-slug-1
+  display: table-cell
+  width: 1%
+  color: secondaryTextGray
+
+.manage-lib-slug-2
+  display: table-cell
+
+.manage-lib-slug-input
+  border-bottom: 1px dotted #c7c7c7
+  width: 100%
+  placeholder secondaryTextGray
+
+  &.non-empty-slug
+    border-bottom: none
+
+    &:focus
+      color: textBlackColor
+
+.manage-lib-description-input
+  height: 100px
+  resize: none
+
+.manage-lib-create-visibility-input-container
+  display: inline-block
+  vertical-align: top
+  margin: 7px 20px 0 0
+  width: 56px
+
+  .library-visibility-custom-input
+    margin: 0
+
+.manage-lib-visibility-description
+  display: inline-block
+  vertical-align: top
+  width: 280px
+  margin-top: 7px
+
+.manage-lib-visibility-description-content
+  font-size: 15px
+  line-height = 28px
+  line-height: line-height
+  height: 2 * line-height
+  overflow: auto
+
+.manage-lib-listed-visibility
+  color: #9b9b9b
+
+  input[type="checkbox"]
+    display: none;
+
+  input[type="checkbox"] + label span
+    position: relative
     display: inline-block
-    padding-top: 10px
-    width: 152px
+    margin: -5px 5px 0 0
+    border-radius: 3px
+    width: 12px
+    height: 12px
+    background-color: #3b99fa
+    vertical-align: middle
+    cursor: pointer
 
-  .manage-lib-delete-button
-    margin: 0 250px 0 20px
+  input[type="checkbox"]:checked + label span
+    &::before
+    &::after
+      content: ' '
+      position: absolute;
+      border-radius: 2px
+      width: 2px;
+      background: #fff
+      font-size: 0
 
-  .manage-lib-error
+    &::before
+      left: 60%
+      top: 2px
+      bottom: 2px
+      transform: translate(-1px) rotate(35deg)
+
+    &::after
+      left: 35%
+      top: 5px
+      bottom: 2px
+      transform: translate(-1px) rotate(-45deg)
+
+.manage-lib-color
+  display: inline-block
+  vertical-align: top
+  width: 36px
+  height: 36px
+  border-radius: 5px
+  margin-right: 4px
+  position: relative
+  cursor: pointer
+
+.manage-lib-color-radio
+  visibility: hidden
+
+  &:checked+.svg-checkmark-thin
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    background-size: auto 12px
+    background-repeat: no-repeat
+    background-position: center
+
+.manage-lib-create-button
+  display: block
+  margin: 0 auto
+
+button.manage-lib-save-button
+button.manage-lib-delete-button
+  box-sizing: border-box
+  display: inline-block
+  padding-top: 10px
+  width: 152px
+
+.manage-lib-delete-button
+  margin: 0 250px 0 20px
+
+.manage-lib-error
+  text-align: center
+  font-size: 16px
+  line-height: 1
+  color: redColor
+
+.manage-lib-name-error
+  pop-over 66px 138px redColor
+
+.manage-lib-invite
+  display: block
+  box-sizing: border-box
+  width: 400px
+  height: 44px
+  text-align: left
+
+  .library-share-menu
+    top: 0
     display: block
-    font-size: 16px
-    color: redColor
+    margin: 0
+    width: 370px
 
-  .manage-lib-name-error
-    pop-over 66px 138px redColor
+  .library-share-menu-content
+    border: none
+    box-shadow: none
 
-  .manage-lib-invite
-    display: block
+  .library-share-input-box
+    border: none
+
+  .library-share-input.library-share-search-input
     box-sizing: border-box
-    width: 400px
-    height: 44px
-    text-align: left
+    border: 1px solid #c7c7c7
+    border-radius: 5px
+    width: 370px
+    background-color: #fff
 
-    .library-share-menu
-      top: 0
-      display: block
-      margin: 0
-      width: 370px
+  .library-share-contact-list
+    position: relative
+    top: -5px
+    border: 1px solid #c7c7c7
+    border-bottom-left-radius: 5px
+    border-bottom-right-radius: 5px
 
-    .library-share-menu-content
-      border: none
-      box-shadow: none
+    &:empty
+      display: none
 
-      .library-share-input-box
-        border: none
+  .library-share-contact-summary
+    line-height: 1.2em
 
-      .library-share-input.library-share-search-input
-        box-sizing: border-box
-        border: 1px solid #c7c7c7
-        border-radius: 5px
-        width: 370px
-        background-color: #fff
+  .library-share-contact
+    width: 100%
 
-      .library-share-contact-list
-        position: relative
-        top: -5px
-        border: 1px solid #c7c7c7
-        border-bottom-left-radius: 5px
-        border-bottom-right-radius: 5px
+  .library-share-contact-button
+    // Override a bunch of global dialog button styles.
+    width: inherit
+    height: inherit
+    line-height: inherit
+    font-weight: inherit
 
-        &:empty
-          display: none
+    right: 3px
+    padding-top: 4px
+    padding-bottom: 4px
 
-      .library-share-contact-summary
-        line-height: 1.2em
+    &:hover
+      color: #666
 
-      .library-share-contact
-        width: 100%
+    &::before
+      top: 3px
 
-      .library-share-contact-button
-        // Override a bunch of global dialog button styles.
-        width: inherit
-        height: inherit
-        line-height: inherit
-        font-weight: inherit
+  .kf-keep-lib-footer-button-icon
+    top: 4px
 
-        right: 3px
-        padding-top: 4px
-        padding-bottom: 4px
+  .library-share-following
+    right: 25px
 
-        &:hover
-          color: #666
-
-        &::before
-          top: 3px
-
-      .kf-keep-lib-footer-button-icon
-        top: 4px
-
-      .library-share-following
-        right: 25px
-
-      .library-share-sent
-        right: 40px
+  .library-share-sent
+    right: 40px
 
 .manage-lib-member
   position: relative
@@ -325,12 +345,7 @@
 .manage-lib-owner
 .manage-lib-member-user
   display: block
-
-  &:link
-  &:visited
-  &:hover
-  &:active
-    color: #333
+  color: #333
 
 .manage-lib-member-image
   display: inline-block

@@ -184,7 +184,7 @@ class AuthHelper @Inject() (
     case t: Throwable => airbrakeNotifier.notify(s"fail to save Kifi Campaign Id for user $userId where kcid = $kcid", t)
   }
 
-  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean, libraryPublicId: Option[PublicId[Library]])(implicit request: MaybeUserRequest[JsValue]): Result = {
+  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean, libraryPublicId: Option[PublicId[Library]], isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
     if (!emailConfirmedAlready) {
       val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
       SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = true, Some(unverifiedEmail)) }
@@ -212,9 +212,15 @@ class AuthHelper @Inject() (
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
-      authenticator => Ok(Json.obj("uri" -> uri))
-        .withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv"))
-        .withSession(request.session.setUserId(user.id.get))
+      authenticator => {
+        val result = if (isFinalizedImmediately) {
+          Redirect(uri)
+        } else {
+          Ok(Json.obj("uri" -> uri))
+        }
+        result.withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv"))
+          .withSession(request.session.setUserId(user.id.get))
+      }
     )
   }
 
@@ -241,28 +247,26 @@ class AuthHelper @Inject() (
       formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
       {
         case sfi: SocialFinalizeInfo =>
-          handleSocialFinalizeInfo(sfi, None)
+          handleSocialFinalizeInfo(sfi, None, isFinalizedImmediately = false)
       })
   }
 
   def doTokenFinalizeAccountAction(implicit request: MaybeUserRequest[JsValue]): Result = {
     request.body.asOpt[TokenFinalizeInfo] match {
       case None => BadRequest(Json.obj("error" -> "invalid_arguments"))
-      case Some(info) => handleSocialFinalizeInfo(info, info.libraryPublicId)
+      case Some(info) => handleSocialFinalizeInfo(info, info.libraryPublicId, isFinalizedImmediately = false)
     }
   }
 
-  def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo, libraryPublicId: Option[PublicId[Library]])(implicit request: MaybeUserRequest[JsValue]): Result = {
+  def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo, libraryPublicId: Option[PublicId[Library]], isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
     require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
-
-    // The below logic needs to happen for password-less social signups (Aaron!!)
 
     val identity = request.identityOpt.get
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
     val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail }.exists(_.equalsIgnoreCase(sfi.email))
-    finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, libraryPublicId = libraryPublicId)
+    finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, libraryPublicId = libraryPublicId, isFinalizedImmediately = isFinalizedImmediately)
   }
 
   private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
@@ -290,7 +294,7 @@ class AuthHelper @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
       case (user, email, newIdentity) =>
-        finishSignup(user, email, newIdentity, emailConfirmedAlready = false, libraryPublicId = libraryPublicId)
+        finishSignup(user, email, newIdentity, emailConfirmedAlready = false, libraryPublicId = libraryPublicId, isFinalizedImmediately = false)
     }
   }
 

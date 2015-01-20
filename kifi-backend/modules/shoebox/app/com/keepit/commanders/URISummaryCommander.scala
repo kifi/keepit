@@ -18,7 +18,7 @@ import java.awt.image.BufferedImage
 import scala.util.{ Success, Failure }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.scraper.ScraperServiceClient
+import com.keepit.scraper.{ NormalizedURIRef, ScraperServiceClient }
 import com.keepit.scraper.embedly.EmbedlyStore
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
@@ -54,9 +54,9 @@ class URISummaryCommander @Inject() (
     getDefaultURISummary(uri, waiting)
   }
 
-  def getDefaultURISummary(uri: NormalizedURI, waiting: Boolean): Future[URISummary] = {
-    val uriSummaryRequest = URISummaryRequest(uri.id.get, ImageType.ANY, ImageSize(0, 0), withDescription = true, waiting = waiting, silent = false)
-    getURISummaryForRequest(uriSummaryRequest, uri)
+  def getDefaultURISummary(nUri: NormalizedURI, waiting: Boolean): Future[URISummary] = {
+    val uriSummaryRequest = URISummaryRequest(nUri.id.get, ImageType.ANY, ImageSize(0, 0), withDescription = true, waiting = waiting, silent = false)
+    getURISummaryForRequest(uriSummaryRequest, NormalizedURIRef(nUri.id.get, nUri.url, nUri.externalId))
   }
 
   /**
@@ -66,7 +66,7 @@ class URISummaryCommander @Inject() (
   def getURIImage(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[Option[String]] = {
     val minSize = minSizeOpt getOrElse ImageSize(0, 0)
     val request = URISummaryRequest(nUri.id.get, ImageType.ANY, minSize, false, false, false)
-    getURISummaryForRequest(request, nUri) map { _.imageUrl }
+    getURISummaryForRequest(request, NormalizedURIRef(nUri.id.get, nUri.url, nUri.externalId)) map { _.imageUrl }
   }
 
   /**
@@ -77,33 +77,32 @@ class URISummaryCommander @Inject() (
     val nUri = db.readOnlyReplica { implicit session =>
       normalizedUriRepo.get(request.uriId)
     }
-    getURISummaryForRequest(request, nUri)
+    getURISummaryForRequest(request, NormalizedURIRef(nUri.id.get, nUri.url, nUri.externalId))
   }
 
-  //todo(Léo): swap url for uriId in URISummaryRequest and stop propagating the entire NormalizedURI in this code
-  private val consolidateFetchURISummary = new RequestConsolidator[(NormalizedURI, ImageType, ImageSize, Boolean), Option[URISummary]](20 seconds)
+  private val consolidateFetchURISummary = new RequestConsolidator[(NormalizedURIRef, ImageType, Boolean), Option[URISummary]](20 seconds)
 
-  def getURISummaryForRequest(request: URISummaryRequest, nUri: NormalizedURI): Future[URISummary] = {
+  private def getURISummaryForRequest(request: URISummaryRequest, nUri: NormalizedURIRef): Future[URISummary] = {
     val existingSummary = getExistingSummaryForRequest(request, nUri)
     if (isCompleteSummary(existingSummary, request) || request.silent) {
       Future.successful(existingSummary)
     } else {
-      val fetchedSummaryFuture = consolidateFetchURISummary((nUri, request.imageType, request.minSize, request.withDescription)) {
-        case (nUri, imageType, minSize, withDescription) => fetchSummaryForRequest(nUri, imageType, minSize, withDescription)
+      val fetchedSummaryFuture = consolidateFetchURISummary((nUri, request.imageType, request.withDescription)) {
+        case (nUri, imageType, withDescription) => fetchSummaryForRequest(nUri, imageType, withDescription)
       }
       if (request.isCacheable) fetchedSummaryFuture.onSuccess {
         case None => // ignore
         case Some(fetchedSummary) =>
           import TransactionalCaching.Implicits.directCacheAccess
-          uriSummaryCache.set(URISummaryKey(nUri.id.get), fetchedSummary)
+          uriSummaryCache.set(URISummaryKey(nUri.id), fetchedSummary)
       }
       if (request.waiting) fetchedSummaryFuture.imap(_.getOrElse(existingSummary)) else Future.successful(existingSummary)
     }
   }
 
-  private def getExistingSummaryForRequest(request: URISummaryRequest, nUri: NormalizedURI): URISummary = {
+  private def getExistingSummaryForRequest(request: URISummaryRequest, nUri: NormalizedURIRef): URISummary = {
     import TransactionalCaching.Implicits.directCacheAccess
-    val cachedSummary = if (request.isCacheable) uriSummaryCache.get(URISummaryKey(nUri.id.get)) else None
+    val cachedSummary = if (request.isCacheable) uriSummaryCache.get(URISummaryKey(nUri.id)) else None
     cachedSummary getOrElse timing(s"getStoredSummaryForRequest ${nUri.id} -> ${nUri.url}") {
       getStoredSummaryForRequest(nUri, request.imageType, request.minSize, request.withDescription)
     }
@@ -119,24 +118,19 @@ class URISummaryCommander @Inject() (
   /**
    * Retrieves URI summary data by only looking at the database
    */
-  private def getStoredSummaryForRequest(nUri: NormalizedURI, imageType: ImageType, minSize: ImageSize, withDescription: Boolean): URISummary = {
+  private def getStoredSummaryForRequest(nUri: NormalizedURIRef, imageType: ImageType, minSize: ImageSize, withDescription: Boolean): URISummary = {
     val targetProvider = imageType match {
       case ImageType.ANY => None
       case ImageType.SCREENSHOT => Some(ImageProvider.PAGEPEEKER)
       case ImageType.IMAGE => Some(ImageProvider.EMBEDLY)
     }
     db.readOnlyReplica { implicit session =>
-      val storedImageInfos = nUri.id flatMap { id =>
-        imageInfoRepo.getByUriWithPriority(id, minSize, targetProvider)
-      }
+      val storedImageInfos = imageInfoRepo.getByUriWithPriority(nUri.id, minSize, targetProvider)
       val storedSummaryOpt = storedImageInfos flatMap { imageInfo =>
         if (withDescription) {
-          val wordCountOpt = nUri.id flatMap { id =>
-            scraper.getURIWordCountOpt(id, Some(nUri.url))
-          }
+          val wordCountOpt = scraper.getURIWordCountOpt(nUri.id, nUri.url)
           for {
-            nUriId <- nUri.id
-            pageInfo <- pageInfoRepo.getByUri(nUriId)
+            pageInfo <- pageInfoRepo.getByUri(nUri.id)
           } yield {
             URISummary(getS3URL(imageInfo, nUri), pageInfo.title, pageInfo.description, imageInfo.width, imageInfo.height, wordCountOpt)
           }
@@ -151,14 +145,13 @@ class URISummaryCommander @Inject() (
   /**
    * Retrieves URI summary data from external services (Embedly, PagePeeker)
    */
-  private def fetchSummaryForRequest(nUri: NormalizedURI, imageType: ImageType, minSize: ImageSize, withDescription: Boolean): Future[Option[URISummary]] = {
+  private def fetchSummaryForRequest(nUri: NormalizedURIRef, imageType: ImageType, withDescription: Boolean): Future[Option[URISummary]] = {
     log.info(s"fetchSummaryForRequest for ${nUri.id} -> ${nUri.url}")
     val embedlyResultFut = if (imageType == ImageType.IMAGE || imageType == ImageType.ANY || withDescription) {
       val stopper = Stopwatch("fetching from scraper embedly info for ${nUri.id} -> ${nUri.url}")
-      val future = fetchFromEmbedly(nUri, minSize)
+      val future = fetchFromEmbedly(nUri)
       future.onComplete { res =>
         stopper.stop() tap { _ => log.info(stopper.toString) }
-        res.map(_.map(s => resizeImage(nUri, s)))
       }
       future
     } else {
@@ -167,21 +160,16 @@ class URISummaryCommander @Inject() (
     embedlyResultFut
   }
 
-  val resizeLock = new ReactiveLock(2)
-  private def resizeImage(nUri: NormalizedURI, uriSummary: URISummary) = {
-    uriSummary
-  }
-
   /**
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
    */
-  private def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize = ImageSize(0, 0), descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
+  private def fetchFromEmbedly(nUri: NormalizedURIRef): Future[Option[URISummary]] = {
     try {
-      scraper.getURISummaryFromEmbedly(nUri, minSize, descriptionOnly)
+      scraper.getURISummaryFromEmbedly(nUri, descriptionOnly = true)
     } catch {
       case timeout: TimeoutException =>
         val failImageInfo = db.readWrite { implicit session =>
-          imageInfoRepo.save(ImageInfo(uriId = nUri.id.get, url = Some(nUri.url), provider = Some(ImageProvider.EMBEDLY), format = Some(ImageFormat.UNKNOWN)))
+          imageInfoRepo.save(ImageInfo(uriId = nUri.id, url = Some(nUri.url), provider = Some(ImageProvider.EMBEDLY), format = Some(ImageFormat.UNKNOWN)))
         }
         airbrake.notify(s"Could not fetch from embedly because of timeout, persisting a tombstone for the image in $failImageInfo", timeout)
         Future.successful(None)
@@ -191,7 +179,7 @@ class URISummaryCommander @Inject() (
   /**
    * Get S3 url for image info
    */
-  private def getS3URL(info: ImageInfo, nUri: NormalizedURI): Option[String] = uriImageStore.getImageURL(info, nUri.externalId)
+  private def getS3URL(info: ImageInfo, nUri: NormalizedURIRef): Option[String] = uriImageStore.getImageURL(info, nUri.externalId)
 
   def getStoredEmbedlyKeywords(id: Id[NormalizedURI]): Seq[EmbedlyKeyword] = {
     embedlyStore.get(id) match {

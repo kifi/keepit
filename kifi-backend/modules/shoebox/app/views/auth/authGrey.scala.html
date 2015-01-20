@@ -100,16 +100,15 @@
       <div class="social-photo form-photo"@if(picturePath != ""){ style="background-image:url(@picturePath)"}></div>
       <div class="social-text-info">
         <div class="social-name">@firstName @lastName</div>
-        <input class="social-email" type="email" name="signup-2-email" value="@emailAddress" placeholder="Your email address" disabled>
-        <a class="social-change-email" href="javascript:" data-track-action="clickchangeEmail">Change email</a>
+
+        @if(emailAddress == "") {
+          <input class="social-email" type="email" name="signup-2-email" value="@emailAddress" placeholder="Your email address">
+        } else {
+          <input class="social-email" type="email" name="signup-2-email" value="@emailAddress" placeholder="Your email address" disabled>
+          <a class="social-change-email" href="javascript:" data-track-action="clickchangeEmail">Change email</a>
+        }
+
       </div>
-    </div>
-    <div class="form-creds">
-      <label class="password-label signup-2-label">
-        Create a password
-        <input class="form-password" type="password" name="signup-2-password" autofocus>
-        <span class="form-password-tip">at least 7 characters</span>
-      </label>
     </div>
     <button class="form-submit form-submit-sexy alt-button alt-blue" data-track-action="clicksignUpButton">
       <span class="progress"></span>

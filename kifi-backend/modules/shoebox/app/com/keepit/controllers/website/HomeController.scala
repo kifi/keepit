@@ -77,6 +77,7 @@ class HomeController @Inject() (
         |Disallow: /admin/
         |
         |SITEMAP: https://www.kifi.com/assets/sitemap-libraries-0.xml
+        |SITEMAP: https://www.kifi.com/assets/sitemap-users-0.xml
       """.stripMargin)
   }
 

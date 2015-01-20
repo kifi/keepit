@@ -1,0 +1,75 @@
+@(toUserId: Id[User], activityData: com.keepit.commanders.emails.ActivityEmailData)
+@import com.keepit.common.db.Id
+@import com.keepit.common.mail.template.helpers._
+
+Hi @fullName(toUserId)
+<br/><br/>
+
+<h1>Libraries you follow have new Keeps </h1>
+@activityData.newKeepsInLibraries.map { lib =>
+    <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
+    @lib.ownerName<br/>
+    @lib.description.getOrElse("")<br/>
+
+    Keeps:<br/>
+    @lib.keeps.map { keep =>
+        <a href="@keep.url">@keep.title</a><br/>
+        @keep.imageUrlAndWidth.map { case (url, width) =>
+        <img src="@toHttpsUrl(url)" alt="@keep.title" width="@width"/><br/>
+        }
+    }
+    <br/>
+}
+
+<h1>Pending Library Invites</h1>
+@activityData.libraryInvites.map { lib =>
+    Invited by @{Html(lib.invitedByUsers.map(fullName).mkString(", "))}<br/>
+    <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
+    @lib.ownerName<br/>
+    @lib.description.getOrElse("")<br/>
+    @lib.image.map { image =>
+        <img src="@libraryImageUrl(image.path)" alt="@lib.name" width="400"/>
+    }
+}
+<br/>
+
+<h1>Pending Unread Messages</h1>
+TODO
+<br/>
+
+<h1>Pending Friend Requests</h1>
+@activityData.pendingFriendRequests.map { senderId =>
+    <a href="@kifiFriendsUrl("clickedFriendRequestName")">@fullName(senderId)</a>
+}
+<br/>
+
+<h1>Library New Followers</h1>
+TODO
+<br/>
+
+<h1>You Helped People Last Week</h1>
+TODO
+<br/>
+
+<h1>Your Friend created a library</h1>
+TODO
+<br/>
+
+<h1>Your Friend followed a library</h1>
+TODO
+<br/>
+
+<h1>Recos</h1>
+@activityData.uriRecos.map { reco  =>
+    <a href="@reco.itemInfo.url">@reco.itemInfo.title</a><br/>
+    @reco.itemInfo.summary.description.getOrElse("")<br/>
+    @reco.itemInfo.summary.imageUrl.map { url =>
+        <img src="@toHttpsUrl(url)" alt="@reco.itemInfo.title" width="@reco.itemInfo.summary.imageWidth.getOrElse(500)"/><br/>
+    }
+    <br/><br/>
+}
+
+<h1>Library Recos</h1>
+@activityData.libraryRecos.map { recoInfo =>
+    <a href="@baseUrl/@{recoInfo.itemInfo.url}">@recoInfo.itemInfo.name</a><br/>
+}

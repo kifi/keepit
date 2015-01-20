@@ -18,11 +18,11 @@ import org.specs2.mutable.Specification
 import org.specs2.matcher.MatchResult
 import scala.Some
 import com.keepit.common.pagepeeker.PagePeekerImage
+import scala.concurrent.duration.Duration
 import scala.util.{ Success, Try }
 import akka.actor.Scheduler
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.scraper.FakeScraperServiceClientImpl
-import com.keepit.scraper.ScraperServiceClient
+import com.keepit.scraper.{ NormalizedURIRef, FakeScraperServiceClientImpl, ScraperServiceClient }
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.store.FakeShoeboxStoreModule
@@ -61,7 +61,7 @@ case class URISummaryCommanderTestS3URIImageStore() extends S3URIImageStore {
 }
 
 case class MockScraperServiceClient(override val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends FakeScraperServiceClientImpl(airbrakeNotifier, scheduler) {
-  override def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
+  override def getURISummaryFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]] = {
     val summary = Some(URISummary(Some(URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl), None, None))
     Future.successful(summary)
   }

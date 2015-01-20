@@ -128,10 +128,10 @@ class EmailTemplateProcessorImpl @Inject() (
 
         val decoratedHtml = htmlDecorator(evalTemplate(htmlBody.body, input, emailToSend, includedTip)) {
           case EmailHtmlMissingImgAlt(ele) =>
-            val msg = s"img element missing @alt in ${emailToSend.category.category} email"
+            val msg = s"img element missing @alt in ${emailToSend.category.category} email on image element $ele"
             airbrake.notify(msg)
             // additional information about the email to logs for debugging
-            log.warn(msg + " subject=\"" + emailToSend.subject + "\" html=" + ele)
+            log.warn(s"""$msg on subject="${emailToSend.subject}" html element = $ele""")
             ()
         }
 
@@ -183,6 +183,9 @@ class EmailTemplateProcessorImpl @Inject() (
           val libOwner = input.users(library.ownerId)
           config.applicationBaseUrl + Library.formatLibraryPath(libOwner.username, library.slug)
         case tags.libraryName => library.name
+        case tags.libraryOwnerFullName =>
+          val libOwner = input.users(library.ownerId)
+          libOwner.fullName
         case tags.unsubscribeUrl =>
           getUnsubUrl(emailToSend.to match {
             case Left(userId) => db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
@@ -224,7 +227,7 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.firstName | tags.lastName | tags.fullName |
           tags.unsubscribeUserUrl | tags.userExternalId => UserNeeded(userId)
         case tags.avatarUrl => AvatarUrlNeeded(userId)
-        case tags.libraryName | tags.libraryUrl =>
+        case tags.libraryName | tags.libraryUrl | tags.libraryOwnerFullName =>
           val libId = tagArgs(0).as[Id[Library]]
           LibraryNeeded(libId)
         case _ => NothingNeeded

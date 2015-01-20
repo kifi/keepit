@@ -290,6 +290,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           LibraryModifyRequest(name = Some("")))
         mod5.isRight === false
 
+        val mod6 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
+          LibraryModifyRequest(color = Some(LibraryColor.SKY_BLUE)))
+        mod6.isRight === true
+        mod6.right.get.color === Some(LibraryColor.SKY_BLUE)
+
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all
           allLibs.length === 3
@@ -297,6 +302,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           allLibs.map(_.slug.value) === Seq("avengers", "murica_#1", "science")
           allLibs.map(_.description) === Seq(Some("Samuel L. Jackson was here"), None, None)
           allLibs.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.PUBLISHED, LibraryVisibility.PUBLISHED)
+          allLibs.map(_.color) === Seq(None, None, Some(LibraryColor.SKY_BLUE))
         }
       }
     }
@@ -745,6 +751,17 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val keepsRW = keepRepo.getByLibrary(libRW.id.get, 0, 20)
           keepsRW.map(_.title.get) === Seq("Freedom", "Reddit")
           keepsRW
+        }
+
+        // Test copying keep from library without membership
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libShield.id.get, 0, 20).length === 0
+        }
+        val copy6 = libraryCommander.copyKeeps(userAgent.id.get, libShield.id.get, keeps4, None)
+        copy6._1.size === 2
+        copy6._2.size === 0
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libShield.id.get, 0, 20).length === 2
         }
 
         // Test Main & Private Library

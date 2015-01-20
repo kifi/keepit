@@ -1,5 +1,6 @@
 package com.keepit.controllers.admin
 
+import com.keepit.commanders.emails.ActivityFeedEmailSender
 import com.keepit.curator.CuratorServiceClient
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
@@ -110,6 +111,7 @@ class AdminUserController @Inject() (
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
     curator: CuratorServiceClient,
+    activityEmailSender: ActivityFeedEmailSender,
     authCommander: AuthCommander) extends AdminUserActions {
 
   def merge = AdminUserPage { implicit request =>
@@ -414,10 +416,7 @@ class AdminUserController @Inject() (
     }
 
     // We want to throw an exception (.get) if `emails' was not passed in. As we expand this, we should add Play! form validation
-    val emailList = form.get("emails").get.split(",").map(_.toLowerCase().trim()).toList.distinct.map(em => em match {
-      case s if s.length > 5 => Some(EmailAddress(s))
-      case _ => None
-    }).flatten
+    val emailList = form.get("emails").get.split(",").map(_.toLowerCase().trim()).toList.distinct.map(EmailAddress.validate(_).toOption).flatten
 
     db.readWrite { implicit session =>
       val oldEmails = emailRepo.getAllByUser(userId).toSet
@@ -871,7 +870,10 @@ class AdminUserController @Inject() (
   }
 
   def sendEmail(toUserId: Id[User], code: String) = AdminUserPage { implicit request =>
-    curator.triggerEmailToUser(code, toUserId)
+    code match {
+      case "activity" => activityEmailSender(Set(toUserId))
+      case _ => curator.triggerEmailToUser(code, toUserId)
+    }
     NoContent
   }
 

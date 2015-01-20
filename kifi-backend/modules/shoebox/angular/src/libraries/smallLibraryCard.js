@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfSmallLibraryCard', [
-  '$location',
-  function ($location) {
+  '$location', 'modalService', 'userService', '$window',
+  function ($location, modalService, userService, $window) {
     return {
       restrict: 'A',
       replace: true,
@@ -15,10 +15,22 @@ angular.module('kifi')
       },
       templateUrl: 'libraries/smallLibraryCard.tpl.html',
       link: function (scope/*, element, attrs*/) {
+        scope.inUserProfileBeta = userService.inUserProfileBeta();
+
         scope.clickCard = function ($event) {
           $event.preventDefault();
           $location.path(scope.library.path).search('o', scope.origin);
+          $window.scrollTo(0, 0);
           scope.$emit('trackLibraryEvent', 'click', { action: scope.action });
+        };
+
+        scope.openFollowersList = function (lib) {
+          modalService.open({
+            template: 'libraries/libraryFollowersModal.tpl.html',
+            modalData: {
+              library: lib
+            }
+          });
         };
       }
     };

@@ -1,8 +1,20 @@
 package com.keepit.model
 
 import com.google.inject.Injector
+import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.seo.LibrarySiteMapGenerator
+import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.FakeCuratorServiceClientModule
+import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -11,6 +23,22 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
+
+  val modules = Seq(
+    FakeExecutionContextModule(),
+    FakeMailModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule(),
+    FakeSearchServiceClientModule(),
+    FakeScrapeSchedulerModule(),
+    FakeShoeboxStoreModule(),
+    FakeExternalServiceModule(),
+    FakeCortexServiceClientModule(),
+    FakeScraperServiceClientModule(),
+    FakeKeepImportsModule(),
+    FakeCryptoModule(),
+    FakeCuratorServiceClientModule()
+  )
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -68,7 +96,7 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
 
   "Sitemap" should {
     "basically work" in { // test read/write/save
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val lib = setup()
         val sitemap = Await.result(inject[LibrarySiteMapGenerator].generate(), Duration.Inf)
         val updateAt = ISO_8601_DAY_FORMAT.print(lib.updatedAt)

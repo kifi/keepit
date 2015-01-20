@@ -1,5 +1,6 @@
 package com.keepit.common.seo
 
+import com.keepit.commanders.UserCommander
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.DBSession.RSession
@@ -30,13 +31,14 @@ object LibrarySiteMapGenerator {
 @Singleton
 class LibrarySiteMapGenerator @Inject() (
     airbrake: AirbrakeNotifier,
-    db: Database,
+    siteMapCache: SiteMapCache,
     userRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     fortyTwoConfig: FortyTwoConfig,
     libraryRepo: LibraryRepo,
-    experimentRepo: UserExperimentRepo,
-    siteMapCache: SiteMapCache) extends SitemapGenerator with Logging {
+    protected val experimentRepo: UserExperimentRepo,
+    protected val db: Database,
+    protected val userCommander: UserCommander) extends SitemapGenerator with Logging {
 
   def intern(): Future[String] = {
     siteMapCache.getOrElseFuture(SiteMapKey.libraries) {
@@ -77,12 +79,9 @@ class LibrarySiteMapGenerator @Inject() (
     } map { libraries =>
 
       // batch, optimize
-      val ownerIds = CollectionHelpers.dedupBy(libraries.map(_.ownerId))(id => id)
+      val ownerIds = libraries.map(_.ownerId).toSet
       val owners = db.readOnlyMaster { implicit ro =>
-        val realUsers = ownerIds.filterNot { id =>
-          val experiments = experimentRepo.getAllUserExperiments(id)
-          experiments.contains(ExperimentType.FAKE) || experiments.contains(ExperimentType.AUTO_GEN)
-        }
+        val realUsers = ownerIds.filterNot(fakeUsers.contains)
         userRepo.loadAll(realUsers.toSet)
       } // cached
       val libs = db.readOnlyReplica { implicit ro =>

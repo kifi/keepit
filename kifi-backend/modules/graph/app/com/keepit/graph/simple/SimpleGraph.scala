@@ -5,7 +5,7 @@ import scala.collection.Map
 import com.keepit.graph.model._
 import play.api.libs.json._
 import com.keepit.graph.manager.GraphStatistics
-import java.io.File
+import java.io._
 import org.apache.commons.io.{ LineIterator, FileUtils }
 import scala.collection.JavaConversions._
 import com.keepit.common.logging.Logging
@@ -39,18 +39,68 @@ case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMa
 object SimpleGraph extends Logging {
   implicit val vertexFormat = MutableVertex.lossyFormat
 
+  val SerializationVersionId = 1
+
+  /**
+   * Int, Int (Long, VRTX)
+   */
   def write(graph: SimpleGraph, graphFile: File): Unit = {
-    val lines: Iterable[String] = graph.vertices.toIterable.map {
+    val out = new ObjectOutputStream(new FileOutputStream(graphFile))
+    try {
+      out.writeInt(SerializationVersionId)
+      out.writeInt(graph.vertices.size)
+      graph.vertices foreach {
+        case (vertexId, vertex) =>
+          checkVertexIntegrity(graph.vertices, vertexId, vertex)
+          out.writeLong(vertexId.id)
+          vertex.write(out)
+      }
+    } finally {
+      out.flush()
+      out.close()
+    }
+  }
+
+  /**
+   * Int, Int (Long, VRTX)
+   */
+  def read(graphFile: File): SimpleGraph = {
+    val vertices = TrieMap[VertexId, MutableVertex]()
+    val in = new ObjectInputStream(new FileInputStream(graphFile))
+    val graphOpt: Option[SimpleGraph] = try {
+      val version = in.readInt()
+      if (version != SerializationVersionId) None
+      else {
+        val graphSize = in.readInt()
+        for (i <- 0 until graphSize) {
+          val vertexId = VertexId(in.readLong())
+          val vertex = MutableVertex.reads(in)
+          vertices += (vertexId -> vertex)
+        }
+        MutableVertex.initializeIncomingEdges(vertices)
+        Some(SimpleGraph(vertices))
+      }
+    } finally {
+      in.close()
+    }
+    graphOpt match {
+      case None => readJson(graphFile)
+      case Some(graph) => graph
+    }
+  }
+
+  def writeJson(graph: SimpleGraph, graphFile: File): Unit = {
+    val lines: Iterable[String] = graph.vertices.iterator.map {
       case (vertexId, vertex) =>
         checkVertexIntegrity(graph.vertices, vertexId, vertex)
         Json.stringify(
           Json.arr(JsNumber(vertexId.id), Json.toJson(vertex))
         )
-    }
+    }.toIterable
     FileUtils.writeLines(graphFile, lines)
   }
 
-  def read(graphFile: File): SimpleGraph = {
+  def readJson(graphFile: File): SimpleGraph = {
     val vertices = TrieMap[VertexId, MutableVertex]()
     val lineIterator = FileUtils.lineIterator(graphFile)
     try {

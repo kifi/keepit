@@ -16,57 +16,59 @@
           following your library
         </p>
         <button ng-if="!showFollowers" class="manage-lib-followers-button" ng-click="showFollowersPanel()">Invite and manage followers</button>
-        <div ng-if="showFollowers" kf-library-share-search library="library" manage-lib-invite="true" class="manage-lib-invite"></div>
+        <div ng-if="showFollowers" kf-library-share-search library="library" manage-lib-invite="true" close="close()" class="manage-lib-invite"></div>
       </div>
 
       <div class="manage-lib-content">
         <div ng-hide="showFollowers" ng-if="!viewFollowersFirst" class="dialog-text manage-lib-default-content">
           <div class="manage-lib-input-wrapper">
-            <div class="manage-lib-input-title">
-              <span class="manage-lib-heading">Name</span>
-            </div>
+            <span class="manage-lib-heading">Name</span>
             <input class="manage-lib-input manage-lib-name-input ng-pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Type a name for your library..." autocomplete="off" novalidate>
             <span ng-show="$error.name" class="manage-lib-name-error">{{$error.name}}</span>
-            <span class="manage-lib-slug">kifi.com/{{username}}/
-              <input ng-change="editSlug()" class="manage-lib-slug-input ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'non-empty-slug': !emptySlug }" type="text" name="slug" placeholder="new-library" novalidate>
-            </span>
+            <label class="manage-lib-slug">
+              <span class="manage-lib-slug-1">kifi.com/{{username}}/</span>
+              <span class="manage-lib-slug-2">
+                <input ng-change="editSlug()" class="manage-lib-slug-input ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'non-empty-slug': !emptySlug }" type="text" name="slug" placeholder="new-library" novalidate>
+              </span>
+            </label>
           </div>
 
           <div class="manage-lib-input-wrapper">
-            <span class="manage-lib-heading manage-lib-input-title manage-lib-description-title-input">Description</span><!-- for removing space between inline-block --><textarea
-            class="manage-lib-input manage-lib-description-input ng-pristine ng-valid" ng-model="library.description" name="description" placeholder="Add a description..." novalidate></textarea>
+            <span class="manage-lib-heading">Description</span><!-- for removing space between inline-block
+         --><textarea class="manage-lib-input manage-lib-description-input ng-pristine ng-valid" ng-model="library.description" name="description" placeholder="Add a description..." novalidate></textarea>
           </div>
 
           <div class="manage-lib-input-wrapper">
-            <div class="manage-lib-heading">Who can see this library?</div>
-              <div class="manage-lib-visibility">
-                <div class="manage-lib-create-visibility-input-container">
-                  <span kf-library-visibility-checkbox library="library"></span>
+            <div class="manage-lib-heading">Privacy</div>
+            <div class="manage-lib-create-visibility-input-container">
+              <span kf-library-visibility-checkbox library="library"></span>
+            </div>
+            <div ng-switch="library.visibility" class="manage-lib-visibility-description">
+              <div ng-switch-default class="manage-lib-visibility-description-content">
+                Anyone can see and follow this library
+                <div ng-if="inUserProfileBeta" class="manage-lib-listed-visibility">
+                  <input type="checkbox" id="listed-visibility-checkbox" ng-model="library.listed">
+                  <label for="listed-visibility-checkbox">
+                    <span></span>
+                    List this library on my public profile
+                  </label>
                 </div>
-
-                <div ng-switch="library.visibility" class="manage-lib-visibility-description">
-                  <div ng-switch-default class="manage-lib-visibility-description-content">It's public. Everyone in the world can see and follow this public library.
-                    <div ng-if="inUserProfileBeta" class="manage-lib-listed-visibility">
-                      <input type="checkbox" id="listed-visibility-checkbox" ng-model="library.listed">
-                      <label for="listed-visibility-checkbox">
-                        <span></span>
-                        Show this Library on my Public Profile
-                      </label>
-                    </div>
-                  </div>
-
-                  <div ng-switch-when="secret" class="manage-lib-visibility-description-content">Make it private. Only you and the people you invite to your private library can see its content.</div>
-                </div>
-
-                <div ng-switch="library.visibility" class="manage-lib-choice-card">
-                  <div ng-switch-default class="manage-lib-choice-card-img svg-public-library-icon"></div>
-                  <div ng-switch-when="secret" class="manage-lib-choice-card-img svg-private-library-icon"></div>
-                </div>
-
-                <div ng-if="$error.general" class="manage-lib-error">{{$error.general}}</div>
+              </div>
+              <div ng-switch-when="secret" class="manage-lib-visibility-description-content">
+                Only people you invite can see this library
               </div>
             </div>
+          </div>
 
+          <div class="manage-lib-input-wrapper kf-color">
+            <div class="manage-lib-heading">Color</div>
+            <label ng-repeat="hex in colors" class="manage-lib-color" style="background-color:{{hex}}">
+              <input type="radio" class="manage-lib-color-radio" value="{{hex}}" ng-model="library.color">
+              <span class="svg-checkmark-thin"></span>
+            </label>
+          </div>
+
+          <div ng-if="$error.general" class="manage-lib-error">{{$error.general}}</div>
         </div>
 
         <div class="manage-lib-members-content" smart-scroll scroll-distance="memberScrollDistance" scroll-disabled="isMemberScrollDisabled()" scroll-next="memberScrollNext()">

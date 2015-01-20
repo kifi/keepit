@@ -34,6 +34,7 @@ import com.keepit.social.providers.ProviderController
 import securesocial.core.providers.utils.RoutesHelper
 
 import scala.concurrent.Future
+import scala.util.Random
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -42,23 +43,19 @@ object AuthController {
   def obscureEmailAddress(address: String) = obscureRegex.replaceFirstIn(address, """$1...@""")
 }
 
-@json case class EmailSignupInfo(email: String)
-
 @json case class UserPassFinalizeInfo(
-    private val email: String,
-    password: String,
-    firstName: String,
-    lastName: String,
-    picToken: Option[String],
-    picWidth: Option[Int],
-    picHeight: Option[Int],
-    cropX: Option[Int],
-    cropY: Option[Int],
-    cropSize: Option[Int],
-    libraryPublicId: Option[PublicId[Library]] // for auto-follow
-    ) {
-  val emailAddress = EmailAddress(email)
-}
+  email: EmailAddress,
+  password: String,
+  firstName: String,
+  lastName: String,
+  picToken: Option[String],
+  picWidth: Option[Int],
+  picHeight: Option[Int],
+  cropX: Option[Int],
+  cropY: Option[Int],
+  cropSize: Option[Int],
+  libraryPublicId: Option[PublicId[Library]] // for auto-follow
+  )
 
 object UserPassFinalizeInfo {
   implicit def toEmailPassFinalizeInfo(info: UserPassFinalizeInfo): EmailPassFinalizeInfo =
@@ -75,24 +72,22 @@ object UserPassFinalizeInfo {
 }
 
 @json case class TokenFinalizeInfo(
-    private val email: String,
-    firstName: String,
-    lastName: String,
-    val password: String,
-    picToken: Option[String],
-    picHeight: Option[Int],
-    picWidth: Option[Int],
-    cropX: Option[Int],
-    cropY: Option[Int],
-    cropSize: Option[Int],
-    libraryPublicId: Option[PublicId[Library]]) {
-  val emailAddress = EmailAddress(email)
-}
+  email: EmailAddress,
+  firstName: String,
+  lastName: String,
+  password: String,
+  picToken: Option[String],
+  picHeight: Option[Int],
+  picWidth: Option[Int],
+  cropX: Option[Int],
+  cropY: Option[Int],
+  cropSize: Option[Int],
+  libraryPublicId: Option[PublicId[Library]])
 
 object TokenFinalizeInfo {
   implicit def toSocialFinalizeInfo(info: TokenFinalizeInfo): SocialFinalizeInfo = {
     SocialFinalizeInfo(
-      info.emailAddress,
+      info.email,
       info.firstName,
       info.lastName,
       info.password.toCharArray,
@@ -244,7 +239,7 @@ class AuthController @Inject() (
         val hasher = Registry.hashers.currentHasher
         val session = request.session
         val home = com.keepit.controllers.website.routes.HomeController.home()
-        authHelper.checkForExistingUser(info.emailAddress) collect {
+        authHelper.checkForExistingUser(info.email) collect {
           case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
             val identity = sui.credentials.get
             val matches = hasher.matches(identity.passwordInfo.get, new String(info.password))
@@ -268,7 +263,7 @@ class AuthController @Inject() (
             }
         } getOrElse {
           val pInfo = hasher.hash(new String(info.password))
-          val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, getSecureSocialUserFromRequest, info.emailAddress, pInfo, isComplete = false) // todo(ray): remove getSecureSocialUserFromRequest
+          val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, getSecureSocialUserFromRequest, info.email, pInfo, isComplete = false) // todo(ray): remove getSecureSocialUserFromRequest
           val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
           authHelper.handleEmailPassFinalizeInfo(info, info.libraryPublicId)(UserRequest(request, user.id.get, None, userActionsHelper))
         }
@@ -419,9 +414,9 @@ class AuthController @Inject() (
             // Haven't run into this one. Redirecting user to logout, ideally to fix their cookie situation
             Redirect(securesocial.controllers.routes.LoginPage.logout)
           }
-        case request: NonUserRequest[_] =>
-          if (request.identityOpt.isDefined) {
-            val identity = request.identityOpt.get
+        case requestNonUser: NonUserRequest[_] =>
+          if (requestNonUser.identityOpt.isDefined) {
+            val identity = requestNonUser.identityOpt.get
             if (identity.email.exists(e => authCommander.emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
               // No user exists, but social network identity’s email address matches a Kifi user
               Ok(views.html.auth.connectToAuthenticate(
@@ -429,7 +424,7 @@ class AuthController @Inject() (
                 network = SocialNetworkType(identity.identityId.providerId),
                 logInAttempted = false
               ))
-            } else if (request.flash.get("signin_error").exists(_ == "no_account")) {
+            } else if (requestNonUser.flash.get("signin_error").exists(_ == "no_account")) {
               // No user exists, social login was attempted. Let user choose what to do next.
               Ok(views.html.auth.loggedInWithWrongNetwork(
                 network = SocialNetworkType(identity.identityId.providerId)
@@ -437,23 +432,33 @@ class AuthController @Inject() (
             } else {
               // No user exists, has social network identity, must finalize
 
-              // Check if request.identityOpt.get.identityId.providerId == "twitter"
-              // if so, do signup2 page below (need to get email)
-              // else, finalize
+              if (requestNonUser.identityOpt.get.identityId.providerId == "twitter") {
+                Ok(views.html.auth.authGrey(
+                  view = "signup2Social",
+                  firstName = User.sanitizeName(identity.firstName),
+                  lastName = User.sanitizeName(identity.lastName),
+                  emailAddress = identity.email.getOrElse(""),
+                  picturePath = identityPicture(identity),
+                  network = Some(SocialNetworkType(identity.identityId.providerId))
+                ))
+              } else {
+                val password = identity.passwordInfo match {
+                  case Some(info) => info.password
+                  case _ => Random.alphanumeric.take(10).mkString
+                }
+                val sfi = SocialFinalizeInfo(
+                  firstName = User.sanitizeName(identity.firstName),
+                  lastName = User.sanitizeName(identity.lastName),
+                  email = EmailAddress(identity.email.getOrElse("")),
+                  password = password.toCharArray,
+                  picToken = None, picHeight = None, picWidth = None, cropX = None, cropY = None, cropSize = None)
 
-              // This is where we will finalize and redirect to home? install? (Aaron!!)
+                authHelper.handleSocialFinalizeInfo(sfi, None, true)(request)
+              }
 
-              Ok(views.html.auth.authGrey(
-                view = "signup2Social",
-                firstName = User.sanitizeName(identity.firstName),
-                lastName = User.sanitizeName(identity.lastName),
-                emailAddress = identity.email.getOrElse(""),
-                picturePath = identityPicture(identity),
-                network = Some(SocialNetworkType(identity.identityId.providerId))
-              ))
             }
           } else {
-            temporaryReportSignupLoad()(request)
+            temporaryReportSignupLoad()(requestNonUser)
             Ok(views.html.auth.authGrey("signup"))
           }
 

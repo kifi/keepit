@@ -115,6 +115,8 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
             description = Some("This is a library about scala..."),
             slug = LibrarySlug("scala"),
             kind = LibraryKind.USER_CREATED,
+            color = Some(LibraryColor.BLUE),
+            image = None,
             owner = basicUser1,
             keeps = Seq(),
             followers = Seq(),
@@ -127,10 +129,10 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
       )
 
       val expectedLibRecoInfosJson =
-        """
+        s"""
           |{"kind":"library",
           | "itemInfo":{"id":"123","name":"Scala","visibility":"published",
-          |   "description":"This is a library about scala...","slug":"scala","url":"joe/scala","kind":"user_created",
+          |   "description":"This is a library about scala...","slug":"scala","url":"joe/scala","color":"${LibraryColor.BLUE.hex}","kind":"user_created",
           |   "owner":{"id":"aa25f5a8-8dea-4e56-82c1-a4dcf38f205c","firstName":"Joe","lastName":"Smith","pictureName":"asdf","username":"joe"},
           |   "followers":[],"keeps":[],"numKeeps":10,"numCollaborators":0,"numFollowers":10}}
         """.stripMargin
@@ -146,7 +148,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
         json === Json.parse("[]")
 
         val recoCommander = inject[RecommendationsCommander].asInstanceOf[FakeRecommendationsCommander]
-        recoCommander.recoInfos = recoInfos
+        recoCommander.uriRecoInfos = recoInfos
         recoCommander.libRecoInfos = libRecoInfos
 
         val result2: Future[Result] = requestFn(request)
@@ -231,7 +233,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
             siteName = Some("fafa"),
             summary = URISummary(title = Some("Yo!"))),
           explain = Some("because :-)")))
-        inject[RecommendationsCommander].asInstanceOf[FakeRecommendationsCommander].recoInfos = recoInfos
+        inject[RecommendationsCommander].asInstanceOf[FakeRecommendationsCommander].uriRecoInfos = recoInfos
 
         val result2: Future[Result] = controller.topRecos(true, 0.75f)(request)
         status(result2) must equalTo(OK)

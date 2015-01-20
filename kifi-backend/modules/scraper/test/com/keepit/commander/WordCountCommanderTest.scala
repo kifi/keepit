@@ -58,18 +58,18 @@ class WordCountCommanderTest extends Specification with CommonTestInjector {
         store.+=(uids(0), a1)
 
         val wcCommander = new WordCountCommanderImpl(store, countCache, sumCache, fakeScrapeProcessor)
-        Await.result(wcCommander.getWordCount(uids(0), url = Some("")), Duration(1, SECONDS)) === 5
+        Await.result(wcCommander.getWordCount(uids(0), url = ""), Duration(1, SECONDS)) === 5
 
         // delete article, then get word count from cache
         store.-=(uids(0))
-        Await.result(wcCommander.getWordCount(uids(0), url = Some("")), Duration(1, SECONDS)) === 5
+        Await.result(wcCommander.getWordCount(uids(0), url = ""), Duration(1, SECONDS)) === 5
 
         // get from scraper
-        Await.result(wcCommander.getWordCount(uids(1), url = Some("http://twoWords.com")), Duration(1, SECONDS)) === 2
-        Await.result(wcCommander.getWordCount(uids(2), url = Some("http://singleWord.com")), Duration(1, SECONDS)) === 1
+        Await.result(wcCommander.getWordCount(uids(1), url = "http://twoWords.com"), Duration(1, SECONDS)) === 2
+        Await.result(wcCommander.getWordCount(uids(2), url = "http://singleWord.com"), Duration(1, SECONDS)) === 1
 
         // from cache
-        Await.result(wcCommander.getWordCount(uids(1), url = Some("http://singleWord.com")), Duration(1, SECONDS)) === 2
+        Await.result(wcCommander.getWordCount(uids(1), url = "http://singleWord.com"), Duration(1, SECONDS)) === 2
       }
     }
   }

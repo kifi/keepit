@@ -1,5 +1,7 @@
 package com.keepit.graph.simple
 
+import java.io.{ ObjectInputStream, ObjectOutputStream }
+
 import com.keepit.graph.model._
 import scala.collection.mutable.{ Map => MutableMap, Set => MutableSet }
 import com.keepit.graph.model.EdgeKind.EdgeType
@@ -33,10 +35,42 @@ class MutableVertex(var data: VertexDataReader, val outgoingEdges: MutableOutgoi
     incomingEdges.edges(component) -= sourceId
     if (incomingEdges.edges(component).isEmpty) { incomingEdges.edges -= component }
   }
+
+  /**
+   * UTF, Int, (Long, UTF)
+   */
+  def write(out: ObjectOutputStream): Unit = {
+    out.writeUTF(VertexDataReader.writes.writes(data).toString)
+    out.writeInt(outgoingEdges.edges.foldLeft(0)((count, edges) => count + edges._2.size))
+    outgoingEdges.edges foreach {
+      case (component, edges) =>
+        edges foreach {
+          case (destinationId, edgeDataReader) =>
+            out.writeLong(destinationId.id)
+            out.writeUTF(EdgeDataReader.writes.writes(edgeDataReader).toString())
+        }
+    }
+  }
 }
 
 object MutableVertex {
   def apply(data: VertexDataReader): MutableVertex = new MutableVertex(data, MutableOutgoingEdges(), MutableIncomingEdges())
+
+  def reads(in: ObjectInputStream): MutableVertex = {
+    val dataJson = in.readUTF()
+    VertexDataReader.readsAsVertexData.reads(Json.parse(dataJson)) match {
+      case JsError(error) => throw new Exception(s"error parsing $dataJson: $error")
+      case JsSuccess(data, _) =>
+        val newVertex = MutableVertex(data.asReader)
+        val outgoingEdgesSize = in.readInt()
+        for (i <- 0 until outgoingEdgesSize) {
+          val destinationId = VertexId(in.readLong())
+          val edgeData = EdgeDataReader.readsAsEdgeData.reads(Json.parse(in.readUTF())).get.asReader
+          newVertex.saveOutgoingEdge(destinationId, edgeData)
+        }
+        newVertex
+    }
+  }
 
   // This "lossy" formatter ignores the vertex's incoming edges, which have to be recovered globally (see initializeIncomingEdges method)
   val lossyFormat = new Format[MutableVertex] {

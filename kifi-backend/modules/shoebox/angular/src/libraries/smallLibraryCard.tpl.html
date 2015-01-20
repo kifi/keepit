@@ -3,18 +3,21 @@
     <div class="kf-slc-card-cover">
       <div class="kf-slc-card-cover-image" ng-attr-style="background-image:url({{library.imageUrl}});background-position:{{library.image.x}}% {{library.image.y}}%" ng-if="library.image"></div>
     </div>
-    <div class="kf-slc-card-name" kf-fit 1="[[24,29],[28,32]]" 2="[[19,25],[18,24],[17,23],[16,22]]" 3="[[15,19]]" block="2">{{library.name}}</div>
-    <div class="kf-slc-counts">
-      <ng-pluralize class="kf-slc-count" count="library.numKeeps" when="{'1':'{} Keep','other':'{} Keeps'}"></ng-pluralize>
-      <ng-pluralize class="kf-slc-count" count="library.numFollowers" when="{'1':'{} Follower','other':'{} Followers'}" ng-if="library.numFollowers > 0"></ng-pluralize>
+    <div class="kf-slc-card-name-align">
+      <div class="kf-slc-card-name">
+        <div class="kf-slc-card-name-clip">{{library.name}}</div>
+      </div>
     </div>
-    <div itemscope itemtype="http://data-vocabulary.org/Person">
-      <span class="kf-slc-card-owner-pic-a">
-        <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}" itemprop="photo">
-      </span>
-      <span class="kf-slc-card-byline">
-        <span class="kf-slc-card-by">by</span> <span class="kf-slc-card-by-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</span>
-      </span>
+    <a ng-if="inUserProfileBeta" class="kf-slc-card-owner" href="{{library.ownerProfileUrl}}"
+      itemscope itemtype="http://data-vocabulary.org/Person" itemprop="url">
+      <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}" itemprop="photo">
+      <span class="kf-slc-card-by">by</span>
+      <span class="kf-slc-card-by-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</span>
+    </a>
+    <div ng-if="!inUserProfileBeta" class="kf-slc-card-owner" itemscope itemtype="http://data-vocabulary.org/Person">
+      <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}" itemprop="photo">
+      <span class="kf-slc-card-by">by</span>
+      <span class="kf-slc-card-by-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</span>
     </div>
     <div class="kf-slc-card-foot" ng-switch on="library.reason">
       <span ng-switch-when="owner">More from this curator</span>
@@ -22,4 +25,13 @@
       <span ng-switch-when="topic">Related</span>
     </div>
   </a>
+  <div class="kf-slc-counts">
+    <a href="{{library.path}}" class="kf-slc-count">
+      <ng-pluralize count="library.numKeeps" when="{'1':'{} Keep','other':'{{library.numKeeps|number}} Keeps'}"></ng-pluralize>
+    </a>
+    <span class="kf-slc-count-dot" ng-if="library.numFollowers > 0">·</span>
+    <a href="javascript:" class="kf-slc-count" ng-click="openFollowersList(library)" ng-if="library.numFollowers > 0">
+      <ng-pluralize count="library.numFollowers" when="{'1':'{} Follower','other':'{{library.numFollowers|number}} Followers'}"></ng-pluralize>
+    </a>
+  </div>
 </div>

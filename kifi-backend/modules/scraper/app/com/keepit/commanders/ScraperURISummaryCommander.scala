@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage
 
 import com.keepit.common.logging.Logging
 import com.kifi.macros.json
+import org.joda.time.DateTime
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
@@ -15,16 +16,19 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.ImageFetcher
 import com.keepit.common.store.{ ImageSize, S3URIImageStore }
-import com.keepit.model.{ PageInfo, ImageInfo, NormalizedURI, URISummary }
-import com.keepit.scraper.ShoeboxDbCallbackHelper
-import com.keepit.scraper.embedly.EmbedlyClient
+import com.keepit.model.{ PageAuthor, PageInfo, ImageInfo, URISummary }
+import com.keepit.scraper.{ URIPreviewFetchResult, NormalizedURIRef, ShoeboxDbCallbackHelper }
+import com.keepit.scraper.embedly.{ EmbedlyImage, EmbedlyClient }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.net.URI
 
 @ImplementedBy(classOf[ScraperURISummaryCommanderImpl])
 trait ScraperURISummaryCommander {
-  def fetchFromEmbedly(uri: NormalizedURIRef, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]]
+  // On the way in:
+  def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]]
+  // On the way out:
+  def fetchFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]]
 }
 
 class ScraperURISummaryCommanderImpl @Inject() (
@@ -34,8 +38,8 @@ class ScraperURISummaryCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander with Logging {
 
-  def fetchFromEmbedly(nUri: NormalizedURIRef, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-    fetchPageInfoAndImageInfo(nUri, minSize, descriptionOnly) map {
+  def fetchFromEmbedly(nUri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]] = {
+    fetchPageInfoAndImageInfo(nUri, descriptionOnly) map {
       case (Some(pageInfo), imageInfoOpt) =>
         callback.savePageInfo(pageInfo) // no wait
 
@@ -54,8 +58,32 @@ class ScraperURISummaryCommanderImpl @Inject() (
     }
   }
 
-  private def fetchPageInfoAndImageInfo(nUri: NormalizedURIRef, minSize: ImageSize, descriptionOnly: Boolean): Future[(Option[PageInfo], Option[ImageInfo])] = {
-    val watch = Stopwatch(s"[embedly] asking for $nUri with minSize $minSize, descriptionOnly $descriptionOnly")
+  def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]] = {
+    embedlyClient.getEmbedlyInfo(url).map {
+      case Some(embedlyResult) =>
+        val primaryImage = embedlyResult.images.find(img => ScraperURISummaryCommander.isValidImage(img))
+        // todo: Resize and persist
+
+        Some(URIPreviewFetchResult(
+          pageUrl = url,
+          title = embedlyResult.title,
+          description = embedlyResult.description,
+          authors = embedlyResult.authors,
+          publishedAt = embedlyResult.published,
+          safe = embedlyResult.safe,
+          lang = embedlyResult.lang,
+          faviconUrl = embedlyResult.faviconUrl.collect { case f if f.startsWith("http") => f },
+          images = None // todo
+        ))
+
+      case None => None
+    }
+  }
+
+  // Internal:
+
+  private def fetchPageInfoAndImageInfo(nUri: NormalizedURIRef, descriptionOnly: Boolean): Future[(Option[PageInfo], Option[ImageInfo])] = {
+    val watch = Stopwatch(s"[embedly] asking for $nUri, descriptionOnly $descriptionOnly")
     val fullEmbedlyInfo = embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
       watch.logTimeWith(s"got info: $embedlyInfoOpt") //this could be lots of logging, should remove it after problems resolved
 
@@ -67,17 +95,11 @@ class ScraperURISummaryCommanderImpl @Inject() (
             Future.successful(None)
           } else {
             val images = embedlyInfo.buildImageInfo(nUri.id)
-            val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.filterImageByUrl) }
-            val (smallImages, selectedImageOpt) = partitionImages(nonBlankImages, minSize)
+            val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.isValidImageUrl) }
 
-            timing(s"fetching ${smallImages.size} small images") {
-              smallImages.foreach {
-                fetchSmallImage(nUri, _)
-              }
-            }
-            watch.logTimeWith(s"all ${smallImages.size} small images")
+            // todo: Upload nonBlankImages to S3.
 
-            selectedImageOpt match {
+            nonBlankImages.headOption match {
               case None =>
                 watch.logTimeWith(s"no selected image")
                 Future.successful(None)
@@ -99,11 +121,6 @@ class ScraperURISummaryCommanderImpl @Inject() (
       watch.stop()
     }
     fullEmbedlyInfo
-  }
-
-  private def partitionImages(imgsInfo: Seq[ImageInfo], minSize: ImageSize): (Seq[ImageInfo], Option[ImageInfo]) = {
-    val smallImages = imgsInfo.takeWhile(!meetsSizeConstraint(_, minSize))
-    (smallImages, imgsInfo.drop(smallImages.size).headOption)
   }
 
   private def fetchAndSaveImage(uri: NormalizedURIRef, imageInfo: ImageInfo): Future[Option[ImageInfo]] = {
@@ -157,17 +174,18 @@ object ScraperURISummaryCommander {
 
   val IMAGE_EXCLUSION_LIST = Seq("/blank.jpg", "/blank.png", "/blank.gif")
 
-  def filterImageByUrl(url: String): Boolean = {
+  def isValidImage(embedlyImage: EmbedlyImage): Boolean = {
+    isValidImageUrl(embedlyImage.url)
+  }
+
+  def isValidImageUrl(url: String): Boolean = {
     URI.parse(url) match {
       case Success(imageUri) => {
-        imageUri.path.map { path =>
-          !IMAGE_EXCLUSION_LIST.exists(path.toLowerCase.endsWith(_))
-        } getOrElse true
+        imageUri.path.exists { path =>
+          !IMAGE_EXCLUSION_LIST.exists(path.toLowerCase.endsWith)
+        }
       }
-      case Failure(imageUrl) => true
+      case Failure(imageUrl) => false
     }
   }
 }
-
-@json case class NormalizedURIRef(id: Id[NormalizedURI], url: String, externalId: ExternalId[NormalizedURI])
-

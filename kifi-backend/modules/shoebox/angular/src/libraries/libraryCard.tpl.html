@@ -16,7 +16,8 @@
           </div>
         </div>
 
-        <div ng-if="recommendation && coverImageUrl" class="kf-keep-lib-cover-image" style="background-image:url({{coverImageUrl}});background-position:{{coverImagePos}}"></div>
+        <div ng-class="{'kf-keep-lib-color': true, 'kf-above-image': coverImageUrl || coverImagePreview}" style="background-color:{{library.color}}"></div>
+        <a ng-if="recommendation && coverImageUrl" href="{{library.url}}" class="kf-keep-lib-cover-image" style="background-image:url({{coverImageUrl}});background-position:{{coverImagePos}}"></a>
         <div ng-if="!recommendation && (coverImageUrl || coverImagePreview)" class="kf-keep-lib-cover-image" ng-style="{'background-image':'{{coverImageUrl ? 'url(' + coverImageUrl + ')' : ''}}','background-position':'{{coverImagePos}}'}">
           <a ng-if="isMyLibrary() && !coverImagePreview" class="kf-keep-lib-cover-image-adjust" href="javascript:" ng-mousedown="onCoverImageAdjustEngage($event)" ng-click="onCoverImageAdjustEngage($event)"></a>
           <div ng-if="coverImageMenuShowing" class="kf-keep-lib-cover-image-menu">
@@ -33,11 +34,15 @@
           <div ng-if="coverImageProgress" class="kf-keep-lib-cover-image-progress"></div>
         </div>
         <div ng-if="coverImageError" class="kf-keep-lib-cover-image-error">{{coverImageError}}</div>
-        <input ng-if="!recommendation && isMyLibrary() && isUserCreatedLibrary()" type="file" class="kf-keep-lib-pic-file-input" accept="image/jpeg,image/png,image/gif" onchange="angular.element(this).scope().onCoverImageFileChosen(this.files[0]);this.value=null">
+        <input ng-if="!recommendation && isMyLibrary() && isUserCreatedLibrary()" type="file" class="kf-keep-lib-cover-image-file" accept="image/jpeg,image/png,image/gif" onchange="angular.element(this).scope().onCoverImageFileChosen(this.files[0]);this.value=null">
+        <a ng-if="!recommendation && isMyLibrary() && isUserCreatedLibrary() && !coverImageUrl" class="kf-keep-lib-cover-image-add" href="javascript:" onclick="angular.element(this).scope().onClickAddCoverImage(event)">
+          Add a cover photo
+        </a>
 
         <div class="kf-keep-lib-info">
           <div class="kf-keep-lib-owner" itemscope itemtype="http://data-vocabulary.org/Person">
-            <a ng-if="inUserProfileBeta" href="{{library.owner.profileUrl}}" itemprop="url">
+            <a ng-if="inUserProfileBeta" href="{{library.owner.profileUrl}}" itemprop="url"
+               kf-track-origin origin="libraryPage/curator">
               <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
             </a>
             <img ng-if="!inUserProfileBeta" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
@@ -45,9 +50,6 @@
               <div class="kf-keep-lib-curator">Curator:</div>
               <div class="kf-keep-lib-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
             </div>
-            <a ng-if="!recommendation && isMyLibrary() && isUserCreatedLibrary() && !coverImageUrl" class="kf-keep-lib-add-pic" href="javascript:" onclick="angular.element(this).scope().onClickAddCoverImage(event)">
-              Add a cover photo
-            </a>
             <div ng-if="!recommendation && isUserLoggedOut" class="kf-keep-lib-search">
               <span class="kf-keep-lib-search-icon sprite-search-icon"></span>
               <input class="kf-keep-lib-search-input" type="search" placeholder="Search this library" ng-model="search.text" ng-focus="onSearchInputFocus()" ng-change="onSearchInputChange(search.text)">
@@ -79,7 +81,8 @@
             <div class="kf-keep-lib-follower-preview">
               <div class="kf-keep-lib-follower-pics">
                 <span ng-repeat="follower in followersToShow" itemscope itemtype="http://data-vocabulary.org/Person">
-                  <a ng-if="inUserProfileBeta" href="{{follower.profileUrl}}" itemprop="url">
+                  <a ng-if="inUserProfileBeta" href="{{follower.profileUrl}}" itemprop="url"
+                     kf-track-origin origin="libraryPage/follower">
                     <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
                       class="kf-keep-lib-user-image"
                       kf-who-tooltip

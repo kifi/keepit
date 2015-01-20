@@ -193,7 +193,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
 
   val libraryNameSuffix = new AtomicInteger(1)
 
-  def saveLibraryInfo(libraryId: Int, ownerId: Int, keepCount: Int = 3, memberCount: Int = 9, name: Option[String] = None)(implicit rw: RWSession, injector: Injector): CuratorLibraryInfo = {
+  def saveLibraryInfo(libraryId: Int, ownerId: Int, keepCount: Int = 10, memberCount: Int = 9, name: Option[String] = None)(implicit rw: RWSession, injector: Injector): CuratorLibraryInfo = {
     val libInfo = CuratorLibraryInfo(libraryId = Id[Library](libraryId), ownerId = Id[User](ownerId), state = CuratorLibraryInfoStates.ACTIVE,
       keepCount = keepCount, memberCount = memberCount, visibility = LibraryVisibility.PUBLISHED, lastKept = Some(currentDateTime.minusDays(5)), lastFollowed = None,
       kind = LibraryKind.USER_CREATED, libraryLastUpdated = currentDateTime, name = name.getOrElse("Library Name " + libraryNameSuffix.getAndIncrement.toString),

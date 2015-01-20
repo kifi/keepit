@@ -27,6 +27,7 @@ package object template {
     val avatarUrl = TagLabel("avatarUrl")
     val libraryName = TagLabel("libraryName")
     val libraryUrl = TagLabel("libraryUrl")
+    val libraryOwnerFullName = TagLabel("libraryOwnerFullName")
     val unsubscribeUrl = TagLabel("unsubscribeUrl")
     val unsubscribeUserUrl = TagLabel("unsubscribeUserUrl")
     val unsubscribeEmailUrl = TagLabel("unsubscribeEmailUrl")
@@ -69,6 +70,8 @@ package object template {
 
     def libraryUrl(id: Id[Library]) = Tag1(tags.libraryUrl, id).toHtml
 
+    def libraryOwnerFullName(id: Id[Library]) = Tag1(tags.libraryOwnerFullName, id).toHtml
+
     val unsubscribeUrl = Tag0(tags.unsubscribeUrl).toHtml
 
     def unsubscribeUrl(id: Id[User]) = Tag1(tags.unsubscribeUserUrl, id).toHtml
@@ -92,7 +95,9 @@ package object template {
 
     def toHttpsUrl(url: String) = if (url.startsWith("//")) "https:" + url else url
 
-    def findMoreFriendsUrl(content: String) = htmlUrl(s"$baseUrl/friends?", content, openInAppIfMobile = true)
+    def libraryImageUrl(path: String) = s"$cdnBaseUrl/$path"
+
+    def kifiFriendsUrl(content: String) = htmlUrl(s"$baseUrl/friends?", content, openInAppIfMobile = true)
 
     def acceptFriendUrl(id: Id[User], content: String) = htmlUrl(s"$baseUrl/friends?friend=${userExternalId(id)}&", content, openInAppIfMobile = true)
 

@@ -22,7 +22,6 @@ angular.module('kifi')
 
         libs.forEach(function(lib) {
           augmentLibrarySummary(lib);
-          lib.isMine = lib.owner.id === profileService.me.id;
         });
 
         invites.forEach(function(lib) {
@@ -47,7 +46,9 @@ angular.module('kifi')
         });
       } else {
         return $http.get(routeService.getLibrarySummaryById(libraryId)).then(function (res) {
-          return res.data;
+          var lib = res.data;
+          augmentLibrarySummary(lib);
+          return lib;
         });
       }
     });
@@ -65,6 +66,7 @@ angular.module('kifi')
         if (res.data && res.data.library) {
           res.data.library.access = res.data.membership;
           res.data.library.listed = res.data.listed;
+          augmentLibrarySummary(res.data.library);
           return res.data.library;
         }
         return null;
@@ -92,6 +94,10 @@ angular.module('kifi')
     function augmentLibrarySummary(library) {
       if (library.owner) {
         library.owner.image = friendService.getPictureUrlForUser(library.owner);
+        library.isMine = library.owner.id === profileService.me.id;
+      }
+      if (library.kind !== 'user_created') {
+        library.color = '#808080';
       }
     }
 
@@ -106,6 +112,7 @@ angular.module('kifi')
     function RelatedLibraryDecorator(libData) {
       var library = libData[0], reason = libData[1];
 
+      this.id = library.id;
       this.owner = library.owner;
       this.numFollowers = library.numFollowers;
       this.numKeeps = library.numKeeps;
@@ -199,33 +206,19 @@ angular.module('kifi')
       },
 
       getSlugById: function (libraryId) {
-        var lib = _.find(librarySummaries, function (librarySummary) {
-          return librarySummary.id === libraryId;
-        });
-
-        if (!!lib) {
-          var split = lib.url.split('/').filter(function (a) { return a.length !== 0; });
-          return split[1];
-        }
-
-        return null;
+        var lib = _.find(librarySummaries, {id: libraryId});
+        return lib.url.match(/[^\/]+\/([^\/]+)/)[1];
       },
 
       getLibraryInfoById: function (libraryId) {
-        var lib = _.find(librarySummaries, function (librarySummary) {
-          return librarySummary.id === libraryId;
-        });
-
-        return lib || null;
+        return _.find(librarySummaries, {id: libraryId}) || null;
       },
 
       addToLibraryCount: function (libraryId, val) {
-        var lib = _.find(librarySummaries, function (librarySummary) {
-          return librarySummary.id === libraryId;
-        });
+        var lib = _.find(librarySummaries, {id: libraryId});
         lib.numKeeps += val;
 
-        $rootScope.$emit('libraryUpdated', lib);
+        $rootScope.$emit('libraryKeepCountChanged', libraryId, lib.numKeeps);
         $rootScope.$emit('librarySummariesChanged');
       },
 
@@ -273,48 +266,46 @@ angular.module('kifi')
 
       joinLibrary: function (libraryId) {
         return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
-          var library = response.data;
-
-          if (!library.alreadyJoined) {
+          var wasInvited = _.remove(invitedSummaries, {id: libraryId}).length > 0;
+          var justJoined = !_.contains(librarySummaries, {id: libraryId});
+          if (justJoined) {
+            var library = response.data;
             augmentLibrarySummary(library);
-
             librarySummaries.push(library);
-            _.remove(invitedSummaries, { id: libraryId });
-
-            $rootScope.$emit('librarySummariesChanged');
-            $rootScope.$emit('libraryUpdated', library);
-          } else {
-            return ('already_joined');
           }
+          if (wasInvited || justJoined) {
+            $rootScope.$emit('librarySummariesChanged');
+          }
+          $rootScope.$emit('libraryJoined', libraryId);
         });
       },
 
       leaveLibrary: function (libraryId) {
         return $http.post(routeService.leaveLibrary(libraryId)).then(function () {
-          _.remove(librarySummaries, { id: libraryId });
-          $rootScope.$emit('librarySummariesChanged');
-
-          return api.getLibraryById(libraryId, true).then(function (data) {
-            // TODO: Take this manual check out when the backend endpoint properly has an 'access' property
-            //       on the library object.
-            data.library.access = data.membership;
-            $rootScope.$emit('libraryUpdated', data.library);
-          });
+          var wasRemoved = _.remove(librarySummaries, {id: libraryId}).length > 0;
+          if (wasRemoved) {
+            $rootScope.$emit('librarySummariesChanged');
+          }
+          $rootScope.$emit('libraryLeft', libraryId);
         });
       },
 
       declineToJoinLibrary: function (libraryId) {
         return $http.post(routeService.declineToJoinLibrary(libraryId)).then(function () {
-          _.remove(invitedSummaries, { id: libraryId });
-          $rootScope.$emit('librarySummariesChanged');
+          var wasRemoved = _.remove(invitedSummaries, {id: libraryId}).length > 0;
+          if (wasRemoved) {
+            $rootScope.$emit('librarySummariesChanged');
+          }
         });
       },
 
       deleteLibrary: function (libraryId) {
         return $http.post(routeService.deleteLibrary(libraryId)).then(function () {
-          _.remove(librarySummaries, function (library) {
-            return library.id === libraryId;
-          });
+          var wasRemoved = _.remove(librarySummaries, {id: libraryId}).length > 0;
+          if (wasRemoved) {
+            $rootScope.$emit('librarySummariesChanged');
+          }
+          $rootScope.$emit('libraryDeleted', libraryId);
         });
       },
 

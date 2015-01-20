@@ -314,8 +314,9 @@ kifi.form = (function () {
     $('.form-error').remove();
     var $email = $form.find('.social-email');
     var email = kifi.form.validateEmailAddress($email);
-    var password = kifi.form.validateNewPassword($form.find('.form-password'));
-    if (password) {
+    var password = Math.random().toString(36).substring(8);
+
+    if (email) {
       Tracker.trackClick($form.find('button')[0]);
       $form.data('promise', $.postJson(this.action, {
         firstName: $form.data('first'),

@@ -6,7 +6,7 @@ import java.io.IOException
 
 import com.google.inject.Inject
 import com.keepit.common.amazon.AmazonInstanceInfo
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
@@ -17,6 +17,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.search.Article
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -118,21 +119,44 @@ case class ScraperThreadInstanceInfo(info: AmazonInstanceInfo, jobInfo: Either[S
   }
 }
 
+@json case class NormalizedURIRef(id: Id[NormalizedURI], url: String, externalId: ExternalId[NormalizedURI])
+
+@json case class PersistedImageVersion(width: Int, height: Int, imageUrl: String)
+@json case class PersistedImageRef(sizes: Seq[PersistedImageVersion], caption: Option[String])
+@json case class URIPreviewFetchResult(
+  pageUrl: String,
+  title: Option[String],
+  description: Option[String],
+  authors: Seq[PageAuthor],
+  publishedAt: Option[DateTime],
+  safe: Option[Boolean],
+  lang: Option[String],
+  faviconUrl: Option[String],
+  images: Option[PersistedImageRef])
+
 trait ScraperServiceClient extends ServiceClient {
   implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
   final val serviceType = ServiceType.SCRAPER
 
-  def status(): Seq[Future[(AmazonInstanceInfo, Seq[ScrapeJobStatus])]]
+  // Scraping related API
   def getBasicArticle(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]]
   def getSignature(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[Signature]]
+
+  // URI information (currently primarily from Embedly)
+  def getURIWordCount(uriId: Id[NormalizedURI], url: String): Future[Int]
+  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: String): Option[Int]
+  def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]]
+  // In the process of deprecation, please do not use:
+  def getURISummaryFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]]
+
+  // Admin only API (if you need one of these outside of admin, talk to Andrew):
+  def status(): Seq[Future[(AmazonInstanceInfo, Seq[ScrapeJobStatus])]]
   def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
   def getPornDetectorModel(): Future[Map[String, Float]]
   def detectPorn(query: String): Future[Map[String, Float]]
   def whitelist(words: String): Future[String]
-  def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]]
-  def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]]
-  def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int]
-  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int]
+  def adminOnlyGetEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]]
+
 }
 
 case class ScraperCacheProvider @Inject() (
@@ -203,22 +227,21 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
-  def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = {
+  def adminOnlyGetEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = {
     val payload = Json.obj("uriId" -> uriId.id, "url" -> url)
     call(Scraper.internal.getEmbedlyImageInfos, payload).map { r =>
       Json.fromJson[Seq[ImageInfo]](r.json).get
     }
   }
 
-  def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-    // todo: Bad API, NormalizedURI isn't needed anymore. Just JSON with id, uri, and externalId. Fix soon?
-    val payload = Json.obj("uri" -> uri, "minSize" -> minSize, "descriptionOnly" -> descriptionOnly)
+  def getURISummaryFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]] = {
+    val payload = Json.obj("uri" -> uri, "descriptionOnly" -> descriptionOnly)
     call(Scraper.internal.getURISummaryFromEmbedly, payload, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
       r.json.as[Option[URISummary]]
     }
   }
 
-  def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int] = {
+  def getURIWordCount(uriId: Id[NormalizedURI], url: String): Future[Int] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
     cacheProvider.wordCountCache.get(NormalizedURIWordCountKey(uriId)) match {
@@ -230,7 +253,7 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
-  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int] = {
+  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: String): Option[Int] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
     log.info(s"Requesting word count from cache for uri $uriId with url $url")
@@ -247,4 +270,13 @@ class ScraperServiceClientImpl @Inject() (
       }
     }
   }
+
+  def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]] = {
+    val payload = Json.obj("url" -> url)
+    call(Scraper.internal.fetchAndPersistURIPreview(), payload).map { r =>
+      r.json.asOpt[URIPreviewFetchResult]
+    }
+  }
+
 }
+

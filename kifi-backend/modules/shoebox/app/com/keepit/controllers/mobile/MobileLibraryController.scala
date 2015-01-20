@@ -50,7 +50,7 @@ class MobileLibraryController @Inject() (
     val name = (jsonBody \ "name").as[String]
     val description = (jsonBody \ "description").asOpt[String]
     val visibility = (jsonBody \ "visibility").as[LibraryVisibility]
-    val color = (jsonBody \ "color").asOpt[HexColor]
+    val color = (jsonBody \ "color").asOpt[LibraryColor]
     val slug = LibrarySlug.generateFromName(name)
     val addRequest = LibraryAddRequest(name, visibility, description, slug, color)
 
@@ -70,7 +70,7 @@ class MobileLibraryController @Inject() (
     val newDescription = (json \ "newDescription").asOpt[String]
     val newVisibility = (json \ "newVisibility").asOpt[LibraryVisibility]
     val newSlug = (json \ "newSlug").asOpt[String]
-    val newColor = (json \ "newColor").asOpt[HexColor]
+    val newColor = (json \ "newColor").asOpt[LibraryColor]
     val newListed = (json \ "newListed").asOpt[Boolean]
 
     val modifyRequest = LibraryModifyRequest(newName, newSlug, newVisibility, newDescription, newColor, newListed)
@@ -360,7 +360,7 @@ class MobileLibraryController @Inject() (
       case Some(user) =>
         val viewer = request.userOpt
         val paginator = Paginator(page, pageSize)
-        val imageSize = ProcessedImageSize.Medium.idealSize
+        val imageSize = ProcessedImageSize.Large.idealSize
         filter match {
           case "own" =>
             val libs = if (viewer.exists(_.id == user.id)) {
