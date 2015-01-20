@@ -459,11 +459,7 @@ class AuthController @Inject() (
                   password = password.toCharArray,
                   picToken = None, picHeight = None, picWidth = None, cropX = None, cropY = None, cropSize = None)
 
-                val result = authHelper.handleSocialFinalizeInfo(sfi, None)(request)
-                result.header.headers.get("uri") match {
-                  case Some(url) => Redirect(url)
-                  case _ => Redirect("/")
-                }
+                authHelper.handleSocialFinalizeInfo(sfi, None, true)(request)
               }
 
             }

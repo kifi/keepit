@@ -135,6 +135,11 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregister$stateChangeSuccess);
 
+    var deregisterCurrentLibrary = $rootScope.$on('getCurrentLibrary', function (e, args) {
+      args.callback({});
+    });
+    $scope.$on('$destroy', deregisterCurrentLibrary);
+
 
     // Initialize controller.
     init();
@@ -266,11 +271,12 @@ angular.module('kifi')
         template: 'libraries/manageLibraryModal.tpl.html',
         modalData: {
           returnAction: function (newLibrary) {
-            newLibrary.ownerPicUrl = $scope.profile && $scope.profile.picUrl;
+            augmentLibrary(null, null, newLibrary);
+
             addNewLibAnimationClass(newLibrary);
             newLibraryIds.push(newLibrary.id);
 
-             // Add new library to right behind the two system libraries.
+            // Add new library to right behind the two system libraries.
             ($scope.libraries || []).splice(2, 0, newLibrary);
           }
         }
@@ -317,6 +323,7 @@ angular.module('kifi')
       var following = lib.following;
       libraryService[following ? 'leaveLibrary' : 'joinLibrary'](lib.id).then(function () {
         lib.following = !following;
+        lib.numFollowers += following ? -1 : 1;
       })['catch'](function () {
         modalService.openGenericErrorModal();
       })['finally'](function () {
