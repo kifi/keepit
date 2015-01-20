@@ -29,6 +29,7 @@ trait KQueryExpansion extends QueryParser {
 
   val siteBoost: Float
   val concatBoost: Float
+  val prefixBoost: Float
 
   val textQueries: ArrayBuffer[KTextQuery] = ArrayBuffer()
 
@@ -188,6 +189,13 @@ trait KQueryExpansion extends QueryParser {
         KConcatQueryAdder.addConcatQueries(queries, concatBoost)
       } else {
         KConcatQueryAdder.addConcatQueries(queries.take(8), concatBoost)
+      }
+    }
+
+    if (prefixBoost > 0.0f) {
+      val fullQueryText = queries.collect { case (_, textQuery) if textQuery != null => textQuery.label }.mkString(" ")
+      KPrefixQuery.get("tv", "tp", fullQueryText).foreach { prefixQuery =>
+        clauses += new BooleanClause(prefixQuery, SHOULD)
       }
     }
 

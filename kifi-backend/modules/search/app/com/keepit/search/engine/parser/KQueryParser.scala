@@ -26,6 +26,7 @@ class KQueryParser(
     override val altStemmingAnalyzer = qp.altStemmingAnalyzer
     override val siteBoost = config.asFloat("siteBoost")
     override val concatBoost = config.asFloat("concatBoost")
+    override val prefixBoost = config.asFloat("prefixBoost")
     override val lang: Lang = qp.analyzer.lang
   }
 
