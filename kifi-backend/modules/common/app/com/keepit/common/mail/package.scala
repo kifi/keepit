@@ -97,7 +97,7 @@ package object template {
 
     def libraryImageUrl(path: String) = s"$cdnBaseUrl/$path"
 
-    def findMoreFriendsUrl(content: String) = htmlUrl(s"$baseUrl/friends?", content, openInAppIfMobile = true)
+    def kifiFriendsUrl(content: String) = htmlUrl(s"$baseUrl/friends?", content, openInAppIfMobile = true)
 
     def acceptFriendUrl(id: Id[User], content: String) = htmlUrl(s"$baseUrl/friends?friend=${userExternalId(id)}&", content, openInAppIfMobile = true)
 

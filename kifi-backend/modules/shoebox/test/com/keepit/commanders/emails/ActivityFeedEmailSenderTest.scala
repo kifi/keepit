@@ -2,25 +2,25 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ FakeRecommendationsCommander, RecommendationsCommander }
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.common.mail.{ EmailAddress, FakeMailModule, ElectronicMailRepo }
+import com.keepit.common.mail.{ ElectronicMailRepo, EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.model.{ RecoInfo, LibraryRecoInfo }
-import com.keepit.curator.{ FakeCuratorServiceClientImpl, CuratorServiceClient, FakeCuratorServiceClientModule }
-import com.keepit.model.ExperimentType
-import com.keepit.model._
-import LibraryFactory._, LibraryFactoryHelper._
-import UserFactory._, UserFactoryHelper._
-import KeepFactory._, KeepFactoryHelper._
-import LibraryMembershipFactory._, LibraryMembershipFactoryHelper._
-import LibraryInviteFactory._, LibraryInviteFactoryHelper._
+import com.keepit.curator.model.{ LibraryRecoInfo, RecoInfo }
+import com.keepit.curator.{ CuratorServiceClient, FakeCuratorServiceClientImpl, FakeCuratorServiceClientModule }
+import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryInviteFactory._
+import com.keepit.model.LibraryInviteFactoryHelper._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.{ ExperimentType, _ }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
@@ -75,8 +75,8 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
 
         val (user1, user2) = db.readWrite { implicit rw =>
           (
-            user().withEmailAddress("u1@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved,
-            user().withEmailAddress("u2@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
+            user().withName("Kifi", "User1").withEmailAddress("u1@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved,
+            user().withName("Kifi", "User2").withEmailAddress("u2@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
           )
         }
 
@@ -124,6 +124,13 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
           }
         }
 
+        // setup friend requests
+        val friendRequestRepo = inject[FriendRequestRepo]
+        db.readWrite { implicit rw =>
+          friendRequestRepo.save(FriendRequest(senderId = user2.id.get, recipientId = user1.id.get, messageHandle = None))
+          friendRequestRepo.save(FriendRequest(senderId = user1.id.get, recipientId = user2.id.get, messageHandle = None))
+        }
+
         val senderF = sender()
         Await.ready(senderF, Duration(5, "seconds"))
 
@@ -169,6 +176,10 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         // library urls
         html1 must contain("/u1/invite1-l0")
         html2 must contain("/u2/invite2-l0")
+
+        // test friend requests
+        html1 must contain(s""">${user2.fullName}</a>""")
+        html2 must contain(s""">${user1.fullName}</a>""")
 
       }
     }

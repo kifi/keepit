@@ -5,7 +5,7 @@
 Hi @fullName(toUserId)
 <br/><br/>
 
-<h1>New in Libraries</h1>
+<h1>Libraries you follow have new Keeps </h1>
 @activityData.newKeepsInLibraries.map { lib =>
     <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
     @lib.ownerName<br/>
@@ -21,7 +21,7 @@ Hi @fullName(toUserId)
     <br/>
 }
 
-<h1>Library Invites</h1>
+<h1>Pending Library Invites</h1>
 @activityData.libraryInvites.map { lib =>
     Invited by @{Html(lib.invitedByUsers.map(fullName).mkString(", "))}<br/>
     <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
@@ -31,6 +31,32 @@ Hi @fullName(toUserId)
         <img src="@libraryImageUrl(image.path)" alt="@lib.name" width="400"/>
     }
 }
+<br/>
+
+<h1>Pending Unread Messages</h1>
+TODO
+<br/>
+
+<h1>Pending Friend Requests</h1>
+@activityData.pendingFriendRequests.map { senderId =>
+    <a href="@kifiFriendsUrl("clickedFriendRequestName")">@fullName(senderId)</a>
+}
+<br/>
+
+<h1>Library New Followers</h1>
+TODO
+<br/>
+
+<h1>You Helped People Last Week</h1>
+TODO
+<br/>
+
+<h1>Your Friend created a library</h1>
+TODO
+<br/>
+
+<h1>Your Friend followed a library</h1>
+TODO
 <br/>
 
 <h1>Recos</h1>
