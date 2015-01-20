@@ -9,13 +9,13 @@
       <div class="library-share-input-box">
         <img ng-src="/img/spinner_32.gif" ng-show="showSpinner" class="library-share-search-spinner">
         <input type="text" ng-model="search.name" class="library-share-input library-share-search-input" placeholder="Search people" ng-change="onSearchInputChange()" ng-keydown="processKeyEvent($event)" ng-focus="onSearchInputFocus()">
-        <div ng-if="manageLibInvite" class="kf-query-icon"></div>
+        <div ng-if="manageLibInvite" class="kf-query-icon sprite-search-icon"></div>
       </div>
       <ul class="library-share-contact-list">
         <li class="library-share-contact" ng-repeat="result in results" ng-mouseenter="onResultHover(result)" ng-mouseleave="onResultUnhover(result)" ng-class="{'library-share-selected': result.selected, 'library-share-actionable': result.actionable}">
           <!-- Kifi friend -->
           <div ng-if="result.id" class="library-share-contact-container library-share-kifi">
-            <a ng-if="inUserProfileBeta" href="{{result.userProfileUrl}}">
+            <a ng-if="inUserProfileBeta" href="{{result.userProfileUrl}}" ng-click="close()">
               <img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="library-share-contact-image">
             </a>
             <img ng-if="!inUserProfileBeta" ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="library-share-contact-image">
