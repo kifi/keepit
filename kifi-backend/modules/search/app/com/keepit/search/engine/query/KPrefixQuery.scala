@@ -66,7 +66,7 @@ class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extend
   }
 
   override def getWeights(out: ArrayBuffer[(Weight, Float)]): Unit = {
-    out += ((this, 0.0f))
+    booleanWeight.getWeights(out)
   }
 }
 
@@ -86,7 +86,7 @@ class KPrefixScorer(weight: KPrefixWeight, subScorer: Scorer, queryTerms: Array[
   override def score(): Float = {
     val name = getName()
     val distance = PrefixMatching.distance(name, queryTerms)
-    val boost = (PrefixMatching.maxDist - distance).toFloat / PrefixMatching.maxDist
+    val boost = (PrefixMatching.maxDist - distance).toFloat / PrefixMatching.maxDist // todo(Léo): boost shorter names
     subScorer.score() * boost
   }
 
