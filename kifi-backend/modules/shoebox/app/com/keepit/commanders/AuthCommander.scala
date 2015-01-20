@@ -321,6 +321,7 @@ class AuthCommander @Inject() (
 
           socialUserInfoRepo.getOpt(socialId, networkType) match { // double check if social user already exists in DB
             case None =>
+              log.info(s"[signupWithTrustedSocialUser] NO social user found in DB for ($socialId, $networkType)")
               socialUserInfoRepo.save(SocialUserInfo(
                 fullName = socialUser.fullName,
                 pictureUrl = socialUser.avatarUrl,
@@ -330,6 +331,7 @@ class AuthCommander @Inject() (
                 credentials = Some(socialUser)
               ))
             case Some(sui) => // update all fields to latest field anyway
+              log.info(s"[signupWithTrustedSocialUser] social user found in DB for ($socialId, $networkType), $sui")
               socialUserInfoRepo.save(sui.copy(
                 fullName = socialUser.fullName,
                 pictureUrl = socialUser.avatarUrl,
