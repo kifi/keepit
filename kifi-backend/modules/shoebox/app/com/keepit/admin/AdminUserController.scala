@@ -416,10 +416,7 @@ class AdminUserController @Inject() (
     }
 
     // We want to throw an exception (.get) if `emails' was not passed in. As we expand this, we should add Play! form validation
-    val emailList = form.get("emails").get.split(",").map(_.toLowerCase().trim()).toList.distinct.map(em => em match {
-      case s if s.length > 5 => Some(EmailAddress(s))
-      case _ => None
-    }).flatten
+    val emailList = form.get("emails").get.split(",").map(_.toLowerCase().trim()).toList.distinct.map(EmailAddress.validate(_).toOption).flatten
 
     db.readWrite { implicit session =>
       val oldEmails = emailRepo.getAllByUser(userId).toSet
@@ -887,5 +884,15 @@ class AdminUserController @Inject() (
 
   def reNormalizedUsername(readOnly: Boolean, max: Int) = Action { implicit request =>
     Ok(userCommander.reNormalizedUsername(readOnly, max).toString)
+  }
+
+  def removeEmptyEmail() = AdminUserAction { request =>
+    db.readWrite { implicit session =>
+      val problematicUser = userRepo.get(Id[User](16443))
+      if (problematicUser.primaryEmail.exists(_.address.isEmpty)) {
+        userRepo.save(problematicUser.copy(primaryEmail = None))
+      }
+    }
+    Ok
   }
 }
