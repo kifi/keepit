@@ -78,7 +78,8 @@ angular.module('kifi')
         editOptions: '&',
         toggleEdit: '=',
         updateSelectedCount: '&',
-        selectedKeepsFilter: '&'
+        selectedKeepsFilter: '&',
+        currentPageOrigin: '@'
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
