@@ -43,23 +43,19 @@ object AuthController {
   def obscureEmailAddress(address: String) = obscureRegex.replaceFirstIn(address, """$1...@""")
 }
 
-@json case class EmailSignupInfo(email: String)
-
 @json case class UserPassFinalizeInfo(
-    private val email: String,
-    password: String,
-    firstName: String,
-    lastName: String,
-    picToken: Option[String],
-    picWidth: Option[Int],
-    picHeight: Option[Int],
-    cropX: Option[Int],
-    cropY: Option[Int],
-    cropSize: Option[Int],
-    libraryPublicId: Option[PublicId[Library]] // for auto-follow
-    ) {
-  val emailAddress = EmailAddress(email)
-}
+  email: EmailAddress,
+  password: String,
+  firstName: String,
+  lastName: String,
+  picToken: Option[String],
+  picWidth: Option[Int],
+  picHeight: Option[Int],
+  cropX: Option[Int],
+  cropY: Option[Int],
+  cropSize: Option[Int],
+  libraryPublicId: Option[PublicId[Library]] // for auto-follow
+  )
 
 object UserPassFinalizeInfo {
   implicit def toEmailPassFinalizeInfo(info: UserPassFinalizeInfo): EmailPassFinalizeInfo =
@@ -76,24 +72,22 @@ object UserPassFinalizeInfo {
 }
 
 @json case class TokenFinalizeInfo(
-    private val email: String,
-    firstName: String,
-    lastName: String,
-    val password: String,
-    picToken: Option[String],
-    picHeight: Option[Int],
-    picWidth: Option[Int],
-    cropX: Option[Int],
-    cropY: Option[Int],
-    cropSize: Option[Int],
-    libraryPublicId: Option[PublicId[Library]]) {
-  val emailAddress = EmailAddress(email)
-}
+  email: EmailAddress,
+  firstName: String,
+  lastName: String,
+  password: String,
+  picToken: Option[String],
+  picHeight: Option[Int],
+  picWidth: Option[Int],
+  cropX: Option[Int],
+  cropY: Option[Int],
+  cropSize: Option[Int],
+  libraryPublicId: Option[PublicId[Library]])
 
 object TokenFinalizeInfo {
   implicit def toSocialFinalizeInfo(info: TokenFinalizeInfo): SocialFinalizeInfo = {
     SocialFinalizeInfo(
-      info.emailAddress,
+      info.email,
       info.firstName,
       info.lastName,
       info.password.toCharArray,
@@ -245,7 +239,7 @@ class AuthController @Inject() (
         val hasher = Registry.hashers.currentHasher
         val session = request.session
         val home = com.keepit.controllers.website.routes.HomeController.home()
-        authHelper.checkForExistingUser(info.emailAddress) collect {
+        authHelper.checkForExistingUser(info.email) collect {
           case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
             val identity = sui.credentials.get
             val matches = hasher.matches(identity.passwordInfo.get, new String(info.password))
@@ -269,7 +263,7 @@ class AuthController @Inject() (
             }
         } getOrElse {
           val pInfo = hasher.hash(new String(info.password))
-          val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, getSecureSocialUserFromRequest, info.emailAddress, pInfo, isComplete = false) // todo(ray): remove getSecureSocialUserFromRequest
+          val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, getSecureSocialUserFromRequest, info.email, pInfo, isComplete = false) // todo(ray): remove getSecureSocialUserFromRequest
           val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
           authHelper.handleEmailPassFinalizeInfo(info, info.libraryPublicId)(UserRequest(request, user.id.get, None, userActionsHelper))
         }
