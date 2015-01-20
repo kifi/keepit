@@ -34,11 +34,13 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
 
   def whitelist(words: String): Future[String] = Future.successful("")
 
-  def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = Future.successful(Seq.empty)
+  def adminOnlyGetEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = Future.successful(Seq.empty)
 
   def getURISummaryFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]] = Future.successful(None)
 
-  def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int] = Future.successful(0)
+  def getURIWordCount(uriId: Id[NormalizedURI], url: String): Future[Int] = Future.successful(0)
 
-  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int] = None
+  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: String): Option[Int] = None
+
+  def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]] = Future.successful(None)
 }

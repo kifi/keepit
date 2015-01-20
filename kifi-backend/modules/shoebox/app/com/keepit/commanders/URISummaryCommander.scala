@@ -128,7 +128,7 @@ class URISummaryCommander @Inject() (
       val storedImageInfos = imageInfoRepo.getByUriWithPriority(nUri.id, minSize, targetProvider)
       val storedSummaryOpt = storedImageInfos flatMap { imageInfo =>
         if (withDescription) {
-          val wordCountOpt = scraper.getURIWordCountOpt(nUri.id, Some(nUri.url))
+          val wordCountOpt = scraper.getURIWordCountOpt(nUri.id, nUri.url)
           for {
             pageInfo <- pageInfoRepo.getByUri(nUri.id)
           } yield {
@@ -163,9 +163,9 @@ class URISummaryCommander @Inject() (
   /**
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
    */
-  private def fetchFromEmbedly(nUri: NormalizedURIRef, descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
+  private def fetchFromEmbedly(nUri: NormalizedURIRef): Future[Option[URISummary]] = {
     try {
-      scraper.getURISummaryFromEmbedly(nUri, descriptionOnly)
+      scraper.getURISummaryFromEmbedly(nUri, descriptionOnly = true)
     } catch {
       case timeout: TimeoutException =>
         val failImageInfo = db.readWrite { implicit session =>
