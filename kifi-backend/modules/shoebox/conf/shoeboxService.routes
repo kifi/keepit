@@ -612,7 +612,6 @@ GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminU
 GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
 POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
 POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserController.refreshRecos(id: Id[User])
-GET     /admin/users/removeEmptyEmail   @com.keepit.controllers.admin.AdminUserController.removeEmptyEmail()
 
 GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])

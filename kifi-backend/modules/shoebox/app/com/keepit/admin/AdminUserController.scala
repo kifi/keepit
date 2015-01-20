@@ -885,14 +885,4 @@ class AdminUserController @Inject() (
   def reNormalizedUsername(readOnly: Boolean, max: Int) = Action { implicit request =>
     Ok(userCommander.reNormalizedUsername(readOnly, max).toString)
   }
-
-  def removeEmptyEmail() = AdminUserAction { request =>
-    db.readWrite { implicit session =>
-      val problematicUser = userRepo.getNoCache(Id[User](16443))
-      if (problematicUser.primaryEmail.exists(_.address.isEmpty)) {
-        userRepo.save(problematicUser.copy(primaryEmail = None))
-      }
-    }
-    Ok
-  }
 }
