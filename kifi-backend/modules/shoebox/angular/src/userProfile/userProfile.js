@@ -175,14 +175,16 @@ angular.module('kifi')
       lib.ownerPicUrl = keepWhoService.getPicUrl(owner, 200);
       lib.ownerProfileUrl = routeService.getProfileUrl(owner.username);
       lib.imageUrl = lib.image ? routeService.libraryImageUrl(lib.image.path) : null;
-      lib.followers.forEach(function (user) {
-        user.picUrl = keepWhoService.getPicUrl(user, 100);
-        user.profileUrl = routeService.getProfileUrl(user.username);
-      });
+      lib.followers.forEach(augmentFollower);
       if (lib.following == null && following != null) {
         lib.following = following;
       }
       return lib;
+    }
+
+    function augmentFollower(user) {
+      user.picUrl = keepWhoService.getPicUrl(user, 100);
+      user.profileUrl = routeService.getProfileUrl(user.username);
     }
 
     function resetFetchState() {
@@ -193,20 +195,42 @@ angular.module('kifi')
       loading = false;
     }
 
-    function removeDeletedLibrary(event, libraryId) {
-      _.remove($scope.libraries, { id: libraryId });
-    }
-
-    var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
-      if (/^userProfile\.libraries\./.test(toState.name)) {
-        $scope.libraryType = toState.data.libraryType;
-        refetchLibraries();
-      }
+    [
+      $rootScope.$on('$stateChangeSuccess', function (event, toState) {
+        if (/^userProfile\.libraries\./.test(toState.name)) {
+          $scope.libraryType = toState.data.libraryType;
+          refetchLibraries();
+        }
+      }),
+      $rootScope.$on('libraryDeleted', function (event, libraryId) {
+        _.remove($scope.libraries, {id: libraryId});
+      }),
+      $rootScope.$on('libraryJoined', function (event, libraryId) {
+        var lib = _.find($scope.libraries, {id: libraryId});
+        if (lib && !lib.following) {
+          lib.following = true;
+          lib.numFollowers++;
+          if (lib.followers.length < 3 && profileService.me.pictureName !== '0.jpg') {
+            var me = _.pick(profileService.me, 'id', 'firstName', 'lastName', 'pictureName', 'username');
+            augmentFollower(me);
+            lib.followers.push(me);
+          }
+        }
+      }),
+      $rootScope.$on('libraryLeft', function (event, libraryId) {
+        var lib = _.find($scope.libraries, {id: libraryId});
+        if (lib && lib.following) {
+          lib.following = false;
+          lib.numFollowers--;
+          _.remove(lib.followers, {id: profileService.me.id});
+        }
+      }),
+      $rootScope.$on('libraryKeepCountChanged', function (event, libraryId, keepCount) {
+        (_.find($scope.libraries, {id: libraryId}) || {}).keepCount = keepCount;
+      })
+    ].forEach(function (deregister) {
+      $scope.$on('$destroy', deregister);
     });
-    $scope.$on('$destroy', deregister$stateChangeSuccess);
-
-    var deregisterLibraryDeleted = $rootScope.$on('libraryDeleted', removeDeletedLibrary);
-    $scope.$on('$destroy', deregisterLibraryDeleted);
 
     $scope.fetchLibraries = function () {
       if (loading) {
@@ -320,12 +344,12 @@ angular.module('kifi')
         return signupService.register({libraryId: lib.id});
       }
       $event.target.disabled = true;
-      var following = lib.following;
-      libraryService[following ? 'leaveLibrary' : 'joinLibrary'](lib.id).then(function () {
-        lib.following = !following;
-        lib.numFollowers += following ? -1 : 1;
-      })['catch'](function () {
-        modalService.openGenericErrorModal();
+      libraryService[lib.following ? 'leaveLibrary' : 'joinLibrary'](lib.id)['catch'](function (resp) {
+        modalService.openGenericErrorModal({
+          modalData: resp.status === 403 && resp.data.error === 'cant_join_nonpublished_library' ? {
+            genericErrorMessage: 'Sorry, the owner of this library has made it private. You’ll need an invitation to follow it.'
+          } : {}
+        });
       })['finally'](function () {
         $event.target.disabled = false;
       });
