@@ -29,7 +29,7 @@ object LibraryRecoSelectionParams {
     popularityScoreWeight = 0.8f,
     socialScoreWeight = 0.9f,
     contentScoreWeight = 0.5f,
-    minKeeps = 3,
-    minMembers = 1,
+    minKeeps = 5,
+    minMembers = 3,
     reset = false)
 }
