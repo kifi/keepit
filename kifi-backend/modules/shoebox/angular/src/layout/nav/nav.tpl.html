@@ -142,7 +142,7 @@
               <div kf-library-mini-card library="library"></div>
             </div>
           </a>
-          <a ng-if="inUserProfileBeta" href="{{getLibraryOwnerProfileUrl(library)}}">
+          <a ng-if="inUserProfileBeta" href="{{getLibraryOwnerProfileUrl(library)}}" kf-track-origin origin="libraryList/followed">
             <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
           </a>
           <a ng-if="!inUserProfileBeta" href="{{library.url}}">
@@ -163,7 +163,7 @@
               <div kf-library-mini-card library="library" invite="true"></div>
             </div>
           </a>
-          <a ng-if="inUserProfileBeta" href="{{getLibraryOwnerProfileUrl(library)}}">
+          <a ng-if="inUserProfileBeta" href="{{getLibraryOwnerProfileUrl(library)}}" kf-track-origin origin="libraryList/invited">
             <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
           </a>
           <a ng-if="!inUserProfileBeta" href="{{library.url}}">
