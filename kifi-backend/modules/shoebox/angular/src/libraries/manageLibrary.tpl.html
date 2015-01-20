@@ -16,7 +16,7 @@
           following your library
         </p>
         <button ng-if="!showFollowers" class="manage-lib-followers-button" ng-click="showFollowersPanel()">Invite and manage followers</button>
-        <div ng-if="showFollowers" kf-library-share-search library="library" manage-lib-invite="true" class="manage-lib-invite"></div>
+        <div ng-if="showFollowers" kf-library-share-search library="library" manage-lib-invite="true" close="close()" class="manage-lib-invite"></div>
       </div>
 
       <div class="manage-lib-content">

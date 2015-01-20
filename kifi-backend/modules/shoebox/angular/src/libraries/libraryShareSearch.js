@@ -10,7 +10,8 @@ angular.module('kifi')
       replace: true,
       scope: {
         library: '=',
-        manageLibInvite: '='
+        manageLibInvite: '=',
+        close: '&'
       },
       templateUrl: 'libraries/libraryShareSearch.tpl.html',
       link: function (scope, element/*, attrs*/) {
