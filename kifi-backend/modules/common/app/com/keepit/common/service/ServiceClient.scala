@@ -1,5 +1,7 @@
 package com.keepit.common.service
 
+import com.keepit.common.akka.SafeFuture
+
 import scala.collection.mutable.{ SynchronizedSet, HashSet, Set }
 import scala.concurrent.Future
 import scala.util.Random
@@ -106,7 +108,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     respFuture
   }
 
-  protected def callUrl(call: ServiceRoute, httpUri: HttpUri, body: JsValue, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts): Future[ClientResponse] = {
+  protected def callUrl(call: ServiceRoute, httpUri: HttpUri, body: JsValue, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts): Future[ClientResponse] = new SafeFuture({
     val url = httpUri.url
     if (url.length > ServiceClient.MaxUrlLength) {
       airbrakeNotifier.notify(AirbrakeError(
@@ -125,7 +127,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
         case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body)
       }
     }
-  }
+  })
 
   private def logBroadcast(url: ServiceUri, body: JsValue = JsNull): Unit = {
     log.info(s"[broadcast] Sending to $url: ${body.toString.take(120)}")
