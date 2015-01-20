@@ -9,6 +9,7 @@
       </div>
     </div>
     <a ng-if="inUserProfileBeta" class="kf-slc-card-owner" href="{{library.ownerProfileUrl}}"
+      kf-track-origin origin="libraryPage.RelatedLibraries/curator">
       itemscope itemtype="http://data-vocabulary.org/Person" itemprop="url">
       <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}" itemprop="photo">
       <span class="kf-slc-card-by">by</span>

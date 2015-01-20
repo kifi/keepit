@@ -28,7 +28,8 @@ angular.module('kifi')
           modalService.open({
             template: 'libraries/libraryFollowersModal.tpl.html',
             modalData: {
-              library: lib
+              library: lib,
+              currentPageOrigin: 'libraryPage.RelatedLibraries'
             }
           });
         };
