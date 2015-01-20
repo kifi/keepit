@@ -206,33 +206,19 @@ angular.module('kifi')
       },
 
       getSlugById: function (libraryId) {
-        var lib = _.find(librarySummaries, function (librarySummary) {
-          return librarySummary.id === libraryId;
-        });
-
-        if (!!lib) {
-          var split = lib.url.split('/').filter(function (a) { return a.length !== 0; });
-          return split[1];
-        }
-
-        return null;
+        var lib = _.find(librarySummaries, {id: libraryId});
+        return lib.url.match(/[^\/]+\/([^\/]+)/)[1];
       },
 
       getLibraryInfoById: function (libraryId) {
-        var lib = _.find(librarySummaries, function (librarySummary) {
-          return librarySummary.id === libraryId;
-        });
-
-        return lib || null;
+        return _.find(librarySummaries, {id: libraryId}) || null;
       },
 
       addToLibraryCount: function (libraryId, val) {
-        var lib = _.find(librarySummaries, function (librarySummary) {
-          return librarySummary.id === libraryId;
-        });
+        var lib = _.find(librarySummaries, {id: libraryId});
         lib.numKeeps += val;
 
-        $rootScope.$emit('libraryUpdated', lib);
+        $rootScope.$emit('libraryKeepCountChanged', libraryId, lib.numKeeps);
         $rootScope.$emit('librarySummariesChanged');
       },
 
@@ -280,48 +266,46 @@ angular.module('kifi')
 
       joinLibrary: function (libraryId) {
         return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
-          var library = response.data;
-
-          if (!library.alreadyJoined) {
+          var wasInvited = _.remove(invitedSummaries, {id: libraryId}).length > 0;
+          var justJoined = !_.contains(librarySummaries, {id: libraryId});
+          if (justJoined) {
+            var library = response.data;
             augmentLibrarySummary(library);
-
             librarySummaries.push(library);
-            _.remove(invitedSummaries, { id: libraryId });
-
-            $rootScope.$emit('librarySummariesChanged');
-            $rootScope.$emit('libraryUpdated', library);
-          } else {
-            return ('already_joined');
           }
+          if (wasInvited || justJoined) {
+            $rootScope.$emit('librarySummariesChanged');
+          }
+          $rootScope.$emit('libraryJoined', libraryId);
         });
       },
 
       leaveLibrary: function (libraryId) {
         return $http.post(routeService.leaveLibrary(libraryId)).then(function () {
-          _.remove(librarySummaries, { id: libraryId });
-          $rootScope.$emit('librarySummariesChanged');
-
-          return api.getLibraryById(libraryId, true).then(function (data) {
-            // TODO: Take this manual check out when the backend endpoint properly has an 'access' property
-            //       on the library object.
-            data.library.access = data.membership;
-            $rootScope.$emit('libraryUpdated', data.library);
-          });
+          var wasRemoved = _.remove(librarySummaries, {id: libraryId}).length > 0;
+          if (wasRemoved) {
+            $rootScope.$emit('librarySummariesChanged');
+          }
+          $rootScope.$emit('libraryLeft', libraryId);
         });
       },
 
       declineToJoinLibrary: function (libraryId) {
         return $http.post(routeService.declineToJoinLibrary(libraryId)).then(function () {
-          _.remove(invitedSummaries, { id: libraryId });
-          $rootScope.$emit('librarySummariesChanged');
+          var wasRemoved = _.remove(invitedSummaries, {id: libraryId}).length > 0;
+          if (wasRemoved) {
+            $rootScope.$emit('librarySummariesChanged');
+          }
         });
       },
 
       deleteLibrary: function (libraryId) {
         return $http.post(routeService.deleteLibrary(libraryId)).then(function () {
-          _.remove(librarySummaries, function (library) {
-            return library.id === libraryId;
-          });
+          var wasRemoved = _.remove(librarySummaries, {id: libraryId}).length > 0;
+          if (wasRemoved) {
+            $rootScope.$emit('librarySummariesChanged');
+          }
+          $rootScope.$emit('libraryDeleted', libraryId);
         });
       },
 

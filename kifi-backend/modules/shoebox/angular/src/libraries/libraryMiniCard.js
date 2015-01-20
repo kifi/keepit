@@ -23,21 +23,11 @@ angular.module('kifi')
         // Internal helper methods.
         //
         function followLibrary() {
-          libraryService.joinLibrary(scope.library.id).then(function (result) {
-            if (result === 'already_joined') {
-              modalService.openGenericErrorModal({
-                modalData: {
-                  genericErrorMessage: 'You are already following this library!'
-                }
-              });
-
-              return;
+          libraryService.joinLibrary(scope.library.id).then(function () {
+            if ($location.path() === scope.library.url) {
+              $state.reload();
             } else {
-              if ($location.path() === scope.library.url) {
-                $state.reload();
-              } else {
-                $location.path(scope.library.url);
-              }
+              $location.path(scope.library.url);
             }
           })['catch'](modalService.openGenericErrorModal);
         }

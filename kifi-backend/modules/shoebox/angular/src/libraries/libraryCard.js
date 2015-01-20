@@ -161,10 +161,7 @@ angular.module('kifi')
           }
 
           scope.library.followers = scope.library.followers || [];
-          scope.library.followers.forEach(function (follower) {
-            follower.picUrl = friendService.getPictureUrlForUser(follower);
-            follower.profileUrl = routeService.getProfileUrl(follower.username);
-          });
+          scope.library.followers.forEach(augmentFollower);
 
           var maxLength = 150;
           if (scope.library.description.length > maxLength && !scope.isUserLoggedOut) {
@@ -199,6 +196,11 @@ angular.module('kifi')
             scope.coverImageUrl = env.picBase + '/' + image.path;
             scope.coverImagePos = formatCoverImagePos(image);
           }
+        }
+
+        function augmentFollower(follower) {
+          follower.picUrl = friendService.getPictureUrlForUser(follower);
+          follower.profileUrl = routeService.getProfileUrl(follower.username);
         }
 
         function preloadSocial() {
@@ -789,28 +791,7 @@ angular.module('kifi')
             return signupService.register({libraryId: scope.library.id});
           }
 
-          libraryService.joinLibrary(scope.library.id).then(function (result) {
-            (scope.library.invite || {}).actedOn = true;
-
-            if (result === 'already_joined') {
-              modalService.openGenericErrorModal({
-                modalData: {
-                  genericErrorMessage: 'You are already following this library!'
-                }
-              });
-              return;
-            }
-
-            scope.library.followers.push({
-              id: profileService.me.id,
-              firstName: profileService.me.firstName,
-              lastName: profileService.me.lastName,
-              pictureName: profileService.me.pictureName
-            });
-
-            augmentData();
-            adjustFollowerPicsSize();
-          })['catch'](modalService.openGenericErrorModal);
+          libraryService.joinLibrary(scope.library.id)['catch'](modalService.openGenericErrorModal);
         };
 
         scope.unfollowLibrary = function () {
@@ -947,14 +928,38 @@ angular.module('kifi')
           }
         });
 
-        var deregisterLibraryUpdated = $rootScope.$on('libraryUpdated', function (e, library) {
-          if (library.id === scope.library.id) {
-            _.assign(scope.library, library);
-            augmentData();
-            adjustFollowerPicsSize();
-          }
+        [
+          $rootScope.$on('libraryKeepCountChanged', function (e, libraryId, keepCount) {
+            if (libraryId === scope.library.id) {
+              scope.library.numKeeps = keepCount;
+            }
+          }),
+          $rootScope.$on('libraryJoined', function (e, libraryId) {
+            var lib = scope.library;
+            if (lib && libraryId === lib.id && lib.access === 'none') {
+              (lib.invite || {}).actedOn = true;
+              lib.access = 'read_only';
+              lib.numFollowers++;
+              var me = profileService.me;
+              if (!_.contains(lib.followers, {id: me.id})) {
+                lib.followers.push(augmentFollower(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username')));
+                adjustFollowerPicsSize();
+              }
+            }
+          }),
+          $rootScope.$on('libraryLeft', function (e, libraryId) {
+            var lib = scope.library;
+            if (lib && libraryId === lib.id && lib.access !== 'none') {
+              lib.access = 'none';
+              lib.numFollowers--;
+              if (_.remove(lib.followers, {id: profileService.me.id}).length > 0) {
+                adjustFollowerPicsSize();
+              }
+            }
+          })
+        ].forEach(function (deregister) {
+          scope.$on('$destroy', deregister);
         });
-        scope.$on('$destroy', deregisterLibraryUpdated);
 
         // Update the search bar and search input text to be consistent with the current state.
         if (scope.isUserLoggedOut) {

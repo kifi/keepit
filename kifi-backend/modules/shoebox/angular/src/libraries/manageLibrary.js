@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .directive('kfManageLibrary', [
-  '$location', '$rootScope', '$state', 'friendService', 'libraryService', 'modalService',
+  '$location', '$state', 'friendService', 'libraryService', 'modalService',
   'profileService', 'routeService', 'userService', 'util',
-  function ($location, $rootScope, $state, friendService, libraryService, modalService,
+  function ($location, $state, friendService, libraryService, modalService,
     profileService, routeService, userService, util) {
     return {
       restrict: 'A',
@@ -129,9 +129,6 @@ angular.module('kifi')
 
           submitting = true;
           libraryService.deleteLibrary(scope.library.id).then(function () {
-            $rootScope.$emit('librarySummariesChanged');
-            $rootScope.$emit('libraryDeleted', scope.library.id);
-
             // If we were on the deleted library's page, return to the homepage.
             if ($state.is('library.keeps') &&
                 ($state.href('library.keeps') === scope.library.url)) {
