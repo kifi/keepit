@@ -11,6 +11,7 @@ angular.module('kifi')
       scope: {
         library: '=',
         manageLibInvite: '=',
+        currentPageOrigin: '@',
         close: '&'
       },
       templateUrl: 'libraries/libraryShareSearch.tpl.html',
