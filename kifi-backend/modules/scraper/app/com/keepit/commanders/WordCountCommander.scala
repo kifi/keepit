@@ -15,8 +15,8 @@ import com.keepit.model.URISummaryKey
 
 @ImplementedBy(classOf[WordCountCommanderImpl])
 trait WordCountCommander {
-  def getWordCount(id: Id[NormalizedURI], url: Option[String]): Future[Int]
-  def getReadTimeMinutes(id: Id[NormalizedURI], url: Option[String]): Future[Option[Int]]
+  def getWordCount(id: Id[NormalizedURI], url: String): Future[Int]
+  def getReadTimeMinutes(id: Id[NormalizedURI], url: String): Future[Option[Int]]
 }
 
 class WordCountCommanderImpl @Inject() (
@@ -63,15 +63,15 @@ class WordCountCommanderImpl @Inject() (
     }
   }
 
-  def getWordCount(id: Id[NormalizedURI], url: Option[String]): Future[Int] = {
+  def getWordCount(id: Id[NormalizedURI], url: String): Future[Int] = {
     val wcOpt = getFromCache(id) orElse getFromArticleStore(id)
     wcOpt match {
       case Some(wc) => Future.successful(wc)
-      case None => if (url.isDefined) getFromScraper(id, url.get) else Future.successful(0)
+      case None => getFromScraper(id, url)
     }
   }
 
-  def getReadTimeMinutes(id: Id[NormalizedURI], url: Option[String]): Future[Option[Int]] = {
+  def getReadTimeMinutes(id: Id[NormalizedURI], url: String): Future[Option[Int]] = {
     getWordCount(id, url) map TimeToReadCommander.wordCountToReadTimeMinutes
   }
 }

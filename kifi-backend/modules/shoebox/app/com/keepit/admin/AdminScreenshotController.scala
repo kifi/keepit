@@ -49,7 +49,7 @@ class AdminScreenshotController @Inject() (
       }
     } match {
       case Success(uri) =>
-        scraper.getEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
+        scraper.adminOnlyGetEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
           Ok(html.admin.imagesForUri(uri, None, infos))
         }
       case Failure(t) =>
@@ -87,7 +87,7 @@ class AdminScreenshotController @Inject() (
     val resOpt = urlOpt map { url =>
       val images = db.readOnlyMaster { implicit ro => normalizedURIInterner.getByUri(url) } match {
         case Some(uri) =>
-          scraper.getEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
+          scraper.adminOnlyGetEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
             infos.map { Json.toJson(_) }
           }
         case None => Future.successful(Seq.empty[JsValue])
@@ -109,7 +109,7 @@ class AdminScreenshotController @Inject() (
           case (url, uriOpt) =>
             uriOpt match {
               case Some(uri) =>
-                val jsF = scraper.getEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
+                val jsF = scraper.adminOnlyGetEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
                   Json.obj("url" -> url, "images" -> Json.toJson(infos))
                 }
                 jsF
