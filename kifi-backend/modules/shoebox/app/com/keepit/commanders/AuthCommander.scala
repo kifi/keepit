@@ -312,18 +312,34 @@ class AuthCommander @Inject() (
   }
 
   def signupWithTrustedSocialUser(providerName: String, socialUser: SocialUser, signUpUrl: String)(implicit request: Request[_]): Result = {
-    getSocialUserOpt(socialUser.identityId) match {
+    getSocialUserOpt(socialUser.identityId) match { // *note* checks for social users with credentials
       case None =>
         db.readWrite { implicit rw =>
           // userId must not be set in this case
-          socialUserInfoRepo.save(SocialUserInfo(
-            fullName = socialUser.fullName,
-            pictureUrl = socialUser.avatarUrl,
-            state = SocialUserInfoStates.FETCHED_USING_SELF,
-            socialId = SocialId(socialUser.identityId.userId),
-            networkType = SocialNetworkType(socialUser.identityId.providerId),
-            credentials = Some(socialUser)
-          ))
+          val socialId = SocialId(socialUser.identityId.userId)
+          val networkType = SocialNetworkType(socialUser.identityId.providerId)
+
+          socialUserInfoRepo.getOpt(socialId, networkType) match { // double check if social user already exists in DB
+            case None =>
+              socialUserInfoRepo.save(SocialUserInfo(
+                fullName = socialUser.fullName,
+                pictureUrl = socialUser.avatarUrl,
+                state = SocialUserInfoStates.FETCHED_USING_SELF,
+                socialId = socialId,
+                networkType = networkType,
+                credentials = Some(socialUser)
+              ))
+            case Some(sui) => // update all fields to latest field anyway
+              socialUserInfoRepo.save(sui.copy(
+                fullName = socialUser.fullName,
+                pictureUrl = socialUser.avatarUrl,
+                state = SocialUserInfoStates.FETCHED_USING_SELF,
+                socialId = socialId,
+                networkType = networkType,
+                credentials = Some(socialUser)
+              ))
+          }
+
         } tap { sui => log.info(s"[doAccessTokenSignup] created socialUserInfo(${sui.id}) $socialUser") }
         val payload = if (socialUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
           Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
