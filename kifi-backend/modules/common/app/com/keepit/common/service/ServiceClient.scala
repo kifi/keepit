@@ -108,26 +108,29 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     respFuture
   }
 
-  protected def callUrl(call: ServiceRoute, httpUri: HttpUri, body: JsValue, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts): Future[ClientResponse] = new SafeFuture({
-    val url = httpUri.url
-    if (url.length > ServiceClient.MaxUrlLength) {
-      airbrakeNotifier.notify(AirbrakeError(
-        message = Some(s"Request URI length ${url.length} > ${ServiceClient.MaxUrlLength}: $url"),
-        method = Some(call.method.toString),
-        url = Some(s"$url")))
-    }
-    if (ignoreFailure) {
-      call match {
-        case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(callTimeouts).getFuture(httpUri, httpClient.ignoreFailure)
-        case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body, httpClient.ignoreFailure)
+  protected def callUrl(call: ServiceRoute, httpUri: HttpUri, body: JsValue, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts): Future[ClientResponse] = {
+    val clientResponseFuture = {
+      val url = httpUri.url
+      if (url.length > ServiceClient.MaxUrlLength) {
+        airbrakeNotifier.notify(AirbrakeError(
+          message = Some(s"Request URI length ${url.length} > ${ServiceClient.MaxUrlLength}: $url"),
+          method = Some(call.method.toString),
+          url = Some(s"$url")))
       }
-    } else {
-      call match {
-        case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(callTimeouts).getFuture(httpUri)
-        case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body)
+      if (ignoreFailure) {
+        call match {
+          case c@ServiceRoute(GET, _, _*) => httpClient.withTimeout(callTimeouts).getFuture(httpUri, httpClient.ignoreFailure)
+          case c@ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body, httpClient.ignoreFailure)
+        }
+      } else {
+        call match {
+          case c@ServiceRoute(GET, _, _*) => httpClient.withTimeout(callTimeouts).getFuture(httpUri)
+          case c@ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body)
+        }
       }
     }
-  })
+    new SafeFuture[ClientResponse](clientResponseFuture, Some(s"Handling service call: $call (body: $body)"))
+  }
 
   private def logBroadcast(url: ServiceUri, body: JsValue = JsNull): Unit = {
     log.info(s"[broadcast] Sending to $url: ${body.toString.take(120)}")
