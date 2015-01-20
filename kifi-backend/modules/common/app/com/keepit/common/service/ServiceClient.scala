@@ -119,13 +119,13 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
       }
       if (ignoreFailure) {
         call match {
-          case c@ServiceRoute(GET, _, _*) => httpClient.withTimeout(callTimeouts).getFuture(httpUri, httpClient.ignoreFailure)
-          case c@ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body, httpClient.ignoreFailure)
+          case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(callTimeouts).getFuture(httpUri, httpClient.ignoreFailure)
+          case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body, httpClient.ignoreFailure)
         }
       } else {
         call match {
-          case c@ServiceRoute(GET, _, _*) => httpClient.withTimeout(callTimeouts).getFuture(httpUri)
-          case c@ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body)
+          case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(callTimeouts).getFuture(httpUri)
+          case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body)
         }
       }
     }
