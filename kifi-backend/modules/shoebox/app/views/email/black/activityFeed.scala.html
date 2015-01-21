@@ -52,7 +52,18 @@ TODO
 <br/>
 
 <h1>Your Friend created a library</h1>
-TODO
+@activityData.friendCreatedLibraries.map { case (friendId, libraries)  =>
+    @libraries.map { library =>
+        @fullName(friendId) created
+        <a href="@{baseUrl}@{library.url}">@library.name</a><br/>
+        @library.numKeeps Keeps | @library.numFollowers Followers<br/>
+        @library.image.map { image =>
+            <img src="@libraryImageUrl(image.path)" alt="@library.name" width="400"/>
+        }
+        <br/><br/>
+    }
+}
+
 <br/>
 
 <h1>Your Friend followed a library</h1>
@@ -71,5 +82,5 @@ TODO
 
 <h1>Library Recos</h1>
 @activityData.libraryRecos.map { recoInfo =>
-    <a href="@baseUrl/@{recoInfo.itemInfo.url}">@recoInfo.itemInfo.name</a><br/>
+    <a href="@{baseUrl}@{recoInfo.itemInfo.url}">@recoInfo.itemInfo.name</a><br/>
 }
