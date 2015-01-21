@@ -1,27 +1,21 @@
 package com.keepit.commanders
 
-import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.performance._
-
 import java.awt.image.BufferedImage
-
-import com.keepit.common.logging.Logging
-import com.kifi.macros.json
-import org.joda.time.DateTime
-
-import scala.concurrent.Future
-import scala.util.{ Failure, Success }
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.ImageFetcher
-import com.keepit.common.store.{ ImageSize, S3URIImageStore }
-import com.keepit.model.{ PageAuthor, PageInfo, ImageInfo, URISummary }
-import com.keepit.scraper.{ URIPreviewFetchResult, NormalizedURIRef, ShoeboxDbCallbackHelper }
-import com.keepit.scraper.embedly.{ EmbedlyImage, EmbedlyClient }
-
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
+import com.keepit.common.performance._
+import com.keepit.common.store.S3URIImageStore
+import com.keepit.model.{ ImageInfo, PageInfo, URISummary }
+import com.keepit.scraper.embedly.{ EmbedlyClient, EmbedlyImage }
+import com.keepit.scraper.{ NormalizedURIRef, ShoeboxDbCallbackHelper, URIPreviewFetchResult }
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 @ImplementedBy(classOf[ScraperURISummaryCommanderImpl])
 trait ScraperURISummaryCommander {
