@@ -137,6 +137,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "name" -> "L1",
           "slug" -> "l1",
           "visibility" -> "secret",
+          "image" -> JsNull,
           "owner" -> BasicUser.fromUser(user1),
           "keeps" -> 0,
           "followers" -> 0,
@@ -146,11 +147,30 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
         status(getLibrary(user2, lib1PubId)) === FORBIDDEN
 
-        db.readWrite { implicit s =>
+        val lib1Image = db.readWrite { implicit s =>
           libraryMembershipRepo.save(mem2.withState(LibraryMembershipStates.ACTIVE))
+          inject[LibraryImageRepo].save(LibraryImage(
+            libraryId = lib1.id.get,
+            width = 512,
+            height = 256,
+            positionX = Some(40),
+            positionY = Some(50),
+            imagePath = "path/to/image.png",
+            format = ImageFormat.PNG,
+            source = ImageSource.UserUpload,
+            sourceFileHash = ImageHash("000"),
+            isOriginal = true))
         }
 
-        status(getLibrary(user2, lib1PubId)) === OK
+        Json.parse(contentAsString(getLibrary(user2, lib1PubId))) === Json.obj(
+          "name" -> "L1",
+          "slug" -> "l1",
+          "visibility" -> "secret",
+          "image" -> LibraryImageInfo.createInfo(lib1Image),
+          "owner" -> BasicUser.fromUser(user1),
+          "keeps" -> 0,
+          "followers" -> 1,
+          "following" -> true)
       }
     }
 
