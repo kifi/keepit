@@ -713,27 +713,6 @@ a.kifi-res-more-a:active {
 .kifi-lc {
   background: linear-gradient(#333 86px, #fff 86px) border-box;
 }
-.kifi-lc::before {
-  content: '';
-  position: absolute;
-  top: -18px;
-  left: 24px;
-  height: 40px;
-  width: 30px;
-  border-radius: 5px;
-  background: center/auto 18px no-repeat;
-  box-shadow: 1px 1px #fff, 2px 2px #ddd;
-}
-.kifi-lc.kifi-public::before,
-.kifi-ml-lib.kifi-public::before {
-  background-color: #73c885;
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle fill="none" stroke="#fff" cx="8" cy="8" r="7.5"/><path fill="#fff" d="M9.5,13.8v-0.4l-0.1-0.9c0,0-0.1-0.5-0.1-0.6c-0.1-0.1-0.3-0.3-0.5-0.4c-0.2-0.1-0.3-0.1-0.4-0.2c-0.1-0.1-0.2-0.4-0.3-0.6c-0.1-0.2-0.3-0.4-0.3-0.5c0-0.1,0-1.2,0-1.2l0.1-1l0.3-0.2l0.4-0.4l0.2-0.1l0.8,0.2h0.6L10.5,8L11,8.4L11.4,9l0.5,0.2h0.5l0.4,0.4l0.2,0.4l0.1,0.3v0.5L13,11.1c-0.3,0.6-0.8,1.1-1.3,1.5l-0.2,0.1l-0.6,0.4l-0.4,0.3C10.1,13.6,9.8,13.7,9.5,13.8M3.4,4.5l0-0.2c1-1.2,2.4-2,4.1-2.1"/><path fill="#fff" d="M7.5,2.2c0.9-0.1,1.8,0,2.7,0.3l0,0.1L9.4,3.3L8.9,3.7L8.7,4.3L8.4,4.6L7.3,4.8L6.7,5l0,0.4L6.6,5.8l0,0.4l0.1,0.3l0.2,0.3c0,0,0.4,0.3,0.1,0.6c0,0-0.4,0-0.5-0.1C6.3,7.2,5.7,6.9,5.6,6.8C5.5,6.7,5.1,6.6,5.1,6.6L4.7,6.5l-0.4,0l0-0.6L4.2,5.5L4,5.2L3.5,4.9L3.4,4.5"/></svg>');
-}
-.kifi-lc.kifi-secret::before,
-.kifi-ml-lib.kifi-secret::before {
-  background-color: #f26360;
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15.4 20"><path fill="#fff" d="M4.4,5.1c0-1.9,0.8-3.5,3.3-3.5c2.5,0,3.3,1.6,3.3,3.5v2.3h2.2V5.1c0-2.8-2-5.1-5.5-5.1C4.3,0,2.2,2.3,2.2,5.1v2.3h2.2V5.1z"/><path fill="#fff" d="M13.4,7.4H2c-1.1,0-2,0.9-2,1.9v8.8C0,19.1,0.9,20,2,20h11.4c1.1,0,2-0.9,2-1.9V9.3C15.4,8.3,14.5,7.4,13.4,7.4z M13.2,16.9c0,0.7-0.6,1.3-1.4,1.3H3.6c-0.8,0-1.4-0.6-1.4-1.3v-6.1c0-0.7,0.6-1.3,1.4-1.3h8.2c0.8,0,1.4,0.6,1.4,1.3V16.9z"/></svg>');
-}
 .kifi-lc-pic {
   float: left;
   height: 32px;
@@ -954,6 +933,14 @@ a.kifi-res-more-a:active {
   border-radius: 5px;
   background: center/auto 12px no-repeat;
   box-shadow: 1px 1px #fff, 2px 2px #d5d8de;
+}
+.kifi-ml-lib.kifi-public::before {
+  background-color: #73c885;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle fill="none" stroke="#fff" cx="8" cy="8" r="7.5"/><path fill="#fff" d="M9.5,13.8v-0.4l-0.1-0.9c0,0-0.1-0.5-0.1-0.6c-0.1-0.1-0.3-0.3-0.5-0.4c-0.2-0.1-0.3-0.1-0.4-0.2c-0.1-0.1-0.2-0.4-0.3-0.6c-0.1-0.2-0.3-0.4-0.3-0.5c0-0.1,0-1.2,0-1.2l0.1-1l0.3-0.2l0.4-0.4l0.2-0.1l0.8,0.2h0.6L10.5,8L11,8.4L11.4,9l0.5,0.2h0.5l0.4,0.4l0.2,0.4l0.1,0.3v0.5L13,11.1c-0.3,0.6-0.8,1.1-1.3,1.5l-0.2,0.1l-0.6,0.4l-0.4,0.3C10.1,13.6,9.8,13.7,9.5,13.8M3.4,4.5l0-0.2c1-1.2,2.4-2,4.1-2.1"/><path fill="#fff" d="M7.5,2.2c0.9-0.1,1.8,0,2.7,0.3l0,0.1L9.4,3.3L8.9,3.7L8.7,4.3L8.4,4.6L7.3,4.8L6.7,5l0,0.4L6.6,5.8l0,0.4l0.1,0.3l0.2,0.3c0,0,0.4,0.3,0.1,0.6c0,0-0.4,0-0.5-0.1C6.3,7.2,5.7,6.9,5.6,6.8C5.5,6.7,5.1,6.6,5.1,6.6L4.7,6.5l-0.4,0l0-0.6L4.2,5.5L4,5.2L3.5,4.9L3.4,4.5"/></svg>');
+}
+.kifi-ml-lib.kifi-secret::before {
+  background-color: #f26360;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15.4 20"><path fill="#fff" d="M4.4,5.1c0-1.9,0.8-3.5,3.3-3.5c2.5,0,3.3,1.6,3.3,3.5v2.3h2.2V5.1c0-2.8-2-5.1-5.5-5.1C4.3,0,2.2,2.3,2.2,5.1v2.3h2.2V5.1z"/><path fill="#fff" d="M13.4,7.4H2c-1.1,0-2,0.9-2,1.9v8.8C0,19.1,0.9,20,2,20h11.4c1.1,0,2-0.9,2-1.9V9.3C15.4,8.3,14.5,7.4,13.4,7.4z M13.2,16.9c0,0.7-0.6,1.3-1.4,1.3H3.6c-0.8,0-1.4-0.6-1.4-1.3v-6.1c0-0.7,0.6-1.3,1.4-1.3h8.2c0.8,0,1.4,0.6,1.4,1.3V16.9z"/></svg>');
 }
 .kifi-ml-name {
   display: block;
