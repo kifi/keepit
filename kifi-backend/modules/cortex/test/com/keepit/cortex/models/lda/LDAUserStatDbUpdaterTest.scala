@@ -71,6 +71,11 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
         model.numOfEvidence === 2
         model.userTopicMean.get.mean.toList === List(0.15f, 0.85f, 0f)
         (model.userTopicVar.get.value.toList zip List(0.005f, 0.005f, 0f)).forall { case (x, y) => math.abs(x - y) < 1e-3 } === true
+
+        userLDAStatsRepo.getByTopic(ModelVersion[DenseLDA](1), LDATopic(0)).map { _.userId.id } === List()
+        userLDAStatsRepo.getByTopic(ModelVersion[DenseLDA](1), LDATopic(1)).map { _.userId.id } === List(1)
+        userLDAStatsRepo.getByTopic(ModelVersion[DenseLDA](1), LDATopic(2)).map { _.userId.id } === List()
+        userLDAStatsRepo.getByTopic(ModelVersion[DenseLDA](2), LDATopic(1)).map { _.userId.id } === List()
       }
 
     }

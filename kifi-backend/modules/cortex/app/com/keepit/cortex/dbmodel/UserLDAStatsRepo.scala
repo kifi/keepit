@@ -17,6 +17,7 @@ trait UserLDAStatsRepo extends DbRepo[UserLDAStats] {
   def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserLDAStats]
   def getActiveByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserLDAStats]
   def getAllUsers(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[Id[User]]
+  def getByTopic(version: ModelVersion[DenseLDA], firstTopic: LDATopic)(implicit session: RSession): Seq[UserLDAStats]
 }
 
 @Singleton
@@ -58,6 +59,10 @@ class UserLDAStatsRepoImpl @Inject() (
 
   def getAllUsers(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[Id[User]] = {
     (for { r <- rows } yield r.userId).list
+  }
+
+  def getByTopic(version: ModelVersion[DenseLDA], firstTopic: LDATopic)(implicit session: RSession): Seq[UserLDAStats] = {
+    (for { r <- rows if r.version === version && r.firstTopic === firstTopic } yield r).list
   }
 
 }
