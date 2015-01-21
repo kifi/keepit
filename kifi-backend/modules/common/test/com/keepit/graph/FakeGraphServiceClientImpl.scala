@@ -4,7 +4,7 @@ import com.keepit.common.db.{ Id }
 import com.keepit.model._
 
 import scala.concurrent.Future
-import com.keepit.common.amazon.AmazonInstanceId
+import com.keepit.common.amazon.{AmazonInstanceInfo, AmazonInstanceId}
 import com.keepit.graph.manager.{ PrettyGraphState, PrettyGraphStatistics }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.HttpClient
@@ -21,8 +21,8 @@ class FakeGraphServiceClientImpl(
   var uriAndScores: Map[Id[NormalizedURI], Int] = Map.empty
   val connectedUserScoresExpectations = collection.mutable.Map[Id[User], Seq[ConnectedUserScore]]()
 
-  def getGraphStatistics(): Future[Map[AmazonInstanceId, PrettyGraphStatistics]] = Future.successful(Map.empty)
-  def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]] = Future.successful(Map.empty)
+  def getGraphStatistics(): Future[Map[AmazonInstanceInfo, PrettyGraphStatistics]] = Future.successful(Map.empty)
+  def getGraphUpdaterStates(): Future[Map[AmazonInstanceInfo, PrettyGraphState]] = Future.successful(Map.empty)
   def getGraphKinds(): Future[GraphKinds] = Future.successful(GraphKinds.empty)
   def wander(wanderlust: Wanderlust): Future[Collisions] = Future.successful(Collisions.empty)
   def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]] = Future.successful(uriAndScores)

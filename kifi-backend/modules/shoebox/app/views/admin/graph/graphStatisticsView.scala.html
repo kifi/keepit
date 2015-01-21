@@ -1,6 +1,6 @@
-@(allInstances: Seq[com.keepit.common.amazon.AmazonInstanceId],
-  statistics: Map[com.keepit.common.amazon.AmazonInstanceId, com.keepit.graph.manager.PrettyGraphStatistics],
-  states: Map[com.keepit.common.amazon.AmazonInstanceId, com.keepit.graph.manager.PrettyGraphState]
+@(allInstances: Seq[com.keepit.common.amazon.AmazonInstanceInfo],
+  statistics: Map[com.keepit.common.amazon.AmazonInstanceInfo, com.keepit.graph.manager.PrettyGraphStatistics],
+  states: Map[com.keepit.common.amazon.AmazonInstanceInfo, com.keepit.graph.manager.PrettyGraphState]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @views.html.admin.admin("Graph Statistics") {
@@ -8,26 +8,26 @@
   <h3>Vertex Statistics</h3>
     <p><i>Showing by instance: (vertex count, average outgoing degree, average incoming degree)</i></p>
     <table class = "table table-bordered">
-      <tr> <th>Vertex</th> @allInstances.map { instanceId => <th>@instanceId</th> } </tr>
+      <tr> <th>Vertex</th> @allInstances.map { instance => <th>@instance.getName</th> } </tr>
       @statistics.values.flatMap(_.vertexStatistics.keySet).toSeq.sorted.map { vertexType: String =>
-        <tr> <td>@vertexType</td> @allInstances.map { instanceId => <td>@statistics.get(instanceId).flatMap(_.vertexStatistics.get(vertexType))</td> } </tr>
+        <tr> <td>@vertexType</td> @allInstances.map { instance => <td>@statistics.get(instance).flatMap(_.vertexStatistics.get(vertexType))</td> } </tr>
       }
     </table>
 
   <h3>Edge Statistics</h3>
     <p><i>Showing by instance: (edge count, source average outgoing degree, destination average incoming degree)</i></p>
     <table class = "table table-bordered">
-      <tr> <th>Edge</th> @allInstances.map { instanceId => <th>@instanceId</th> } </tr>
+      <tr> <th>Edge</th> @allInstances.map { instance => <th>@instance.getName</th> } </tr>
       @statistics.values.flatMap(_.edgeStatistics.keySet).toSeq.sorted.map { edgeType: (String, String, String) => @edgeType match { case (sourceKind, destinationKind, edgeKind) =>
-        <tr> <td>@sourceKind -> @destinationKind | @edgeKind</td> @allInstances.map { instanceId => <td>@statistics.get(instanceId).flatMap(_.edgeStatistics.get((sourceKind, destinationKind, edgeKind)))</td> } </tr>
+        <tr> <td>@sourceKind -> @destinationKind | @edgeKind</td> @allInstances.map { instance => <td>@statistics.get(instance).flatMap(_.edgeStatistics.get((sourceKind, destinationKind, edgeKind)))</td> } </tr>
       }}
     </table>
 
   <h3>Graph Updater State</h3>
     <table class = "table table-bordered">
-      <tr> <th>GraphUpdate</th> @allInstances.map { instanceId => <th>@instanceId</th> } </tr>
+      <tr> <th>GraphUpdate</th> @allInstances.map { instance => <th>@instance.getName</th> } </tr>
         @states.values.flatMap(_.state.keySet).toSeq.sorted.map { updateKind: String =>
-        <tr> <td>@updateKind</td> @allInstances.map { instanceId => <td>@states.get(instanceId).map(_.state.get(updateKind))</td> } </tr>
+        <tr> <td>@updateKind</td> @allInstances.map { instance => <td>@states.get(instance).map(_.state.get(updateKind))</td> } </tr>
       }
     </table>
 }

@@ -51,6 +51,8 @@ case class AmazonInstanceInfo(
     loadBalancer: Option[String],
     tags: Map[String, String] = Map()) {
 
+  def getName = name getOrElse instanceId.id
+
   lazy val capabilities: Set[String] = {
     tags.get("Capabilities") match {
       case Some(c) => c.split(",").map(_.trim).filter(_.length > 0).toSet
