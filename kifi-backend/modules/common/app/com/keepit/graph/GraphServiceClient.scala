@@ -58,7 +58,7 @@ class GraphServiceClientImpl @Inject() (
     val safeCalls = calls.map { call =>
       call.map(Some(_)).recover {
         case error: Throwable =>
-          log.error("Failed to complete service call:", error)
+          airbrakeNotifier.notify(s"Failed service call was ignored.", error)
           None
       }
     }
