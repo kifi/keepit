@@ -66,7 +66,8 @@ class LibraryMembershipRepoImpl @Inject() (
     def lastViewed = column[Option[DateTime]]("last_viewed", O.Nullable)
     def lastEmailSent = column[Option[DateTime]]("last_email_sent", O.Nullable)
     def listed = column[Boolean]("listed", O.NotNull)
-    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
+    def lastJoinedAt = column[Option[DateTime]]("last_joined_at", O.Nullable)
+    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, lastJoinedAt) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
 
   def table(tag: Tag) = new LibraryMemberTable(tag)

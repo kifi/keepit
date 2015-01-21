@@ -3,13 +3,15 @@ package com.keepit.model
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.{ Id, State }
+import com.keepit.common.time._
 
 object LibraryMembershipFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
   def membership(): PartialLibraryMembership = {
     new PartialLibraryMembership(LibraryMembership(id = Some(Id[LibraryMembership](idx.incrementAndGet())),
-      libraryId = Id[Library](idx.incrementAndGet()), userId = Id[User](idx.incrementAndGet()), access = LibraryAccess.OWNER))
+      libraryId = Id[Library](idx.incrementAndGet()), userId = Id[User](idx.incrementAndGet()),
+      access = LibraryAccess.OWNER, lastJoinedAt = Some(currentDateTime)))
   }
 
   def memberships(count: Int): Seq[PartialLibraryMembership] = List.fill(count)(membership())
