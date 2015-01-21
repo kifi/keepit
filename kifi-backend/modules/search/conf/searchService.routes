@@ -77,6 +77,7 @@ POST        /internal/search/index/dumpDoc/:id        @com.keepit.search.control
 GET         /internal/search/index/refreshWriter        @com.keepit.search.controllers.search.ArticleIndexerController.refreshWriter()
 
 GET         /internal/search/indexInfo/listAll        @com.keepit.search.controllers.search.IndexController.listIndexInfo
+POST        /internal/search/index/library/document  @com.keepit.search.controllers.search.IndexController.getLibraryDocument()
 
 
 POST        /internal/search/search/users        @com.keepit.search.controllers.search.SearchController.searchUsers()

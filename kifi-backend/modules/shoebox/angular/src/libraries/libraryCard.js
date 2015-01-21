@@ -5,10 +5,10 @@ angular.module('kifi')
 .directive('kfLibraryCard', [
   '$FB', '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$twitter', '$window',
   'env', 'friendService', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
-  'routeService', 'userService', 'util',
+  'routeService', 'util',
   function ($FB, $http, $location, $q, $rootScope, $state, $stateParams, $timeout, $twitter, $window,
             env, friendService, libraryService, modalService, profileService, platformService, signupService,
-            routeService, userService, util) {
+            routeService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -54,7 +54,6 @@ angular.module('kifi')
         scope.librarySearchInProgress = false;
         scope.search = { 'text': $stateParams.q || '' };
         scope.pageScrolled = false;
-        scope.inUserProfileBeta = userService.inUserProfileBeta();
 
         //
         // Internal methods.

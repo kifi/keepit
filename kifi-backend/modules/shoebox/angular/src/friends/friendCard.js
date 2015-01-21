@@ -4,8 +4,8 @@ angular.module('kifi')
 
 
 .directive('kfFriendCard', [
-  '$log', 'friendService', 'modalService', 'routeService', 'userService',
-  function ($log, friendService, modalService, routeService, userService) {
+  '$log', 'friendService', 'modalService', 'routeService',
+  function ($log, friendService, modalService, routeService) {
     return {
       scope: {
         'friend': '&'
@@ -22,7 +22,6 @@ angular.module('kifi')
         scope.unfriended = friend.unfriended;
         scope.searchFriend = friend.searchFriend;
         scope.friendProfileUrl = routeService.getProfileUrl(friend.username);
-        scope.inUserProfileBeta = userService.inUserProfileBeta();
 
         scope.unfriend = function () {
           modalService.open({
