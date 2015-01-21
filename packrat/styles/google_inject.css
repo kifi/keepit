@@ -693,7 +693,6 @@ a.kifi-res-more-a:active {
   box-shadow: 1px 2px 16px rgba(0,0,0,.12);
   border: 1px solid rgba(180,180,200,.4);
   border-radius: 4px !important;
-  padding: 38px 24px 10px;
   text-align: left;
   cursor: default;
   opacity: 0;
@@ -710,10 +709,14 @@ a.kifi-res-more-a:active {
   transform: none;
   transition-duration: 60ms;
 }
-.kifi-lc {
-  background: linear-gradient(#333 86px, #fff 86px) border-box;
+.kifi-lc-top {
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+  background-color: #333;
+  background-size: cover;
+  padding: 38px 24px 0;
 }
-.kifi-lc-pic {
+.kifi-lc-owner-pic {
   float: left;
   height: 32px;
   width: 32px;
@@ -732,6 +735,7 @@ a.kifi-res-more-a:active {
   font-weight: bold;
   font-family: Lato,Helvetica,Arial,sans-serif;
   color: #fff;
+  text-shadow: 0 0 8px #000;
 }
 .kifi-lc-owner::before {
   content: 'Library Curator:';
@@ -741,9 +745,14 @@ a.kifi-res-more-a:active {
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
 }
+.kifi-lc-bottom {
+  border-top: 3px solid transparent;
+  padding: 0 24px 10px;
+}
 .kifi-lc-name {
   display: block;
   clear: left;
+  margin-top: -3px;
   padding-left: 14px;
   white-space: nowrap;
   overflow: hidden;
@@ -914,7 +923,6 @@ a.kifi-res-more-a:active {
 .kifi-ml {
   min-width: 130px;
   max-width: 270px;
-  padding: 0;
 }
 .kifi-ml-lib {
   padding: 9px 20px 7px 46px;
