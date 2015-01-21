@@ -4,7 +4,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.amazon.AmazonInstanceInfo
 
 import scala.concurrent.Future
-import scala.util.Random
+import scala.util.{ Failure, Success, Try, Random }
 
 import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.healthcheck.{ StackTrace, AirbrakeError, AirbrakeNotifier }
@@ -150,18 +150,16 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     }
   }.toMap
 
-  protected def collectSuccessfulResponses(calls: Map[AmazonInstanceInfo, Future[ClientResponse]]): Future[Map[AmazonInstanceInfo, ClientResponse]] = {
+  protected def collectResponses(calls: Map[AmazonInstanceInfo, Future[ClientResponse]]): Future[Map[AmazonInstanceInfo, Try[ClientResponse]]] = {
     val safeCalls = calls.mapValues { call =>
-      call.map(Some(_)).recover {
+      call.map(Success(_)).recover {
         case error: Throwable =>
           airbrakeNotifier.notify(s"Failed service call was ignored.", error)
-          None
+          Failure(error)
       }
     }
     val (instances, futureResponses) = safeCalls.toSeq.unzip
-    Future.sequence(futureResponses).map { responses =>
-      (instances zip responses).collect { case (instance, Some(successfulResponse)) => (instance, successfulResponse) }.toMap
-    }
+    Future.sequence(futureResponses).map { responses => (instances zip responses).toMap }
   }
 
   protected def callLeader(call: ServiceRoute, body: JsValue = JsNull, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts) = {
