@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders.LibraryCommander
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
@@ -11,6 +11,7 @@ import com.keepit.common.net.RichRequestHeader
 import com.keepit.common.util.Paginator
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.model._
+import com.keepit.search.SearchServiceClient
 import play.api.mvc.AnyContent
 import views.html
 import com.keepit.common.time._
@@ -48,6 +49,7 @@ class AdminLibraryController @Inject() (
     cortex: CortexServiceClient,
     db: Database,
     clock: Clock,
+    searchClient: SearchServiceClient,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
   def updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User]) = AdminUserPage { implicit request =>
@@ -242,5 +244,13 @@ class AdminLibraryController @Inject() (
     Redirect(request.request.referer)
   }
 
+  def getLuceneDocument(libraryId: Id[Library]) = AdminUserPage.async { implicit request =>
+    val libraryAndMemberships = db.readOnlyMaster { implicit session =>
+      val library = libraryRepo.get(libraryId)
+      val memberships = libraryMembershipRepo.getWithLibraryId(libraryId).map(_.toLibraryMembershipView)
+      LibraryAndMemberships(library, memberships)
+    }
+    searchClient.getLibraryDocument(libraryAndMemberships).map(Ok(_))
+  }
 }
 

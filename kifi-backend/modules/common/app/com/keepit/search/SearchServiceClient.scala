@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.zookeeper._
 import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, BenchmarkResults }
@@ -7,7 +8,7 @@ import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceTy
 import com.keepit.common.db.Id
 import com.keepit.common.net.{ ClientResponse, HttpClient }
 import com.keepit.common.routes.{ ServiceRoute, Search, Common }
-import com.keepit.model.{ Library, NormalizedURI, User }
+import com.keepit.model.{ LibraryAndMemberships, Library, NormalizedURI, User }
 import com.keepit.search.index.{ IndexInfo }
 import com.keepit.search.index.user.UserSearchResult
 import com.keepit.search.index.user.UserSearchRequest
@@ -56,6 +57,7 @@ trait SearchServiceClient extends ServiceClient {
   def getSearchDefaultConfig: Future[SearchConfig]
 
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
+  def getLibraryDocument(libraryAndMemberships: LibraryAndMemberships): Future[Html]
 
   def benchmarks(): Future[BenchmarkResults]
   def version(): Future[String]
@@ -197,6 +199,11 @@ class SearchServiceClientImpl(
 
   def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = {
     call(Search.internal.searchDumpLuceneDocument(id)).map(r => Html(r.body))
+  }
+
+  def getLibraryDocument(libraryAndMemberships: LibraryAndMemberships): Future[Html] = {
+    val payload = Json.toJson(libraryAndMemberships)
+    call(Search.internal.getLibraryDocument(), payload).map(r => Html(r.body))
   }
 
   def benchmarks(): Future[BenchmarkResults] = {
