@@ -25,6 +25,8 @@ import scala.collection.mutable.{ SynchronizedMap, HashMap => MutableMap }
 import scala.concurrent._
 import com.keepit.common.akka.SafeFuture
 
+import scala.util.Failure
+
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
   db: Database,
@@ -308,14 +310,18 @@ class AdminBookmarksController @Inject() (
         }
       }
 
-      db.readWriteBatch(images) { (session, imageWithUri) =>
-        val (image, normalizedUri) = imageWithUri
+      db.readWriteBatch(images) {
+        case (session, imageWithUri) =>
+          val (image, normalizedUri) = imageWithUri
 
-        //this will break if not using forceAllProviders since we have 1485252 images from pagepeeker
-        val path = s3URIImageStore.getImageURL(image, normalizedUri, forceAllProviders = true)
-        if (path.isEmpty) throw new Exception(s"can't find path for image $image")
-        imageInfoRepo.save(image.copy(path = path))(session)
-        processed.incrementAndGet()
+          //this will break if not using forceAllProviders since we have 1485252 images from pagepeeker
+          val path = s3URIImageStore.getImageURL(image, normalizedUri, forceAllProviders = true)
+          if (path.isEmpty) throw new Exception(s"can't find path for image $image")
+          imageInfoRepo.save(image.copy(path = path))(session)
+          processed.incrementAndGet()
+      } foreach {
+        case (_, Failure(ex)) => throw ex
+        case _ =>
       }
       log.info(s"finished a batch, current process count is ${processed.get}")
     }
