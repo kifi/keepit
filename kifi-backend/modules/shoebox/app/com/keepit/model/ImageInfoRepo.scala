@@ -43,7 +43,8 @@ class ImageInfoRepoImpl @Inject() (
     def provider = column[ImageProvider]("provider", O.Nullable)
     def format = column[ImageFormat]("format", O.Nullable)
     def priority = column[Int]("priority", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url.?, name, caption.?, width.?, height.?, sz.?, provider.?, format.?, priority.?) <> ((ImageInfo.apply _).tupled, ImageInfo.unapply)
+    def path = column[String]("path", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url.?, name, caption.?, width.?, height.?, sz.?, provider.?, format.?, priority.?, path.?) <> ((ImageInfo.apply _).tupled, ImageInfo.unapply)
   }
 
   def table(tag: Tag) = new ImageInfoTable(tag)
