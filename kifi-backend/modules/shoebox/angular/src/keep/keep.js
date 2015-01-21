@@ -44,6 +44,7 @@ angular.module('kifi')
         keep: '=',
         library: '=',
         libraries: '=',
+        currentPageOrigin: '@',
         editMode: '=',
         editOptions: '&',
         toggleSelect: '&',

@@ -48,7 +48,7 @@
 
     <div class="kf-keep-who" ng-if="keep.showSocial">
       <div kf-keep-who-text keep="keep"></div>
-      <div kf-keep-who-libs-and-pics keep="keep" class="kf-keep-who-libs-and-pics"></div>
+      <div kf-keep-who-libs-and-pics keep="keep" current-page-origin="{{currentPageOrigin}}" class="kf-keep-who-libs-and-pics"></div>
     </div>
 
     <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep(keep)" adding-tag="addingTag" is-shown="showTags(keep)" ng-show="showTags(keep)" keep="keep" read-only-mode="!isTaggable(keep)" user-logged-in="userLoggedIn" library="library"></div>
