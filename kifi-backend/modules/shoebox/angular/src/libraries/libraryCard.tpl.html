@@ -1,5 +1,5 @@
 <div class="kf-library-card-header-wrapper" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress, 'library-search': librarySearch }">
-  <div class="kf-library-card-header" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress, 'library-search': librarySearch, 'pageScrolled': pageScrolled }" itemscope itemtype="CollectionPage">
+  <div class="kf-library-card-header" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress, 'library-search': librarySearch, 'pageScrolled': pageScrolled }" itemscope itemtype="http://schema.org/CollectionPage">
     <meta itemtype="url" content="{{library.shareUrl}}" />
     <div class="kf-keep library-card" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress }">
       <div ng-show="library.invite && !library.invite.actedOn" class="library-card-invite-header">
