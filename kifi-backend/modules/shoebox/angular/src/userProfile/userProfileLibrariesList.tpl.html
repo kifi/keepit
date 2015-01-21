@@ -17,11 +17,11 @@
         </div>
       </div>
     </a>
-    <div itemscope itemtype="http://data-vocabulary.org/Person">
-      <a class="kf-upl-card-owner" href="{{lib.ownerProfileUrl}}" kf-track-origin origin="{{currentPageOrigin}}/curator" itemprop="url">
-        <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" itemprop="photo" ng-if="libraryType !== 'own'">
+    <div>
+      <a class="kf-upl-card-owner" href="{{lib.ownerProfileUrl}}" kf-track-origin origin="{{currentPageOrigin}}/curator">
+        <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" ng-if="libraryType !== 'own'">
         <span class="kf-upl-card-by">by</span>
-        <span class="kf-upl-card-by-name" itemprop="name">{{lib.owner.firstName}} {{lib.owner.lastName}}</span>
+        <span class="kf-upl-card-by-name">{{lib.owner.firstName}} {{lib.owner.lastName}}</span>
       </a>
     </div>
     <div ng-class="{'kf-upl-counts': true, 'kf-mine': lib.owner.id === me.id}">
