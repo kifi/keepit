@@ -107,7 +107,7 @@ class LDAUserStatDbUpdaterImpl @Inject() (
       val feats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserURIFeatures(userId, version, min_num_words) }
       val (mean, variance) = genMeanAndVar(feats)
       val (firstOpt, secondOpt, thirdOpt, firstScoreOpt) = getAuxiliary(mean)
-      val state = if (feats.size > min_num_evidence) UserLDAStatsStates.ACTIVE else UserLDAStatsStates.NOT_APPLICABLE
+      val state = if (feats.size >= min_num_evidence) UserLDAStatsStates.ACTIVE else UserLDAStatsStates.NOT_APPLICABLE
       val toSave = model match {
         case Some(m) => m.copy(numOfEvidence = feats.size, userTopicMean = mean, userTopicVar = variance, firstTopic = firstOpt, secondTopic = secondOpt, thirdTopic = thirdOpt, firstTopicScore = firstScoreOpt).withUpdateTime(currentDateTime).withState(state)
         case None => UserLDAStats(userId = userId, version = version, numOfEvidence = feats.size, firstTopic = firstOpt, secondTopic = secondOpt, thirdTopic = thirdOpt, firstTopicScore = firstScoreOpt, userTopicMean = mean, userTopicVar = variance, state = state)
