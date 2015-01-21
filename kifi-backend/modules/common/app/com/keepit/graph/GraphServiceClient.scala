@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType }
-import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.common.zookeeper.{ ServiceInstance, ServiceCluster }
 import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.graph.model._
@@ -13,7 +13,7 @@ import scala.concurrent.Future
 import com.keepit.common.time._
 import com.keepit.common.routes.Graph
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.amazon.AmazonInstanceId
+import com.keepit.common.amazon.{ AmazonInstanceInfo, AmazonInstanceId }
 import com.keepit.graph.manager.{ PrettyGraphState, PrettyGraphStatistics }
 import play.api.Mode
 import play.api.Mode.Mode
@@ -27,8 +27,8 @@ import scala.concurrent.duration._
 trait GraphServiceClient extends ServiceClient {
   final val serviceType = ServiceType.GRAPH
 
-  def getGraphStatistics(): Future[Map[AmazonInstanceId, PrettyGraphStatistics]]
-  def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]]
+  def getGraphStatistics(): Future[Map[AmazonInstanceInfo, PrettyGraphStatistics]]
+  def getGraphUpdaterStates(): Future[Map[AmazonInstanceInfo, PrettyGraphState]]
   def getGraphKinds(): Future[GraphKinds]
   def wander(wanderlust: Wanderlust): Future[Collisions]
   def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]]
@@ -65,18 +65,18 @@ class GraphServiceClientImpl @Inject() (
     Future.sequence(safeCalls).map(_.flatten)
   }
 
-  def getGraphStatistics(): Future[Map[AmazonInstanceId, PrettyGraphStatistics]] = {
+  def getGraphStatistics(): Future[Map[AmazonInstanceInfo, PrettyGraphStatistics]] = {
     getSuccessfulResponses(broadcast(Graph.internal.getGraphStatistics(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
       responses.map { response =>
-        response.request.instance.get.instanceInfo.instanceId -> response.json.as[PrettyGraphStatistics]
+        response.request.instance.get.instanceInfo -> response.json.as[PrettyGraphStatistics]
       }.toMap
     }
   }
 
-  def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]] = {
+  def getGraphUpdaterStates(): Future[Map[AmazonInstanceInfo, PrettyGraphState]] = {
     getSuccessfulResponses(broadcast(Graph.internal.getGraphUpdaterState(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
       responses.map { response =>
-        response.request.instance.get.instanceInfo.instanceId -> response.json.as[PrettyGraphState]
+        response.request.instance.get.instanceInfo -> response.json.as[PrettyGraphState]
       }.toMap
     }
   }
