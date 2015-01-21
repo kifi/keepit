@@ -22,7 +22,7 @@ trait ScraperURISummaryCommander {
   // On the way in:
   def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]]
   // On the way out:
-  def fetchFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]]
+  def fetchFromEmbedly(uri: NormalizedURIRef): Future[Option[URISummary]]
 }
 
 class ScraperURISummaryCommanderImpl @Inject() (
@@ -33,8 +33,8 @@ class ScraperURISummaryCommanderImpl @Inject() (
     uriImageCommander: UriImageCommander,
     callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander with Logging {
 
-  def fetchFromEmbedly(nUri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-    fetchPageInfoAndImageInfo(nUri, descriptionOnly) map {
+  def fetchFromEmbedly(nUri: NormalizedURIRef): Future[Option[URISummary]] = {
+    fetchPageInfoAndImageInfo(nUri) map {
       case (Some(pageInfo), imageInfoOpt) =>
         callback.savePageInfo(pageInfo) // no wait
 
@@ -101,8 +101,8 @@ class ScraperURISummaryCommanderImpl @Inject() (
 
   // Internal:
 
-  private def fetchPageInfoAndImageInfo(nUri: NormalizedURIRef, descriptionOnly: Boolean): Future[(Option[PageInfo], Option[ImageInfo])] = {
-    val watch = Stopwatch(s"[embedly] asking for $nUri, descriptionOnly $descriptionOnly")
+  private def fetchPageInfoAndImageInfo(nUri: NormalizedURIRef): Future[(Option[PageInfo], Option[ImageInfo])] = {
+    val watch = Stopwatch(s"[embedly] asking for $nUri")
     val fullEmbedlyInfo = embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
       watch.logTimeWith(s"got info: $embedlyInfoOpt") //this could be lots of logging, should remove it after problems resolved
 
@@ -110,26 +110,22 @@ class ScraperURISummaryCommanderImpl @Inject() (
         embedlyInfo <- embedlyInfoOpt
       } yield {
         val imageInfoOptF: Future[Option[ImageInfo]] = {
-          if (descriptionOnly) {
-            Future.successful(None)
-          } else {
-            val images = embedlyInfo.buildImageInfo(nUri.id)
-            val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.isValidImageUrl) }
+          val images = embedlyInfo.buildImageInfo(nUri.id)
+          val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.isValidImageUrl) }
 
-            // todo: Upload nonBlankImages to S3.
+          // todo: Upload nonBlankImages to S3.
 
-            nonBlankImages.headOption match {
-              case None =>
-                watch.logTimeWith(s"no selected image")
-                Future.successful(None)
-              case Some(image) =>
-                watch.logTimeWith(s"got a selected image : $image")
-                val future = fetchAndSaveImage(nUri, image)
-                future.onComplete { res =>
-                  watch.logTimeWith(s"[success = ${res.isSuccess}}] fetched a selected image for : $image")
-                }
-                future
-            }
+          nonBlankImages.headOption match {
+            case None =>
+              watch.logTimeWith(s"no selected image")
+              Future.successful(None)
+            case Some(image) =>
+              watch.logTimeWith(s"got a selected image : $image")
+              val future = fetchAndSaveImage(nUri, image)
+              future.onComplete { res =>
+                watch.logTimeWith(s"[success = ${res.isSuccess}}] fetched a selected image for : $image")
+              }
+              future
           }
         }
         imageInfoOptF map { imageInfoOpt => (Some(embedlyInfo.toPageInfo(nUri.id)), imageInfoOpt) }
