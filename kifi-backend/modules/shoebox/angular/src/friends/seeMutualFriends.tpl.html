@@ -1,11 +1,9 @@
 <div class="kf-mutual-friends">
   <!-- Person who has mutual friends with the user -->
   <div class="kf-mutual-friends-pymk">
-    <a ng-if="inUserProfileBeta" href="{{userProfileUrl}}" ng-click="close()" kf-track-origin origin="pymk/mutualFriends">
+    <a href="{{userProfileUrl}}" ng-click="close()" kf-track-origin origin="pymk/mutualFriends">
       <img class="kf-mutual-friends-image" title="{{name}}" ng-src="{{pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
     </a>
-    <img ng-if="!inUserProfileBeta" class="kf-mutual-friends-image" title="{{name}}" ng-src="{{pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
-
     <a href="javascript:" class="kf-mutual-friends-action" ng-click="addFriend(id)" ng-class="{clickable: clickable}"><span class="sprite sprite-tag-new-plus-icon"></span>{{actionText}}</a>
     <div class="kf-mutual-friends-pymk-info">
       <div class="kf-mutual-friends-pymk-number"><ng-pluralize count="numMutualFriends" when="{'one': '1 Mutual Friend ', 'other': '{} Mutual Friends '}"></ng-pluralize>With</div>
@@ -17,11 +15,10 @@
   <div class='kf-mutual-friends-friends'>
     <div ng-repeat="mutualFriendPair in mutualFriendsPairs" class="kf-mutual-friend-pair">
       <div ng-repeat="mutualFriend in mutualFriendPair" class="kf-mutual-friend-card">
-        <a ng-if="inUserProfileBeta" href="{{mutualFriend.profileUrl}}" ng-click="close()"
+        <a href="{{mutualFriend.profileUrl}}" ng-click="close()"
           kf-track-origin origin="pymk/mutualFriends">
           <img class="kf-mutual-friends-image" title="{{mutualFriend.firstName}} {{mutualFriend.lastName}}" ng-src="{{mutualFriend.pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
         </a>
-        <img ng-if="!inUserProfileBeta" class="kf-mutual-friends-image" title="{{mutualFriend.firstName}} {{mutualFriend.lastName}}" ng-src="{{mutualFriend.pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
         <div class="kf-mutual-friend-card-info">
           <div class="kf-mutual-friend-card-name">{{mutualFriend.firstName}} {{mutualFriend.lastName}}</div>
           <div><ng-pluralize count="mutualFriend.numFriends" when="{'one': '1 friend ', 'other': '{} friends '}"></ng-pluralize>on Kifi</div>

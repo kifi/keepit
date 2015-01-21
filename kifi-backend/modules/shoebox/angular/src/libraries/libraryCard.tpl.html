@@ -41,11 +41,10 @@
 
         <div class="kf-keep-lib-info">
           <div class="kf-keep-lib-owner" itemscope itemtype="http://data-vocabulary.org/Person">
-            <a ng-if="inUserProfileBeta" href="{{library.owner.profileUrl}}" itemprop="url"
+            <a href="{{library.owner.profileUrl}}" itemprop="url"
                kf-track-origin origin="{{currentPageOrigin}}/curator">
               <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
             </a>
-            <img ng-if="!inUserProfileBeta" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image" itemprop="photo" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
             <div class="kf-keep-lib-owner-text">
               <div class="kf-keep-lib-curator">Curator:</div>
               <div class="kf-keep-lib-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
@@ -81,7 +80,7 @@
             <div class="kf-keep-lib-follower-preview">
               <div class="kf-keep-lib-follower-pics">
                 <span ng-repeat="follower in followersToShow" itemscope itemtype="http://data-vocabulary.org/Person">
-                  <a ng-if="inUserProfileBeta" href="{{follower.profileUrl}}" itemprop="url"
+                  <a href="{{follower.profileUrl}}" itemprop="url"
                      kf-track-origin origin="{{currentPageOrigin}}/follower">
                     <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
                       class="kf-keep-lib-user-image"
@@ -92,17 +91,7 @@
                       ng-click="hideTooltip()"
                       itemprop="photo"
                       alt="{{follower.firstName}} {{follower.lastName}}"
-                    ><meta itemprop="name" content="{{follower.firstName}} {{follower.lastName}}" /></a><img
-                      ng-if="!inUserProfileBeta" ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
-                      class="kf-keep-lib-user-image"
-                      kf-who-tooltip
-                      keeper="follower"
-                      ng-mouseenter="showTooltip()"
-                      ng-mouseleave="hideTooltip()"
-                      ng-click="hideTooltip()"
-                      itemprop="photo"
-                      alt="{{follower.firstName}} {{follower.lastName}}"
-                    ><meta itemprop="name" content="{{follower.firstName}} {{follower.lastName}}" />
+                    ><meta itemprop="name" content="{{follower.firstName}} {{follower.lastName}}" /></a>
                 </span>
               </div>
               <div ng-if="numAdditionalFollowers" class="kf-keep-lib-additional-followers" ng-click="showFollowers()">

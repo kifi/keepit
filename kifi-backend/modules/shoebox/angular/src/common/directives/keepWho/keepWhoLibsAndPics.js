@@ -62,8 +62,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepWhoLib', ['$rootScope', 'platformService', 'userService', '$location',
-  function ($rootScope, platformService, userService, $location) {
+.directive('kfKeepWhoLib', ['$rootScope', 'platformService', '$location',
+  function ($rootScope, platformService, $location) {
     return {
       restrict: 'A',
       replace: true,
@@ -79,14 +79,13 @@ angular.module('kifi')
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedLibraryAttribution' });
         };
         scope.isBot = platformService.isBot();
-        scope.inUserProfileBeta = userService.inUserProfileBeta();
       }
     };
   }
 ])
 
-.directive('kfKeepWhoPic', ['routeService', 'userService',
-  function (routeService, userService) {
+.directive('kfKeepWhoPic', ['routeService',
+  function (routeService) {
     return {
       restrict: 'A',
       replace: true,
@@ -96,7 +95,6 @@ angular.module('kifi')
         currentPageOrigin: '@'
       },
       link: function (scope) {
-        scope.inUserProfileBeta = userService.inUserProfileBeta();
         scope.keeper.profileUrl = routeService.getProfileUrl(scope.keeper.username);
       }
     };

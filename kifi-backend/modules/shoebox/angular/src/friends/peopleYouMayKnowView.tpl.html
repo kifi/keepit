@@ -13,10 +13,9 @@
         </span>
       </div>
     </div>
-    <a ng-if="inUserProfileBeta" href="{{person.profileUrl}}" kf-track-origin origin="pymk/pymk">
+    <a href="{{person.profileUrl}}" kf-track-origin origin="pymk/pymk">
       <img class="kf-pymk-image" title="{{person.fullName}}" ng-src="{{person.pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
     </a>
-    <img ng-if="!inUserProfileBeta" class="kf-pymk-image" title="{{person.fullName}}" ng-src="{{person.pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
   </div>
   <a href="/invite" class="kf-pymk-invite-link">See more &#0187;</a>
  </div>

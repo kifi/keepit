@@ -5,10 +5,9 @@
 
       <div ng-if="!result.custom">
         <div ng-if="result.networkType !== 'email'">
-          <a ng-if="inUserProfileBeta" href="{{result.userProfileUrl}}">
+          <a href="{{result.userProfileUrl}}">
             <img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="social-invite-image">
           </a>
-          <img ng-if="!inUserProfileBeta" ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="social-invite-image">
         </div>
 
         <div ng-if="!result.status">

@@ -14,13 +14,6 @@ angular.module('kifi')
           deferred.reject(res);
         });
         return deferred.promise;
-      },
-
-      // Returns true if the user is in user profiles beta experiment or if the
-      // user profiles beta query parameter is set. Temporarily lodged here because
-      // code that needs this also usually needs userService.
-      inUserProfileBeta: function () {
-        return true;
       }
     };
   }
