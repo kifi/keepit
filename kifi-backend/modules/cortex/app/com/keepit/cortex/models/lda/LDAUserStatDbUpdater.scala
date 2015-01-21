@@ -62,6 +62,8 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   private val min_num_words = 50
   protected val min_num_evidence = 5
 
+  type Auxiliary = (Option[LDATopic], Option[LDATopic], Option[LDATopic], Option[Float]) // 1st, 2nd, 3rd topic; 1st topic score
+
   def update(): Unit = {
     representer.versions.foreach { implicit version =>
       val tasks = fetchTasks
@@ -104,10 +106,11 @@ class LDAUserStatDbUpdaterImpl @Inject() (
     if (shouldComputeFeature(model, numFeat)) {
       val feats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserURIFeatures(userId, version, min_num_words) }
       val (mean, variance) = genMeanAndVar(feats)
+      val (firstOpt, secondOpt, thirdOpt, firstScoreOpt) = getAuxiliary(mean)
       val state = if (feats.size > min_num_evidence) UserLDAStatsStates.ACTIVE else UserLDAStatsStates.NOT_APPLICABLE
       val toSave = model match {
-        case Some(m) => m.copy(numOfEvidence = feats.size, userTopicMean = mean, userTopicVar = variance).withUpdateTime(currentDateTime).withState(state)
-        case None => UserLDAStats(userId = userId, version = version, numOfEvidence = feats.size, userTopicMean = mean, userTopicVar = variance, state = state)
+        case Some(m) => m.copy(numOfEvidence = feats.size, userTopicMean = mean, userTopicVar = variance, firstTopic = firstOpt, secondTopic = secondOpt, thirdTopic = thirdOpt, firstTopicScore = firstScoreOpt).withUpdateTime(currentDateTime).withState(state)
+        case None => UserLDAStats(userId = userId, version = version, numOfEvidence = feats.size, firstTopic = firstOpt, secondTopic = secondOpt, thirdTopic = thirdOpt, firstTopicScore = firstScoreOpt, userTopicMean = mean, userTopicVar = variance, state = state)
       }
       db.readWrite { implicit s => userLDAStatsRepo.save(toSave) }
     }
@@ -132,6 +135,17 @@ class LDAUserStatDbUpdaterImpl @Inject() (
       val (mean, std) = getMeanAndStd(vecs)
       val variance = std.map { x => x * x }
       (Some(UserTopicMean(mean)), Some(UserTopicVar(variance)))
+    }
+  }
+
+  private def getAuxiliary(userTopic: Option[UserTopicMean]): Auxiliary = {
+    userTopic match {
+      case Some(mean) =>
+        val sorted = mean.mean.zipWithIndex.sortBy(-_._1).take(3)
+        val Array(first, second, third) = sorted.map { _._2 }
+        val firstTopicScore = sorted(0)._1
+        (Some(LDATopic(first)), Some(LDATopic(second)), Some(LDATopic(third)), Some(firstTopicScore))
+      case None => (None, None, None, None)
     }
   }
 }
