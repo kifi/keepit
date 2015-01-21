@@ -15,6 +15,7 @@ import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[ImageInfoRepoImpl])
 trait ImageInfoRepo extends Repo[ImageInfo] with SeqNumberFunction[ImageInfo] {
+  def getWithoutPath(count: Int)(implicit ro: RSession): Seq[ImageInfo]
   def getByUri(id: Id[NormalizedURI])(implicit ro: RSession): Seq[ImageInfo]
   def getByUriWithPriority(id: Id[NormalizedURI], minSize: ImageSize, provider: Option[ImageProvider])(implicit ro: RSession): Option[ImageInfo]
 
@@ -110,6 +111,10 @@ class ImageInfoRepoImpl @Inject() (
     }
     // pick the latest inactive row for update
     (for (f <- rows if f.uriId === info.uriId && f.state === INACTIVE) yield f).sortBy(_.updatedAt desc).map(_.id).firstOption()
+  }
+
+  def getWithoutPath(count: Int)(implicit ro: RSession): Seq[ImageInfo] = {
+    (for (f <- rows if f.path.isNull) yield f).take(count).list()
   }
 
   def getByUri(id: Id[NormalizedURI])(implicit ro: RSession): Seq[ImageInfo] = {

@@ -1,5 +1,7 @@
 package com.keepit.controllers.admin
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.google.inject.Inject
 import com.keepit.commanders.{ CollectionCommander, KeepsCommander, LibraryCommander, RichWhoKeptMyKeeps, URISummaryCommander }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
@@ -8,11 +10,13 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
+import com.keepit.common.store.S3URIImageStore
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepStates, _ }
 import com.keepit.scraper.ScrapeScheduler
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.mvc.AnyContent
 import views.html
@@ -28,6 +32,8 @@ class AdminBookmarksController @Inject() (
   keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
+  s3URIImageStore: S3URIImageStore,
+  imageInfoRepo: ImageInfoRepo,
   scrapeRepo: ScrapeInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   libraryRepo: LibraryRepo,
@@ -292,4 +298,29 @@ class AdminBookmarksController @Inject() (
       NotFound(Json.obj("error" -> "not_found"))
     }
   }
+
+  def fillImageInfoPath(count: Int = 10, pageSize: Int = 1000) = AdminUserPage { implicit request =>
+    val processed = new AtomicInteger(0)
+    while (processed.get < count) {
+      val images = db.readOnlyMaster { implicit s =>
+        imageInfoRepo.getWithoutPath(pageSize) map { image =>
+          image -> uriRepo.get(image.uriId).externalId
+        }
+      }
+
+      db.readWriteBatch(images) { (session, imageWithUri) =>
+        val (image, normalizedUri) = imageWithUri
+
+        //this will break if not using forceAllProviders since we have 1485252 images from pagepeeker
+        val path = s3URIImageStore.getImageURL(image, normalizedUri, forceAllProviders = true)
+        if (path.isEmpty) throw new Exception(s"can't find path for image $image")
+        imageInfoRepo.save(image.copy(path = path))(session)
+        processed.incrementAndGet()
+      }
+      log.info(s"finished a batch, current process count is ${processed.get}")
+    }
+
+    Ok(s"done with ${processed.get} images")
+  }
+
 }
