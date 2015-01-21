@@ -431,4 +431,21 @@ class LDACommander @Inject() (
     }
   }
 
+  def fixUserTopicIds() = {
+    val models = db.readOnlyReplica { implicit s => userLDAStatRepo.all() }
+    models.grouped(100).foreach { group =>
+      db.readWrite { implicit s =>
+        group.foreach { model =>
+          if (model.userTopicMean.isDefined) {
+            val mean = model.userTopicMean.get
+            val sorted = mean.mean.zipWithIndex.sortBy(-_._1).take(3)
+            val Array(first, second, third) = sorted.map { _._2 }
+            val firstTopicScore = sorted(0)._1
+            val toSave = model.copy(firstTopic = Some(LDATopic(first)), secondTopic = Some(LDATopic(second)), thirdTopic = Some(LDATopic(third)), firstTopicScore = Some(firstTopicScore))
+            userLDAStatRepo.save(toSave)
+          }
+        }
+      }
+    }
+  }
 }

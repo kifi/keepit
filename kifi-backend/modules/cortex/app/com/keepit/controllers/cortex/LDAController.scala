@@ -209,4 +209,9 @@ class LDAController @Inject() (
     Ok
   }
 
+  def fixUserTopicIds() = Action { request =>
+    lda.fixUserTopicIds()
+    Ok
+  }
+
 }
