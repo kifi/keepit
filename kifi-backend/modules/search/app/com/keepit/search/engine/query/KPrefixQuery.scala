@@ -26,7 +26,7 @@ class KPrefixQuery(val nameValueField: String, val prefixField: String, val term
 
   protected val name = "KPrefix"
 
-  override def toString(s: String) = "prefix(%s)".format(terms.mkString(" "))
+  override def toString(s: String) = s"prefix($prefixField-$nameValueField:${terms.mkString(" ")})"
 
   override def createWeight(searcher: IndexSearcher): Weight = new KPrefixWeight(this, searcher)
 
