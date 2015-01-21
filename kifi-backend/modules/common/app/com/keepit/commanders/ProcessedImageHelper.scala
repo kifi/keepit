@@ -13,13 +13,10 @@ import com.keepit.common.net.{ URI, WebService }
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store.ImageSize
 import com.keepit.model._
-import org.imgscalr.Scalr
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.iteratee.Iteratee
-import play.api.libs.ws.WS
-import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.iteratee.Iteratee
 
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
