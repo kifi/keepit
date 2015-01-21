@@ -84,6 +84,7 @@ class ExtLibraryController @Inject() (
             "name" -> library.name,
             "slug" -> library.slug,
             "visibility" -> library.visibility,
+            "color" -> library.color,
             "image" -> imageOpt.map(LibraryImageInfo.createInfo),
             "owner" -> owner,
             "keeps" -> keepCount,
