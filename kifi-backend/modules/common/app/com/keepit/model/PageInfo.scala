@@ -170,7 +170,8 @@ case class ImageInfo(
     size: Option[Int] = None,
     provider: Option[ImageProvider] = None,
     format: Option[ImageFormat] = None,
-    priority: Option[Int] = None) extends ModelWithState[ImageInfo] with ModelWithSeqNumber[ImageInfo] {
+    priority: Option[Int] = None,
+    path: Option[String] = None) extends ModelWithState[ImageInfo] with ModelWithSeqNumber[ImageInfo] {
   val defaultImageFormat = ImageFormat.JPG
   def withId(imageInfoId: Id[ImageInfo]) = copy(id = Some(imageInfoId))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
@@ -200,7 +201,8 @@ object ImageInfo {
     (__ \ 'size).formatNullable[Int] and
     (__ \ 'provider).formatNullable[ImageProvider] and
     (__ \ 'format).formatNullable[ImageFormat] and
-    (__ \ 'priority).formatNullable[Int]
+    (__ \ 'priority).formatNullable[Int] and
+    (__ \ 'path).formatNullable[String]
   )(ImageInfo.apply _, unlift(ImageInfo.unapply))
 }
 

@@ -4,7 +4,7 @@ import com.keepit.common.db.{ Id }
 import com.keepit.model._
 
 import scala.concurrent.Future
-import com.keepit.common.amazon.{AmazonInstanceInfo, AmazonInstanceId}
+import com.keepit.common.amazon.{ AmazonInstanceInfo, AmazonInstanceId }
 import com.keepit.graph.manager.{ PrettyGraphState, PrettyGraphStatistics }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.HttpClient
