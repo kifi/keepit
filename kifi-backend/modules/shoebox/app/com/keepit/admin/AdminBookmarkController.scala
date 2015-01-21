@@ -310,7 +310,9 @@ class AdminBookmarksController @Inject() (
 
       db.readWriteBatch(images) { (session, imageWithUri) =>
         val (image, normalizedUri) = imageWithUri
-        val path = s3URIImageStore.getImageURL(image, normalizedUri)
+
+        //this will break if not using forceAllProviders since we have 1485252 images from pagepeeker
+        val path = s3URIImageStore.getImageURL(image, normalizedUri, forceAllProviders = true)
         if (path.isEmpty) throw new Exception(s"can't find path for image $image")
         imageInfoRepo.save(image.copy(path = path))(session)
         processed.incrementAndGet()

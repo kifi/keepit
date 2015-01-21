@@ -57,7 +57,7 @@ class URISummaryCommanderTestImageFetcher extends ImageFetcher {
 
 case class URISummaryCommanderTestS3URIImageStore() extends S3URIImageStore {
   def storeImage(info: ImageInfo, rawImage: BufferedImage, extNormUriId: ExternalId[NormalizedURI]): Try[(String, Int)] = Success((FakeS3URIImageStore.placeholderImageURL, FakeS3URIImageStore.placeholderSize))
-  def getImageURL(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI]): Option[String] = imageInfo.url // returns the original ImageInfo url (important!)
+  def getImageURL(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI], forceAllProviders: Boolean = false): Option[String] = imageInfo.url // returns the original ImageInfo url (important!)
 }
 
 case class MockScraperServiceClient(override val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends FakeScraperServiceClientImpl(airbrakeNotifier, scheduler) {
