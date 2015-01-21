@@ -26,7 +26,7 @@ class KPrefixQuery(val nameValueField: String, val prefixField: String, val term
 
   protected val name = "KPrefix"
 
-  override def toString(s: String) = s"prefix($prefixField-$nameValueField:${terms.mkString(" ")})"
+  override def toString(s: String) = s"prefix($prefixField-$nameValueField: ${terms.mkString(" & ")})"
 
   override def createWeight(searcher: IndexSearcher): Weight = new KPrefixWeight(this, searcher)
 
@@ -66,7 +66,7 @@ class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extend
   }
 
   override def getWeights(out: ArrayBuffer[(Weight, Float)]): Unit = {
-    booleanWeight.getWeights(out)
+    out += ((this, 1.0f))
   }
 }
 
