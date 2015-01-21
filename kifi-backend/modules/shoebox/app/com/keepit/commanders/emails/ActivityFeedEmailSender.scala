@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.ROSession
 import com.keepit.common.db.slick.Database
@@ -51,7 +52,7 @@ case class KeepInfoView(private val keepInfo: KeepInfo) {
 }
 
 case class ActivityEmailData(
-  newKeepsInLibraries: Seq[LibraryInfoView],
+  newKeepsInLibraries: Seq[(LibraryInfoView, Seq[KeepInfoView])],
   libraryInvites: Seq[LibraryInviteInfoView],
   libraryRecos: Seq[FullLibRecoInfo],
   uriRecos: Seq[FullUriRecoInfo],
@@ -72,10 +73,12 @@ class ActivityFeedEmailSenderImpl @Inject() (
     libraryQualityHelper: LibraryQualityHelper,
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
+    keepRepo: KeepRepo,
     friendRequestRepo: FriendRequestRepo,
     userConnectionRepo: UserConnectionRepo,
     db: Database,
-    private val airbrake: AirbrakeNotifier) extends ActivityFeedEmailSender with Logging {
+    private val airbrake: AirbrakeNotifier,
+    private implicit val publicIdConfig: PublicIdConfiguration) extends ActivityFeedEmailSender with Logging {
 
   val reactiveLock = new ReactiveLock(8)
 
@@ -100,7 +103,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     }
 
     for {
-      newKeeps <- feed.getNewKeepsFromFollowedLibraries()
+      newKeepsInLibraries <- feed.getNewKeepsFromFollowedLibraries()
       unreadMessages <- feed.getUnreadMessages()
       pendingLibInvites <- feed.getPendingLibraryInvitations()
       pendingFriendRequests <- feed.getPendingFriendRequests()
@@ -110,7 +113,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
       libRecos <- feed.getLibraryRecommendations()
     } yield {
       val activityData = ActivityEmailData(
-        newKeepsInLibraries = newKeeps map { case (libId, info) => BaseLibraryInfoView(libId, info) },
+        newKeepsInLibraries = newKeepsInLibraries,
         libraryInvites = pendingLibInvites map {
           case (libId, info, invites) =>
             val inviterUserIds = invites map (_.inviterId)
@@ -161,7 +164,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
     // max number of libraries to show creaed by friends
     val maxFriendsWhoCreatedLibraries = 3
 
-    val minLibraryAge = currentDateTime.minus(Duration.standardDays(7))
+    val minRecordAge = currentDateTime.minus(Duration.standardDays(7))
+
+    val maxNewKeepsPerLibrary = 5
 
     private lazy val (followedLibraries: Seq[Library], invitedLibraries: Seq[(LibraryInvite, Library)]) = {
       val (rawUserLibs, rawInvitedLibs) = libraryCommander.getLibrariesByUser(toUserId)
@@ -179,8 +184,24 @@ class ActivityFeedEmailSenderImpl @Inject() (
         libraries = libraries, withKeepTime = true)
     }
 
-    def getNewKeepsFromFollowedLibraries(): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
-      createFullLibraryInfos(followedLibraries)
+    def getNewKeepsFromFollowedLibraries(): Future[Seq[(LibraryInfoView, Seq[KeepInfoView])]] = {
+      val libraryKeeps = db.readOnlyReplica { implicit session =>
+        followedLibraries map { library =>
+          val keeps = keepRepo.getByLibrary(library.id.get, 0, maxNewKeepsPerLibrary) filter { keep =>
+            keep.createdAt > minRecordAge
+          }
+          library -> keeps
+        }
+      }
+
+      val libInfosF = createFullLibraryInfos(libraryKeeps.map(_._1))
+      libInfosF map { libInfos =>
+        libInfos.zip(libraryKeeps) map {
+          case ((libId, libInfo), (lib, keeps)) =>
+            val keepInfos = keeps map { k => KeepInfoView(KeepInfo.fromKeep(k)) }
+            BaseLibraryInfoView(libId, libInfo) -> keepInfos
+        }
+      }
     }
 
     def getUnreadMessages(): Future[Unit] = {
@@ -260,7 +281,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     protected def filterAndSortLibrariesByAge(libraries: Seq[Library])(implicit db: ROSession) = {
       val onceFilteredLibraries = libraries filter { library =>
         library.visibility == LibraryVisibility.PUBLISHED &&
-          library.createdAt > minLibraryAge &&
+          library.createdAt > minRecordAge &&
           !libraryQualityHelper.isBadLibraryName(library.name)
       }
 

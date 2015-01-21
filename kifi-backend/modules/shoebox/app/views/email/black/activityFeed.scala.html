@@ -6,13 +6,13 @@ Hi @fullName(toUserId)
 <br/><br/>
 
 <h1>Libraries you follow have new Keeps </h1>
-@activityData.newKeepsInLibraries.map { lib =>
+@activityData.newKeepsInLibraries.map { case (lib, keeps) =>
     <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
     @lib.ownerName<br/>
     @lib.description.getOrElse("")<br/>
 
     Keeps:<br/>
-    @lib.keeps.map { keep =>
+    @keeps.map { keep =>
         <a href="@keep.url">@keep.title</a><br/>
         @keep.imageUrlAndWidth.map { case (url, width) =>
         <img src="@toHttpsUrl(url)" alt="@keep.title" width="@width"/><br/>
