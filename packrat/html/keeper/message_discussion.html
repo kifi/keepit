@@ -1,7 +1,9 @@
 <div class="kifi-message-sent" data-id="{{id}}">
   <div class="kifi-message-status"></div>
   {{#sender.isUser}}
-    <img class="kifi-message-pic" src="{{cdnBase}}/users/{{sender.id}}/pics/100/{{sender.pictureName}}"/>
+    <a class="kifi-message-pic-a" href="https://www.kifi.com/{{sender.username}}" target="_blank">{{!
+    }}<img class="kifi-message-pic" src="{{cdnBase}}/users/{{sender.id}}/pics/100/{{sender.pictureName}}"/>{{!
+  }}</a>
   {{/sender.isUser}}
   {{^sender.isUser}}
     <span class="kifi-message-pic-email kifi-participant-background-{{sender.color}}">{{sender.initial}}</span>
@@ -9,10 +11,17 @@
   <div class="kifi-message-body">
     <div class="kifi-message-top">
       {{>messageTip}}
-      <div class="kifi-message-name">
-        {{#sender.isUser}}{{sender.firstName}} {{sender.lastName}}{{/sender.isUser}}
-        {{#sender.isEmail}}{{sender.id}}{{/sender.isEmail}}
-      </div>
+        {{#sender.isUser}}
+          <a class="kifi-message-name" href="https://www.kifi.com/{{sender.username}}" target="_blank">
+            {{sender.firstName}} {{sender.lastName}}
+          </a>
+        {{/sender.isUser}}
+        {{#sender.isEmail}}
+          <div class="kifi-message-name">
+            {{sender.id}}
+          </div>
+        {{/sender.isEmail}}
+      </a>
     </div>
     {{#formatMessage}}{{{text}}}{{/formatMessage}}
   </div>

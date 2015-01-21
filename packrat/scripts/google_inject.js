@@ -516,6 +516,14 @@ if (searchUrlRe.test(document.URL)) !function () {
         var val = $v.data('val');
         search(false, {who: val});
       }
+    }).on('click', '.kifi-res-user', function () {
+      var a = this, url = a.href;
+      if (url.indexOf('?') < 0) {
+        a.href = url + '?o=xsr';
+        setTimeout(function () {
+          a.href = url;
+        });
+      }
     }).hoverfu('.kifi-res-user', function (configureHover) {
       var $a = $(this);
       var i = $a.prevAll('.kifi-res-user').length;
@@ -527,8 +535,7 @@ if (searchUrlRe.test(document.URL)) !function () {
         configureHover(html, {
           position: {my: 'left-46 bottom-16', at: 'left top', of: $a, collision: 'none'},
           canLeaveFor: 600,
-          hideAfter: 4000,
-          click: 'toggle'});
+          hideAfter: 4000});
       });
     }).hoverfu('.kifi-res-users-n', function (configureHover) {
       var $a = $(this);
