@@ -10,13 +10,13 @@
     </div>
     <a ng-if="inUserProfileBeta" class="kf-slc-card-owner" href="{{library.ownerProfileUrl}}"
       kf-track-origin origin="libraryPage.RelatedLibraries/curator">
-      itemscope itemtype="http://data-vocabulary.org/Person" itemprop="url">
-      <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}" itemprop="photo">
+      itemscope itemtype="http://schema.org/Person" itemprop="url">
+      <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}" itemprop="image">
       <span class="kf-slc-card-by">by</span>
       <span class="kf-slc-card-by-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</span>
     </a>
-    <div ng-if="!inUserProfileBeta" class="kf-slc-card-owner" itemscope itemtype="http://data-vocabulary.org/Person">
-      <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}" itemprop="photo">
+    <div ng-if="!inUserProfileBeta" class="kf-slc-card-owner" itemscope itemtype="http://schema.org/Person">
+      <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}" itemprop="image">
       <span class="kf-slc-card-by">by</span>
       <span class="kf-slc-card-by-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</span>
     </div>
