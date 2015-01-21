@@ -54,30 +54,15 @@ class GraphServiceClientImpl @Inject() (
 
   private[this] val connectedUserScoresReqConsolidator = new RequestConsolidator[(Id[User], Boolean), Seq[ConnectedUserScore]](1 minutes)
 
-  private def getSuccessfulResponses(calls: Seq[Future[ClientResponse]]): Future[Seq[ClientResponse]] = {
-    val safeCalls = calls.map { call =>
-      call.map(Some(_)).recover {
-        case error: Throwable =>
-          airbrakeNotifier.notify(s"Failed service call was ignored.", error)
-          None
-      }
-    }
-    Future.sequence(safeCalls).map(_.flatten)
-  }
-
   def getGraphStatistics(): Future[Map[AmazonInstanceInfo, PrettyGraphStatistics]] = {
-    getSuccessfulResponses(broadcast(Graph.internal.getGraphStatistics(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
-      responses.map { response =>
-        response.request.instance.get.instanceInfo -> response.json.as[PrettyGraphStatistics]
-      }.toMap
+    collectSuccessfulResponses(broadcast(Graph.internal.getGraphStatistics(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
+      responses.mapValues(_.json.as[PrettyGraphStatistics])
     }
   }
 
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceInfo, PrettyGraphState]] = {
-    getSuccessfulResponses(broadcast(Graph.internal.getGraphUpdaterState(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
-      responses.map { response =>
-        response.request.instance.get.instanceInfo -> response.json.as[PrettyGraphState]
-      }.toMap
+    collectSuccessfulResponses(broadcast(Graph.internal.getGraphUpdaterState(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
+      responses.mapValues(_.json.as[PrettyGraphState])
     }
   }
 
