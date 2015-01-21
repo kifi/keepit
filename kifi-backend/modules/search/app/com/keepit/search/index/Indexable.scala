@@ -1,5 +1,6 @@
 package com.keepit.search.index
 
+import com.keepit.common.CollectionHelpers
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.net._
 import com.keepit.model.User
@@ -125,14 +126,15 @@ trait Indexable[T, S] extends Logging {
   }
 
   protected def buildPrefixField(fieldName: String, fieldValue: String, maxPrefixLength: Int, minPrefixLength: Int = 1): Field = {
-    val tokens = PrefixFilter.tokenize(fieldValue).toSet
+    val tokens = PrefixFilter.tokenize(fieldValue)
     val prefixes = for {
       token <- tokens
       prefixLength <- minPrefixLength to maxPrefixLength
     } yield {
       token.take(prefixLength)
     }
-    buildIteratorField(fieldName, prefixes.toIterator)(identity)
+    val uniquePrefixes = CollectionHelpers.dedupBy(prefixes)(identity)
+    buildIteratorField(fieldName, uniquePrefixes.toIterator)(identity)
   }
 
   def buildIdValueField(typedId: Id[T]): Field = buildIdValueField(Indexer.idValueFieldName, typedId)
