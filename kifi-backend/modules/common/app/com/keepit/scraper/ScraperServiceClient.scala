@@ -121,7 +121,7 @@ case class ScraperThreadInstanceInfo(info: AmazonInstanceInfo, jobInfo: Either[S
 
 @json case class NormalizedURIRef(id: Id[NormalizedURI], url: String, externalId: ExternalId[NormalizedURI])
 
-@json case class PersistedImageVersion(width: Int, height: Int, imageUrl: String)
+@json case class PersistedImageVersion(width: Int, height: Int, path: String)
 @json case class PersistedImageRef(sizes: Seq[PersistedImageVersion], caption: Option[String])
 @json case class URIPreviewFetchResult(
   pageUrl: String,

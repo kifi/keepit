@@ -9,9 +9,9 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.performance._
 import com.keepit.common.store.S3URIImageStore
-import com.keepit.model.{ ImageInfo, PageInfo, URISummary }
+import com.keepit.model.{ ImageStoreFailureWithException, ImageInfo, PageInfo, URISummary }
 import com.keepit.scraper.embedly.{ EmbedlyClient, EmbedlyImage }
-import com.keepit.scraper.{ NormalizedURIRef, ShoeboxDbCallbackHelper, URIPreviewFetchResult }
+import com.keepit.scraper._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
@@ -30,6 +30,7 @@ class ScraperURISummaryCommanderImpl @Inject() (
     embedlyClient: EmbedlyClient,
     uriImageStore: S3URIImageStore,
     airbrake: AirbrakeNotifier,
+    uriImageCommander: UriImageCommander,
     callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander with Logging {
 
   def fetchFromEmbedly(nUri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]] = {
@@ -53,24 +54,48 @@ class ScraperURISummaryCommanderImpl @Inject() (
   }
 
   def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]] = {
-    embedlyClient.getEmbedlyInfo(url).map {
+    embedlyClient.getEmbedlyInfo(url).flatMap {
       case Some(embedlyResult) =>
         val primaryImage = embedlyResult.images.find(img => ScraperURISummaryCommander.isValidImage(img))
-        // todo: Resize and persist
 
-        Some(URIPreviewFetchResult(
-          pageUrl = url,
-          title = embedlyResult.title,
-          description = embedlyResult.description,
-          authors = embedlyResult.authors,
-          publishedAt = embedlyResult.published,
-          safe = embedlyResult.safe,
-          lang = embedlyResult.lang,
-          faviconUrl = embedlyResult.faviconUrl.collect { case f if f.startsWith("http") => f },
-          images = None // todo
-        ))
+        val imagesF = primaryImage match {
+          case Some(embedlyImage) =>
+            log.info(s"[susc] Got ${embedlyImage.url} for $url, fetching, resizing, and persisting.")
+            uriImageCommander.processRemoteImage(embedlyImage.url).map {
+              case Left(uploadResults) =>
+                val sizes = uploadResults.map { upload =>
+                  PersistedImageVersion(upload.image.getWidth, upload.image.getHeight, upload.key)
+                }
+                log.info(s"[susc] Done, uploaded ${uploadResults.length} images: ${sizes}")
+                Some(PersistedImageRef(sizes, embedlyImage.caption))
+              case Right(failure) =>
+                failure match {
+                  case f: ImageStoreFailureWithException =>
+                    log.error(s"[susc] Failure fetching/persisting image from $url. Reason: ${f.reason}", f.getCause)
+                  case f =>
+                    log.error(s"[susc] Couldn't fetch/persist image from $url. Reason: ${f.reason}")
+                }
+                None
+            }
+          case None => // embedly didn't have any images
+            Future.successful(None)
+        }
+        imagesF.map { images =>
+          Option(URIPreviewFetchResult(
+            pageUrl = url,
+            title = embedlyResult.title,
+            description = embedlyResult.description,
+            authors = embedlyResult.authors,
+            publishedAt = embedlyResult.published,
+            safe = embedlyResult.safe,
+            lang = embedlyResult.lang,
+            faviconUrl = embedlyResult.faviconUrl.collect { case f if f.startsWith("http") => f },
+            images = images
+          ))
+        }
 
-      case None => None
+      case None =>
+        Future.successful(None)
     }
   }
 

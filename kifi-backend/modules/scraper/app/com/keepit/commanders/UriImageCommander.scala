@@ -15,11 +15,10 @@ import scala.concurrent.Future
 
 @ImplementedBy(classOf[UriImageCommanderImpl])
 trait UriImageCommander {
-
-  // Fetch, resize, persist to S3
-  //def processRemoteImage(): Future[Either[Seq[UriImage], ImageStoreFailure]]
-
   def getUrl(libraryImage: UriImage): String
+
+  // Fetch, resize, persist to S3:
+  def processRemoteImage(remoteImageUrl: String): Future[Either[Seq[ImageProcessState.UploadedImage], ImageStoreFailure]]
 }
 
 case class UriImage(imagePath: String)
@@ -35,11 +34,7 @@ class UriImageCommanderImpl @Inject() (
     s3ImageConfig.cdnBase + "/" + uriImage.imagePath
   }
 
-  //
-  // Internal helper methods!
-  //
-
-  private def fetchAndSet(remoteImageUrl: String, libraryId: Id[Library], source: ImageSource): Future[ImageProcessDone] = {
+  def processRemoteImage(remoteImageUrl: String): Future[Either[Seq[ImageProcessState.UploadedImage], ImageStoreFailure]] = {
     fetchAndHashRemoteImage(remoteImageUrl).flatMap {
       case Right(originalImage) =>
         buildPersistSet(originalImage, "i")(photoshop) match {
@@ -52,19 +47,16 @@ class UriImageCommanderImpl @Inject() (
             }
 
             Future.sequence(uploads).map { results =>
-              val uploadedOriginal = results.find { uploadedImage =>
-                uploadedImage.key.takeRight(7).indexOf(originalLabel) != -1
-              }.getOrElse(results.head)
-
-              ImageProcessState.StoreSuccess(originalImage.format, ImageSize(uploadedOriginal.image.getWidth, uploadedOriginal.image.getHeight), originalImage.file.file.length.toInt)
+              val sortedBySize = results.toList.sortBy(img => img.image.getWidth + img.image.getHeight).reverse // biggest first
+              Left(sortedBySize)
             }.recover {
               case ex: Throwable =>
-                ImageProcessState.CDNUploadFailed(ex)
+                Right(ImageProcessState.CDNUploadFailed(ex))
             }
           case Left(failure) =>
-            Future.successful(failure)
+            Future.successful(Right(failure))
         }
-      case Left(failure) => Future.successful(failure)
+      case Left(failure) => Future.successful(Right(failure))
     }
   }
 
