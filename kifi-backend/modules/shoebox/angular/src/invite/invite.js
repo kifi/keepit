@@ -275,15 +275,15 @@ angular.module('kifi')
 ])
 
 .directive('kfFriendRequestBanner', [
-  '$analytics', '$timeout', 'analyticsState', 'injectedState', 'keepWhoService',
+  '$analytics', '$timeout', 'analyticsState', 'initParams', 'keepWhoService',
   'profileService', 'routeService', 'userService',
-  function ($analytics, $timeout, analyticsState, injectedState, keepWhoService,
+  function ($analytics, $timeout, analyticsState, initParams, keepWhoService,
     profileService, routeService, userService) {
 
     function setupShowFriendRequestBanner(scope, externalId) {
       function closeBanner() {
-        if (injectedState && injectedState.state) {
-          delete injectedState.state.friend;
+        if (initParams.friend) {
+          delete initParams.friend;
         }
         scope.hidden = true;
       }
@@ -333,7 +333,7 @@ angular.module('kifi')
     }
 
     function link(scope) {
-      var externalId = injectedState.state.friend;
+      var externalId = initParams.friend;
 
       scope.hidden = true;
       if (!externalId) {

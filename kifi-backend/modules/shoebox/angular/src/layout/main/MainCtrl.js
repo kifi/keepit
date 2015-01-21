@@ -4,11 +4,16 @@ angular.module('kifi')
 
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
-  'injectedState', '$rootScope', '$analytics', 'installService', 'profileService', '$q', 'routeService',
+  'initParams', '$rootScope', '$analytics', 'installService', 'profileService', '$q', 'routeService',
   'modalService', 'libraryService',
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    injectedState, $rootScope, $analytics, installService, profileService, $q, routeService,
+    initParams, $rootScope, $analytics, installService, profileService, $q, routeService,
     modalService, libraryService) {
+
+    var tooltipMessages = {
+      0: 'Welcome back!',
+      2: 'Bookmark import in progress. Reload the page to update.'
+    };
 
     $scope.search = {};
     $scope.searchEnabled = false;
@@ -67,25 +72,14 @@ angular.module('kifi')
 
     $scope.undo = undoService;
 
-    var messages = {
-      0: 'Welcome back!',
-      2: 'Bookmark import in progress. Reload the page to update.'
-    };
-
-    function handleInjectedState(state) {
-      if (state) {
-        if (state.m && state.m === '1') {
-          $scope.showEmailVerifiedModal = true;
-        } else if (state.m) { // show small tooltip
-          var msg = messages[state.m];
-          $scope.tooltipMessage = msg;
-          $timeout(function () {
-            delete $scope.tooltipMessage;
-          }, 5000);
-        }
-      }
+    if (initParams.m === '1') {
+      $scope.showEmailVerifiedModal = true;
+    } else if (initParams.m in tooltipMessages) { // show small tooltip
+      $scope.tooltipMessage = tooltipMessages[initParams.m];
+      $timeout(function () {
+        delete $scope.tooltipMessage;
+      }, 5000);
     }
-    handleInjectedState(injectedState.state);
 
     //
     // For importing bookmarks

@@ -3,8 +3,14 @@
 angular.module('kifi')
 
 .factory('originTrackingService', [
-  function () {
+  'initParams',
+  function (initParams) {
     var pageOrigin = '';
+    var pageOrigins = {
+      xmp: 'extension/messagePane',
+      xsr: 'extension/searchResult',
+      xst: 'extension/socialTooltip'
+    };
 
     return {
       set: function (newOrigin) {
@@ -13,8 +19,16 @@ angular.module('kifi')
 
       getAndClear: function () {
         var temp = pageOrigin;
-        pageOrigin = '';
-        return temp;
+        if (temp) {
+          pageOrigin = '';
+          return temp;
+        }
+        temp = pageOrigins[initParams.o];
+        if (temp) {
+          delete initParams.o;
+          return temp;
+        }
+        return '';
       }
     };
   }
