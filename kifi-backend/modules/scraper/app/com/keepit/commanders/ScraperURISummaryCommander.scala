@@ -152,22 +152,6 @@ class ScraperURISummaryCommanderImpl @Inject() (
    */
   private def getS3URL(info: ImageInfo, nUri: NormalizedURIRef): Option[String] = uriImageStore.getImageURL(info, nUri.externalId)
 
-  private def meetsSizeConstraint(info: ImageInfo, size: ImageSize): Boolean = {
-    for {
-      width <- info.width
-      height <- info.height
-    } yield {
-      return (width > size.width && height > size.height)
-    }
-    false
-  }
-
-  private def fetchSmallImage(uri: NormalizedURIRef, imageInfo: ImageInfo): Unit = {
-    fetchAndSaveImage(uri, imageInfo) map { imageInfoOpt =>
-      imageInfoOpt foreach { info => callback.saveImageInfo(info) }
-    }
-  }
-
 }
 
 object ScraperURISummaryCommander {
@@ -175,7 +159,9 @@ object ScraperURISummaryCommander {
   val IMAGE_EXCLUSION_LIST = Seq("/blank.jpg", "/blank.png", "/blank.gif")
 
   def isValidImage(embedlyImage: EmbedlyImage): Boolean = {
-    isValidImageUrl(embedlyImage.url)
+    // If embedly height and width aren't defined, may just be because they haven't fetched the image yet.
+    val bigEnough = embedlyImage.height.map(_ > 60).getOrElse(true) && embedlyImage.width.map(_ > 60).getOrElse(true)
+    bigEnough && isValidImageUrl(embedlyImage.url)
   }
 
   def isValidImageUrl(url: String): Boolean = {
