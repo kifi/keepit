@@ -242,33 +242,44 @@
   font-size: 12px;
   font-weight: 500;
 
-  img,
-  .kifi-message-participant-email-image {
-    width: @listPicSize;
-    height: @listPicSize;
-    border: 0;
-    border-radius: 2px !important;
-    padding: 0;
-    margin: 0;
-    margin-right: 10px;
-    float: left;
-    vertical-align: middle;
-  }
-
-  .kifi-message-participant-email-image {
-    line-height: 34px;
-    text-align: center;
-    font-size: 24px;
-    font-weight: 400;
-    color: white;
-  }
-
   &.kifi-highlight {
     -webkit-animation-name: kifi-highlight-backround;
     animation-name: kifi-highlight-backround;
     -webkit-animation-duration: 10s;
     animation-duration: 10s;
   }
+}
+
+.kifi-message-participant-a {
+  color: inherit !important;
+  &:hover {
+    text-decoration: underline !important;
+  }
+}
+
+.kifi-message-participant-img,
+.kifi-message-participant-email-image {
+  width: @listPicSize;
+  height: @listPicSize;
+  border: 0;
+  border-radius: 2px !important;
+  padding: 0;
+  margin: 0;
+  margin-right: 10px;
+  float: left;
+  vertical-align: middle;
+}
+
+.kifi-message-participant-img {
+  border-radius: 50% !important;
+}
+
+.kifi-message-participant-email-image {
+  line-height: 34px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 400;
+  color: white;
 }
 
 @-webkit-keyframes kifi-highlight-backround {

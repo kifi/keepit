@@ -17,7 +17,7 @@
 
 /**
  * --------------------------
- *    Message Participants
+ *	Message Participants
  * --------------------------
  *
  * Message Participants is an UI component that manages
@@ -115,6 +115,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 				var submitAddParticipants = this.addParticipantTokens.bind(this);
 
 				var $el = this.get$();
+				$el.on('click', '.kifi-message-participant-avatar>a,.kifi-message-participant-a', this.openUserProfile.bind(this));
 				$el.on('click', '.kifi-message-participants-avatars-expand', this.toggleParticipants.bind(this));
 				$el.on('click', '.kifi-message-participant-list-hide', this.toggleParticipants.bind(this));
 				$el.on('click', '.kifi-message-participant-dialog-button', submitAddParticipants);
@@ -377,6 +378,16 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 			}
 			else {
 				this.expandParticipants();
+			}
+		},
+
+		openUserProfile: function (e) {
+			var a = e.currentTarget, url = a.href;
+			if (url.indexOf('?') < 0) {
+				a.href = url + '?o=xmp';
+				setTimeout(function () {
+					a.href = url;
+				});
 			}
 		},
 

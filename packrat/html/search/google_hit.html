@@ -15,7 +15,7 @@
     <span class="kifi-res-users"></span>
     {{#users.length}}
       {{#users}}
-        <a class="kifi-res-user{{#secret}} kifi-secret{{/secret}}{{#duplicate}} kifi-duplicate{{/duplicate}}" href="javascript:" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})"></a>
+        <a class="kifi-res-user{{#secret}} kifi-secret{{/secret}}{{#duplicate}} kifi-duplicate{{/duplicate}}" href="{{origin}}/{{username}}" target="_blank" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})"></a>
       {{/users}}
       <a class="kifi-res-users-n" href="javascript:">{{usersMore}}</a>
       {{^libraries.length}}

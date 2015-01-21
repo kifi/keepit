@@ -144,7 +144,6 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         if (o.libraries.length || o.keepers.length) {
           var params = setSocialParams(o, {
             cssClass: 'kifi-keepers-hover',
-            linkKeepers: true,
             kept: o.kept
           });
           k.render('html/keeper/keepers', params, function (html) {
@@ -329,12 +328,21 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
   }
 
   function hoverfuFriends($tip, keepers) {
-    return $tip.hoverfu('.kifi-keepers-pic', function (configureHover) {
+    return $tip.on('click', '.kifi-keepers-pic', function () {
+      var a = this, url = a.href;
+      if (url.indexOf('?') < 0) {
+        a.href = url + '?o=xst';
+        setTimeout(function () {
+          a.href = url;
+        });
+      }
+    })
+    .hoverfu('.kifi-keepers-pic', function (configureHover) {
       var $pic = $(this);
       var friend = keepers.filter(idIs($pic.data('id')))[0];
       k.render('html/friend_card', friend, function (html) {
         configureHover(html, {
-          mustHoverFor: 100, hideAfter: 4000, click: 'toggle', parent: $tip,
+          mustHoverFor: 100, hideAfter: 4000, parent: $tip,
           position: {my: 'center bottom-16', at: 'center top', of: $pic, collision: 'fit', using: function (pos, o) {
             var xTC = o.target.left + .5 * o.target.width;
             var xEC = o.element.left + .5 * o.element.width;

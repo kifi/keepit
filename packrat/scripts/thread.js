@@ -86,6 +86,15 @@ k.panes.thread = k.panes.thread || function () {
     var $holder = $tall.find('.kifi-scroll-inner')
       .preventAncestorScroll()
       .handleLookClicks('chat')
+      .on('click', '.kifi-message-pic-a,a.kifi-message-name', function () {
+        var a = this, url = a.href;
+        if (url.indexOf('?') < 0) {
+          a.href = url + '?o=xmp';
+          setTimeout(function () {
+            a.href = url;
+          });
+        }
+      })
       .hoverfu('.kifi-message-email-learn', function (configureHover) {
         var link = this;
         k.render('html/keeper/message_email_tooltip', function (html) {
