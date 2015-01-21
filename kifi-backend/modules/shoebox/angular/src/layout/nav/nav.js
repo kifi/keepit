@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfNav', [
   '$document', '$interval', '$location', '$rootScope', '$window', '$timeout',
-  'friendService', 'libraryService', 'modalService', 'profileService', 'routeService', 'tagService', 'userService', 'util',
+  'friendService', 'libraryService', 'modalService', 'profileService', 'routeService', 'tagService', 'util',
   function ($document, $interval, $location, $rootScope, $window, $timeout,
-  friendService, libraryService, modalService, profileService, routeService, tagService, userService, util) {
+  friendService, libraryService, modalService, profileService, routeService, tagService, util) {
     return {
       //replace: true,
       restrict: 'A',
@@ -36,7 +36,6 @@ angular.module('kifi')
           friendsNotifCount: friendService.requests.length
         };
 
-        scope.inUserProfileBeta = userService.inUserProfileBeta();
 
         //
         // Internal methods.

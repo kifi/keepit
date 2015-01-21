@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfManageLibrary', [
   '$location', '$state', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'routeService', 'userService', 'util',
+  'profileService', 'routeService', 'util',
   function ($location, $state, friendService, libraryService, modalService,
-    profileService, routeService, userService, util) {
+    profileService, routeService, util) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -250,8 +250,6 @@ angular.module('kifi')
         scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
 
         nameInput.focus();
-
-        scope.inUserProfileBeta = userService.inUserProfileBeta();
       }
     };
   }

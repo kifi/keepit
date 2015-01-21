@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('HeaderCtrl', [
   '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService',
-    '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state', 'routeService', 'userService',
+    '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state', 'routeService',
   function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService,
-    $location, util, keyIndices, modalService, $timeout, $state, routeService, userService) {
+    $location, util, keyIndices, modalService, $timeout, $state, routeService) {
 
     $scope.toggleMenu = function () {
       $rootElement.find('html').toggleClass('kf-sidebar-inactive');
@@ -160,7 +160,6 @@ angular.module('kifi')
     friendService.getRequests();
     $scope.friendRequests = friendService.requests;
 
-    $scope.inUserProfileBeta = userService.inUserProfileBeta();
     $scope.userProfileUrl = routeService.getProfileUrl($scope.me.username);
 
     $scope.logout = profileService.logout;

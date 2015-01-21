@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryShareSearch', [
-  '$document', '$timeout', 'friendService', 'keyIndices', 'libraryService', 'routeService', 'socialService', 'userService', 'util',
-  function ($document, $timeout, friendService, keyIndices, libraryService, routeService, socialService, userService, util) {
+  '$document', '$timeout', 'friendService', 'keyIndices', 'libraryService', 'routeService', 'socialService', 'util',
+  function ($document, $timeout, friendService, keyIndices, libraryService, routeService, socialService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -47,8 +47,6 @@ angular.module('kifi')
             searchInput.attr('placeholder', 'Type a name or email');
             showMenu();
           }
-
-          scope.inUserProfileBeta = userService.inUserProfileBeta();
         }
 
         function showMenu() {

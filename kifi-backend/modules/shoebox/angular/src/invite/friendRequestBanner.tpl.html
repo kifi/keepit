@@ -5,10 +5,9 @@
   <h2 class="kf-add-friend-banner-title">{{friendRequestBannerHeader}}</h2>
 
   <div class="kf-add-friend-banner">
-    <a ng-if="inUserProfileBeta" href="{{userProfileUrl}}">
+    <a href="{{userProfileUrl}}">
       <img class="kf-add-friend-banner-image" onerror="this.src='/assets/img/ghost.200.png'" ng-src="{{mainImage}}" />
     </a>
-    <img ng-if="!inUserProfileBeta" class="kf-add-friend-banner-image" onerror="this.src='/assets/img/ghost.200.png'" ng-src="{{mainImage}}" />
     <span class="kf-add-friend-banner-who">
       <span class="kf-add-friend-banner-main-label" title="{{mainLabel}}">{{mainLabel}}</span>
       <div class="kf-friend-card-count" title="{{user.friendCount}}" ng-show="user.friendCount > 0">

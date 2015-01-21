@@ -11,10 +11,9 @@
       <div class="kf-query-lib-container" ng-class="{empty: isEmpty()}">
         <div class="kf-query-lib-icon" ng-class="{'focused': isFocused}"></div>
 
-        <a ng-if="inUserProfileBeta" href="{{userProfileUrl}}">
+        <a href="{{userProfileUrl}}">
           <img class="kf-search-bar-lib-owner-img" ng-show="search.showName" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}">
         </a>
-        <img ng-if="!inUserProfileBeta" class="kf-search-bar-lib-owner-img" ng-show="search.showName" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}">
 
         <div class="kf-search-bar-lib-name" ng-show="search.showName" ng-class="library.kind != 'user_created' ? 'system-created' : library.visibility == 'secret' ? 'secret' : 'published'"> {{library.name}} </div>
         <div class="kf-search-bar-lib-name-clear" ng-show="search.showName" ng-class="library.kind != 'user_created' ? 'system-created' : library.visibility == 'secret' ? 'secret' : 'published'" ng-click="clearLibraryName()">&times;</div>
@@ -43,11 +42,11 @@
         </menu>
       </div>
       <div class="kf-header-icon-hover-container kf-header-profile">
-        <a href="{{inUserProfileBeta ? userProfileUrl : '/profile'}}">
+        <a href="{{userProfileUrl}}">
           <div class="kf-header-profile-picture" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></div>
         </a>
         <menu class="kf-dropdown-menu">
-          <a ng-if="inUserProfileBeta" class="kf-dropdown-menu-item" href="{{userProfileUrl}}">Your Profile</a>
+          <a class="kf-dropdown-menu-item" href="{{userProfileUrl}}">Your Profile</a>
           <a class="kf-dropdown-menu-item" href="/profile">Settings</a>
           <a class="kf-dropdown-menu-item" href="javascript:" ng-click="logout()">Log out</a>
         </menu>
