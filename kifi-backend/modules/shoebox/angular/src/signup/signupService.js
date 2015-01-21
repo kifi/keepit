@@ -41,12 +41,13 @@ angular.module('kifi')
 ])
 
 .controller('SignupCtrl', [
-  '$scope', '$FB', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope',
-  function ($scope, $FB, modalService, registrationService, $window, installService, $q, $log, $rootScope) {
+  '$scope', '$FB', '$twitter', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope', '$location',
+  function ($scope, $FB, $twitter, modalService, registrationService, $window, installService, $q, $log, $rootScope, $location) {
 
     // Shared data across several modals
 
     $scope.userData = $scope.userData || {};
+    $scope.showTwitter = _.has($location.search(), 'twitter');
 
     function setModalScope($modalScope, onClose) {
       $modalScope.close = modalService.close;
@@ -119,6 +120,17 @@ angular.module('kifi')
         $rootScope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthFacebook' });
       }
       return $scope.fbAuth();
+    };
+    $scope.twAuthFromLibrary = function () {
+      if ($scope.userData.libraryId) {
+        $rootScope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthTwitter' });
+      }
+      return $scope.twAuth();
+    };
+
+    $scope.twAuth = function() {
+      modalService.close();
+      $location.url('/signup/twitter'); // todo (aaron): change logic to return back to library or profile page after signing up with twitter
     };
 
     $scope.fbAuth = function () {

@@ -158,6 +158,25 @@ kifi.form = (function () {
     return false;
   });
 
+  function getParameterByName(name) {
+    name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+    var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+        results = regex.exec(location.search);
+    return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+  }
+
+  if (getParameterByName('twitter')) { // do not show linkedIn (if twitter is a url query param)
+    var linkedInButtons = $('.form-network.linkedin');
+    for (var i=0; i < linkedInButtons.length; i++) {
+      linkedInButtons.eq(i).hide();
+    }
+  } else { // do not show twitter
+    var twitterButtons = $('.form-network.twitter');
+    for (var i=0; i < twitterButtons.length; i++) {
+      twitterButtons.eq(i).hide();
+    }
+  }
+
   var animateButton = function (button) {
     var $button = $(button);
     var $progress = $button.find('.progress');
