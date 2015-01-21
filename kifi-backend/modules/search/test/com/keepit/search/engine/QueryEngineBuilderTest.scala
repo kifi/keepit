@@ -21,6 +21,7 @@ class QueryEngineBuilderTest extends Specification {
       override val altStemmingAnalyzer = None
       override val siteBoost: Float = 1.0f
       override val concatBoost: Float = 0.5f
+      val prefixBoost: Float = 0.0f
     }
   }
 

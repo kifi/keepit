@@ -211,6 +211,7 @@ class WebsiteSearchController @Inject() (
     libraryContext: Option[String],
     maxUsers: Int,
     userContext: Option[String],
+    doPrefixSearch: Boolean,
     debug: Option[String]) = UserAction.async { request =>
 
     val acceptLangs = getAcceptLangs(request)
@@ -244,7 +245,7 @@ class WebsiteSearchController @Inject() (
     // Library Search
 
     val futureLibrarySearchResultJson = if (maxLibraries <= 0) Future.successful(JsNull) else {
-      librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, libraryContext, maxLibraries, None, debugOpt, None).flatMap { librarySearchResult =>
+      librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, libraryContext, maxLibraries, doPrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
         val librarySearcher = libraryIndexer.getSearcher
         val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)

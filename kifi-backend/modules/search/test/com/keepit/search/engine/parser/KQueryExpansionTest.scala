@@ -20,6 +20,7 @@ class KQueryExpansionTest extends Specification {
       override val altStemmingAnalyzer = None
       override val siteBoost: Float = 1.0f
       override val concatBoost: Float = concatBoostValue
+      val prefixBoost: Float = 0.0f
     }
   }
 

@@ -13,8 +13,6 @@ import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Weight
 import org.apache.lucene.util.Bits
-import org.apache.lucene.util.PriorityQueue
-import org.apache.lucene.util.ToStringUtils
 import java.util.{ Set => JSet }
 
 class ConditionalQuery(val source: Query, val condition: Query) extends Query {

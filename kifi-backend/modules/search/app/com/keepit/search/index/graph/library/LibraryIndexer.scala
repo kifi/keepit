@@ -15,6 +15,9 @@ import com.keepit.common.logging.Logging
 
 class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient, val airbrake: AirbrakeNotifier) extends Indexer[Library, Library, LibraryIndexer](indexDirectory, LibraryFields.decoders) {
   val name = "LibraryIndexer"
+
+  override val maxPrefixLength = LibraryFields.maxPrefixLength
+
   def update(): Int = throw new UnsupportedOperationException()
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
