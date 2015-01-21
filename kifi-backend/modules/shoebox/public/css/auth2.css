@@ -361,7 +361,10 @@ a.video-frame {
   background-position: -221px -294px;
 }
 .twitter > .form-network-icon:empty:before {
-  background-position: -221px -294px; // needs actual design logo
+  background-image: url(../img/twitter-icon.svg);
+  width: 37px;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
 .form-network-pic {
