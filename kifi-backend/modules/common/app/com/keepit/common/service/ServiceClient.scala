@@ -1,10 +1,10 @@
 package com.keepit.common.service
 
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.amazon.AmazonInstanceInfo
 
-import scala.collection.mutable.{ SynchronizedSet, HashSet, Set }
 import scala.concurrent.Future
-import scala.util.Random
+import scala.util.{ Failure, Success, Try, Random }
 
 import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.healthcheck.{ StackTrace, AirbrakeError, AirbrakeNotifier }
@@ -20,7 +20,7 @@ import java.net.ConnectException
 import play.api.libs.json.{ JsNull, JsValue }
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.routes.ServiceRoute
-import scala.collection.mutable.{ SynchronizedSet, HashSet, Set => MutableSet, ListBuffer }
+import scala.collection.mutable.{ SynchronizedSet, HashSet, Set => MutableSet }
 
 class ServiceNotAvailableException(serviceType: ServiceType)
   extends Exception(s"Service of type ${serviceType.name} is not available")
@@ -143,11 +143,23 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     }
   }
 
-  protected def broadcast(call: ServiceRoute, body: JsValue = JsNull, includeUnavailable: Boolean = false, includeSelf: Boolean = false): Seq[Future[ClientResponse]] = {
+  protected def broadcast(call: ServiceRoute, body: JsValue = JsNull, includeUnavailable: Boolean = false, includeSelf: Boolean = false): Map[AmazonInstanceInfo, Future[ClientResponse]] = {
     urls(call.url, includeUnavailable, includeSelf) map { url =>
       logBroadcast(url, body)
-      callUrl(call, url, body)
+      url.serviceInstance.instanceInfo -> callUrl(call, url, body)
     }
+  }.toMap
+
+  protected def collectResponses(calls: Map[AmazonInstanceInfo, Future[ClientResponse]]): Future[Map[AmazonInstanceInfo, Try[ClientResponse]]] = {
+    val safeCalls = calls.mapValues { call =>
+      call.map(Success(_)).recover {
+        case error: Throwable =>
+          airbrakeNotifier.notify(s"Failed service call was ignored.", error)
+          Failure(error)
+      }
+    }
+    val (instances, futureResponses) = safeCalls.toSeq.unzip
+    Future.sequence(futureResponses).map { responses => (instances zip responses).toMap }
   }
 
   protected def callLeader(call: ServiceRoute, body: JsValue = JsNull, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts) = {
@@ -173,5 +185,5 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
 }
 
 trait CommonServiceUtilities { self: ServiceClient =>
-  def removeAllFromLocalCaches(prefix: Option[String]): Future[Seq[ClientResponse]] = Future.sequence(broadcast(Common.internal.removeAllFromLocalCache(prefix)))
+  def removeAllFromLocalCaches(prefix: Option[String]): Future[Seq[ClientResponse]] = Future.sequence(broadcast(Common.internal.removeAllFromLocalCache(prefix)).values.toSeq)
 }

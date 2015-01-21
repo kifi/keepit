@@ -78,7 +78,7 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def connectedClientCount: Future[Seq[Int]] = {
-    Future.sequence(broadcast(Eliza.internal.connectedClientCount)).map { respSeq =>
+    Future.sequence(broadcast(Eliza.internal.connectedClientCount).values.toSeq).map { respSeq =>
       respSeq.map { resp => resp.body.toInt }
     }
   }

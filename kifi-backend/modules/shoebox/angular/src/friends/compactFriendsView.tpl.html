@@ -5,10 +5,9 @@
   </div>
   <div class="kf-compact-friends-image-row">
     <span ng-repeat="friend in friends | limitTo: 4">
-      <a ng-if="inUserProfileBeta" href="{{friend.profileUrl}}">
+      <a href="{{friend.profileUrl}}">
         <img class="kf-compact-friend-image" title="{{friend.firstName}}" ng-src="{{friend.pictureUrl}}">
       </a>
-      <img ng-if="!inUserProfileBeta" class="kf-compact-friend-image" title="{{friend.firstName}}" ng-src="{{friend.pictureUrl}}">
     </span>
   </div>
 </div>

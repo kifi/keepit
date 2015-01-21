@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfCompactFriendsView', ['friendService', 'routeService', 'userService',
-  function (friendService, routeService, userService) {
+.directive('kfCompactFriendsView', ['friendService', 'routeService',
+  function (friendService, routeService) {
     return {
       replace: true,
       restrict: 'A',
@@ -36,8 +36,6 @@ angular.module('kifi')
 
             scope.friends = friendsToDisplay;
           });
-
-          scope.inUserProfileBeta = userService.inUserProfileBeta();
         }
 
         scope.friendsLink = function () {
@@ -56,8 +54,8 @@ angular.module('kifi')
 ])
 
 .directive('kfPeopleYouMayKnowView',
-  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'modalService', 'routeService', 'userService', 'wtiService',
-  function ($log, $q, $rootScope, $timeout, friendService, inviteService, modalService, routeService, userService, wtiService) {
+  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'modalService', 'routeService', 'wtiService',
+  function ($log, $q, $rootScope, $timeout, friendService, inviteService, modalService, routeService, wtiService) {
   return {
     replace: true,
     restrict: 'A',
@@ -122,8 +120,6 @@ angular.module('kifi')
 
           scope.peopleYouMayKnow = peopleYouMayKnow;
         });
-
-        scope.inUserProfileBeta = userService.inUserProfileBeta();
       }
 
       scope.action = function (person) {

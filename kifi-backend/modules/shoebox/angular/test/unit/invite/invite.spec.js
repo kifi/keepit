@@ -3,7 +3,7 @@
 
 describe('kifi.invite', function () {
   var $injector, $rootScope, $httpBackend, routeService, $location, $compile,
-    injectedState, profileService, inviteService, elem, scope;
+    initParams, profileService, inviteService, elem, scope;
 
   var fakeSocialId = '29a10380-166a-11e4-8c21-0800200c9a66';
 
@@ -30,7 +30,7 @@ describe('kifi.invite', function () {
     $location = $injector.get('$location');
     $compile = $injector.get('$compile');
     routeService = $injector.get('routeService');
-    injectedState = $injector.get('injectedState');
+    initParams = $injector.get('initParams');
     profileService = $injector.get('profileService');
     inviteService = $injector.get('inviteService');
 
@@ -108,7 +108,7 @@ describe('kifi.invite', function () {
     var friendRequestUrl, basicUserInfoUrl, profileUrl;
 
     beforeEach(function () {
-      injectedState.state.friend = fakeSocialId;
+      initParams.friend = fakeSocialId;
       elem = angular.element('<div kf-friend-request-banner></div>');
       friendRequestUrl = routeService.friendRequest(fakeSocialId);
       basicUserInfoUrl = routeService.basicUserInfo(fakeSocialId, true);

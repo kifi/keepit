@@ -23,6 +23,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.graph.model.GraphKinds
 import com.keepit.abook.model.EmailAccountInfo
 import scala.concurrent.duration._
+import scala.util.Success
 
 trait GraphServiceClient extends ServiceClient {
   final val serviceType = ServiceType.GRAPH
@@ -54,30 +55,15 @@ class GraphServiceClientImpl @Inject() (
 
   private[this] val connectedUserScoresReqConsolidator = new RequestConsolidator[(Id[User], Boolean), Seq[ConnectedUserScore]](1 minutes)
 
-  private def getSuccessfulResponses(calls: Seq[Future[ClientResponse]]): Future[Seq[ClientResponse]] = {
-    val safeCalls = calls.map { call =>
-      call.map(Some(_)).recover {
-        case error: Throwable =>
-          airbrakeNotifier.notify(s"Failed service call was ignored.", error)
-          None
-      }
-    }
-    Future.sequence(safeCalls).map(_.flatten)
-  }
-
   def getGraphStatistics(): Future[Map[AmazonInstanceInfo, PrettyGraphStatistics]] = {
-    getSuccessfulResponses(broadcast(Graph.internal.getGraphStatistics(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
-      responses.map { response =>
-        response.request.instance.get.instanceInfo -> response.json.as[PrettyGraphStatistics]
-      }.toMap
+    collectResponses(broadcast(Graph.internal.getGraphStatistics(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
+      responses.collect { case (instance, Success(successfulResponse)) => instance -> (successfulResponse.json.as[PrettyGraphStatistics]) }
     }
   }
 
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceInfo, PrettyGraphState]] = {
-    getSuccessfulResponses(broadcast(Graph.internal.getGraphUpdaterState(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
-      responses.map { response =>
-        response.request.instance.get.instanceInfo -> response.json.as[PrettyGraphState]
-      }.toMap
+    collectResponses(broadcast(Graph.internal.getGraphUpdaterState(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
+      responses.collect { case (instance, Success(successfulResponse)) => instance -> (successfulResponse.json.as[PrettyGraphState]) }
     }
   }
 
