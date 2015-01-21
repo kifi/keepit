@@ -1,5 +1,6 @@
 <div class="kf-library-card-header-wrapper" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress, 'library-search': librarySearch }">
-  <div class="kf-library-card-header" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress, 'library-search': librarySearch, 'pageScrolled': pageScrolled }">
+  <div class="kf-library-card-header" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress, 'library-search': librarySearch, 'pageScrolled': pageScrolled }" itemscope itemtype="CollectionPage">
+    <meta itemtype="url" content="{{library.shareUrl}}" />
     <div class="kf-keep library-card" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress }">
       <div ng-show="library.invite && !library.invite.actedOn" class="library-card-invite-header">
         <button class="library-card-invite-header-button library-card-invite-header-accept" ng-click="acceptInvitation()">Accept</button>
@@ -12,13 +13,14 @@
         <div class="kf-keep-lib-header">
           <div ng-switch="recommendation" class="kf-keep-lib-name-container kf-keep-title">
             <a ng-switch-when="true" class="kf-keep-lib-name" ng-href="{{library.url}}" ng-attr-title="{{library.name}}" ng-bind-html="library.name" ng-click="clickLibraryCallback()"></a>
-            <span ng-switch-when="false" class="kf-keep-lib-name" title="{{library.name}}" kf-ellipsis full-text="library.name" max-num-lines=2 num-reloads=3></span>
+            <span ng-switch-when="false" class="kf-keep-lib-name" title="{{library.name}}" kf-ellipsis full-text="library.name" max-num-lines=2 num-reloads=3
+              itemtype="name"></span>
           </div>
         </div>
 
         <div ng-class="{'kf-keep-lib-color': true, 'kf-above-image': coverImageUrl || coverImagePreview}" style="background-color:{{library.color}}"></div>
         <a ng-if="recommendation && coverImageUrl" href="{{library.url}}" class="kf-keep-lib-cover-image" style="background-image:url({{coverImageUrl}});background-position:{{coverImagePos}}"></a>
-        <div ng-if="!recommendation && (coverImageUrl || coverImagePreview)" class="kf-keep-lib-cover-image" ng-style="{'background-image':'{{coverImageUrl ? 'url(' + coverImageUrl + ')' : ''}}','background-position':'{{coverImagePos}}'}">
+        <div ng-if="!recommendation && (coverImageUrl || coverImagePreview)" class="kf-keep-lib-cover-image" ng-style="{'background-image':'{{coverImageUrl ? 'url(' + coverImageUrl + ')' : ''}}','background-position':'{{coverImagePos}}'}" itemtype="image">
           <a ng-if="isMyLibrary() && !coverImagePreview" class="kf-keep-lib-cover-image-adjust" href="javascript:" ng-mousedown="onCoverImageAdjustEngage($event)" ng-click="onCoverImageAdjustEngage($event)"></a>
           <div ng-if="coverImageMenuShowing" class="kf-keep-lib-cover-image-menu">
             <a class="kf-keep-lib-cover-image-menu-opt kf-keep-lib-cover-image-remove" href="javascript:" kf-hover ng-mouseup="onRemoveCoverImageMouseUp($event)">Remove</a>
@@ -40,14 +42,14 @@
         </a>
 
         <div class="kf-keep-lib-info">
-          <div class="kf-keep-lib-owner">
-            <a href="{{library.owner.profileUrl}}"
+          <div class="kf-keep-lib-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person">
+            <a href="{{library.owner.profileUrl}}" itemprop="url"
                kf-track-origin origin="{{currentPageOrigin}}/curator">
-              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
+              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image" itemprop="image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
             </a>
             <div class="kf-keep-lib-owner-text">
               <div class="kf-keep-lib-curator">Curator:</div>
-              <div class="kf-keep-lib-owner-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+              <div class="kf-keep-lib-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
             </div>
             <div ng-if="!recommendation && isUserLoggedOut" class="kf-keep-lib-search">
               <span class="kf-keep-lib-search-icon sprite-search-icon"></span>
@@ -58,7 +60,7 @@
 
           <div ng-switch="clippedDescription" class="kf-keep-lib-description-container">
             <p ng-switch-when="true" class="kf-keep-lib-description">
-              <span ng-bind-html="library.shortDescription"></span>&hellip;
+              <span ng-bind-html="library.shortDescription" itemtype="headline"></span>&hellip;
               <a href="javascript:" class="kf-desc-more" ng-click="showLongDescription()">More</a>
             </p>
             <p ng-switch-when="false" class="kf-keep-lib-description" ng-bind-html="library.formattedDescription"></p>
