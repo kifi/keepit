@@ -165,6 +165,7 @@ kifi.form = (function () {
     return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
   }
 
+  // todo (aaron): remove below for twitter launch
   if (getParameterByName('twitter')) { // do not show linkedIn (if twitter is a url query param)
     var linkedInButtons = $('.form-network.linkedin');
     for (var i=0; i < linkedInButtons.length; i++) {
