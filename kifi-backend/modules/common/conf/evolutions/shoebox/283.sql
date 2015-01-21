@@ -2,18 +2,8 @@
 
 # --- !Ups
 
-alter table user_lda_stats
-    add column first_topic smallint unsigned default NULL;
+ALTER TABLE image_info ADD COLUMN if not exists path varchar(64) NULL;
 
-alter table user_lda_stats
-  add column second_topic smallint unsigned default NULL;
-
-alter table user_lda_stats
-  add column third_topic smallint unsigned default NULL;
-
-alter table user_lda_stats
-  add column first_topic_score real default NULL;
-
-INSERT INTO evolutions (name, description) VALUES('283.sql', 'add first 3 topics, major topic score to user_lda_stats table');
+insert into evolutions (name, description) values('283.sql', 'adding path to the image info');
 
 # --- !Downs

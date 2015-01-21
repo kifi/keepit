@@ -6,6 +6,9 @@ import scala.util.matching.Regex
 import java.util.regex.Pattern
 
 object PrefixMatching extends Logging {
+
+  val maxDist = Int.MaxValue
+
   private[this] def initDistance(numTerms: Int): Array[Int] = {
     val scores = new Array[Int](numTerms + 1)
     var i = 0
@@ -36,7 +39,6 @@ object PrefixMatching extends Logging {
     var sc = 0;
     var matchFlags = 1
     val allMatched = ~(0xFFFFFFFF << (queryTerms.length + 1))
-    val maxDist = Int.MaxValue
     var i = 0
     while (i < names.length) {
       val name = names(i)
