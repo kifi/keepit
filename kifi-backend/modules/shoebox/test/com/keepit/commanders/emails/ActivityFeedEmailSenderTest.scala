@@ -131,6 +131,19 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
           friendRequestRepo.save(FriendRequest(senderId = user1.id.get, recipientId = user2.id.get, messageHandle = None))
         }
 
+        // setup friend created libraries
+        val connRepo = inject[UserConnectionRepo]
+
+        db.readWrite { implicit rw =>
+          for {
+            (user, userIdx) <- Seq(user1, user2).zipWithIndex
+            i <- 0 to 2 // 3 different lib owner will create 2 libraries (to test library owner diversity)
+            (lib, keeps) <- createLibWithKeeps(s"u${userIdx + 1}/friendCreated$i", 2, 1)
+          } yield {
+            connRepo.save(UserConnection(user1 = user.id.get, user2 = lib.ownerId))
+          }
+        }
+
         val senderF = sender()
         Await.ready(senderF, Duration(5, "seconds"))
 
@@ -180,6 +193,14 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         // test friend requests
         html1 must contain(s""">${user2.fullName}</a>""")
         html2 must contain(s""">${user1.fullName}</a>""")
+
+        // test friend created libraries
+        html1 must contain("u1/friendCreated0")
+        html1 must contain("u1/friendCreated1")
+        html1 must contain("u1/friendCreated2")
+        html2 must contain("u2/friendCreated0")
+        html2 must contain("u2/friendCreated1")
+        html2 must contain("u2/friendCreated2")
 
       }
     }
