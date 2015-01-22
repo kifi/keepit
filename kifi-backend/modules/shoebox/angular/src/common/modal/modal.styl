@@ -63,14 +63,16 @@ generic-dialog-button =
   .email-address
     color: #73787f
 
+dialog-header-vpad = 15px
+dialog-header-border-bottom-width = 1px
+dialog-header-line-height = 24px
+dialog-header-height = (dialog-header-vpad * 2) + dialog-header-line-height + dialog-header-border-bottom-width
+
 .dialog-header
-  padding: 15px 23px
-  border-bottom: 1px solid #e7e7e7
+  padding: dialog-header-vpad 23px
+  border-bottom: dialog-header-border-bottom-width solid #e7e7e7
   background-color: #fff
-  font-family: Lato,Helvetica, Arial, sans-serif
-  font-size: 16px
-  font-style: normal
-  font-weight: 700
+  font: 700 16px/dialog-header-line-height Lato,Helvetica,Arial,sans-serif
   color: #5c6373
   text-align: left
 
@@ -148,7 +150,7 @@ generic-dialog-button =
   .dialog-body
     margin: 0 auto
     padding: 30px 25px
-    max-height: calc(98vh - 55px)
+    max-height: 'calc(98vh - %s)' % dialog-header-height
 
   .dialog-buttons
     margin-bottom: 0px
