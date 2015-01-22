@@ -126,11 +126,9 @@ class URISummaryCommander @Inject() (
           for {
             pageInfo <- pageInfoRepo.getByUri(nUri.id)
           } yield {
-            // Option needed for cdn url?
             URISummary(Some(getCDNURL(imageInfo)), pageInfo.title, pageInfo.description, imageInfo.width, imageInfo.height, wordCountOpt)
           }
         } else {
-          // Option needed for cdn url?
           Some(URISummary(imageUrl = Some(getCDNURL(imageInfo)), imageWidth = imageInfo.width, imageHeight = imageInfo.height))
         }
       }
@@ -157,7 +155,7 @@ class URISummaryCommander @Inject() (
   private def fetchFromEmbedly(nUri: NormalizedURIRef): Future[Option[URISummary]] = {
     scraper.fetchAndPersistURIPreview(nUri.url).map { rawResp =>
       rawResp.map { resp =>
-        db.readWrite(attempts = 3) { implicit session =>
+        val savedImages = db.readWrite(attempts = 3) { implicit session =>
           // PageInfo (title, desc, etc)
           val pageInfo = pageInfoRepo.getByUri(nUri.id) match {
             case Some(pi) =>
@@ -186,7 +184,7 @@ class URISummaryCommander @Inject() (
           pageInfoRepo.save(pageInfo)
 
           // Images
-          resp.images.foreach { images =>
+          resp.images.map { images =>
             // todo handle existing images
             // Persist images largest to smallest
             images.sizes.sortBy(i => i.height + i.width).reverse.map { image =>
@@ -212,13 +210,13 @@ class URISummaryCommander @Inject() (
           }
         }
 
-        val primaryImageOpt = resp.images.flatMap(_.sizes.headOption)
+        val primaryImageOpt = savedImages.flatMap(_.headOption)
 
         // and to support the old API:
         URISummary(
-          imageUrl = primaryImageOpt.map(_.path),
-          imageWidth = primaryImageOpt.map(_.width),
-          imageHeight = primaryImageOpt.map(_.height),
+          imageUrl = primaryImageOpt.map(getCDNURL),
+          imageWidth = primaryImageOpt.flatMap(_.width),
+          imageHeight = primaryImageOpt.flatMap(_.height),
           title = resp.title,
           description = resp.description,
           wordCount = None

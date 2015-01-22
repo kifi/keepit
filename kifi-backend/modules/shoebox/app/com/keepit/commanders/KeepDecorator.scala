@@ -148,7 +148,7 @@ class KeepDecorator @Inject() (
       keepImageOpt match {
         case None => summary
         case Some(keepImage) =>
-          summary.copy(imageUrl = keepImage.map(keepImageCommander.getUrl(_)), imageWidth = keepImage.map(_.width), imageHeight = keepImage.map(_.height))
+          summary.copy(imageUrl = keepImage.map(keepImageCommander.getUrl), imageWidth = keepImage.map(_.width), imageHeight = keepImage.map(_.height))
       }
     }
   }
