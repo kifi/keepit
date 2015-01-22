@@ -143,20 +143,30 @@ object PublicPageMetaTags {
    * Google does not like descriptions with less then 60 characters
    * This function adds a bit of diversity to the description tags and tries to keep them longer then 70 characters.
    */
-  def generateMetaTagsDescription(description: Option[String], ownerName: String, libraryName: String): String = {
+  def generateMetaTagsDescription(description: Option[String], ownerName: String, libraryName: String, altDesc: Option[String]): String = {
     val base = description match {
       case None =>
-        s"$ownerName's $libraryName Kifi Library"
+        s"$ownerName's $libraryName Library"
       case Some(desc) =>
-        val cleaned = desc.trim
+        val cleaned = trim(desc)
         if (cleaned.size > 70) cleaned
-        else s"$ownerName's $libraryName Kifi Library: $cleaned"
+        else s"$ownerName's $libraryName Library: $cleaned"
     }
     if (base.size > 70) base
     else {
-      val extended = s"$base. Kifi -- Connecting people with knowledge"
-      if (extended.size > 80) extended
-      else s"$base. Kifi -- the smartest way to collect, discover, and share knowledge"
+      val withAltDesc = altDesc.map(desc => s"${trim(base)}. $desc").getOrElse(base)
+      if (withAltDesc.size > 70) withAltDesc
+      else {
+        val extended = s"withAltDesc. Kifi -- Connecting people with knowledge"
+        if (extended.size > 80) extended
+        else s"$withAltDesc. Kifi -- the smartest way to collect, discover, and share knowledge"
+      }
     }
+  }
+
+  private def trim(str: String): String = {
+    val trimmed = str.trim
+    if (trimmed.endsWith(".")) trimmed.substring(0, trimmed.length - 1)
+    else trimmed
   }
 }
