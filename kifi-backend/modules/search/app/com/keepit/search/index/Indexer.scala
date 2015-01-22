@@ -56,11 +56,9 @@ trait IndexingEventHandler[T, S] {
 
 abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   indexDirectory: IndexDirectory,
-  fieldDecoders: Map[String, FieldDecoder],
+  fieldDecoders: Map[String, FieldDecoder] = Map.empty[String, FieldDecoder],
   maxPrefixLength: Int = Int.MaxValue)
     extends IndexManager[S, I] with IndexingEventHandler[T, S] with Logging {
-
-  def this(indexDirectory: IndexDirectory) = this(indexDirectory, Map.empty[String, FieldDecoder])
 
   val commitBatchSize = 1000
 
