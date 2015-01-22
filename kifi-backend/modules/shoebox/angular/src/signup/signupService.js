@@ -96,7 +96,7 @@ angular.module('kifi')
 
     $scope.getTwitterSignupUrl = function() {
       var url = '/signup/twitter';
-      url += '?redirect=' + $location.url().split('?')[0]; // remove query params when redirecting back to this page
+      url += '?redirect=' + $window.encodeURIcomponent($location.url().split('?')[0]); // remove query params when redirecting back to this page
       return url;
     };
 

@@ -215,10 +215,10 @@ class AuthHelper @Inject() (
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => {
-        val result = if (isFinalizedImmediately) {
-          Redirect(uri)
-        } else if (cookieRedirect.isDefined) {
+        val result = if (cookieRedirect.isDefined) {
           Redirect(cookieRedirect.get.value)
+        } else if (isFinalizedImmediately) {
+          Redirect(uri)
         } else {
           Ok(Json.obj("uri" -> uri))
         }
