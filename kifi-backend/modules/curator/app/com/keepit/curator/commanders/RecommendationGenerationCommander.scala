@@ -228,7 +228,6 @@ class RecommendationGenerationCommander @Inject() (
         }
         res.map(_ => ())
       } else {
-        recommendationGenerationLock.clear()
         if (serviceDiscovery.myStatus.exists(_ != ServiceStatus.STOPPING)) log.error("Trying to run reco precomputation on non-leader (and it's not a shut down)! Aborting.")
         Future.successful()
       }
@@ -240,7 +239,12 @@ class RecommendationGenerationCommander @Inject() (
     specialCurators().flatMap { boostedKeepersSeq =>
       if (recommendationGenerationLock.waiting < userIds.length + 1) {
         val boostedKeepers = boostedKeepersSeq.toSet
-        Future.sequence(userIds.map(userId => precomputeRecommendationsForUser(userId, boostedKeepers))).map(_ => ())
+        val futSeq = userIds.map { userId =>
+          recommendationGenerationLock.withLockFuture {
+            precomputeRecommendationsForUser(userId, boostedKeepers)
+          }
+        }
+        Future.sequence(futSeq).map(_ => ())
       } else {
         Future.successful()
       }
