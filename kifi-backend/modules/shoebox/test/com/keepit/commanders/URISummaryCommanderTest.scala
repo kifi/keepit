@@ -62,7 +62,7 @@ case class URISummaryCommanderTestS3URIImageStore() extends S3URIImageStore {
 }
 
 case class MockScraperServiceClient(override val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends FakeScraperServiceClientImpl(airbrakeNotifier, scheduler) {
-  override def getURISummaryFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]] = {
+  override def getURISummaryFromEmbedly(uri: NormalizedURIRef): Future[Option[URISummary]] = {
     val summary = Some(URISummary(Some(URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl), None, None))
     Future.successful(summary)
   }

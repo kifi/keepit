@@ -1,37 +1,38 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.core._
-import com.keepit.common.db.Id
-import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
 import com.keepit.common.performance._
-import com.keepit.common.service.RequestConsolidator
-import com.keepit.common.store.{ ImageSize, S3ImageConfig }
-import com.keepit.common.time._
-import com.keepit.cortex.CortexServiceClient
-import com.keepit.model._
-import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.scraper.embedly.{ EmbedlyKeyword, EmbedlyStore }
-import com.keepit.scraper.{ NormalizedURIRef, ScraperServiceClient }
-import com.keepit.search.ArticleStore
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
+import com.keepit.common.cache.TransactionalCaching
+import com.keepit.common.logging.Logging
+import com.google.inject.{ Singleton, Inject }
 import scala.concurrent.Future
+import com.keepit.model._
+import com.keepit.common.store.{ S3ImageConfig, ImageSize }
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.time._
+import com.keepit.scraper.{ NormalizedURIRef, ScraperServiceClient }
+import com.keepit.scraper.embedly.EmbedlyStore
+import com.keepit.common.db.Id
+import com.keepit.cortex.CortexServiceClient
+import com.keepit.search.ArticleStore
+import com.keepit.scraper.embedly.EmbedlyKeyword
+import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.common.service.RequestConsolidator
 import scala.concurrent.duration._
+import com.keepit.common.core._
 
 @Singleton
 class URISummaryCommander @Inject() (
     normalizedUriRepo: NormalizedURIRepo,
     normalizedURIInterner: NormalizedURIInterner,
     imageInfoRepo: ImageInfoRepo,
+    imageConfig: S3ImageConfig,
     pageInfoRepo: PageInfoRepo,
     db: Database,
     scraper: ScraperServiceClient,
     cortex: CortexServiceClient,
-    imageConfig: S3ImageConfig,
     embedlyStore: EmbedlyStore,
     articleStore: ArticleStore,
     uriSummaryCache: URISummaryCache,
@@ -73,9 +74,11 @@ class URISummaryCommander @Inject() (
     getURISummaryForRequest(request, NormalizedURIRef(nUri.id.get, nUri.url, nUri.externalId))
   }
 
-  private val consolidateFetchURISummary = new RequestConsolidator[NormalizedURIRef, Option[URISummary]](20 seconds)
+  private val consolidateFetchURISummary = new RequestConsolidator[NormalizedURIRef, Option[URISummary]](20.seconds)
 
   private def getURISummaryForRequest(request: URISummaryRequest, nUri: NormalizedURIRef): Future[URISummary] = {
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
     val existingSummary = getExistingSummaryForRequest(request, nUri)
     if (isCompleteSummary(existingSummary, request) || request.silent) {
       Future.successful(existingSummary)
@@ -91,6 +94,8 @@ class URISummaryCommander @Inject() (
   }
 
   private def getExistingSummaryForRequest(request: URISummaryRequest, nUri: NormalizedURIRef): URISummary = {
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
     val cachedSummary = if (request.isCacheable) uriSummaryCache.get(URISummaryKey(nUri.id)) else None
     cachedSummary getOrElse timing(s"getStoredSummaryForRequest ${nUri.id} -> ${nUri.url}") {
       getStoredSummaryForRequest(nUri, request.imageType, request.minSize, request.withDescription)
@@ -181,7 +186,7 @@ class URISummaryCommander @Inject() (
           pageInfoRepo.save(pageInfo)
 
           // Images
-          resp.images.map { images =>
+          resp.images.foreach { images =>
             // todo handle existing images
             // Persist images largest to smallest
             images.sizes.sortBy(i => i.height + i.width).reverse.map { image =>
