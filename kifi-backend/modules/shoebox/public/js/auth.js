@@ -158,6 +158,28 @@ kifi.form = (function () {
     return false;
   });
 
+  function getParameterByName(name) {
+    name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+    var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+        results = regex.exec(location.search);
+    return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+  }
+
+  // todo (aaron): remove below for twitter launch
+  // if twitter is a url query param
+  if (getParameterByName('twitter')) {
+    // do not show linkedIn
+    var linkedInButtons = $('.form-network.linkedin');
+    for (var i=0; i < linkedInButtons.length; i++) {
+      linkedInButtons.eq(i).hide();
+    }
+    // and show twitter
+    var twitterButtons = $('.form-network.twitter');
+    for (var i=0; i < twitterButtons.length; i++) {
+      twitterButtons.eq(i).css('display','table');
+    }
+  }
+
   var animateButton = function (button) {
     var $button = $(button);
     var $progress = $button.find('.progress');
