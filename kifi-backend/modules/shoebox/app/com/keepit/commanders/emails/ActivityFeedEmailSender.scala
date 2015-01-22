@@ -188,6 +188,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
     val maxNewFollowersOfLibraries = 5
 
+    val maxNewFollowersOfLibrariesUsers = 5
+
     val minRecordAge = currentDateTime.minus(Duration.standardDays(7))
 
     val libraryAgePredicate: Library => Boolean = lib => lib.createdAt > minRecordAge
@@ -207,29 +209,30 @@ class ActivityFeedEmailSenderImpl @Inject() (
     }
 
     def getNewFollowersOfUserLibraries(): Future[Seq[(LibraryInfoView, Seq[Id[User]])]] = {
-      val membershipsToLibraries = db.readOnlyReplica { implicit session =>
-        ownedLibs flatMap { library =>
-          membershipRepo.getWithLibraryId(library.id.get) filter { membership =>
+      val librariesToMembers = db.readOnlyReplica { implicit session =>
+        ownedLibs map { library =>
+          val members = membershipRepo.getWithLibraryId(library.id.get) filter { membership =>
             membership.state == LibraryMembershipStates.ACTIVE && !membership.isOwner &&
               membership.lastJoinedAt.exists(minRecordAge <)
-          } sortBy (-_.lastJoinedAt.map(_.getMillis).getOrElse(0L)) take maxNewFollowersOfLibraries map { mem =>
-            (mem, library)
-          }
-        }
+          } sortBy (-_.lastJoinedAt.map(_.getMillis).getOrElse(0L))
+          (library, members take maxNewFollowersOfLibrariesUsers)
+        } take maxNewFollowersOfLibraries
       }
 
       val libraries = db.readOnlyReplica { implicit session =>
-        val libraries = membershipsToLibraries map (_._2)
+        val libraries = librariesToMembers.map(_._1)
         filterAndSortLibrariesByAge(libraries)
       }
 
-      val membershipsGroupedByLibrary = membershipsToLibraries groupBy (_._1.libraryId)
+      val librariesToMembersMap = librariesToMembers.map {
+        case (lib, members) => (lib.id.get, members)
+      }.toMap
 
       val libInfosF = createFullLibraryInfos(libraries)
       libInfosF map { libInfos =>
         libInfos map {
           case (libId, libInfo) =>
-            val members = membershipsGroupedByLibrary(libId) map { case (lm, _) => lm.userId }
+            val members = librariesToMembersMap(libId) map (_.userId)
             val libInfoView = BaseLibraryInfoView(libId, libInfo)
             (libInfoView, members)
         }
