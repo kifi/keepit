@@ -157,7 +157,7 @@ object PublicPageMetaTags {
       val withAltDesc = altDesc.map(desc => s"${trim(base)}. $desc").getOrElse(base)
       if (withAltDesc.size > 70) withAltDesc
       else {
-        val extended = s"withAltDesc. Kifi -- Connecting people with knowledge"
+        val extended = s"$withAltDesc. Kifi -- Connecting people with knowledge"
         if (extended.size > 80) extended
         else s"$withAltDesc. Kifi -- the smartest way to collect, discover, and share knowledge"
       }

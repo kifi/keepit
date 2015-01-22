@@ -9,10 +9,10 @@ class PublicPageMetaTagsTest extends Specification {
         "Joe J's Cows Library. this is a very good desc of the page, its a bit long but not too much."
       PublicPageMetaTags.generateMetaTagsDescription(None, "Joe J", "Cows", None) ===
         "Joe J's Cows Library. Kifi -- the smartest way to collect, discover, and share knowledge"
-      PublicPageMetaTags.generateMetaTagsDescription(Some("Eat Chicken!"), "Joe Joegineie", "Cows", None) ===
-        "Joe Joegineie's Cows Library: Eat Chicken!. Kifi -- the smartest way to collect, discover, and share knowledge"
+      PublicPageMetaTags.generateMetaTagsDescription(Some("Eat Chicken!"), "Joe J", "Cows", None) ===
+        "Joe J's Cows Library: Eat Chicken!. Kifi -- the smartest way to collect, discover, and share knowledge"
       PublicPageMetaTags.generateMetaTagsDescription(None, "John Jacob Jingleheimer Schmidt", "That's My Name too", None) ===
-        "John Jacob Jingleheimer Schmidt's That's My Name too Library. Kifi -- the smartest way to collect, discover, and share knowledge"
+        "John Jacob Jingleheimer Schmidt's That's My Name too Library. Kifi -- Connecting people with knowledge"
       PublicPageMetaTags.generateMetaTagsDescription(Some(
         """
           |John Jacob Jingleheimer Schmidt,
