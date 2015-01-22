@@ -46,7 +46,6 @@ class KeepImageCommanderImpl @Inject() (
     keepRepo: KeepRepo,
     uriSummaryCommander: URISummaryCommander,
     imageInfoRepo: ImageInfoRepo,
-    s3UriImageStore: S3URIImageStore,
     s3ImageConfig: S3ImageConfig,
     normalizedUriRepo: NormalizedURIRepo,
     keepImageRequestRepo: KeepImageRequestRepo,
@@ -88,9 +87,8 @@ class KeepImageCommanderImpl @Inject() (
   }
 
   def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String] = {
-    imageInfoRepo.getLargestByUriWithPriority(nUriId).flatMap { imageInfo =>
-      val nuri = normalizedUriRepo.get(nUriId)
-      s3UriImageStore.getImageURL(imageInfo, nuri.externalId)
+    imageInfoRepo.getLargestByUriWithPriority(nUriId).map { imageInfo =>
+      s3ImageConfig.cdnBase + "/" + imageInfo.path
     }
   }
 
