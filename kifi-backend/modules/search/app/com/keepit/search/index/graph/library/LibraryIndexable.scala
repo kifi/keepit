@@ -65,7 +65,7 @@ object LibraryFields {
   }
 
   val decoders: Map[String, FieldDecoder] = Map(
-    nameValueField -> DocUtil.StringDocValFieldDecoder,
+    nameValueField -> DocUtil.stringDocValFieldDecoder,
     recordField -> DocUtil.binaryDocValFieldDecoder(LibraryRecord.fromByteArray(_, _, _).toString)
   )
 }

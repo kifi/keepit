@@ -1,6 +1,6 @@
 package com.keepit.search.engine.query
 
-import java.io.ByteArrayInputStream
+import java.nio.charset.StandardCharsets
 
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.query.core.{ NullQuery, KWeight, KBooleanQuery, ProjectableQuery }
@@ -9,7 +9,6 @@ import com.keepit.typeahead.{ PrefixFilter, PrefixMatching }
 import org.apache.lucene.index.{ BinaryDocValues, Term, AtomicReaderContext }
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.{ Scorer, Query, Weight, IndexSearcher, TermQuery }
-import org.apache.lucene.store.InputStreamDataInput
 import org.apache.lucene.util.Bits
 import java.util.{ Set => JSet }
 
@@ -79,8 +78,7 @@ class KPrefixScorer(weight: KPrefixWeight, subScorer: Scorer, queryTerms: Array[
 
   private def getName(): String = {
     val ref = nameDocValues.get(docID())
-    val in = new InputStreamDataInput(new ByteArrayInputStream(ref.bytes, ref.offset, ref.length))
-    in.readString()
+    new String(ref.bytes, ref.offset, ref.length, StandardCharsets.UTF_8)
   }
 
   override def score(): Float = {
