@@ -27,6 +27,7 @@ import com.keepit.common.json.TupleFormat
 class ExtLibraryController @Inject() (
   db: Database,
   val libraryCommander: LibraryCommander,
+  libraryImageCommander: LibraryImageCommander,
   keepsCommander: KeepsCommander,
   basicUserRepo: BasicUserRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
@@ -75,16 +76,20 @@ class ExtLibraryController @Inject() (
   def getLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
       libraryCommander.getLibraryWithOwnerAndCounts(libraryId, request.userId) match {
-        case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
-        case Right((library, owner, keepCount, followerCount, following)) => Ok(Json.obj(
-          "name" -> library.name,
-          "slug" -> library.slug,
-          "visibility" -> library.visibility,
-          "owner" -> owner,
-          "keeps" -> keepCount,
-          "followers" -> followerCount,
-          "following" -> following
-        ))
+        case Left(fail) =>
+          Status(fail.status)(Json.obj("error" -> fail.message))
+        case Right((library, owner, keepCount, followerCount, following)) =>
+          val imageOpt = libraryImageCommander.getBestImageForLibrary(libraryId, ExtLibraryController.defaultImageSize)
+          Ok(Json.obj(
+            "name" -> library.name,
+            "slug" -> library.slug,
+            "visibility" -> library.visibility,
+            "color" -> library.color,
+            "image" -> imageOpt.map(LibraryImageInfo.createInfo),
+            "owner" -> owner,
+            "keeps" -> keepCount,
+            "followers" -> followerCount,
+            "following" -> following))
       }
     }
   }

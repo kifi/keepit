@@ -1,5 +1,7 @@
 package com.keepit.controllers.admin
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.google.inject.Inject
 import com.keepit.commanders.{ CollectionCommander, KeepsCommander, LibraryCommander, RichWhoKeptMyKeeps, URISummaryCommander }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
@@ -8,11 +10,13 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
+import com.keepit.common.store.S3URIImageStore
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepStates, _ }
 import com.keepit.scraper.ScrapeScheduler
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.mvc.AnyContent
 import views.html
@@ -21,6 +25,8 @@ import scala.collection.mutable.{ SynchronizedMap, HashMap => MutableMap }
 import scala.concurrent._
 import com.keepit.common.akka.SafeFuture
 
+import scala.util.Failure
+
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
   db: Database,
@@ -28,6 +34,8 @@ class AdminBookmarksController @Inject() (
   keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
+  s3URIImageStore: S3URIImageStore,
+  imageInfoRepo: ImageInfoRepo,
   scrapeRepo: ScrapeInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   libraryRepo: LibraryRepo,
@@ -292,4 +300,47 @@ class AdminBookmarksController @Inject() (
       NotFound(Json.obj("error" -> "not_found"))
     }
   }
+
+  def fillImageInfoPath(count: Int = 10, pageSize: Int = 1000) = AdminUserPage { implicit request =>
+    SafeFuture {
+      val processed = new AtomicInteger(0)
+      var batch = 0
+      while (processed.get < count) timing(s"processing images, batch $batch, processed ${processed.get()}") {
+        batch += 1
+        val images = timing(s"processing images, loading info") {
+          db.readOnlyMaster { implicit s =>
+            imageInfoRepo.getWithoutPath(pageSize) map { image =>
+              image -> uriRepo.get(image.uriId).externalId
+            }
+          }
+        }
+
+        timing(s"processing images, persisting info") {
+          db.readWriteBatch(images) {
+            case (session, imageWithUri) =>
+              val (image, normalizedUri) = imageWithUri
+
+              //this will break if not using forceAllProviders since we have 1485252 images from pagepeeker
+              try {
+                val path = s3URIImageStore.getImageKey(image, normalizedUri, forceAllProviders = true)
+                if (path.size == 0) throw new Exception(s"can't find path for image $image")
+                imageInfoRepo.doNotUseSave(image.copy(path = Some(path)))(session)
+                processed.incrementAndGet()
+              } catch {
+                case e: Throwable =>
+                  log.error(s"error persisting image $image with uri $normalizedUri", e)
+                  throw e
+              }
+          } foreach {
+            case (_, Failure(ex)) => throw ex
+            case _ =>
+          }
+        }
+        log.info(s"finished a batch, current process count is ${processed.get}")
+      }
+      log.info(s"done processing images, current process count is ${processed.get}")
+    }
+    Ok(s"processing $count images")
+  }
+
 }

@@ -1,12 +1,11 @@
 package com.keepit.search.index
 
-import java.io.ByteArrayInputStream
+import java.nio.charset.StandardCharsets
 
 import com.keepit.search.util.LongArrayBuilder
 import org.apache.lucene.index._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Explanation, IndexSearcher, Query, Scorer, Weight }
-import org.apache.lucene.store.InputStreamDataInput
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 
@@ -121,13 +120,7 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int) ex
     None
   }
 
-  def getStringDocValue(field: String, id: Long): Option[String] = {
-    getDecodedDocValue(field, id) {
-      case (bytes, offset, length) =>
-        val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
-        in.readString()
-    }
-  }
+  def getStringDocValue(field: String, id: Long): Option[String] = getDecodedDocValue(field, id)(new String(_, _, _, StandardCharsets.UTF_8))
 
   def getDecodedDocValue[T](field: String, id: Long)(implicit decode: (Array[Byte], Int, Int) => T): Option[T] = {
     findDocIdAndAtomicReaderContext(id).flatMap {
@@ -151,7 +144,7 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int) ex
     findDocIdAndAtomicReaderContext(id).flatMap {
       case (docid, context) =>
         val reader = context.reader
-        var docValues = reader.getNumericDocValues(field)
+        val docValues = reader.getNumericDocValues(field)
         if (docValues != null) {
           Some(docValues.get(docid))
         } else {

@@ -194,7 +194,7 @@ trait KQueryExpansion extends QueryParser {
 
     if (prefixBoost > 0.0f) {
       val fullQueryText = queries.collect { case (_, textQuery) if textQuery != null => textQuery.label }.mkString(" ")
-      KPrefixQuery.get("tv", "tp", fullQueryText).foreach { prefixQuery =>
+      KPrefixQuery.get("tp", "tv", fullQueryText).foreach { prefixQuery =>
         clauses += new BooleanClause(prefixQuery, SHOULD)
       }
     }

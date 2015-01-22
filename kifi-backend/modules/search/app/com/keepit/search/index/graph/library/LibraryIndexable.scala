@@ -3,7 +3,7 @@ package com.keepit.search.index.graph.library
 import com.keepit.common.db.Id
 import com.keepit.model.view.LibraryMembershipView
 import com.keepit.model._
-import com.keepit.search.index.{ Searcher, DefaultAnalyzer, Indexable, FieldDecoder }
+import com.keepit.search.index._
 import com.keepit.search.LangDetector
 import com.keepit.search.util.LongArraySet
 import org.apache.lucene.index.Term
@@ -64,7 +64,10 @@ object LibraryFields {
     }
   }
 
-  val decoders: Map[String, FieldDecoder] = Map.empty
+  val decoders: Map[String, FieldDecoder] = Map(
+    nameValueField -> DocUtil.stringDocValFieldDecoder,
+    recordField -> DocUtil.binaryDocValFieldDecoder(LibraryRecord.fromByteArray(_, _, _).toString)
+  )
 }
 
 object LibraryIndexable {
