@@ -68,13 +68,13 @@ angular.module('kifi')
         });
 
         var wrap = element.find('.dialog-body');
-        var verticalScrollbarCss = {'max-height': $window.innerHeight - 160 + 'px'};
+        var verticalScrollbarCss = {'max-height': $window.innerHeight - 120 + 'px'};
         if (!scope.disableScroll) {
           _.merge(verticalScrollbarCss, {'overflow-y': 'auto', 'overflow-x': 'hidden'});
         }
 
         var resizeWindow = _.debounce(function () {
-          verticalScrollbarCss['max-height'] = $window.innerHeight - 160 + 'px';
+          verticalScrollbarCss['max-height'] = $window.innerHeight - 120 + 'px';
           wrap.css(verticalScrollbarCss);
         }, 100);
         $window.addEventListener('resize', resizeWindow);
