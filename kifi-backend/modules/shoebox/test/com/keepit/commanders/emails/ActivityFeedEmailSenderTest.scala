@@ -161,6 +161,20 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
           }
         }
 
+        // setup new followers of user's libraries
+        db.readWrite { implicit rw =>
+          val follower1 = user().withName("New", "Follower1").saved
+          val follower2 = user().withName("New", "Follower2").saved
+
+          Seq(user1, user2).zipWithIndex map {
+            case (user, userIdx) =>
+              val lib = library().withUser(user).withSlug(s"u${userIdx + 1}/newFollowersMyLibs").published().saved
+              keep().withLibrary(lib).saved
+              val x1 = membership().withLibraryOwner(lib).withLibraryFollower(lib, follower1).saved
+              val x2 = membership().withLibraryOwner(lib).withLibraryFollower(lib, follower2).saved
+          }
+        }
+
         val senderF = sender()
         Await.ready(senderF, Duration(5, "seconds"))
 
@@ -226,6 +240,14 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         html2 must contain("u2/friendFollowed1")
         html2 must contain("John Doe1")
         html2 must contain("Bobby Tullip1")
+
+        // test new followers of users' libraries
+        html1 must contain("u1/newFollowersMyLibs")
+        html1 must contain("New Follower1")
+        html1 must contain("New Follower2")
+        html2 must contain("u2/newFollowersMyLibs")
+        html2 must contain("New Follower1")
+        html2 must contain("New Follower2")
 
       }
     }

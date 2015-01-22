@@ -2,16 +2,20 @@
 @import com.keepit.common.db.Id
 @import com.keepit.common.mail.template.helpers._
 
-Hi @fullName(toUserId)
+<br/><br/>
+Hi @fullName(toUserId),
+<br/><br/>
+Activity email (still a work in progress)
 <br/><br/>
 
 <h1>Libraries you follow have new Keeps </h1>
 @activityData.newKeepsInLibraries.map { case (lib, keeps) =>
-    <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
-    @lib.ownerName<br/>
+    <a href="@libraryUrl(lib.libraryId)">@lib.name</a><br/>
+    curated by @lib.ownerName<br/>
     @lib.description.getOrElse("")<br/>
+    @lib.numKeeps Keeps | @lib.numFollowers Followers<br/>
 
-    Keeps:<br/>
+    New Keeps:<br/>
     @keeps.map { keep =>
         <a href="@keep.url">@keep.title</a><br/>
         @keep.imageUrlAndWidth.map { case (url, width) =>
@@ -27,6 +31,7 @@ Hi @fullName(toUserId)
     <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
     @lib.ownerName<br/>
     @lib.description.getOrElse("")<br/>
+    @lib.numKeeps Keeps | @lib.numFollowers Followers<br/>
     @lib.image.map { image =>
         <img src="@libraryImageUrl(image.path)" alt="@lib.name" width="400"/>
     }
@@ -43,18 +48,31 @@ TODO
 }
 <br/>
 
-<h1>Library New Followers</h1>
-TODO
+<h1>Your Libraries Have New Followers</h1>
+@activityData.newFollowersOfLibraries.map { case (lib, followers) =>
+    @followers.zipWithIndex.map { case (id, i) =>
+        @if(i == followers.size - 1){and}
+        @fullName(id)@if(i < followers.size - 1){,}
+    }
+    <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
+    @lib.ownerName<br/>
+    @lib.description.getOrElse("")<br/>
+    @lib.numKeeps Keeps | @lib.numFollowers Followers<br/>
+    @lib.image.map { image =>
+        <img src="@libraryImageUrl(image.path)" alt="@lib.name" width="400"/>
+    }
+    <br/>
+}
 <br/>
 
 <h1>You Helped People Last Week</h1>
 TODO
 <br/>
 
-<h1>Your Friend created a library</h1>
+<h1>Your Friends created a library</h1>
 @activityData.friendCreatedLibraries.map { case (friendId, libraries)  =>
+    Your friend @fullName(friendId) created:<br/>
     @libraries.map { lib =>
-        @fullName(friendId) created
         <a href="@{baseUrl}@{lib.url}">@lib.name</a><br/>
         @lib.numKeeps Keeps | @lib.numFollowers Followers<br/>
         @lib.image.map { image =>
@@ -66,15 +84,17 @@ TODO
 
 <br/>
 
-<h1>Your Friend followed a library</h1>
+<h1>Your Friends followed a library</h1>
 @activityData.friendFollowedLibraries.map { case (libraryId, (lib, friendIds)) =>
+    Your friends
     @friendIds.zipWithIndex.map { case (id, i) =>
         @if(i == friendIds.size - 1){and}
         @fullName(id)@if(i < friendIds.size - 1){,}
     }
     are following
-    <a href="@{baseUrl}@{lib.url}">@lib.name</a>
-    by @lib.ownerName<br/>
+    <a href="@{baseUrl}@{lib.url}">@lib.name</a><br/>
+    curated by @lib.ownerName<br/>
+    @lib.numKeeps Keeps | @lib.numFollowers Followers<br/>
     @lib.description.getOrElse("")<br/>
     @lib.image.map { image =>
         <img src="@libraryImageUrl(image.path)" alt="@lib.name" width="400"/>
@@ -83,17 +103,25 @@ TODO
 }
 <br/>
 
-<h1>Recos</h1>
+<h1>Recommendations</h1>
 @activityData.uriRecos.map { reco  =>
     <a href="@reco.itemInfo.url">@reco.itemInfo.title</a><br/>
     @reco.itemInfo.summary.description.getOrElse("")<br/>
     @reco.itemInfo.summary.imageUrl.map { url =>
-        <img src="@toHttpsUrl(url)" alt="@reco.itemInfo.title" width="@reco.itemInfo.summary.imageWidth.getOrElse(500)"/><br/>
+        <img src="@toHttpsUrl(url)" alt="@reco.itemInfo.title" width="400"/><br/>
     }
     <br/><br/>
 }
 
-<h1>Library Recos</h1>
+<h1>Library Recommendations</h1>
 @activityData.libraryRecos.map { recoInfo =>
     <a href="@{baseUrl}@{recoInfo.itemInfo.url}">@recoInfo.itemInfo.name</a><br/>
+    <a href="@{baseUrl}@{recoInfo.itemInfo.url}">@recoInfo.itemInfo.name</a>
+    by @recoInfo.itemInfo.owner.fullName<br/>
+    @recoInfo.itemInfo.description.getOrElse("")<br/>
+    @recoInfo.itemInfo.image.map { image =>
+        <img src="@libraryImageUrl(image.path)" alt="@recoInfo.itemInfo.name" width="400"/>
+    }
+    <br/><br/>
 }
+<br/>
