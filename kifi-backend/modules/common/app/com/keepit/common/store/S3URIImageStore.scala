@@ -24,7 +24,7 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
     os.flush
     val bytes = os.toByteArray
     os.close
-    val key = getImageKey(info, extNormUriId)
+    val key = getImageKey(info, extNormUriId )
     log.info(s"Uploading screenshot of ${extNormUriId} to S3 key $key")
     streamUpload(config.bucketName, key, new ByteArrayInputStream(bytes), "public, max-age=1800", bytes.length) flatMap { _ =>
       // Return the url of the image in S3
@@ -45,17 +45,21 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
   //setting the path for the image info
   def getImageURL(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI], forceAllProviders: Boolean = false): Option[String] = {
     if (!forceAllProviders && (config.isLocal || imageInfo.provider == ImageProvider.PAGEPEEKER)) return None
-    urlFromKey(getImageKey(imageInfo, extNormUriId))
+    urlFromKey(getImageKey(imageInfo, extNormUriId, forceAllProviders))
   }
 
-  private def getImageKey(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI]): String = {
+  private def getImageKey(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI], forceAllProviders: Boolean = false): String = {
     val provider = imageInfo.provider.getOrElse(ImageProvider.EMBEDLY) // Use Embedly as default provider (backwards compatibility)
     provider match {
       case ImageProvider.EMBEDLY => s"images/${extNormUriId}/${ImageProvider.getProviderIndex(imageInfo.provider)}/${imageInfo.name}.${imageInfo.getFormatSuffix}"
       case ImageProvider.PAGEPEEKER => getScreenshotKey(extNormUriId, imageInfo.getImageSize)
       case _ => {
-        airbrake.notify(s"Unsupported image provider: ${imageInfo.provider}")
-        ""
+        if (forceAllProviders) {
+          s"images/${extNormUriId}/0/${imageInfo.name}.jpg"
+        } else {
+          airbrake.notify(s"Unsupported image provider: ${imageInfo.provider}")
+          ""
+        }
       }
     }
   }
