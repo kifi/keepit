@@ -1,7 +1,10 @@
 package com.keepit.search.index
 
+import com.keepit.common.CollectionHelpers
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.net._
+import com.keepit.model.User
+import com.keepit.typeahead.PrefixFilter
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
@@ -122,6 +125,18 @@ trait Indexable[T, S] extends Logging {
     new Field(fieldName, ts, textFieldType)
   }
 
+  protected def buildPrefixField(fieldName: String, fieldValue: String, maxPrefixLength: Int, minPrefixLength: Int = 1): Field = {
+    val tokens = PrefixFilter.tokenize(fieldValue)
+    val prefixes = for {
+      token <- tokens
+      prefixLength <- minPrefixLength to maxPrefixLength
+    } yield {
+      token.take(prefixLength)
+    }
+    val uniquePrefixes = CollectionHelpers.dedupBy(prefixes)(identity)
+    buildIteratorField(fieldName, uniquePrefixes.toIterator)(identity)
+  }
+
   def buildIdValueField(typedId: Id[T]): Field = buildIdValueField(Indexer.idValueFieldName, typedId)
   def buildIdValueField[V](field: String, typedId: Id[V]): Field = new NumericDocValuesField(field, typedId.id)
 
@@ -137,6 +152,10 @@ trait Indexable[T, S] extends Logging {
 
   def buildBinaryDocValuesField(fieldName: String, bytes: Array[Byte]): Field = {
     new BinaryDocValuesField(fieldName, new BytesRef(bytes))
+  }
+
+  def buildStringDocValuesField(fieldName: String, value: String): Field = {
+    new BinaryDocValuesField(fieldName, new BytesRef(value))
   }
 
   def buildExtraLongBinaryDocValuesField(fieldName: String, bytes: Array[Byte]): Seq[Field] = {

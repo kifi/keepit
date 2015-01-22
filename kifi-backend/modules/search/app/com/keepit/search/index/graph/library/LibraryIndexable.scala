@@ -3,7 +3,7 @@ package com.keepit.search.index.graph.library
 import com.keepit.common.db.Id
 import com.keepit.model.view.LibraryMembershipView
 import com.keepit.model._
-import com.keepit.search.index.{ Searcher, DefaultAnalyzer, Indexable, FieldDecoder }
+import com.keepit.search.index._
 import com.keepit.search.LangDetector
 import com.keepit.search.util.LongArraySet
 import org.apache.lucene.index.Term
@@ -11,6 +11,8 @@ import org.apache.lucene.index.Term
 object LibraryFields {
   val nameField = "t"
   val nameStemmedField = "ts"
+  val namePrefixField = "tp"
+  val nameValueField = "tv"
   val descriptionField = "c"
   val descriptionStemmedField = "cs"
   val visibilityField = "v"
@@ -21,8 +23,10 @@ object LibraryFields {
   val allUsersField = "a"
   val recordField = "rec"
 
-  val textSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
+  val textSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField, namePrefixField)
   val nameSearchFields = Set(nameField, nameStemmedField)
+
+  val maxPrefixLength = 8
 
   object Visibility {
     val SECRET = 0
@@ -60,7 +64,10 @@ object LibraryFields {
     }
   }
 
-  val decoders: Map[String, FieldDecoder] = Map.empty
+  val decoders: Map[String, FieldDecoder] = Map(
+    nameValueField -> DocUtil.stringDocValFieldDecoder,
+    recordField -> DocUtil.binaryDocValFieldDecoder(LibraryRecord.fromByteArray(_, _, _).toString)
+  )
 }
 
 object LibraryIndexable {
@@ -78,6 +85,10 @@ object LibraryIndexable {
 
   def getKind(librarySearcher: Searcher, libId: Long): Option[LibraryKind] = {
     librarySearcher.getLongDocValue(LibraryFields.kindField, libId).map(LibraryFields.Kind.fromNumericCode)
+  }
+
+  def getName(librarySearcher: Searcher, libraryId: Id[Library]): Option[String] = {
+    librarySearcher.getStringDocValue(LibraryFields.nameValueField, libraryId.id)
   }
 
   def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
@@ -123,6 +134,8 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]
         val nameLang = LangDetector.detect(library.name)
         doc.add(buildTextField(nameField, library.name, DefaultAnalyzer.getAnalyzer(nameLang)))
         doc.add(buildTextField(nameStemmedField, library.name, DefaultAnalyzer.getAnalyzerWithStemmer(nameLang)))
+        doc.add(buildPrefixField(namePrefixField, library.name, maxPrefixLength))
+        doc.add(buildStringDocValuesField(nameValueField, library.name))
     }
 
     library.description.foreach { description =>

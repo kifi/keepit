@@ -72,6 +72,7 @@ class SearchFactory @Inject() (
       DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
+      false,
       config,
       phraseDetector,
       phraseDetectionReqConsolidator)
@@ -183,6 +184,7 @@ class SearchFactory @Inject() (
       DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
+      false,
       config,
       phraseDetector,
       phraseDetectionReqConsolidator)
@@ -231,6 +233,7 @@ class SearchFactory @Inject() (
     lang1: Lang,
     lang2: Option[Lang],
     numHitsToReturn: Int,
+    doPrefixSearch: Boolean,
     filter: SearchFilter,
     config: SearchConfig,
     explain: Option[Id[Library]]): Seq[LibrarySearch] = {
@@ -245,6 +248,7 @@ class SearchFactory @Inject() (
       DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
+      doPrefixSearch,
       config,
       phraseDetector,
       phraseDetectionReqConsolidator

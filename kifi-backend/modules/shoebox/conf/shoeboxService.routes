@@ -638,7 +638,7 @@ POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchCon
 POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
 POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
 
-GET     /admin/explainLibraryResult        @com.keepit.controllers.admin.AdminSearchController.explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String])
+GET     /admin/explainLibraryResult        @com.keepit.controllers.admin.AdminSearchController.explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], doPrefixSearch: Boolean ?= false)
 GET     /admin/explainUriResult        @com.keepit.controllers.admin.AdminSearchController.explainUriResult(query: String, uriId: Id[NormalizedURI], lang: String, debug: Option[String])
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
 
@@ -660,6 +660,7 @@ POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminC
 
 GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
 GET     /admin/libraries/:id             @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library])
+GET     /admin/libraries/:id/indexed        @com.keepit.controllers.admin.AdminLibraryController.getLuceneDocument(id: Id[Library])
 GET     /admin/libraries/:id/keeps       @com.keepit.controllers.admin.AdminLibraryController.libraryKeepsView(id: Id[Library], page: Int ?= 0, showPrivates: Boolean ?= false)
 POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
 POST    /admin/libraries/internForAllUsers  @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])

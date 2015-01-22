@@ -69,25 +69,18 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
-        Json.parse(contentAsString(result)) must equalTo(Json.parse(
-          s"""
-            |{"libraries" :
-               |[
-                 |{
-                  | "id": "$pubId1",
-                  | "name": "Million Dollar Baby",
-                  | "path": "/morgan/baby",
-                  | "visibility": "discoverable"
-                 |},
-                 |{
-                  | "id": "$pubId2",
-                  | "name": "Dark Knight",
-                  | "path": "/michael/darkknight",
-                  | "visibility": "discoverable"
-                 |}
-               |]
-             |}""".stripMargin
-        ))
+        Json.parse(contentAsString(result)) === Json.obj(
+          "libraries" -> Seq(
+            Json.obj(
+              "id" -> pubId1,
+              "name" -> "Million Dollar Baby",
+              "path" -> "/morgan/baby",
+              "visibility" -> "discoverable"),
+            Json.obj(
+              "id" -> pubId2,
+              "name" -> "Dark Knight",
+              "path" -> "/michael/darkknight",
+              "visibility" -> "discoverable")))
       }
     }
 
@@ -123,8 +116,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         val (user1, user2, lib1, lib2, mem1, mem2) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
           val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
-          val lib1 = libraryRepo.save(Library(name = "L1", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("l1"), memberCount = 1))
-          val lib2 = libraryRepo.save(Library(name = "L2", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l2"), memberCount = 1))
+          val lib1 = libraryRepo.save(Library(name = "L1", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("l1"), color = Some(LibraryColor.BLUE), memberCount = 1))
+          val lib2 = libraryRepo.save(Library(name = "L2", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l2"), color = Some(LibraryColor.RED), memberCount = 1))
           val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
           val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, state = LibraryMembershipStates.INACTIVE))
           (user1, user2, lib1, lib2, mem1, mem2)
@@ -137,6 +130,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "name" -> "L1",
           "slug" -> "l1",
           "visibility" -> "secret",
+          "color" -> lib1.color,
+          "image" -> JsNull,
           "owner" -> BasicUser.fromUser(user1),
           "keeps" -> 0,
           "followers" -> 0,
@@ -146,11 +141,31 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
         status(getLibrary(user2, lib1PubId)) === FORBIDDEN
 
-        db.readWrite { implicit s =>
+        val lib1Image = db.readWrite { implicit s =>
           libraryMembershipRepo.save(mem2.withState(LibraryMembershipStates.ACTIVE))
+          inject[LibraryImageRepo].save(LibraryImage(
+            libraryId = lib1.id.get,
+            width = 512,
+            height = 256,
+            positionX = Some(40),
+            positionY = Some(50),
+            imagePath = "path/to/image.png",
+            format = ImageFormat.PNG,
+            source = ImageSource.UserUpload,
+            sourceFileHash = ImageHash("000"),
+            isOriginal = true))
         }
 
-        status(getLibrary(user2, lib1PubId)) === OK
+        Json.parse(contentAsString(getLibrary(user2, lib1PubId))) === Json.obj(
+          "name" -> "L1",
+          "slug" -> "l1",
+          "visibility" -> "secret",
+          "color" -> lib1.color,
+          "image" -> LibraryImageInfo.createInfo(lib1Image),
+          "owner" -> BasicUser.fromUser(user1),
+          "keeps" -> 0,
+          "followers" -> 1,
+          "following" -> true)
       }
     }
 

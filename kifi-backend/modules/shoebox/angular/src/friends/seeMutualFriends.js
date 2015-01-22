@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfSeeMutualFriends', ['$rootScope', '$timeout', 'friendService', 'inviteService', 'routeService', 'userService',
-  function ($rootScope, $timeout, friendService, inviteService, routeService, userService) {
+.directive('kfSeeMutualFriends', ['$rootScope', '$timeout', 'friendService', 'inviteService', 'routeService',
+  function ($rootScope, $timeout, friendService, inviteService, routeService) {
     return {
       replace: true,
       restrict: 'A',
@@ -15,7 +15,6 @@ angular.module('kifi')
 
         function init() {
           updateScopeValues(scope.modalData.savedPymk);
-          scope.inUserProfileBeta = userService.inUserProfileBeta();
         }
 
         // Helper function to update scope values based on passed-in person.

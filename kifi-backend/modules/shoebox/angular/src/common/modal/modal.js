@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfModal', [
-  '$document', 'modalService', '$window',
-  function ($document, modalService, $window) {
+  '$document', 'modalService',
+  function ($document, modalService) {
     return {
       restrict: 'A',
       replace: true,
@@ -67,23 +67,9 @@ angular.module('kifi')
           }
         });
 
-        var wrap = element.find('.dialog-body');
-        var verticalScrollbarCss = {'max-height': $window.innerHeight - 160 + 'px'};
         if (!scope.disableScroll) {
-          _.merge(verticalScrollbarCss, {'overflow-y': 'auto', 'overflow-x': 'hidden'});
+          element.find('.dialog-body').css({'overflow-y': 'auto', 'overflow-x': 'hidden'});
         }
-
-        var resizeWindow = _.debounce(function () {
-          verticalScrollbarCss['max-height'] = $window.innerHeight - 160 + 'px';
-          wrap.css(verticalScrollbarCss);
-        }, 100);
-        $window.addEventListener('resize', resizeWindow);
-
-        scope.$on('$destroy', function () {
-          $window.removeEventListener('resize', resizeWindow);
-        });
-
-        wrap.css(verticalScrollbarCss);
       }
     };
   }

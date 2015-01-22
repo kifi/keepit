@@ -39,7 +39,7 @@ GET         /m/1/search/library        @com.keepit.search.controllers.mobile.Mob
 # Search Website API
 ##########################################
 GET         /site/search2                       @com.keepit.search.controllers.website.WebsiteSearchController.search2(q: String, f: Option[String], l: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], auth: Option[String], debug: Option[String])
-GET         /site/search                        @com.keepit.search.controllers.website.WebsiteSearchController.search(q: String, f: Option[String] ?= None, maxUris: Int ?= 0, uriContext: Option[String] ?= None, lastUUIDStr: Option[String] ?= None, maxLibraries: Int ?= 0, libraryContext: Option[String] ?= None, maxUsers: Int ?= 0, userContext: Option[String] ?= None, debug: Option[String] ?= None)
+GET         /site/search                        @com.keepit.search.controllers.website.WebsiteSearchController.search(q: String, f: Option[String] ?= None, maxUris: Int ?= 0, uriContext: Option[String] ?= None, lastUUIDStr: Option[String] ?= None, maxLibraries: Int ?= 0, libraryContext: Option[String] ?= None, maxUsers: Int ?= 0, userContext: Option[String] ?= None, doPrefixSearch: Boolean ?= false, debug: Option[String] ?= None)
 GET         /site/search/warmUp                 @com.keepit.search.controllers.website.WebsiteSearchController.warmUp()
 POST        /site/search/events/resultClicked   @com.keepit.search.controllers.website.WebsiteSearchEventController.clickedKifiResult()
 POST        /site/search/events/searched        @com.keepit.search.controllers.website.WebsiteSearchEventController.searched()
@@ -77,12 +77,13 @@ POST        /internal/search/index/dumpDoc/:id        @com.keepit.search.control
 GET         /internal/search/index/refreshWriter        @com.keepit.search.controllers.search.ArticleIndexerController.refreshWriter()
 
 GET         /internal/search/indexInfo/listAll        @com.keepit.search.controllers.search.IndexController.listIndexInfo
+POST        /internal/search/index/library/document  @com.keepit.search.controllers.search.IndexController.getLibraryDocument()
 
 
 POST        /internal/search/search/users        @com.keepit.search.controllers.search.SearchController.searchUsers()
 POST        /internal/search/search/userTypeahead        @com.keepit.search.controllers.search.SearchController.userTypeahead()
 GET         /internal/search/search/uri/explain        @com.keepit.search.controllers.search.SearchController.explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], debug: Option[String])
-GET         /internal/search/search/library/explain        @com.keepit.search.controllers.search.SearchController.explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String])
+GET         /internal/search/search/library/explain        @com.keepit.search.controllers.search.SearchController.explainLibraryResult(query: String, doPrefixSearch: Boolean, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String])
 POST        /internal/searchWithConfig        @com.keepit.search.controllers.search.SearchController.searchWithConfig
 
 GET         /internal/search/searchConfig/:id        @com.keepit.search.controllers.search.SearchConfigController.showUserConfig(id: Id[User])

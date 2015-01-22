@@ -22,8 +22,8 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
         db.readWrite { implicit s =>
           keepRepo.save(CortexKeep(keptAt = time, userId = Id[User](1), keepId = Id[Keep](1), uriId = Id[NormalizedURI](1L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](1L), source = KeepSource.keeper))
           keepRepo.save(CortexKeep(keptAt = time, userId = Id[User](1), keepId = Id[Keep](2), uriId = Id[NormalizedURI](2L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](2L), source = KeepSource.keeper))
-          uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](1L), uriSeq = SequenceNumber[NormalizedURI](1L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0f, 1f))), state = URILDATopicStates.ACTIVE))
-          uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](2L), uriSeq = SequenceNumber[NormalizedURI](2L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(1f, 0f))), state = URILDATopicStates.ACTIVE))
+          uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](1L), uriSeq = SequenceNumber[NormalizedURI](1L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0.2f, 0.8f, 0f))), state = URILDATopicStates.ACTIVE))
+          uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](2L), uriSeq = SequenceNumber[NormalizedURI](2L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0.1f, 0.9f, 0f))), state = URILDATopicStates.ACTIVE))
         }
 
         val updater = new LDAUserStatDbUpdaterImpl(uriReps, db, keepRepo, uriTopicRepo, userLDAStatsRepo, commitRepo) {
@@ -35,8 +35,11 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
         db.readOnlyReplica { implicit s =>
           val model = userLDAStatsRepo.getByUser(Id[User](1), uriRep.version).get
           model.numOfEvidence === 2
-          model.userTopicMean.get.mean.toList === List(0.5f, 0.5f)
-          model.userTopicVar.get.value.toList.forall(x => math.abs(x - 0.5f) < 1e-4) === true
+          model.firstTopic.get.index === 1
+          model.secondTopic.get.index === 0
+          model.thirdTopic.get.index === 2
+          model.userTopicMean.get.mean.toList === List(0.15f, 0.85f, 0f)
+          (model.userTopicVar.get.value.toList zip List(0.005f, 0.005f, 0f)).forall { case (x, y) => math.abs(x - y) < 1e-3 } === true
         }
       }
     }
@@ -53,8 +56,8 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
       db.readWrite { implicit s =>
         keepRepo.save(CortexKeep(keptAt = time, userId = Id[User](1), keepId = Id[Keep](1), uriId = Id[NormalizedURI](1L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](1L), source = KeepSource.keeper))
         keepRepo.save(CortexKeep(keptAt = time, userId = Id[User](1), keepId = Id[Keep](2), uriId = Id[NormalizedURI](2L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](2L), source = KeepSource.keeper))
-        uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](1L), uriSeq = SequenceNumber[NormalizedURI](1L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0f, 1f))), state = URILDATopicStates.ACTIVE))
-        uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](2L), uriSeq = SequenceNumber[NormalizedURI](2L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(1f, 0f))), state = URILDATopicStates.ACTIVE))
+        uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](1L), uriSeq = SequenceNumber[NormalizedURI](1L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0.2f, 0.8f, 0f))), state = URILDATopicStates.ACTIVE))
+        uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](2L), uriSeq = SequenceNumber[NormalizedURI](2L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0.1f, 0.9f, 0f))), state = URILDATopicStates.ACTIVE))
       }
 
       val updater = new LDAUserStatDbUpdaterImpl(uriReps, db, keepRepo, uriTopicRepo, userLDAStatsRepo, commitRepo) {
@@ -66,8 +69,13 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
       db.readOnlyReplica { implicit s =>
         val model = userLDAStatsRepo.getByUser(Id[User](1), uriRep.version).get
         model.numOfEvidence === 2
-        model.userTopicMean.get.mean.toList === List(0.5f, 0.5f)
-        model.userTopicVar.get.value.toList.forall(x => math.abs(x - 0.5f) < 1e-4) === true
+        model.userTopicMean.get.mean.toList === List(0.15f, 0.85f, 0f)
+        (model.userTopicVar.get.value.toList zip List(0.005f, 0.005f, 0f)).forall { case (x, y) => math.abs(x - y) < 1e-3 } === true
+
+        userLDAStatsRepo.getByTopic(ModelVersion[DenseLDA](1), LDATopic(0)).map { _.userId.id } === List()
+        userLDAStatsRepo.getByTopic(ModelVersion[DenseLDA](1), LDATopic(1)).map { _.userId.id } === List(1)
+        userLDAStatsRepo.getByTopic(ModelVersion[DenseLDA](1), LDATopic(2)).map { _.userId.id } === List()
+        userLDAStatsRepo.getByTopic(ModelVersion[DenseLDA](2), LDATopic(1)).map { _.userId.id } === List()
       }
 
     }

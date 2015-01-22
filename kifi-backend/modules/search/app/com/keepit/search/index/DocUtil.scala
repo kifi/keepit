@@ -1,5 +1,7 @@
 package com.keepit.search.index
 
+import java.nio.charset.StandardCharsets
+
 import com.keepit.common.time._
 import com.keepit.search.index.graph.collection.CollectionIdList
 import com.keepit.search.index.graph.URIList
@@ -133,4 +135,6 @@ object DocUtil {
       decode(binaryValue.bytes, binaryValue.offset, binaryValue.length)
     }
   }
+
+  val stringDocValFieldDecoder = binaryDocValFieldDecoder(new String(_, _, _, StandardCharsets.UTF_8))
 }

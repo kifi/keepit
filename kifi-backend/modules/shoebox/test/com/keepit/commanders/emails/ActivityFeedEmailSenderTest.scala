@@ -142,6 +142,37 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
           }
         }
 
+        // setup friend followed libraries
+        db.readWrite { implicit rw =>
+          for {
+            (user, userIdx) <- Seq(user1, user2).zipWithIndex
+            friend1 = UserFactory.user().withName("John", s"Doe$userIdx").saved
+            friend2 = UserFactory.user().withName("Bobby", s"Tullip$userIdx").saved
+            i <- 0 to 1
+            (lib, keeps) <- createLibWithKeeps(s"u${userIdx + 1}/friendFollowed$i", 1, 1)
+          } yield {
+            connRepo.save(UserConnection(user1 = user.id.get, user2 = friend1.id.get))
+            connRepo.save(UserConnection(user1 = user.id.get, user2 = friend2.id.get))
+
+            membership().withLibraryFollower(lib, friend1).saved
+            membership().withLibraryFollower(lib, friend2).saved
+          }
+        }
+
+        // setup new followers of user's libraries
+        db.readWrite { implicit rw =>
+          val follower1 = user().withName("New", "Follower1").saved
+          val follower2 = user().withName("New", "Follower2").saved
+
+          Seq(user1, user2).zipWithIndex map {
+            case (user, userIdx) =>
+              val lib = library().withUser(user).withSlug(s"u${userIdx + 1}/newFollowersMyLibs").published().saved
+              keep().withLibrary(lib).saved
+              val x1 = membership().withLibraryOwner(lib).withLibraryFollower(lib, follower1).saved
+              val x2 = membership().withLibraryOwner(lib).withLibraryFollower(lib, follower2).saved
+          }
+        }
+
         val senderF = sender()
         Await.ready(senderF, Duration(5, "seconds"))
 
@@ -199,6 +230,22 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         html2 must contain("u2/friendCreated0")
         html2 must contain("u2/friendCreated1")
         html2 must contain("u2/friendCreated2")
+
+        // test friend followed libraries
+        html1 must contain("u1/friendFollowed0")
+        html1 must contain("John Doe0")
+        html1 must contain("Bobby Tullip0")
+        html2 must contain("u2/friendFollowed1")
+        html2 must contain("John Doe1")
+        html2 must contain("Bobby Tullip1")
+
+        // test new followers of users' libraries
+        html1 must contain("u1/newFollowersMyLibs")
+        html1 must contain("New Follower1")
+        html1 must contain("New Follower2")
+        html2 must contain("u2/newFollowersMyLibs")
+        html2 must contain("New Follower1")
+        html2 must contain("New Follower2")
 
       }
     }

@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time.Clock
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.DenseLDA
+import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA }
 import com.keepit.cortex.sql.CortexTypeMappers
 import com.keepit.model.User
 import com.keepit.common.db.slick._
@@ -17,6 +17,7 @@ trait UserLDAStatsRepo extends DbRepo[UserLDAStats] {
   def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserLDAStats]
   def getActiveByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserLDAStats]
   def getAllUsers(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[Id[User]]
+  def getByTopic(version: ModelVersion[DenseLDA], firstTopic: LDATopic)(implicit session: RSession): Seq[UserLDAStats]
 }
 
 @Singleton
@@ -33,9 +34,13 @@ class UserLDAStatsRepoImpl @Inject() (
     def userId = column[Id[User]]("user_id")
     def version = column[ModelVersion[DenseLDA]]("version")
     def numOfEvidence = column[Int]("num_of_evidence")
+    def firstTopic = column[LDATopic]("first_topic", O.Nullable)
+    def secondTopic = column[LDATopic]("second_topic", O.Nullable)
+    def thirdTopic = column[LDATopic]("third_topic", O.Nullable)
+    def firstTopicScore = column[Float]("first_topic_score", O.Nullable)
     def userTopicMean = column[UserTopicMean]("user_topic_mean", O.Nullable)
     def userTopicVar = column[UserTopicVar]("user_topic_var", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, version, numOfEvidence, userTopicMean.?, userTopicVar.?, state) <> ((UserLDAStats.apply _).tupled, UserLDAStats.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, version, numOfEvidence, firstTopic.?, secondTopic.?, thirdTopic.?, firstTopicScore.?, userTopicMean.?, userTopicVar.?, state) <> ((UserLDAStats.apply _).tupled, UserLDAStats.unapply _)
   }
 
   def table(tag: Tag) = new UserPersonalLDAStatsTable(tag)
@@ -54,6 +59,10 @@ class UserLDAStatsRepoImpl @Inject() (
 
   def getAllUsers(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[Id[User]] = {
     (for { r <- rows } yield r.userId).list
+  }
+
+  def getByTopic(version: ModelVersion[DenseLDA], firstTopic: LDATopic)(implicit session: RSession): Seq[UserLDAStats] = {
+    (for { r <- rows if r.version === version && r.firstTopic === firstTopic } yield r).list
   }
 
 }

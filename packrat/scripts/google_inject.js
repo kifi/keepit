@@ -585,7 +585,11 @@ if (searchUrlRe.test(document.URL)) !function () {
         detailLibrary(library, function detail(lib, retryMs) {
           var $card = ($a.data('hoverfu') || {}).$h;
           if ($card) {
-            $card.find('.kifi-lc-pic').css('background-image', 'url(' + lib.owner.pictureUrl + ')');
+            if (lib.image) {
+              $card.find('.kifi-lc-top').css({'background-image': 'url(' + lib.imageUrl + ')', 'background-position': lib.image.x + '% ' + lib.image.y + '%'});
+            }
+            $card.find('.kifi-lc-bottom').css('border-color', lib.color);
+            $card.find('.kifi-lc-owner-pic').css('background-image', 'url(' + lib.owner.pictureUrl + ')');
             $card.find('.kifi-lc-owner').text(lib.owner.name);
             var $n = $card.find('.kifi-lc-count-n');
             $n.first().text(lib.keeps);
@@ -727,6 +731,9 @@ if (searchUrlRe.test(document.URL)) !function () {
   function detailLibrary(lib, callback) {
     api.port.emit('get_library', lib.id, function (o) {
       $.extend(lib, o);
+      if (o.image) {
+        lib.imageUrl = k.cdnBase + '/' + o.image.path;
+      }
       lib.owner.pictureUrl = k.cdnBase + '/users/' + o.owner.id + '/pics/200/' + o.owner.pictureName;
       lib.owner.name = o.owner.firstName + ' ' + o.owner.lastName;
       lib.mine = lib.owner.id === response.me.id;

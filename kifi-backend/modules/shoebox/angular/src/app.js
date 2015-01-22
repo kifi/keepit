@@ -69,49 +69,35 @@ angular.module('kifi', [
   }
 ])
 
-.factory('injectedState', [
+.factory('initParams', [
   '$location',
   function ($location) {
-    var state = {};
-
-    if (_.size($location.search()) > 0) {
-      // There may be URL parameters that we're interested in extracting.
-      _.forOwn($location.search(), function (value, key) {
-        state[key] = value;
-      });
+    var params = ['m', 'o', 'friend', 'subtype'];
+    var search = $location.search();
+    var state = _.pick(search, params);
+    if (!_.isEmpty(state)) {
+      $location.search(_.omit(search, params)).replace();
     }
-
-    function pushState(obj) {
-      _.forOwn(obj, function (value, key) {
-        state[key] = value;
-      });
-      return state;
-    }
-
-    return {
-      state: state,
-      pushState: pushState
-    };
+    return state;
   }
 ])
 
 .factory('analyticsState', [
-  'injectedState',
-  function (injectedState) {
+  'initParams',
+  function (initParams) {
     // this is a way to add custom event attributes analytics events that may
     // be fired before the full state of the page is realized (like whether or
-    // not to load a directive that depends on injectedState)
+    // not to load a directive that depends on initParams)
     var attributes = {
       events: {
         user_viewed_page: {}
       }
     };
 
-    var state = injectedState.state || {};
-    if (typeof state.friend === 'string' && state.friend.match(/^[a-f0-9-]{36}$/)) {
+    if (initParams.friend && /^[a-f0-9-]{36}$/.test(initParams.friend)) {
       // naively assumes that state.friend is a valid externalId and the user
       // will see the contact jointed banner
-      attributes.events.user_viewed_page.subtype = state.subtype || 'contactJoined';
+      attributes.events.user_viewed_page.subtype = initParams.subtype || 'contactJoined';
     }
 
     return attributes;

@@ -430,5 +430,4 @@ class LDACommander @Inject() (
         (ranked.take(limit) ++ additional).distinct
     }
   }
-
 }

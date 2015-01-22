@@ -1,8 +1,5 @@
 package com.keepit.commanders
 
-import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.performance._
-
 import java.awt.image.BufferedImage
 
 import com.keepit.common.logging.Logging
@@ -22,14 +19,24 @@ import com.keepit.scraper.{ URIPreviewFetchResult, NormalizedURIRef, ShoeboxDbCa
 import com.keepit.scraper.embedly.{ EmbedlyImage, EmbedlyClient }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 import com.keepit.common.net.URI
+import com.keepit.common.performance._
+import com.keepit.common.store.S3URIImageStore
+import com.keepit.model.{ ImageStoreFailureWithException, ImageInfo, PageInfo, URISummary }
+import com.keepit.scraper.embedly.{ EmbedlyClient, EmbedlyImage }
+import com.keepit.scraper._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 @ImplementedBy(classOf[ScraperURISummaryCommanderImpl])
 trait ScraperURISummaryCommander {
   // On the way in:
   def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]]
   // On the way out:
-  def fetchFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]]
+  def fetchFromEmbedly(uri: NormalizedURIRef): Future[Option[URISummary]]
 }
 
 class ScraperURISummaryCommanderImpl @Inject() (
@@ -38,10 +45,11 @@ class ScraperURISummaryCommanderImpl @Inject() (
     s3URIImageStore: S3URIImageStore,
     uriImageStore: S3URIImageStore,
     airbrake: AirbrakeNotifier,
+    uriImageCommander: UriImageCommander,
     callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander with Logging {
 
-  def fetchFromEmbedly(nUri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-    fetchPageInfoAndImageInfo(nUri, descriptionOnly) map {
+  def fetchFromEmbedly(nUri: NormalizedURIRef): Future[Option[URISummary]] = {
+    fetchPageInfoAndImageInfo(nUri) map {
       case (Some(pageInfo), imageInfoOpt) =>
         callback.savePageInfo(pageInfo) // no wait
 
@@ -61,31 +69,55 @@ class ScraperURISummaryCommanderImpl @Inject() (
   }
 
   def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]] = {
-    embedlyClient.getEmbedlyInfo(url).map {
+    embedlyClient.getEmbedlyInfo(url).flatMap {
       case Some(embedlyResult) =>
         val primaryImage = embedlyResult.images.find(img => ScraperURISummaryCommander.isValidImage(img))
-        // todo: Resize and persist
 
-        Some(URIPreviewFetchResult(
-          pageUrl = url,
-          title = embedlyResult.title,
-          description = embedlyResult.description,
-          authors = embedlyResult.authors,
-          publishedAt = embedlyResult.published,
-          safe = embedlyResult.safe,
-          lang = embedlyResult.lang,
-          faviconUrl = embedlyResult.faviconUrl.collect { case f if f.startsWith("http") => f },
-          images = None // todo
-        ))
+        val imagesF = primaryImage match {
+          case Some(embedlyImage) =>
+            log.info(s"[susc] Got ${embedlyImage.url} for $url, fetching, resizing, and persisting.")
+            uriImageCommander.processRemoteImage(embedlyImage.url).map {
+              case Left(uploadResults) =>
+                val sizes = uploadResults.map { upload =>
+                  PersistedImageVersion(upload.image.getWidth, upload.image.getHeight, upload.key)
+                }
+                log.info(s"[susc] Done, uploaded ${uploadResults.length} images: ${sizes}")
+                Some(PersistedImageRef(sizes, embedlyImage.caption))
+              case Right(failure) =>
+                failure match {
+                  case f: ImageStoreFailureWithException =>
+                    log.error(s"[susc] Failure fetching/persisting image from $url. Reason: ${f.reason}", f.getCause)
+                  case f =>
+                    log.error(s"[susc] Couldn't fetch/persist image from $url. Reason: ${f.reason}")
+                }
+                None
+            }
+          case None => // embedly didn't have any images
+            Future.successful(None)
+        }
+        imagesF.map { images =>
+          Option(URIPreviewFetchResult(
+            pageUrl = url,
+            title = embedlyResult.title,
+            description = embedlyResult.description,
+            authors = embedlyResult.authors,
+            publishedAt = embedlyResult.published,
+            safe = embedlyResult.safe,
+            lang = embedlyResult.lang,
+            faviconUrl = embedlyResult.faviconUrl.collect { case f if f.startsWith("http") => f },
+            images = images
+          ))
+        }
 
-      case None => None
+      case None =>
+        Future.successful(None)
     }
   }
 
   // Internal:
 
-  private def fetchPageInfoAndImageInfo(nUri: NormalizedURIRef, descriptionOnly: Boolean): Future[(Option[PageInfo], Option[ImageInfo])] = {
-    val watch = Stopwatch(s"[embedly] asking for $nUri, descriptionOnly $descriptionOnly")
+  private def fetchPageInfoAndImageInfo(nUri: NormalizedURIRef): Future[(Option[PageInfo], Option[ImageInfo])] = {
+    val watch = Stopwatch(s"[embedly] asking for $nUri")
     val fullEmbedlyInfo = embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
       watch.logTimeWith(s"got info: $embedlyInfoOpt") //this could be lots of logging, should remove it after problems resolved
 
@@ -93,28 +125,24 @@ class ScraperURISummaryCommanderImpl @Inject() (
         embedlyInfo <- embedlyInfoOpt
       } yield {
         val imageInfoOptF: Future[Option[ImageInfo]] = {
-          if (descriptionOnly) {
-            Future.successful(None)
-          } else {
-            val name = RandomStringUtils.randomAlphanumeric(5)
-            val path = s3URIImageStore.getEmbedlyImageKey(nUri.externalId, name, ImageFormat.JPG.value)
-            val images = embedlyInfo.buildImageInfo(nUri.id, path, name)
-            val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.isValidImageUrl) }
+          val name = RandomStringUtils.randomAlphanumeric(5)
+          val path = s3URIImageStore.getEmbedlyImageKey(nUri.externalId, name, ImageFormat.JPG.value)
+          val images = embedlyInfo.buildImageInfo(nUri.id, path, name)
+          val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.isValidImageUrl) }
 
-            // todo: Upload nonBlankImages to S3.
+          // todo: Upload nonBlankImages to S3.
 
-            nonBlankImages.headOption match {
-              case None =>
-                watch.logTimeWith(s"no selected image")
-                Future.successful(None)
-              case Some(image) =>
-                watch.logTimeWith(s"got a selected image : $image")
-                val future = fetchAndSaveImage(nUri, image)
-                future.onComplete { res =>
-                  watch.logTimeWith(s"[success = ${res.isSuccess}}] fetched a selected image for : $image")
-                }
-                future
-            }
+          nonBlankImages.headOption match {
+            case None =>
+              watch.logTimeWith(s"no selected image")
+              Future.successful(None)
+            case Some(image) =>
+              watch.logTimeWith(s"got a selected image : $image")
+              val future = fetchAndSaveImage(nUri, image)
+              future.onComplete { res =>
+                watch.logTimeWith(s"[success = ${res.isSuccess}}] fetched a selected image for : $image")
+              }
+              future
           }
         }
         imageInfoOptF map { imageInfoOpt => (Some(embedlyInfo.toPageInfo(nUri.id)), imageInfoOpt) }

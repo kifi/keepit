@@ -1,8 +1,7 @@
 package com.keepit.search.engine
 
-import com.keepit.search.engine.query._
 import com.keepit.search.engine.query.core._
-import com.keepit.search.engine.query.{ FixedScoreQuery, HomePageQuery, ProximityQuery }
+import com.keepit.search.engine.query.{ FixedScoreQuery, HomePageQuery }
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanClause.Occur._
 import scala.collection.JavaConversions._
@@ -96,10 +95,10 @@ class QueryEngineBuilder(userQuery: Query) {
           filter = ExistsExpr(filterOut)
         )
 
-        (expr, userQuery, exprIndex, false)
+        (expr, booleanQuery, exprIndex, false)
 
       case textQuery: KTextQuery =>
-        (MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), userQuery, 1, false)
+        (MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), textQuery, 1, false)
 
       case filterQuery: KFilterQuery =>
         // this is a filter only query, use FixedScoreQuery and MaxExpr, and disable click boost and sharing boost
