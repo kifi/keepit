@@ -144,6 +144,23 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
           }
         }
 
+        // setup friend followed libraries
+        db.readWrite { implicit rw =>
+          for {
+            (user, userIdx) <- Seq(user1, user2).zipWithIndex
+            friend1 = UserFactory.user().withName("John", s"Doe$userIdx").saved
+            friend2 = UserFactory.user().withName("Bobby", s"Tullip$userIdx").saved
+            i <- 0 to 1
+            (lib, keeps) <- createLibWithKeeps(s"u${userIdx + 1}/friendFollowed$i", 1, 1)
+          } yield {
+            connRepo.save(UserConnection(user1 = user.id.get, user2 = friend1.id.get))
+            connRepo.save(UserConnection(user1 = user.id.get, user2 = friend2.id.get))
+
+            membership().withLibraryFollower(lib, friend1).saved
+            membership().withLibraryFollower(lib, friend2).saved
+          }
+        }
+
         val senderF = sender()
         Await.ready(senderF, Duration(5, "seconds"))
 
@@ -201,6 +218,14 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         html2 must contain("u2/friendCreated0")
         html2 must contain("u2/friendCreated1")
         html2 must contain("u2/friendCreated2")
+
+        // test friend followed libraries
+        html1 must contain("u1/friendFollowed0")
+        html1 must contain("John Doe0")
+        html1 must contain("Bobby Tullip0")
+        html2 must contain("u2/friendFollowed1")
+        html2 must contain("John Doe1")
+        html2 must contain("Bobby Tullip1")
 
       }
     }

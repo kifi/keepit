@@ -57,7 +57,8 @@ case class ActivityEmailData(
   libraryRecos: Seq[FullLibRecoInfo],
   uriRecos: Seq[FullUriRecoInfo],
   pendingFriendRequests: Seq[Id[User]],
-  friendCreatedLibraries: Map[Id[User], Seq[LibraryInfoView]])
+  friendCreatedLibraries: Map[Id[User], Seq[LibraryInfoView]],
+  friendFollowedLibraries: Map[Id[Library], (LibraryInfoView, Seq[Id[User]])])
 
 @ImplementedBy(classOf[ActivityFeedEmailSenderImpl])
 trait ActivityFeedEmailSender {
@@ -122,7 +123,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
         libraryRecos = libRecos,
         uriRecos = uriRecos,
         pendingFriendRequests = pendingFriendRequests,
-        friendCreatedLibraries = friendsWhoCreated
+        friendCreatedLibraries = friendsWhoCreated,
+        friendFollowedLibraries = friendsWhoFollowed
       )
 
       EmailToSend(
@@ -152,17 +154,20 @@ class ActivityFeedEmailSenderImpl @Inject() (
     // library recommendations to fetch from curator
     val libRecosToFetch = maxLibRecostoDeliver * 2
 
-    // max number of user-followed libraries to display
-    val maxFollowedLibraries = 3
+    // max number of new keeps in user-followed libraries to display
+    val maxNewKeepsInFollowedLibraries = 3
 
-    // max number of invited-to libraries to display
-    val maxInvitedLibraries = 3
+    // max number of pending invited-to libraries to display
+    val maxInvitedLibraries = 5
 
     // max number of friend requests to display
-    val maxFriendRequests = 3
+    val maxFriendRequests = 5
 
-    // max number of libraries to show creaed by friends
-    val maxFriendsWhoCreatedLibraries = 3
+    // max number of libraries to show created by friends
+    val maxFriendsWhoCreatedLibraries = 5
+
+    // max number of libraries to show that were followed by friends
+    val maxLibrariesFollowedByFriends = 5
 
     val minRecordAge = currentDateTime.minus(Duration.standardDays(7))
 
@@ -171,8 +176,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
     private lazy val (followedLibraries: Seq[Library], invitedLibraries: Seq[(LibraryInvite, Library)]) = {
       val (rawUserLibs, rawInvitedLibs) = libraryCommander.getLibrariesByUser(toUserId)
       (
-        rawUserLibs filterNot (_._1.isOwner) map (_._2) take maxFollowedLibraries,
-        rawInvitedLibs take maxInvitedLibraries
+        rawUserLibs filterNot (_._1.isOwner) map (_._2),
+        rawInvitedLibs
       )
     }
 
@@ -191,7 +196,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
             keep.createdAt > minRecordAge
           }
           library -> keeps
-        }
+        } filter (_._2.nonEmpty)
       }
 
       val libInfosF = createFullLibraryInfos(libraryKeeps.map(_._1))
@@ -200,7 +205,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
           case ((libId, libInfo), (lib, keeps)) =>
             val keepInfos = keeps map { k => KeepInfoView(KeepInfo.fromKeep(k)) }
             BaseLibraryInfoView(libId, libInfo) -> keepInfos
-        }
+        } take maxNewKeepsInFollowedLibraries
       }
     }
 
@@ -216,7 +221,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
       fullLibraryInfosF map { fullLibraryInfos =>
         fullLibraryInfos map {
           case (libraryId, fullLibInfo) => (libraryId, fullLibInfo, invitesByLibraryId(libraryId))
-        }
+        } take maxInvitedLibraries
       }
     } recover {
       case e: Exception =>
@@ -230,8 +235,35 @@ class ActivityFeedEmailSenderImpl @Inject() (
       } map { _ sortBy (-_.updatedAt.getMillis) map (_.senderId) take maxFriendRequests }
     }
 
-    def getFriendsWhoFollowedLibraries(friends: Set[Id[User]]): Future[Seq[Library]] = {
-      Future.successful(Seq.empty) // TODO
+    def getFriendsWhoFollowedLibraries(friends: Set[Id[User]]): Future[Map[Id[Library], (LibraryInfoView, Seq[Id[User]])]] = {
+      val (libraries, libMembershipAndLibraries) = db.readOnlyReplica { implicit session =>
+        val libMembershipAndLibraries = friends.toSeq flatMap { friendUserId =>
+          libraryRepo.getByUser(friendUserId)
+        } filter {
+          case (lm, library) =>
+            !lm.isOwner && library.visibility == LibraryVisibility.PUBLISHED &&
+              lm.state == LibraryMembershipStates.ACTIVE && lm.lastJoinedAt.exists(minRecordAge <)
+        }
+        val libraries = libMembershipAndLibraries.map(_._2)
+
+        (filterAndSortLibrariesByAge(libraries), libMembershipAndLibraries)
+      }
+
+      val fullLibInfosF = createFullLibraryInfos(libraries)
+      fullLibInfosF map { libInfos =>
+        val membershipsByLibraryId = libMembershipAndLibraries.groupBy(_._2.id.get)
+        val libIdsAndFriendUserIds = libInfos map {
+          case (libId, libInfo) =>
+            val memberships = membershipsByLibraryId(libId)
+            val friendsWhoFollowThisLibrary = memberships map { case (membership, _) => membership.userId }
+            libId -> (BaseLibraryInfoView(libId, libInfo), friendsWhoFollowThisLibrary)
+        }
+
+        // sorts libraries by # of friends following each one
+        libIdsAndFriendUserIds.sortBy {
+          case (_, (_, friends)) => -friends.size
+        }.take(maxLibrariesFollowedByFriends).toMap
+      }
     }
 
     def getFriendsWhoCreatedLibraries(friends: Set[Id[User]]): Future[Map[Id[User], Seq[LibraryInfoView]]] = {
