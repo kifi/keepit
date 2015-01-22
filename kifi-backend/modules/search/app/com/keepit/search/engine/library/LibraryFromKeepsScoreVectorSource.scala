@@ -61,7 +61,7 @@ class LibraryFromKeepsScoreVectorSource(
           // write to the buffer
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // libId (8 bytes), keepId (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(libId, keepId).putTaggedFloatBits(taggedScores, size)
-          explanation.foreach(_.collectBufferScoreContribution(libId, keepId, visibility, taggedScores, size))
+          explanation.foreach(_.collectBufferScoreContribution(libId, keepId, visibility, taggedScores, size, weights.length))
 
           docId = pq.top.doc // next doc
         } else {

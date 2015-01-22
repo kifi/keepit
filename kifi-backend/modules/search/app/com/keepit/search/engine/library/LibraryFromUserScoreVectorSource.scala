@@ -89,7 +89,7 @@ class LibraryFromUserScoreVectorSource(
             // write to the buffer
             output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
             writer.putLong(libId).putTaggedFloatBits(taggedScores, size)
-            explanation.foreach(_.collectBufferScoreContribution(libId, -1, visibility, taggedScores, size))
+            explanation.foreach(_.collectBufferScoreContribution(libId, -1, visibility, taggedScores, size, userSource.numberOfScorers))
           }
           docId = td.nextDoc()
         }
@@ -129,5 +129,6 @@ class LibraryFromUserScoreVectorSource(
     }
 
     def createScoreArray(): Array[Int] = new Array[Int](weights.size)
+    def numberOfScorers = weights.size
   }
 }
