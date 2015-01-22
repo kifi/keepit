@@ -209,7 +209,8 @@ angular.module('kifi')
       $scope.registerFinalizeSubmitted = true;
       $scope.requestActive = true;
       var fields;
-      if (!form.$valid) {
+
+      if (form && !form.$valid) {
         $scope.requestActive = false;
         return false;
       } else if ($scope.userData.method === 'social') {
