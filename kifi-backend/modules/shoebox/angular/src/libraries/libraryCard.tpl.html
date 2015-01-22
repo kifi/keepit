@@ -60,7 +60,7 @@
 
           <div ng-switch="clippedDescription" class="kf-keep-lib-description-container">
             <p ng-switch-when="true" class="kf-keep-lib-description">
-              <span ng-bind-html="library.shortDescription" itemtype="headline"></span>&hellip;
+              <span ng-bind-html="library.shortDescription" itemtype="description"></span>&hellip;
               <a href="javascript:" class="kf-desc-more" ng-click="showLongDescription()">More</a>
             </p>
             <p ng-switch-when="false" class="kf-keep-lib-description" ng-bind-html="library.formattedDescription"></p>
