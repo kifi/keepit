@@ -166,9 +166,13 @@ angular.module('kifi')
               $scope.onSuccess();
             } else if (resp.code && resp.code === 'continue_signup') {
               // todo: handle case when emails match, so backend auto-logs in user - andrew
-              modalService.close();
+
               $scope.userData.method = 'social';
-              registerFinalizeModal();
+
+              // skip password setting (set randomly)
+              $scope.userData.password = Math.random().toString(36).substring(8);
+              $scope.registerFinalizeSubmit();
+
             } else if (resp.code && resp.code === 'connect_option') {
               // todo, figure out what this could be, handle errors - andrew
               $scope.onError({'code': 'connect_option', redirect: resp.uri});
@@ -205,7 +209,8 @@ angular.module('kifi')
       $scope.registerFinalizeSubmitted = true;
       $scope.requestActive = true;
       var fields;
-      if (!form.$valid) {
+
+      if (form && !form.$valid) {
         $scope.requestActive = false;
         return false;
       } else if ($scope.userData.method === 'social') {
