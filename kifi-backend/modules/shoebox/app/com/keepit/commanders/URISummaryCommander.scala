@@ -187,6 +187,7 @@ class URISummaryCommander @Inject() (
           pageInfoRepo.save(pageInfo)
 
           // Images
+          log.info(s"[usc] Persisting ${resp.images.map(_.sizes.length)} images: ${resp.images}")
           resp.images.map { images =>
             // todo handle existing images
             // Persist images largest to smallest
@@ -197,6 +198,7 @@ class URISummaryCommander @Inject() (
                 case "gif" => ImageFormat.GIF
                 case _ => ImageFormat.UNKNOWN
               }
+              log.info(s"[usc] Persisting Created obj for ${image.path}")
               ImageInfo(
                 uriId = nUri.id,
                 url = Some(image.originalUrl),
