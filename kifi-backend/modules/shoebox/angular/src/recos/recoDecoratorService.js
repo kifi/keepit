@@ -41,6 +41,7 @@ angular.module('kifi')
         // All recommended libraries are published user-created libraries.
         this.recoLib.kind = 'user_created';
         this.recoLib.visibility = 'published';
+        this.recoLib.access = 'none';
       }
     }
 

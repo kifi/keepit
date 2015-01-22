@@ -115,7 +115,7 @@ class UriFromLibraryScoreVectorSource(
             // write to the buffer
             output.alloc(writer, v, 8 + 8 + 4 * size) // id (8 bytes), keepId (8 bytes), taggedScores (4 * size bytes)
             writer.putLong(uriId, keepId).putTaggedFloatBits(taggedScores, size)
-            explanation.foreach(_.collectBufferScoreContribution(uriId, keepId, visibility, taggedScores, size))
+            explanation.foreach(_.collectBufferScoreContribution(uriId, keepId, visibility, taggedScores, size, libraryNameSource.numberOfScorers))
           }
           docId = td.nextDoc()
         }
@@ -145,7 +145,7 @@ class UriFromLibraryScoreVectorSource(
               // write to the buffer
               output.alloc(writer, v, 8 + 8) // id (8 bytes), keepId (8 bytes)
               writer.putLong(uriId, keepId)
-              explanation.foreach(_.collectBufferScoreContribution(uriId, keepId, visibility, Array.empty[Int], 0))
+              explanation.foreach(_.collectBufferScoreContribution(uriId, keepId, visibility, Array.empty[Int], 0, 0))
             }
             docId = td.nextDoc()
           }
@@ -238,5 +238,6 @@ class UriFromLibraryScoreVectorSource(
     }
 
     def createScoreArray(): Array[Int] = new Array[Int](weights.size)
+    def numberOfScorers = weights.size
   }
 }

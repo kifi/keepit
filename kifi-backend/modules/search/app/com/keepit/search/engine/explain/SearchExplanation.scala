@@ -138,10 +138,10 @@ abstract class SearchExplanationBuilder[T](val resultId: Id[T], val lang: (Lang,
 
   private[this] val _details = new ListBuffer[ScoreDetail]()
 
-  def collectBufferScoreContribution(primaryId: Long, secondaryId: Long, visibility: Int, taggedScores: Array[Int], numberOfTaggedScores: Int)(implicit location: Location): Unit = {
+  def collectBufferScoreContribution(primaryId: Long, secondaryId: Long, visibility: Int, taggedScores: Array[Int], numberOfTaggedScores: Int, numberOfScorers: Int)(implicit location: Location): Unit = {
     if (primaryId == resultId.id) {
-      val scoreArray = Array.fill(taggedScores.size)(0.0f)
-      taggedScores.take(numberOfTaggedScores).foreach { bits =>
+      val scoreArray = Array.fill(numberOfScorers)(0.0f)
+      taggedScores.take(numberOfScorers).foreach { bits =>
         val idx = DataBuffer.getTaggedFloatTag(bits)
         val scr = DataBuffer.getTaggedFloatValue(bits)
         scoreArray(idx) = scr

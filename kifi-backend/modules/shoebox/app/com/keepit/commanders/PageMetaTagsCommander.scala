@@ -20,6 +20,7 @@ class PageMetaTagsCommander @Inject() (
     relatedLibraryCommander: RelatedLibraryCommander,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
+    pageInfoRepo: PageInfoRepo,
     applicationConfig: FortyTwoConfig,
     socialUserInfoRepo: SocialUserInfoRepo,
     libraryRepo: LibraryRepo,
@@ -68,6 +69,15 @@ class PageMetaTagsCommander @Inject() (
       val urlPathOnly = Library.formatLibraryPath(owner.username, library.slug)
       (owner, urlPathOnly)
     }
+    val altDescF: Future[Option[String]] = if (library.description.exists(_.size > 10)) {
+      Future.successful(None)
+    } else {
+      db.readOnlyMasterAsync { implicit s =>
+        val keeps = keepRepo.getByLibrary(library.id.get, 0, 50)
+        val page = keeps.iterator.map(k => pageInfoRepo.getByUri(k.uriId)).find(p => p.exists(_.description.size > 100)).flatten
+        page.flatMap(_.description)
+      }
+    }
     if (library.visibility != PUBLISHED) {
       Future.successful(PublicPageMetaPrivateTags(urlPathOnly))
     } else {
@@ -92,12 +102,13 @@ class PageMetaTagsCommander @Inject() (
       for {
         (owner, url, imageUrls, facebookId, lowQualityLibrary) <- metaInfoF
         relatedLibraiesLinks <- relatedLibraiesLinksF
+        altDesc <- altDescF
       } yield {
         PublicPageMetaFullTags(
           unsafeTitle = s"${library.name} by ${owner.firstName} ${owner.lastName} \u2022 Kifi",
           url = url,
           urlPathOnly = urlPathOnly,
-          unsafeDescription = PublicPageMetaTags.generateMetaTagsDescription(library.description, owner.fullName, library.name),
+          unsafeDescription = PublicPageMetaTags.generateMetaTagsDescription(library.description, owner.fullName, library.name, altDesc),
           images = imageUrls,
           facebookId = facebookId,
           createdAt = library.createdAt,
