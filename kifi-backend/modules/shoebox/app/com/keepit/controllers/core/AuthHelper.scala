@@ -216,7 +216,7 @@ class AuthHelper @Inject() (
       error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => {
         val result = if (cookieRedirect.isDefined) {
-          val redirectUrl = java.net.URLDecoder.decode(cookieRedirect.get.value, "UTF-8")
+          val redirectUrl = java.net.URLDecoder.decode(cookieRedirect.get.value, "UTF-8") + "?install=1" // tell browser to pop-up install modal
           Ok(Json.obj("uri" -> redirectUrl))
         } else if (isFinalizedImmediately) {
           Redirect(uri)
