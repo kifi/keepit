@@ -53,6 +53,8 @@ angular.module('kifi')
       } else {
         $scope.clearLibraryName();
       }
+
+      $scope.curatorProfileUrl = $scope.library.owner && routeService.getProfileUrl($scope.library.owner.username);
     });
     $scope.$on('$destroy', deregisterLibraryChip);
 
