@@ -50,6 +50,8 @@ class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extend
     booleanQuery.createWeight(searcher)
   }
 
+  log.info(s"[$query] Created KPrefixWeight with underlying boolean query: ${booleanWeight.getQuery} ")
+
   def getQuery(): KPrefixQuery = query
 
   def getValueForNormalization() = booleanWeight.getValueForNormalization
@@ -61,7 +63,9 @@ class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extend
   override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
     val nameDocsValues = context.reader.getBinaryDocValues(query.nameValueField)
     val booleanScorer = booleanWeight.scorer(context, acceptDocs)
-    if (nameDocsValues == null || booleanScorer == null) null else new KPrefixScorer(this, booleanScorer, query.terms, nameDocsValues)
+    val scorer = if (nameDocsValues == null || booleanScorer == null) null else new KPrefixScorer(this, booleanScorer, query.terms, nameDocsValues)
+    log.info(s"[$query] Created scorer: $scorer")
+    scorer
   }
 
   override def getWeights(out: ArrayBuffer[(Weight, Float)]): Unit = {
@@ -69,7 +73,7 @@ class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extend
   }
 }
 
-class KPrefixScorer(weight: KPrefixWeight, subScorer: Scorer, queryTerms: Array[String], nameDocValues: BinaryDocValues) extends Scorer(weight) {
+class KPrefixScorer(weight: KPrefixWeight, subScorer: Scorer, queryTerms: Array[String], nameDocValues: BinaryDocValues) extends Scorer(weight) with Logging {
   override def docID(): Int = subScorer.docID()
 
   override def nextDoc(): Int = subScorer.nextDoc()
@@ -85,7 +89,9 @@ class KPrefixScorer(weight: KPrefixWeight, subScorer: Scorer, queryTerms: Array[
     val name = getName()
     val distance = PrefixMatching.distance(name, queryTerms)
     val boost = (PrefixMatching.maxDist - distance).toFloat / PrefixMatching.maxDist // todo(Léo): boost shorter names
-    subScorer.score() * boost
+    val score = subScorer.score() * boost
+    log.info(s"[${weight.query}] Scored $name at $score)")
+    score
   }
 
   override def freq(): Int = -1
