@@ -16,17 +16,17 @@ import java.util.{ Set => JSet }
 import scala.collection.mutable.ArrayBuffer
 
 object KPrefixQuery {
-  def get(nameValueField: String, prefixField: String, queryText: String): Option[KPrefixQuery] = {
+  def get(prefixField: String, nameValueField: String, queryText: String): Option[KPrefixQuery] = {
     val terms = PrefixFilter.tokenize(queryText)
-    if (terms.isEmpty) None else Some(new KPrefixQuery(nameValueField, prefixField, terms))
+    if (terms.isEmpty) None else Some(new KPrefixQuery(prefixField, nameValueField, terms))
   }
 }
 
-class KPrefixQuery(val nameValueField: String, val prefixField: String, val terms: Array[String]) extends Query with ProjectableQuery {
+class KPrefixQuery(val prefixField: String, val nameValueField: String, val terms: Array[String]) extends Query with ProjectableQuery {
 
   protected val name = "KPrefix"
 
-  override def toString(s: String) = s"prefix($prefixField-$nameValueField: ${terms.mkString(" & ")})"
+  override def toString(s: String) = s"KPrefixQuery($prefixField-$nameValueField: ${terms.mkString(" & ")})"
 
   override def createWeight(searcher: IndexSearcher): Weight = new KPrefixWeight(this, searcher)
 
