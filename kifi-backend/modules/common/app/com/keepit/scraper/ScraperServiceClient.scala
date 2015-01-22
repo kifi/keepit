@@ -121,7 +121,7 @@ case class ScraperThreadInstanceInfo(info: AmazonInstanceInfo, jobInfo: Either[S
 
 @json case class NormalizedURIRef(id: Id[NormalizedURI], url: String, externalId: ExternalId[NormalizedURI])
 
-@json case class PersistedImageVersion(width: Int, height: Int, path: String)
+@json case class PersistedImageVersion(width: Int, height: Int, path: String, originalUrl: String)
 @json case class PersistedImageRef(sizes: Seq[PersistedImageVersion], caption: Option[String])
 @json case class URIPreviewFetchResult(
   pageUrl: String,
@@ -147,7 +147,7 @@ trait ScraperServiceClient extends ServiceClient {
   def getURIWordCountOpt(uriId: Id[NormalizedURI], url: String): Option[Int]
   def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]]
   // In the process of deprecation, please do not use:
-  def getURISummaryFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]]
+  def getURISummaryFromEmbedly(uri: NormalizedURIRef): Future[Option[URISummary]]
 
   // Admin only API (if you need one of these outside of admin, talk to Andrew):
   def status(): Seq[Future[(AmazonInstanceInfo, Seq[ScrapeJobStatus])]]
@@ -234,8 +234,8 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
-  def getURISummaryFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-    val payload = Json.obj("uri" -> uri, "descriptionOnly" -> descriptionOnly)
+  def getURISummaryFromEmbedly(uri: NormalizedURIRef): Future[Option[URISummary]] = {
+    val payload = Json.obj("uri" -> uri)
     call(Scraper.internal.getURISummaryFromEmbedly, payload, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
       r.json.as[Option[URISummary]]
     }

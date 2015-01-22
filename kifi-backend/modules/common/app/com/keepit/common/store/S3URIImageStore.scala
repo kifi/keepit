@@ -24,7 +24,7 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
     os.flush
     val bytes = os.toByteArray
     os.close
-    val key = getImageKey(info, extNormUriId )
+    val key = getImageKey(info, extNormUriId)
     log.info(s"Uploading screenshot of ${extNormUriId} to S3 key $key")
     streamUpload(config.bucketName, key, new ByteArrayInputStream(bytes), "public, max-age=1800", bytes.length) flatMap { _ =>
       // Return the url of the image in S3
