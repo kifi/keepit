@@ -101,7 +101,7 @@ class ImageInfoRepoImpl @Inject() (
           case Some(url) =>
             // deactivate images with the same url or older than a day
             val yesterday = clock.now.minusDays(1)
-            sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value}, updated_at=${now} where uri_id=${info.uriId} and provider=${EMBEDLY.value} and state=${ACTIVE.value} and (updated_at < $yesterday or url = $url)".first
+            //sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value}, updated_at=${now} where uri_id=${info.uriId} and provider=${EMBEDLY.value} and state=${ACTIVE.value} and (updated_at < $yesterday or url = $url)".first
             // deactivate rows with null provider
             sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value}, updated_at=${now} where uri_id=${info.uriId} and provider is null and state=${ACTIVE.value}".first
           case _ =>
