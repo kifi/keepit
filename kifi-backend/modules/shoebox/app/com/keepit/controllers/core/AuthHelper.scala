@@ -210,11 +210,15 @@ class AuthHelper @Inject() (
 
     request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))
 
+    val cookieRedirect = request.cookies.get("redirect")
+
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => {
         val result = if (isFinalizedImmediately) {
           Redirect(uri)
+        } else if (cookieRedirect.isDefined) {
+          Redirect(cookieRedirect.get.value)
         } else {
           Ok(Json.obj("uri" -> uri))
         }
