@@ -3,7 +3,7 @@ package com.keepit.search.engine.query
 import java.io.ByteArrayInputStream
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.engine.query.core.{ KWeight, KBooleanQuery, ProjectableQuery }
+import com.keepit.search.engine.query.core.{NullQuery, KWeight, KBooleanQuery, ProjectableQuery}
 import com.keepit.search.index.Searcher
 import com.keepit.typeahead.{ PrefixFilter, PrefixMatching }
 import org.apache.lucene.index.{ BinaryDocValues, Term, AtomicReaderContext }
@@ -32,7 +32,7 @@ class KPrefixQuery(val nameValueField: String, val prefixField: String, val term
 
   override def extractTerms(out: JSet[Term]): Unit = terms.foreach(termString => out.add(new Term(prefixField, termString)))
 
-  def project(fields: Set[String]): Query = if (fields.contains(prefixField)) this else null
+  def project(fields: Set[String]): Query = if (fields.contains(prefixField)) this else new NullQuery()
 
 }
 
