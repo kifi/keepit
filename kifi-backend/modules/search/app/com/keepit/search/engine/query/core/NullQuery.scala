@@ -6,6 +6,8 @@ import org.apache.lucene.index.{ AtomicReaderContext, IndexReader, Term }
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
 
+import scala.collection.mutable.ArrayBuffer
+
 class NullQuery() extends Query {
 
   def project(fields: Set[String]) = this
@@ -32,7 +34,7 @@ class NullQuery() extends Query {
   }
 }
 
-class NullWeight(query: NullQuery) extends Weight {
+class NullWeight(query: NullQuery) extends Weight with KWeight {
 
   override def getQuery(): Query = query
 
@@ -46,6 +48,10 @@ class NullWeight(query: NullQuery) extends Weight {
     result.setValue(0)
     result.setMatch(false)
     result
+  }
+
+  def getWeights(out: ArrayBuffer[(Weight, Float)]): Unit = {
+    out += ((this, 0.0f))
   }
 
   override def scorer(context: AtomicReaderContext, liveDocs: Bits): Scorer = null
