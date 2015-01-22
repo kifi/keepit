@@ -166,15 +166,17 @@ kifi.form = (function () {
   }
 
   // todo (aaron): remove below for twitter launch
-  if (getParameterByName('twitter')) { // do not show linkedIn (if twitter is a url query param)
+  // if twitter is a url query param
+  if (getParameterByName('twitter')) {
+    // do not show linkedIn
     var linkedInButtons = $('.form-network.linkedin');
     for (var i=0; i < linkedInButtons.length; i++) {
       linkedInButtons.eq(i).hide();
     }
-  } else { // do not show twitter
+    // and show twitter
     var twitterButtons = $('.form-network.twitter');
     for (var i=0; i < twitterButtons.length; i++) {
-      twitterButtons.eq(i).hide();
+      twitterButtons.eq(i).css('display','table');
     }
   }
 

@@ -329,6 +329,7 @@ a.video-frame {
 }
 .form-network.twitter {
   background: #00aced;
+  display: none;
 }
 .form-network.twitter:hover {
   background: #02baff;
