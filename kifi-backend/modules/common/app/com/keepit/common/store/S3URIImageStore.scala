@@ -15,6 +15,7 @@ trait S3URIImageStore {
   def storeImage(info: ImageInfo, rawImage: BufferedImage, extNormUriId: ExternalId[NormalizedURI]): Try[(String, Int)]
   def getImageURL(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI]): Option[String]
   def getImageKey(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI], forceAllProviders: Boolean = false): String
+  def getEmbedlyImageKey(extNormUriId: ExternalId[NormalizedURI], name: String, suffix: String): String
 }
 
 class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig, airbrake: AirbrakeNotifier) extends S3URIImageStore with S3Helper with Logging {
@@ -49,10 +50,13 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
     urlFromKey(getImageKey(imageInfo, extNormUriId))
   }
 
+  def getEmbedlyImageKey(extNormUriId: ExternalId[NormalizedURI], name: String, suffix: String): String =
+    s"images/${extNormUriId}/${ImageProvider.getProviderIndex(Some(ImageProvider.EMBEDLY))}/${name}.${suffix}"
+
   def getImageKey(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI], forceAllProviders: Boolean = false): String = {
     val provider = imageInfo.provider.getOrElse(ImageProvider.EMBEDLY) // Use Embedly as default provider (backwards compatibility)
     provider match {
-      case ImageProvider.EMBEDLY => s"images/${extNormUriId}/${ImageProvider.getProviderIndex(imageInfo.provider)}/${imageInfo.name}.${imageInfo.getFormatSuffix}"
+      case ImageProvider.EMBEDLY => getEmbedlyImageKey(extNormUriId, imageInfo.name, imageInfo.getFormatSuffix)
       case ImageProvider.PAGEPEEKER => getScreenshotKey(extNormUriId, imageInfo.getImageSize)
       case _ => {
         if (forceAllProviders) {

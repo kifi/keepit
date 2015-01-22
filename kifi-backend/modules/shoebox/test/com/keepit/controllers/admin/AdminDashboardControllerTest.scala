@@ -23,7 +23,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.cortex.FakeCortexServiceClientModule
 
 import scala.concurrent.Future
@@ -42,7 +42,6 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
     FakeAirbrakeModule(),
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeCuratorServiceClientModule()

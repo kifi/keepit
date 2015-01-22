@@ -6,7 +6,7 @@ import java.io.File
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.UserCommander
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
@@ -33,7 +33,6 @@ class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
     FakeScraperServiceClientModule(),
     FakeSocialGraphModule(),
     FakeShoeboxStoreModule(),
-    FakeExternalServiceModule(),
     FakeScrapeSchedulerModule()
   )
 

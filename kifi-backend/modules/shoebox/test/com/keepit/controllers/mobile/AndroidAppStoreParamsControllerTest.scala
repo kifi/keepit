@@ -4,7 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.helprank.HelpRankTestHelper
 import com.keepit.common.social.FakeSocialGraphModule
@@ -31,7 +31,6 @@ class AndroidAppStoreParamsControllerTest extends Specification with ShoeboxTest
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeABookServiceClientModule(),

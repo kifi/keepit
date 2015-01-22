@@ -24,7 +24,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.scraper.{ FakeScrapeSchedulerConfigModule, FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.db.{ Id, SequenceNumber }
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.crypto.FakeCryptoModule
 
@@ -43,7 +43,6 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeScrapeSchedulerConfigModule(),

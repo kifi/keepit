@@ -490,8 +490,6 @@ GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyti
 POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
 GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
 
-GET     /admin/fillImageInfoPath    @com.keepit.controllers.admin.AdminBookmarksController.fillImageInfoPath(count: Int ?= 10, pageSize: Int ?= 1000)
-
 GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
@@ -506,7 +504,6 @@ DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarks
 
 GET     /admin/images                @com.keepit.controllers.admin.AdminScreenshotController.images
 GET     /admin/imageInfos            @com.keepit.controllers.admin.AdminScreenshotController.imageInfos
-GET     /admin/imagesForUri          @com.keepit.controllers.admin.AdminScreenshotController.imagesForUri(uriId: Id[NormalizedURI])
 POST    /admin/imagesCompare         @com.keepit.controllers.admin.AdminScreenshotController.imagesCompare()
 
 GET     /admin/pageInfo/:id         @com.keepit.controllers.admin.AdminPageInfoController.pageInfo(id:Id[PageInfo])

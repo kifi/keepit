@@ -12,7 +12,7 @@ class ImageInfoTest extends Specification with ShoeboxApplicationInjector {
       running(new ShoeboxApplication()) {
         val imageInfo = db.readWrite { implicit s =>
           val uri = inject[NormalizedURIRepo].save(NormalizedURI.withHash("http://www.foobar.com"))
-          val imageInfo = inject[ImageInfoRepo].save(ImageInfo(uriId = uri.id.get, url = Some(uri.url), path = Some("path123")))
+          val imageInfo = inject[ImageInfoRepo].save(ImageInfo(uriId = uri.id.get, url = Some(uri.url), path = "path123"))
           imageInfo
         }
         db.readOnlyMaster { implicit s =>

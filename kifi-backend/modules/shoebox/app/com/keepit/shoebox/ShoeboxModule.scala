@@ -24,7 +24,6 @@ import com.keepit.common.queue.SimpleQueueModule
 import com.keepit.queue.{ NormalizationUpdateJobQueueModule }
 import com.keepit.common.concurrent.ForkJoinContextMonitorModule
 import com.keepit.cortex.{ CortexServiceClientModule }
-import com.keepit.common.external.ExternalServiceModule
 import com.keepit.graph.{ GraphServiceClientModule }
 import com.keepit.common.zookeeper.ServiceTypeModule
 import com.keepit.common.service.ServiceType
@@ -51,8 +50,7 @@ abstract class ShoeboxModule(
     val cacheModule: ShoeboxCacheModule,
     val scrapeSchedulerModule: ScrapeSchedulerModule,
     val scraperHealthMonitorModule: ScraperHealthMonitorModule,
-    val fjMonitorModule: ForkJoinContextMonitorModule,
-    val externalServiceModule: ExternalServiceModule) extends ConfigurationModule with CommonServiceModule {
+    val fjMonitorModule: ForkJoinContextMonitorModule) extends ConfigurationModule with CommonServiceModule {
   //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients
   val serviceTypeModule = ShoeboxServiceTypeModule()

@@ -13,10 +13,12 @@ case class EmbedlyImage(
     width: Option[Int] = None,
     height: Option[Int] = None,
     size: Option[Int] = None) extends ImageGenericInfo {
-  def toImageInfoWithPriority(nuriId: Id[NormalizedURI], priority: Option[Int]): ImageInfo =
+  def toImageInfoWithPriority(nuriId: Id[NormalizedURI], priority: Option[Int], path: String, name: String): ImageInfo = {
     ImageInfo(uriId = nuriId, url = Some(this.url), caption = this.caption, width = this.width, height = this.height,
-      size = this.size, provider = Some(ImageProvider.EMBEDLY), priority = priority)
-  implicit def toImageInfo(nuriId: Id[NormalizedURI]): ImageInfo = toImageInfoWithPriority(nuriId, None)
+      size = this.size, provider = Some(ImageProvider.EMBEDLY), priority = priority, path = path, name = name)
+  }
+
+  def toImageInfo(nuriId: Id[NormalizedURI], path: String, name: String): ImageInfo = toImageInfoWithPriority(nuriId, None, path = path, name = name)
 }
 
 object EmbedlyImage {
@@ -63,10 +65,10 @@ case class EmbedlyInfo(
       faviconUrl = (this.faviconUrl.collect { case f: String if f.startsWith("http") => f }) // embedly bug
     )
 
-  def buildImageInfo(nUriId: Id[NormalizedURI]) = {
+  def buildImageInfo(nUriId: Id[NormalizedURI], path: String, name: String) = {
     images.zipWithIndex flatMap {
       case (embedlyImage, priority) =>
-        Some(embedlyImage.toImageInfoWithPriority(nUriId, Some(priority)))
+        Some(embedlyImage.toImageInfoWithPriority(nUriId, Some(priority), path = path, name = name))
     }
   }
 }

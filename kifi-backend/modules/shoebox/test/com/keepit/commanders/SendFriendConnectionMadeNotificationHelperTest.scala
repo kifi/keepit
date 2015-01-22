@@ -2,7 +2,6 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail._
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
@@ -38,7 +37,6 @@ class SendFriendConnectionMadeNotificationHelperTest extends Specification with 
   val modules = Seq(
     FakeMailModule(),
     FakeShoeboxStoreModule(),
-    FakeExternalServiceModule(),
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule()

@@ -7,13 +7,13 @@ import com.keepit.common.performance._
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
 import com.google.inject.{ Singleton, Inject }
+import org.apache.commons.lang3.RandomStringUtils
 import scala.concurrent.Future
 import java.util.concurrent.TimeoutException
 import com.keepit.model._
 import com.keepit.common.store.{ S3URIImageStore, ImageSize }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.slick.Database
-import com.keepit.common.pagepeeker.PagePeekerClient
 import java.awt.image.BufferedImage
 import scala.util.{ Success, Failure }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -35,6 +35,7 @@ class URISummaryCommander @Inject() (
     normalizedURIInterner: NormalizedURIInterner,
     imageInfoRepo: ImageInfoRepo,
     pageInfoRepo: PageInfoRepo,
+    s3URIImageStore: S3URIImageStore,
     db: Database,
     scraper: ScraperServiceClient,
     cortex: CortexServiceClient,
@@ -164,16 +165,7 @@ class URISummaryCommander @Inject() (
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
    */
   private def fetchFromEmbedly(nUri: NormalizedURIRef): Future[Option[URISummary]] = {
-    try {
-      scraper.getURISummaryFromEmbedly(nUri, descriptionOnly = true)
-    } catch {
-      case timeout: TimeoutException =>
-        val failImageInfo = db.readWrite { implicit session =>
-          imageInfoRepo.save(ImageInfo(uriId = nUri.id, url = Some(nUri.url), provider = Some(ImageProvider.EMBEDLY), format = Some(ImageFormat.UNKNOWN)))
-        }
-        airbrake.notify(s"Could not fetch from embedly because of timeout, persisting a tombstone for the image in $failImageInfo", timeout)
-        Future.successful(None)
-    }
+    scraper.getURISummaryFromEmbedly(nUri, descriptionOnly = true)
   }
 
   /**
@@ -189,14 +181,12 @@ class URISummaryCommander @Inject() (
   }
 
   def getArticleKeywords(id: Id[NormalizedURI]): Seq[String] = {
-
     val rv = for {
       article <- articleStore.get(id)
       keywords <- article.keywords
     } yield {
       keywords.toLowerCase.split(" ").filter { x => !x.isEmpty && x.forall(_.isLetterOrDigit) }
     }
-
     rv.getOrElse(Array()).toSeq
   }
 
@@ -238,5 +228,5 @@ class URISummaryCommander @Inject() (
 
   }
 
-  //todo(martin) method to prune obsolete images from S3 (i.e. remove image if there is a newer image with at least the same size and priority)
+  //todo(andrew) method to prune obsolete images from S3 (i.e. remove image if there is a newer image with at least the same size and priority)
 }

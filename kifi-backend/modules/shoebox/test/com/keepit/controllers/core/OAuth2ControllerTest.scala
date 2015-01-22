@@ -2,7 +2,7 @@ package com.keepit.controllers.core
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -28,7 +28,6 @@ class OAuth2ControllerTest extends Specification with ShoeboxTestInjector {
     FakeHttpClientModule(),
     FakeMailModule(),
     FakeSearchServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeCuratorServiceClientModule())

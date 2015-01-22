@@ -4,7 +4,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -37,7 +37,6 @@ class LibraryRecommendationsControllerTest extends TestKitSupport with Specifica
     FakeSocialGraphModule(),
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeABookServiceClientModule(),

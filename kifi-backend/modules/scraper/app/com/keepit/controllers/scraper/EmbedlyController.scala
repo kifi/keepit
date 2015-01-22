@@ -20,14 +20,4 @@ class EmbedlyController @Inject() (
       Ok(Json.toJson(infoOpt))
     }
   }
-
-  def getImageInfos() = Action.async(parse.tolerantJson) { request =>
-    val json = request.body
-    val uriId = (json \ "uriId").as[Long]
-    val url = (json \ "url").as[String]
-
-    embedly.getImageInfos(Id[NormalizedURI](uriId), url) map { imgInfo =>
-      Ok(Json.toJson(imgInfo))
-    }
-  }
 }

@@ -10,7 +10,7 @@ import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
@@ -49,7 +49,6 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeABookServiceClientModule(),

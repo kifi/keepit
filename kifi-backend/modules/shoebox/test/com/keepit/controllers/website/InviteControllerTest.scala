@@ -6,7 +6,7 @@ import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
@@ -44,7 +44,6 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeScrapeSchedulerConfigModule(),

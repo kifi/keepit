@@ -3,7 +3,6 @@ package com.keepit.commanders.emails
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.{ ElectronicMailRepo, EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -41,7 +40,6 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule()
   )

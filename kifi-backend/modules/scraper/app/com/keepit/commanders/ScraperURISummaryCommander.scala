@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage
 
 import com.keepit.common.logging.Logging
 import com.kifi.macros.json
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 
 import scala.concurrent.Future
@@ -15,8 +16,8 @@ import scala.util.{ Failure, Success }
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.ImageFetcher
-import com.keepit.common.store.{ ImageSize, S3URIImageStore }
-import com.keepit.model.{ PageAuthor, PageInfo, ImageInfo, URISummary }
+import com.keepit.common.store.{ S3ImageConfig, ImageSize, S3URIImageStore }
+import com.keepit.model._
 import com.keepit.scraper.{ URIPreviewFetchResult, NormalizedURIRef, ShoeboxDbCallbackHelper }
 import com.keepit.scraper.embedly.{ EmbedlyImage, EmbedlyClient }
 
@@ -34,6 +35,7 @@ trait ScraperURISummaryCommander {
 class ScraperURISummaryCommanderImpl @Inject() (
     imageFetcher: ImageFetcher,
     embedlyClient: EmbedlyClient,
+    s3URIImageStore: S3URIImageStore,
     uriImageStore: S3URIImageStore,
     airbrake: AirbrakeNotifier,
     callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander with Logging {
@@ -94,7 +96,9 @@ class ScraperURISummaryCommanderImpl @Inject() (
           if (descriptionOnly) {
             Future.successful(None)
           } else {
-            val images = embedlyInfo.buildImageInfo(nUri.id)
+            val name = RandomStringUtils.randomAlphanumeric(5)
+            val path = s3URIImageStore.getEmbedlyImageKey(nUri.externalId, name, ImageFormat.JPG.value)
+            val images = embedlyInfo.buildImageInfo(nUri.id, path, name)
             val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.isValidImageUrl) }
 
             // todo: Upload nonBlankImages to S3.

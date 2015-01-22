@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.classify.FakeDomainTagImporterModule
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
@@ -48,7 +48,6 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
     FakeCortexServiceClientModule(),
     FakeScrapeSchedulerModule(),
     FakeSocialGraphModule(),
-    FakeExternalServiceModule(),
     FakeCuratorServiceClientModule()
   )
 

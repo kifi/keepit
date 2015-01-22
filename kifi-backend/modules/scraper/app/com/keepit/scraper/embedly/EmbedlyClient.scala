@@ -3,6 +3,8 @@ package com.keepit.scraper.embedly
 import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
 import com.keepit.common.performance._
+import com.keepit.common.store.S3URIImageStore
+import org.apache.commons.lang3.RandomStringUtils
 
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
@@ -11,7 +13,7 @@ import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.strings.UTF8
-import com.keepit.model.{ ImageInfo, NormalizedURI }
+import com.keepit.model.{ ImageFormat, ImageInfo, NormalizedURI }
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -23,21 +25,14 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 trait EmbedlyClient {
   def embedlyUrl(url: String): String
   def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]]
-  def getImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]]
 }
 
 @Singleton
-class EmbedlyClientImpl @Inject() (airbrake: AirbrakeNotifier) extends EmbedlyClient with Logging {
+class EmbedlyClientImpl @Inject() (airbrake: AirbrakeNotifier, s3URIImageStore: S3URIImageStore) extends EmbedlyClient with Logging {
 
   private val embedlyKey = "e46ecae2611d4cb29342fddb0e666a29"
 
   override def embedlyUrl(url: String): String = s"http://api.embed.ly/1/extract?key=$embedlyKey&url=${URLEncoder.encode(url, UTF8)}"
-
-  override def getImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = {
-    getEmbedlyInfo(url) map { infoOpt =>
-      infoOpt.map(_.buildImageInfo(uriId)).getOrElse(Seq())
-    }
-  }
 
   private def parseEmbedlyInfo(resp: WSResponse): Option[EmbedlyInfo] = {
     resp.status match {
@@ -92,5 +87,4 @@ class EmbedlyClientImpl @Inject() (airbrake: AirbrakeNotifier) extends EmbedlyCl
 class DevEmbedlyClient extends EmbedlyClient {
   override def embedlyUrl(url: String): String = "http://dev.ezkeep.com"
   override def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = Future.successful(None)
-  override def getImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = Future.successful(Seq())
 }
