@@ -3,12 +3,12 @@ package com.keepit.search.engine.query
 import java.nio.charset.StandardCharsets
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.engine.query.core.{ NullQuery, KWeight, KBooleanQuery, ProjectableQuery }
+import com.keepit.search.engine.query.core.{ NullQuery, KWeight, ProjectableQuery }
 import com.keepit.search.index.Searcher
 import com.keepit.typeahead.{ PrefixFilter, PrefixMatching }
 import org.apache.lucene.index.{ BinaryDocValues, Term, AtomicReaderContext }
 import org.apache.lucene.search.BooleanClause.Occur
-import org.apache.lucene.search.{ Scorer, Query, Weight, IndexSearcher, TermQuery }
+import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
 import java.util.{ Set => JSet }
 
@@ -42,15 +42,17 @@ class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extend
       case kSearcher: Searcher => kSearcher.maxPrefixLength
       case _ => Int.MaxValue
     }
-    val booleanQuery = new KBooleanQuery
-    query.terms.foreach { token =>
-      val termQuery = new TermQuery(new Term(query.prefixField, token.take(maxPrefixLength)))
+    log.info(s"[$query] Detected maxPrefixLength: $maxPrefixLength")
+    val booleanQuery = new BooleanQuery()
+    query.terms.foreach { term =>
+      val termQuery = new TermQuery(new Term(query.prefixField, term.take(maxPrefixLength)))
       booleanQuery.add(termQuery, Occur.MUST)
+      log.info(s"[$query] Added term to boolean query: $term -> ${term.take(maxPrefixLength)}")
     }
     booleanQuery.createWeight(searcher)
   }
 
-  log.info(s"[$query] Created KPrefixWeight with underlying boolean query: ${booleanWeight.getQuery} ")
+  log.info(s"[$query] Created KPrefixWeight with underlying boolean query: ${booleanWeight.getQuery}")
 
   def getQuery(): KPrefixQuery = query
 
