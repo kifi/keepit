@@ -363,7 +363,8 @@ a.video-frame {
 }
 .twitter > .form-network-icon:empty:before {
   background-image: url(../img/twitter-icon.svg);
-  width: 37px;
+  width: 28px;
+  height: 24px;
   background-size: cover;
   background-repeat: no-repeat;
 }
