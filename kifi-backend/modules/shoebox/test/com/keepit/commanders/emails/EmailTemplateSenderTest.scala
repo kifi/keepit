@@ -4,7 +4,6 @@ import com.google.inject.Injector
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMailRepo, FakeMailModule }
 import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.net.FakeHttpClientModule
@@ -35,7 +34,6 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule()
   )

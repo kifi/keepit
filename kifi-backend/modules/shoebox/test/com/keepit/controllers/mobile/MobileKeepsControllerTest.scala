@@ -6,7 +6,7 @@ import com.keepit.commanders._
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
 import com.keepit.common.db._
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.helprank.HelpRankTestHelper
 import com.keepit.common.social.FakeSocialGraphModule
@@ -36,7 +36,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeABookServiceClientModule(),

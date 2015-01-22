@@ -11,7 +11,7 @@ import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsModule }
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -91,7 +91,6 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeKeepImportsModule(),
     FakeMailModule(),
     FakeShoeboxStoreModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),

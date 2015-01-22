@@ -35,7 +35,7 @@ object URISummaryCommanderTestDummyValues {
     provider = None,
     format = Some(ImageFormat.JPG),
     priority = Some(0),
-    path = Some("dummy.jpg")
+    path = "dummy.jpg"
   );
   val dummyEmbedlyImageUrl = "http://localhost/S3_KEY.jpg"
   val dummyPagePeekerImageUrl = "http://www.testimg.com/thedummypagepeekerscreenshot.jpg"
@@ -64,7 +64,7 @@ case class MockScraperServiceClient(override val airbrakeNotifier: AirbrakeNotif
 class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
 
   private def getCDNURL(cdnBase: String, info: ImageInfo): String = {
-    cdnBase + "/" + info.path.get
+    cdnBase + "/" + info.path
   }
 
   def setup()(implicit injector: Injector) = {
@@ -84,7 +84,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
         priority = Some(0),
-        path = Some("foo.jpg")
+        path = "foo.jpg"
       ))
       val image2 = imageInfo.save(ImageInfo(
         uriId = nUri2.id.get,
@@ -95,7 +95,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
         priority = Some(1),
-        path = Some("bar.jpg")
+        path = "bar.jpg"
       ))
       val image3 = imageInfo.save(ImageInfo(
         uriId = nUri1.id.get,
@@ -106,7 +106,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         provider = Some(ImageProvider.PAGEPEEKER),
         format = Some(ImageFormat.JPG),
         priority = Some(0),
-        path = Some("dar.jpg")
+        path = "dar.jpg"
       ))
       val image4 = imageInfo.save(ImageInfo(
         uriId = nUri1.id.get,
@@ -117,7 +117,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
         priority = Some(3),
-        path = Some("zar.jpg")
+        path = "zar.jpg"
       ))
       val image5 = imageInfo.save(ImageInfo(
         uriId = nUri1.id.get,
@@ -128,7 +128,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
         priority = Some(4),
-        path = Some("gar.jpg")
+        path = "gar.jpg"
       ))
 
       (getCDNURL(cdnBase, image1), getCDNURL(cdnBase, image2), getCDNURL(cdnBase, image3), getCDNURL(cdnBase, image4), getCDNURL(cdnBase, image5), nUri1, nUri2, nUri3, nUri4)

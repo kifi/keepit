@@ -20,7 +20,6 @@ import com.keepit.scraper.{ ProdScraperHealthMonitorModule, ProdScrapeSchedulerM
 import com.keepit.common.queue.ProdSimpleQueueModule
 import com.keepit.queue.ProdNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
-import com.keepit.common.external.ProdExternalServiceModule
 import com.keepit.curator.ProdCuratorServiceClientModule
 
 case class ShoeboxProdModule() extends ShoeboxModule(
@@ -40,8 +39,7 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   scrapeSchedulerModule = ProdScrapeSchedulerModule(),
   scraperHealthMonitorModule = ProdScraperHealthMonitorModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),
-  cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
-  externalServiceModule = ProdExternalServiceModule()
+  cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
 ) with CommonProdModule {
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()

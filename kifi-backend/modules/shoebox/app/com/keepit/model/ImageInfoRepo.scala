@@ -17,7 +17,6 @@ import scala.slick.jdbc.StaticQuery
 trait ImageInfoRepo extends Repo[ImageInfo] with SeqNumberFunction[ImageInfo] {
 
   def doNotUseSave(model: ImageInfo)(implicit session: RWSession): ImageInfo
-  def getWithoutPath(count: Int)(implicit ro: RSession): Seq[ImageInfo]
   def getByUri(id: Id[NormalizedURI])(implicit ro: RSession): Seq[ImageInfo]
   def getByUriWithPriority(id: Id[NormalizedURI], minSize: ImageSize, provider: Option[ImageProvider])(implicit ro: RSession): Option[ImageInfo]
 
@@ -46,8 +45,8 @@ class ImageInfoRepoImpl @Inject() (
     def provider = column[ImageProvider]("provider", O.Nullable)
     def format = column[ImageFormat]("format", O.Nullable)
     def priority = column[Int]("priority", O.Nullable)
-    def path = column[String]("path", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url.?, name, caption.?, width.?, height.?, sz.?, provider.?, format.?, priority.?, path.?) <> ((ImageInfo.apply _).tupled, ImageInfo.unapply)
+    def path = column[String]("path", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url.?, name, caption.?, width.?, height.?, sz.?, provider.?, format.?, priority.?, path) <> ((ImageInfo.apply _).tupled, ImageInfo.unapply)
   }
 
   def table(tag: Tag) = new ImageInfoTable(tag)
@@ -115,10 +114,6 @@ class ImageInfoRepoImpl @Inject() (
     }
     // pick the latest inactive row for update
     (for (f <- rows if f.uriId === info.uriId && f.state === INACTIVE) yield f).sortBy(_.updatedAt desc).map(_.id).firstOption()
-  }
-
-  def getWithoutPath(count: Int)(implicit ro: RSession): Seq[ImageInfo] = {
-    (for (f <- rows if f.path.isNull) yield f).take(count).list()
   }
 
   def getByUri(id: Id[NormalizedURI])(implicit ro: RSession): Seq[ImageInfo] = {

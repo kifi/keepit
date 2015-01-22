@@ -6,7 +6,6 @@ import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.KifiSession._
 import com.keepit.common.controller._
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule }
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
@@ -55,7 +54,6 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
     FakeHeimdalServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
     MaybeAppFakeUserActionsModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     KeepImportsModule(),

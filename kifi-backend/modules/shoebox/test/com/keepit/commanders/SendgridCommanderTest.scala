@@ -5,7 +5,6 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.template.{ EmailTip, EmailTrackingParam }
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, ElectronicMailRepo, EmailAddress }
 import com.keepit.common.social.FakeSocialGraphModule
@@ -66,7 +65,6 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
     FakeSearchServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeShoeboxStoreModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),

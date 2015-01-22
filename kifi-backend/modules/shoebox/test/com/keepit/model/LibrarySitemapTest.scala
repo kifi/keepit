@@ -4,7 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.seo.LibrarySiteMapGenerator
 import com.keepit.common.social.FakeSocialGraphModule
@@ -32,7 +32,6 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),

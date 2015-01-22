@@ -2,10 +2,24 @@ package com.keepit.commanders
 
 import java.awt.image.BufferedImage
 
+import com.keepit.common.logging.Logging
+import com.kifi.macros.json
+import org.apache.commons.lang3.RandomStringUtils
+import org.joda.time.DateTime
+
+import scala.concurrent.Future
+import scala.util.{ Failure, Success }
+
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.ImageFetcher
-import com.keepit.common.logging.Logging
+import com.keepit.common.store.{ S3ImageConfig, ImageSize, S3URIImageStore }
+import com.keepit.model._
+import com.keepit.scraper.{ URIPreviewFetchResult, NormalizedURIRef, ShoeboxDbCallbackHelper }
+import com.keepit.scraper.embedly.{ EmbedlyImage, EmbedlyClient }
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 import com.keepit.common.net.URI
 import com.keepit.common.performance._
 import com.keepit.common.store.{ S3ImageConfig, S3URIImageStore }
@@ -28,6 +42,7 @@ trait ScraperURISummaryCommander {
 class ScraperURISummaryCommanderImpl @Inject() (
     imageFetcher: ImageFetcher,
     embedlyClient: EmbedlyClient,
+    s3URIImageStore: S3URIImageStore,
     uriImageStore: S3URIImageStore,
     imageConfig: S3ImageConfig,
     airbrake: AirbrakeNotifier,
@@ -111,7 +126,9 @@ class ScraperURISummaryCommanderImpl @Inject() (
         embedlyInfo <- embedlyInfoOpt
       } yield {
         val imageInfoOptF: Future[Option[ImageInfo]] = {
-          val images = embedlyInfo.buildImageInfo(nUri.id)
+          val name = RandomStringUtils.randomAlphanumeric(5)
+          val path = s3URIImageStore.getEmbedlyImageKey(nUri.externalId, name, ImageFormat.JPG.value)
+          val images = embedlyInfo.buildImageInfo(nUri.id, path, name)
           val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.isValidImageUrl) }
 
           nonBlankImages.headOption match {
@@ -165,7 +182,7 @@ class ScraperURISummaryCommanderImpl @Inject() (
    * Get S3 url for image info
    */
   private def getS3URL(info: ImageInfo): Option[String] = {
-    Some(imageConfig.cdnBase + "/" + info.path.get)
+    Some(imageConfig.cdnBase + "/" + info.path)
   }
 
 }

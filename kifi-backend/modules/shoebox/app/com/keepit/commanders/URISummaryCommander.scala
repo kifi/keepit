@@ -5,11 +5,14 @@ import com.keepit.common.performance._
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
 import com.google.inject.{ Singleton, Inject }
+import org.apache.commons.lang3.RandomStringUtils
 import scala.concurrent.Future
 import com.keepit.model._
 import com.keepit.common.store.{ S3ImageConfig, ImageSize }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.slick.Database
+import java.awt.image.BufferedImage
+import scala.util.{ Success, Failure }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.scraper.{ NormalizedURIRef, ScraperServiceClient }
@@ -204,7 +207,7 @@ class URISummaryCommander @Inject() (
                 format = Some(format),
                 provider = Some(ImageProvider.EMBEDLY),
                 priority = Some(0), // Only storing primary image for now
-                path = Some(image.path)
+                path = image.path
               )
             }.map(imageInfoRepo.save)
           }
@@ -229,7 +232,7 @@ class URISummaryCommander @Inject() (
    * Get S3 url for image info
    */
   private def getCDNURL(info: ImageInfo): String = {
-    imageConfig.cdnBase + "/" + info.path.get
+    imageConfig.cdnBase + "/" + info.path
   }
 
   def getStoredEmbedlyKeywords(id: Id[NormalizedURI]): Seq[EmbedlyKeyword] = {
@@ -240,14 +243,12 @@ class URISummaryCommander @Inject() (
   }
 
   def getArticleKeywords(id: Id[NormalizedURI]): Seq[String] = {
-
     val rv = for {
       article <- articleStore.get(id)
       keywords <- article.keywords
     } yield {
       keywords.toLowerCase.split(" ").filter { x => !x.isEmpty && x.forall(_.isLetterOrDigit) }
     }
-
     rv.getOrElse(Array()).toSeq
   }
 
@@ -289,5 +290,5 @@ class URISummaryCommander @Inject() (
 
   }
 
-  //todo(martin) method to prune obsolete images from S3 (i.e. remove image if there is a newer image with at least the same size and priority)
+  //todo(andrew) method to prune obsolete images from S3 (i.e. remove image if there is a newer image with at least the same size and priority)
 }

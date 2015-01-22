@@ -3,7 +3,6 @@ package com.keepit.common.seo
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
@@ -29,7 +28,6 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
     FakeABookServiceClientModule(),
     FakeKeepImportsModule(),
     FakeMailModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerConfigModule(),

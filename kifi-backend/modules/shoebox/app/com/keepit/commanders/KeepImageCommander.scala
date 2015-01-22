@@ -88,7 +88,7 @@ class KeepImageCommanderImpl @Inject() (
 
   def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String] = {
     imageInfoRepo.getLargestByUriWithPriority(nUriId).map { imageInfo =>
-      s3ImageConfig.cdnBase + "/" + imageInfo.path.get
+      s3ImageConfig.cdnBase + "/" + imageInfo.path
     }
   }
 

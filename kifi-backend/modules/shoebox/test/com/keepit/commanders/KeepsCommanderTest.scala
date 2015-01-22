@@ -5,7 +5,6 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller._
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.common.db.Id
@@ -26,7 +25,6 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
   def modules = FakeKeepImportsModule() ::
     FakeExecutionContextModule() ::
     FakeShoeboxStoreModule() ::
-    FakeExternalServiceModule() ::
     FakeSearchServiceClientModule() ::
     FakeCortexServiceClientModule() ::
     FakeScrapeSchedulerModule() ::

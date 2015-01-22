@@ -7,7 +7,7 @@ import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.FakeHttpClientModule
@@ -40,7 +40,6 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeABookServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule()
