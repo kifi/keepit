@@ -322,7 +322,7 @@ class AdminBookmarksController @Inject() (
             processed.incrementAndGet()
           } catch {
             case e: Throwable =>
-              log.error(s"error persisting image $image with uri $normalizedUri")
+              log.error(s"error persisting image $image with uri $normalizedUri", e)
               throw e
           }
       } foreach {
