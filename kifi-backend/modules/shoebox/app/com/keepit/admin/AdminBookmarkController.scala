@@ -316,9 +316,9 @@ class AdminBookmarksController @Inject() (
 
           //this will break if not using forceAllProviders since we have 1485252 images from pagepeeker
           try {
-            val path = s3URIImageStore.getImageURL(image, normalizedUri, forceAllProviders = true)
-            if (path.isEmpty) throw new Exception(s"can't find path for image $image")
-            imageInfoRepo.save(image.copy(path = path))(session)
+            val path = s3URIImageStore.getImageKey(image, normalizedUri, forceAllProviders = true)
+            if (path.size == 0) throw new Exception(s"can't find path for image $image")
+            imageInfoRepo.save(image.copy(path = Some(path)))(session)
             processed.incrementAndGet()
           } catch {
             case e: Throwable =>
