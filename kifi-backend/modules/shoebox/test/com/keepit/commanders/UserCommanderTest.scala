@@ -19,7 +19,6 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import play.api.test.Helpers.running
 
 import com.google.inject.Injector
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import scala.concurrent.duration.Duration
 import scala.concurrent.Await
@@ -66,7 +65,6 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),

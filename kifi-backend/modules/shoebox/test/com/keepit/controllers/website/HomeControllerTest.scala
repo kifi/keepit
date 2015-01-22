@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -28,8 +28,7 @@ class HomeControllerTest extends Specification with ShoeboxTestInjector {
     FakeHealthcheckModule(),
     FakeABookServiceClientModule(),
     FakeMailModule(),
-    FakeScrapeSchedulerModule(),
-    FakeExternalServiceModule()
+    FakeScrapeSchedulerModule()
   )
 
   "HomeController" should {

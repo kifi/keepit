@@ -7,7 +7,6 @@ import com.keepit.common.auth.AuthException
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ KifiSession, FakeUserActionsModule }
 import com.keepit.common.db.ExternalId
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
@@ -68,7 +67,6 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
     FakeHeimdalServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
     FakeUserActionsModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     KeepImportsModule(),

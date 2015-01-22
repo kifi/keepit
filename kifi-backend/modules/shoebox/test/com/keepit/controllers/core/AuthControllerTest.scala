@@ -3,7 +3,7 @@ package com.keepit.controllers.core
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.{ FakeOutbox, EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
@@ -36,7 +36,6 @@ class AuthControllerTest extends Specification with ShoeboxTestInjector {
     FakeHttpClientModule(),
     FakeMailModule(),
     FakeSearchServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeCuratorServiceClientModule())

@@ -7,7 +7,7 @@ import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule, UserActionsHelper }
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -47,7 +47,6 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     FakeSocialGraphModule(),
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeABookServiceClientModule(),

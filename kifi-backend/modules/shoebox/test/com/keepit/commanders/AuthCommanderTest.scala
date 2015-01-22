@@ -6,7 +6,6 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ KifiSession, MaybeAppFakeUserActionsModule }
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -46,7 +45,6 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
     FakeHeimdalServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
     MaybeAppFakeUserActionsModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     KeepImportsModule(),

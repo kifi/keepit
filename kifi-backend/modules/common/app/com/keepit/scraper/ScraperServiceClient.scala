@@ -155,8 +155,6 @@ trait ScraperServiceClient extends ServiceClient {
   def getPornDetectorModel(): Future[Map[String, Float]]
   def detectPorn(query: String): Future[Map[String, Float]]
   def whitelist(words: String): Future[String]
-  def adminOnlyGetEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]]
-
 }
 
 case class ScraperCacheProvider @Inject() (
@@ -224,13 +222,6 @@ class ScraperServiceClientImpl @Inject() (
     val payload = Json.obj("whitelist" -> words)
     call(Scraper.internal.whitelist(), payload).map { r =>
       Json.fromJson[String](r.json).get
-    }
-  }
-
-  def adminOnlyGetEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = {
-    val payload = Json.obj("uriId" -> uriId.id, "url" -> url)
-    call(Scraper.internal.getEmbedlyImageInfos, payload).map { r =>
-      Json.fromJson[Seq[ImageInfo]](r.json).get
     }
   }
 

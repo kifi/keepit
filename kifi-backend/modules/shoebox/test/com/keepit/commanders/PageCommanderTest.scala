@@ -13,7 +13,6 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.template.{ EmailTip, EmailTrackingParam }
 import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
 import com.keepit.common.social.{ BasicUserRepo, FakeSocialGraphModule }
@@ -36,7 +35,6 @@ class PageCommanderTest extends Specification with ShoeboxTestInjector {
   def modules = FakeKeepImportsModule() ::
     FakeExecutionContextModule() ::
     FakeShoeboxStoreModule() ::
-    FakeExternalServiceModule() ::
     FakeSearchServiceClientModule() ::
     FakeCortexServiceClientModule() ::
     FakeScrapeSchedulerModule() ::

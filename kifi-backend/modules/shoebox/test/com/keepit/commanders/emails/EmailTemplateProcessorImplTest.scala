@@ -2,7 +2,6 @@ package com.keepit.commanders.emails
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.helpers._
@@ -33,7 +32,6 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule()
   )
