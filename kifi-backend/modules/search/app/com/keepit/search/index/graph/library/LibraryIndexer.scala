@@ -13,10 +13,8 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.logging.Logging
 
-class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient, val airbrake: AirbrakeNotifier) extends Indexer[Library, Library, LibraryIndexer](indexDirectory, LibraryFields.decoders) {
+class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient, val airbrake: AirbrakeNotifier) extends Indexer[Library, Library, LibraryIndexer](indexDirectory, LibraryFields.decoders, LibraryFields.maxPrefixLength) {
   val name = "LibraryIndexer"
-
-  override val maxPrefixLength = LibraryFields.maxPrefixLength
 
   def update(): Int = throw new UnsupportedOperationException()
 
