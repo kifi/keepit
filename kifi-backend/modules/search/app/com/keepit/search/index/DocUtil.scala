@@ -1,6 +1,6 @@
 package com.keepit.search.index
 
-import java.io.ByteArrayInputStream
+import java.nio.charset.StandardCharsets
 
 import com.keepit.common.time._
 import com.keepit.search.index.graph.collection.CollectionIdList
@@ -12,7 +12,6 @@ import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexableField
-import org.apache.lucene.store.InputStreamDataInput
 import org.apache.lucene.util.Attribute
 import org.joda.time.DateTime
 import scala.collection.mutable.ArrayBuffer
@@ -137,11 +136,5 @@ object DocUtil {
     }
   }
 
-  object StringDocValFieldDecoder extends FieldDecoder {
-    override def apply(indexableField: IndexableField): String = {
-      val binaryValue = indexableField.binaryValue
-      val in = new InputStreamDataInput(new ByteArrayInputStream(binaryValue.bytes, binaryValue.offset, binaryValue.length))
-      in.readString()
-    }
-  }
+  val stringDocValFieldDecoder = binaryDocValFieldDecoder(new String(_, _, _, StandardCharsets.UTF_8))
 }
