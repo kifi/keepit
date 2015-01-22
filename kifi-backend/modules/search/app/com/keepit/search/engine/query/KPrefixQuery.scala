@@ -35,24 +35,20 @@ class KPrefixQuery(val prefixField: String, val nameValueField: String, val term
 
 }
 
-class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extends Weight with KWeight with Logging {
+class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extends Weight with KWeight {
 
   val booleanWeight = {
     val maxPrefixLength = searcher match {
       case kSearcher: Searcher => kSearcher.maxPrefixLength
       case _ => Int.MaxValue
     }
-    log.info(s"[$query] Detected maxPrefixLength: $maxPrefixLength")
     val booleanQuery = new BooleanQuery()
     query.terms.foreach { term =>
       val termQuery = new TermQuery(new Term(query.prefixField, term.take(maxPrefixLength)))
       booleanQuery.add(termQuery, Occur.MUST)
-      log.info(s"[$query] Added term to boolean query: $term -> ${term.take(maxPrefixLength)}")
     }
     booleanQuery.createWeight(searcher)
   }
-
-  log.info(s"[$query] Created KPrefixWeight with underlying boolean query: ${booleanWeight.getQuery}")
 
   def getQuery(): KPrefixQuery = query
 
@@ -66,7 +62,6 @@ class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extend
     val nameDocsValues = context.reader.getBinaryDocValues(query.nameValueField)
     val booleanScorer = booleanWeight.scorer(context, acceptDocs)
     val scorer = if (nameDocsValues == null || booleanScorer == null) null else new KPrefixScorer(this, booleanScorer, query.terms, nameDocsValues)
-    log.info(s"[$query] Created scorer: $scorer")
     scorer
   }
 
@@ -92,7 +87,6 @@ class KPrefixScorer(weight: KPrefixWeight, subScorer: Scorer, queryTerms: Array[
     val distance = PrefixMatching.distance(name, queryTerms)
     val boost = (PrefixMatching.maxDist - distance).toFloat / PrefixMatching.maxDist // todo(Léo): boost shorter names
     val score = subScorer.score() * boost
-    log.info(s"[${weight.query}] Scored $name at $score)")
     score
   }
 
