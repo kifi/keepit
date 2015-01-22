@@ -216,7 +216,8 @@ class AuthHelper @Inject() (
       error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => {
         val result = if (cookieRedirect.isDefined) {
-          Redirect(cookieRedirect.get.value)
+          val redirectUrl = java.net.URLDecoder.decode(cookieRedirect.get.value, "UTF-8")
+          Ok(Json.obj("uri" -> redirectUrl))
         } else if (isFinalizedImmediately) {
           Redirect(uri)
         } else {
