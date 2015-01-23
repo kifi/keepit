@@ -106,7 +106,7 @@ class PageMetaTagsCommander @Inject() (
         altDesc <- altDescF
       } yield {
         PublicPageMetaFullTags(
-          unsafeTitle = s"${library.name} by ${owner.firstName} ${owner.lastName} \u2022 Kifi",
+          unsafeTitle = s"${library.name}",
           url = url,
           urlPathOnly = urlPathOnly,
           unsafeDescription = PublicPageMetaTags.generateLibraryMetaTagDescription(library.description, owner.fullName, library.name, altDesc),
