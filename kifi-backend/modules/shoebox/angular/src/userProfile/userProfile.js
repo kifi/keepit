@@ -63,7 +63,7 @@ angular.module('kifi')
         initProfile(profile);
         initViewingUserStatus();
         if (initParams.install === '1' && !installService.installedVersion) {
-          maybeShowInstallModal();
+          showInstallModal();
         }
 
         // This function should be called last because some of the attributes
