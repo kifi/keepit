@@ -274,20 +274,18 @@ angular.module('kifi')
 ])
 
 .directive('kfFriendRequestBanner', [
-  '$analytics', '$timeout', 'analyticsState', 'initParams', 'keepWhoService',
+  '$analytics', '$timeout', 'initParams', 'keepWhoService',
   'profileService', 'routeService', 'userService',
-  function ($analytics, $timeout, analyticsState, initParams, keepWhoService,
+  function ($analytics, $timeout, initParams, keepWhoService,
     profileService, routeService, userService) {
 
-    function setupShowFriendRequestBanner(scope, externalId) {
+    function setupShowFriendRequestBanner(scope, externalId, eventSubtype) {
       function closeBanner() {
-        if (initParams.friend) {
-          delete initParams.friend;
-        }
+        delete initParams.friend;
+        delete initParams.subtype;
         scope.hidden = true;
       }
 
-      var eventSubtype = analyticsState.events.user_viewed_page.subtype || 'contactJoined';
       userService.getBasicUserInfo(externalId, true).then(function (res) {
         var user = res.data,
             picUrl = keepWhoService.getPicUrl(user, 200);
@@ -331,16 +329,14 @@ angular.module('kifi')
     }
 
     function link(scope) {
-      var externalId = initParams.friend;
-
       scope.hidden = true;
-      if (!externalId) {
-        return;
-      }
 
-      scope.friendRequestBannerHeader = 'Send a friend request';
-      scope.showFriendRequestBanner = true;
-      setupShowFriendRequestBanner(scope, externalId);
+      var externalId = initParams.friend;
+      if (externalId && /^[a-f0-9-]{36}$/.test(externalId)) {
+        scope.friendRequestBannerHeader = 'Send a friend request';
+        scope.showFriendRequestBanner = true;
+        setupShowFriendRequestBanner(scope, externalId, initParams.subtype || 'contactJoined');
+      }
     }
 
     return {

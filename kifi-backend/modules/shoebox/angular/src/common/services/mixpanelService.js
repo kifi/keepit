@@ -17,12 +17,11 @@
       $analyticsProvider.settings.pageTracking.autoTrackVirtualPages = false;
     }
   ])
-  .run(['$rootScope', '$window', '$log', 'profileService', 'analyticsState', '$http', 'env',
-    function (_$rootScope_, _$window_, _$log_, _profileService_, _analyticsState_, _$http_, _env_) {
+  .run(['$rootScope', '$window', '$log', 'profileService', '$http', 'env',
+    function (_$rootScope_, _$window_, _$log_, _profileService_, _$http_, _env_) {
       $window = _$window_;
       $log = _$log_;
       profileService = _profileService_;
-      analyticsState = _analyticsState_;
       $http = _$http_;
       env = _env_;
 
@@ -31,7 +30,7 @@
     }
   ]);
 
-  var $window, $rootScope, $log, profileService, analyticsState, $http, env;  // injected before any code below runs
+  var $window, $rootScope, $log, profileService, $http, env;  // injected before any code below runs
   var identifiedViewEventQueue = [];
   var userId;
   var currentLibrary;
@@ -127,9 +126,6 @@
           userStatus: getUserStatus(),
           experiments: getExperiments()
         }, attributes || {});
-
-        var customAttributes = analyticsState.events.user_viewed_page;
-        attributes = _.extend(customAttributes, attributes);
 
         trackEventThroughProxy('user_viewed_page', attributes);
       } finally {
