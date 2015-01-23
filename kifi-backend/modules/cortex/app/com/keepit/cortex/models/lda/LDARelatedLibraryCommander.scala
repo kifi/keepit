@@ -34,7 +34,7 @@ class LDARelatedLibraryCommanderImpl @Inject() (
 
   private val TOP_K = 50
   private val MIN_WEIGHT = 0.7f
-  private val MIN_EVIDENCE = 1
+  private val MIN_EVIDENCE = 2
 
   // completely reconstruct an asymetric graph
   def update(version: ModelVersion[DenseLDA]): Unit = {
