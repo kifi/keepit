@@ -9,8 +9,7 @@
 <link rel="stylesheet" type="text/css" href="/dist/svg.css">
 
 <div class="kf-cols ng-cloak" ng-controller="AppCtrl">
-  <div ng-if="$root.userLoggedIn === true" ng-include="'layout/loggedIn/body.tpl.html'"></div>
-  <div ng-if="$root.userLoggedIn === false" ng-include="'layout/loggedOut/body.tpl.html'"></div>
+  <div ng-if="$root.userLoggedIn != null" ng-include="'layout/body.tpl.html'"></div>
 </div>
 <script>
   !function (d, s) {
