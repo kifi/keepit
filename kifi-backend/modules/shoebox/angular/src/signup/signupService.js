@@ -49,6 +49,9 @@ angular.module('kifi')
     $scope.userData = $scope.userData || {};
     $scope.showTwitter = _.has($location.search(), 'twitter'); // todo (aaron): remove for twitter launch
 
+    var encodedCurrentPage = $window.encodeURIComponent($location.url().split('?')[0]); //remove query params when redirecting back to this page
+    $scope.twitterSignupUrl = '/signup/twitter?redirect=' + encodedCurrentPage; // twitter signup url with redirect
+
     function setModalScope($modalScope, onClose) {
       $modalScope.close = modalService.close;
       $modalScope.$on('$destroy', function () {
@@ -92,12 +95,6 @@ angular.module('kifi')
         template: 'signup/registerModal.tpl.html',
         scope: $scope
       }));
-    };
-
-    $scope.getTwitterSignupUrl = function() {
-      var url = '/signup/twitter';
-      url += '?redirect=' + $window.encodeURIcomponent($location.url().split('?')[0]); // remove query params when redirecting back to this page
-      return url;
     };
 
     $scope.submitEmail = function (form) {
