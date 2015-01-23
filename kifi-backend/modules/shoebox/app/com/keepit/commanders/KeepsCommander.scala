@@ -297,7 +297,7 @@ class KeepsCommander @Inject() (
             val tracer = new StackTrace()
             val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
             val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
-            val json = Json.obj("object" -> keep.url, "library" -> libraryUrl)
+            val json = Json.obj("article" -> keep.url, "library" -> libraryUrl)
             client.postFuture(DirectUrl(url), json).onComplete {
               case Success(res) =>
                 log.info(s"sent FB story with res = ${res.status}")
