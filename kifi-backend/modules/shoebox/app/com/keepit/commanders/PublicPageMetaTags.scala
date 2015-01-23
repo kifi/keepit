@@ -1,8 +1,31 @@
 package com.keepit.commanders
 
-import com.keepit.model.URL
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.db.Id
+import com.keepit.common.logging.AccessLog
+import com.keepit.model.{ User, Library, URL }
 import org.joda.time.DateTime
 import com.keepit.common.time.ISO_8601_DAY_FORMAT
+
+import scala.concurrent.duration.Duration
+
+case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
+  override val version = 10
+  val namespace = "library_metadata_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class UserMetadataKey(id: Id[User]) extends Key[String] {
+  override val version = 1
+  val namespace = "user_metadata_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class UserMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UserMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 /**
  * https://developers.facebook.com/docs/sharing/best-practices
@@ -143,7 +166,7 @@ object PublicPageMetaTags {
    * Google does not like descriptions with less then 60 characters
    * This function adds a bit of diversity to the description tags and tries to keep them longer then 70 characters.
    */
-  def generateMetaTagsDescription(description: Option[String], ownerName: String, libraryName: String, altDesc: Option[String]): String = {
+  def generateLibraryMetaTagDescription(description: Option[String], ownerName: String, libraryName: String, altDesc: Option[String]): String = {
     val base = description match {
       case None =>
         s"$ownerName's $libraryName Library"
