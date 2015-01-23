@@ -10,38 +10,38 @@ import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA }
 import com.keepit.cortex.sql.CortexTypeMappers
 
-@ImplementedBy(classOf[PersonaFeatureRepoImpl])
-trait PersonaFeatureRepo extends DbRepo[PersonaFeature] {
-  def getPersonaFeature(pid: Id[Persona], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[PersonaFeature]
+@ImplementedBy(classOf[PersonaLDAFeatureRepoImpl])
+trait PersonaLDAFeatureRepo extends DbRepo[PersonaLDAFeature] {
+  def getPersonaFeature(pid: Id[Persona], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[PersonaLDAFeature]
 }
 
 @Singleton
-class PersonaFeatureRepoImpl @Inject() (
+class PersonaLDAFeatureRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    airbrake: AirbrakeNotifier) extends DbRepo[PersonaFeature] with PersonaFeatureRepo with CortexTypeMappers {
+    airbrake: AirbrakeNotifier) extends DbRepo[PersonaLDAFeature] with PersonaLDAFeatureRepo with CortexTypeMappers {
 
   import db.Driver.simple._
 
   type RepoImpl = PersonaFeatureRepoTable
 
-  class PersonaFeatureRepoTable(tag: Tag) extends RepoTable[PersonaFeature](db, tag, "persona_feature") {
+  class PersonaFeatureRepoTable(tag: Tag) extends RepoTable[PersonaLDAFeature](db, tag, "persona_lda_feature") {
     def personaId = column[Id[Persona]]("persona_id")
     def version = column[ModelVersion[DenseLDA]]("version")
     def feature = column[UserTopicMean]("feature")
     def firstTopic = column[LDATopic]("first_topic")
     def secondTopic = column[LDATopic]("second_topic")
     def thirdTopic = column[LDATopic]("third_topic")
-    def * = (id.?, createdAt, updatedAt, personaId, version, feature, firstTopic, secondTopic, thirdTopic, state) <> ((PersonaFeature.apply _).tupled, PersonaFeature.unapply _)
+    def * = (id.?, createdAt, updatedAt, personaId, version, feature, firstTopic, secondTopic, thirdTopic, state) <> ((PersonaLDAFeature.apply _).tupled, PersonaLDAFeature.unapply _)
   }
 
   def table(tag: Tag) = new PersonaFeatureRepoTable(tag)
   initTable()
 
-  def deleteCache(model: PersonaFeature)(implicit session: RSession): Unit = {}
-  def invalidateCache(model: PersonaFeature)(implicit session: RSession): Unit = {}
+  def deleteCache(model: PersonaLDAFeature)(implicit session: RSession): Unit = {}
+  def invalidateCache(model: PersonaLDAFeature)(implicit session: RSession): Unit = {}
 
-  def getPersonaFeature(pid: Id[Persona], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[PersonaFeature] = {
+  def getPersonaFeature(pid: Id[Persona], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[PersonaLDAFeature] = {
     (for (r <- rows if r.personaId === pid && r.version === version) yield r).firstOption
   }
 
