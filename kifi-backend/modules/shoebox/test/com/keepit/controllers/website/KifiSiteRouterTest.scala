@@ -6,7 +6,7 @@ import com.keepit.commanders.{ LibraryCommander, UserCommander }
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, UserRequest, NonUserRequest }
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
@@ -40,7 +40,6 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),

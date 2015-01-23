@@ -24,7 +24,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.cortex.FakeCortexServiceClientModule
 
 class MobileAuthControllerTest extends Specification with ShoeboxTestInjector with DbInjectionHelper {
@@ -40,7 +40,6 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),

@@ -24,7 +24,7 @@ case class ImageInfo(
     provider: Option[ImageProvider] = None,
     format: Option[ImageFormat] = None,
     priority: Option[Int] = None,
-    path: Option[String] = None // the s3 bucket key name
+    path: String // the s3 bucket key name
     ) extends ModelWithState[ImageInfo] with ModelWithSeqNumber[ImageInfo] {
   val defaultImageFormat = ImageFormat.JPG
   def withId(imageInfoId: Id[ImageInfo]) = copy(id = Some(imageInfoId))
@@ -56,7 +56,7 @@ object ImageInfo {
     (__ \ 'provider).formatNullable[ImageProvider] and
     (__ \ 'format).formatNullable[ImageFormat] and
     (__ \ 'priority).formatNullable[Int] and
-    (__ \ 'path).formatNullable[String]
+    (__ \ 'path).format[String]
   )(ImageInfo.apply _, unlift(ImageInfo.unapply))
 }
 

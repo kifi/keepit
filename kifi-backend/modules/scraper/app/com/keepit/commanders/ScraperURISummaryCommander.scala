@@ -2,13 +2,27 @@ package com.keepit.commanders
 
 import java.awt.image.BufferedImage
 
+import com.keepit.common.logging.Logging
+import com.kifi.macros.json
+import org.apache.commons.lang3.RandomStringUtils
+import org.joda.time.DateTime
+
+import scala.concurrent.Future
+import scala.util.{ Failure, Success }
+
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.ImageFetcher
-import com.keepit.common.logging.Logging
+import com.keepit.common.store.{ S3ImageConfig, ImageSize, S3URIImageStore }
+import com.keepit.model._
+import com.keepit.scraper.{ URIPreviewFetchResult, NormalizedURIRef, ShoeboxDbCallbackHelper }
+import com.keepit.scraper.embedly.{ EmbedlyImage, EmbedlyClient }
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 import com.keepit.common.net.URI
 import com.keepit.common.performance._
-import com.keepit.common.store.S3URIImageStore
+import com.keepit.common.store.{ S3ImageConfig, S3URIImageStore }
 import com.keepit.model.{ ImageStoreFailureWithException, ImageInfo, PageInfo, URISummary }
 import com.keepit.scraper.embedly.{ EmbedlyClient, EmbedlyImage }
 import com.keepit.scraper._
@@ -28,7 +42,9 @@ trait ScraperURISummaryCommander {
 class ScraperURISummaryCommanderImpl @Inject() (
     imageFetcher: ImageFetcher,
     embedlyClient: EmbedlyClient,
+    s3URIImageStore: S3URIImageStore,
     uriImageStore: S3URIImageStore,
+    imageConfig: S3ImageConfig,
     airbrake: AirbrakeNotifier,
     uriImageCommander: UriImageCommander,
     callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander with Logging {
@@ -42,7 +58,7 @@ class ScraperURISummaryCommanderImpl @Inject() (
           case Some(imageInfo) =>
             callback.saveImageInfo(imageInfo) // no wait
 
-            val urlOpt = imageInfoOpt.flatMap(getS3URL(_, nUri))
+            val urlOpt = imageInfoOpt.flatMap(getS3URL)
             val widthOpt = imageInfoOpt.flatMap(_.width)
             val heightOpt = imageInfoOpt.flatMap(_.height)
             Some(URISummary(urlOpt, pageInfo.title, pageInfo.description, widthOpt, heightOpt))
@@ -64,7 +80,7 @@ class ScraperURISummaryCommanderImpl @Inject() (
             uriImageCommander.processRemoteImage(embedlyImage.url).map {
               case Left(uploadResults) =>
                 val sizes = uploadResults.map { upload =>
-                  PersistedImageVersion(upload.image.getWidth, upload.image.getHeight, upload.key)
+                  PersistedImageVersion(upload.image.getWidth, upload.image.getHeight, upload.key, embedlyImage.url)
                 }
                 log.info(s"[susc] Done, uploaded ${uploadResults.length} images: ${sizes}")
                 Some(PersistedImageRef(sizes, embedlyImage.caption))
@@ -110,10 +126,10 @@ class ScraperURISummaryCommanderImpl @Inject() (
         embedlyInfo <- embedlyInfoOpt
       } yield {
         val imageInfoOptF: Future[Option[ImageInfo]] = {
-          val images = embedlyInfo.buildImageInfo(nUri.id)
+          val name = RandomStringUtils.randomAlphanumeric(5)
+          val path = s3URIImageStore.getEmbedlyImageKey(nUri.externalId, name, ImageFormat.JPG.value)
+          val images = embedlyInfo.buildImageInfo(nUri.id, path, name)
           val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.isValidImageUrl) }
-
-          // todo: Upload nonBlankImages to S3.
 
           nonBlankImages.headOption match {
             case None =>
@@ -165,7 +181,9 @@ class ScraperURISummaryCommanderImpl @Inject() (
   /**
    * Get S3 url for image info
    */
-  private def getS3URL(info: ImageInfo, nUri: NormalizedURIRef): Option[String] = uriImageStore.getImageURL(info, nUri.externalId)
+  private def getS3URL(info: ImageInfo): Option[String] = {
+    Some(imageConfig.cdnBase + "/" + info.path)
+  }
 
 }
 

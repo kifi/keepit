@@ -26,7 +26,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.google.inject.Injector
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.cortex.FakeCortexServiceClientModule
 
 class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with DbInjectionHelper {
@@ -39,7 +39,6 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeUserActionsModule(),

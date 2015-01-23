@@ -34,8 +34,6 @@ class AdminBookmarksController @Inject() (
   keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
-  s3URIImageStore: S3URIImageStore,
-  imageInfoRepo: ImageInfoRepo,
   scrapeRepo: ScrapeInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   libraryRepo: LibraryRepo,
@@ -299,48 +297,6 @@ class AdminBookmarksController @Inject() (
     } getOrElse {
       NotFound(Json.obj("error" -> "not_found"))
     }
-  }
-
-  def fillImageInfoPath(count: Int = 10, pageSize: Int = 1000) = AdminUserPage { implicit request =>
-    SafeFuture {
-      val processed = new AtomicInteger(0)
-      var batch = 0
-      while (processed.get < count) timing(s"processing images, batch $batch, processed ${processed.get()}") {
-        batch += 1
-        val images = timing(s"processing images, loading info") {
-          db.readOnlyMaster { implicit s =>
-            imageInfoRepo.getWithoutPath(pageSize) map { image =>
-              image -> uriRepo.get(image.uriId).externalId
-            }
-          }
-        }
-
-        timing(s"processing images, persisting info") {
-          db.readWriteBatch(images) {
-            case (session, imageWithUri) =>
-              val (image, normalizedUri) = imageWithUri
-
-              //this will break if not using forceAllProviders since we have 1485252 images from pagepeeker
-              try {
-                val path = s3URIImageStore.getImageKey(image, normalizedUri, forceAllProviders = true)
-                if (path.size == 0) throw new Exception(s"can't find path for image $image")
-                imageInfoRepo.doNotUseSave(image.copy(path = Some(path)))(session)
-                processed.incrementAndGet()
-              } catch {
-                case e: Throwable =>
-                  log.error(s"error persisting image $image with uri $normalizedUri", e)
-                  throw e
-              }
-          } foreach {
-            case (_, Failure(ex)) => throw ex
-            case _ =>
-          }
-        }
-        log.info(s"finished a batch, current process count is ${processed.get}")
-      }
-      log.info(s"done processing images, current process count is ${processed.get}")
-    }
-    Ok(s"processing $count images")
   }
 
 }

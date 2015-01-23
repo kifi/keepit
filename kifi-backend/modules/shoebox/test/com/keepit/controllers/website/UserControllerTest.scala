@@ -16,7 +16,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.oauth.FakeOAuth2ConfigurationModule
@@ -49,7 +49,6 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     FakeMailModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule(),
     FakeOAuth2ConfigurationModule()

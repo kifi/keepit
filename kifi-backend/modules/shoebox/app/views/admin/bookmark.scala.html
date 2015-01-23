@@ -67,15 +67,6 @@
             <td><img src="@imgUrl" alt="no image available"/></td>
         }
       </tr>
-      <tr>
-          <td></td>
-          <td>
-              <form class="form-horizontal" method="GET" action="@com.keepit.controllers.admin.routes.AdminScreenshotController.imagesForUri(normalizedUri.id.get)">
-                  <input type="hidden" name="uriId" value="@normalizedUri.id.get"/>
-                  <b>Get All Images</b><input type="submit" name="Fetch" />
-              </form>
-          </td>
-      </tr>
    </table>
    <p><input type="button" id="rescrape" value="Rescrape"></p>
    <script>

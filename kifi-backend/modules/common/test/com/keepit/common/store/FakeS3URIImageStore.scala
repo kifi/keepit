@@ -9,6 +9,7 @@ case class FakeS3URIImageStore() extends S3URIImageStore {
   def storeImage(info: ImageInfo, rawImage: BufferedImage, extNormUriId: ExternalId[NormalizedURI]): Try[(String, Int)] = Success((FakeS3URIImageStore.placeholderImageURL, FakeS3URIImageStore.placeholderSize))
   def getImageURL(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI]): Option[String] = None
   def getImageKey(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI], forceAllProviders: Boolean = false): String = ""
+  def getEmbedlyImageKey(extNormUriId: ExternalId[NormalizedURI], name: String, suffix: String): String = ""
 }
 
 object FakeS3URIImageStore {

@@ -9,7 +9,6 @@ import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.{ FakeSlickModule, TestDbInfo }
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -48,7 +47,6 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     FakeHttpClientModule(),
     FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     AbuseControlModule(),

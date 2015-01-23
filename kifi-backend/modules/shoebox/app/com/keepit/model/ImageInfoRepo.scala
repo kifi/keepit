@@ -17,7 +17,6 @@ import scala.slick.jdbc.StaticQuery
 trait ImageInfoRepo extends Repo[ImageInfo] with SeqNumberFunction[ImageInfo] {
 
   def doNotUseSave(model: ImageInfo)(implicit session: RWSession): ImageInfo
-  def getWithoutPath(count: Int)(implicit ro: RSession): Seq[ImageInfo]
   def getByUri(id: Id[NormalizedURI])(implicit ro: RSession): Seq[ImageInfo]
   def getByUriWithPriority(id: Id[NormalizedURI], minSize: ImageSize, provider: Option[ImageProvider])(implicit ro: RSession): Option[ImageInfo]
 
@@ -46,8 +45,8 @@ class ImageInfoRepoImpl @Inject() (
     def provider = column[ImageProvider]("provider", O.Nullable)
     def format = column[ImageFormat]("format", O.Nullable)
     def priority = column[Int]("priority", O.Nullable)
-    def path = column[String]("path", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url.?, name, caption.?, width.?, height.?, sz.?, provider.?, format.?, priority.?, path.?) <> ((ImageInfo.apply _).tupled, ImageInfo.unapply)
+    def path = column[String]("path", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url.?, name, caption.?, width.?, height.?, sz.?, provider.?, format.?, priority.?, path) <> ((ImageInfo.apply _).tupled, ImageInfo.unapply)
   }
 
   def table(tag: Tag) = new ImageInfoTable(tag)
@@ -102,7 +101,7 @@ class ImageInfoRepoImpl @Inject() (
           case Some(url) =>
             // deactivate images with the same url or older than a day
             val yesterday = clock.now.minusDays(1)
-            sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value}, updated_at=${now} where uri_id=${info.uriId} and provider=${EMBEDLY.value} and state=${ACTIVE.value} and (updated_at < $yesterday or url = $url)".first
+            //sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value}, updated_at=${now} where uri_id=${info.uriId} and provider=${EMBEDLY.value} and state=${ACTIVE.value} and (updated_at < $yesterday or url = $url)".first
             // deactivate rows with null provider
             sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value}, updated_at=${now} where uri_id=${info.uriId} and provider is null and state=${ACTIVE.value}".first
           case _ =>
@@ -115,10 +114,6 @@ class ImageInfoRepoImpl @Inject() (
     }
     // pick the latest inactive row for update
     (for (f <- rows if f.uriId === info.uriId && f.state === INACTIVE) yield f).sortBy(_.updatedAt desc).map(_.id).firstOption()
-  }
-
-  def getWithoutPath(count: Int)(implicit ro: RSession): Seq[ImageInfo] = {
-    (for (f <- rows if f.path.isNull) yield f).take(count).list()
   }
 
   def getByUri(id: Id[NormalizedURI])(implicit ro: RSession): Seq[ImageInfo] = {
@@ -139,7 +134,11 @@ class ImageInfoRepoImpl @Inject() (
         ) yield f).list()
     }
     if (candidates.nonEmpty) {
-      Some(candidates.minBy(_.priority.getOrElse(Int.MaxValue)))
+      Some(candidates.minBy { i =>
+        val size = if (i.width.isDefined && i.height.isDefined) i.width.get + i.height.get else Int.MaxValue
+        // Sort by priority, image size (lower is better, since we already filtered out min sizes), -id (newer is better)
+        (i.priority.getOrElse(Int.MaxValue), size, -1 * i.id.get.id)
+      })
     } else {
       None
     }

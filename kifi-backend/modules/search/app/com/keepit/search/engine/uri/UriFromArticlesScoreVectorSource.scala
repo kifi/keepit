@@ -49,7 +49,7 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
           val size = pq.getTaggedScores(taggedScores)
           output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(uriId).putTaggedFloatBits(taggedScores, size)
-          explanation.foreach(_.collectBufferScoreContribution(uriId, -1, visibility, taggedScores, size))
+          explanation.foreach(_.collectBufferScoreContribution(uriId, -1, visibility, taggedScores, size, weights.length))
 
           docId = pq.top.doc // next doc
         } else {

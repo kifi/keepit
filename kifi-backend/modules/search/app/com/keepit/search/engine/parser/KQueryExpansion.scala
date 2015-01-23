@@ -145,6 +145,12 @@ trait KQueryExpansion extends QueryParser {
           }
         }
       }
+
+      if (prefixBoost > 0.0f) {
+        KPrefixQuery.get("tp", "tv", queryText).foreach { prefixQuery =>
+          textQuery.addQuery(prefixQuery, prefixBoost)
+        }
+      }
     }
 
     if (textQuery.isEmpty) None else Some(textQuery)
@@ -189,13 +195,6 @@ trait KQueryExpansion extends QueryParser {
         KConcatQueryAdder.addConcatQueries(queries, concatBoost)
       } else {
         KConcatQueryAdder.addConcatQueries(queries.take(8), concatBoost)
-      }
-    }
-
-    if (prefixBoost > 0.0f) {
-      val fullQueryText = queries.collect { case (_, textQuery) if textQuery != null => textQuery.label }.mkString(" ")
-      KPrefixQuery.get("tp", "tv", fullQueryText).foreach { prefixQuery =>
-        clauses += new BooleanClause(prefixQuery, SHOULD)
       }
     }
 

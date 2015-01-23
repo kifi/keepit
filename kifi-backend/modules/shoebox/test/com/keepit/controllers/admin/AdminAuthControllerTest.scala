@@ -24,7 +24,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.mail.{ FakeOutbox, FakeMailModule }
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.cortex.FakeCortexServiceClientModule
 
 class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjector {
@@ -42,7 +42,6 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeCuratorServiceClientModule())

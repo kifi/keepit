@@ -200,6 +200,8 @@ angular.module('kifi')
         function augmentFollower(follower) {
           follower.picUrl = friendService.getPictureUrlForUser(follower);
           follower.profileUrl = routeService.getProfileUrl(follower.username);
+
+          return follower;
         }
 
         function preloadSocial() {

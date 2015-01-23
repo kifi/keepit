@@ -7,7 +7,7 @@ import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.helprank.HelpRankTestHelper
 import com.keepit.common.net.FakeHttpClientModule
@@ -40,7 +40,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeScraperServiceClientModule(),

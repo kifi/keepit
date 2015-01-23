@@ -7,7 +7,7 @@ import com.keepit.commanders._
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ FakeShoeboxStoreModule, ImageSize }
@@ -47,7 +47,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
     FakeABookServiceClientModule(),
     FakeKeepImportsModule(),
     FakeMailModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerConfigModule(),

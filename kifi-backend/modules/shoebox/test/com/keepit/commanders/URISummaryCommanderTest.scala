@@ -6,26 +6,23 @@ import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model._
 import scala.concurrent._
 import com.google.inject.Injector
-import com.keepit.common.store.{ S3URIImageStore, FakeS3URIImageStore, ImageSize }
+import com.keepit.common.store._
 import com.keepit.scraper.embedly._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.db.{ ExternalId, Id }
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.awt.image.BufferedImage
 import com.keepit.common.images.ImageFetcher
-import com.keepit.common.pagepeeker.PagePeekerClient
 import org.specs2.mutable.Specification
 import org.specs2.matcher.MatchResult
 import scala.Some
-import com.keepit.common.pagepeeker.PagePeekerImage
 import scala.concurrent.duration.Duration
 import scala.util.{ Success, Try }
 import akka.actor.Scheduler
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.scraper.{ NormalizedURIRef, FakeScraperServiceClientImpl, ScraperServiceClient }
+import com.keepit.scraper._
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.search.{ ArticleStore, InMemoryArticleStoreImpl }
 
 object URISummaryCommanderTestDummyValues {
@@ -37,18 +34,14 @@ object URISummaryCommanderTestDummyValues {
     size = Some(4242),
     provider = None,
     format = Some(ImageFormat.JPG),
-    priority = Some(0)
+    priority = Some(0),
+    path = "dummy.jpg"
   );
-  val dummyEmbedlyImageUrl = "http://www.testimg.com/thedummyembedlyimage.jpg"
+  val dummyEmbedlyImageUrl = "http://localhost/S3_KEY.jpg"
   val dummyPagePeekerImageUrl = "http://www.testimg.com/thedummypagepeekerscreenshot.jpg"
   val dummyPagePeekerImage = dummyImage.copy(provider = Some(ImageProvider.PAGEPEEKER), url = Some(dummyPagePeekerImageUrl))
 
   val dummyBufferedImage = new BufferedImage(1000, 1000, BufferedImage.TYPE_INT_RGB)
-}
-
-class URISummaryCommanderTestPagePeekerClient extends PagePeekerClient {
-  override def getScreenshotData(normalizedUri: NormalizedURI): Future[Option[Seq[PagePeekerImage]]] =
-    future { Some(Seq(PagePeekerImage(URISummaryCommanderTestDummyValues.dummyBufferedImage, ImageSize(1000, 1000)))) }
 }
 
 class URISummaryCommanderTestImageFetcher extends ImageFetcher {
@@ -59,18 +52,23 @@ case class URISummaryCommanderTestS3URIImageStore() extends S3URIImageStore {
   def storeImage(info: ImageInfo, rawImage: BufferedImage, extNormUriId: ExternalId[NormalizedURI]): Try[(String, Int)] = Success((FakeS3URIImageStore.placeholderImageURL, FakeS3URIImageStore.placeholderSize))
   def getImageURL(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI]): Option[String] = imageInfo.url // returns the original ImageInfo url (important!)
   def getImageKey(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI], forceAllProviders: Boolean = false): String = ""
+  def getEmbedlyImageKey(extNormUriId: ExternalId[NormalizedURI], name: String, suffix: String): String = ""
 }
 
 case class MockScraperServiceClient(override val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends FakeScraperServiceClientImpl(airbrakeNotifier, scheduler) {
-  override def getURISummaryFromEmbedly(uri: NormalizedURIRef, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-    val summary = Some(URISummary(Some(URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl), None, None))
-    Future.successful(summary)
+  override def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]] = Future.successful {
+    Some(URIPreviewFetchResult(url, Some("title"), Some("desc"), Seq.empty, None, Some(true), None, None, Some(PersistedImageRef(Seq(PersistedImageVersion(100, 100, "S3_KEY.jpg", "https://original.url/image.jpg")), None))))
   }
 }
 
 class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
 
+  private def getCDNURL(cdnBase: String, info: ImageInfo): String = {
+    cdnBase + "/" + info.path
+  }
+
   def setup()(implicit injector: Injector) = {
+    val cdnBase = inject[S3ImageConfig].cdnBase
 
     db.readWrite { implicit session =>
       val nUri1 = normalizedURIInterner.internByUri("http://www.adomain.com")
@@ -85,7 +83,8 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         size = Some(4242),
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
-        priority = Some(0)
+        priority = Some(0),
+        path = "foo.jpg"
       ))
       val image2 = imageInfo.save(ImageInfo(
         uriId = nUri2.id.get,
@@ -95,7 +94,8 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         size = Some(4242),
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
-        priority = Some(1)
+        priority = Some(1),
+        path = "bar.jpg"
       ))
       val image3 = imageInfo.save(ImageInfo(
         uriId = nUri1.id.get,
@@ -105,7 +105,8 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         size = Some(4242),
         provider = Some(ImageProvider.PAGEPEEKER),
         format = Some(ImageFormat.JPG),
-        priority = Some(0)
+        priority = Some(0),
+        path = "dar.jpg"
       ))
       val image4 = imageInfo.save(ImageInfo(
         uriId = nUri1.id.get,
@@ -115,7 +116,8 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         size = Some(4242),
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
-        priority = Some(3)
+        priority = Some(3),
+        path = "zar.jpg"
       ))
       val image5 = imageInfo.save(ImageInfo(
         uriId = nUri1.id.get,
@@ -125,17 +127,17 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         size = Some(4242),
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
-        priority = Some(4)
+        priority = Some(4),
+        path = "gar.jpg"
       ))
 
-      (image1.url.get, image2.url.get, image3.url.get, image4.url.get, image5.url.get, nUri1, nUri2, nUri3, nUri4)
+      (getCDNURL(cdnBase, image1), getCDNURL(cdnBase, image2), getCDNURL(cdnBase, image3), getCDNURL(cdnBase, image4), getCDNURL(cdnBase, image5), nUri1, nUri2, nUri3, nUri4)
     }
 
   }
 
   case class URISummaryCommanderTestModule() extends ScalaModule {
     def configure() {
-      bind[PagePeekerClient].to[URISummaryCommanderTestPagePeekerClient]
       bind[ImageFetcher].to[URISummaryCommanderTestImageFetcher]
       bind[S3URIImageStore].to[URISummaryCommanderTestS3URIImageStore]
     }
@@ -204,7 +206,6 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
           (nUri1, nUri2)
         }
         val embedlyRequest = URISummaryRequest(nUri1.id.get, ImageType.IMAGE, ImageSize(10, 10), false, true, false)
-        val pagePeekerRequest = URISummaryRequest(nUri2.id.get, ImageType.SCREENSHOT, ImageSize(10, 10), false, true, false)
 
         type Partial = PartialFunction[Option[String], MatchResult[_]]
 
@@ -215,25 +216,12 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
             result === URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl
         }: Partial).await
 
-        // fetch image from pagepeeker
-        val result8Fut = URISummaryCommander.getURISummaryForRequest(pagePeekerRequest) map { _.imageUrl }
-        result8Fut must beLike({
-          case None => true === true // PagePeeker has been deactivated, should be Some(FakeS3URIImageStore.placeholderImageURL) otherwise
-        }: Partial).await
-
         // find any kind of image
         val embedlyRequestWithAny = embedlyRequest.copy(imageType = ImageType.ANY)
         val embedlyImageFut = URISummaryCommander.getURISummaryForRequest(embedlyRequestWithAny) map { _.imageUrl }
         embedlyImageFut must beLike({
           case Some(result: String) =>
             result === URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl
-        }: Partial).await
-
-        val pagePeekerRequestWithAny = pagePeekerRequest.copy(imageType = ImageType.ANY)
-        val pagePeekerResultFut = URISummaryCommander.getURISummaryForRequest(pagePeekerRequestWithAny) map { _.imageUrl }
-        pagePeekerResultFut must beLike({
-          case Some(result: String) =>
-            result === URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl // PagePeeker has been deactivated, should be FakeS3URIImageStore.placeholderImageURL otherwise
         }: Partial).await
       }
     }

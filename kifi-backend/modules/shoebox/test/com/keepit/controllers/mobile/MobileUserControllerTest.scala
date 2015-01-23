@@ -17,7 +17,7 @@ import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.controller._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.external.FakeExternalServiceModule
+
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -64,7 +64,6 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     FakeAirbrakeModule(),
     FakeSocialGraphModule(),
     FakeABookServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
@@ -125,7 +124,6 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
     FakeSearchServiceClientModule(),
     FakeAirbrakeModule(),
     FakeABookServiceClientModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeSocialGraphModule(),

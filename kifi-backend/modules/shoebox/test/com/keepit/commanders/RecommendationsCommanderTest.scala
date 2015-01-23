@@ -4,7 +4,6 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -38,7 +37,6 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
     FakeSocialGraphModule(),
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
-    FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeABookServiceClientModule(),
