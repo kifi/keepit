@@ -75,28 +75,6 @@ angular.module('kifi', [
   }
 ])
 
-.factory('analyticsState', [
-  'initParams',
-  function (initParams) {
-    // this is a way to add custom event attributes analytics events that may
-    // be fired before the full state of the page is realized (like whether or
-    // not to load a directive that depends on initParams)
-    var attributes = {
-      events: {
-        user_viewed_page: {}
-      }
-    };
-
-    if (initParams.friend && /^[a-f0-9-]{36}$/.test(initParams.friend)) {
-      // naively assumes that state.friend is a valid externalId and the user
-      // will see the contact jointed banner
-      attributes.events.user_viewed_page.subtype = initParams.subtype || 'contactJoined';
-    }
-
-    return attributes;
-  }
-])
-
 .controller('AppCtrl', [
   '$scope', 'profileService', '$window', '$rootScope', 'friendService', 'libraryService','$timeout', '$log',
   'platformService', '$rootElement', '$analytics', '$location', 'util',
