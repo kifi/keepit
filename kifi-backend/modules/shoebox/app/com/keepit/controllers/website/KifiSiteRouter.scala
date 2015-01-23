@@ -192,7 +192,7 @@ class AngularRouter @Inject() (
 
   private def userMetadata(user: User): Future[String] = try {
     userMetadataCache.getOrElseFuture(UserMetadataKey(user.id.get)) {
-      pageMetaTagsCommander.userMetaTags(user).imap(_.formatOpenGraph)
+      pageMetaTagsCommander.userMetaTags(user).imap(_.formatOpenGraphForUser)
     }
   } catch {
     case e: Throwable =>
@@ -202,7 +202,7 @@ class AngularRouter @Inject() (
 
   private def libMetadata(library: Library): Future[String] = try {
     libraryMetadataCache.getOrElseFuture(LibraryMetadataKey(library.id.get)) {
-      pageMetaTagsCommander.libraryMetaTags(library).imap(_.formatOpenGraph)
+      pageMetaTagsCommander.libraryMetaTags(library).imap(_.formatOpenGraphForLibrary)
     }
   } catch {
     case e: Throwable =>
