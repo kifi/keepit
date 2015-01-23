@@ -15,6 +15,7 @@ import com.keepit.model.Library
 trait LDARelatedLibraryRepo extends DbRepo[LDARelatedLibrary] {
   def getRelatedLibraries(sourceId: Id[Library], version: ModelVersion[DenseLDA], excludeState: Option[State[LDARelatedLibrary]])(implicit session: RSession): Seq[LDARelatedLibrary]
   def getNeighborIdsAndWeights(sourceId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Id[Library], Float)]
+  def getTopNeighborIdsAndWeights(sourceId: Id[Library], version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[(Id[Library], Float)]
 }
 
 @Singleton
@@ -44,8 +45,13 @@ class LDARelatedLibraryRepoImpl @Inject() (
   def getRelatedLibraries(sourceId: Id[Library], version: ModelVersion[DenseLDA], excludeState: Option[State[LDARelatedLibrary]])(implicit session: RSession): Seq[LDARelatedLibrary] = {
     (for (r <- rows if r.version === version && r.sourceId === sourceId && r.state =!= excludeState.orNull) yield r).list
   }
+
   def getNeighborIdsAndWeights(sourceId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Id[Library], Float)] = {
     (for (r <- rows if r.version === version && r.sourceId === sourceId && r.state === LDARelatedLibraryStates.ACTIVE) yield (r.destId, r.weight)).list
+  }
+
+  def getTopNeighborIdsAndWeights(sourceId: Id[Library], version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[(Id[Library], Float)] = {
+    (for (r <- rows if r.version === version && r.sourceId === sourceId && r.state === LDARelatedLibraryStates.ACTIVE) yield (r.destId, r.weight)).sortBy(_._2.desc).take(limit).list
   }
 
 }
