@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.db.Id
 import com.keepit.common.time.{ FakeClock, Clock }
-import com.keepit.cortex.dbmodel.Persona
+import com.keepit.model.Persona
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import com.keepit.common.time._

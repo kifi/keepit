@@ -9,6 +9,7 @@ import com.keepit.common.time.Clock
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA }
 import com.keepit.cortex.sql.CortexTypeMappers
+import com.keepit.model.Persona
 
 @ImplementedBy(classOf[PersonaLDAFeatureRepoImpl])
 trait PersonaLDAFeatureRepo extends DbRepo[PersonaLDAFeature] {

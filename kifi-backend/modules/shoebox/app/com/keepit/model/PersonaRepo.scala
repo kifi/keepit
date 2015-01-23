@@ -5,7 +5,6 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time.Clock
-import com.keepit.cortex.dbmodel.Persona
 
 @ImplementedBy(classOf[PersonaRepoImpl])
 trait PersonaRepo extends DbRepo[Persona]

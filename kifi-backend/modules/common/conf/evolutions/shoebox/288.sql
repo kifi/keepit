@@ -12,7 +12,7 @@ create table persona_lda_feature(
   first_topic smallint unsigned NOT NULL,
   second_topic smallint unsigned NOT NULL,
   third_topic smallint unsigned NOT NULL,
-  state varchar(20) NOT NULL
+  state varchar(20) NOT NULL,
 
   PRIMARY KEY (id),
   unique key persona_lda_feature_i_version_persona (version, persona_id)

@@ -1,6 +1,6 @@
-package com.keepit.cortex.dbmodel
+package com.keepit.model
 
-import com.keepit.common.db.{ States, ModelWithState, State, Id }
+import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.time._
 import org.joda.time.DateTime
 

@@ -2,7 +2,6 @@ package com.keepit.model
 
 import com.keepit.common.db.{ States, ModelWithState, State, Id }
 import com.keepit.common.time._
-import com.keepit.cortex.dbmodel.Persona
 import org.joda.time.DateTime
 
 case class UserPersona(

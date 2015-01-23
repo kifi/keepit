@@ -10,7 +10,7 @@ create table persona(
   state varchar(20) NOT NULL,
 
   PRIMARY KEY (id),
-  constraint persona_c_id_name (id, name)
+  constraint persona_c_name unique (name)
 );
 
 create table user_persona(

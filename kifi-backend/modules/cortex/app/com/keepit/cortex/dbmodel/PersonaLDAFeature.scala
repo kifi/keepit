@@ -4,6 +4,7 @@ import com.keepit.common.db.{ States, ModelWithState, State, Id }
 import com.keepit.common.time._
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA }
+import com.keepit.model.Persona
 import org.joda.time.DateTime
 
 case class PersonaLDAFeature(

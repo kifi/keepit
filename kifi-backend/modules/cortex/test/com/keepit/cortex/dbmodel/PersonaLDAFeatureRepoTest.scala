@@ -4,6 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.cortex.CortexTestInjector
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA }
+import com.keepit.model.Persona
 import org.specs2.mutable.Specification
 
 class PersonaLDAFeatureRepoTest extends Specification with CortexTestInjector {
