@@ -94,6 +94,12 @@ angular.module('kifi')
       }));
     };
 
+    $scope.getTwitterSignupUrl = function() {
+      var url = '/signup/twitter';
+      url += '?redirect=' + $window.encodeURIcomponent($location.url().split('?')[0]); // remove query params when redirecting back to this page
+      return url;
+    };
+
     $scope.submitEmail = function (form) {
       $scope.registerFinalizeSubmitted = true;
       if (!form.$valid) {
@@ -120,17 +126,6 @@ angular.module('kifi')
         $rootScope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthFacebook' });
       }
       return $scope.fbAuth();
-    };
-    $scope.twAuthFromLibrary = function () {
-      if ($scope.userData.libraryId) {
-        $rootScope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthTwitter' });
-      }
-      return $scope.twAuth();
-    };
-
-    $scope.twAuth = function() {
-      modalService.close();
-      $location.url('/signup/twitter'); // todo (aaron): change logic to return back to library or profile page after signing up with twitter
     };
 
     $scope.fbAuth = function () {

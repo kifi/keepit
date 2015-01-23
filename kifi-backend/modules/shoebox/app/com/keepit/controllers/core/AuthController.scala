@@ -309,12 +309,16 @@ class AuthController @Inject() (
     }
   }
 
-  def signup(provider: String) = Action.async(parse.anyContent) { implicit request =>
+  def signup(provider: String, redirect: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map { result =>
       authHelper.authHandler(request, result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
-        result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
+        val res = result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
+        if (redirect.isDefined)
+          res.withCookies(Cookie("redirect", redirect.get))
+        else
+          res
       }
     }
   }

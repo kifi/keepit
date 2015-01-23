@@ -9,7 +9,9 @@
 
         <div class="register-modal-social-block">
           <div class="kf-register-button facebook" ng-click="fbAuthFromLibrary()" ng-mouseover="fbInit()">Continue with Facebook</div>
-          <div class="kf-register-button twitter" ng-if="showTwitter" ng-click="twAuthFromLibrary()">Continue with Twitter</div>
+          <a href="{{getTwitterSignupUrl()}}" target="_self" ng-if="showTwitter">
+            <div class="kf-register-button twitter">Continue with Twitter</div>
+          </a>
           <div class="register-modal-we-are-nice">We will never post without your explicit permission.</div>
         </div>
 

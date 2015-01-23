@@ -5,8 +5,10 @@ angular.module('kifi')
 .controller('UserProfileCtrl', [
   '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window',
   'env', 'inviteService', 'keepWhoService', 'originTrackingService', 'profileService', 'userProfileActionService',
+  'installService', 'modalService', 'initParams',
   function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window,
-            env, inviteService, keepWhoService, originTrackingService, profileService, userProfileActionService) {
+            env, inviteService, keepWhoService, originTrackingService, profileService, userProfileActionService,
+            installService, modalService, initParams) {
 
     //
     // Internal data.
@@ -33,6 +35,22 @@ angular.module('kifi')
     //
     // Internal functions.
     //
+    function showInstallModal() {
+      $scope.platformName = installService.getPlatformName();
+      if ($scope.platformName) {
+        $scope.thanksVersion = 'installExt';
+        $scope.installExtension = installService.triggerInstall;
+      } else {
+        $scope.thanksVersion = 'notSupported';
+      }
+
+      $scope.close = modalService.close;
+      modalService.open({
+        template: 'signup/thanksForRegisteringModal.tpl.html',
+        scope: $scope
+      });
+    }
+
     function init() {
       $rootScope.$emit('libraryUrl', {});
       var pageOrigin = originTrackingService.getAndClear();
@@ -44,6 +62,9 @@ angular.module('kifi')
         setTitle(profile);
         initProfile(profile);
         initViewingUserStatus();
+        if (initParams.install === '1' && !installService.installedVersion) {
+          showInstallModal();
+        }
 
         // This function should be called last because some of the attributes
         // that we're tracking are initialized by the above functions.
