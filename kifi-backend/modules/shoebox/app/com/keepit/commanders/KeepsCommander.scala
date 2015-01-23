@@ -288,21 +288,14 @@ class KeepsCommander @Inject() (
     if (library.visibility == LibraryVisibility.PUBLISHED) {
       val inExperiment = db.readOnlyMaster { implicit session => userExperimentRepo.get(userId, ExperimentType.FACEBOOK_POST).isDefined }
       if (inExperiment) {
-        socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.FACEBOOK) match {
+        db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.FACEBOOK) } match {
           case None => log.info(s"user $userId is not connected to facebook!")
           case Some(sui) =>
             val accessToken = getFbAccessToken(sui)
             val url = s"https://graph.facebook.com/v2.2/${sui.socialId.id}/fortytwoinc:keep?access_token=$accessToken"
             val client = httpClient.withTimeout(CallTimeouts(responseTimeout = Some(2 * 60 * 1000), maxJsonParseTime = Some(20000)))
             val tracer = new StackTrace()
-            val myFailureHandler: Request => PartialFunction[Throwable, Unit] = url => {
-              case nonOkRes: NonOKResponseException =>
-                airbrake.notify(s"FB didn't like posting a story of user $userId in lib $library $url", tracer.withCause(nonOkRes))
-              case ex: Exception =>
-                val user = s"${sui.id.getOrElse("NO_ID")}:${sui.fullName}"
-                airbrake.notify(s"FB didn't like posting a story of user $userId in lib $library $url", tracer.withCause(ex))
-            }
-            val libOwner = userRepo.get(library.ownerId)
+            val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
             val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
             val json = Json.obj("object" -> keep.url, "library" -> libraryUrl)
             client.postFuture(DirectUrl(url), json).onComplete {
