@@ -10,7 +10,7 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
 import scala.concurrent.duration.Duration
 
 case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
-  override val version = 11
+  override val version = 12
   val namespace = "library_metadata_by_id"
   def toKey(): String = id.id.toString
 }
@@ -19,7 +19,7 @@ class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class UserMetadataKey(id: Id[User]) extends Key[String] {
-  override val version = 2
+  override val version = 3
   val namespace = "user_metadata_by_id"
   def toKey(): String = id.id.toString
 }
@@ -53,18 +53,23 @@ class UserMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostP
  * For twitter:creator we should use the creator twitter handle
  */
 trait PublicPageMetaTags {
-  def formatOpenGraph: String
+  def formatOpenGraphForLibrary: String
+  def formatOpenGraphForUser: String
 }
 
 case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMetaTags {
-  def formatOpenGraph: String =
+
+  def formatOpenGraphForLibrary: String = formatOpenGraph
+
+  def formatOpenGraphForUser: String = formatOpenGraph
+
+  private def formatOpenGraph: String =
     s"""
       |<meta name="robots" content="noindex">
       |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly">
       |<meta name="apple-mobile-web-app-capable" content="no">
       |<meta name="google-play-app" content="app-id=com.kifi">
     """.stripMargin
-
 }
 
 case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String,
@@ -80,50 +85,65 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   val lastName = clean(unsafeLastName)
   val fullName = s"$firstName $lastName"
 
-  //  use og:type of profile!
-  //  verify with https://developers.facebook.com/tools/debug/og/object/
-  def formatOpenGraph: String = {
-
-    def ogSeeAlso: String = related.take(6) map { link =>
-      s"""
+  private def ogSeeAlso: String = related.take(6) map { link =>
+    s"""
          |<meta property="og:see_also" content="$link">
        """.stripMargin
-    } mkString ("\n")
+  } mkString "\n"
 
-    def ogImageTags = images map { image =>
-      s"""
+  private def ogImageTags = images map { image =>
+    s"""
          |<meta property="og:image" content="$image">
          |<meta itemprop="image" content="$image">
        """.stripMargin.trim
-    } mkString ("\n")
+  } mkString "\n"
 
-    def twitterImageTags = images.headOption map { image =>
-      s"""
+  private def twitterImageTags = images.headOption map { image =>
+    s"""
         |<meta name="twitter:image:src" content="$image">
        """.stripMargin
-    } getOrElse ("")
+  } getOrElse ""
 
-    def facebookIdTag = facebookId.map { id =>
-      s"""<meta property="article:author" content="$id">"""
-    } getOrElse ""
+  private def facebookIdTag = facebookId.map { id =>
+    s"""<meta property="article:author" content="$id">"""
+  } getOrElse ""
 
-    def noIndexTag = if (noIndex) {
-      """
-        |<meta name="robots" content="noindex">
-      """.stripMargin
-    } else ""
+  private def noIndexTag = if (noIndex) {
+    """
+      |<meta name="robots" content="noindex">
+    """.stripMargin
+  } else ""
+
+  def formatOpenGraphForLibrary: String = {
+    formatOpenGraph("article") +
+      s"""
+      |<meta name="author" content="$firstName $lastName">
+      |<meta property="article:published_time" content="${ISO_8601_DAY_FORMAT.print(createdAt)}">
+      |<meta property="article:modified_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}">
+      |$ogSeeAlso
+     """.stripMargin
+  }
+
+  def formatOpenGraphForUser: String = {
+    formatOpenGraph("profile") +
+      s"""
+      |<meta property="profile:first_name" content="$firstName">
+      |<meta property="profile:last_name" content="$lastName">
+     """.stripMargin
+  }
+
+  //  use og:type of profile!
+  //  verify with https://developers.facebook.com/tools/debug/og/object/
+  private def formatOpenGraph(ogType: String): String = {
 
     s"""
-      |<title>${title}</title>
+      |<title>$title</title>
       |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly">
       |<meta name="apple-mobile-web-app-capable" content="no">
       |<meta name="google-play-app" content="app-id=com.kifi">
-      |<meta property="og:description" content="${description}">
-      |<meta property="og:title" content="${title}">
-      |<meta property="og:type" content="article">
-      |<meta name="author" content="${firstName} ${lastName}">
-      |<meta property="article:published_time" content="${ISO_8601_DAY_FORMAT.print(createdAt)}">
-      |<meta property="article:modified_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}">
+      |<meta property="og:description" content="$description">
+      |<meta property="og:title" content="$title">
+      |<meta property="og:type" content="$ogType">
       |<meta property="al:iphone:url" content="kifi:/$urlPathOnly">
       |<meta property="al:iphone:app_store_id" content="740232575">
       |<meta property="al:iphone:app_name" content="Kifi iPhone App">
@@ -133,7 +153,6 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |<meta property="al:android:class" content="com.kifi.SplashActivity">
       |$ogImageTags
       |$facebookIdTag
-      |$ogSeeAlso
       |<meta property="og:url" content="$url">
       |<meta property="og:site_name" content="Kifi - Connecting People With Knowledge">
       |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}">
