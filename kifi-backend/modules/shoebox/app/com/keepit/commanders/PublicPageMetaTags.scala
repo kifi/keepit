@@ -67,8 +67,10 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
 
 }
 
-case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
-    createdAt: DateTime, updatedAt: DateTime, unsafeFirstName: String, unsafeLastName: String, noIndex: Boolean, related: Seq[String]) extends PublicPageMetaTags {
+case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String,
+    images: Seq[String], facebookId: Option[String], createdAt: DateTime, updatedAt: DateTime,
+    unsafeFirstName: String, unsafeLastName: String, noIndex: Boolean,
+    related: Seq[String]) extends PublicPageMetaTags {
 
   def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
 
@@ -78,13 +80,15 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   val lastName = clean(unsafeLastName)
   val fullName = s"$firstName $lastName"
 
+  //  use og:type of profile!
+  //  verify with https://developers.facebook.com/tools/debug/og/object/
   def formatOpenGraph: String = {
 
-    def ogSeeAlso = related.take(6) map { link =>
+    def ogSeeAlso: String = related.take(6) map { link =>
       s"""
          |<meta property="og:see_also" content="$link">
        """.stripMargin
-    }
+    } mkString ("\n")
 
     def ogImageTags = images map { image =>
       s"""
