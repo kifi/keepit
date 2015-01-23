@@ -400,7 +400,15 @@ class AuthController @Inject() (
         case ur: UserRequest[_] =>
           if (ur.user.state != UserStates.INCOMPLETE_SIGNUP) {
             // Complete user, they don't need to be here!
-            Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
+            // Read Cookie
+            val redirectCookie = request.cookies.get("redirect")
+            if (redirectCookie.isDefined) {
+              val redirectPath = redirectCookie.get.value
+              Redirect(s"${redirectPath}?m=0")
+            } else {
+              Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
+            }
+
           } else if (ur.identityOpt.isDefined) {
             val identity = ur.identityOpt.get
             // User exists, is incomplete
