@@ -10,7 +10,7 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
 import scala.concurrent.duration.Duration
 
 case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
-  override val version = 10
+  override val version = 11
   val namespace = "library_metadata_by_id"
   def toKey(): String = id.id.toString
 }
@@ -19,7 +19,7 @@ class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class UserMetadataKey(id: Id[User]) extends Key[String] {
-  override val version = 1
+  override val version = 2
   val namespace = "user_metadata_by_id"
   def toKey(): String = id.id.toString
 }
