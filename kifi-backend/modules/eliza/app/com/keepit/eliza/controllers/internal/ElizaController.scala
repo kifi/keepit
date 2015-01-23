@@ -13,7 +13,7 @@ import play.api.mvc.Action
 import play.api.libs.json.{ Json, JsObject, JsArray }
 
 import com.google.inject.Inject
-import com.keepit.eliza.commanders.ElizaStatsCommander
+import com.keepit.eliza.commanders.{ MessagingCommander, NotificationJson, NotificationCommander, ElizaStatsCommander }
 import com.keepit.eliza.model.UserThreadStats
 
 class ElizaController @Inject() (

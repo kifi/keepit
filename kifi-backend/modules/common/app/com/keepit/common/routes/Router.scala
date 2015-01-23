@@ -238,6 +238,7 @@ object Eliza extends Service {
     def getRenormalizationSequenceNumber() = ServiceRoute(GET, "/internal/eliza/sequenceNumber/renormalization")
     def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/eliza/keepAttribution", Param("userId", userId), Param("uriId", uriId))
     def checkUrisDiscussed(userId: Id[User]) = ServiceRoute(POST, "/internal/eliza/checkUrisDiscussed", Param("userId", userId))
+    def getUnreadNotifications(userId: Id[User], howMany: Int) = ServiceRoute(GET, "/internal/eliza/getUnreadNotifications", Param("userId", userId), Param("howMany", howMany))
   }
 }
 

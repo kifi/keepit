@@ -524,4 +524,22 @@ class NotificationCommander @Inject() (
   def notifyUserAboutMuteChange(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean) = {
     notificationRouter.sendToUser(userId, Json.arr("thread_muted", threadId.id, mute))
   }
+
+  def getUnreadNotifications(userId: Id[User], howMany: Int): Seq[UserThreadView] = {
+    db.readOnlyReplica { implicit s =>
+      val userThreads = userThreadRepo.getLatestUnreadUnmutedThreads(userId, howMany)
+      userThreads.map { userThread =>
+        val threadId = userThread.threadId
+        val messageThread = threadRepo.get(threadId)
+
+        val messagesSinceLastSeen = userThread.lastSeen map { seenAt =>
+          messageRepo.getAfter(threadId, seenAt)
+        } getOrElse {
+          messageRepo.get(threadId, 0)
+        }
+
+        UserThread.toUserThreadView(userThread, messagesSinceLastSeen, messageThread)
+      }
+    }
+  }
 }

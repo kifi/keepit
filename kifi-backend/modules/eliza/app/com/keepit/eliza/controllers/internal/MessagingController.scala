@@ -36,6 +36,8 @@ import play.api.mvc.Action
 class MessagingController @Inject() (
   threadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
+  messageThreadRepo: MessageThreadRepo,
+  messageRepo: MessageRepo,
   db: Database,
   uriNormalizationUpdater: UriNormalizationUpdater,
   messagingCommander: MessagingCommander,
@@ -120,6 +122,11 @@ class MessagingController @Inject() (
     messagingCommander.checkUrisDiscussed(userId, uriIds).map { res =>
       Ok(Json.toJson(res))
     }
+  }
+
+  def getUnreadNotifications(userId: Id[User], howMany: Int) = Action {
+    val userThreadViews = notificationCommander.getUnreadNotifications(userId, howMany)
+    Ok(Json.toJson(userThreadViews))
   }
 
 }
