@@ -83,7 +83,18 @@ angular.module('kifi')
         return false;
       },
       isValidChrome: isChrome && supported,
-      isValidFirefox: isFirefox && supported
+      isValidFirefox: isFirefox && supported,
+      getPlatformName: function () {
+        var platformName;
+        if (api.canInstall) {
+          if (api.isValidChrome) {
+            platformName = 'Chrome';
+          } else if (api.isValidFirefox) {
+            platformName = 'Firefox';
+          }
+        }
+        return platformName;
+      }
     };
 
     return api;

@@ -35,26 +35,20 @@ angular.module('kifi')
     //
     // Internal functions.
     //
-    function maybeShowInstallModal() {
-      if (!installService.installedVersion) {
-        if (installService.canInstall) {
-          if (installService.isValidChrome) {
-            $scope.platformName = 'Chrome';
-          } else if (installService.isValidFirefox) {
-            $scope.platformName = 'Firefox';
-          }
-          $scope.installExtension = installService.triggerInstall;
-          $scope.thanksVersion = 'installExt';
-        } else {
-          $scope.thanksVersion = 'notSupported';
-        }
-
-        $scope.close = modalService.close;
-        modalService.open({
-          template: 'signup/thanksForRegisteringModal.tpl.html',
-          scope: $scope
-        });
+    function showInstallModal() {
+      $scope.platformName = installService.getPlatformName();
+      if ($scope.platformName) {
+        $scope.thanksVersion = 'installExt';
+        $scope.installExtension = installService.triggerInstall;
+      } else {
+        $scope.thanksVersion = 'notSupported';
       }
+
+      $scope.close = modalService.close;
+      modalService.open({
+        template: 'signup/thanksForRegisteringModal.tpl.html',
+        scope: $scope
+      });
     }
 
     function init() {
@@ -68,7 +62,7 @@ angular.module('kifi')
         setTitle(profile);
         initProfile(profile);
         initViewingUserStatus();
-        if (initParams.install === '1') {
+        if (initParams.install === '1' && !installService.installedVersion) {
           maybeShowInstallModal();
         }
 
