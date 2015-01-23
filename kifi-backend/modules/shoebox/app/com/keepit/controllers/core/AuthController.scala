@@ -400,7 +400,7 @@ class AuthController @Inject() (
         case ur: UserRequest[_] =>
           if (ur.user.state != UserStates.INCOMPLETE_SIGNUP) {
             // Complete user, they don't need to be here!
-            // Read Cookie
+
             val redirectCookie = request.cookies.get("redirect")
             if (redirectCookie.isDefined) {
               val redirectPath = redirectCookie.get.value
