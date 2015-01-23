@@ -292,13 +292,13 @@ class KeepsCommander @Inject() (
           case None => log.info(s"user $userId is not connected to facebook!")
           case Some(sui) =>
             val accessToken = getFbAccessToken(sui)
-            val url = s"https://graph.facebook.com/v2.2/${sui.socialId.id}/fortytwoinc:keep?access_token=$accessToken"
             val client = httpClient.withTimeout(CallTimeouts(responseTimeout = Some(2 * 60 * 1000), maxJsonParseTime = Some(20000)))
             val tracer = new StackTrace()
             val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
             val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
-            val json = Json.obj("article" -> keep.url, "library" -> libraryUrl)
-            client.postFuture(DirectUrl(url), json).onComplete {
+            val url = s"https://graph.facebook.com/v2.2/${sui.socialId.id}/fortytwoinc:keep?access_token=$accessToken&article=${keep.url}&library=$libraryUrl"
+            log.info(s"posting to FB a story of user $userId with url $url")
+            client.postTextFuture(DirectUrl(url), "").onComplete {
               case Success(res) =>
                 log.info(s"sent FB story with res = ${res.status}")
               case Failure(e) =>
