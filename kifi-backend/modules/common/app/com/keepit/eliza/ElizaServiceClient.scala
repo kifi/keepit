@@ -15,11 +15,11 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable
 import scala.concurrent.{ Future, Promise }
 
-import play.api.libs.json.{ JsArray, Json, JsObject }
+import play.api.libs.json.{ JsString, JsValue, JsArray, Json, JsObject }
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
-import com.keepit.eliza.model.{ MessageHandle, UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats }
+import com.keepit.eliza.model.{ UserThreadView, MessageHandle, UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats }
 
 import akka.actor.Scheduler
 import com.keepit.common.json.TupleFormat._
@@ -52,6 +52,8 @@ trait ElizaServiceClient extends ServiceClient {
   def importThread(data: JsObject): Unit
 
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]]
+
+  def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -154,6 +156,12 @@ class ElizaServiceClientImpl @Inject() (
       Json.parse(response.body).as[Seq[Id[User]]]
     }
   }
+
+  def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]] = {
+    call(Eliza.internal.getUnreadNotifications(userId, howMany)).map { response =>
+      Json.parse(response.body).as[Seq[UserThreadView]]
+    }
+  }
 }
 
 class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler, attributionInfo: mutable.Map[Id[NormalizedURI], Seq[Id[User]]] = mutable.HashMap.empty) extends ElizaServiceClient {
@@ -212,5 +220,9 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]] = {
     Future.successful(attributionInfo.get(uriId).getOrElse(Seq.empty).filter(_ != userId))
+  }
+
+  def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]] = {
+    Future.successful(Seq.empty)
   }
 }

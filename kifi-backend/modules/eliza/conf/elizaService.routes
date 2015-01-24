@@ -62,6 +62,8 @@ GET   /internal/eliza/getNonUserThreadMuteInfo  @com.keepit.eliza.controllers.in
 POST  /internal/eliza/setNonUserThreadMuteState @com.keepit.eliza.controllers.internal.MessagingController.setNonUserThreadMuteState(publicId: String, muted: Boolean)
 POST  /internal/eliza/checkUrisDiscussed         @com.keepit.eliza.controllers.internal.MessagingController.checkUrisDiscussed(userId: Id[User])
 
+GET  /internal/eliza/getUnreadNotifications     @com.keepit.eliza.controllers.internal.MessagingController.getUnreadNotifications(userId: Id[User], howMany: Int)
+
 ##########################################
 # IMPORTS
 ##########################################
