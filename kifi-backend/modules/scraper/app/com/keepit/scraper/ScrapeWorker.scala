@@ -9,7 +9,7 @@ import com.keepit.scraper.extractor._
 import com.keepit.scraper.fetcher.HttpFetcher
 import com.keepit.search.{ LangDetector, Article, ArticleStore }
 import scala.concurrent.duration._
-import org.joda.time.Days
+import org.joda.time.{ DateTime, Days }
 import com.keepit.common.time._
 import com.keepit.common.net.URI
 import org.apache.http.HttpStatus
@@ -124,6 +124,7 @@ class ScrapeWorkerImpl @Inject() (
       } else {
         articleStore += (latestUri.id.get -> article)
         updateWordCountCache(latestUri.id.get, Some(article))
+        updatePageInfo(article)
         for {
           scrapedURI <- dbHelper.saveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
           _ <- dbHelper.saveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
@@ -134,6 +135,17 @@ class ScrapeWorkerImpl @Inject() (
         }
       }
     }
+  }
+
+  private def updatePageInfo(article: Article): Unit = {
+    val pageInfo = PageInfo(uriId = article.id,
+      title = Some(article.title),
+      description = article.description,
+      authors = article.author.toSeq.map(a => PageAuthor(a)),
+      ogType = article.ogType,
+      publishedAt = article.publishedAt,
+      lang = article.contentLang.map(_.lang))
+    shoeboxScraperClient.updatePageInfoFromHttpClient(pageInfo)
   }
 
   private def handleNotScrapable(latestUri: NormalizedURI, notScrapable: NotScrapable, info: ScrapeInfo): Future[Option[Article]] = {
@@ -170,6 +182,7 @@ class ScrapeWorkerImpl @Inject() (
       id = latestUri.id.get,
       title = latestUri.title.getOrElse(""),
       description = None,
+      ogType = None,
       author = None,
       publishedAt = None,
       canonicalUrl = None,
@@ -295,6 +308,7 @@ class ScrapeWorkerImpl @Inject() (
                   id = normalizedUri.id.get,
                   title = title,
                   description = description,
+                  ogType = extractor.getOgType,
                   author = extractor.getAuthor,
                   publishedAt = extractor.getPublishedAt,
                   canonicalUrl = extractor.getCanonicalUrl(normalizedUri.url),

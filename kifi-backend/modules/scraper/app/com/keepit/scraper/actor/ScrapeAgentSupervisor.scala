@@ -68,6 +68,7 @@ class ScrapeAgentSupervisor @Inject() (
   val fetchers = (0 until config.numWorkers / 2).map { i =>
     context.actorOf(Props(fetcherAgentProvider.get), s"fetch-agent$i")
   }
+
   val fetcherRouter = context.actorOf(Props.empty.withRouter(RoundRobinGroup(paths = fetchers.map(_.path.toString))), "fetcher-router")
   log.info(s"[Supervisor.<ctr>] fetcherRouter=$fetcherRouter fetchers(sz=${fetchers.size}):${fetchers.mkString(",")}")
 

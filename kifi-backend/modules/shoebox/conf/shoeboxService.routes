@@ -856,6 +856,7 @@ GET      /internal/shoebox/database/getSocialConnections    @com.keepit.controll
 
 GET      /internal/shoebox/image/getUriImage         @com.keepit.controllers.internal.URISummaryController.getUriImageForUriId(id: Id[NormalizedURI])
 POST     /internal/shoebox/image/getUriSummary       @com.keepit.controllers.internal.URISummaryController.getUriSummary()
+POST     /internal/shoebox/database/updatePageInfoFromHttpClient @com.keepit.controllers.internal.URISummaryController.updatePageInfoFromHttpClient()
 POST     /internal/shoebox/image/getUriSummaries     @com.keepit.controllers.internal.URISummaryController.getUriSummaries()
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
 POST     /internal/shoebox/database/getBasicKeeps   @com.keepit.controllers.internal.ShoeboxController.getBasicKeeps(userId: Id[User])

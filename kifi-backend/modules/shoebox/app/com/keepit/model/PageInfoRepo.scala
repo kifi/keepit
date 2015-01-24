@@ -36,9 +36,10 @@ class PageInfoRepoImpl @Inject() (
     def publishedAt = column[DateTime]("published_at", O.Nullable)
     def safe = column[Boolean]("safe")
     def lang = column[String]("lang")
+    def ogType = column[String]("og_type", O.Nullable)
     def faviconUrl = column[String]("favicon_url")
     def imageInfoId = column[Id[ImageInfo]]("image_info_id")
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, title.?, description.?, authors, publishedAt.?, safe.?, lang.?, faviconUrl.?, imageInfoId.?) <> ((PageInfo.apply _).tupled, PageInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, title.?, ogType.?, description.?, authors, publishedAt.?, safe.?, lang.?, faviconUrl.?, imageInfoId.?) <> ((PageInfo.apply _).tupled, PageInfo.unapply _)
   }
 
   def table(tag: Tag) = new PageInfoTable(tag)

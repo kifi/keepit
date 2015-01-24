@@ -27,6 +27,7 @@ trait ShoeboxScraperClient extends ServiceClient {
   def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean]
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit]
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI]
+  def updatePageInfoFromHttpClient(pageInfo: PageInfo): Future[Unit]
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
   def savePageInfo(pageInfo: PageInfo): Future[Unit]
   def saveImageInfo(imgInfo: ImageInfo): Future[Unit]
@@ -88,6 +89,10 @@ class ShoeboxScraperClientImpl @Inject() (
     call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = longTimeout).map { r =>
       r.json.as[NormalizedURI]
     }
+  }
+
+  def updatePageInfoFromHttpClient(pageInfo: PageInfo): Future[Unit] = {
+    call(Shoebox.internal.updatePageInfoFromHttpClient(), Json.toJson(pageInfo), callTimeouts = longTimeout).imap(_ => {})
   }
 
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = {

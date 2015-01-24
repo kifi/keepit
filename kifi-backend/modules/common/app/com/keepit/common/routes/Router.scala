@@ -126,6 +126,7 @@ object Shoebox extends Service {
     def assignScrapeTasks(zkId: Long, max: Int) = ServiceRoute(GET, "/internal/shoebox/database/assignScrapeTasks", Param("zkId", zkId), Param("max", max))
     def saveScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
     def saveNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/saveNormalizedURI")
+    def updatePageInfoFromHttpClient() = ServiceRoute(POST, "/internal/shoebox/database/updatePageInfoFromHttpClient")
     def savePageInfo() = ServiceRoute(POST, "/internal/shoebox/database/savePageInfo")
     def saveImageInfo() = ServiceRoute(POST, "/internal/shoebox/database/saveImageInfo")
     def updateNormalizedURI(uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/shoebox/database/updateNormalizedURI", Param("uriId", uriId))

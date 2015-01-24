@@ -153,7 +153,38 @@ class URISummaryCommander @Inject() (
   }
 
   /**
+   * not overriding existing data in the db (e.g. comes from embed.ly)
+   */
+  def updateFromHttpClient(pageInfo: PageInfo): PageInfo = db.readWrite { implicit s =>
+    val updated: PageInfo = pageInfoRepo.getByUri(pageInfo.uriId) match {
+      case Some(pi) =>
+        pi.copy(
+          title = pi.title.orElse(pageInfo.title),
+          description = pi.description.orElse(pageInfo.description),
+          authors = if (pi.authors.nonEmpty) pi.authors else pageInfo.authors,
+          publishedAt = pi.publishedAt.orElse(pageInfo.publishedAt),
+          safe = pageInfo.safe,
+          lang = pi.lang.orElse(pageInfo.lang),
+          faviconUrl = pageInfo.faviconUrl
+        )
+      case None =>
+        PageInfo(
+          uriId = pageInfo.uriId,
+          title = pageInfo.title,
+          description = pageInfo.description,
+          authors = pageInfo.authors,
+          publishedAt = pageInfo.publishedAt,
+          safe = pageInfo.safe,
+          lang = pageInfo.lang,
+          faviconUrl = pageInfo.faviconUrl
+        )
+    }
+    pageInfoRepo.save(updated)
+  }
+
+  /**
    * Fetches images and page description from Embedly
+   * Override PageInfo in the db
    */
   private def fetchFromEmbedly(nUri: NormalizedURIRef): Future[Option[URISummary]] = {
     scraper.fetchAndPersistURIPreview(nUri.url).map { rawResp =>
@@ -164,12 +195,12 @@ class URISummaryCommander @Inject() (
             case Some(pi) =>
               pi.copy(
                 uriId = nUri.id,
-                title = resp.title,
-                description = resp.description,
-                authors = resp.authors,
-                publishedAt = resp.publishedAt,
+                title = resp.title.orElse(pi.description),
+                description = resp.description.orElse(pi.description),
+                authors = if (resp.authors.isEmpty) pi.authors else resp.authors,
+                publishedAt = resp.publishedAt.orElse(pi.publishedAt),
                 safe = resp.safe,
-                lang = resp.lang,
+                lang = resp.lang.orElse(pi.lang),
                 faviconUrl = resp.faviconUrl
               )
             case None =>
