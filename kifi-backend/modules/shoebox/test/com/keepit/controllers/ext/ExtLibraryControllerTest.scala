@@ -45,17 +45,17 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Morgan", lastName = "Freeman", username = Username("morgan"), normalizedUsername = "test"))
-          val lib1 = libraryRepo.save(Library(name = "Million Dollar Baby", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("baby"), memberCount = 1))
+          val lib1 = libraryRepo.save(Library(name = "Million Dollar Baby", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("baby"), color = Some(LibraryColor.RED), memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 
           val user2 = userRepo.save(User(firstName = "Michael", lastName = "Caine", username = Username("michael"), normalizedUsername = "test"))
           // Give READ_INSERT access to Freeman
-          val lib2 = libraryRepo.save(Library(name = "Dark Knight", ownerId = user2.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("darkknight"), memberCount = 1))
+          val lib2 = libraryRepo.save(Library(name = "Dark Knight", ownerId = user2.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("darkknight"), color = Some(LibraryColor.BLUE), memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.READ_INSERT))
 
           // Give READ_ONLY access to Freeman
-          val lib3 = libraryRepo.save(Library(name = "Now You See Me", ownerId = user2.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("magic"), memberCount = 1))
+          val lib3 = libraryRepo.save(Library(name = "Now You See Me", ownerId = user2.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("magic"), color = Some(LibraryColor.GREEN), memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user2.id.get, access = LibraryAccess.OWNER))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY))
 
@@ -74,13 +74,15 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
             Json.obj(
               "id" -> pubId1,
               "name" -> "Million Dollar Baby",
-              "path" -> "/morgan/baby",
-              "visibility" -> "discoverable"),
+              "color" -> LibraryColor.RED,
+              "visibility" -> "published",
+              "path" -> "/morgan/baby"),
             Json.obj(
               "id" -> pubId2,
               "name" -> "Dark Knight",
-              "path" -> "/michael/darkknight",
-              "visibility" -> "discoverable")))
+              "color" -> LibraryColor.BLUE,
+              "visibility" -> "published",
+              "path" -> "/michael/darkknight")))
       }
     }
 
