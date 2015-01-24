@@ -39,12 +39,21 @@ Activity email (still a work in progress)
 <br/>
 
 <h1>Pending Unread Messages</h1>
-TODO
+@activityData.unreadThreads.map { thread =>
+    @thread.messageSendersToShow.zipWithIndex.map { case (senderHtml, i) =>
+        @{senderHtml}@if(thread.messageSendersToShow.size > 2 && i < thread.messageSendersToShow.size - 1){,}
+        @if(i == thread.messageSendersToShow.size - 2){and}
+    }
+    sent a message @thread.firstMessageSentTime<br/>
+    "@{thread.allMessages.head.messageText}"<br/><br/>
+    @{/* TODO(josh) linkable url? waiting for design to finish this detail */}
+}
 <br/>
 
 <h1>Pending Friend Requests</h1>
 @activityData.pendingFriendRequests.map { senderId =>
     <a href="@kifiFriendsUrl("clickedFriendRequestName")">@fullName(senderId)</a>
+    <br/>
 }
 <br/>
 

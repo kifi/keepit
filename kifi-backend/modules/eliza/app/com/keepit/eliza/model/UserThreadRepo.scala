@@ -164,8 +164,8 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread] = {
-    (for (row <- rows if row.user === userId && row.unread && row.muted === false) yield row).
-      sortBy { row => row.lastActive.desc }.take(howMany).list
+    (for (row <- rows if row.user === userId && row.unread && !row.muted) yield row).
+      sortBy { row => row.updatedAt.desc }.take(howMany).list
   }
 
   def getThreadIds(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]] = {
