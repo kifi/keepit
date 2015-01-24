@@ -60,11 +60,9 @@ class MobileSearchController @Inject() (
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
 
-    val doPrefixSearch = experiments.contains(ADMIN) && experiments.contains(PREFIX_SEARCH)
-
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, context, maxHits, doPrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
+    librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, context, maxHits, true, None, debugOpt, None).flatMap { librarySearchResult =>
       val librarySearcher = libraryIndexer.getSearcher
       val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
       val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
