@@ -789,7 +789,7 @@ angular.module('kifi')
             platformService.goToAppOrStore(url + (url.indexOf('?') > 0 ? '&' : '?') + 'follow=true');
             return;
           } else if ($rootScope.userLoggedIn === false) {
-            return signupService.register({libraryId: scope.library.id});
+            return signupService.register({libraryId: scope.library.id, intent: 'follow'});
           }
 
           libraryService.joinLibrary(scope.library.id)['catch'](modalService.openGenericErrorModal);
