@@ -309,16 +309,19 @@ class AuthController @Inject() (
     }
   }
 
-  def signup(provider: String, redirect: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
+  def signup(provider: String, redirect: Option[String] = None, follow: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map { result =>
       authHelper.authHandler(request, result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
         val res = result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
-        if (redirect.isDefined)
-          res.withCookies(Cookie("redirect", redirect.get))
-        else
-          res
+
+        val cookies = Seq(
+          redirect.map(path => Cookie("redirect", path)),
+          redirect.map(follow => Cookie("follow", follow))
+        ).flatten
+
+        res.withCookies(cookies: _*)
       }
     }
   }
@@ -403,8 +406,17 @@ class AuthController @Inject() (
 
             val redirectCookie = request.cookies.get("redirect")
             if (redirectCookie.isDefined) {
-              val redirectPath = redirectCookie.get.value
-              Redirect(s"${redirectPath}?m=0")
+              authCommander.parseRedirectCookie(redirectCookie.get.value) match {
+                case Left(fail) =>
+                  Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
+                case Right((redirectPath, libIdOpt)) =>
+                  val followOpt = request.cookies.get("follow").map(_.value)
+                  if (followOpt.isDefined && libIdOpt.isDefined) {
+                    authCommander.autoJoinLib(ur.user.id.get, libIdOpt.get)
+                  }
+                  Redirect(s"${redirectPath}?m=0")
+              }
+
             } else {
               Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
             }

@@ -113,6 +113,7 @@ class AuthCommander @Inject() (
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
+    libraryRepo: LibraryRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     userExperimentCommander: LocalUserExperimentCommander,
     userCommander: UserCommander,
@@ -409,15 +410,39 @@ class AuthCommander @Inject() (
     }
   }
 
-  def autoJoinLib(userId: Id[User], libPubId: PublicId[Library]): Unit = {
-    Library.decodePublicId(libPubId) map { libId =>
-      implicit val context = HeimdalContext(Map())
-      libraryCommander.joinLibrary(userId, libId).fold(
-        libFail =>
-          airbrakeNotifier.notify(s"[finishSignup] auto-join failed. $libFail"),
-        library =>
-          log.info(s"[finishSignup] user(id=$userId) has successfully joined library $library")
-      )
+  def autoJoinPubLib(userId: Id[User], libPubId: PublicId[Library]): Either[String, Unit] = {
+    Library.decodePublicId(libPubId) match {
+      case Success(libId) => Right(autoJoinLib(userId, libId))
+      case _ => Left("invalid_library_id")
+    }
+  }
+
+  def autoJoinLib(userId: Id[User], libId: Id[Library]): Unit = {
+    implicit val context = HeimdalContext(Map())
+    libraryCommander.joinLibrary(userId, libId).fold(
+      libFail => airbrakeNotifier.notify(s"[finishSignup] auto-join failed. $libFail"),
+      library => log.info(s"[finishSignup] user(id=$userId) has successfully joined library $library")
+    )
+  }
+
+  def parseRedirectCookie(path: String): Either[String, (String, Option[Id[Library]])] = {
+    val decodedPath = java.net.URLDecoder.decode(path, "UTF-8")
+    if (decodedPath.startsWith("l/")) { // is a libraryId
+      val idString = decodedPath.substring(2)
+      val libPubId: PublicId[Library] = PublicId[Library](idString)
+      Library.decodePublicId(libPubId) match {
+        case Success(libId) =>
+          val (owner, library) = db.readOnlyMaster { implicit s =>
+            val library = libraryRepo.get(libId)
+            (userRepo.get(library.ownerId), library)
+          }
+          Right((Library.formatLibraryPath(owner.username, library.slug), library.id))
+        case _ =>
+          airbrakeNotifier.notify(s"[parseRedirectCookie] invalid library id in $decodedPath (decoded from $path)")
+          Left("invalid_library_id")
+      }
+    } else {
+      Right((decodedPath, None))
     }
   }
 

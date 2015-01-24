@@ -206,18 +206,19 @@ class AuthHelper @Inject() (
     }
 
     libraryCommander.convertPendingInvites(emailAddress, user.id.get)
-    libraryPublicId.foreach(authCommander.autoJoinLib(user.id.get, _))
+    libraryPublicId.foreach(authCommander.autoJoinPubLib(user.id.get, _))
 
     request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))
-
-    val cookieRedirect = request.cookies.get("redirect")
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => {
+        val cookieRedirect = request.cookies.get("redirect")
         val result = if (cookieRedirect.isDefined) {
-          val redirectUrl = java.net.URLDecoder.decode(cookieRedirect.get.value, "UTF-8") + "?install=1" // tell browser to pop-up install modal
-          Ok(Json.obj("uri" -> redirectUrl))
+          authCommander.parseRedirectCookie(cookieRedirect.get.value).fold(
+            failMsg => Ok(Json.obj("uri" -> "/?install=1")),
+            redirectPath => Ok(Json.obj("uri" -> (redirectPath + "?install=1"))) // tell browser to pop-up install modal
+          )
         } else if (isFinalizedImmediately) {
           Redirect(uri)
         } else {

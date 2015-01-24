@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.abook.FakeABookServiceClientModule
@@ -20,6 +21,11 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ KeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.social.{ SocialNetworks, SocialId }
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.UserFactoryHelper._
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -85,6 +91,36 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
         res1.header.status === OK
         res1.session.getUserId.isDefined === true
         res1.session.getUserId.get === user.id.get
+      }
+    }
+
+    "parse redirect cookies" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        implicit val config = inject[PublicIdConfiguration]
+        val authCommander = inject[AuthCommander]
+
+        val (user1, user2, library1) = db.readWrite { implicit s =>
+          val user1 = user().withName("first", "user").withUsername("firstuser").saved
+          val user2 = user().withName("second", "user").withUsername("seconduser").saved
+          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").saved
+          (user1, user2, library1)
+        }
+        val libPubId1 = Library.publicId(library1.id.get)
+
+        // return redirect url to library page
+        val redirectLib = authCommander.parseRedirectCookie(s"l/${libPubId1.id}")
+        redirectLib.right.get === ("/firstuser/lib1", Some(library1.id.get))
+
+        // return redirect url encoded
+        val redirectEncoded = authCommander.parseRedirectCookie(s"l%2F${libPubId1.id}")
+        redirectEncoded.right.get === ("/firstuser/lib1", Some(library1.id.get))
+
+        // return redirect url to profile page (username)
+        val redirectProfile = authCommander.parseRedirectCookie(s"/firstuser")
+        redirectProfile.right.get === ("/firstuser", None)
+
+        // incorrect library id
+        authCommander.parseRedirectCookie(s"l/asdfqwer").isRight === false
       }
     }
   }
