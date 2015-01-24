@@ -438,7 +438,7 @@ class AuthCommander @Inject() (
           }
           Right((Library.formatLibraryPath(owner.username, library.slug), library.id))
         case _ =>
-          log.error(s"[parseRedirectCookie] invalid library id in $path")
+          airbrakeNotifier.notify(s"[parseRedirectCookie] invalid library id in $decodedPath (decoded from $path)")
           Left("invalid_library_id")
       }
     } else {
