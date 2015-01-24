@@ -410,7 +410,7 @@ class AuthCommander @Inject() (
     }
   }
 
-  def autoJoinPubLib(userId: Id[User], libPubId: PublicId[Library]) = {
+  def autoJoinPubLib(userId: Id[User], libPubId: PublicId[Library]): Either[String, Unit] = {
     Library.decodePublicId(libPubId) match {
       case Success(libId) => Right(autoJoinLib(userId, libId))
       case _ => Left("invalid_library_id")
@@ -438,6 +438,7 @@ class AuthCommander @Inject() (
           }
           Right((Library.formatLibraryPath(owner.username, library.slug), library.id))
         case _ =>
+          log.error(s"[parseRedirectCookie] invalid library id in $path")
           Left("invalid_library_id")
       }
     } else {
