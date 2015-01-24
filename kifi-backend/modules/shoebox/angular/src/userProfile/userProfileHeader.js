@@ -41,10 +41,9 @@ angular.module('kifi')
         }
 
         function initViewingUserStatus() {
-          scope.userLoggedIn = $rootScope.userLoggedIn;
           scope.viewingOwnProfile = scope.profile.id === profileService.me.id;
 
-          if (scope.userLoggedIn) {
+          if ($rootScope.userLoggedIn) {
             if (scope.viewingOwnProfile) {
               scope.connectionWithUser = 'self';
             } else {
@@ -99,7 +98,6 @@ angular.module('kifi')
         //
         // Scope Variables
         //
-        scope.userLoggedIn = false;
         scope.viewingOwnProfile = false;
         scope.isKifiCurator = false;
         scope.userNavLinks = [];

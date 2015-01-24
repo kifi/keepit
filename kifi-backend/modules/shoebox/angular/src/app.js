@@ -98,7 +98,7 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  '$scope', 'profileService', '$rootScope', 'friendService', 'libraryService','$timeout', '$log',
+  '$scope', 'profileService', '$rootScope', 'friendService', 'libraryService', '$timeout', '$log',
   'platformService', '$rootElement', '$analytics', '$location', 'util',
   function ($scope, profileService, $rootScope, friendService, libraryService, $timeout, $log,
       platformService, $rootElement, $analytics, $location, util) {
@@ -131,6 +131,13 @@ angular.module('kifi', [
           }
         });
       }
+
+      $rootScope.$on('$stateChangeError', function (event, toState, toParams, fromState, fromParams, error) {
+        if (error && error.status === 404) {
+          event.preventDefault();  // stay in error state
+          $scope.errorStatus = 404;
+        }
+      });
     }
 
     start();
