@@ -88,9 +88,13 @@ angular.module('kifi')
         $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signupLibrary' });
       }
 
-       // twitter signup url with redirect
-      var currentPath = $location.url().split('?')[0]; //remove query params when redirecting back to this page
-      $scope.twitterSignupUrl = '/signup/twitter?redirect=' + $window.encodeURIComponent(currentPath);
+      $scope.twitterSignupUrl = '/signup/twitter?redirect=';
+      if ($scope.userData.redirectPath) {
+        $scope.twitterSignupUrl += $window.encodeURIComponent($scope.userData.redirectPath);
+      } else {
+        var currentPath = $location.url().split('?')[0]; //remove query params when redirecting back to this page
+        $scope.twitterSignupUrl += $window.encodeURIComponent(currentPath);
+      }
       if ($scope.userData.intent === 'follow') {
         $scope.twitterSignupUrl += '&intent=follow';
       }
