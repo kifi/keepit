@@ -57,6 +57,7 @@ case class EmbedlyInfo(
       id = None,
       uriId = nuriId,
       title = this.title,
+      ogType = None,
       description = this.description.orElse(Some("")),
       authors = authors,
       publishedAt = published,

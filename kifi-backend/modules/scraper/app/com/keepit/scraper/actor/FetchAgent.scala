@@ -34,6 +34,7 @@ class FetchAgent @Inject() (
       fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt).pipeTo(sender)
     case m => throw new UnsupportedActorMessage(m)
   }
+
   private def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     val uri = URI.parse(url).get
     val extractor = extractorProviderTypeOpt match {

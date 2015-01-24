@@ -5,7 +5,7 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.commanders.URISummaryCommander
 import play.api.mvc.Action
 import play.api.libs.json._
-import com.keepit.model.{ ImageType, NormalizedURIRepo, URISummaryRequest, NormalizedURI }
+import com.keepit.model._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -27,6 +27,11 @@ class URISummaryController @Inject() (
   def getUriSummary() = Action.async(parse.tolerantJson) { request =>
     val urlFut = uriSummaryCommander.getURISummaryForRequest(Json.fromJson[URISummaryRequest](request.body).get)
     urlFut map { urlOpt => Ok(Json.toJson(urlOpt)) }
+  }
+
+  def updatePageInfoFromHttpClient() = Action(parse.tolerantJson) { request =>
+    uriSummaryCommander.updateFromHttpClient(Json.fromJson[PageInfo](request.body).get)
+    Ok
   }
 
   def getUriSummaries() = Action.async(parse.tolerantJson) { request =>

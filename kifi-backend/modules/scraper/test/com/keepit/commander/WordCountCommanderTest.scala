@@ -35,6 +35,7 @@ class WordCountCommanderTest extends Specification with CommonTestInjector {
       httpOriginalContentCharset = Option("UTF-8"),
       state = SCRAPED,
       message = None,
+      ogType = None,
       titleLang = Some(english),
       contentLang = Some(english))
   }

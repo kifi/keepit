@@ -45,6 +45,7 @@ case class PageInfo(
     seq: SequenceNumber[PageInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     title: Option[String] = None,
+    ogType: Option[String] = None,
     description: Option[String] = None,
     authors: Seq[PageAuthor] = Seq.empty,
     publishedAt: Option[DateTime] = None,
@@ -67,6 +68,7 @@ object PageInfo {
     (__ \ 'seq).format(SequenceNumber.format[PageInfo]) and
     (__ \ 'uri_id).format(Id.format[NormalizedURI]) and
     (__ \ 'title).formatNullable[String] and
+    (__ \ 'ogType).formatNullable[String] and
     (__ \ 'description).formatNullable[String] and
     (__ \ 'authors).format[Seq[PageAuthor]] and
     (__ \ 'publishedAt).formatNullable[DateTime] and

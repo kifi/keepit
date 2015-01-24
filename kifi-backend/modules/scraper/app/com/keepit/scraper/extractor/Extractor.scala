@@ -42,6 +42,7 @@ trait Extractor {
   def getAlternateUrls(): Set[String] = getLinks("alternate")
   def getTitle(): String = getMetadata("title").getOrElse("")
   def getDescription(): Option[String] = getMetadata("description")
+  def getOgType(): Option[String] = getMetadata("og:type")
   def getAuthor(): Option[String] = getMetadata("author")
   def getPublishedAt(): Option[DateTime] = {
     Stream("article:published_time", "article:published", "ptime", "pdate").map(getMetadata).flatten.headOption.flatMap(ExtractorDateTimeParser.parse)

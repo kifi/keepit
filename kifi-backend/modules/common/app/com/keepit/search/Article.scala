@@ -12,6 +12,7 @@ case class Article(
   title: String,
   content: String,
   description: Option[String],
+  ogType: Option[String],
   author: Option[String],
   publishedAt: Option[DateTime],
   canonicalUrl: Option[String],
@@ -35,6 +36,7 @@ object Article {
     (__ \ 'content).format[String] and
     (__ \ 'description).formatNullable[String] and
     (__ \ 'author).formatNullable[String] and
+    (__ \ 'ogType).formatNullable[String] and
     (__ \ 'publishedAt).formatNullable[DateTime] and
     (__ \ 'canonicalUrl).formatNullable[String] and
     (__ \ 'alternateUrls).formatNullable[Set[String]].inmap[Set[String]](_.getOrElse(Set.empty), Some(_)) and
