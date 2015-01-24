@@ -49,9 +49,6 @@ angular.module('kifi')
     $scope.userData = $scope.userData || {};
     $scope.showTwitter = _.has($location.search(), 'twitter'); // todo (aaron): remove for twitter launch
 
-    var encodedCurrentPage = $window.encodeURIComponent($location.url().split('?')[0]); //remove query params when redirecting back to this page
-    $scope.twitterSignupUrl = '/signup/twitter?redirect=' + encodedCurrentPage; // twitter signup url with redirect
-
     function setModalScope($modalScope, onClose) {
       $modalScope.close = modalService.close;
       $modalScope.$on('$destroy', function () {
@@ -89,6 +86,17 @@ angular.module('kifi')
     var registerModal = function () {
       if ($scope.userData.libraryId) {
         $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signupLibrary' });
+      }
+
+      $scope.twitterSignupUrl = '/signup/twitter?redirect=';
+      if ($scope.userData.redirectPath) {
+        $scope.twitterSignupUrl += $window.encodeURIComponent($scope.userData.redirectPath);
+      } else {
+        var currentPath = $location.url().split('?')[0]; //remove query params when redirecting back to this page
+        $scope.twitterSignupUrl += $window.encodeURIComponent(currentPath);
+      }
+      if ($scope.userData.intent === 'follow') {
+        $scope.twitterSignupUrl += '&intent=follow';
       }
 
       setModalScope(modalService.open({

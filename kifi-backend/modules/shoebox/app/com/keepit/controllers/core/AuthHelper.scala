@@ -210,14 +210,19 @@ class AuthHelper @Inject() (
 
     request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))
 
-    val cookieRedirect = request.cookies.get("redirect")
-
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => {
+        val cookieRedirect = request.cookies.get("redirect")
+        val cookieIntent = request.cookies.get("intent")
         val result = if (cookieRedirect.isDefined) {
-          val redirectUrl = java.net.URLDecoder.decode(cookieRedirect.get.value, "UTF-8") + "?install=1" // tell browser to pop-up install modal
-          Ok(Json.obj("uri" -> redirectUrl))
+          val redirectUrl = java.net.URLDecoder.decode(cookieRedirect.get.value, "UTF-8")
+          val initParams = new StringBuilder("?install=1") // tell browser to pop-up install modal
+          if (cookieIntent.isDefined) {
+            initParams ++= s"&intent=${cookieIntent.get.value}"
+          }
+          val returnUri = redirectUrl + initParams.toString
+          Ok(Json.obj("uri" -> returnUri))
         } else if (isFinalizedImmediately) {
           Redirect(uri)
         } else {

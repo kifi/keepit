@@ -63,68 +63,66 @@ angular.module('kifi')
         url: '/find?q&f',
         templateUrl: 'search/search.tpl.html',
         controller: 'SearchCtrl',
-
-        // SearchCtrl manually reloads search results on search input change in a debounced function.
-        reloadOnSearch: false
+        reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('userProfile', {
-        url: '/:username?upb',
+        url: '/:username',
         templateUrl: 'userProfile/userProfile.tpl.html',
         controller: 'UserProfileCtrl',
         'abstract': true
       })
-        .state('userProfile.libraries', {
-          url: '',
-          templateUrl: 'userProfile/userProfileLibraries.tpl.html',
-          controller: 'UserProfileLibrariesCtrl',
-          'abstract': true
-        })
-          .state('userProfile.libraries.own', {
-            url: '',
-            templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
-            data: {
-              libraryType: 'own'
-            }
-          })
-          .state('userProfile.libraries.following', {
-            url: '/libraries/following',
-            templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
-            data: {
-              libraryType: 'following'
-            }
-          })
-          .state('userProfile.libraries.invited', {
-            url: '/libraries/invited',
-            templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
-            data: {
-              libraryType: 'invited'
-            }
-          })
-        .state('userProfile.friends', {
-          url: '/friends',
-          templateUrl: 'userProfile/userProfilePeople.tpl.html',
-          controller: 'UserProfilePeopleCtrl',
-          data: {
-            peopleType: 'friends'
-          }
-        })
-        .state('userProfile.followers', {
-          url: '/followers',
-          templateUrl: 'userProfile/userProfilePeople.tpl.html',
-          controller: 'UserProfilePeopleCtrl',
-          data: {
-            peopleType: 'followers'
-          }
-        })
-        .state('userProfile.helped', {
-          url: '/helped',
-          templateUrl: 'userProfile/userProfileKeeps.tpl.html',
-          controller: 'UserProfileKeepsCtrl'
-        })
+      .state('userProfile.libraries', {
+        url: '',
+        templateUrl: 'userProfile/userProfileLibraries.tpl.html',
+        controller: 'UserProfileLibrariesCtrl',
+        'abstract': true
+      })
+      .state('userProfile.libraries.own', {
+        url: '',
+        templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
+        data: {
+          libraryType: 'own'
+        }
+      })
+      .state('userProfile.libraries.following', {
+        url: '/libraries/following',
+        templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
+        data: {
+          libraryType: 'following'
+        }
+      })
+      .state('userProfile.libraries.invited', {
+        url: '/libraries/invited',
+        templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
+        data: {
+          libraryType: 'invited'
+        }
+      })
+      .state('userProfile.friends', {
+        url: '/friends',
+        templateUrl: 'userProfile/userProfilePeople.tpl.html',
+        controller: 'UserProfilePeopleCtrl',
+        data: {
+          peopleType: 'friends'
+        }
+      })
+      .state('userProfile.followers', {
+        url: '/followers',
+        templateUrl: 'userProfile/userProfilePeople.tpl.html',
+        controller: 'UserProfilePeopleCtrl',
+        data: {
+          peopleType: 'followers'
+        }
+      })
+      .state('userProfile.helped', {
+        url: '/helped',
+        templateUrl: 'userProfile/userProfileKeeps.tpl.html',
+        controller: 'UserProfileKeepsCtrl'
+      })
 
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
-        url: '/:username/:librarySlug?upb',
+        url: '/:username/:librarySlug',
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
         data: {
@@ -132,17 +130,17 @@ angular.module('kifi')
         },
         'abstract': true
       })
-        .state('library.keeps', {
-          url: '',
-          templateUrl: 'libraries/libraryKeeps.tpl.html'
-        })
-        .state('library.search', {
-          url: '/find?q&f',
-          templateUrl: 'search/search.tpl.html',
-          controller: 'SearchCtrl',
-          data: {
-            librarySearch: true
-          }
-        });
+      .state('library.keeps', {
+        url: '',
+        templateUrl: 'libraries/libraryKeeps.tpl.html'
+      })
+      .state('library.search', {
+        url: '/find?q&f',
+        templateUrl: 'search/search.tpl.html',
+        controller: 'SearchCtrl',
+        data: {
+          librarySearch: true
+        }
+      });
       // ↑↑↑↑↑ Important: This needs to be last! ↑↑↑↑↑
 }]);

@@ -363,7 +363,7 @@ angular.module('kifi')
         platformService.goToAppOrStore(url + (url.indexOf('?') > 0 ? '&' : '?') + 'follow=true');
         return;
       } else if ($rootScope.userLoggedIn === false) {
-        return signupService.register({libraryId: lib.id});
+        return signupService.register({libraryId: lib.id, intent: 'follow', redirectPath: lib.path});
       }
       $event.target.disabled = true;
       libraryService[lib.following ? 'leaveLibrary' : 'joinLibrary'](lib.id)['catch'](function (resp) {

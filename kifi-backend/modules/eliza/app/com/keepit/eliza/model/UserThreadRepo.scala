@@ -25,6 +25,8 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
 
+  def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread]
+
   def getThreadIds(user: Id[User], uriId: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]]
 
   def markAllRead(user: Id[User])(implicit session: RWSession): Unit
@@ -159,6 +161,11 @@ class UserThreadRepoImpl @Inject() (
 
   def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread] = {
     (for (r <- rows if r.user === userId && r.uriId === uriId) yield r).list()
+  }
+
+  def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread] = {
+    (for (row <- rows if row.user === userId && row.unread && row.muted === false) yield row).
+      sortBy { row => row.lastActive.desc }.take(howMany).list
   }
 
   def getThreadIds(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]] = {
