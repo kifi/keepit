@@ -49,6 +49,7 @@ class ExtLibraryController @Inject() (
       LibraryData(
         id = Library.publicId(lib.id.get),
         name = lib.name,
+        color = lib.color,
         visibility = lib.visibility,
         path = Library.formatLibraryPath(owner.username, lib.slug))
     }
@@ -68,6 +69,7 @@ class ExtLibraryController @Inject() (
         Ok(Json.toJson(LibraryData(
           id = Library.publicId(lib.id.get),
           name = lib.name,
+          color = lib.color,
           visibility = lib.visibility,
           path = Library.formatLibraryPath(request.user.username, lib.slug))))
     }
