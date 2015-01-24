@@ -98,9 +98,9 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  '$scope', 'profileService', '$window', '$rootScope', 'friendService', 'libraryService','$timeout', '$log',
+  '$scope', 'profileService', '$rootScope', 'friendService', 'libraryService','$timeout', '$log',
   'platformService', '$rootElement', '$analytics', '$location', 'util',
-  function ($scope, profileService, $window, $rootScope, friendService, libraryService, $timeout, $log,
+  function ($scope, profileService, $rootScope, friendService, libraryService, $timeout, $log,
       platformService, $rootElement, $analytics, $location, util) {
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
 
