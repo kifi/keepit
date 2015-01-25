@@ -296,7 +296,7 @@ class KeepsCommander @Inject() (
             val tracer = new StackTrace()
             val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
             val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
-            val url = s"https://graph.facebook.com/v2.2/${sui.socialId.id}/fortytwoinc:keep?access_token=$accessToken&article=${keep.url}&library=$libraryUrl"
+            val url = s"https://graph.facebook.com/v2.2/${sui.socialId.id}/fortytwoinc:keep?access_token=$accessToken&object=${keep.url}&library=$libraryUrl"
             log.info(s"posting to FB a story of user $userId with url $url")
             client.postTextFuture(DirectUrl(url), "").onComplete {
               case Success(res) =>
