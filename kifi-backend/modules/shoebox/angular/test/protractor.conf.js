@@ -8,8 +8,7 @@ module.exports.config = {
   // is running (usually localhost).
   baseUrl: 'http://protractor.kifi.com:9080/',
 
-  // Increase protractor timeout for page synchronization to 15 seconds.
-  // (default is 11 seconds)
-  // See: https://github.com/angular/protractor/blob/master/docs/timeouts.md
+  // Increase protractor timeout for page synchronization (default is 11s)
+  // https://github.com/angular/protractor/blob/master/docs/timeouts.md
   allScriptsTimeout: 20000
 };
