@@ -146,7 +146,7 @@ class PageMetaTagsCommander @Inject() (
       (imageUrl, facebookId) <- metaInfoF
     } yield {
       PublicPageMetaFullTags(
-        unsafeTitle = s"${user.firstName} ${user.lastName} on Kifi",
+        unsafeTitle = s"${user.firstName} ${user.lastName}",
         url = url,
         urlPathOnly = url,
         unsafeDescription = s"${user.firstName} ${user.lastName} is on Kifi. Join Kifi to connect with Eishay Smith and others you may know. Kifi connects people with knowledge.",
