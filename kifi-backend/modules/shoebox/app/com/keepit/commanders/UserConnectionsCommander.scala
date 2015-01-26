@@ -147,8 +147,8 @@ class UserConnectionsCommander @Inject() (
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
     db.readOnlyMaster { implicit s =>
       val searchFriends = searchFriendRepo.getSearchFriends(userId)
-      val basicConnections = userConnectionRepo.getBasicUserConnection(userId)
-      val connectionIds = basicConnections.sortWith { (c1, c2) => c2.createdAt.isAfter(c1.createdAt) }.map(_.userId)
+      val basicConnections = userConnectionRepo.getBasicUserConnection(userId).sortWith { (c1, c2) => c1.createdAt.isAfter(c2.createdAt) }
+      val connectionIds = basicConnections.map(_.userId)
       val unfriendedIds = userConnectionRepo.getUnfriendedUsers(userId)
       val connections = connectionIds.map(_ -> false) ++ unfriendedIds.map(_ -> true).toSeq
 

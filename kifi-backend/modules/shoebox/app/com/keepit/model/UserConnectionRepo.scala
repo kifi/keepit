@@ -133,8 +133,7 @@ class UserConnectionRepoImpl @Inject() (
       val conns = ((for (c <- rows if c.user1 === id && c.state === UserConnectionStates.ACTIVE) yield (c.user2, c.createdAt)) union
         (for (c <- rows if c.user2 === id && c.state === UserConnectionStates.ACTIVE) yield (c.user1, c.createdAt))).list.toSet
       val basicConnections: Set[BasicUserConnection] = (conns.map { c => BasicUserConnection(c._1, c._2) }).toSet
-      basicUserConnCache.set(BasicUserConnectionIdKey(id), basicConnections.toSeq.sortWith { (c1, c2) => c2.createdAt.isAfter(c1.createdAt) })
-      basicConnections.toSeq
+      basicConnections.toSeq.sortWith { (c1, c2) => c1.createdAt.isAfter(c2.createdAt) }
     }
   }
 
