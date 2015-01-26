@@ -65,7 +65,38 @@ angular.module('kifi')
       return hasError;
     };
 
+    function createSignupUrl(network) {
+      var base = '/signup/' + network + '?redirect=';
+      var url = base;
+
+      if ($scope.userData.redirectPath) {
+        url += $window.encodeURIComponent($scope.userData.redirectPath);
+      } else {
+        var currentPath = $location.url().split('?')[0]; //remove query params when redirecting back to this page
+        url += $window.encodeURIComponent(currentPath);
+      }
+
+      if ($scope.userData.intent === 'follow') {
+        url += '&intent=follow';
+      }
+      return url;
+    }
+
     // First Register modal
+
+    var registerModal = function () {
+      if ($scope.userData.libraryId) {
+        $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signupLibrary' });
+      }
+
+      $scope.facebookSignupUrl = createSignupUrl('facebook');
+      $scope.twitterSignupUrl = createSignupUrl('twitter');
+
+      setModalScope(modalService.open({
+        template: 'signup/registerModal.tpl.html',
+        scope: $scope
+      }));
+    };
 
     var facebookLogin = function () {
       return $FB.getLoginStatus().then(function (loginStatus) {
@@ -81,28 +112,6 @@ angular.module('kifi')
           });
         }
       });
-    };
-
-    var registerModal = function () {
-      if ($scope.userData.libraryId) {
-        $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signupLibrary' });
-      }
-
-      $scope.twitterSignupUrl = '/signup/twitter?redirect=';
-      if ($scope.userData.redirectPath) {
-        $scope.twitterSignupUrl += $window.encodeURIComponent($scope.userData.redirectPath);
-      } else {
-        var currentPath = $location.url().split('?')[0]; //remove query params when redirecting back to this page
-        $scope.twitterSignupUrl += $window.encodeURIComponent(currentPath);
-      }
-      if ($scope.userData.intent === 'follow') {
-        $scope.twitterSignupUrl += '&intent=follow';
-      }
-
-      setModalScope(modalService.open({
-        template: 'signup/registerModal.tpl.html',
-        scope: $scope
-      }));
     };
 
     $scope.submitEmail = function (form) {
