@@ -153,4 +153,11 @@ object MatrixUtils {
     require(abs(v.sum - 1.0) < 1e-2)
     v.map { x => val y = x + eps; -y * log2(y) }.sum
   }
+
+  // frequently used in extracting top 3 topic ids.
+  def argmax3(v: Array[Float]): (Int, Int, Int) = {
+    require(v.size >= 3, s"cannot call argmax3() with an array of size ${v.size}")
+    val Array(first, second, third) = v.zipWithIndex.sortBy(-_._1).take(3).map { _._2 }
+    (first, second, third)
+  }
 }
