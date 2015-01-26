@@ -15,6 +15,7 @@ angular.module('util', [])
       '/': '&#x2F;'
     };
     var youtubeVideoUrlRe = /^(?:https?:\/\/)?(?:youtu\.be|(?:www\.)?youtube(?:-nocookie)?\.com)\/(?:|user\/[^\/?#]+)?(?:|.*?[\/=])([a-zA-Z0-9_-]{11})\b/;
+    var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|a[cdegilmoqrstuz]|b[abefghimnrtyz]|c[acdfghiklmnoruxyz]|d[ejko]|e[cegst]|f[ijkmor]|g[befghilmnpqrstu]|h[kmnru]|i[delmnorst]|j[eop]|k[eghrwyz]|l[bciktuvy]|m[cdghkmnoqrstuwxyz]|n[acfilouz]|om|p[aeghklmnrty]|qa|r[eouw]|s[abcdeghikmnotuvz]|t[cdfhjmnoprtvwz]|u[agkmsyz]|v[eginu]|wf|y[t|u]|z[amrw]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
 
     return {
       startsWith: function (str, prefix) {
@@ -110,6 +111,22 @@ angular.module('util', [])
       },
       generateSlug: function (name) {
         return name.toLowerCase().replace(/[^\w\s-]|_/g, '').replace(/\s+/g, '-').replace(/^-/, '').substr(0, 50).replace(/-$/, '');
+      },
+      processUrls: function (text) {
+        var parts = (text || '').split(uriRe);
+
+        for (var i = 1; i < parts.length; i += 3) {
+          var uri = parts[i];
+          var scheme = parts[i+1];
+          var url = (scheme ? '' : 'http://') + this.htmlEscape(uri);
+
+          parts[i] = '<a target="_blank" href="' + url + '">' + url;
+          parts[i+1] = '</a>';
+          parts[i-1] = this.htmlEscape(parts[i-1]);
+        }
+        parts[parts.length-1] = this.htmlEscape(parts[parts.length-1]);
+
+        return parts.join('');
       }
     };
   }
