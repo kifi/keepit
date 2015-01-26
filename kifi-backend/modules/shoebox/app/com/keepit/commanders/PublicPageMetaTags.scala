@@ -105,7 +105,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   } getOrElse ""
 
   private def facebookIdTag = facebookId.map { id =>
-    s"""<meta property="library:owner" content="$id">"""
+    s"""<meta property="${PublicPageMetaTags.facebookNameSpace}:library:owner" content="$id">"""
   } getOrElse ""
 
   private def noIndexTag = if (noIndex) {
@@ -115,7 +115,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   } else ""
 
   def formatOpenGraphForLibrary: String = {
-    formatOpenGraph("fortytwoinc:library") +
+    formatOpenGraph(s"${PublicPageMetaTags.facebookNameSpace}:library") +
       s"""
       |<meta name="author" content="$firstName $lastName">
       |<meta property="og:updated_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}">
@@ -154,7 +154,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |$facebookIdTag
       |<meta property="og:url" content="$url">
       |<meta property="og:site_name" content="Kifi - Connecting People With Knowledge">
-      |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}">
+      |<meta property="fb:app_id" content="${PublicPageMetaTags.facebookAppId}">
       |<meta name="description" content="$description">
       |<link rel="canonical" href="$url">
       |<meta name="twitter:card" content="summary_large_image">
@@ -180,7 +180,8 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
 
 object PublicPageMetaTags {
   val siteName = "Kifi"
-  val appId = "104629159695560"
+  val facebookAppId = "104629159695560"
+  val facebookNameSpace = "fortytwoinc"
   /**
    * http://www.swellpath.com/2014/05/update-new-title-tag-meta-description-character-lengths/
    * Magic numbers:
