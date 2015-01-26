@@ -23,7 +23,7 @@ class FacebookPublishingCommander @Inject() (
     httpClient: HttpClient,
     airbrake: AirbrakeNotifier) extends Logging {
 
-  private val facebookNameSpace = "fortytwoinc"
+  private val facebookNameSpace = PublicPageMetaTags.facebookNameSpace
   private val facebookJoinAction = "join"
   private val facebookKeepAction = "keep"
 
