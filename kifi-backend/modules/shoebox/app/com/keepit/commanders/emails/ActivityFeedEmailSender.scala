@@ -2,7 +2,6 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -10,14 +9,18 @@ import com.keepit.common.db.slick.DBSession.ROSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.template.helpers._
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.time._
 import com.keepit.curator.{ LibraryQualityHelper, CuratorServiceClient }
 import com.keepit.curator.model.{ FullUriRecoInfo, FullLibRecoInfo, RecommendationSource, RecommendationSubSource }
+import com.keepit.eliza.ElizaServiceClient
+import com.keepit.eliza.model.{ MessageSenderNonUserView, MessageSenderView, UserThreadView, MessageView, MessageSenderUserView }
 import com.keepit.model._
-import org.joda.time.{ Duration, ReadableDuration }
+import org.joda.time.{ DateTime, Duration }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.twirl.api.Html
 
 import scala.concurrent.Future
 
@@ -51,6 +54,44 @@ case class KeepInfoView(private val keepInfo: KeepInfo) {
   val imageUrlAndWidth: Option[(String, Int)] = imageUrl flatMap { url => imageWidth map ((url, _)) }
 }
 
+// TODO (josh) much of the functionality below may not be necessary per the latest design, remove unused code
+// after design is final
+case class EmailUnreadThreadView(private val view: UserThreadView) {
+  val pageTitle = view.pageTitle
+  val lastSeen = view.lastSeen
+  val lastActive = view.notificationUpdatedAt
+  val allMessages = view.messages
+
+  val messageSendersToShow: Seq[Html] = {
+    val senders = view.messages collect {
+      case MessageView(MessageSenderUserView(id), _, _) => firstName(id)
+      case MessageView(MessageSenderNonUserView(identifier), _, _) => safeHtml(identifier)
+    }
+
+    val others = senders.size - view.messages.size
+    if (others > 0) senders :+ safeHtml(s"$others others")
+    else senders
+  }
+
+  val firstMessageSentTime: String = {
+    val msgCreatedAtPT = allMessages.head.createdAt.withZone(zones.PT)
+    val nowPT = currentDateTime(zones.PT)
+    val startOfTodayPT = nowPT.withTimeAtStartOfDay()
+    if (startOfTodayPT < msgCreatedAtPT) "today"
+    else if (startOfTodayPT.minusDays(1) < msgCreatedAtPT) "yesterday"
+    else if (startOfTodayPT.minusDays(6) < msgCreatedAtPT) msgCreatedAtPT.dayOfWeek().getAsText
+    else if (msgCreatedAtPT.minusDays(14) < msgCreatedAtPT) "last week"
+    else s"on ${msgCreatedAtPT.monthOfYear().getAsText} ${msgCreatedAtPT.dayOfMonth().getAsText}"
+  }
+
+  val userMessages = view.messages filter {
+    case MessageView(MessageSenderUserView(_), _, _) => true
+    case _ => false
+  }
+  val totalMessageCount = view.messages.size
+  val otherMessageCount = totalMessageCount - messageSendersToShow.size
+}
+
 case class ActivityEmailData(
   newKeepsInLibraries: Seq[(LibraryInfoView, Seq[KeepInfoView])],
   libraryInvites: Seq[LibraryInviteInfoView],
@@ -59,7 +100,8 @@ case class ActivityEmailData(
   pendingFriendRequests: Seq[Id[User]],
   friendCreatedLibraries: Map[Id[User], Seq[LibraryInfoView]],
   friendFollowedLibraries: Map[Id[Library], (LibraryInfoView, Seq[Id[User]])],
-  newFollowersOfLibraries: Seq[(LibraryInfoView, Seq[Id[User]])])
+  newFollowersOfLibraries: Seq[(LibraryInfoView, Seq[Id[User]])],
+  unreadThreads: Seq[EmailUnreadThreadView])
 
 @ImplementedBy(classOf[ActivityFeedEmailSenderImpl])
 trait ActivityFeedEmailSender {
@@ -69,6 +111,8 @@ trait ActivityFeedEmailSender {
 
 class ActivityFeedEmailSenderImpl @Inject() (
     curator: CuratorServiceClient,
+    eliza: ElizaServiceClient,
+    userRepo: UserRepo,
     experimentCommander: LocalUserExperimentCommander,
     emailTemplateSender: EmailTemplateSender,
     recoCommander: RecommendationsCommander,
@@ -106,7 +150,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     }
 
     val newKeepsInLibrariesF = feed.getNewKeepsFromFollowedLibraries()
-    val unreadMessagesF = feed.getUnreadMessages()
+    val unreadMessageThreadsF = feed.getUnreadMessageThreads()
     val pendingLibInvitesF = feed.getPendingLibraryInvitations()
     val pendingFriendRequestsF = feed.getPendingFriendRequests()
     val friendsWhoFollowedF = feed.getFriendsWhoFollowedLibraries(friends)
@@ -117,7 +161,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
     for {
       newKeepsInLibraries <- newKeepsInLibrariesF
-      unreadMessages <- unreadMessagesF
+      unreadThreads <- unreadMessageThreadsF
       pendingLibInvites <- pendingLibInvitesF
       pendingFriendRequests <- pendingFriendRequestsF
       friendsWhoFollowed <- friendsWhoFollowedF
@@ -138,7 +182,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
         pendingFriendRequests = pendingFriendRequests,
         friendCreatedLibraries = friendsWhoCreated,
         friendFollowedLibraries = friendsWhoFollowed,
-        newFollowersOfLibraries = newFollowersOfLibraries
+        newFollowersOfLibraries = newFollowersOfLibraries,
+        unreadThreads = unreadThreads
       )
 
       EmailToSend(
@@ -169,26 +214,31 @@ class ActivityFeedEmailSenderImpl @Inject() (
     val libRecosToFetch = maxLibRecostoDeliver * 2
 
     // max number of user-followed libraries to show new keeps for
-    val maxFollowedLibrariesWithNewKeeps = 3
+    val maxFollowedLibrariesWithNewKeeps = 10
 
     // max number of new keeps per user-followed libraries to show
-    val maxNewKeepsPerLibrary = 5
+    val maxNewKeepsPerLibrary = 10
 
     // max number of pending invited-to libraries to display
-    val maxInvitedLibraries = 5
+    val maxInvitedLibraries = 10
 
     // max number of friend requests to display
-    val maxFriendRequests = 5
+    val maxFriendRequests = 10
 
     // max number of libraries to show created by friends
-    val maxFriendsWhoCreatedLibraries = 5
+    val maxFriendsWhoCreatedLibraries = 10
 
     // max number of libraries to show that were followed by friends
-    val maxLibrariesFollowedByFriends = 5
+    val maxLibrariesFollowedByFriends = 10
 
-    val maxNewFollowersOfLibraries = 5
+    val maxNewFollowersOfLibraries = 10
 
-    val maxNewFollowersOfLibrariesUsers = 5
+    val maxNewFollowersOfLibrariesUsers = 10
+
+    val minAgeOfUnreadNotificationThreads = currentDateTime.minusWeeks(6)
+    val maxAgeOfUnreadNotificationThreads = currentDateTime.minusHours(12)
+
+    val maxUnreadNotificationThreads = 10
 
     val minRecordAge = currentDateTime.minus(Duration.standardDays(7))
 
@@ -259,12 +309,20 @@ class ActivityFeedEmailSenderImpl @Inject() (
       }
     }
 
-    def getUnreadMessages(): Future[Unit] = {
-      Future.successful(Unit) // TODO
+    def getUnreadMessageThreads(): Future[Seq[EmailUnreadThreadView]] = {
+      eliza.getUnreadNotifications(toUserId, maxUnreadNotificationThreads) map { userThreads =>
+        userThreads filter { thread =>
+          val threadLastActive = thread.notificationUpdatedAt
+          threadLastActive > minAgeOfUnreadNotificationThreads &&
+            threadLastActive < maxAgeOfUnreadNotificationThreads &&
+            thread.messages.nonEmpty && thread.messages.head.from.kind != MessageSenderView.SYSTEM
+        } take maxUnreadNotificationThreads map EmailUnreadThreadView
+      }
     }
 
     def getPendingLibraryInvitations(): Future[Seq[(Id[Library], FullLibraryInfo, Seq[LibraryInvite])]] = {
-      val libraries = invitedLibraries map (_._2)
+      val libraries = invitedLibraries map (_._2) groupBy (_.id) map (_._2.head) toSeq
+      // groupBy().map().toSeq above is a hack around duplicate library invites from the same user (which is/was possible and should be cleaned up)
       val invitesByLibraryId = invitedLibraries map (_._1) groupBy (_.libraryId)
       val fullLibraryInfosF = createFullLibraryInfos(libraries)
 

@@ -63,7 +63,7 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
   }
 
   def createUserThread(thread: MessageThread, userId: Id[User])(implicit rw: RWSession, injector: Injector) = {
-    inject[UserThreadRepo].save(UserThread(lastActive = Some(nextTime),
+    inject[UserThreadRepo].save(UserThread(notificationUpdatedAt = nextTime,
       user = userId, threadId = thread.id.get, uriId = None, unread = true,
       lastMsgFromOther = None, lastNotification = JsNull, lastSeen = None))
   }

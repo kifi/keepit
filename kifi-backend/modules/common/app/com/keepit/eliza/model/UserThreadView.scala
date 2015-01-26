@@ -1,7 +1,6 @@
 package com.keepit.eliza.model
 
 import com.keepit.common.db.Id
-import com.keepit.model.NotificationCategory.NonUser
 import com.keepit.model.{ NormalizedURI, User }
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -13,7 +12,7 @@ import play.api.libs.json.{ JsResult, JsString, Json, JsError, JsSuccess, JsValu
   pageTitle: Option[String],
   uriId: Option[Id[NormalizedURI]],
   lastSeen: Option[DateTime],
-  lastActive: Option[DateTime],
+  notificationUpdatedAt: DateTime,
   messages: Seq[MessageView])
 
 object MessageSenderView {

@@ -50,7 +50,7 @@ object UserThread {
       pageTitle = messageThread.pageTitle,
       uriId = userThread.uriId,
       lastSeen = userThread.lastSeen,
-      lastActive = userThread.lastActive,
+      notificationUpdatedAt = userThread.notificationUpdatedAt,
       messages = messages map Message.toMessageView
     )
   }
