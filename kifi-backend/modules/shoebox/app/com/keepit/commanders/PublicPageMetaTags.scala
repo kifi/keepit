@@ -10,7 +10,7 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
 import scala.concurrent.duration.Duration
 
 case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
-  override val version = 17
+  override val version = 18
   val namespace = "library_metadata_by_id"
   def toKey(): String = id.id.toString
 }
@@ -118,7 +118,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
     formatOpenGraph(s"${PublicPageMetaTags.facebookNameSpace}:library") +
       s"""
       |<meta name="author" content="$firstName $lastName">
-      |<meta property="${PublicPageMetaTags.facebookNameSpace}:library:owner" content="$profileUrl">
+      |<meta property="${PublicPageMetaTags.facebookNameSpace}:owner" content="$profileUrl">
       |<meta property="og:updated_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}">
       |$ogSeeAlso
      """.stripMargin
