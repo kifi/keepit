@@ -12,10 +12,9 @@
             <a class="kf-keep-lib-name" ng-href="{{library.url}}" ng-attr-title="{{library.name}}" ng-bind-html="library.name" ng-click="clickLibraryCallback()"></a>
           </div>
         </div>
-        <div ng-class="{'kf-keep-lib-color': true, 'kf-above-image': coverImageUrl || coverImagePreview}" style="background-color:{{library.color}}"></div>
+        <div ng-class="{'kf-keep-lib-color': true, 'kf-above-image': coverImageUrl}" style="background-color:{{library.color}}"></div>
         <a ng-if="coverImageUrl" href="{{library.url}}" class="kf-keep-lib-cover-image"
-          style="background-image:url({{coverImageUrl}});background-position:{{coverImagePos}}"></a>
-        <div ng-if="coverImageError" class="kf-keep-lib-cover-image-error">{{coverImageError}}</div>
+          style="background-image:url({{coverImageUrl}});background-position:{{library.image.x}}% {{library.image.y}}%"></a>
         <div class="kf-keep-lib-info">
           <div class="kf-keep-lib-owner">
             <a href="{{library.owner.profileUrl}}" kf-track-origin origin="recommendationsPage/curator">

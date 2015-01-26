@@ -117,12 +117,7 @@ angular.module('kifi')
           var image = scope.library.image;
           if (image) {
             scope.coverImageUrl = env.picBase + '/' + image.path;
-            scope.coverImagePos = formatCoverImagePos(image);
           }
-        }
-
-        function formatCoverImagePos(pos) {
-          return pos ? pos.x + '% ' + pos.y + '%' : '50% 50%';
         }
 
         function augmentFollower(follower) {
