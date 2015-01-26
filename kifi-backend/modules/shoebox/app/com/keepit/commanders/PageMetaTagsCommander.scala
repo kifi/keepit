@@ -116,6 +116,7 @@ class PageMetaTagsCommander @Inject() (
           updatedAt = library.updatedAt,
           unsafeFirstName = owner.firstName,
           unsafeLastName = owner.lastName,
+          getUserProfileUrl(owner.username),
           noIndex = lowQualityLibrary,
           related = relatedLibraiesLinks)
       }
@@ -126,12 +127,14 @@ class PageMetaTagsCommander @Inject() (
   private def getProfileImageUrl(user: User): String =
     s"$cdnBaseUrl/users/${user.externalId}/pics/200/${user.pictureName.getOrElse(S3UserPictureConfig.defaultName)}.jpg"
 
+  private def getUserProfileUrl(username: Username): String = {
+    val urlPathOnly = s"/${username.value}"
+    val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
+    if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
+  }
+
   def userMetaTags(user: User): Future[PublicPageMetaTags] = {
-    val url = {
-      val urlPathOnly = s"/${user.username.value}"
-      val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
-      if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
-    }
+    val url = getUserProfileUrl(user.username)
     val metaInfoF = db.readOnlyMasterAsync { implicit s =>
       val facebookId: Option[String] = socialUserInfoRepo.getByUser(user.id.get).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
 
@@ -146,13 +149,14 @@ class PageMetaTagsCommander @Inject() (
         unsafeTitle = s"${user.firstName} ${user.lastName} on Kifi",
         url = url,
         urlPathOnly = url,
-        unsafeDescription = s"${user.firstName} ${user.lastName} is on Kifi. Join Kifi to connect with Eishay Smith and others you may know. Kifi connects people with knowladge.",
+        unsafeDescription = s"${user.firstName} ${user.lastName} is on Kifi. Join Kifi to connect with Eishay Smith and others you may know. Kifi connects people with knowledge.",
         images = Seq(imageUrl),
         facebookId = facebookId,
         createdAt = user.createdAt,
         updatedAt = user.updatedAt,
         unsafeFirstName = user.firstName,
         unsafeLastName = user.lastName,
+        profileUrl = url,
         noIndex = false,
         related = Seq.empty)
     }
