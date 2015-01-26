@@ -205,6 +205,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def basicUserConnectionIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new BasicUserConnectionIdCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
   def unfriendedConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UnfriendedConnectionsCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
 
