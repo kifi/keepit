@@ -10,7 +10,7 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
 import scala.concurrent.duration.Duration
 
 case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
-  override val version = 15
+  override val version = 16
   val namespace = "library_metadata_by_id"
   def toKey(): String = id.id.toString
 }
