@@ -216,13 +216,14 @@ class AuthHelper @Inject() (
         val cookieRedirect = request.cookies.get("redirect")
         val cookieIntent = request.cookies.get("intent")
         val result = if (cookieRedirect.isDefined) {
-          val redirectUrl = java.net.URLDecoder.decode(cookieRedirect.get.value, "UTF-8")
+          val redirectPath = java.net.URLDecoder.decode(cookieRedirect.get.value, "UTF-8")
           val initParams = new StringBuilder("?install=1") // tell browser to pop-up install modal
           if (cookieIntent.isDefined) {
             initParams ++= s"&intent=${cookieIntent.get.value}"
           }
-          val returnUri = redirectUrl + initParams.toString
-          Ok(Json.obj("uri" -> returnUri))
+          val returnUri = redirectPath + initParams.toString
+          val discardedCookies = Seq(cookieRedirect, cookieIntent).flatten.map(c => DiscardingCookie(c.name))
+          Ok(Json.obj("uri" -> returnUri)).discardingCookies(discardedCookies: _*)
         } else if (isFinalizedImmediately) {
           Redirect(uri)
         } else {
