@@ -65,21 +65,21 @@ angular.module('kifi')
       return hasError;
     };
 
-    function createSignupUrl(network) {
+    function createSignupPath(network) {
       var base = '/signup/' + network + '?redirect=';
-      var url = base;
+      var path = base;
 
       if ($scope.userData.redirectPath) {
-        url += $window.encodeURIComponent($scope.userData.redirectPath);
+        path += $window.encodeURIComponent($scope.userData.redirectPath);
       } else {
         var currentPath = $location.url().split('?')[0]; //remove query params when redirecting back to this page
-        url += $window.encodeURIComponent(currentPath);
+        path += $window.encodeURIComponent(currentPath);
       }
 
       if ($scope.userData.intent === 'follow') {
-        url += '&intent=follow';
+        path += '&intent=follow';
       }
-      return url;
+      return path;
     }
 
     // First Register modal
@@ -89,8 +89,8 @@ angular.module('kifi')
         $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signupLibrary' });
       }
 
-      $scope.facebookSignupUrl = createSignupUrl('facebook');
-      $scope.twitterSignupUrl = createSignupUrl('twitter');
+      $scope.facebookSignupPath = createSignupPath('facebook');
+      $scope.twitterSignupPath = createSignupPath('twitter');
 
       setModalScope(modalService.open({
         template: 'signup/registerModal.tpl.html',
