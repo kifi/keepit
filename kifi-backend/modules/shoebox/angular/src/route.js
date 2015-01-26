@@ -69,12 +69,6 @@ angular.module('kifi')
         url: '/:username',
         templateUrl: 'userProfile/userProfile.tpl.html',
         controller: 'UserProfileCtrl',
-        resolve: {
-          userProfileActionService: 'userProfileActionService',
-          profile: function (userProfileActionService, $stateParams) {
-            return userProfileActionService.getProfile($stateParams.username);
-          }
-        },
         'abstract': true
       })
       .state('userProfile.libraries', {
