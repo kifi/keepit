@@ -41,8 +41,8 @@ angular.module('kifi')
 ])
 
 .controller('SignupCtrl', [
-  '$scope', '$FB', '$twitter', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope', '$location',
-  function ($scope, $FB, $twitter, modalService, registrationService, $window, installService, $q, $log, $rootScope, $location) {
+  '$scope', '$FB', '$twitter', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope', '$location', 'routeService',
+  function ($scope, $FB, $twitter, modalService, registrationService, $window, installService, $q, $log, $rootScope, $location, routeService) {
 
     // Shared data across several modals
 
@@ -66,20 +66,11 @@ angular.module('kifi')
     };
 
     function createSignupPath(network) {
-      var base = '/signup/' + network + '?redirect=';
-      var path = base;
-
-      if ($scope.userData.redirectPath) {
-        path += $window.encodeURIComponent($scope.userData.redirectPath);
-      } else {
-        var currentPath = $location.url().split('?')[0]; //remove query params when redirecting back to this page
-        path += $window.encodeURIComponent(currentPath);
-      }
-
-      if ($scope.userData.intent === 'follow') {
-        path += '&intent=follow';
-      }
-      return path;
+      return routeService.socialSignupWithRedirect(
+          network,
+          $scope.userData.redirectPath || $location.url().split('?')[0],
+          $scope.userData.intent
+        );
     }
 
     // First Register modal

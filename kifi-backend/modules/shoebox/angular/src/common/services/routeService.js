@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('routeService', [
-  '$location', 'env',
-  function ($location, env) {
+  '$location', 'env', '$window',
+  function ($location, env, $window) {
     function route(url) {
       return env.xhrBase + url;
     }
@@ -154,6 +154,14 @@ angular.module('kifi')
       ////////////////////////////
       socialSignup: function (provider) {
         return env.navBase + '/auth/token-signup/' + provider;
+      },
+      socialSignupWithRedirect: function (provider, redirectPath, intent) {
+        var path = '/signup/' + provider + '?redirect=' + $window.encodeURIComponent(redirectPath);
+        if (intent) {
+          path += '&intent=';
+          path += intent;
+        }
+        return path;
       },
       socialFinalize: env.navBase + '/auth/token-finalize',
       emailSignup: env.navBase + '/auth/email-signup',
