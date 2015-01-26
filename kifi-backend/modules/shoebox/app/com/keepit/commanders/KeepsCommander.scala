@@ -74,7 +74,6 @@ object BulkKeepSelection {
 class KeepsCommander @Inject() (
     db: Database,
     keepInterner: KeepInterner,
-    httpClient: HttpClient,
     searchClient: SearchServiceClient,
     globalKeepCountCache: GlobalKeepCountCache,
     keepToCollectionRepo: KeepToCollectionRepo,
@@ -94,6 +93,7 @@ class KeepsCommander @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     hashtagTypeahead: HashtagTypeahead,
     keepDecorator: KeepDecorator,
+    facebookPublishingCommander: FacebookPublishingCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getKeepsCountFuture(): Future[Int] = {
@@ -271,42 +271,11 @@ class KeepsCommander @Inject() (
     }
     val (keep, isNewKeep) = keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId).get
     SafeFuture {
-      if (isNewKeep) notifyFacebook(userId, keep, library)
+      if (isNewKeep) facebookPublishingCommander.publishKeep(userId, keep, library)
       searchClient.updateKeepIndex()
       curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
     }
     (keep, isNewKeep)
-  }
-
-  protected def getFbAccessToken(socialUserInfo: SocialUserInfo): String = {
-    val credentials = socialUserInfo.credentials.getOrElse(throw new Exception("Can't find credentials for %s".format(socialUserInfo)))
-    val oAuth2Info = credentials.oAuth2Info.getOrElse(throw new Exception("Can't find oAuth2Info for %s".format(socialUserInfo)))
-    oAuth2Info.accessToken
-  }
-
-  private def notifyFacebook(userId: Id[User], keep: Keep, library: Library): Unit = {
-    if (library.visibility == LibraryVisibility.PUBLISHED) {
-      val inExperiment = db.readOnlyMaster { implicit session => userExperimentRepo.get(userId, ExperimentType.FACEBOOK_POST).isDefined }
-      if (inExperiment) {
-        db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.FACEBOOK) } match {
-          case None => log.info(s"user $userId is not connected to facebook!")
-          case Some(sui) =>
-            val accessToken = getFbAccessToken(sui)
-            val client = httpClient.withTimeout(CallTimeouts(responseTimeout = Some(2 * 60 * 1000), maxJsonParseTime = Some(20000)))
-            val tracer = new StackTrace()
-            val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
-            val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
-            val url = s"https://graph.facebook.com/v2.2/${sui.socialId.id}/fortytwoinc:keep?access_token=$accessToken&object=${keep.url}&library=$libraryUrl"
-            log.info(s"posting to FB a story of user $userId with url $url")
-            client.postTextFuture(DirectUrl(url), "").onComplete {
-              case Success(res) =>
-                log.info(s"sent FB story with res = ${res.status}")
-              case Failure(e) =>
-                airbrake.notify(s"FB didn't like posting a story of user $userId in lib $library $url", tracer.withCause(e))
-            }
-        }
-      }
-    }
   }
 
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource, collection: Option[Either[ExternalId[Collection], String]], separateExisting: Boolean = false)(implicit context: HeimdalContext): (Seq[KeepInfo], Option[Int], Seq[String], Option[Seq[KeepInfo]]) = {
