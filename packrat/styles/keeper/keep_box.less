@@ -300,10 +300,6 @@
       background-color: #e3e3e3 !important;
     }
   }
-  &::before {
-    left: 13px;
-    top: 8px;
-  }
 }
 .kifi-keep-box-lib-1 {
   display: block;
@@ -324,24 +320,33 @@
 }
 .kifi-keep-box-with-lib-icon {
   position: relative;
-  &::before {
-    content: '';
-    position: absolute;
-    width: 20px;
-    height: 28px;
-    border-radius: 4px;
-    box-shadow: 1px 1px #fff, 2px 2px #d3d3d3;
-    @url: %(@svgLibCardWorldDataUrl, #fff);
-    background: #73c885 url(@url) center/12px 12px no-repeat;
-  }
-  &.kifi-secret::before {
-    @url: %(@svgLibCardLockDataUrl, #fff);
-    background: #f16564 url(@url) center/8px 12px no-repeat;
-  }
-  &.kifi-system::before {
+}
+.kifi-keep-box-lib-icon {
+  position: absolute;
+  top: 8px;
+  left: 13px;
+  width: 20px;
+  height: 28px;
+  border-radius: 4px;
+  box-shadow: 1px 1px #fff, 2px 2px #d3d3d3;
+  .kifi-system>& {
     background-color: #333434;
   }
-  &.kifi-create::before {
+  .kifi-system.kifi-discoverable>& {
+    @url: %(@svgLibCardStarDataUrl, #fff, 4);
+    background-image: url(@url);
+    background-position: 5px 8px;
+    background-size: 11px 11px;
+    background-repeat: no-repeat;
+  }
+  .kifi-secret>& {
+    @url: %(@svgLibCardLockDataUrl, #fff);
+    background-image: url(@url);
+    background-position: center;
+    background-size: 8px 12px;
+    background-repeat: no-repeat;
+  }
+  .kifi-create>& {
     @url: %(@svgLibCardPlusDataUrl, #fff, #fff);
     background: #333434 url(@url) center/10px 10px no-repeat;
   }
@@ -454,20 +459,19 @@
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
+    right: 0;
     width: @switch-diam + 2 * @slide-dist;
     height: @switch-diam;
-    @world-url: %(@svgLibCardWorldDataUrl, #fff);
     @lock-url: %(@svgLibCardLockDataUrl, #fff);
-    background: url(@world-url) 11px center/12px 12px no-repeat, url(@lock-url) (@switch-diam + 2 * @slide-dist - 21px) center/8px 12px no-repeat, linear-gradient(to right, #73c885 50%, #f16564 50%);
+    background: url(@lock-url) 13px center/8px 12px no-repeat, linear-gradient(to right, #f16564 50%, #ddd 50%);
     border-radius: inherit;
-    box-shadow: inset 0 0 1px rgba(0,0,0,.3);
+    box-shadow: inset 0 0 1px rgba(0,0,0,.2);
     transition: -webkit-transform @duration;
     transition: transform @duration;
-    clip: rect(0, @slide-dist + @switch-diam / 2, auto, 0);
+    clip: rect(0, auto, auto, @slide-dist + @switch-diam / 2);
   }
   .kifi-secret>&::before {
-    clip: rect(0, auto, auto, @slide-dist + @switch-diam / 2);
+    clip: rect(0, @slide-dist + @switch-diam / 2, auto, 0);
   }
   &:hover:active::before,
   &:focus:active::before,
@@ -478,7 +482,7 @@
     content: '';
     position: absolute;
     bottom: 0;
-    right: 0;
+    left: 0;
     width: @switch-diam;
     height: @switch-diam;
     border-radius: 50%;
@@ -489,8 +493,8 @@
   }
   .kifi-secret>&::before,
   .kifi-secret>&::after {
-    -webkit-transform: translate(-@slide-dist);
-    transform: translate(-@slide-dist);
+    -webkit-transform: translate(@slide-dist);
+    transform: translate(@slide-dist);
   }
   &:hover::after,
   &:focus::after {
