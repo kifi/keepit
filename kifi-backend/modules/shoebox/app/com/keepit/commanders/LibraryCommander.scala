@@ -80,6 +80,7 @@ class LibraryCommander @Inject() (
     friendStatusCommander: FriendStatusCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
+    facebookPublishingCommander: FacebookPublishingCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -770,7 +771,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Future[Unit] = SafeFuture {
+  private def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Future[Unit] = SafeFuture {
     val (follower, owner) = db.readOnlyReplica { implicit session =>
       userRepo.get(newFollowerId) -> userRepo.get(lib.ownerId)
     }
@@ -829,7 +830,10 @@ class LibraryCommander @Inject() (
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
             libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(currentDateTime)))
-            notifyOwnerOfNewFollower(userId, lib)
+            SafeFuture {
+              notifyOwnerOfNewFollower(userId, lib)
+              facebookPublishingCommander.publishLibraryMembership(userId, lib)
+            }
           case Some(mem) =>
             val maxWithExisting = (maxAccess :: mem.access :: Nil).sorted.last
             libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE, lastJoinedAt = Some(currentDateTime)))
