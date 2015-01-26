@@ -41,8 +41,8 @@ angular.module('kifi')
 ])
 
 .controller('SignupCtrl', [
-  '$scope', '$FB', '$twitter', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope', '$location',
-  function ($scope, $FB, $twitter, modalService, registrationService, $window, installService, $q, $log, $rootScope, $location) {
+  '$scope', '$FB', '$twitter', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope', '$location', 'routeService',
+  function ($scope, $FB, $twitter, modalService, registrationService, $window, installService, $q, $log, $rootScope, $location, routeService) {
 
     // Shared data across several modals
 
@@ -65,7 +65,29 @@ angular.module('kifi')
       return hasError;
     };
 
+    function createSignupPath(network) {
+      return routeService.socialSignupWithRedirect(
+          network,
+          $scope.userData.redirectPath || $location.url().split('?')[0],
+          $scope.userData.intent
+        );
+    }
+
     // First Register modal
+
+    var registerModal = function () {
+      if ($scope.userData.libraryId) {
+        $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signupLibrary' });
+      }
+
+      $scope.facebookSignupPath = createSignupPath('facebook');
+      $scope.twitterSignupPath = createSignupPath('twitter');
+
+      setModalScope(modalService.open({
+        template: 'signup/registerModal.tpl.html',
+        scope: $scope
+      }));
+    };
 
     var facebookLogin = function () {
       return $FB.getLoginStatus().then(function (loginStatus) {
@@ -81,28 +103,6 @@ angular.module('kifi')
           });
         }
       });
-    };
-
-    var registerModal = function () {
-      if ($scope.userData.libraryId) {
-        $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signupLibrary' });
-      }
-
-      $scope.twitterSignupUrl = '/signup/twitter?redirect=';
-      if ($scope.userData.redirectPath) {
-        $scope.twitterSignupUrl += $window.encodeURIComponent($scope.userData.redirectPath);
-      } else {
-        var currentPath = $location.url().split('?')[0]; //remove query params when redirecting back to this page
-        $scope.twitterSignupUrl += $window.encodeURIComponent(currentPath);
-      }
-      if ($scope.userData.intent === 'follow') {
-        $scope.twitterSignupUrl += '&intent=follow';
-      }
-
-      setModalScope(modalService.open({
-        template: 'signup/registerModal.tpl.html',
-        scope: $scope
-      }));
     };
 
     $scope.submitEmail = function (form) {

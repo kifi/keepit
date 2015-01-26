@@ -154,7 +154,7 @@ angular.module('kifi')
           if (initParams.install === '1' && !installService.installedVersion) {
             showInstallModal();
           }
-          if (initParams.intent === 'follow' && $scope.library.access==='none') {
+          if (initParams.intent === 'follow' && $scope.library.access === 'none') {
             libraryService.joinLibrary($scope.library.id);
           }
         });

@@ -8,8 +8,10 @@
         <div class="kf-register-header">Join Kifi to get updates to this library</div>
 
         <div class="register-modal-social-block">
-          <div class="kf-register-button facebook" ng-click="fbAuthFromLibrary()" ng-mouseover="fbInit()">Continue with Facebook</div>
-          <a ng-href="{{twitterSignupUrl}}" target="_self" ng-if="showTwitter">
+          <a ng-href="{{facebookSignupPath}}" target="_self">
+            <div class="kf-register-button facebook">Continue with Facebook</div>
+          </a>
+          <a ng-href="{{twitterSignupPath}}" target="_self" ng-if="showTwitter">
             <div class="kf-register-button twitter">Continue with Twitter</div>
           </a>
           <div class="register-modal-we-are-nice">We will never post without your explicit permission.</div>

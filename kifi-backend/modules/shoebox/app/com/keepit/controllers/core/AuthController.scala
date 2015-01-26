@@ -412,7 +412,8 @@ class AuthController @Inject() (
               if (cookieIntent.isDefined) {
                 initParams ++= s"&intent=${cookieIntent.get.value}"
               }
-              Redirect(s"${redirectPath}${initParams.toString}")
+              val discardedCookies = Seq(cookieRedirect, cookieIntent).flatten.map(c => DiscardingCookie(c.name))
+              Redirect(s"${redirectPath}${initParams.toString}").discardingCookies(discardedCookies: _*)
             } else {
               Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
             }
