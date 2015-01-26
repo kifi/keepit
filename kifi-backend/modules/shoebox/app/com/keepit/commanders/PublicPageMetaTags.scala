@@ -105,7 +105,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   } getOrElse ""
 
   private def facebookIdTag = facebookId.map { id =>
-    s"""<meta property="article:author" content="$id">"""
+    s"""<meta property="library_owner" content="$id">"""
   } getOrElse ""
 
   private def noIndexTag = if (noIndex) {
@@ -118,8 +118,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
     formatOpenGraph("fortytwoinc:library") +
       s"""
       |<meta name="author" content="$firstName $lastName">
-      |<meta property="article:published_time" content="${ISO_8601_DAY_FORMAT.print(createdAt)}">
-      |<meta property="article:modified_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}">
+      |<meta property="og:updated_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}">
       |$ogSeeAlso
      """.stripMargin
   }
