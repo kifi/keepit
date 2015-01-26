@@ -27,7 +27,6 @@ angular.module('kifi')
         //
         // Internal data.
         //
-        var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|a[cdegilmoqrstuz]|b[abefghimnrtyz]|c[acdfghiklmnoruxyz]|d[ejko]|e[cegst]|f[ijkmor]|g[befghilmnpqrstu]|h[kmnru]|i[delmnorst]|j[eop]|k[eghrwyz]|l[bciktuvy]|m[cdghkmnoqrstuwxyz]|n[acfilouz]|om|p[aeghklmnrty]|qa|r[eouw]|s[abcdeghikmnotuvz]|t[cdfhjmnoprtvwz]|u[agkmsyz]|v[eginu]|wf|y[t|u]|z[amrw]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
         var authToken = $location.search().authToken || '';
         var prevQuery = '';
         var headerLinksShifted = false;
@@ -60,23 +59,6 @@ angular.module('kifi')
           $timeout(function () {
             $rootScope.$emit('trackLibraryEvent', 'click', { action: action });
           });
-        }
-
-        function processUrls(text) {
-          var parts = (text || '').split(uriRe);
-
-          for (var i = 1; i < parts.length; i += 3) {
-            var uri = parts[i];
-            var scheme = parts[i+1];
-            var url = (scheme ? '' : 'http://') + util.htmlEscape(uri);
-
-            parts[i] = '<a target="_blank" href="' + url + '">' + url;
-            parts[i+1] = '</a>';
-            parts[i-1] = util.htmlEscape(parts[i-1]);
-          }
-          parts[parts.length-1] = util.htmlEscape(parts[parts.length-1]);
-
-          return parts.join('');
         }
 
         // Data augmentation.
@@ -137,10 +119,10 @@ angular.module('kifi')
               clipLastIndex = lastSpaceIndex + 1;  // Grab the space too.
             }
 
-            scope.library.shortDescription = processUrls(scope.library.description.substr(0, clipLastIndex));
+            scope.library.shortDescription = util.processUrls(scope.library.description.substr(0, clipLastIndex));
             scope.clippedDescription = true;
           }
-          scope.library.formattedDescription = '<p>' + processUrls(scope.library.description).replace(/\n+/g, '<p>');
+          scope.library.formattedDescription = '<p>' + util.processUrls(scope.library.description).replace(/\n+/g, '<p>');
 
           scope.library.shareUrl = env.origin + scope.library.url;
           scope.library.shareFbUrl = scope.library.shareUrl +
