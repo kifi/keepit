@@ -1,9 +1,6 @@
-<div ng-switch="userProfileStatus" class="kf-user-profile">
-  <div ng-switch-when="not-found" kf-error-not-found></div>
-  <div ng-switch-when="found">
-    <div kf-user-profile-header profile="profile"></div>
-    <div class="kf-user-profile-content">
-      <div ui-view></div>
-    </div>
+<div class="kf-user-profile">
+  <div kf-user-profile-header profile="profile"></div>
+  <div class="kf-user-profile-content">
+    <div ui-view></div>
   </div>
 </div>
