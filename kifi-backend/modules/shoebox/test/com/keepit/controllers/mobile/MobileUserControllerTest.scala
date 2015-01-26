@@ -1,5 +1,6 @@
 package com.keepit.controllers.mobile
 
+import com.keepit.common.time._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.UserFactoryHelper._
@@ -38,6 +39,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.SocialNetworks._
 import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector, ShoeboxTestInjector }
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.Play
 import play.api.libs.json._
@@ -139,7 +141,8 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
       val user1921 = userRepo.save(User(firstName = "Albert", lastName = "Einstein", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a676"), username = Username("test"), normalizedUsername = "test"))
       val friends = List(user1933, user1935, user1927, user1921)
 
-      friends.foreach { friend => userConnRepo.save(UserConnection(user1 = user1965.id.get, user2 = friend.id.get)) }
+      val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
+      friends.zipWithIndex.foreach { case (friend, i) => userConnRepo.save(UserConnection(user1 = user1965.id.get, user2 = friend.id.get, createdAt = now.plusDays(i))) }
       (user1965, friends)
     }
   }
@@ -373,10 +376,10 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         contentType(result) must beSome("application/json")
         val expected = Json.parse(
           """{"friends":[
-            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a673","firstName":"Paul","lastName":"Dirac","pictureName":"0.jpg","username":"test","searchFriend":true,"unfriended":false},
-            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a674","firstName":"James","lastName":"Chadwick","pictureName":"0.jpg","username":"test","searchFriend":true,"unfriended":false},
-            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a675","firstName":"Arthur","lastName":"Compton","pictureName":"0.jpg","username":"test","searchFriend":true,"unfriended":false},
-            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a676","firstName":"Albert","lastName":"Einstein","pictureName":"0.jpg","username":"test","searchFriend":true,"unfriended":false}
+              {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a676","firstName":"Albert","lastName":"Einstein","pictureName":"0.jpg","username":"test","searchFriend":true,"unfriended":false},
+              {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a675","firstName":"Arthur","lastName":"Compton","pictureName":"0.jpg","username":"test","searchFriend":true,"unfriended":false},
+              {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a674","firstName":"James","lastName":"Chadwick","pictureName":"0.jpg","username":"test","searchFriend":true,"unfriended":false},
+              {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a673","firstName":"Paul","lastName":"Dirac","pictureName":"0.jpg","username":"test","searchFriend":true,"unfriended":false}
             ],
             "total":4}""")
         val resString = contentAsString(result)
