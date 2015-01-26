@@ -3,11 +3,11 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window',
-  'env', 'inviteService', 'keepWhoService', 'originTrackingService', 'profileService', 'userProfileActionService',
+  '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window', 'profile',
+  'env', 'inviteService', 'keepWhoService', 'originTrackingService', 'profileService',
   'installService', 'modalService', 'initParams',
-  function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window,
-            env, inviteService, keepWhoService, originTrackingService, profileService, userProfileActionService,
+  function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window, profile,
+            env, inviteService, keepWhoService, originTrackingService, profileService,
             installService, modalService, initParams) {
 
     //
@@ -23,18 +23,9 @@ angular.module('kifi')
 
 
     //
-    // Scope data.
-    //
-    $scope.userProfileStatus = null;
-    $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
-    $scope.profile = null;
-    $scope.userLoggedIn = false;
-    $scope.viewingOwnProfile = false;
-
-
-    //
     // Internal functions.
     //
+
     function showInstallModal() {
       $scope.platformName = installService.getPlatformName();
       if ($scope.platformName) {
@@ -51,50 +42,13 @@ angular.module('kifi')
       });
     }
 
-    function init() {
-      $rootScope.$emit('libraryUrl', {});
-      var pageOrigin = originTrackingService.getAndClear();
-      var username = $stateParams.username;
-
-      userProfileActionService.getProfile(username).then(function (profile) {
-        $scope.userProfileStatus = 'found';
-
-        setTitle(profile);
-        initProfile(profile);
-        initViewingUserStatus();
-        if (initParams.install === '1' && !installService.installedVersion) {
-          showInstallModal();
-        }
-
-        // This function should be called last because some of the attributes
-        // that we're tracking are initialized by the above functions.
-        trackPageView(pageOrigin);
-      })['catch'](function () {
-        $scope.userProfileStatus = 'not-found';
-      });
-
-      $scope.currentPageOrigin = getCurrentPageOrigin();
-    }
-
     function getCurrentPageOrigin() {
       var originContext = originContexts[$state.current.data.libraryType];
       return 'profilePage' +  (originContext ? '.' + originContext : '');
     }
 
-    function setTitle(profile) {
-      $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi' ;
-    }
-
-    function initProfile(profile) {
-      $scope.profile = _.cloneDeep(profile);
-      $scope.profile.picUrl = keepWhoService.getPicUrl($scope.profile, 200);
-    }
-
-    function initViewingUserStatus() {
-      $scope.viewingOwnProfile = $scope.profile.id === profileService.me.id;
-    }
-
-    function trackPageView(pageOrigin) {
+    function trackPageView() {
+      var pageOrigin = originTrackingService.getAndClear();
       var url = $analytics.settings.pageTracking.basePath + $location.url();
       var originsArray = (pageOrigin && pageOrigin.split('/')) || [];
 
@@ -127,6 +81,7 @@ angular.module('kifi')
     //
     // Scope methods.
     //
+
     $scope.trackUplCardClick = function (lib) {
       trackPageClick({
         action: 'clickedLibrary',
@@ -147,6 +102,7 @@ angular.module('kifi')
     //
     // Watches and listeners.
     //
+
     var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
       // When routing among the nested states, track page view again.
       if ((/^userProfile/.test(toState.name)) && (/^userProfile/.test(fromState.name)) && (toParams.username === fromParams.username)) {
@@ -162,8 +118,24 @@ angular.module('kifi')
     $scope.$on('$destroy', deregisterCurrentLibrary);
 
 
+    //
     // Initialize controller.
-    init();
+    //
+
+    $rootScope.$emit('libraryUrl', {});
+
+    $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi';
+    $scope.currentPageOrigin = getCurrentPageOrigin();
+    $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
+    $scope.profile = _.cloneDeep(profile);
+    $scope.profile.picUrl = keepWhoService.getPicUrl(profile, 200);
+    $scope.viewingOwnProfile = profile.id === profileService.me.id;
+
+    trackPageView();
+
+    if (initParams.install === '1' && !installService.installedVersion) {
+      showInstallModal();
+    }
   }
 ])
 
