@@ -160,7 +160,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
           val user1935 = userRepo.save(User(firstName = "James", lastName = "Chadwick", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a674"), username = Username("test1"), normalizedUsername = "test1"))
           val friends = List(user1933, user1935)
 
-          friends.foreach { friend => userConnRepo.save(UserConnection(user1 = user1.id.get, user2 = friend.id.get)) }
+          val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
+          friends.zipWithIndex.foreach { case (friend, i) => userConnRepo.save(UserConnection(user1 = user1.id.get, user2 = friend.id.get, createdAt = now.plusDays(i))) }
 
           (user1, uri)
         }
@@ -208,8 +209,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
             Json.obj("id" -> "eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672", "name" -> "Cooking", "keeps" -> 1),
             Json.obj("id" -> "ffffffff-51ad-4c7d-a88e-d4e6e3c9a673", "name" -> "Baking", "keeps" -> 2)),
           "friends" -> Seq(
-            Json.obj("id" -> "e58be33f-51ad-4c7d-a88e-d4e6e3c9a673", "firstName" -> "Paul", "lastName" -> "Dirac", "pictureName" -> "0.jpg", "username" -> "test", "searchFriend" -> true, "unfriended" -> false),
-            Json.obj("id" -> "e58be33f-51ad-4c7d-a88e-d4e6e3c9a674", "firstName" -> "James", "lastName" -> "Chadwick", "pictureName" -> "0.jpg", "username" -> "test1", "searchFriend" -> true, "unfriended" -> false)
+            Json.obj("id" -> "e58be33f-51ad-4c7d-a88e-d4e6e3c9a674", "firstName" -> "James", "lastName" -> "Chadwick", "pictureName" -> "0.jpg", "username" -> "test1", "searchFriend" -> true, "unfriended" -> false),
+            Json.obj("id" -> "e58be33f-51ad-4c7d-a88e-d4e6e3c9a673", "firstName" -> "Paul", "lastName" -> "Dirac", "pictureName" -> "0.jpg", "username" -> "test", "searchFriend" -> true, "unfriended" -> false)
           )
         )
         Json.parse(contentAsString(result)) must equalTo(expected)
