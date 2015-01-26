@@ -63,7 +63,7 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
   }
 
   def createUserThread(thread: MessageThread, userId: Id[User])(implicit rw: RWSession, injector: Injector) = {
-    inject[UserThreadRepo].save(UserThread(
+    inject[UserThreadRepo].save(UserThread(notificationUpdatedAt = nextTime,
       user = userId, threadId = thread.id.get, uriId = None, unread = true,
       lastMsgFromOther = None, lastNotification = JsNull, lastSeen = None))
   }
@@ -131,15 +131,15 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
           case _ => throw new FailureException(failure(s"wrong kind ${view.from.kind}"))
         }
 
-        t1.pageTitle must beSome("HackerNews")
+        t1.pageTitle must beSome("Reddit")
         t1.messages.size === 2
-        t1.messages(0).messageText === "check out HackerNews"
+        t1.messages(0).messageText === "check out Reddit"
         assertSender(t1.messages(0)) { _ === sender1 }
         assertSender(t1.messages(1)) { _ === sender2 }
 
-        t2.pageTitle must beSome("Reddit")
+        t2.pageTitle must beSome("HackerNews")
         t2.messages.size === 2
-        t2.messages(0).messageText === "check out Reddit"
+        t2.messages(0).messageText === "check out HackerNews"
         assertSender(t2.messages(0)) { _ === sender1 }
         assertSender(t2.messages(1)) { _ === sender2 }
       }

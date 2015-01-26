@@ -59,7 +59,7 @@ case class KeepInfoView(private val keepInfo: KeepInfo) {
 case class EmailUnreadThreadView(private val view: UserThreadView) {
   val pageTitle = view.pageTitle
   val lastSeen = view.lastSeen
-  val lastActive = view.lastActive
+  val lastActive = view.notificationUpdatedAt
   val allMessages = view.messages
 
   val messageSendersToShow: Seq[Html] = {
@@ -312,7 +312,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
     def getUnreadMessageThreads(): Future[Seq[EmailUnreadThreadView]] = {
       eliza.getUnreadNotifications(toUserId, maxUnreadNotificationThreads) map { userThreads =>
         userThreads filter { thread =>
-          thread.lastActive.exists(t => t > minAgeOfUnreadNotificationThreads && t < maxAgeOfUnreadNotificationThreads) &&
+          val threadLastActive = thread.notificationUpdatedAt
+          threadLastActive > minAgeOfUnreadNotificationThreads &&
+            threadLastActive < maxAgeOfUnreadNotificationThreads &&
             thread.messages.nonEmpty && thread.messages.head.from.kind != MessageSenderView.SYSTEM
         } take maxUnreadNotificationThreads map EmailUnreadThreadView
       }
