@@ -2,9 +2,11 @@ package com.keepit.commanders
 
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.time._
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.common.db.Id
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 import com.keepit.test.{ ShoeboxTestInjector }
@@ -122,13 +124,20 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
               firstName = "Clark",
               lastName = "Simpson", username = Username("test4"), normalizedUsername = "test4"
             ))
-
-            connectionRepo.addConnections(user1.id.get, Set(user2.id.get, user3.id.get, user4.id.get))
+            val clock = inject[FakeClock]
+            val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
+            clock.push(now)
+            clock.push(now.plusDays(1))
+            clock.push(now.plusDays(2))
+            clock.push(now.plusDays(3))
+            clock.push(now.plusDays(4))
+            connectionRepo.addConnections(user1.id.get, Set(user3.id.get, user2.id.get, user4.id.get))
             connectionRepo.addConnections(user2.id.get, Set(user4.id.get))
             (user1, user2, user3, user4)
         }
         val (connections1, total1) = inject[UserConnectionsCommander].getConnectionsPage(user1.id.get, 0, 1000)
         connections1.size === 3
+        connections1.map(_.userId) === Seq(user4.id.get, user2.id.get, user3.id.get)
         total1 === 3
 
         val (connections2, total2) = inject[UserConnectionsCommander].getConnectionsPage(user2.id.get, 0, 1000)
@@ -137,7 +146,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
 
         val (connections1p1, total1p1) = inject[UserConnectionsCommander].getConnectionsPage(user1.id.get, 1, 2)
         connections1p1.size === 1
-        connections1p1.head.userId === user4.id.get
+        connections1p1.head.userId === user3.id.get
         total1p1 === 3
 
         inject[UserConnectionsCommander].getConnectionsPage(user1.id.get, 2, 2)._1.size === 0
