@@ -233,10 +233,15 @@ object KeepSource {
   val tagImport = KeepSource("tagImport")
   val emailReco = KeepSource("emailReco")
   val userCopied = KeepSource("userCopied")
+  val twitterFileImport = KeepSource("twitterFileImport")
 
-  val valid = Set(keeper, bookmarkImport, site, mobile, email, default, bookmarkFileImport, kippt, pocket, instapaper, emailReco)
+  val valid = Set(keeper, bookmarkImport, site, mobile, email, default, bookmarkFileImport, kippt, pocket, instapaper, emailReco, twitterFileImport)
 
-  val imports = Set(bookmarkImport, kippt, pocket, instapaper, bookmarkFileImport)
+  val imports = Set(bookmarkImport, kippt, pocket, instapaper, bookmarkFileImport, twitterFileImport)
+
+  // Sources that are from users uploading files, bulk actions, inputting URLs, etc.
+  // These may be old links
+  val bulk = Set(site, bookmarkImport, kippt, pocket, instapaper, bookmarkFileImport, twitterFileImport, userCopied, unknown)
 
   def get(value: String): KeepSource = KeepSource(value) match {
     case KeepSource("HOVER_KEEP") => keeper

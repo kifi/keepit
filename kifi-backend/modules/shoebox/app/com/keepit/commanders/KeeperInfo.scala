@@ -90,12 +90,14 @@ object MoarKeepData {
 case class LibraryData(
   id: PublicId[Library],
   name: String,
+  color: Option[LibraryColor],
   visibility: LibraryVisibility,
   path: String)
 object LibraryData {
   implicit val writes: Writes[LibraryData] = (
     (__ \ 'id).write[PublicId[Library]] and
     (__ \ 'name).write[String] and
+    (__ \ 'color).writeNullable[LibraryColor] and
     (__ \ 'visibility).write[LibraryVisibility] and
     (__ \ 'path).write[String]
   )(unlift(LibraryData.unapply))

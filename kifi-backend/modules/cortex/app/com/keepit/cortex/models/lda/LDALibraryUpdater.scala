@@ -159,9 +159,8 @@ class LDALibraryUpdaterImpl @Inject() (
   private def getAuxiliary(libTopic: Option[LibraryTopicMean]): Auxiliary = {
     libTopic match {
       case Some(mean) =>
-        val sorted = mean.value.zipWithIndex.sortBy(-_._1).take(3)
-        val Array(first, second, third) = sorted.map { _._2 }
-        val firstTopicScore = sorted(0)._1
+        val (first, second, third) = argmax3(mean.value)
+        val firstTopicScore = mean.value(first)
         val entro = entropy(mean.value).toFloat
         (Some(LDATopic(first)), Some(LDATopic(second)), Some(LDATopic(third)), Some(firstTopicScore), Some(entro))
       case None => (None, None, None, None, None)

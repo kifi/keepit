@@ -11,9 +11,6 @@ angular.module('kifi')
       restrict: 'A',
       templateUrl: 'social/connectNetworks.tpl.html',
       link: function (scope/*, element, attrs*/) {
-        scope.data = scope.data || {};
-        scope.data.show = true;
-
         scope.facebook = socialService.facebook;
         scope.linkedin = socialService.linkedin;
         scope.gmail = socialService.gmail;

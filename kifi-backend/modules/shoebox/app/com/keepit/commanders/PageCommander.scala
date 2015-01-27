@@ -191,6 +191,7 @@ class PageCommander @Inject() (
           Json.obj(
             "name" -> lib.name,
             "slug" -> lib.slug,
+            "color" -> lib.color,
             "owner" -> basicUserMap(lib.ownerId),
             "keeps" -> keepCounts(lib.id.get),
             "followers" -> followerCounts(lib.id.get))

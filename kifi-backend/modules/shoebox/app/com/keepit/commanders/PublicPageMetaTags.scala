@@ -3,14 +3,14 @@ package com.keepit.commanders
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
-import com.keepit.model.{ User, Library, URL }
+import com.keepit.model.{ Username, User, Library, URL }
 import org.joda.time.DateTime
 import com.keepit.common.time.ISO_8601_DAY_FORMAT
 
 import scala.concurrent.duration.Duration
 
 case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
-  override val version = 13
+  override val version = 19
   val namespace = "library_metadata_by_id"
   def toKey(): String = id.id.toString
 }
@@ -19,7 +19,7 @@ class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class UserMetadataKey(id: Id[User]) extends Key[String] {
-  override val version = 3
+  override val version = 5
   val namespace = "user_metadata_by_id"
   def toKey(): String = id.id.toString
 }
@@ -74,7 +74,7 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
 
 case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String,
     images: Seq[String], facebookId: Option[String], createdAt: DateTime, updatedAt: DateTime,
-    unsafeFirstName: String, unsafeLastName: String, noIndex: Boolean,
+    unsafeFirstName: String, unsafeLastName: String, profileUrl: String, noIndex: Boolean,
     related: Seq[String]) extends PublicPageMetaTags {
 
   def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
@@ -105,7 +105,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   } getOrElse ""
 
   private def facebookIdTag = facebookId.map { id =>
-    s"""<meta property="article:author" content="$id">"""
+    s"""<meta property="fb:profile_id" content="$id">"""
   } getOrElse ""
 
   private def noIndexTag = if (noIndex) {
@@ -115,11 +115,11 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   } else ""
 
   def formatOpenGraphForLibrary: String = {
-    formatOpenGraph("fortytwoinc:library") +
+    formatOpenGraph(s"${PublicPageMetaTags.facebookNameSpace}:library") +
       s"""
       |<meta name="author" content="$firstName $lastName">
-      |<meta property="article:published_time" content="${ISO_8601_DAY_FORMAT.print(createdAt)}">
-      |<meta property="article:modified_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}">
+      |<meta property="${PublicPageMetaTags.facebookNameSpace}:owner" content="$profileUrl">
+      |<meta property="og:updated_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}">
       |$ogSeeAlso
      """.stripMargin
   }
@@ -129,10 +129,10 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       s"""
       |<meta property="profile:first_name" content="$firstName">
       |<meta property="profile:last_name" content="$lastName">
+      |$facebookIdTag
      """.stripMargin
   }
 
-  //  use og:type of profile!
   //  verify with https://developers.facebook.com/tools/debug/og/object/
   private def formatOpenGraph(ogType: String): String = {
 
@@ -152,17 +152,16 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |<meta property="al:android:app_name" content="Kifi Android App">
       |<meta property="al:android:class" content="com.kifi.SplashActivity">
       |$ogImageTags
-      |$facebookIdTag
       |<meta property="og:url" content="$url">
       |<meta property="og:site_name" content="Kifi - Connecting People With Knowledge">
-      |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}">
+      |<meta property="fb:app_id" content="${PublicPageMetaTags.facebookAppId}">
       |<meta name="description" content="$description">
       |<link rel="canonical" href="$url">
       |<meta name="twitter:card" content="summary_large_image">
       |<meta name="twitter:site" content="@kifi">
       |<meta name="twitter:creator" content="@kifi">
-      |<meta name="twitter:title" content="${title}">
-      |<meta name="twitter:description" content="${description}">
+      |<meta name="twitter:title" content="$title">
+      |<meta name="twitter:description" content="$description">
       |<meta name="twitter:url" content="$url">
       |<meta name="twitter:app:name:iphone" content="Kifi iPhone App">
       |<meta name="twitter:app:id:iphone" content="740232575">
@@ -181,7 +180,8 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
 
 object PublicPageMetaTags {
   val siteName = "Kifi"
-  val appId = "104629159695560"
+  val facebookAppId = "104629159695560"
+  val facebookNameSpace = "fortytwoinc"
   /**
    * http://www.swellpath.com/2014/05/update-new-title-tag-meta-description-character-lengths/
    * Magic numbers:

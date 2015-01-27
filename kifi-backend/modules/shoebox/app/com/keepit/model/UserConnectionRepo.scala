@@ -26,6 +26,7 @@ trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[Use
   def getConnectionCounts(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit
   def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection]
+  def getBasicUserConnection(id: Id[User])(implicit session: RSession): Seq[BasicUserConnection]
 }
 
 case class UnfriendedConnectionsKey(userId: Id[User]) extends Key[Set[Id[User]]] {
@@ -43,6 +44,7 @@ class UserConnectionRepoImpl @Inject() (
   val friendRequestRepo: FriendRequestRepo,
   val connCountCache: UserConnectionCountCache,
   val userConnCache: UserConnectionIdCache,
+  val basicUserConnCache: BasicUserConnectionIdCache,
   val unfriendedCache: UnfriendedConnectionsCache,
   val searchFriendsCache: SearchFriendsCache,
   override protected val changeListener: Option[RepoModification.Listener[UserConnection]])
@@ -58,6 +60,7 @@ class UserConnectionRepoImpl @Inject() (
 
   def invalidateCache(userId: Id[User])(implicit session: RSession): Unit = {
     userConnCache.remove(UserConnectionIdKey(userId))
+    basicUserConnCache.remove(BasicUserConnectionIdKey(userId))
     connCountCache.remove(UserConnectionCountKey(userId))
     searchFriendsCache.remove(SearchFriendsKey(userId))
     unfriendedCache.remove(UnfriendedConnectionsKey(userId))
@@ -122,6 +125,15 @@ class UserConnectionRepoImpl @Inject() (
           (for (c <- rows if c.user2 === id && c.state === UserConnectionStates.ACTIVE) yield c.user1)).list.toSet
         userConnCache.set(UserConnectionIdKey(id), conns.map(_.id).toArray)
         conns
+    }
+  }
+
+  def getBasicUserConnection(id: Id[User])(implicit session: RSession): Seq[BasicUserConnection] = {
+    basicUserConnCache.getOrElse(BasicUserConnectionIdKey(id)) {
+      val conns = ((for (c <- rows if c.user1 === id && c.state === UserConnectionStates.ACTIVE) yield (c.user2, c.createdAt)) union
+        (for (c <- rows if c.user2 === id && c.state === UserConnectionStates.ACTIVE) yield (c.user1, c.createdAt))).list.toSet
+      val basicConnections: Set[BasicUserConnection] = (conns.map { c => BasicUserConnection(c._1, c._2) }).toSet
+      basicConnections.toSeq.sortWith { (c1, c2) => c1.createdAt.isAfter(c2.createdAt) }
     }
   }
 
@@ -205,7 +217,7 @@ class UserConnectionRepoImpl @Inject() (
 
       (users + userId) foreach invalidateCache
 
-      rows.insertAll(toInsert.map { connId => UserConnection(user1 = userId, user2 = connId, seq = deferredSeqNum()) }.toSeq: _*)
+      rows.insertAll(toInsert.map { connId => UserConnection(createdAt = clock.now, user1 = userId, user2 = connId, seq = deferredSeqNum()) }.toSeq: _*)
     }
   }
 

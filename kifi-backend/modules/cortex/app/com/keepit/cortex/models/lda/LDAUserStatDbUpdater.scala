@@ -141,9 +141,8 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   private def getAuxiliary(userTopic: Option[UserTopicMean]): Auxiliary = {
     userTopic match {
       case Some(mean) =>
-        val sorted = mean.mean.zipWithIndex.sortBy(-_._1).take(3)
-        val Array(first, second, third) = sorted.map { _._2 }
-        val firstTopicScore = sorted(0)._1
+        val (first, second, third) = argmax3(mean.mean)
+        val firstTopicScore = mean.mean(first)
         (Some(LDATopic(first)), Some(LDATopic(second)), Some(LDATopic(third)), Some(firstTopicScore))
       case None => (None, None, None, None)
     }

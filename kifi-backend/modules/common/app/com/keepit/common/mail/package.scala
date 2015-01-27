@@ -93,6 +93,8 @@ package object template {
     val source = Tag0(tags.source).toHtml
     private val sourceTagStr = source.body
 
+    def safeHtml(str: String) = Html(htmlEscape(str))
+
     def toHttpsUrl(url: String) = if (url.startsWith("//")) "https:" + url else url
 
     def libraryImageUrl(path: String) = s"$cdnBaseUrl/$path"

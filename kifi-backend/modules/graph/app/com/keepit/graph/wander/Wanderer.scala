@@ -12,20 +12,20 @@ trait Wanderer {
 }
 
 class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) extends DestinationWeightsQuerier with Logging {
-  type TransitionProbabilityCache = mutable.Map[VertexId, mutable.Map[Component, ProbabilityDensity[VertexId]]]
+  type DestinationSampleCache = mutable.Map[VertexId, mutable.Map[Component, DestinationSamples]]
 
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit = {
-    val probabilityCache: TransitionProbabilityCache = mutable.Map()
+    val sampleCache: DestinationSampleCache = mutable.Map()
     teleportTo(teleporter.surely, journal, isStart = true)
     var step = 0
     while (step < steps) {
-      tryAndMove(teleporter, resolver, journal, probabilityCache, 1)
+      tryAndMove(teleporter, resolver, journal, sampleCache, 1)
       step += 1
     }
     journal.onComplete(wanderer)
   }
 
-  private def tryAndMove(teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal, cache: TransitionProbabilityCache, retries: Int): Unit = {
+  private def tryAndMove(teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal, cache: DestinationSampleCache, retries: Int): Unit = {
     try { move(teleporter, resolver, journal, cache) }
     catch {
       case VertexNotFoundException(id) if retries > 0 =>
@@ -35,7 +35,7 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
     }
   }
 
-  private def move(teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal, cache: TransitionProbabilityCache): Unit = {
+  private def move(teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal, cache: DestinationSampleCache): Unit = {
     teleporter.maybe(wanderer) match {
       case Some(newStart) => teleportTo(newStart, journal)
       case None => {
@@ -79,15 +79,49 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
     probability.sample(Math.random())
   }
 
-  private def sampleDestination(component: Component, resolver: EdgeResolver, cache: TransitionProbabilityCache): Option[(VertexId, EdgeType)] = {
+  private def sampleDestination(component: Component, resolver: EdgeResolver, cache: DestinationSampleCache): Option[(VertexId, EdgeType)] = {
     val source = wanderer.id
     val localCache = cache.getOrElseUpdate(source, mutable.Map())
-    val probability = localCache.getOrElseUpdate(component, computeDestinationProbability(component, resolver))
-    probability.sample(Math.random()).map { destination => (destination, component._3) }
+
+    val destinationSamples = localCache.get(component) match {
+      case Some(destinationSamples) =>
+        if (destinationSamples.hasNext) destinationSamples
+        else {
+          if (destinationSamples.totalWeight > 0.0) {
+            // enlarge the sample size
+            val newSampleSize = Math.max(destinationSamples.size * 2, 128)
+            // and use the previous totalWeight as the estimated total weight in this iteration
+            val newDestinationSamples = computeDestinationSamples(component, resolver, newSampleSize, destinationSamples.totalWeight)
+            localCache.put(component, newDestinationSamples)
+            newDestinationSamples
+          } else {
+            destinationSamples
+          }
+        }
+      case None =>
+        val newDestinationSamples = computeDestinationSamples(component, resolver)
+        localCache.put(component, newDestinationSamples)
+        newDestinationSamples
+    }
+
+    if (destinationSamples.hasNext) {
+      Some((destinationSamples.next, component._3))
+    } else {
+      None
+    }
   }
 
-  private def computeDestinationProbability(component: Component, resolver: EdgeResolver): ProbabilityDensity[VertexId] = {
-    val builder = new ProbabilityDensityBuilder[VertexId]
+  private def computeDestinationSamples(component: Component, resolver: EdgeResolver): DestinationSamples = {
+    // use the real total weight for the initial estimated total weight
+    val (totalWeight, destCount) = getTotalDestinationWeightAndCount(wanderer, scout, component, resolver)
+    // the initial sample size is four times the population size or 256 whichever smaller
+    val maxSampleSize = Math.min(destCount * 4, 256)
+
+    computeDestinationSamples(component, resolver, maxSampleSize, totalWeight)
+  }
+
+  private def computeDestinationSamples(component: Component, resolver: EdgeResolver, maxSampleSize: Int, totalWeight: Double): DestinationSamples = {
+    val builder = new DestinationSamplesBuilder(maxSampleSize, totalWeight)
     getDestinationWeights(wanderer, scout, component, resolver) { (vertexId, weight) => builder.add(vertexId, weight) }
     builder.build
   }
@@ -108,9 +142,13 @@ trait DestinationWeightsQuerier {
     }
   }
 
-  def getTotalDestinationWeight(wanderer: GlobalVertexReader, scout: GlobalVertexReader, component: Component, resolver: EdgeResolver): Double = {
+  def getTotalDestinationWeightAndCount(wanderer: GlobalVertexReader, scout: GlobalVertexReader, component: Component, resolver: EdgeResolver): (Double, Int) = {
     var total = 0.0
-    getDestinationWeights(wanderer, scout, component, resolver) { (_, weight) => total += weight }
-    total
+    var count = 0
+    getDestinationWeights(wanderer, scout, component, resolver) { (_, weight) =>
+      total += weight
+      count += 1
+    }
+    (total, count)
   }
 }

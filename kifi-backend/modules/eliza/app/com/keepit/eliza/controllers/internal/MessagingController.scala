@@ -36,8 +36,6 @@ import play.api.mvc.Action
 class MessagingController @Inject() (
   threadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
-  messageThreadRepo: MessageThreadRepo,
-  messageRepo: MessageRepo,
   db: Database,
   uriNormalizationUpdater: UriNormalizationUpdater,
   messagingCommander: MessagingCommander,
