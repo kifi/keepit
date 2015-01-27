@@ -120,7 +120,7 @@ class ScrapeWorkerImpl @Inject() (
           }
           dbHelper.saveBookmark(updatedBookmark)
         }
-        Future.sequence(???) flatMap { updatedBookmarks =>
+        Future.sequence(updatedBookmarks) flatMap { updatedBookmarks =>
           article.canonicalUrl.fold(Future.successful())(recordScrapedNormalization(latestUri, signature, _, article.alternateUrls)) flatMap { _ =>
             scrapedURI.id.fold(Future.successful[Option[String]](None))(id => shoeboxScraperClient.getUriImage(id))
           }
