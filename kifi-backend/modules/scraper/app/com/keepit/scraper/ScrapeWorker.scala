@@ -102,12 +102,25 @@ class ScrapeWorkerImpl @Inject() (
       case None =>
     }
   }
-
+  private val shortenedUrls = Set("bit.ly", "goo.gl", "owl.ly", "deck.ly", "su.pr", "lnk.co", "fur.ly", "ow.ly", "owl.ly", "tinyurl.com", "is.gd", "v.gd", "t.co")
   private def handleSuccessfulScraped(latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo, pageInfoOpt: Option[PageInfo]): Future[Option[Article]] = {
+
+    // This is bad. This whole function could likely be replaced with one call to shoebox signaling that a
+    // scrape has happened. Excellent cleanup task for anyone learning scraper architecture.
 
     @inline def postProcess(scrapedURI: NormalizedURI, article: Article, signature: Signature): Future[Option[String]] = {
       dbHelper.getBookmarksByUriWithoutTitle(scrapedURI.id.get) flatMap { bookmarks =>
-        Future.sequence(bookmarks.map { bookmark => dbHelper.saveBookmark(bookmark.copy(title = scrapedURI.title)) }) flatMap { updatedBookmarks =>
+        // Update bookmarks that have an empty title. For links that are clearly shortened URLs, fix them.
+        val updatedBookmarks = bookmarks.map { bookmark =>
+          val isShortenedUrl = URI.parse(bookmark.url).toOption.flatMap(_.host.map(_.name)).exists(shortenedUrls.contains)
+          val updatedBookmark = if (isShortenedUrl) {
+            bookmark.copy(title = scrapedURI.title, url = scrapedURI.url)
+          } else {
+            bookmark.copy(title = scrapedURI.title)
+          }
+          dbHelper.saveBookmark(updatedBookmark)
+        }
+        Future.sequence(???) flatMap { updatedBookmarks =>
           article.canonicalUrl.fold(Future.successful())(recordScrapedNormalization(latestUri, signature, _, article.alternateUrls)) flatMap { _ =>
             scrapedURI.id.fold(Future.successful[Option[String]](None))(id => shoeboxScraperClient.getUriImage(id))
           }
