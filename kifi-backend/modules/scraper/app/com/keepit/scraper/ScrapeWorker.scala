@@ -380,6 +380,7 @@ class ScrapeWorkerImpl @Inject() (
   }
 
   private def hasFishy301(movedUri: NormalizedURI): Future[Boolean] = {
+    log.info(s"[hasFishy301] determining if ${movedUri} is fishy.")
     if (movedUri.restriction == Some(Restriction.http(301))) {
       log.info(s"[hasFishy301] ${movedUri.id} was already fishy.")
       Future.successful(true)
