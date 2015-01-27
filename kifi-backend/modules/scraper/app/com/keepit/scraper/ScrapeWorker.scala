@@ -114,10 +114,8 @@ class ScrapeWorkerImpl @Inject() (
         val updatedBookmarks = bookmarks.map { bookmark =>
           val isShortenedUrl = URI.parse(bookmark.url).toOption.flatMap(_.host.map(_.name)).exists(shortenedUrls.contains)
           val updatedBookmark = if (isShortenedUrl) {
-            log.info(s"[handleSuccessfulScraped] Scraped ${scrapedURI.id}, bookmark ${bookmark.id} w/ no title/redirect url. ${bookmark.url} -> ${scrapedURI.url}")
             bookmark.copy(title = scrapedURI.title, url = scrapedURI.url)
           } else {
-            log.info(s"[handleSuccessfulScraped] Scraped ${scrapedURI.id}, bookmark ${bookmark.id} w/ no title. ${bookmark.url}")
             bookmark.copy(title = scrapedURI.title)
           }
           dbHelper.saveBookmark(updatedBookmark)
@@ -382,22 +380,20 @@ class ScrapeWorkerImpl @Inject() (
   private def hasFishy301(movedUri: NormalizedURI): Future[Boolean] = {
     log.info(s"[hasFishy301] determining if ${movedUri} is fishy.")
     if (movedUri.restriction == Some(Restriction.http(301))) {
-      log.info(s"[hasFishy301] ${movedUri.id} was already fishy.")
       Future.successful(true)
     } else {
       dbHelper.getLatestKeep(movedUri.url).map { keepOpt =>
         keepOpt.filter(_.keptAt.isAfter(currentDateTime.minusHours(1))) match {
           case Some(recentKeep) if !KeepSource.bulk.contains(recentKeep.source) =>
-            log.info(s"[hasFishy301] ${recentKeep.uriId} is not bulk, so is fishy.")
             true
           case Some(importedBookmark) =>
             val parsedBookmarkUrl = URI.parse(importedBookmark.url).get
-            val fetchStatusCode = httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP).statusCode
-            val result = (parsedBookmarkUrl != movedUri.url) && (fetchStatusCode != HttpStatus.SC_MOVED_PERMANENTLY)
-            log.info(s"[hasFishy301] ${importedBookmark.uriId} failed status code, so is fishy. ($fetchStatusCode)")
+            val fetched = httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP)
+            val fetchStatusCode = fetched.redirects.headOption.exists(_.isPermanent)
+            val result = (parsedBookmarkUrl.toString != movedUri.url) && (fetchStatusCode != HttpStatus.SC_MOVED_PERMANENTLY)
+            log.info(s"[hasFishy301] ${importedBookmark.uriId} failed status code, so is fishy. ($fetchStatusCode). ${parsedBookmarkUrl.toString} ${movedUri.url} :: ${fetched} :: ${fetched.destinationUrl} :: ${fetched.redirects}")
             result
           case None =>
-            log.info(s"[hasFishy301] ${movedUri.id} is not fishy.")
             false
         }
       }
