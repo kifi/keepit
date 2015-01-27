@@ -1,7 +1,5 @@
 package com.keepit.common.math
 
-import java.util.Arrays
-
 import scala.util.Random
 
 trait Sampler {

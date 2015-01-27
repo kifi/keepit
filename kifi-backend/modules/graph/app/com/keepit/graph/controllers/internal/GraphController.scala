@@ -132,13 +132,4 @@ class GraphController @Inject() (
       Ok(Json.toJson(res))
     }
   }
-
-  def enableSampler() = Action {
-    uriWanderingCommander.useSampler = true
-    Ok
-  }
-  def disableSampler() = Action {
-    uriWanderingCommander.useSampler = false
-    Ok
-  }
 }
