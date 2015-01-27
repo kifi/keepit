@@ -1,6 +1,6 @@
 package com.keepit.common.commanders
 
-import com.google.inject.{ ImplementedBy, Inject }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.core.ModelVersion
@@ -11,10 +11,8 @@ import com.keepit.model.{ NormalizedURI, User, Persona }
 
 @ImplementedBy(classOf[LDAPersonaCommanderImpl])
 trait LDAPersonaCommander {
-  def generatePersonaFeature(topicIds: Seq[LDATopic])(implicit version: ModelVersion[DenseLDA]): UserTopicMean
+  def generatePersonaFeature(topicIds: Seq[LDATopic])(implicit version: ModelVersion[DenseLDA]): (UserTopicMean, Int)
   def savePersonaFeature(pid: Id[Persona], feature: UserTopicMean)(implicit version: ModelVersion[DenseLDA]): PersonaLDAFeature
-  def userPersonaInducedURIScore(userId: Id[User], uri: Id[NormalizedURI]): LDAUserURIInterestScore
-  def batchUserPersonaInducedURIScore(userId: Id[User], uris: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores]
 }
 
 @Singleton
@@ -22,11 +20,10 @@ class LDAPersonaCommanderImpl @Inject() (
     db: Database,
     info: LDAInfoCommander,
     personaLDARepo: PersonaLDAFeatureRepo,
-    userLDARepo: UserLDAStatsRepo,
-    uriLDARepo: URILDATopicRepo) extends LDAPersonaCommander {
+    userLDARepo: UserLDAStatsRepo) extends LDAPersonaCommander {
 
   // admin operation. not optimized for performance
-  def generatePersonaFeature(topicIds: Seq[LDATopic])(implicit version: ModelVersion[DenseLDA]): UserTopicMean = {
+  def generatePersonaFeature(topicIds: Seq[LDATopic])(implicit version: ModelVersion[DenseLDA]): (UserTopicMean, Int) = {
     val dim = info.getLDADimension(version)
     val vecs = topicIds.distinct.flatMap { tid =>
       val topicVecs = db.readOnlyReplica { implicit s => userLDARepo.getByTopic(version, tid) }
@@ -40,20 +37,16 @@ class LDAPersonaCommanderImpl @Inject() (
       new Array[Float](dim)
     }
 
-    UserTopicMean(feature)
+    (UserTopicMean(feature), vecs.size)
   }
 
   def savePersonaFeature(pid: Id[Persona], feature: UserTopicMean)(implicit version: ModelVersion[DenseLDA]): PersonaLDAFeature = {
-    ???
+    db.readWrite { implicit s =>
+      val toSave = personaLDARepo.getPersonaFeature(pid, version) match {
+        case Some(model) => model.withFeature(feature)
+        case None => PersonaLDAFeature.create(pid, version, feature)
+      }
+      personaLDARepo.save(toSave)
+    }
   }
-
-  // admin check
-  def userPersonaInducedURIScore(userId: Id[User], uri: Id[NormalizedURI]): LDAUserURIInterestScore = {
-    ???
-  }
-
-  def batchUserPersonaInducedURIScore(userId: Id[User], uris: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
-    ???
-  }
-
 }
