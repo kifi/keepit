@@ -383,8 +383,7 @@ class ScrapeWorkerImpl @Inject() (
     if (movedUri.restriction == Some(Restriction.http(301))) {
       log.info(s"[hasFishy301] ${movedUri.id} was already fishy.")
       Future.successful(true)
-    }
-    else {
+    } else {
       dbHelper.getLatestKeep(movedUri.url).map { keepOpt =>
         keepOpt.filter(_.keptAt.isAfter(currentDateTime.minusHours(1))) match {
           case Some(recentKeep) if !KeepSource.bulk.contains(recentKeep.source) =>
