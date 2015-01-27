@@ -3,10 +3,12 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window',
-  'env', 'inviteService', 'keepWhoService', 'originTrackingService', 'profileService', 'userProfileActionService',
-  function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window,
-            env, inviteService, keepWhoService, originTrackingService, profileService, userProfileActionService) {
+  '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window', 'profile',
+  'env', 'inviteService', 'keepWhoService', 'originTrackingService', 'profileService',
+  'installService', 'modalService', 'initParams',
+  function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window, profile,
+            env, inviteService, keepWhoService, originTrackingService, profileService,
+            installService, modalService, initParams) {
 
     //
     // Internal data.
@@ -21,38 +23,23 @@ angular.module('kifi')
 
 
     //
-    // Scope data.
-    //
-    $scope.userProfileStatus = null;
-    $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
-    $scope.profile = null;
-    $scope.userLoggedIn = false;
-    $scope.viewingOwnProfile = false;
-
-
-    //
     // Internal functions.
     //
-    function init() {
-      $rootScope.$emit('libraryUrl', {});
-      var pageOrigin = originTrackingService.getAndClear();
-      var username = $stateParams.username;
 
-      userProfileActionService.getProfile(username).then(function (profile) {
-        $scope.userProfileStatus = 'found';
+    function showInstallModal() {
+      $scope.platformName = installService.getPlatformName();
+      if ($scope.platformName) {
+        $scope.thanksVersion = 'installExt';
+        $scope.installExtension = installService.triggerInstall;
+      } else {
+        $scope.thanksVersion = 'notSupported';
+      }
 
-        setTitle(profile);
-        initProfile(profile);
-        initViewingUserStatus();
-
-        // This function should be called last because some of the attributes
-        // that we're tracking are initialized by the above functions.
-        trackPageView(pageOrigin);
-      })['catch'](function () {
-        $scope.userProfileStatus = 'not-found';
+      $scope.close = modalService.close;
+      modalService.open({
+        template: 'signup/thanksForRegisteringModal.tpl.html',
+        scope: $scope
       });
-
-      $scope.currentPageOrigin = getCurrentPageOrigin();
     }
 
     function getCurrentPageOrigin() {
@@ -60,20 +47,8 @@ angular.module('kifi')
       return 'profilePage' +  (originContext ? '.' + originContext : '');
     }
 
-    function setTitle(profile) {
-      $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi' ;
-    }
-
-    function initProfile(profile) {
-      $scope.profile = _.cloneDeep(profile);
-      $scope.profile.picUrl = keepWhoService.getPicUrl($scope.profile, 200);
-    }
-
-    function initViewingUserStatus() {
-      $scope.viewingOwnProfile = $scope.profile.id === profileService.me.id;
-    }
-
-    function trackPageView(pageOrigin) {
+    function trackPageView() {
+      var pageOrigin = originTrackingService.getAndClear();
       var url = $analytics.settings.pageTracking.basePath + $location.url();
       var originsArray = (pageOrigin && pageOrigin.split('/')) || [];
 
@@ -106,6 +81,7 @@ angular.module('kifi')
     //
     // Scope methods.
     //
+
     $scope.trackUplCardClick = function (lib) {
       trackPageClick({
         action: 'clickedLibrary',
@@ -126,6 +102,7 @@ angular.module('kifi')
     //
     // Watches and listeners.
     //
+
     var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
       // When routing among the nested states, track page view again.
       if ((/^userProfile/.test(toState.name)) && (/^userProfile/.test(fromState.name)) && (toParams.username === fromParams.username)) {
@@ -141,8 +118,24 @@ angular.module('kifi')
     $scope.$on('$destroy', deregisterCurrentLibrary);
 
 
+    //
     // Initialize controller.
-    init();
+    //
+
+    $rootScope.$emit('libraryUrl', {});
+
+    $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi';
+    $scope.currentPageOrigin = getCurrentPageOrigin();
+    $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
+    $scope.profile = _.cloneDeep(profile);
+    $scope.profile.picUrl = keepWhoService.getPicUrl(profile, 200);
+    $scope.viewingOwnProfile = profile.id === profileService.me.id;
+
+    trackPageView();
+
+    if (initParams.install === '1' && !installService.installedVersion) {
+      showInstallModal();
+    }
   }
 ])
 
@@ -342,7 +335,7 @@ angular.module('kifi')
         platformService.goToAppOrStore(url + (url.indexOf('?') > 0 ? '&' : '?') + 'follow=true');
         return;
       } else if ($rootScope.userLoggedIn === false) {
-        return signupService.register({libraryId: lib.id});
+        return signupService.register({libraryId: lib.id, intent: 'follow', redirectPath: lib.path});
       }
       $event.target.disabled = true;
       libraryService[lib.following ? 'leaveLibrary' : 'joinLibrary'](lib.id)['catch'](function (resp) {

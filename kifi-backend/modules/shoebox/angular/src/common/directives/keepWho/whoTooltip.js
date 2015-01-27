@@ -64,7 +64,7 @@ angular.module('kifi')
           timeout = $timeout(function () {
             tooltip.css('visibility', 'visible');
             scope.tooltipEnabled = true;
-          }, 500);
+          });
         };
 
         scope.hideTooltip = function () {

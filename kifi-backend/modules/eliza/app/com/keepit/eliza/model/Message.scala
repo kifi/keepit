@@ -23,6 +23,12 @@ sealed trait MessageSender {
   def isSystem: Boolean = false
   def asUser: Option[Id[User]] = None
   def asNonUser: Option[NonUserParticipant] = None
+
+  def fold[T](systemF: () => T, userF: Id[User] => T, nonUserF: String => T): T = {
+    asUser.map(userF).
+      orElse { asNonUser.map(nup => nonUserF(nup.identifier)) }.
+      getOrElse { systemF() }
+  }
 }
 
 object MessageSender {
@@ -65,6 +71,9 @@ object MessageSender {
   case object System extends MessageSender {
     override def isSystem: Boolean = true
   }
+
+  def toMessageSenderView(messageSender: MessageSender): MessageSenderView =
+    messageSender.fold(MessageSenderSystemView, MessageSenderUserView, MessageSenderNonUserView)
 }
 
 case class MessageSource(value: String)
@@ -171,6 +180,13 @@ object Message {
       message.sentOnUriId,
       message.from.asNonUser.map(Json.toJson(_))
     ))
+  }
+
+  def toMessageView(message: Message): MessageView = {
+    MessageView(
+      from = MessageSender.toMessageSenderView(message.from),
+      messageText = message.messageText,
+      createdAt = message.createdAt)
   }
 }
 

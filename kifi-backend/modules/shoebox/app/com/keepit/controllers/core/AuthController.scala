@@ -309,12 +309,18 @@ class AuthController @Inject() (
     }
   }
 
-  def signup(provider: String) = Action.async(parse.anyContent) { implicit request =>
+  def signup(provider: String, redirect: Option[String] = None, intent: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map { result =>
       authHelper.authHandler(request, result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
-        result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
+        val res = result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
+
+        val cookies = Seq(
+          redirect.map(path => Cookie("redirect", path)),
+          intent.map(action => Cookie("intent", action))
+        ).flatten
+        res.withCookies(cookies: _*)
       }
     }
   }
@@ -396,7 +402,22 @@ class AuthController @Inject() (
         case ur: UserRequest[_] =>
           if (ur.user.state != UserStates.INCOMPLETE_SIGNUP) {
             // Complete user, they don't need to be here!
-            Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
+
+            val cookieRedirect = request.cookies.get("redirect")
+            if (cookieRedirect.isDefined) {
+              val redirectPath = java.net.URLDecoder.decode(cookieRedirect.get.value, "UTF-8")
+              val initParams = new StringBuilder("?m=0")
+
+              val cookieIntent = request.cookies.get("intent")
+              if (cookieIntent.isDefined) {
+                initParams ++= s"&intent=${cookieIntent.get.value}"
+              }
+              val discardedCookies = Seq(cookieRedirect, cookieIntent).flatten.map(c => DiscardingCookie(c.name))
+              Redirect(s"${redirectPath}${initParams.toString}").discardingCookies(discardedCookies: _*)
+            } else {
+              Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
+            }
+
           } else if (ur.identityOpt.isDefined) {
             val identity = ur.identityOpt.get
             // User exists, is incomplete

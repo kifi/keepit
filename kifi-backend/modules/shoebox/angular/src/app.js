@@ -28,17 +28,33 @@ angular.module('kifi', [
   appKey: 'r11loldy9zlg'
 })
 
+.constant('env', (function () {
+  var location = window.location;
+  var host = location.hostname;
+  var port = location.port;
+  var prod = host === 'www.kifi.com';
+  var local = !prod && port === '9000';
+  var origin = location.protocol + '//' + host  + (port ? ':' + port : '');
+  var navOrigin = local ? origin : 'https://www.kifi.com';
+
+  return {
+    local: local,
+    dev: !prod,
+    production: prod,
+    origin: origin,
+    navBase: navOrigin,
+    xhrBase: navOrigin + '/site',
+    xhrBaseEliza: navOrigin.replace('www', 'eliza') + '/eliza/site',
+    xhrBaseSearch: navOrigin.replace('www', 'search'),
+    picBase: (local ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net'
+  };
+}()))
+
 .config([
-  '$FBProvider',
-  function ($FBProvider) {
-    // We cannot inject `env` here since factories are not yet available in config blocks
-    // We can make `env` a constant if we want to remove duplicate codes, but
-    // then we cannot use $location inside `env` initialization
-    /* global window */
-    var host = window.location.host || window.location.hostname,
-      dev = /^dev\.ezkeep\.com|localhost$/.test(host);
+  '$FBProvider', 'env',
+  function ($FBProvider, env) {
     $FBProvider
-      .appId(dev ? '530357056981814' : '104629159695560')
+      .appId(env.dev ? '530357056981814' : '104629159695560')
       // https://developers.facebook.com/docs/facebook-login/permissions
       .scope('public_profile,user_friends,email')
       .cookie(true)
@@ -46,33 +62,10 @@ angular.module('kifi', [
   }
 ])
 
-.factory('env', [
-  '$location',
-  function ($location) {
-    var host = $location.host();
-    var dev = /^dev\.ezkeep\.com|localhost|^protractor\.kifi\.com$/.test(host);
-    var origin = $location.protocol() + '://' + host  + (dev ? ':' + $location.port() : '');
-    var local = $location.port() === 9000;
-    var navOrigin = dev && !local ? 'https://www.kifi.com' : origin;
-
-    return {
-      local: local,
-      dev: dev,
-      production: !dev,
-      origin: origin,
-      navBase: navOrigin,
-      xhrBase: navOrigin + '/site',
-      xhrBaseEliza: navOrigin.replace('www', 'eliza') + '/eliza/site',
-      xhrBaseSearch: navOrigin.replace('www', 'search'),
-      picBase: (local ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net'
-    };
-  }
-])
-
 .factory('initParams', [
   '$location',
   function ($location) {
-    var params = ['m', 'o', 'friend', 'subtype'];
+    var params = ['m', 'o', 'friend', 'subtype', 'install', 'intent'];
     var search = $location.search();
     var state = _.pick(search, params);
     if (!_.isEmpty(state)) {
@@ -82,32 +75,10 @@ angular.module('kifi', [
   }
 ])
 
-.factory('analyticsState', [
-  'initParams',
-  function (initParams) {
-    // this is a way to add custom event attributes analytics events that may
-    // be fired before the full state of the page is realized (like whether or
-    // not to load a directive that depends on initParams)
-    var attributes = {
-      events: {
-        user_viewed_page: {}
-      }
-    };
-
-    if (initParams.friend && /^[a-f0-9-]{36}$/.test(initParams.friend)) {
-      // naively assumes that state.friend is a valid externalId and the user
-      // will see the contact jointed banner
-      attributes.events.user_viewed_page.subtype = initParams.subtype || 'contactJoined';
-    }
-
-    return attributes;
-  }
-])
-
 .controller('AppCtrl', [
-  '$scope', 'profileService', '$window', '$rootScope', 'friendService', 'libraryService','$timeout', '$log',
+  '$scope', 'profileService', '$rootScope', 'friendService', 'libraryService', '$timeout', '$log',
   'platformService', '$rootElement', '$analytics', '$location', 'util',
-  function ($scope, profileService, $window, $rootScope, friendService, libraryService, $timeout, $log,
+  function ($scope, profileService, $rootScope, friendService, libraryService, $timeout, $log,
       platformService, $rootElement, $analytics, $location, util) {
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
 
@@ -138,6 +109,13 @@ angular.module('kifi', [
           }
         });
       }
+
+      $rootScope.$on('$stateChangeError', function (event, toState, toParams, fromState, fromParams, error) {
+        if (error && error.status === 404) {
+          event.preventDefault();  // stay in error state
+          $scope.errorStatus = 404;
+        }
+      });
     }
 
     start();

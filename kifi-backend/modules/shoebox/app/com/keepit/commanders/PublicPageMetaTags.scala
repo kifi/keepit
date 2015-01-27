@@ -1,8 +1,31 @@
 package com.keepit.commanders
 
-import com.keepit.model.URL
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.db.Id
+import com.keepit.common.logging.AccessLog
+import com.keepit.model.{ Username, User, Library, URL }
 import org.joda.time.DateTime
 import com.keepit.common.time.ISO_8601_DAY_FORMAT
+
+import scala.concurrent.duration.Duration
+
+case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
+  override val version = 18
+  val namespace = "library_metadata_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class UserMetadataKey(id: Id[User]) extends Key[String] {
+  override val version = 5
+  val namespace = "user_metadata_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class UserMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UserMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 /**
  * https://developers.facebook.com/docs/sharing/best-practices
@@ -30,22 +53,29 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
  * For twitter:creator we should use the creator twitter handle
  */
 trait PublicPageMetaTags {
-  def formatOpenGraph: String
+  def formatOpenGraphForLibrary: String
+  def formatOpenGraphForUser: String
 }
 
 case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMetaTags {
-  def formatOpenGraph: String =
+
+  def formatOpenGraphForLibrary: String = formatOpenGraph
+
+  def formatOpenGraphForUser: String = formatOpenGraph
+
+  private def formatOpenGraph: String =
     s"""
       |<meta name="robots" content="noindex">
       |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly">
       |<meta name="apple-mobile-web-app-capable" content="no">
       |<meta name="google-play-app" content="app-id=com.kifi">
     """.stripMargin
-
 }
 
-case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
-    createdAt: DateTime, updatedAt: DateTime, unsafeFirstName: String, unsafeLastName: String, noIndex: Boolean, related: Seq[String]) extends PublicPageMetaTags {
+case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String,
+    images: Seq[String], facebookId: Option[String], createdAt: DateTime, updatedAt: DateTime,
+    unsafeFirstName: String, unsafeLastName: String, profileUrl: String, noIndex: Boolean,
+    related: Seq[String]) extends PublicPageMetaTags {
 
   def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
 
@@ -55,48 +85,65 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   val lastName = clean(unsafeLastName)
   val fullName = s"$firstName $lastName"
 
-  def formatOpenGraph: String = {
-
-    def ogSeeAlso = related.take(6) map { link =>
-      s"""
+  private def ogSeeAlso: String = related.take(6) map { link =>
+    s"""
          |<meta property="og:see_also" content="$link">
        """.stripMargin
-    }
+  } mkString "\n"
 
-    def ogImageTags = images map { image =>
-      s"""
+  private def ogImageTags = images map { image =>
+    s"""
          |<meta property="og:image" content="$image">
          |<meta itemprop="image" content="$image">
        """.stripMargin.trim
-    } mkString ("\n")
+  } mkString "\n"
 
-    def twitterImageTags = images.headOption map { image =>
-      s"""
+  private def twitterImageTags = images.headOption map { image =>
+    s"""
         |<meta name="twitter:image:src" content="$image">
        """.stripMargin
-    } getOrElse ("")
+  } getOrElse ""
 
-    def facebookIdTag = facebookId.map { id =>
-      s"""<meta property="article:author" content="$id">"""
-    } getOrElse ""
+  private def facebookIdTag = facebookId.map { id =>
+    s"""<meta property="fb:profile_id" content="$id">"""
+  } getOrElse ""
 
-    def noIndexTag = if (noIndex) {
-      """
-        |<meta name="robots" content="noindex">
-      """.stripMargin
-    } else ""
+  private def noIndexTag = if (noIndex) {
+    """
+      |<meta name="robots" content="noindex">
+    """.stripMargin
+  } else ""
+
+  def formatOpenGraphForLibrary: String = {
+    formatOpenGraph(s"${PublicPageMetaTags.facebookNameSpace}:library") +
+      s"""
+      |<meta name="author" content="$firstName $lastName">
+      |<meta property="${PublicPageMetaTags.facebookNameSpace}:owner" content="$profileUrl">
+      |<meta property="og:updated_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}">
+      |$ogSeeAlso
+     """.stripMargin
+  }
+
+  def formatOpenGraphForUser: String = {
+    formatOpenGraph("profile") +
+      s"""
+      |<meta property="profile:first_name" content="$firstName">
+      |<meta property="profile:last_name" content="$lastName">
+      |$facebookIdTag
+     """.stripMargin
+  }
+
+  //  verify with https://developers.facebook.com/tools/debug/og/object/
+  private def formatOpenGraph(ogType: String): String = {
 
     s"""
-      |<title>${title}</title>
+      |<title>$title</title>
       |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly">
       |<meta name="apple-mobile-web-app-capable" content="no">
       |<meta name="google-play-app" content="app-id=com.kifi">
-      |<meta property="og:description" content="${description}">
-      |<meta property="og:title" content="${title}">
-      |<meta property="og:type" content="article">
-      |<meta name="author" content="${firstName} ${lastName}">
-      |<meta property="article:published_time" content="${ISO_8601_DAY_FORMAT.print(createdAt)}">
-      |<meta property="article:modified_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}">
+      |<meta property="og:description" content="$description">
+      |<meta property="og:title" content="$title">
+      |<meta property="og:type" content="$ogType">
       |<meta property="al:iphone:url" content="kifi:/$urlPathOnly">
       |<meta property="al:iphone:app_store_id" content="740232575">
       |<meta property="al:iphone:app_name" content="Kifi iPhone App">
@@ -105,11 +152,9 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |<meta property="al:android:app_name" content="Kifi Android App">
       |<meta property="al:android:class" content="com.kifi.SplashActivity">
       |$ogImageTags
-      |$facebookIdTag
-      |$ogSeeAlso
       |<meta property="og:url" content="$url">
       |<meta property="og:site_name" content="Kifi - Connecting People With Knowledge">
-      |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}">
+      |<meta property="fb:app_id" content="${PublicPageMetaTags.facebookAppId}">
       |<meta name="description" content="$description">
       |<link rel="canonical" href="$url">
       |<meta name="twitter:card" content="summary_large_image">
@@ -135,7 +180,8 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
 
 object PublicPageMetaTags {
   val siteName = "Kifi"
-  val appId = "104629159695560"
+  val facebookAppId = "104629159695560"
+  val facebookNameSpace = "fortytwoinc"
   /**
    * http://www.swellpath.com/2014/05/update-new-title-tag-meta-description-character-lengths/
    * Magic numbers:
@@ -143,7 +189,7 @@ object PublicPageMetaTags {
    * Google does not like descriptions with less then 60 characters
    * This function adds a bit of diversity to the description tags and tries to keep them longer then 70 characters.
    */
-  def generateMetaTagsDescription(description: Option[String], ownerName: String, libraryName: String, altDesc: Option[String]): String = {
+  def generateLibraryMetaTagDescription(description: Option[String], ownerName: String, libraryName: String, altDesc: Option[String]): String = {
     val base = description match {
       case None =>
         s"$ownerName's $libraryName Library"

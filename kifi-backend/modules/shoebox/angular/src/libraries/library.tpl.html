@@ -2,13 +2,12 @@
   <!-- Library page -->
   <div ng-if="(!librarySearch || !$root.userLoggedIn) && (page !== 'permission_denied' && page !== 'not_found') && initialized"
        class="kf-library-card-header-container">
-    <div kf-library-card
+    <div kf-library-header
       library="library"
       username="username"
       library-slug="librarySlug"
       loading="loading"
       toggle-edit="toggleEdit"
-      recommendation="false"
       library-search="librarySearch"
     ></div>
   </div>

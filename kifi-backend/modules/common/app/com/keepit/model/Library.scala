@@ -137,15 +137,6 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     updatedAt = lib.updatedAt, name = lib.name, description = lib.description)
 }
 
-case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
-  override val version = 9
-  val namespace = "library_metadata_by_id"
-  def toKey(): String = id.id.toString
-}
-
-class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
   override val version = 5
   val namespace = "library_by_id"

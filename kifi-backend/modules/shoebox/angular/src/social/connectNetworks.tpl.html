@@ -1,114 +1,114 @@
-<div class="social-connect" ng-show="data.show">
-  <div class="social-connect-title">Connect your social networks to Kifi</div>
-  <p class="social-connect-desc">Connect your networks to quickly find people you may know already using Kifi.</p>
-  <div class="social-connect-buttons">
+<div class="kf-social-connect">
+  <div class="kf-social-connect-title">Connect your social networks to Kifi</div>
+  <p class="kf-social-connect-desc">Connect your networks to quickly find people you may know already using Kifi.</p>
+  <div class="kf-social-connect-buttons">
 
     <!-- Facebook -->
-    <div class="social-connect-row">
+    <div class="kf-social-connect-row">
       <div ng-if="facebook.profileUrl">
-        <div class="social-connected-button facebook">Facebook Connected</div>
+        <div class="kf-social-connected-button kf-facebook">Facebook Connected</div>
 
-        <span class="social-notice-badge" ng-if="facebookStatus() === 'good'">
-          <span class="notice-button good"></span>
+        <span class="kf-social-notice-badge" ng-if="facebookStatus() === 'kf-good'">
+          <span class="kf-notice-button kf-good"></span>
         </span>
 
-        <span class="social-notice-badge" ng-if="facebookStatus() === 'refreshing'">
-          <span class="notice-message import">
-            <div class="bouncy-ball">
+        <span class="kf-social-notice-badge" ng-if="facebookStatus() === 'refreshing'">
+          <span class="kf-notice-message kf-import">
+            <div class="kf-bouncy-ball">
               <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
             </div>
             Importing your contacts
           </span>
         </span>
 
-        <span class="social-notice-badge" ng-if="facebookStatus() === 'expired'"  ng-click="connectFacebook()">
-          <span class="notice-button warn">×</span>
-          <span class="notice-message refresh">Refresh connection</span>
+        <span class="kf-social-notice-badge" ng-if="facebookStatus() === 'expired'"  ng-click="connectFacebook()">
+          <span class="kf-notice-button kf-warn">×</span>
+          <span class="kf-notice-message kf-refresh">Refresh connection</span>
         </span>
 
       </div>
       <div ng-if="!facebook.profileUrl">
-        <a class="social-connect-button facebook" href="javascript:" ng-click="connectFacebook()">Connect Facebook</a>
+        <a class="kf-social-connect-button kf-facebook" href="javascript:" ng-click="connectFacebook()">Connect Facebook</a>
       </div>
     </div>
 
     <!-- Twitter -->
-    <div class="social-connect-row" ng-if="onTwitterExperiment">
+    <div class="kf-social-connect-row" ng-if="onTwitterExperiment">
       <div ng-if="twitter.profileUrl">
-        <div class="social-connected-button twitter">Twitter Connected</div>
+        <div class="kf-social-connected-button kf-twitter">Twitter Connected</div>
 
-        <span class="social-notice-badge" ng-if="twitterStatus() === 'good'">
-          <span class="notice-button good"></span>
+        <span class="kf-social-notice-badge" ng-if="twitterStatus() === 'kf-good'">
+          <span class="kf-notice-button kf-good"></span>
         </span>
 
-        <span class="social-notice-badge" ng-if="twitterStatus() === 'refreshing'">
-          <span class="notice-message import">
-            <div class="bouncy-ball">
+        <span class="kf-social-notice-badge" ng-if="twitterStatus() === 'refreshing'">
+          <span class="kf-notice-message kf-import">
+            <div class="kf-bouncy-ball">
               <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
             </div>
             Importing your contacts
           </span>
         </span>
 
-        <span class="social-notice-badge" ng-if="twitterStatus() === 'expired'"  ng-click="connectTwitter()">
-          <span class="notice-button warn">×</span>
-          <span class="notice-message refresh">Refresh connection</span>
+        <span class="kf-social-notice-badge" ng-if="twitterStatus() === 'expired'"  ng-click="connectTwitter()">
+          <span class="kf-notice-button kf-warn">×</span>
+          <span class="kf-notice-message kf-refresh">Refresh connection</span>
         </span>
 
       </div>
       <div ng-if="!twitter.profileUrl">
-        <a class="social-connect-button twitter" href="javascript:" ng-click="connectTwitter()">Connect Twitter</a>
+        <a class="kf-social-connect-button kf-twitter" href="javascript:" ng-click="connectTwitter()">Connect Twitter</a>
       </div>
     </div>
 
     <!-- LinkedIn -->
-    <div class="social-connect-row">
+    <div class="kf-social-connect-row">
       <div ng-if="linkedin.profileUrl">
-        <div class="social-connected-button linkedin">LinkedIn Connected</div>
+        <div class="kf-social-connected-button kf-linkedin">LinkedIn Connected</div>
 
-        <span class="social-notice-badge" ng-if="linkedinStatus() === 'good'">
-          <span class="notice-button good"></span>
+        <span class="kf-social-notice-badge" ng-if="linkedinStatus() === 'kf-good'">
+          <span class="kf-notice-button kf-good"></span>
         </span>
 
-        <span class="social-notice-badge" ng-if="linkedinStatus() === 'refreshing'">
-          <span class="notice-message import">
-            <div class="bouncy-ball">
+        <span class="kf-social-notice-badge" ng-if="linkedinStatus() === 'refreshing'">
+          <span class="kf-notice-message kf-import">
+            <div class="kf-bouncy-ball">
               <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
             </div>
             Importing your contacts
           </span>
         </span>
 
-        <span class="social-notice-badge" ng-if="linkedinStatus() === 'expired'"  ng-click="connectLinkedIn()">
-          <span class="notice-button warn">×</span>
-          <span class="notice-message refresh">Refresh connection</span>
+        <span class="kf-social-notice-badge" ng-if="linkedinStatus() === 'expired'"  ng-click="connectLinkedIn()">
+          <span class="kf-notice-button kf-warn">×</span>
+          <span class="kf-notice-message kf-refresh">Refresh connection</span>
         </span>
 
       </div>
       <div ng-if="!linkedin.profileUrl">
-        <a class="social-connect-button linkedin" href="javascript:" ng-click="connectLinkedIn()">Connect LinkedIn</a>
+        <a class="kf-social-connect-button kf-linkedin" href="javascript:" ng-click="connectLinkedIn()">Connect LinkedIn</a>
       </div>
     </div>
 
 
     <!-- Gmail -->
-    <div class="social-connect-row" ng-if="gmail.length === 0">
-      <a class="social-connect-button gmail" href="javascript:" ng-click="importGmail()">Connect Gmail</a>
+    <div class="kf-social-connect-row" ng-if="gmail.length === 0">
+      <a class="kf-social-connect-button kf-gmail" href="javascript:" ng-click="importGmail()">Connect Gmail</a>
     </div>
 
     <div ng-repeat="account in gmail" ng-if="gmail.length > 0">
-      <div class="social-connect-row social-extended">
-        <div class="social-connected-button gmail">
+      <div class="kf-social-connect-row kf-social-extended">
+        <div class="kf-social-connected-button kf-gmail">
           Gmail Connected
-          <div class="social-account-name">{{account.ownerEmail}}</div>
+          <div class="kf-social-account-name">{{account.ownerEmail}}</div>
         </div>
-        <span class="social-notice-badge">
-          <span class="notice-button good"></span>
+        <span class="kf-social-notice-badge">
+          <span class="kf-notice-button kf-good"></span>
         </span>
       </div>
     </div>
 
-    <div class="social-more-accounts" ng-if="gmail.length > 0" ng-click="importGmail()">Refresh/Add more Gmail accounts</div>
+    <div class="kf-social-more-accounts" ng-if="gmail.length > 0" ng-click="importGmail()">Refresh/Add more Gmail accounts</div>
 
   </div>
 </div>

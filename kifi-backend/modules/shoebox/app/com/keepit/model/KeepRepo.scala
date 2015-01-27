@@ -8,7 +8,7 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 import com.keepit.common.logging.Logging
-import com.keepit.commanders.WhoKeptMyKeeps
+import com.keepit.commanders.{ LibraryMetadataKey, LibraryMetadataCache, WhoKeptMyKeeps }
 import com.keepit.common.core._
 
 @ImplementedBy(classOf[KeepRepoImpl])

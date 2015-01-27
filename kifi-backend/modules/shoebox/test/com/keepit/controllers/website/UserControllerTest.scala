@@ -1,5 +1,7 @@
 package com.keepit.controllers.website
 
+import com.keepit.commanders.UserConnectionsCommander
+import com.keepit.common.time._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.LibraryInviteFactory._
@@ -29,6 +31,7 @@ import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsNull, Json }
 import play.api.mvc.Result
@@ -41,6 +44,7 @@ import scala.slick.jdbc.StaticQuery
 class UserControllerTest extends Specification with ShoeboxTestInjector {
 
   val controllerTestModules = Seq(
+    FakeClockModule(),
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
@@ -271,19 +275,23 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
 
     "get friends" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val userConnectionRepo = inject[UserConnectionRepo]
         val (userGW, userAL, userTJ, userJA, userBF) = db.readWrite { implicit session =>
           val userGW = userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GDubs"), normalizedUsername = "gdubs"))
           val userAL = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("abe"), normalizedUsername = "abe"))
           val userTJ = userRepo.save(User(firstName = "Thomas", lastName = "Jefferson", username = Username("TJ"), normalizedUsername = "tj"))
           val userJA = userRepo.save(User(firstName = "John", lastName = "Adams", username = Username("jayjayadams"), normalizedUsername = "jayjayadams"))
           val userBF = userRepo.save(User(firstName = "Ben", lastName = "Franklin", username = Username("Benji"), normalizedUsername = "benji"))
-          userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userAL.id.get))
-          userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userTJ.id.get))
-          userConnectionRepo.save(UserConnection(user1 = userJA.id.get, user2 = userGW.id.get))
+          val userConnectionRepo = inject[UserConnectionRepo]
+          val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
+          userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userAL.id.get, createdAt = now.plusDays(1)))
+          userConnectionRepo.save(UserConnection(user1 = userGW.id.get, user2 = userTJ.id.get, createdAt = now.plusDays(2)))
+          userConnectionRepo.save(UserConnection(user1 = userJA.id.get, user2 = userGW.id.get, createdAt = now.plusDays(3)))
           (userGW, userAL, userTJ, userJA, userBF)
         }
         val userController = inject[UserController]
+
+        val connections = inject[UserConnectionsCommander].getConnectionsPage(userGW.id.get, 0, 5)._1
+        connections.map(_.userId) === Seq(userJA.id.get, userTJ.id.get, userAL.id.get)
 
         inject[FakeUserActionsHelper].setUser(userGW)
         val request1 = FakeRequest("GET", routes.UserController.friends().url)
@@ -292,13 +300,12 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result1) must beSome("application/json")
         val resultJson = contentAsJson(result1)
         val resultIds = (resultJson \\ "id").map(_.as[ExternalId[User]])
-        resultIds === List(userAL.externalId, userTJ.externalId, userJA.externalId)
+        resultIds === List(userJA.externalId, userTJ.externalId, userAL.externalId)
       }
     }
 
     "get profile for self" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val userConnectionRepo = inject[UserConnectionRepo]
         val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
           val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
           val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved

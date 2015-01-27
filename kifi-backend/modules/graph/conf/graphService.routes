@@ -9,7 +9,4 @@ GET     /internal/graph/getUserAndScorePairs @com.keepit.graph.controllers.inter
 GET     /internal/graph/getSociallyRelatedEntities  @com.keepit.graph.controllers.internal.GraphController.getSociallyRelatedEntities(userId: Id[User])
 POST    /internal/graph/explainFeed                      @com.keepit.graph.controllers.internal.GraphController.explainFeed
 
-GET     /internal/graph/enableSampler   @com.keepit.graph.controllers.internal.GraphController.enableSampler()
-GET     /internal/graph/disableSampler  @com.keepit.graph.controllers.internal.GraphController.disableSampler()
-
 ->  / commonService.Routes

@@ -44,3 +44,14 @@ case class UserThread(
     s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed, replyable = $replyable]"
 }
 
+object UserThread {
+  def toUserThreadView(userThread: UserThread, messages: Seq[Message], messageThread: MessageThread): UserThreadView = {
+    UserThreadView(
+      pageTitle = messageThread.pageTitle,
+      uriId = userThread.uriId,
+      lastSeen = userThread.lastSeen,
+      notificationUpdatedAt = userThread.notificationUpdatedAt,
+      messages = messages map Message.toMessageView
+    )
+  }
+}

@@ -8,6 +8,9 @@
       <a href="{{library.absPath}}" ng-click="onLibraryAttributionClicked($event)">
         <span class="kf-keep-who-lib">{{library.name}}</span>
       </a>
+      <span kf-tooltip position="top" padding="10">
+        <span kf-library-mini-card library="library"></span>
+      </span>
     </span>
   </span>
   <span ng-if="isBot" class="kf-keep-who-pic-box">

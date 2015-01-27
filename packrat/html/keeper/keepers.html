@@ -4,6 +4,7 @@
     <div class="kifi-keepers-libs">
     {{#libs}}
       <a class="kifi-keepers-lib" href="{{origin}}/{{owner.username}}/{{slug}}" target="_blank" tabindex="-1">
+        <div class="kifi-keepers-lib-icon"{{#color}} style="background-color:{{color}}"{{/color}}></div>
         <img class="kifi-keepers-lib-owner-pic" src="{{{cdnBase}}}/users/{{owner.id}}/pics/100/{{owner.pictureName}}"/>
         <div class="kifi-keepers-lib-name">{{name}}</div>
         <span class="kifi-keepers-lib-keeps" data-n="{{keeps}}">{{keeps}} keep</span>

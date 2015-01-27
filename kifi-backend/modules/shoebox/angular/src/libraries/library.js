@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
-  'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'util',
+  'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'util', 'initParams', 'installService',
   function ($scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
-    keepDecoratorService, libraryService, modalService, platformService, profileService, util) {
+    keepDecoratorService, libraryService, modalService, platformService, profileService, util, initParams, installService) {
     //
     // Internal data.
     //
@@ -14,10 +14,29 @@ angular.module('kifi')
     var prePopulated = false;
     var authToken = $location.search().authToken || '';
 
-
     //
     // Internal functions
     //
+    function showInstallModal() {
+      $scope.platformName = installService.getPlatformName();
+      if ($scope.platformName) {
+        $scope.thanksVersion = 'installExt';
+        $scope.installExtension = installService.triggerInstall;
+      } else {
+        $scope.thanksVersion = 'notSupported';
+      }
+
+      if ($scope.library.id) {
+        $rootScope.$emit('trackLibraryEvent', 'view', { type: 'installLibrary' });
+      }
+
+      $scope.close = modalService.close;
+      modalService.open({
+        template: 'signup/thanksForRegisteringModal.tpl.html',
+        scope: $scope
+      });
+    }
+
     function trackPageView(attributes) {
       var url = $analytics.settings.pageTracking.basePath + $location.url();
       var library = $scope.library;
@@ -132,6 +151,12 @@ angular.module('kifi')
           $scope.relatedLibraries = libraries;
           trackPageView({ libraryRecCount: libraries.length });
           $rootScope.$broadcast('relatedLibrariesChanged', $scope.library, libraries);
+          if (initParams.install === '1' && !installService.installedVersion) {
+            showInstallModal();
+          }
+          if (initParams.intent === 'follow' && $scope.library.access === 'none') {
+            libraryService.joinLibrary($scope.library.id);
+          }
         });
       }
     });

@@ -386,48 +386,8 @@ class LDACommander @Inject() (
   }
 
   def getSimilarLibraries(libId: Id[Library], limit: Int)(implicit version: ModelVersion[DenseLDA]): Seq[Id[Library]] = {
-
-    def getCandidates(libId: Id[Library], feat: LibraryLDATopic): Seq[LibraryLDATopic] = {
-      val first = feat.firstTopic.get
-      val candidates = db.readOnlyReplica { implicit s => libTopicRepo.getLibraryByTopics(firstTopic = first, version = version, limit = 50) }
-      candidates.filter(_.libraryId != libId)
-    }
-
-    def rankCandidates(feat: LibraryLDATopic, candidates: Seq[LibraryLDATopic]): Seq[Id[Library]] = {
-      val topicBitSet = new BitSet(feat.topic.get.value.size)
-      List(feat.firstTopic.get, feat.secondTopic.get, feat.thirdTopic.get).foreach { t => topicBitSet.set(t.index) }
-
-      val idsAndScores = Seq.tabulate(candidates.size) { i =>
-        val candidate = candidates(i)
-        val id = candidate.libraryId
-        val score = 1.0 - KL_divergence(feat.topic.get.value, candidate.topic.get.value) // score is higher the better
-        val (same2, same3) = (candidate.secondTopic == feat.secondTopic, candidate.thirdTopic == feat.thirdTopic)
-        val boost = (same2, same3) match {
-          case (true, true) => 2f // full match
-          case (true, false) | (false, true) => 1.5f // exact 1 match
-          case (false, false) =>
-            val interCnt = List(candidate.secondTopic.get.index, candidate.thirdTopic.get.index).count(topicBitSet.get(_))
-            interCnt match {
-              case 2 => 1.5f // permuted 2 matches
-              case 1 => 1f // permuted 1 match
-              case 0 => 0f // no match
-            }
-        }
-        (id, score * boost)
-      }
-      idsAndScores.filter(_._2 > 0).sortBy(-_._2).map { _._1 }
-    }
-
-    val libFeatOpt = db.readOnlyReplica { implicit s => libTopicRepo.getActiveByLibraryId(libId, version) }
-    libFeatOpt match {
-      case None => Seq()
-      case Some(feat) =>
-        val candidates = getCandidates(libId, feat)
-        val ranked = rankCandidates(feat, candidates)
-        val additional = if (ranked.size < limit) {
-          db.readOnlyReplica { implicit s => ldaRelatedLibRepo.getNeighborIdsAndWeights(libId, version) }.sortBy(-_._2).map { _._1 }.take(limit - ranked.size)
-        } else Seq()
-        (ranked.take(limit) ++ additional).distinct
+    db.readOnlyReplica { implicit s =>
+      ldaRelatedLibRepo.getTopNeighborIdsAndWeights(libId, version, limit).map { _._1 }
     }
   }
 }

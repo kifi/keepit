@@ -4,7 +4,7 @@ import java.net.{ URLDecoder, URLEncoder }
 
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.google.inject.{ Provider, Inject, Singleton }
-import com.keepit.commanders.{ PageMetaTagsCommander, UserCommander, LibraryCommander }
+import com.keepit.commanders._
 import com.keepit.common.core._
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
@@ -125,7 +125,8 @@ class AngularRouter @Inject() (
     pageMetaTagsCommander: PageMetaTagsCommander,
     libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier,
-    libraryMetadataCache: LibraryMetadataCache) {
+    libraryMetadataCache: LibraryMetadataCache,
+    userMetadataCache: UserMetadataCache) {
 
   def route(request: MaybeUserRequest[_], path: Path, userAgent: UserAgent): Option[Routeable] = {
     ngStaticPage(request, path) orElse userOrLibrary(request, path, userAgent)
@@ -164,9 +165,9 @@ class AngularRouter @Inject() (
             val redir = "/" + (user.username.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
             if (isUserAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
           } else if (path.split.length == 1) { // user profile page
-            Some(Angular(Some(Future.successful("<meta name=\"robots\" content=\"noindex\">"))))
+            Some(Angular(Some(userMetadata(user))))
           } else if (path.split.length == 3 && path.split(1) == "libraries" && (path.split(2) == "following" || path.split(2) == "invited")) { // user profile page (nested routes)
-            Some(Angular(Some(Future.successful("<meta name=\"robots\" content=\"noindex\">"))))
+            Some(Angular(Some(userMetadata(user))))
           } else {
             path.secondary.flatMap { secondary =>
               libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(secondary)).map {
@@ -189,9 +190,19 @@ class AngularRouter @Inject() (
     }
   }
 
+  private def userMetadata(user: User): Future[String] = try {
+    userMetadataCache.getOrElseFuture(UserMetadataKey(user.id.get)) {
+      pageMetaTagsCommander.userMetaTags(user).imap(_.formatOpenGraphForUser)
+    }
+  } catch {
+    case e: Throwable =>
+      airbrake.notify(s"on getting library metadata for $user", e)
+      Future.successful("")
+  }
+
   private def libMetadata(library: Library): Future[String] = try {
     libraryMetadataCache.getOrElseFuture(LibraryMetadataKey(library.id.get)) {
-      pageMetaTagsCommander.libraryMetaTags(library).imap(_.formatOpenGraph)
+      pageMetaTagsCommander.libraryMetaTags(library).imap(_.formatOpenGraphForLibrary)
     }
   } catch {
     case e: Throwable =>

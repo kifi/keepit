@@ -386,6 +386,7 @@ button.manage-lib-delete-button
 
 .manage-lib-default-content
   position: absolute
+  height: 100%
   background-color: #fff
   transition: margin ease 0.5s
   z-index: 1060
@@ -395,8 +396,9 @@ button.manage-lib-delete-button
 
 .manage-lib-members-content
   position: relative
-  margin-top: 10px
-  height: 100%
+  margin-top = 10px
+  margin-top: margin-top
+  height: 'calc(100% - %s)' % margin-top
   overflow-y: auto
   overflow-x: hidden
 
