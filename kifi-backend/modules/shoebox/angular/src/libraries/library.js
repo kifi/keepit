@@ -5,9 +5,10 @@ angular.module('kifi')
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window', 'util', 'initParams', 'library',
   'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'originTrackingService', 'installService',
+  'abTestService',
   function ($scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window, util, initParams, library,
-    keepDecoratorService, libraryService, modalService, platformService, profileService, originTrackingService, installService) {
-
+    keepDecoratorService, libraryService, modalService, platformService, profileService, originTrackingService, installService,
+    abTestService) {
     //
     // Internal data.
     //
@@ -153,8 +154,28 @@ angular.module('kifi')
     //
     // Watches and listeners.
     //
-    [  // TODO: indent two spaces within this array
 
+    $scope.$watch('library.id', function (id) {
+      $rootScope.$broadcast('currentLibraryChanged', $scope.library);
+
+      if (id) {
+        $scope.library.abTestExperiment = abTestService.getExperiment('1') || null;
+
+        libraryService.getRelatedLibraries(id, profileService.me.id).then(function (libraries) {
+          $scope.relatedLibraries = libraries;
+          trackPageView({ libraryRecCount: libraries.length });
+          $rootScope.$broadcast('relatedLibrariesChanged', $scope.library, libraries);
+          if (initParams.install === '1' && !installService.installedVersion) {
+            showInstallModal();
+          }
+          if (initParams.intent === 'follow' && $scope.library.access === 'none') {
+            libraryService.joinLibrary($scope.library.id);
+          }
+        });
+      }
+    });
+
+    [  // TODO: indent two spaces within this array
     $rootScope.$on('keepAdded', function (e, libSlug, keeps, library) {
       keeps.forEach(function (keep) {
         // checks if the keep was added to the secret library from main or

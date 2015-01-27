@@ -141,6 +141,10 @@ angular.module('kifi')
             scope.coverImageUrl = env.picBase + '/' + image.path;
             scope.coverImagePos = formatCoverImagePos(image);
           }
+
+          scope.library.followButtonText = (scope.library.abTestExperiment && !scope.library.abTestExperiment.treatment_is_control) ?
+            scope.library.abTestExperiment.treatment_data.buttonText :
+            'Follow Library';
         }
 
         function augmentFollower(follower) {

@@ -366,6 +366,10 @@ angular.module('kifi')
           source: 'site'
         };
 
+        if (library.abTestExperiment) {
+          defaultAttributes[library.abTestExperiment.name] = library.abTestExperiment.treatment_name;
+        }
+
         if (library.visibility === 'published') {
           defaultAttributes.libraryName = library.name;
         }
