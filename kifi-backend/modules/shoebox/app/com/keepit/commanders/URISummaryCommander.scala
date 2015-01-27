@@ -144,7 +144,7 @@ class URISummaryCommander @Inject() (
    */
   private def fetchSummaryForRequest(nUri: NormalizedURIRef): Future[Option[URISummary]] = {
     log.info(s"fetchSummaryForRequest for ${nUri.id} -> ${nUri.url}")
-    val stopper = Stopwatch("fetching from scraper embedly info for ${nUri.id} -> ${nUri.url}")
+    val stopper = Stopwatch(s"fetching from scraper embedly info for ${nUri.id} -> ${nUri.url}")
     val future = fetchFromEmbedly(nUri)
     future.onComplete { res =>
       stopper.stop() tap { _ => log.info(stopper.toString) }

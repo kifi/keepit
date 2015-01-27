@@ -20,7 +20,8 @@ case class RawTweet(
   inReplyToUserId: Option[RawTweet.TwitterId],
   inReplyToScreenName: Option[String],
   lang: Option[String], // BCP 47
-  possiblySensitive: Option[Boolean])
+  possiblySensitive: Option[Boolean],
+  originalJson: JsValue)
 object RawTweet {
   implicit def format: Reads[RawTweet] = (
     (__ \ 'id_str).read[RawTweet.TwitterId] and
@@ -36,7 +37,10 @@ object RawTweet {
     (__ \ 'in_reply_to_user_id_str).readNullable[RawTweet.TwitterId] and
     (__ \ 'in_reply_to_screen_name).readNullable[String] and
     (__ \ 'lang).readNullable[String] and
-    (__ \ 'possibly_sensitive).readNullable[Boolean]
+    (__ \ 'possibly_sensitive).readNullable[Boolean] and
+    new Reads[JsValue] {
+      def reads(json: JsValue): JsResult[JsValue] = JsSuccess(json)
+    }
   )(RawTweet.apply _)
 
   // This is because Play json has a bug with recursive types

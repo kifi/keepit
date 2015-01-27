@@ -1,5 +1,7 @@
 package com.keepit.controllers.website
 
+import java.net.URLConnection
+
 import com.keepit.classify.{ Domain, DomainRepo, DomainStates }
 import com.keepit.commanders.{ KeepsCommander, KeepInterner, UserCommander }
 import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
@@ -17,7 +19,7 @@ import com.google.inject.Inject
 import play.api.mvc.{ MaxSizeExceeded, Request }
 import scala.util.{ Try, Failure, Success }
 import org.jsoup.Jsoup
-import java.io.{ BufferedWriter, FileWriter, FileOutputStream, File }
+import java.io._
 import com.keepit.common.db.Id
 import java.util.UUID
 import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContextBuilder }
@@ -28,14 +30,8 @@ import org.apache.commons.io.{ Charsets, IOUtils, FileUtils }
 import com.keepit.common.performance._
 
 import org.joda.time.DateTime
-import java.util.zip.ZipFile
-import java.io.FileInputStream
-import java.io.FileOutputStream
+import java.util.zip.{ ZipInputStream, ZipFile, ZipEntry }
 import scala.collection.JavaConversions._
-import java.util.zip.ZipEntry
-import java.io.InputStream
-import java.io.OutputStream
-import java.io.File
 
 class BookmarkImporter @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -57,9 +53,19 @@ class BookmarkImporter @Inject() (
 
         Try(bookmarks.file)
           .flatMap({ file =>
-            if (file.getAbsolutePath.endsWith(".zip")) {
+            val isZipped = Try {
+              val zip = new ZipFile(file)
+              val isZipped = zip.entries().toStream.exists { ze =>
+                ze.getName.startsWith("data/js/tweets")
+              }
+              zip.close()
+              isZipped
+            }.getOrElse(false)
+            if (isZipped) {
+              log.info(s"[bmFileImport:$id] Twitter import, ${file.getAbsoluteFile}")
               parseTwitterArchive(file)
             } else {
+              log.info(s"[bmFileImport:$id] Netscape import, ${file.getAbsoluteFile}")
               parseNetscapeBookmarks(file)
             }
           }).map {
@@ -71,15 +77,6 @@ class BookmarkImporter @Inject() (
               log.info(s"Successfully processed bookmark file import for ${request.userId}. $keepSize keeps processed, $tagSize tags.")
               Ok(s"""{"done": "kindly let the user know that it is working and may take a sec", "count": $keepSize}""")
             case Failure(oops) =>
-              // todo(Andrew): Remove this soon, or anonymize it. This is here to isolate some issues.
-              val file: File = new File(s"bad-bookmarks-${request.userId}.html")
-              try {
-                FileUtils.copyFile(bookmarks.file, file)
-              } catch {
-                case ex: Throwable =>
-                  log.error("[bmFileImport:$id] Tried to write failed file to disk, failed again. Sigh.", ex)
-              }
-
               log.info(s"[bmFileImport:$id] Failure (ex) in ${clock.getMillis() - startMillis}ms")
               log.error(s"Could not import bookmark file for ${request.userId}, had an exception.", oops)
               BadRequest(s"""{"error": "couldnt_complete", "message": "${oops.getMessage}"}""")
@@ -114,9 +111,9 @@ class BookmarkImporter @Inject() (
       tagStr.trim -> timing(s"uploadBookmarkFile(${lf.request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(lf.request.userId, tagStr.trim)(context) }
     }.toMap
     val taggedKeeps = parsed.map {
-      case Bookmark(t, h, tagNames, createdDate) =>
+      case Bookmark(t, h, tagNames, createdDate, originalJson) =>
         val keepTags = tagNames.map(tags.get).flatten.map(_.id.get) :+ importTag.id.get
-        (t, h, keepTags, createdDate)
+        BookmarkWithTagIds(t, h, keepTags, createdDate, originalJson)
     }
     log.info(s"[bmFileImport:${lf.id}] Tags extracted in ${clock.getMillis() - lf.startMillis}ms")
 
@@ -183,7 +180,7 @@ class BookmarkImporter @Inject() (
         // This may be useful in the future, but we currently are not using them:
         // val lastVisitDate = Option(elem.attr("last_visit"))
 
-        Bookmark(Some(title), href, tagList, createdDate)
+        Bookmark(Some(title), href, tagList, createdDate, Some(Json.obj("href" -> elem.html())))
       }
     }.toList.flatten
     (source, extracted)
@@ -197,7 +194,7 @@ class BookmarkImporter @Inject() (
         case tweet if tweet.entities.urls.nonEmpty =>
           val tags = tweet.entities.hashtags.map(_.text).toList
           tweet.entities.urls.map { url =>
-            Bookmark(title = None, href = url.expandedUrl, tags = tags, createdDate = Some(tweet.createdAt))
+            Bookmark(title = None, href = url.expandedUrl, tags = tags, createdDate = Some(tweet.createdAt), originalJson = Some(tweet.originalJson))
           }
       }.flatten
     }.flatten
@@ -223,10 +220,10 @@ class BookmarkImporter @Inject() (
     }
   }
 
-  private def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: Seq[(Option[String], String, List[Id[Collection]], Option[DateTime])], libraryId: Id[Library]) = {
+  private def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: Seq[BookmarkWithTagIds], libraryId: Id[Library]) = {
     val importId = UUID.randomUUID.toString
     val rawKeeps = bookmarks.map {
-      case (title, href, tagIds, createdDate) =>
+      case BookmarkWithTagIds(title, href, tagIds, createdDate, originalJson) =>
         val titleOpt = if (title.nonEmpty && title.exists(_.nonEmpty)) Some(title.get) else None
         val tags = tagIds.map(_.id.toString).mkString(",") match {
           case s if s.isEmpty => None
@@ -239,7 +236,7 @@ class BookmarkImporter @Inject() (
           isPrivate = true,
           importId = Some(importId),
           source = source.getOrElse(KeepSource.bookmarkFileImport),
-          originalJson = None,
+          originalJson = originalJson,
           installationId = None,
           tagIds = tags,
           libraryId = Some(libraryId),
@@ -250,4 +247,5 @@ class BookmarkImporter @Inject() (
 
 }
 
-case class Bookmark(title: Option[String], href: String, tags: List[String], createdDate: Option[DateTime])
+case class Bookmark(title: Option[String], href: String, tags: List[String], createdDate: Option[DateTime], originalJson: Option[JsValue])
+case class BookmarkWithTagIds(title: Option[String], href: String, tags: List[Id[Collection]], createdAt: Option[DateTime], originalJson: Option[JsValue])
