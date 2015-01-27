@@ -81,7 +81,7 @@ f = open('bookmarks.html', 'r')
 bookmarks = f.read()
 f.close()
 payload = {'file': bookmarks}
-url = 'https://www.kifi.com/site/keeps/file-import?public=1'
+url = 'https://www.kifi.com/site/libraries/lB8BIuUOCTi3/import-file'
 
 files = {'file': ('bookmarks.html', open('bookmarks.html', 'rb'), 'text/html', {'Expires': '0'})}
 r = requests.post(url, files=files, cookies=cookies)

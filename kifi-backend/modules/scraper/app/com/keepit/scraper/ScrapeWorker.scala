@@ -369,7 +369,7 @@ class ScrapeWorkerImpl @Inject() (
     else {
       dbHelper.getLatestKeep(movedUri.url).map { keepOpt =>
         keepOpt.filter(_.createdAt.isAfter(currentDateTime.minusHours(1))) match {
-          case Some(recentKeep) if recentKeep.source != KeepSource.bookmarkImport => true
+          case Some(recentKeep) if !KeepSource.bulk.contains(recentKeep.source) => true
           case Some(importedBookmark) =>
             val parsedBookmarkUrl = URI.parse(importedBookmark.url).get
             (parsedBookmarkUrl != movedUri.url) && (httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP).statusCode != HttpStatus.SC_MOVED_PERMANENTLY)
