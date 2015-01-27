@@ -239,6 +239,10 @@ object KeepSource {
 
   val imports = Set(bookmarkImport, kippt, pocket, instapaper, bookmarkFileImport, twitterFileImport)
 
+  // Sources that are from users uploading files, bulk actions, inputting URLs, etc.
+  // These may be old links
+  val bulk = Set(site, bookmarkImport, kippt, pocket, instapaper, bookmarkFileImport, twitterFileImport, userCopied, unknown)
+
   def get(value: String): KeepSource = KeepSource(value) match {
     case KeepSource("HOVER_KEEP") => keeper
     case KeepSource("INIT_LOAD") => bookmarkImport
