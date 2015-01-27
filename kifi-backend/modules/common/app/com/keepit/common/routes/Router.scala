@@ -340,8 +340,8 @@ object Scraper extends Service {
 }
 
 object Cortex extends Service {
-
-  type LDAVersionOpt = Option[ModelVersion[DenseLDA]]
+  type LDAVersion = ModelVersion[DenseLDA]
+  type LDAVersionOpt = Option[LDAVersion]
 
   object internal {
     def word2vecSimilairty(word1: String, word2: String) = ServiceRoute(GET, "/internal/cortex/word2vec/wordSimilarity", Param("word1", word1), Param("word2", word2))
@@ -374,6 +374,8 @@ object Cortex extends Service {
     def userLibrariesScores(userId: Id[User])(implicit version: LDAVersionOpt) = ServiceRoute(POST, "/internal/cortex/lda/userLibrariesScores", Param("userId", userId), Param("version", version))
     def similarURIs(uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/similarURIs", Param("uriId", uriId), Param("version", version))
     def similarLibraries(libId: Id[Library], limit: Int)(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/similarLibraries", Param("libId", libId), Param("limit", limit), Param("version", version))
+    def generatePersonaFeature(implicit version: ModelVersion[DenseLDA]) = ServiceRoute(POST, "/internal/cortex/lda/generatePersonaFeature", Param("version", version))
+    def savePersonaFeature(implicit version: ModelVersion[DenseLDA]) = ServiceRoute(POST, "/internal/cortex/lda/savePersonaFeature", Param("version", version))
 
     def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }

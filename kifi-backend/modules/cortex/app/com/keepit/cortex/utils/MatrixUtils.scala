@@ -52,6 +52,7 @@ object MatrixUtils {
   }
 
   def weightedAverage(vecs: Seq[Array[Double]], weights: Array[Double]): Array[Double] = {
+    require(vecs.size == weights.size, s"sizes do not match: ${vecs.size}, ${weights.size}")
     val n = vecs.size
     assume(n > 0)
     val dim = vecs(0).size

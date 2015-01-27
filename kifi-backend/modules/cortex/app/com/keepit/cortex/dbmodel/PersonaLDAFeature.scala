@@ -27,4 +27,11 @@ case class PersonaLDAFeature(
   }
 }
 
+object PersonaLDAFeature {
+  def create(personaId: Id[Persona], version: ModelVersion[DenseLDA], feature: UserTopicMean): PersonaLDAFeature = {
+    val (first, second, third) = MatrixUtils.argmax3(feature.mean)
+    PersonaLDAFeature(personaId = personaId, version = version, feature = feature, firstTopic = LDATopic(first), secondTopic = LDATopic(second), thirdTopic = LDATopic(third))
+  }
+}
+
 object PersonaFeatureStates extends States[PersonaLDAFeature]
