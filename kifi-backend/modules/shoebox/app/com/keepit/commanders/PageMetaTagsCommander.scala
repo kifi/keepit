@@ -149,7 +149,7 @@ class PageMetaTagsCommander @Inject() (
         unsafeTitle = s"${user.firstName} ${user.lastName}",
         url = url,
         urlPathOnly = url,
-        unsafeDescription = s"${user.firstName} ${user.lastName} is on Kifi. Join Kifi to connect with Eishay Smith and others you may know. Kifi connects people with knowledge.",
+        unsafeDescription = s"${user.firstName} ${user.lastName} is on Kifi. Join Kifi to connect with ${user.firstName} ${user.lastName} and others you may know. Kifi connects people with knowledge.",
         images = Seq(imageUrl),
         facebookId = facebookId,
         createdAt = user.createdAt,
