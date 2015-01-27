@@ -91,7 +91,9 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
             // enlarge the sample size
             val newSampleSize = Math.max(destinationSamples.size * 2, 128)
             // and use the previous totalWeight as the estimated total weight in this iteration
-            computeDestinationSamples(component, resolver, newSampleSize, destinationSamples.totalWeight)
+            val newDestinationSamples = computeDestinationSamples(component, resolver, newSampleSize, destinationSamples.totalWeight)
+            localCache.put(component, newDestinationSamples)
+            newDestinationSamples
           } else {
             destinationSamples
           }
