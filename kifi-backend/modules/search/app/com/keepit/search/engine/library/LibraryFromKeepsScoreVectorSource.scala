@@ -7,7 +7,7 @@ import com.keepit.search.{ SearchFilter, SearchConfig }
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
-import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.{Term, AtomicReaderContext}
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Query, Scorer }
 import scala.concurrent.Future
@@ -52,7 +52,9 @@ class LibraryFromKeepsScoreVectorSource(
         val visibility = keepVisibilityEvaluator(docId, libId)
 
         if (visibility != Visibility.RESTRICTED) {
-          val boost = getRecencyBoost(recencyScorer, docId)
+          val recencyBoost = getRecencyBoost(recencyScorer, docId)
+          val inverseLibraryFrequencyBoost = 1.0f / (1 + Math.log(1 + searcher.freq(new Term(KeepFields.libraryField, libId.toString))).toFloat) // number of keeps from this shard in this library (correlated with number of keeps in this library)
+          val boost = recencyBoost * inverseLibraryFrequencyBoost
 
           // get all scores
           val size = pq.getTaggedScores(taggedScores, boost)
