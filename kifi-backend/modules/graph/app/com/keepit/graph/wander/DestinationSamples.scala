@@ -6,6 +6,8 @@ import scala.util.Random
 
 object DestinationSamples {
   val random = new Random
+
+  val empty = new DestinationSamples(Array.empty[Long], 0, 0.0)
 }
 
 class DestinationSamples(destinations: Array[Long], val size: Int, val totalWeight: Double) {
@@ -46,7 +48,7 @@ class DestinationSamplesBuilder(maxSampleSize: Int, totalWeightEstimate: Double)
     if (sum > 0.0) {
       new DestinationSamples(samples, sampleSize, sum)
     } else {
-      new DestinationSamples(Array.empty[Long], 0, 0.0)
+      DestinationSamples.empty
     }
   }
 }
