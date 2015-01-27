@@ -1,7 +1,6 @@
 <div ng-class="{'public-body': !$root.userLoggedIn}">
   <header ng-include="$root.userLoggedIn ? 'layout/header/header.tpl.html' : 'layout/header/publicHeader.tpl.html'"></header>
   <div class="kf-col-island">
-    <aside class="kf-col kf-sidebar" ng-include="'layout/sidebar/sidebar.tpl.html'" ng-if="$root.userLoggedIn"></aside>
     <section class="kf-scrollable-pane">
       <section class="kf-col kf-main" ng-include="'layout/main/main.tpl.html'"></section>
       <aside class="kf-col kf-col-right" ng-include="'layout/rightCol/rightCol.tpl.html'" ng-if="$root.userLoggedIn"></aside>
