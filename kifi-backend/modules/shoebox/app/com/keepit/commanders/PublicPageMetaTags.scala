@@ -19,7 +19,7 @@ class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class UserMetadataKey(id: Id[User]) extends Key[String] {
-  override val version = 5
+  override val version = 6
   val namespace = "user_metadata_by_id"
   def toKey(): String = id.id.toString
 }
