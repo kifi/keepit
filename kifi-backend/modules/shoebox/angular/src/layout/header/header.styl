@@ -26,11 +26,8 @@
 .kf-header-left-separator
 .kf-header-profile-picture
 .kf-header-logo
+  display: inline-block
   vertical-align: middle
-
-.kf-header-toggle-menu
-.kf-header-left-separator
-  display: none
 
 .kf-header-profile-picture
 .kf-header-logo
@@ -55,33 +52,6 @@
   width: 70px
   height: 27px
   margin-left: 10px
-
-@media (max-width: 1024px)
-  .kf-header-toggle-menu
-  .kf-header-left-separator
-    display: inline-block
-
-  .kf-header-inner
-    .kf-header-search-bar
-      width: calc(100% - 380px)
-
-  .kf-logged-in & .kf-header-left
-    margin-left: 20px
-    width: 140px
-
-  .kf-header-toggle-menu
-    &.open
-      display: inline-block
-    &.closed
-      display: none
-
-  .kf-sidebar-inactive
-    .kf-header-toggle-menu
-      &.open
-        display: none
-      &.closed
-        display: inline-block
-
 
 a.kf-header-callout
   position: relative

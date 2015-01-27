@@ -116,6 +116,10 @@ angular.module('kifi', [
           $scope.errorStatus = 404;
         }
       });
+
+      $scope.navDropdown = {
+        visible: false
+      };
     }
 
     start();
