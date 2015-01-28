@@ -102,7 +102,7 @@ class ScrapeWorkerImpl @Inject() (
       case None =>
     }
   }
-  private val shortenedUrls = Set("bit.ly", "goo.gl", "owl.ly", "deck.ly", "su.pr", "lnk.co", "fur.ly", "ow.ly", "owl.ly", "tinyurl.com", "is.gd", "v.gd", "t.co")
+  private val shortenedUrls = Set("bit.ly", "goo.gl", "owl.ly", "deck.ly", "su.pr", "lnk.co", "fur.ly", "ow.ly", "owl.ly", "tinyurl.com", "is.gd", "v.gd", "t.co", "linkd.in")
   private def handleSuccessfulScraped(latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo, pageInfoOpt: Option[PageInfo]): Future[Option[Article]] = {
 
     // This is bad. This whole function could likely be replaced with one call to shoebox signaling that a
@@ -391,10 +391,9 @@ class ScrapeWorkerImpl @Inject() (
             true
           case Some(importedBookmark) =>
             val parsedBookmarkUrl = URI.parse(importedBookmark.url).get
-            val fetched = httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP)
-            val fetchStatusCodeIsFishy = !fetched.redirects.headOption.exists(_.isPermanent)
-            val isFishy = (parsedBookmarkUrl.toString != movedUri.url) && fetchStatusCodeIsFishy
-            log.info(s"[hasFishy301] ${importedBookmark.uriId} result: $isFishy. $fetchStatusCodeIsFishy, ${parsedBookmarkUrl.toString} vs ${movedUri.url}")
+            val isFishy = (parsedBookmarkUrl.toString != movedUri.url) &&
+              !httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP).redirects.headOption.exists(_.isPermanent)
+            log.info(s"[hasFishy301] ${importedBookmark.uriId} result: $isFishy, ${parsedBookmarkUrl.toString} vs ${movedUri.url}")
             isFishy
           case None =>
             false
