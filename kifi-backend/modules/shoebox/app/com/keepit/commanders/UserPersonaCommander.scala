@@ -34,7 +34,7 @@ class UserPersonaCommanderImpl @Inject() (
   def addPersonasForUser(userId: Id[User], personas: Set[String])(implicit context: HeimdalContext): Map[Persona, Option[Library]] = {
     val personasToPersist = db.readOnlyMaster { implicit s =>
       val currentPersonas = userPersonaRepo.getPersonasForUser(userId).toSet
-      val personaNamesToAdd = personas diff currentPersonas.map(_.name)
+      val personaNamesToAdd = personas.map(_.toLowerCase) diff currentPersonas.map(_.name)
       personaRepo.getByNames(personaNamesToAdd)
     }
 
@@ -68,7 +68,7 @@ class UserPersonaCommanderImpl @Inject() (
   def removePersonasForUser(userId: Id[User], personas: Set[String]): Set[Persona] = {
     val personasToRemove = db.readOnlyMaster { implicit s =>
       val currentPersonas = userPersonaRepo.getPersonasForUser(userId).toSet
-      val personaNamesToRemove = personas intersect currentPersonas.map(_.name)
+      val personaNamesToRemove = personas.map(_.toLowerCase) intersect currentPersonas.map(_.name)
       personaRepo.getByNames(personaNamesToRemove)
     }
 
