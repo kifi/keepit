@@ -171,12 +171,12 @@ class LibraryCommander @Inject() (
               case LibraryKind.SYSTEM_MAIN =>
                 assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${library.ownerId} can't view a library he does not own: $library")
                 if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.ALL_KEEPS_VIEW)) {
-                  keepRepo.getAllNonPrivate(library.ownerId, 0, maxKeepsShown)
+                  keepRepo.getNonPrivate(library.ownerId, 0, maxKeepsShown)
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
               case LibraryKind.SYSTEM_SECRET =>
                 assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${library.ownerId} can't view a library he does not own: $library")
                 if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.ALL_KEEPS_VIEW)) {
-                  keepRepo.getAllPrivate(library.ownerId, 0, maxKeepsShown)
+                  keepRepo.getPrivate(library.ownerId, 0, maxKeepsShown)
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
             }
 
