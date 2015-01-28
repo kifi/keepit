@@ -56,7 +56,7 @@ angular.module('kifi')
     //
     // Scope data.
     //
-    $scope.librarySearch = $state.current.data.librarySearch;
+    $scope.librarySearch = $state.current.name === 'library.search';
     $scope.username = $stateParams.username;
     $scope.librarySlug = $stateParams.librarySlug;
     $scope.keeps = [];
@@ -200,7 +200,7 @@ angular.module('kifi')
     }),
 
     $rootScope.$on('$stateChangeSuccess', function (e, toState) {
-      $scope.librarySearch = toState.data && toState.data.librarySearch;
+      $scope.librarySearch = toState.name === 'library.search';
     }),
 
     $rootScope.$on('userLoggedInStateChange', function (e, me) {

@@ -1,7 +1,7 @@
 <div class="kf-library-card-header-wrapper" ng-class="{ 'library-search-in-progress': librarySearchInProgress, 'library-search': librarySearch }">
-  <div class="kf-library-card-header" ng-class="{ 'library-search-in-progress': librarySearchInProgress, 'library-search': librarySearch, 'pageScrolled': pageScrolled }" itemscope itemtype="http://schema.org/CollectionPage">
+  <div class="kf-library-card-header" ng-class="{ 'pageScrolled': pageScrolled }" itemscope itemtype="http://schema.org/CollectionPage">
     <meta itemtype="url" content="{{library.shareUrl}}" />
-    <div class="kf-keep library-card" ng-class="{ 'library-search-in-progress': librarySearchInProgress }">
+    <div class="kf-keep library-card">
       <div ng-show="library.invite && !library.invite.actedOn" class="library-card-invite-header">
         <button class="library-card-invite-header-button library-card-invite-header-accept" ng-click="acceptInvitation()">Accept</button>
         <button class="library-card-invite-header-button library-card-invite-header-ignore" ng-click="ignoreInvitation()">Ignore</button>

@@ -131,9 +131,6 @@ angular.module('kifi')
         url: '/:username/:librarySlug?authToken',
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
-        data: {
-          librarySearch: false
-        },
         resolve: {
           libraryService: 'libraryService',
           library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {
@@ -149,10 +146,7 @@ angular.module('kifi')
       .state('library.search', {
         url: '/find?q&f',
         templateUrl: 'search/search.tpl.html',
-        controller: 'SearchCtrl',
-        data: {
-          librarySearch: true
-        }
+        controller: 'SearchCtrl'
       });
       // ↑↑↑↑↑ Important: This needs to be last! ↑↑↑↑↑
 }]);
