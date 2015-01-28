@@ -5,6 +5,7 @@ case class BasicArticle(
   content: String,
   description: Option[String] = None,
   canonicalUrl: Option[String] = None,
+  alternateUrls: Set[String] = Set.empty[String],
   media: Option[String] = None,
   httpContentType: Option[String] = None, // from http header
   httpOriginalContentCharset: Option[String] = None, // from EntityUtils.getContentCharSet
@@ -21,6 +22,7 @@ object BasicArticle {
     (__ \ 'content).format[String] and
     (__ \ 'description).formatNullable[String] and
     (__ \ 'canonicalUrl).formatNullable[String] and
+    (__ \ 'alternateUrls).format[Set[String]] and
     (__ \ 'media).formatNullable[String] and
     (__ \ 'httpContentType).formatNullable[String] and
     (__ \ 'httpOriginalContentCharset).formatNullable[String] and

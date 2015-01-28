@@ -1,13 +1,12 @@
 package com.keepit.scraper
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ScraperServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ ScraperServiceController, UserActionsHelper }
 import com.keepit.model._
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.scraper.extractor.ExtractorProviderTypes
 import com.keepit.common.logging.Logging
-import com.keepit.model.ScrapeInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.Future
 import com.keepit.common.concurrent.ExecutionContext
