@@ -169,12 +169,12 @@ class LibraryCommander @Inject() (
             library.kind match {
               case LibraryKind.USER_CREATED => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
               case LibraryKind.SYSTEM_MAIN =>
-                assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${library.ownerId} can't view a library he does not own: $library")
+                assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
                 if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.ALL_KEEPS_VIEW)) { //cached
                   keepRepo.getNonPrivate(library.ownerId, 0, maxKeepsShown) //not cached
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
               case LibraryKind.SYSTEM_SECRET =>
-                assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${library.ownerId} can't view a library he does not own: $library")
+                assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
                 if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.ALL_KEEPS_VIEW)) { //cached
                   keepRepo.getPrivate(library.ownerId, 0, maxKeepsShown) //not cached
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
