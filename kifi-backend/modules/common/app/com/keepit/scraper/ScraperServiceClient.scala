@@ -264,7 +264,7 @@ class ScraperServiceClientImpl @Inject() (
 
   def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]] = {
     val payload = Json.obj("url" -> url)
-    call(Scraper.internal.fetchAndPersistURIPreview(), payload).map { r =>
+    call(Scraper.internal.fetchAndPersistURIPreview(), payload, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
       r.json.asOpt[URIPreviewFetchResult]
     }
   }
