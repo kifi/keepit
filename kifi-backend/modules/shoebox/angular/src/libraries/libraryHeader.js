@@ -16,7 +16,6 @@ angular.module('kifi')
         library: '=',
         username: '=',
         librarySlug: '=',
-        loading: '=',
         toggleEdit: '=',
         librarySearch: '=',
         followCallback: '&',
@@ -39,7 +38,6 @@ angular.module('kifi')
 
         var headerLinksElement = angular.element('.kf-header-right');
         var searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
-        var libraryBodyElement = angular.element('.kf-library-body');
 
         //
         // Scope data.
@@ -148,7 +146,6 @@ angular.module('kifi')
         function augmentFollower(follower) {
           follower.picUrl = friendService.getPictureUrlForUser(follower);
           follower.profileUrl = routeService.getProfileUrl(follower.username);
-
           return follower;
         }
 
@@ -160,7 +157,6 @@ angular.module('kifi')
             $twitter.load();
           }
         }
-        scope.$evalAsync(preloadSocial);
 
         function onScroll() {
           scope.$apply(function () {
@@ -208,16 +204,9 @@ angular.module('kifi')
             }
 
             searchFollowElement.css({
-              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
-            });
-
-            searchFollowElement.css({
+              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px',
               'transition': 'top 0.5s ease 0.3s',
               'top': '15px'
-            });
-
-            libraryBodyElement.css({
-              'margin-top': '90px'
             });
           }, 0);
         }
@@ -244,11 +233,6 @@ angular.module('kifi')
 
             headerLinksShifted = false;
           }
-
-          libraryBodyElement.css({
-            'transition': 'margin-top 0.1s ease',
-            'margin-top': '0px'
-          });
 
           $timeout(function () {
             scope.search = { text: '' };
@@ -863,20 +847,6 @@ angular.module('kifi')
         // Watches and listeners.
         //
 
-        // Wait until library data is ready before processing information to display the library card.
-        scope.$watch('loading', function (newVal) {
-          if (!newVal) {
-            augmentData();
-
-            $timeout(function () {
-              element.addClass('kf-loaded');
-              if (scope.librarySearch) {
-                showLibrarySearchBar();
-              }
-            });
-          }
-        });
-
         [
           $rootScope.$on('libraryKeepCountChanged', function (e, libraryId, keepCount) {
             if (libraryId === scope.library.id) {
@@ -940,6 +910,23 @@ angular.module('kifi')
         $window.addEventListener('scroll', onScroll);
         scope.$on('$destroy', function () {
           $window.removeEventListener('scroll', onScroll);
+        });
+
+
+        //
+        // Initialize.
+        //
+
+        augmentData();
+
+        scope.$evalAsync(preloadSocial);
+
+        $timeout(function () {
+          element.addClass('kf-loaded');  // enables transitions/animations
+
+          if (scope.librarySearch) {
+            showLibrarySearchBar();
+          }
         });
       }
     };

@@ -321,7 +321,7 @@ cover-image-adjust-right = 24px
 
 // For library cards that are displayed when there
 // is no logged in user.
-.library-card.loggedOutUser
+.kf-logged-out .library-card
   border: none
   margin: 0 auto
   padding-bottom: 20px
@@ -396,13 +396,12 @@ cover-image-adjust-right = 24px
 //
 // For logged-out library search.
 //
-html:not(.kf-mobile)
-  .kf-library-card-header-wrapper.library-search
-  .kf-library-card-header-wrapper.library-search-in-progress
+html:not(.kf-mobile) .library-search
+html:not(.kf-mobile) .library-search-in-progress
+  &.kf-library-card-header-wrapper
     height: 56px
 
-  .kf-library-card-header.library-search
-  .kf-library-card-header.library-search-in-progress
+  .kf-library-card-header
     position: fixed
     top: 62px
     width: 100%
@@ -411,8 +410,7 @@ html:not(.kf-mobile)
     &.pageScrolled
       box-shadow: 0px 5px 5px #ddd
 
-  .library-search .library-card
-  .library-card.library-search-in-progress
+  .library-card
     max-height: 56px
 
     .kf-keep-lib-body
@@ -526,18 +524,11 @@ html:not(.kf-mobile)
   .kf-keep-lib-name-container
     display: inline-block
     width: 100%
-    max-height: 60px
     line-height: 30px
     margin-top: 8px
     margin-bottom: 9px
     vertical-align: top
     overflow: hidden
-
-    &::before
-      content: '';
-      display: inline-block;
-      height: 100%;
-      vertical-align: middle;
 
   .kf-keep-lib-name
     display: inline-block
@@ -948,8 +939,14 @@ html:not(.kf-mobile)
       width: 15px
       height: 15px
 
+.kf-lib-passphrase
+  text-align: center
+
 .kf-lib-passphrase-message
-  margin-left: 30px
+  margin: 0 auto
+  width: 680px
+  padding-top: 10vh
+  text-align: left
 
 .kf-lib-passphrase-header
   color: #3DA9F5
@@ -1032,10 +1029,12 @@ html:not(.kf-mobile)
   font-weight: 400
 
 .kf-lib-access-error
-  padding: 25px
-  border-radius: 5px
+  float: left
   margin-top: 20px
-  background: #FFCACA
+  border-radius: 5px
+  padding: 12px 24px
+  background: #ffcaca
+  line-height: 1.5;
 
 .kf-lib-info-footer
   width: 350px

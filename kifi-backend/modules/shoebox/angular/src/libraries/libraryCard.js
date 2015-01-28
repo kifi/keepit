@@ -16,25 +16,11 @@ angular.module('kifi')
         clickLibraryCallback: '&'
       },
       templateUrl: 'libraries/libraryCard.tpl.html',
-      link: function (scope, element/*, attrs*/) {
-        //
-        // Scope data.
-        //
-        scope.clippedDescription = false;
-
+      link: function (scope) {
 
         //
         // Internal methods.
         //
-        function init() {
-          augmentData();
-
-          scope.$evalAsync(preloadSocial);
-
-          $timeout(function () {
-            element.addClass('kf-loaded');
-          });
-        }
 
         function trackShareEvent(action) {
           $timeout(function () {
@@ -123,7 +109,6 @@ angular.module('kifi')
         function augmentFollower(follower) {
           follower.picUrl = friendService.getPictureUrlForUser(follower);
           follower.profileUrl = routeService.getProfileUrl(follower.username);
-
           return follower;
         }
 
@@ -232,7 +217,15 @@ angular.module('kifi')
         });
 
 
-        init();
+        //
+        // Initialize.
+        //
+
+        scope.clippedDescription = false;
+
+        augmentData();
+
+        $timeout(preloadSocial);
       }
     };
   }
