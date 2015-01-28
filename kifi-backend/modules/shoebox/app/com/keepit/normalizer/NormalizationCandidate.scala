@@ -24,6 +24,11 @@ case class ScrapedCandidate(url: String, normalization: Normalization) extends N
   def isTrusted = true
 }
 
+case class AlternateCandidate(url: String, normalization: Normalization) extends NormalizationCandidate {
+  val candidateType = "alternate"
+  def isTrusted = false
+}
+
 case class UntrustedCandidate(url: String, normalization: Normalization) extends NormalizationCandidate {
   val candidateType = "untrusted"
   def isTrusted = false
@@ -39,6 +44,7 @@ object NormalizationCandidate {
     t match {
       case "verified" => VerifiedCandidate(url, n)
       case "scraped" => ScrapedCandidate(url, n)
+      case "alternate" => AlternateCandidate(url, n)
       case "untrusted" => UntrustedCandidate(url, n)
     }
   }

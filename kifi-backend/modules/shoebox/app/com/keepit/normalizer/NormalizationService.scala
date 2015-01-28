@@ -15,8 +15,6 @@ import com.keepit.common.db.Id
 import scala.util.{ Failure, Success, Try }
 import com.keepit.common.performance._
 
-case class PrenormalizationException(cause: Throwable) extends Throwable(cause)
-
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]]
@@ -29,20 +27,10 @@ class NormalizationServiceImpl @Inject() (
     failedContentCheckRepo: FailedContentCheckRepo,
     normalizedURIRepo: NormalizedURIRepo,
     uriIntegrityPlugin: UriIntegrityPlugin,
-    priorKnowledge: PriorKnowledge,
+    priorKnowledge: PriorNormalizationKnowledge,
     airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
-  def prenormalize(uriString: String): Try[String] = {
-    URI.parse(uriString).flatMap { parsedUri =>
-      Try { Prenormalizer(parsedUri) }.map { prenormalizedUri =>
-        val uriWithPreferredSchemeOption = priorKnowledge.getPreferredSchemeNormalizer(uriString).map(_.apply(prenormalizedUri))
-        val result = uriWithPreferredSchemeOption getOrElse prenormalizedUri
-        result.toString()
-      }
-    }.recoverWith {
-      case cause: Throwable => Failure(PrenormalizationException(cause))
-    }
-  }
+  def prenormalize(uriString: String): Try[String] = priorKnowledge.prenormalize(uriString)
 
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = timing(s"NormalizationService.update.${currentReference.url}") {
     val relevantCandidates = getRelevantCandidates(currentReference, candidates)
@@ -80,6 +68,7 @@ class NormalizationServiceImpl @Inject() (
     val prenormalizedCandidates = candidates.map {
       case verifiedCandidate: VerifiedCandidate => Success(verifiedCandidate)
       case ScrapedCandidate(url, normalization) => prenormalize(url).map(ScrapedCandidate(_, normalization))
+      case AlternateCandidate(url, normalization) => prenormalize(url).map(AlternateCandidate(_, normalization))
       case UntrustedCandidate(url, normalization) => prenormalize(url).map(UntrustedCandidate(_, normalization))
     }.map(_.toOption).flatten
 
