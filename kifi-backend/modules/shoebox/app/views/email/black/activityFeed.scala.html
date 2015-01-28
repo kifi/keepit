@@ -8,6 +8,12 @@ Hi @fullName(toUserId),
 Activity email (still a work in progress)
 <br/><br/>
 
+
+<h1>Fellow users followed your library</h1>
+
+
+
+
 <h1>Libraries you follow have new Keeps </h1>
 @activityData.newKeepsInLibraries.map { case (lib, keeps) =>
     <a href="@libraryUrl(lib.libraryId)">@lib.name</a><br/>
@@ -94,7 +100,7 @@ TODO
 <br/>
 
 <h1>Your Friends followed a library</h1>
-@activityData.friendFollowedLibraries.map { case (libraryId, (lib, friendIds)) =>
+@activityData.friendFollowedLibraries.map { case (libraryId, lib, friendIds) =>
     Your friends
     @friendIds.zipWithIndex.map { case (id, i) =>
         @if(i == friendIds.size - 1){and}
@@ -123,13 +129,13 @@ TODO
 }
 
 <h1>Library Recommendations</h1>
-@activityData.libraryRecos.map { recoInfo =>
-    <a href="@{baseUrl}@{recoInfo.itemInfo.url}">@recoInfo.itemInfo.name</a><br/>
-    <a href="@{baseUrl}@{recoInfo.itemInfo.url}">@recoInfo.itemInfo.name</a>
-    by @recoInfo.itemInfo.owner.fullName<br/>
-    @recoInfo.itemInfo.description.getOrElse("")<br/>
-    @recoInfo.itemInfo.image.map { image =>
-        <img src="@libraryImageUrl(image.path)" alt="@recoInfo.itemInfo.name" width="400"/>
+@activityData.libraryRecos.map { lib =>
+    <a href="@{baseUrl}@{lib.url}">@lib.name</a><br/>
+    <a href="@{baseUrl}@{lib.url}">@lib.name</a>
+    by @lib.ownerName<br/>
+    @lib.description<br/>
+    @lib.image.map { image =>
+        <img src="@libraryImageUrl(image.path)" alt="@lib.name" width="400"/>
     }
     <br/><br/>
 }
