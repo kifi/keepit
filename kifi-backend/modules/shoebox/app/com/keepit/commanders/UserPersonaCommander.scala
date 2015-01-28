@@ -10,8 +10,8 @@ import com.keepit.model._
 
 @ImplementedBy(classOf[UserPersonaCommanderImpl])
 trait UserPersonaCommander {
-  def addPersonaForUser(userId: Id[User], persona: String)(implicit context: HeimdalContext): Option[(Persona, Library)]
-  def addPersonasForUser(userId: Id[User], personas: Set[String])(implicit context: HeimdalContext): Map[Persona, Library]
+  def addPersonaForUser(userId: Id[User], persona: String)(implicit context: HeimdalContext): (Option[Persona], Option[Library])
+  def addPersonasForUser(userId: Id[User], personas: Set[String])(implicit context: HeimdalContext): Map[Persona, Option[Library]]
   def removePersonaForUser(userId: Id[User], persona: String): Option[Persona]
   def removePersonasForUser(userId: Id[User], personas: Set[String]): Set[Persona]
 }
@@ -24,11 +24,14 @@ class UserPersonaCommanderImpl @Inject() (
     libraryCommander: LibraryCommander,
     clock: Clock) extends UserPersonaCommander with Logging {
 
-  def addPersonaForUser(userId: Id[User], persona: String)(implicit context: HeimdalContext): Option[(Persona, Library)] = {
-    addPersonasForUser(userId, Set(persona)).headOption
+  def addPersonaForUser(userId: Id[User], persona: String)(implicit context: HeimdalContext): (Option[Persona], Option[Library]) = {
+    addPersonasForUser(userId, Set(persona)).headOption match {
+      case Some(pair) => (Some(pair._1), pair._2)
+      case _ => (None, None)
+    }
   }
 
-  def addPersonasForUser(userId: Id[User], personas: Set[String])(implicit context: HeimdalContext): Map[Persona, Library] = {
+  def addPersonasForUser(userId: Id[User], personas: Set[String])(implicit context: HeimdalContext): Map[Persona, Option[Library]] = {
     val personasToPersist = db.readOnlyMaster { implicit s =>
       val currentPersonas = userPersonaRepo.getPersonasForUser(userId).toSet
       val personaNamesToAdd = personas diff currentPersonas.map(_.name)
@@ -53,7 +56,8 @@ class UserPersonaCommanderImpl @Inject() (
         val libraryAddReq = LibraryAddRequest(personaName, LibraryVisibility.PUBLISHED, None, personaName)
         (persona, libraryCommander.addLibrary(libraryAddReq, userId))
     }.collect {
-      case (persona, Right(lib)) => (persona, lib)
+      case (persona, Right(lib)) => (persona, Some(lib)) // library successfully created
+      case (persona, Left(_)) => (persona, None) // library with name or slug already created
     }.toMap
   }
 
