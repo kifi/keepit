@@ -136,10 +136,6 @@ angular.module('kifi')
     $scope.me = profileService.me;
     $scope.me.picUrl = $scope.me.picUrl || '//www.kifi.com/assets/img/ghost.200.png';
 
-    $scope.logout = function () {
-      profileService.logout();
-    };
-
     $scope.addKeeps = function (library) {
       modalService.open({
         template: 'keeps/addKeepsModal.tpl.html',
@@ -160,7 +156,6 @@ angular.module('kifi')
     });
 
     $scope.userProfileUrl = routeService.getProfileUrl($scope.me.username);
-
-    $scope.logout = profileService.logout;
+    $scope.logoutUrl = routeService.logoutUrl;
   }
 ]);

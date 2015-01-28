@@ -221,9 +221,5 @@ angular.module('kifi')
       $scope.triggerInstall();
     });
     $scope.$on('$destroy', deregisterInstallExt);
-
-    $scope.logout = function () {
-      profileService.logout();
-    };
   }
 ]);
