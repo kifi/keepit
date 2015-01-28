@@ -1,6 +1,8 @@
-<div class="kf-col-inner" ng-controller="MainCtrl" ng-switch="errorStatus">
-  <div ng-switch-default>
-    <div kf-delighted-survey ng-show="showDelightedSurvey" class="delighted-survey" ng-class="{ 'delighted-visible': showDelightedSurvey }" show-survey="showDelightedSurvey"></div>
+<div class="kf-col-inner" ng-controller="MainCtrl">
+  <div kf-library-pass-phrase ng-if="errorStatus === 403 && errorParams.authToken" class="kf-lib-passphrase" error-params="errorParams"></div>
+  <div kf-error-not-found ng-if="(errorStatus === 403 && !errorParams.authToken) || errorStatus === 404"></div>
+  <div ng-if="errorStatus !== 403 && errorStatus !== 404">
+    <div kf-delighted-survey ng-show="showDelightedSurvey" class="delighted-survey" ng-class="{'delighted-visible': showDelightedSurvey}" show-survey="showDelightedSurvey"></div>
     <div ui-view></div>
     <div class="kf-small-tooltip" ng-if="undo.isSet() || tooltipMessage">
       <span class="kf-small-tooltip-box">
@@ -9,5 +11,4 @@
       </span>
     </div>
   </div>
-  <div ng-switch-when="404" kf-error-not-found></div>
 </div>

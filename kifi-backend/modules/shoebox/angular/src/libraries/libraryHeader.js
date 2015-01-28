@@ -16,7 +16,6 @@ angular.module('kifi')
         library: '=',
         username: '=',
         librarySlug: '=',
-        loading: '=',
         toggleEdit: '=',
         librarySearch: '=',
         followCallback: '&',
@@ -148,7 +147,6 @@ angular.module('kifi')
         function augmentFollower(follower) {
           follower.picUrl = friendService.getPictureUrlForUser(follower);
           follower.profileUrl = routeService.getProfileUrl(follower.username);
-
           return follower;
         }
 
@@ -160,7 +158,6 @@ angular.module('kifi')
             $twitter.load();
           }
         }
-        scope.$evalAsync(preloadSocial);
 
         function onScroll() {
           scope.$apply(function () {
@@ -863,20 +860,6 @@ angular.module('kifi')
         // Watches and listeners.
         //
 
-        // Wait until library data is ready before processing information to display the library card.
-        scope.$watch('loading', function (newVal) {
-          if (!newVal) {
-            augmentData();
-
-            $timeout(function () {
-              element.addClass('kf-loaded');
-              if (scope.librarySearch) {
-                showLibrarySearchBar();
-              }
-            });
-          }
-        });
-
         [
           $rootScope.$on('libraryKeepCountChanged', function (e, libraryId, keepCount) {
             if (libraryId === scope.library.id) {
@@ -940,6 +923,23 @@ angular.module('kifi')
         $window.addEventListener('scroll', onScroll);
         scope.$on('$destroy', function () {
           $window.removeEventListener('scroll', onScroll);
+        });
+
+
+        //
+        // Initialize.
+        //
+
+        augmentData();
+
+        scope.$evalAsync(preloadSocial);
+
+        $timeout(function () {
+          element.addClass('kf-loaded');  // enables transitions/animations
+
+          if (scope.librarySearch) {
+            showLibrarySearchBar();
+          }
         });
       }
     };
