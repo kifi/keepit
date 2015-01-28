@@ -211,6 +211,11 @@ class LDAController @Inject() (
     Ok
   }
 
+  def getExistingPersonaFeature(personaId: Id[Persona], version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
+    val modelOpt = personaCommander.getExistingPersonaFeature(personaId)(version)
+    Ok(Json.toJson(modelOpt.map { _.feature.mean }))
+  }
+
   def generatePersonaFeature(version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
     val js = request.body
     val topicIds = (js \ "topicIds").as[Seq[Int]].map { LDATopic(_) }
@@ -220,7 +225,7 @@ class LDAController @Inject() (
 
   def savePersonaFeature(version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
     val js = request.body
-    val feature = (js \ "topic").as[JsArray].value.map { _.as[Float] }.toArray
+    val feature = (js \ "feature").as[Array[Float]]
     val personaId = Id[Persona]((js \ "personaId").as[Int])
     personaCommander.savePersonaFeature(personaId, UserTopicMean(feature))(version)
     Ok
