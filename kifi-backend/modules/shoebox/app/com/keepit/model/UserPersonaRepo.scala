@@ -37,15 +37,24 @@ class UserPersonaRepoImpl @Inject() (
   def deleteCache(model: UserPersona)(implicit session: RSession): Unit = {}
   def invalidateCache(model: UserPersona)(implicit session: RSession): Unit = {}
 
+  private val getByUserAndPersonaCompiled = Compiled { (userId: Column[Id[User]], personaId: Column[Id[Persona]]) =>
+    (for (r <- rows if r.userId === userId && r.personaId === personaId) yield r)
+  }
   def getByUserAndPersona(userId: Id[User], personaId: Id[Persona])(implicit session: RSession): Option[UserPersona] = {
-    (for (r <- rows if r.userId === userId && r.personaId === personaId) yield r).firstOption
+    getByUserAndPersonaCompiled(userId, personaId).firstOption
   }
 
+  private val getUserPersonasCompiled = Compiled { (userId: Column[Id[User]]) =>
+    (for (r <- rows if r.userId === userId && r.state === UserPersonaStates.ACTIVE) yield r.personaId)
+  }
   def getUserPersonas(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]] = {
-    (for (r <- rows if r.userId === userId && r.state === UserPersonaStates.ACTIVE) yield r.personaId).list
+    getUserPersonasCompiled(userId).list
   }
 
+  private val getUserLastEditTimeCompiled = Compiled { (userId: Column[Id[User]]) =>
+    (for (r <- rows if r.userId === userId) yield r).sortBy(_.updatedAt.desc)
+  }
   def getUserLastEditTime(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
-    (for (r <- rows if r.userId === userId) yield r).sortBy(_.updatedAt.desc).firstOption.map { _.updatedAt }
+    getUserLastEditTimeCompiled(userId).firstOption.map { _.updatedAt }
   }
 }
