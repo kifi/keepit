@@ -90,7 +90,6 @@ angular.module('kifi', [
         profileService.fetchMe().then(function () {
           if ($rootScope.userLoggedIn) {
             profileService.fetchPrefs();
-            friendService.getRequests();
             libraryService.fetchLibrarySummaries(true);
           }
         });
