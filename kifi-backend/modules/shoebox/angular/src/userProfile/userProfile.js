@@ -48,20 +48,13 @@ angular.module('kifi')
     }
 
     function trackPageView() {
-      var pageOrigin = originTrackingService.getAndClear();
       var url = $analytics.settings.pageTracking.basePath + $location.url();
-      var originsArray = (pageOrigin && pageOrigin.split('/')) || [];
-
-      var profilePageTrackAttributes = {
+      $analytics.pageTrack(url, originTrackingService.applyAndClear({
         type: 'userProfile',
         profileOwnerUserId: $scope.profile.id,
         profileOwnedBy: $scope.viewingOwnProfile ? 'viewer' : ($scope.profile.isFriend ? 'viewersFriend' : 'other'),
-        origin: originsArray[0] || '',
-        subOrigin: originsArray[1] || '',
         libraryCount: $scope.profile.numLibraries
-      };
-
-      $analytics.pageTrack(url, profilePageTrackAttributes);
+      }));
     }
 
     function trackPageClick(/* attributes */) {
@@ -106,7 +99,7 @@ angular.module('kifi')
     var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
       // When routing among the nested states, track page view again.
       if ((/^userProfile/.test(toState.name)) && (/^userProfile/.test(fromState.name)) && (toParams.username === fromParams.username)) {
-        trackPageView(originTrackingService.getAndClear());
+        trackPageView();
         $scope.currentPageOrigin = getCurrentPageOrigin();
       }
     });
