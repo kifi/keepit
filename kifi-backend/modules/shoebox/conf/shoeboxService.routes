@@ -279,6 +279,7 @@ GET     /install                    @com.keepit.controllers.website.HomeControll
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /terms                      @com.keepit.controllers.website.HomeController.route(path = "terms")
 GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
+GET     /parenting                  @com.keepit.controllers.website.HomeController.route(path = "parenting")
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 GET     /libraries/featured         @com.keepit.controllers.website.HomeController.route(path = "libraries/featured")
