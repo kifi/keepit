@@ -236,9 +236,9 @@ angular.module('kifi')
           // });
 
           var tooSlowTimer = $timeout(function () {
-            $scope.importFileStatus = 'Your bookmarks are still uploading... Hang tight.';
+            $scope.importFileStatus = 'Your bookmarks are still uploading... Hang tight!';
             $scope.disableBookmarkImport = false;
-          }, 20000);
+          }, 8000);
 
           $scope.importFileStatus = 'Uploading! May take a bit, especially if you have a lot of links.';
           $scope.importFilename = '';
