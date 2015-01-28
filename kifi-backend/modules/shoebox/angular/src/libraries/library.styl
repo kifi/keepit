@@ -396,13 +396,12 @@ cover-image-adjust-right = 24px
 //
 // For logged-out library search.
 //
-html:not(.kf-mobile)
-  .kf-library-card-header-wrapper.library-search
-  .kf-library-card-header-wrapper.library-search-in-progress
+html:not(.kf-mobile) .library-search
+html:not(.kf-mobile) .library-search-in-progress
+  &.kf-library-card-header-wrapper
     height: 56px
 
-  .kf-library-card-header.library-search
-  .kf-library-card-header.library-search-in-progress
+  .kf-library-card-header
     position: fixed
     top: 62px
     width: 100%
@@ -411,8 +410,7 @@ html:not(.kf-mobile)
     &.pageScrolled
       box-shadow: 0px 5px 5px #ddd
 
-  .library-search .library-card
-  .library-card.library-search-in-progress
+  .library-card
     max-height: 56px
 
     .kf-keep-lib-body
