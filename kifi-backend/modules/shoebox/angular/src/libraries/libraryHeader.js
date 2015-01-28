@@ -38,7 +38,6 @@ angular.module('kifi')
 
         var headerLinksElement = angular.element('.kf-header-right');
         var searchFollowElement = angular.element('.kf-keep-lib-footer-button-follow-in-search');
-        var libraryBodyElement = angular.element('.kf-library-body');
 
         //
         // Scope data.
@@ -205,16 +204,9 @@ angular.module('kifi')
             }
 
             searchFollowElement.css({
-              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px'
-            });
-
-            searchFollowElement.css({
+              'left': headerLinksElement.offset().left + headerLinksElement.width() + 15 + 'px',
               'transition': 'top 0.5s ease 0.3s',
               'top': '15px'
-            });
-
-            libraryBodyElement.css({
-              'margin-top': '90px'
             });
           }, 0);
         }
@@ -241,11 +233,6 @@ angular.module('kifi')
 
             headerLinksShifted = false;
           }
-
-          libraryBodyElement.css({
-            'transition': 'margin-top 0.1s ease',
-            'margin-top': '0px'
-          });
 
           $timeout(function () {
             scope.search = { text: '' };
