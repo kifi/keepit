@@ -165,7 +165,22 @@ class LibraryCommander @Inject() (
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
-          val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
+          val keeps = db.readOnlyMaster { implicit session =>
+            library.kind match {
+              case LibraryKind.USER_CREATED => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
+              case LibraryKind.SYSTEM_MAIN =>
+                assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${library.ownerId} can't view a library he does not own: $library")
+                if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.ALL_KEEPS_VIEW)) {
+                  keepRepo.getAllNonPrivate(library.ownerId, 0, maxKeepsShown)
+                } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
+              case LibraryKind.SYSTEM_SECRET =>
+                assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${library.ownerId} can't view a library he does not own: $library")
+                if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.ALL_KEEPS_VIEW)) {
+                  keepRepo.getAllPrivate(library.ownerId, 0, maxKeepsShown)
+                } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
+            }
+
+          }
           keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, withKeepTime)
         } else Future.successful(Seq.empty)
       }
@@ -195,10 +210,10 @@ class LibraryCommander @Inject() (
     }
 
     val countsByLibraryId = libraries.map { library =>
-      val counts = followerInfosByLibraryId(library.id.get)._2
-      val collaboratorCount = counts(LibraryAccess.READ_WRITE)
-      val followerCount = counts(LibraryAccess.READ_INSERT) + counts(LibraryAccess.READ_ONLY)
-      val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0)
+      val counts = followerInfosByLibraryId(library.id.get)._2 //todo(eishay): switch on ALL_KEEPS_VIEW (should be zero)
+      val collaboratorCount = counts(LibraryAccess.READ_WRITE) //todo(eishay): switch on ALL_KEEPS_VIEW (should be zero)
+      val followerCount = counts(LibraryAccess.READ_INSERT) + counts(LibraryAccess.READ_ONLY) //todo(eishay): switch on ALL_KEEPS_VIEW (should be zero)
+      val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0) //todo(eishay): switch on ALL_KEEPS_VIEW
       library.id.get -> (collaboratorCount, followerCount, keepCount)
     }.toMap
 
