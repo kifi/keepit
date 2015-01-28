@@ -34,17 +34,17 @@ object PersonaName {
   case object ADVENTURER extends PersonaName("adventurer")
 
   def apply(str: String) = {
-    str match {
-      case FOODIE.`value` => FOODIE
-      case ARTIST.`value` => ARTIST
-      case PARENT.`value` => PARENT
-      case STUDENT.`value` => STUDENT
-      case DESIGNER.`value` => DESIGNER
-      case PHOTOGRAPHER.`value` => PHOTOGRAPHER
-      case ATHLETE.`value` => ATHLETE
-      case TECHIE.`value` => TECHIE
-      case GAMER.`value` => GAMER
-      case ADVENTURER.`value` => ADVENTURER
+    str.toLowerCase match {
+      case FOODIE.value => FOODIE
+      case ARTIST.value => ARTIST
+      case PARENT.value => PARENT
+      case STUDENT.value => STUDENT
+      case DESIGNER.value => DESIGNER
+      case PHOTOGRAPHER.value => PHOTOGRAPHER
+      case ATHLETE.value => ATHLETE
+      case TECHIE.value => TECHIE
+      case GAMER.value => GAMER
+      case ADVENTURER.value => ADVENTURER
     }
   }
 
