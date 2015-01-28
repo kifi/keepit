@@ -770,4 +770,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     allLibraryMemberships.values.collect { case membership if membership.userId == userId && membership.canWrite => membership.libraryId }.toSet
   }
 
+  def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = ???
+
 }

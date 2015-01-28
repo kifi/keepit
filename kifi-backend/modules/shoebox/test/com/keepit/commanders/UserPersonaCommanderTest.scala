@@ -48,7 +48,7 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
         val (user1, allPersonas) = setupUserPersona
         val userPersonaCommander = inject[UserPersonaCommander]
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getUserPersonas(user1.id.get) === Seq(allPersonas("hero"), allPersonas("adventurer"))
+          userPersonaRepo.getUserPersonaIds(user1.id.get) === Seq(allPersonas("hero"), allPersonas("adventurer"))
         }
         // add an existing persona
         val (personas1, libs1) = userPersonaCommander.addPersonasForUser(user1.id.get, Set("hero"))
@@ -66,7 +66,7 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
         libs3.length === 2
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getUserPersonas(user1.id.get) === Seq(allPersonas("hero"), allPersonas("adventurer"), allPersonas("engineer"), allPersonas("foodie"), allPersonas("philanthropist"))
+          userPersonaRepo.getUserPersonaIds(user1.id.get) === Seq(allPersonas("hero"), allPersonas("adventurer"), allPersonas("engineer"), allPersonas("foodie"), allPersonas("philanthropist"))
         }
       }
     }
@@ -76,7 +76,7 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
         val (user1, allPersonas) = setupUserPersona
         val userPersonaCommander = inject[UserPersonaCommander]
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getUserPersonas(user1.id.get) === Seq(allPersonas("hero"), allPersonas("adventurer"))
+          userPersonaRepo.getUserPersonaIds(user1.id.get) === Seq(allPersonas("hero"), allPersonas("adventurer"))
         }
         // remove one existing persona
         userPersonaCommander.removePersonasForUser(user1.id.get, Set("hero")).length === 1
@@ -88,7 +88,7 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
         userPersonaCommander.removePersonasForUser(user1.id.get, Set("hero", "adventurer", "parent")).length === 1
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getUserPersonas(user1.id.get) === Seq()
+          userPersonaRepo.getUserPersonaIds(user1.id.get) === Seq()
         }
       }
     }
