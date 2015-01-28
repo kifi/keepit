@@ -58,7 +58,7 @@ class WebsiteSearchController @Inject() (
       getWebsiteUriSearchResults(userId, uriSearchResult).imap {
         case (hits, users, libraries) =>
           val librariesJson = libraries.map { library =>
-            Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "secret" -> library.isSecret) //todo(Léo): remove secret field
+            Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility)
           }
           val result = Json.obj(
             "uuid" -> uriSearchResult.uuid,

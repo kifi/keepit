@@ -148,7 +148,7 @@ angular.module('kifi')
       }
     };
 
-    $scope.$on('relatedLibrariesChanged', function (evt, currentLibrary, relatedLibraries) {
+    $scope.$on('relatedLibrariesChanged', function (e, relatedLibraries) {
       $scope.relatedLibraries = relatedLibraries;
     });
 
@@ -221,9 +221,5 @@ angular.module('kifi')
       $scope.triggerInstall();
     });
     $scope.$on('$destroy', deregisterInstallExt);
-
-    $scope.logout = function () {
-      profileService.logout();
-    };
   }
 ]);

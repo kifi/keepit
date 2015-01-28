@@ -24,13 +24,6 @@ angular.module('kifi')
       linkNetwork: function (network) {
         return env.navBase + '/link/' + network;
       },
-      uploadBookmarkFile: function (makePublic) {
-        var path = '/keeps/file-import';
-        if (makePublic) {
-          path += '?public=1';
-        }
-        return route(path);
-      },
       uploadBookmarkFileToLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/import-file');
       },
@@ -43,7 +36,7 @@ angular.module('kifi')
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
       profileSettings: route('/user/settings'),
-      logout: '/logout',
+      logoutUrl: env.navBase + '/logout',
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),

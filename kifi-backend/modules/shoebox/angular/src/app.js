@@ -90,7 +90,6 @@ angular.module('kifi', [
         profileService.fetchMe().then(function () {
           if ($rootScope.userLoggedIn) {
             profileService.fetchPrefs();
-            friendService.getRequests();
             libraryService.fetchLibrarySummaries(true);
           }
         });
@@ -100,6 +99,8 @@ angular.module('kifi', [
       // setting be false, or we will duplicate 2 page-track events
       if (!$analytics.settings.pageTracking.autoTrackVirtualPages) {
         $rootScope.$on('$stateChangeSuccess', function (event, toState) {
+          $scope.errorStatus = $scope.errorParams = null;
+
           // We cannot track the library and profile pages yet because we have not loaded
           // information about the library/profile; therefore, libraries and profiles are
           // responsible for calling pageTrack themselves.
@@ -111,9 +112,10 @@ angular.module('kifi', [
       }
 
       $rootScope.$on('$stateChangeError', function (event, toState, toParams, fromState, fromParams, error) {
-        if (error && error.status === 404) {
+        if (error && _.contains([403, 404], error.status)) {
           event.preventDefault();  // stay in error state
-          $scope.errorStatus = 404;
+          $scope.errorStatus = error.status;
+          $scope.errorParams = toParams;
         }
       });
 

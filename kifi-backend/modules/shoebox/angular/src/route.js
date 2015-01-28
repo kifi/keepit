@@ -22,6 +22,7 @@ angular.module('kifi')
       .when('/friends/invite', '/invite')
       .when('/friends/requests', '/friends')
       .when('/friends/requests/:network', '/friends')
+      .when('/:username/libraries', '/:username')
       .when('/recommendations', '/')
       .otherwise('/');  // last resort
 
@@ -128,11 +129,14 @@ angular.module('kifi')
 
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
-        url: '/:username/:librarySlug',
+        url: '/:username/:librarySlug?authToken',
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
-        data: {
-          librarySearch: false
+        resolve: {
+          libraryService: 'libraryService',
+          library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {
+            return libraryService.getLibraryByUserSlug($stateParams.username, $stateParams.librarySlug, $stateParams.authToken);
+          }]
         },
         'abstract': true
       })
@@ -143,10 +147,7 @@ angular.module('kifi')
       .state('library.search', {
         url: '/find?q&f',
         templateUrl: 'search/search.tpl.html',
-        controller: 'SearchCtrl',
-        data: {
-          librarySearch: true
-        }
+        controller: 'SearchCtrl'
       });
       // ↑↑↑↑↑ Important: This needs to be last! ↑↑↑↑↑
 }]);

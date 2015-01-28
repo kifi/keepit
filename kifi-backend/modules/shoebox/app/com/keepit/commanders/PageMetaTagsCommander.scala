@@ -2,6 +2,8 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
@@ -10,7 +12,9 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
 import com.keepit.social.SocialNetworks
+import org.im4java.utils.NoiseFilter.Threshold
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import views.html.admin.library
 
 import scala.concurrent.Future
 
@@ -64,6 +68,17 @@ class PageMetaTagsCommander @Inject() (
     }
   }
 
+  def selectKeepsDescription(libraryId: Id[Library], threshold: Int = 100)(implicit s: RSession): Option[String] = {
+    val keeps = keepRepo.getByLibrary(libraryId, 0, 50)
+    val pages = keeps.iterator.map(k => pageInfoRepo.getByUri(k.uriId))
+    val page = pages.find(p => p.exists(_.description.exists(_.size > threshold))).flatten
+    val desc = page.flatMap(_.description).orElse {
+      if (threshold <= 50) None
+      else selectKeepsDescription(libraryId, 50)
+    }
+    desc
+  }
+
   def libraryMetaTags(library: Library): Future[PublicPageMetaTags] = {
     val (owner, urlPathOnly) = db.readOnlyMaster { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
@@ -74,9 +89,7 @@ class PageMetaTagsCommander @Inject() (
       Future.successful(None)
     } else {
       db.readOnlyMasterAsync { implicit s =>
-        val keeps = keepRepo.getByLibrary(library.id.get, 0, 50)
-        val page = keeps.iterator.map(k => pageInfoRepo.getByUri(k.uriId)).find(p => p.exists(_.description.size > 100)).flatten
-        page.flatMap(_.description)
+        selectKeepsDescription(library.id.get)
       }
     }
     if (library.visibility != PUBLISHED) {
@@ -149,7 +162,7 @@ class PageMetaTagsCommander @Inject() (
         unsafeTitle = s"${user.firstName} ${user.lastName}",
         url = url,
         urlPathOnly = url,
-        unsafeDescription = s"${user.firstName} ${user.lastName} is on Kifi. Join Kifi to connect with Eishay Smith and others you may know. Kifi connects people with knowledge.",
+        unsafeDescription = s"${user.firstName} ${user.lastName} is on Kifi. Join Kifi to connect with ${user.firstName} ${user.lastName} and others you may know. Kifi connects people with knowledge.",
         images = Seq(imageUrl),
         facebookId = facebookId,
         createdAt = user.createdAt,

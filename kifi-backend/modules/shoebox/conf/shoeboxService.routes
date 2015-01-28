@@ -445,7 +445,6 @@ POST    /site/user/prefs            @com.keepit.controllers.website.UserControll
 POST    /site/user/pic/upload       @com.keepit.controllers.website.UserController.uploadBinaryUserPicture()
 POST    /site/user/pic              @com.keepit.controllers.website.UserController.setUserPicture()
 POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: EmailAddress)
-POST    /site/keeps/file-import     @com.keepit.controllers.website.BookmarkImporter.uploadBookmarkFile(public: Boolean ?= false)
 
 GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
 
@@ -869,6 +868,7 @@ GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controll
 
 POST    /internal/shoebox/user/addInteractions            @com.keepit.controllers.internal.ShoeboxController.addInteractions(userId: Id[User])
 POST    /internal/shoebox/libraries/canView             @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
+GET     /internal/shoebox/user/activePersonas           @com.keepit.controllers.internal.ShoeboxController.getUserActivePersonas(userId: Id[User])
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)

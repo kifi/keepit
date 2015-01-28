@@ -4,14 +4,15 @@ import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.cortex.ModelVersions
 import com.keepit.cortex.core.{ CortexVersionCommander, ModelVersion }
+import com.keepit.cortex.dbmodel.UserTopicMean
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.common.controller.CortexServiceController
-import com.keepit.common.commanders.{ LDARepresenterCommander, LDAInfoCommander, LDACommander }
+import com.keepit.common.commanders.{ LDAPersonaCommander, LDARepresenterCommander, LDAInfoCommander, LDACommander }
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.utils.TextUtils
 import com.keepit.cortex.models.lda._
-import com.keepit.model.{ Library, User, NormalizedURI }
+import com.keepit.model.{ Persona, Library, User, NormalizedURI }
 import com.keepit.common.db.Id
 
 import scala.concurrent.Await
@@ -21,7 +22,8 @@ class LDAController @Inject() (
   lda: LDACommander,
   versionCommander: CortexVersionCommander,
   representer: LDARepresenterCommander,
-  infoCommander: LDAInfoCommander)
+  infoCommander: LDAInfoCommander,
+  personaCommander: LDAPersonaCommander)
     extends CortexServiceController with Logging {
 
   private val defaultVersion = ModelVersions.defaultLDAVersion
@@ -209,4 +211,23 @@ class LDAController @Inject() (
     Ok
   }
 
+  def getExistingPersonaFeature(personaId: Id[Persona], version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
+    val modelOpt = personaCommander.getExistingPersonaFeature(personaId)(version)
+    Ok(Json.toJson(modelOpt.map { _.feature.mean }))
+  }
+
+  def generatePersonaFeature(version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val topicIds = (js \ "topicIds").as[Seq[Int]].map { LDATopic(_) }
+    val (feature, sampleSize) = personaCommander.generatePersonaFeature(topicIds)(version)
+    Ok(Json.obj("feature" -> feature.mean, "sampleSize" -> sampleSize))
+  }
+
+  def savePersonaFeature(version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val feature = (js \ "feature").as[Array[Float]]
+    val personaId = Id[Persona]((js \ "personaId").as[Int])
+    personaCommander.savePersonaFeature(personaId, UserTopicMean(feature))(version)
+    Ok
+  }
 }

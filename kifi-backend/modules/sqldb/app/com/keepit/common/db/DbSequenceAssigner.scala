@@ -17,6 +17,7 @@ abstract class DbSequenceAssigner[M <: ModelWithSeqNumber[M]](
 
   override def assignSequenceNumbers(): Unit = {
     var done = false
+    errorCount.set(0)
     var currentBatchSize = batchSize
     while (!done) {
       try {
@@ -53,7 +54,7 @@ abstract class DbSequenceAssigner[M <: ModelWithSeqNumber[M]](
 
     for (lastMinDeferredSeqNum <- lastMinDeferredSeqNumOpt; minDeferredSeqNum <- minDeferredSeqNumOpt) {
       if (minDeferredSeqNum <= lastMinDeferredSeqNum) {
-        val ex = new SequenceNumberAssignmentStalling(minDeferredSeqNum)
+        val ex = new SequenceNumberAssignmentStalling(this.getClass.getSimpleName, minDeferredSeqNum)
         log.warn(ex.getMessage)
         airbrake.notify(ex)
       }

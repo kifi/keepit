@@ -28,9 +28,8 @@
           <td class="import-library-how-to-row-heading">Step 2</td>
           <td class="import-library-how-to-row-content">Select
             <a ng-click="openBookmarkFileSelector($event)" href="javascript:">the file you downloaded</a>.
-            <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html" onchange="angular.element(this).scope().allowUpload(this)">
+            <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html,.zip" onchange="angular.element(this).scope().allowUpload(this)">
             <span ng-if="importFilename" class="bookmark-file-upload-name"><i>{{importFilename}}</i> selected.</span>
-            <div ng-if="importFileStatus" class="bookmark-file-upload-status" >{{importFileStatus}}</div>
           </td>
         </tr>
 
@@ -60,6 +59,8 @@
         <span class="add-keep-to-library-dropdown-arrow"></span>
       </div>
     </div>
+
+    <div ng-if="importFileStatus" class="bookmark-file-upload-status" >{{importFileStatus}}</div>
 
     <div class="dialog-buttons">
       <button class="import-button" ng-class="{'disabled': disableBookmarkImport || !importFilename}" ng-click="importBookmarkFileToLibrary(importLibrary)">Import</button>

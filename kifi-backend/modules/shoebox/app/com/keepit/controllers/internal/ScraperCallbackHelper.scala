@@ -1,14 +1,17 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.model._
 import com.keepit.scraper.{ ScraperSchedulerConfig, ScrapeRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.{ timing, timingWithResult }
-import java.util.concurrent.locks.ReentrantLock
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.concurrent.Future
 
 @Singleton
 class ScraperCallbackHelper @Inject() (
@@ -21,22 +24,13 @@ class ScraperCallbackHelper @Inject() (
     scrapeInfoRepo: ScrapeInfoRepo,
     implicit val scraperConfig: ScraperSchedulerConfig) extends Logging {
 
-  private val assignLock = new ReentrantLock()
-  private val pageInfoLock = new ReentrantLock()
-  private val imageInfoLock = new ReentrantLock()
+  private val assignLock = new ReactiveLock(1)
+  private val pageInfoLock = new ReactiveLock(1)
+  private val imageInfoLock = new ReactiveLock(1)
 
-  def withLock[T](lock: ReentrantLock)(f: => T) = {
-    try {
-      lock.lock
-      f
-    } finally {
-      lock.unlock
-    }
-  }
-
-  def assignTasks(zkId: Id[ScraperWorker], max: Int): Seq[ScrapeRequest] = timingWithResult(s"assignTasks($zkId,$max)", { r: Seq[ScrapeRequest] => s"${r.length} uris assigned: ${r.mkString(",")}" }) {
+  def assignTasks(zkId: Id[ScraperWorker], max: Int): Future[Seq[ScrapeRequest]] = timing(s"assignTasks($zkId,$max)") {
     val rules = urlPatternRuleRepo.rules()
-    withLock(assignLock) {
+    val requests: Future[Seq[ScrapeRequest]] = assignLock.withLock {
       val res = db.readWrite(attempts = 1) { implicit rw =>
         val builder = Seq.newBuilder[ScrapeRequest]
         val limit = if (max < 10) max * 2 else max
@@ -70,18 +64,19 @@ class ScraperCallbackHelper @Inject() (
       statsd.gauge("scraper.assign", limit.length)
       limit
     }
+    requests
   }
 
   def saveImageInfo(info: ImageInfo): Unit = {
-    withLock(imageInfoLock) {
+    imageInfoLock.withLock {
       db.readWrite(attempts = 3) { implicit s =>
         imageInfoRepo.save(info)
       }
     }
   }
 
-  def savePageInfo(info: PageInfo): PageInfo = {
-    withLock(pageInfoLock) {
+  def savePageInfo(info: PageInfo): Future[PageInfo] = {
+    pageInfoLock.withLock {
       db.readWrite(attempts = 3) { implicit s =>
         try {
           pageInfoRepo.save(info)
