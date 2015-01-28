@@ -17,18 +17,21 @@ angular.module('kifi')
         pageOrigin = newOrigin || '';
       },
 
-      getAndClear: function () {
-        var temp = pageOrigin;
-        if (temp) {
+      applyAndClear: function (obj) {
+        if (!pageOrigin) {
+          pageOrigin = pageOrigins[initParams.o];
+          if (pageOrigin) {
+            delete initParams.o;
+          }
+        }
+        if (pageOrigin) {
+          var parts = pageOrigin.split('/');
+          obj.origin = parts[0];
+          if (parts[1]) {
+            obj.subOrigin = parts[1];
+          }
           pageOrigin = '';
-          return temp;
         }
-        temp = pageOrigins[initParams.o];
-        if (temp) {
-          delete initParams.o;
-          return temp;
-        }
-        return '';
       }
     };
   }

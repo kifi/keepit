@@ -3,10 +3,11 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window', 'library',
-  'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'util', 'initParams', 'installService',
-  function ($scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window, library,
-    keepDecoratorService, libraryService, modalService, platformService, profileService, util, initParams, installService) {
+  '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window', 'util', 'initParams', 'library',
+  'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'originTrackingService', 'installService',
+  function ($scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window, util, initParams, library,
+    keepDecoratorService, libraryService, modalService, platformService, profileService, originTrackingService, installService) {
+
     //
     // Internal data.
     //
@@ -38,11 +39,13 @@ angular.module('kifi')
     function trackPageView(attributes) {
       var url = $analytics.settings.pageTracking.basePath + $location.url();
 
-      $analytics.pageTrack(url, _.extend(
-        attributes || {},
-        libraryService.getCommonTrackingAttributes(library),
-        $rootScope.userLoggedIn ? {owner: $scope.userIsOwner ? 'Yes' : 'No'} : null
-      ));
+      attributes = _.extend(libraryService.getCommonTrackingAttributes(library), attributes);
+      attributes = originTrackingService.applyAndClear(attributes);
+      if ($rootScope.userLoggedIn) {
+        attributes.owner = $scope.userIsOwner ? 'Yes' : 'No';
+      }
+
+      $analytics.pageTrack(url, attributes);
     }
 
     function setTitle(lib) {
