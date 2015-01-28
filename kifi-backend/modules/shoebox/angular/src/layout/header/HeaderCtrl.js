@@ -159,9 +159,6 @@ angular.module('kifi')
       $document.off('keydown', addKeepsShortcut);
     });
 
-    friendService.getRequests();
-    $scope.friendRequests = friendService.requests;
-
     $scope.userProfileUrl = routeService.getProfileUrl($scope.me.username);
 
     $scope.logout = profileService.logout;
