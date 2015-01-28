@@ -11,6 +11,7 @@ angular.module('kifi')
     // Maintain client state for recently kept-to libraries.
     var recentLibraries = [];
 
+    // TODO: flush any non-public cached data when a user logs out.
 
     //
     // Clutches.
@@ -352,6 +353,7 @@ angular.module('kifi')
 
       getCommonTrackingAttributes: function (library) {
         var defaultAttributes = {
+          type: $rootScope.userLoggedIn ? 'library' : 'libraryLanding',
           followerCount: library.numFollowers,
           followingLibrary: this.isFollowingLibrary(library),
           keepCount: library.numKeeps,

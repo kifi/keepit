@@ -128,11 +128,17 @@ angular.module('kifi')
 
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
-        url: '/:username/:librarySlug',
+        url: '/:username/:librarySlug?authToken',
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
         data: {
           librarySearch: false
+        },
+        resolve: {
+          libraryService: 'libraryService',
+          library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {
+            return libraryService.getLibraryByUserSlug($stateParams.username, $stateParams.librarySlug, $stateParams.authToken);
+          }]
         },
         'abstract': true
       })

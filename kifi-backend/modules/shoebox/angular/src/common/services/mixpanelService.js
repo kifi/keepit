@@ -17,23 +17,19 @@
       $analyticsProvider.settings.pageTracking.autoTrackVirtualPages = false;
     }
   ])
-  .run(['$rootScope', '$window', '$log', 'profileService', '$http', 'env',
-    function (_$rootScope_, _$window_, _$log_, _profileService_, _$http_, _env_) {
+  .run(['$window', '$log', 'profileService', '$http', 'env',
+    function (_$window_, _$log_, _profileService_, _$http_, _env_) {
       $window = _$window_;
       $log = _$log_;
       profileService = _profileService_;
       $http = _$http_;
       env = _env_;
-
-      $rootScope = _$rootScope_;
-      $rootScope.$on('currentLibraryChanged', registerCurrentLibrary);
     }
   ]);
 
-  var $window, $rootScope, $log, profileService, $http, env;  // injected before any code below runs
+  var $window, $log, profileService, $http, env;  // injected before any code below runs
   var identifiedViewEventQueue = [];
   var userId;
-  var currentLibrary;
 
   var locations = {
     yourKeeps: /^\/$/,
@@ -45,10 +41,6 @@
     helpRankClicks: /^\/helprank\/clicks?$/,
     helpRankReKeeps: /^\/helprank\/rekeeps?$/
   };
-
-  function registerCurrentLibrary(event, library) {
-    currentLibrary = library;
-  }
 
   function trackEventThroughProxy(event, properties)  {
     return $http.post(env.xhrBase + '/events', [{
@@ -89,9 +81,6 @@
   }
 
   function getLocation(path) {
-    if (currentLibrary) {
-      return (profileService.me && profileService.me.id) ? 'library' : 'libraryLanding';
-    }
     for (var loc in locations) {
       if (locations[loc].test(path)) {
         return loc;
@@ -120,12 +109,12 @@
         $log.log('mixpanelService.pageTrackForUser(' + path + '):' + origin);
 
         attributes = _.extend({
-          type: getLocation(path),
+          type: attributes.type || getLocation(path),
           origin: origin,
           siteVersion: 2,
           userStatus: getUserStatus(),
           experiments: getExperiments()
-        }, attributes || {});
+        }, attributes);
 
         trackEventThroughProxy('user_viewed_page', attributes);
       } finally {
@@ -163,10 +152,10 @@
     $log.log('mixpanelService.pageTrackForVisitor(' + path + '):' + origin);
 
     attributes = _.extend({
-      type: getLocation(path),
+      type: attributes.type || getLocation(path),
       origin: origin,
       siteVersion: 2
-    }, attributes || {});
+    }, attributes);
 
     mixpanel.track('visitor_viewed_page', attributes);
   }
