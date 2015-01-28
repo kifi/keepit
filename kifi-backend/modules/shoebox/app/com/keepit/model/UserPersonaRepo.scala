@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time.Clock
@@ -13,7 +13,6 @@ trait UserPersonaRepo extends DbRepo[UserPersona] {
   def getByUserAndPersona(userId: Id[User], personaId: Id[Persona])(implicit session: RSession): Option[UserPersona]
   def getUserPersonaIds(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]]
   def getUserActivePersonas(userId: Id[User])(implicit session: RSession): UserActivePersonas
-  def getUserLastEditTime(userId: Id[User])(implicit session: RSession): Option[DateTime]
 }
 
 @Singleton
@@ -43,8 +42,17 @@ class UserPersonaRepoImpl @Inject() (
   }
 
   def invalidateCache(model: UserPersona)(implicit session: RSession): Unit = {
-    val current = getUserActivePersonas(model.userId)
+    val current = {
+      val (pids, updates) = getUserPersonaIdAndUpdatedAtCompiled(model.userId).list.unzip
+      UserActivePersonas(pids, updates)
+    }
     userActivePersonasCache.set(model.userId, current)
+  }
+
+  override def save(model: UserPersona)(implicit session: RWSession): UserPersona = {
+    val saved = super.save(model)
+    invalidateCache(saved)
+    saved
   }
 
   private val getByUserAndPersonaCompiled = Compiled { (userId: Column[Id[User]], personaId: Column[Id[Persona]]) =>
@@ -72,10 +80,4 @@ class UserPersonaRepoImpl @Inject() (
     }
   }
 
-  private val getUserLastEditTimeCompiled = Compiled { (userId: Column[Id[User]]) =>
-    (for (r <- rows if r.userId === userId) yield r).sortBy(_.updatedAt.desc)
-  }
-  def getUserLastEditTime(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
-    getUserLastEditTimeCompiled(userId).firstOption.map { _.updatedAt }
-  }
 }
