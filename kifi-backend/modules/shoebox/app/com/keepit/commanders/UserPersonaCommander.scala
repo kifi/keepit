@@ -17,7 +17,7 @@ class UserPersonaCommander @Inject() (
 
   def getPersonasForUser(userId: Id[User]): Seq[Persona] = {
     db.readOnlyMaster { implicit s =>
-      val personaIds = userPersonaRepo.getUserPersonas(userId).toSet
+      val personaIds = userPersonaRepo.getUserPersonaIds(userId).toSet
       personaRepo.getPersonasByIds(personaIds)
     }
   }
@@ -25,7 +25,7 @@ class UserPersonaCommander @Inject() (
   def addPersonasForUser(userId: Id[User], personas: Set[String])(implicit context: HeimdalContext): (Seq[Persona], Seq[Library]) = {
     val (newPersonas, currentPersonaIds) = db.readOnlyMaster { implicit s =>
       val newPersonas = personaRepo.getByNames(personas)
-      val currentPersonaIds = userPersonaRepo.getUserPersonas(userId)
+      val currentPersonaIds = userPersonaRepo.getUserPersonaIds(userId)
       (newPersonas, currentPersonaIds)
     }
     val personasToPersist = newPersonas.filterNot(p => currentPersonaIds.contains(p.id.get))
@@ -53,7 +53,7 @@ class UserPersonaCommander @Inject() (
   def removePersonasForUser(userId: Id[User], personas: Set[String]): Seq[Persona] = {
     val (newPersonas, currentPersonaIds) = db.readOnlyMaster { implicit s =>
       val newPersonas = personaRepo.getByNames(personas)
-      val currentPersonaIds = userPersonaRepo.getUserPersonas(userId)
+      val currentPersonaIds = userPersonaRepo.getUserPersonaIds(userId)
       (newPersonas, currentPersonaIds)
     }
     val personasToRemove = newPersonas.filter(p => currentPersonaIds.contains(p.id.get))

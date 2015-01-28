@@ -11,13 +11,15 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[UserPersonaRepoImpl])
 trait UserPersonaRepo extends DbRepo[UserPersona] {
   def getByUserAndPersona(userId: Id[User], personaId: Id[Persona])(implicit session: RSession): Option[UserPersona]
-  def getUserPersonas(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]]
+  def getUserPersonaIds(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]]
+  def getUserActivePersonas(userId: Id[User])(implicit session: RSession): UserActivePersonas
   def getUserLastEditTime(userId: Id[User])(implicit session: RSession): Option[DateTime]
 }
 
 @Singleton
 class UserPersonaRepoImpl @Inject() (
     val db: DataBaseComponent,
+    userActivePersonasCache: UserActivePersonasCache,
     val clock: Clock,
     airbrake: AirbrakeNotifier) extends DbRepo[UserPersona] with UserPersonaRepo {
 
@@ -34,8 +36,16 @@ class UserPersonaRepoImpl @Inject() (
   def table(tag: Tag) = new UserPersonaRepoTable(tag)
   initTable()
 
-  def deleteCache(model: UserPersona)(implicit session: RSession): Unit = {}
-  def invalidateCache(model: UserPersona)(implicit session: RSession): Unit = {}
+  implicit def userId2UserPersonasKey(userId: Id[User]): UserActivePersonasKey = UserActivePersonasKey(userId)
+
+  def deleteCache(model: UserPersona)(implicit session: RSession): Unit = {
+    userActivePersonasCache.remove(model.userId)
+  }
+
+  def invalidateCache(model: UserPersona)(implicit session: RSession): Unit = {
+    val current = getUserActivePersonas(model.userId)
+    userActivePersonasCache.set(model.userId, current)
+  }
 
   private val getByUserAndPersonaCompiled = Compiled { (userId: Column[Id[User]], personaId: Column[Id[Persona]]) =>
     (for (r <- rows if r.userId === userId && r.personaId === personaId) yield r)
@@ -44,11 +54,22 @@ class UserPersonaRepoImpl @Inject() (
     getByUserAndPersonaCompiled(userId, personaId).firstOption
   }
 
-  private val getUserPersonasCompiled = Compiled { (userId: Column[Id[User]]) =>
+  private val getUserPersonaIdsCompiled = Compiled { (userId: Column[Id[User]]) =>
     (for (r <- rows if r.userId === userId && r.state === UserPersonaStates.ACTIVE) yield r.personaId)
   }
-  def getUserPersonas(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]] = {
-    getUserPersonasCompiled(userId).list
+  def getUserPersonaIds(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]] = {
+    getUserPersonaIdsCompiled(userId).list
+  }
+
+  private val getUserPersonaIdAndUpdatedAtCompiled = Compiled { (userId: Column[Id[User]]) =>
+    (for (r <- rows if r.userId === userId && r.state === UserPersonaStates.ACTIVE) yield (r.personaId, r.updatedAt))
+  }
+
+  def getUserActivePersonas(userId: Id[User])(implicit session: RSession): UserActivePersonas = {
+    userActivePersonasCache.getOrElse(userId) {
+      val (pids, updates) = getUserPersonaIdAndUpdatedAtCompiled(userId).list.unzip
+      UserActivePersonas(pids, updates)
+    }
   }
 
   private val getUserLastEditTimeCompiled = Compiled { (userId: Column[Id[User]]) =>
