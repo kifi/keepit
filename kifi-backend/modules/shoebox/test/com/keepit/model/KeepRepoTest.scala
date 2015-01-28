@@ -1,0 +1,41 @@
+package com.keepit.model
+
+import com.keepit.common.db._
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.test._
+import org.specs2.mutable._
+
+class KeepRepoTest extends Specification with ShoeboxTestInjector {
+
+  "KeepRepo" should {
+    "getPrivate" in {
+      withDb() { implicit injector =>
+        val (user1, user2, keep1, keep2, keep3) = db.readWrite { implicit s =>
+          val user1 = user().saved
+          val user2 = user().saved
+          val user1Keeps = keep().withUser(user1).discoverable().saved ::
+            keep().withUser(user1).secret().saved ::
+            keep().withUser(user1).published().saved :: Nil
+          keeps(20).map(_.withUser(user2).published()).saved
+          keeps(20).map(_.withUser(user2).secret()).saved
+          (user1, user2, user1Keeps(0), user1Keeps(1), user1Keeps(2))
+        }
+        db.readOnlyMaster { implicit s =>
+          val privates = inject[KeepRepo].getPrivate(user1.id.get, 0, 10)
+          privates.map(_.id.get) === Seq(keep2.id.get)
+          val public = inject[KeepRepo].getNonPrivate(user1.id.get, 0, 10)
+          public.map(_.id.get) === Seq(keep3.id.get, keep1.id.get)
+          inject[KeepRepo].getPrivate(user2.id.get, 0, 8).size === 8
+          inject[KeepRepo].getPrivate(user2.id.get, 10, 100).size === 10
+          inject[KeepRepo].getNonPrivate(user2.id.get, 0, 8).size === 8
+        }
+      }
+    }
+  }
+
+}

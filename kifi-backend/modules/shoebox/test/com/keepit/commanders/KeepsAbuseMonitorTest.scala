@@ -2,11 +2,11 @@ package com.keepit.commanders
 
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.test._
 import org.specs2.mutable.Specification
 import com.keepit.model._
-import com.keepit.model.UserFactoryHelper._
 import com.keepit.common.db.slick.Database
 import com.keepit.normalizer.NormalizationService
 import org.joda.time.DateTime
