@@ -1,65 +1,32 @@
-<div>
-  <!-- Library page -->
-  <div ng-if="(!librarySearch || !$root.userLoggedIn) && (page !== 'permission_denied' && page !== 'not_found') && initialized"
-       class="kf-library-card-header-container">
-    <div kf-library-header
-      library="library"
-      username="username"
-      library-slug="librarySlug"
-      loading="loading"
-      toggle-edit="toggleEdit"
-      library-search="librarySearch"
-    ></div>
-  </div>
+<div class="kf-library-card-header-container" ng-if="!librarySearch || !$root.userLoggedIn">
+  <div kf-library-header
+    library="library"
+    username="username"
+    library-slug="librarySlug"
+    loading="loading"
+    toggle-edit="toggleEdit"
+    library-search="librarySearch"
+  ></div>
+</div>
 
-  <div class="kf-main-library-keeps" ng-if="page === 'library'" ng-class="{'library-search': librarySearch}">
-    <div class="kf-library-body clearfix">
-      <div ui-view></div>
-      <div kf-related-libraries ng-if="!userLoggedIn && relatedLibraries" ng-hide="librarySearch"
-        related-libraries="relatedLibraries" parent-library="library">
-      </div>
+<div class="kf-main-library-keeps" ng-class="{'library-search': librarySearch}">
+  <div class="kf-library-body clearfix">
+    <div ui-view></div>
+    <div kf-related-libraries ng-if="!userLoggedIn && relatedLibraries" ng-hide="librarySearch"
+      related-libraries="relatedLibraries" parent-library="library">
     </div>
   </div>
+</div>
 
-  <!-- Permission Denied -->
-  <div class="kf-main-library-keeps" ng-if="page === 'permission_denied' || page === 'not_found'">
-    <div kf-error-not-found></div>
+<div class="kf-lib-info-footer" ng-if="!$root.userLoggedIn">
+  <div class="first-line">
+    <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/how_it_works">How it works</a> &middot;
+    <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/about">About</a> &middot;
+    <a class="kf-footer-item-link" target="_top" href="http://blog.kifi.com">Blog</a>
   </div>
-
-  <!-- Needs to log in -->
-  <div class="kf-main-library-keeps" ng-if="page === 'login'">
-    <div class="kf-lib-passphrase-message">
-      <p class="kf-lib-passphrase-header">This is a private library. To access:</p>
-      <ul class="kf-lib-passphrase-directions">
-        <li>1. Copy the pass phrase from the invitation email</li>
-        <li>2. Paste it below and hit the 'Let me in' button</li>
-      </ul>
-      <br>
-      <span class="kf-lib-passphrase-input-box">
-        <span class="passphrase-lock-icon sprite svg-white-lock"></span>
-        <input class="" ng-model="passphrase.value" type="text" name="name" placeholder="Enter pass phrase here" autocomplete="off" novalidate>
-      </span>
-      <div class="kf-lib-passphrase-button" ng-click="submitPassPhrase()">
-        <span class="passphrase-key-icon sprite svg-white-key"></span>
-        <span class="passphrase-key-text">Let me in</span>
-      </div>
-      <div class="kf-lib-passphrase-example">Example: "hot yellow car"</div>
-      <div class="kf-lib-access-error" ng-if="$error.name">
-        {{$error.name}}
-      </div>
-    </div>
-  </div>
-
-  <div class="kf-lib-info-footer" ng-if="!$root.userLoggedIn && page=='library'">
-    <div class="first-line">
-      <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/how_it_works">How it works</a> &middot;
-      <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/about">About</a> &middot;
-      <a class="kf-footer-item-link" target="_top" href="http://blog.kifi.com">Blog</a>
-    </div>
-    <span ng-if="!isMobile"> &middot; </span>
-    <div class="second-line">
-      <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/privacy">Privacy</a> &middot;
-      <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/terms">Terms</a>
-    </div>
+  <span ng-if="!isMobile"> &middot; </span>
+  <div class="second-line">
+    <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/privacy">Privacy</a> &middot;
+    <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/terms">Terms</a>
   </div>
 </div>

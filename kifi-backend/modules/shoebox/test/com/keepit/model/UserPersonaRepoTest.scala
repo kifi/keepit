@@ -23,7 +23,7 @@ class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyReplica { implicit s =>
           repo.getByUserAndPersona(Id[User](1), Id[Persona](1)).isDefined
-          repo.getUserPersonas(Id[User](1)).sortBy(_.id).map { _.id }.toList === List(1, 2)
+          repo.getUserPersonaIds(Id[User](1)).sortBy(_.id).map { _.id }.toList === List(1, 2)
           repo.getUserLastEditTime(Id[User](1)).get.getMillis === editTime1.getMillis
         }
 

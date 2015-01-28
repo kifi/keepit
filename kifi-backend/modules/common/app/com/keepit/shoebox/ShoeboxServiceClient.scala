@@ -121,6 +121,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]]
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
+  def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -144,7 +145,8 @@ case class ShoeboxCacheProvider @Inject() (
   userSegmentCache: UserSegmentCache,
   extensionVersionCache: ExtensionVersionInstallationIdCache,
   allFakeUsersCache: AllFakeUsersCache,
-  librariesWithWriteAccessCache: LibrariesWithWriteAccessCache)
+  librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
+  userActivePersonaCache: UserActivePersonasCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -763,6 +765,13 @@ class ShoeboxServiceClientImpl @Inject() (
     cacheProvider.librariesWithWriteAccessCache.get(LibrariesWithWriteAccessUserKey(userId)) match {
       case Some(cachedLibraryIds) => Future.successful(cachedLibraryIds)
       case None => call(Shoebox.internal.getLibrariesWithWriteAccess(userId)).map(_.json.as[Set[Id[Library]]])
+    }
+  }
+
+  def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = {
+    cacheProvider.userActivePersonaCache.get(UserActivePersonasKey(userId)) match {
+      case Some(personas) => Future.successful(personas)
+      case None => call(Shoebox.internal.getUserActivePersonas(userId)).map { _.json.as[UserActivePersonas] }
     }
   }
 }

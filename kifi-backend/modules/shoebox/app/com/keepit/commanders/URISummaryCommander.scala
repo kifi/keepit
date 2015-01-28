@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.net.WebService
 import com.keepit.common.performance._
 import com.keepit.common.cache.TransactionalCaching
@@ -77,7 +78,7 @@ class URISummaryCommander @Inject() (
     getURISummaryForRequest(request, NormalizedURIRef(nUri.id.get, nUri.url, nUri.externalId))
   }
 
-  private val consolidateFetchURISummary = new RequestConsolidator[NormalizedURIRef, Option[URISummary]](20.seconds)
+  private val consolidateFetchURISummary = new RequestConsolidator[NormalizedURIRef, Option[URISummary]](60.seconds)
 
   private def getURISummaryForRequest(request: URISummaryRequest, nUri: NormalizedURIRef): Future[URISummary] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
@@ -142,14 +143,23 @@ class URISummaryCommander @Inject() (
   /**
    * Retrieves URI summary data from external services (Embedly, PagePeeker)
    */
+  val fetchPreviewLock = new ReactiveLock(8)
   private def fetchSummaryForRequest(nUri: NormalizedURIRef): Future[Option[URISummary]] = {
     log.info(s"fetchSummaryForRequest for ${nUri.id} -> ${nUri.url}")
-    val stopper = Stopwatch("fetching from scraper embedly info for ${nUri.id} -> ${nUri.url}")
-    val future = fetchFromEmbedly(nUri)
-    future.onComplete { res =>
-      stopper.stop() tap { _ => log.info(stopper.toString) }
+    val stopper = Stopwatch(s"fetching from scraper embedly info for ${nUri.id} -> ${nUri.url}")
+    if (fetchPreviewLock.waiting > 50) { // Backlog is this deep, we're way behind.
+      log.info(s"fetchSummaryForRequest denied for ${nUri.id}, ${nUri.url} because lock waiting is ${fetchPreviewLock.waiting}")
+      Future.successful(None)
+    } else {
+      fetchPreviewLock.withLockFuture {
+        log.info(s"fetchSummaryForRequest running for ${nUri.id}, ${nUri.url}, wait is ${fetchPreviewLock.waiting}")
+        val future = fetchFromEmbedly(nUri)
+        future.onComplete { res =>
+          stopper.stop() tap { _ => log.info(stopper.toString) }
+        }
+        future
+      }
     }
-    future
   }
 
   /**

@@ -1,7 +1,7 @@
-<div class="kf-library-card-header-wrapper" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress, 'library-search': librarySearch }">
-  <div class="kf-library-card-header" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress, 'library-search': librarySearch, 'pageScrolled': pageScrolled }" itemscope itemtype="http://schema.org/CollectionPage">
+<div class="kf-library-card-header-wrapper" ng-class="{ 'library-search-in-progress': librarySearchInProgress, 'library-search': librarySearch }">
+  <div class="kf-library-card-header" ng-class="{ 'pageScrolled': pageScrolled }" itemscope itemtype="http://schema.org/CollectionPage">
     <meta itemtype="url" content="{{library.shareUrl}}" />
-    <div class="kf-keep library-card" ng-class="{ 'loggedOutUser': isUserLoggedOut, 'library-search-in-progress': librarySearchInProgress }">
+    <div class="kf-keep library-card">
       <div ng-show="library.invite && !library.invite.actedOn" class="library-card-invite-header">
         <button class="library-card-invite-header-button library-card-invite-header-accept" ng-click="acceptInvitation()">Accept</button>
         <button class="library-card-invite-header-button library-card-invite-header-ignore" ng-click="ignoreInvitation()">Ignore</button>
@@ -12,8 +12,7 @@
       <div class="kf-keep-lib-body">
         <div class="kf-keep-lib-header">
           <div class="kf-keep-lib-name-container kf-keep-title">
-            <span class="kf-keep-lib-name" title="{{library.name}}" kf-ellipsis full-text="library.name" max-num-lines=2 num-reloads=3
-              itemtype="name"></span>
+            <span class="kf-keep-lib-name" itemtype="name">{{library.name}}</span>
           </div>
         </div>
 

@@ -259,10 +259,6 @@ angular.module('kifi')
       }
     }
 
-    function logout() {
-      $window.location = routeService.logout;
-    }
-
     function postDelightedAnswer(score, comment, answerId) {
       var data = {
         score: score || undefined,
@@ -302,7 +298,6 @@ angular.module('kifi')
       fetchMe: fetchMe,
       getMe: getMe,
       postMe: postMe,
-      logout: logout,
       prefs: prefs,
       fetchPrefs: fetchPrefs,
       savePrefs: savePrefs,

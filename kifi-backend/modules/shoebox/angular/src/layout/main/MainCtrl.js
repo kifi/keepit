@@ -177,7 +177,8 @@ angular.module('kifi')
     $scope.allowUpload = function (elem) {
       $scope.$apply(function () {
         var file = elem && elem.files && elem.files[0];
-        if (file && file.name.indexOf('.html', file.name.length - 5) !== -1) { // checking if file.name ends with '.html'
+        var ext = file && file.name.split('.').pop();
+        if (ext && (ext === 'html' || ext === 'htm' || ext === 'zip')) {
           $scope.importFilename = file.name;
           $scope.disableBookmarkImport = false;
           $scope.importFileStatus = '';
@@ -235,9 +236,9 @@ angular.module('kifi')
           // });
 
           var tooSlowTimer = $timeout(function () {
-            $scope.importFileStatus = 'Your bookmarks are still uploading... Hang tight.';
+            $scope.importFileStatus = 'Your bookmarks are still uploading... Hang tight!';
             $scope.disableBookmarkImport = false;
-          }, 20000);
+          }, 8000);
 
           $scope.importFileStatus = 'Uploading! May take a bit, especially if you have a lot of links.';
           $scope.importFilename = '';

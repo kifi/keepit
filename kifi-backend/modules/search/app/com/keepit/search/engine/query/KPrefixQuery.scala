@@ -25,6 +25,8 @@ class KPrefixQuery(val prefixField: String, val nameValueField: String, val term
 
   protected val name = "KPrefix"
 
+  val length = terms.foldLeft(0)(_ + _.length)
+
   override def toString(s: String) = s"KPrefixQuery($prefixField-$nameValueField: ${terms.mkString(" & ")})"
 
   override def createWeight(searcher: IndexSearcher): Weight = new KPrefixWeight(this, searcher)
@@ -85,8 +87,9 @@ class KPrefixScorer(weight: KPrefixWeight, subScorer: Scorer, queryTerms: Array[
   override def score(): Float = {
     val name = getName()
     val distance = PrefixMatching.distance(name, queryTerms)
-    val boost = (PrefixMatching.maxDist - distance).toFloat / PrefixMatching.maxDist // todo(Léo): boost shorter names
-    val score = subScorer.score() * boost
+    val prefixSimilarity = (PrefixMatching.maxDist - distance).toFloat / PrefixMatching.maxDist
+    val lengthSimilarity = (1.0f + weight.query.length) / (1 + name.length)
+    val score = subScorer.score() * prefixSimilarity * lengthSimilarity
     score
   }
 
