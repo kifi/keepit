@@ -9,16 +9,16 @@
       <div class="kf-keep-lib-body">
         <div class="kf-keep-lib-header">
           <div class="kf-keep-lib-name-container kf-keep-title">
-            <a class="kf-keep-lib-name" ng-href="{{library.url}}" ng-attr-title="{{library.name}}" ng-bind-html="library.name" ng-click="clickLibraryCallback()"></a>
+            <a class="kf-keep-lib-name" href="{{library.url}}" ng-click="clickLibraryCallback()">{{library.name}}</a>
           </div>
         </div>
-        <div ng-class="{'kf-keep-lib-color': true, 'kf-above-image': coverImageUrl}" style="background-color:{{library.color}}"></div>
+        <div class="kf-keep-lib-color" ng-class="{'kf-above-image': coverImageUrl}" style="background-color:{{library.color}}"></div>
         <a ng-if="coverImageUrl" href="{{library.url}}" class="kf-keep-lib-cover-image"
           style="background-image:url({{coverImageUrl}});background-position:{{library.image.x}}% {{library.image.y}}%"></a>
         <div class="kf-keep-lib-info">
           <div class="kf-keep-lib-owner">
             <a href="{{library.owner.profileUrl}}" kf-track-origin origin="recommendationsPage/curator">
-              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
+              <img src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
                 class="kf-keep-lib-user-image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
             </a>
             <div class="kf-keep-lib-owner-text">
@@ -59,7 +59,7 @@
         <div kf-library-share-search library="library" current-page-origin="libraryPage" class="kf-keep-lib-footer-button-right"></div>
 
         <button class="kf-keep-lib-footer-button library-button-with-icon kf-keep-lib-footer-twitter-button">
-          <a class="kf-keep-lib-footer-share-link" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}" ng-click="shareTwitter()">
+          <a class="kf-keep-lib-footer-share-link" href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}" ng-click="shareTwitter()">
             <span class="kf-keep-lib-footer-button-icon svg-twitter"></span>
             <span class="kf-keep-lib-footer-button-icon svg-twitter-white"></span><!-- for non-logged-in users -->
             <span class="kf-keep-lib-footer-share-link-text">Tweet</span>
