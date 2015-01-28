@@ -102,12 +102,25 @@ class ScrapeWorkerImpl @Inject() (
       case None =>
     }
   }
-
+  private val shortenedUrls = Set("bit.ly", "goo.gl", "owl.ly", "deck.ly", "su.pr", "lnk.co", "fur.ly", "ow.ly", "owl.ly", "tinyurl.com", "is.gd", "v.gd", "t.co", "linkd.in")
   private def handleSuccessfulScraped(latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo, pageInfoOpt: Option[PageInfo]): Future[Option[Article]] = {
+
+    // This is bad. This whole function could likely be replaced with one call to shoebox signaling that a
+    // scrape has happened. Excellent cleanup task for anyone learning scraper architecture.
 
     @inline def postProcess(scrapedURI: NormalizedURI, article: Article, signature: Signature): Future[Option[String]] = {
       dbHelper.getBookmarksByUriWithoutTitle(scrapedURI.id.get) flatMap { bookmarks =>
-        Future.sequence(bookmarks.map { bookmark => dbHelper.saveBookmark(bookmark.copy(title = scrapedURI.title)) }) flatMap { updatedBookmarks =>
+        // Update bookmarks that have an empty title. For links that are clearly shortened URLs, fix them.
+        val updatedBookmarks = bookmarks.map { bookmark =>
+          val isShortenedUrl = URI.parse(bookmark.url).toOption.flatMap(_.host.map(_.name)).exists(shortenedUrls.contains)
+          val updatedBookmark = if (isShortenedUrl) {
+            bookmark.copy(title = scrapedURI.title, url = scrapedURI.url)
+          } else {
+            bookmark.copy(title = scrapedURI.title)
+          }
+          dbHelper.saveBookmark(updatedBookmark)
+        }
+        Future.sequence(updatedBookmarks) flatMap { updatedBookmarks =>
           article.canonicalUrl.fold(Future.successful())(recordScrapedNormalization(latestUri, signature, _, article.alternateUrls)) flatMap { _ =>
             scrapedURI.id.fold(Future.successful[Option[String]](None))(id => shoeboxScraperClient.getUriImage(id))
           }
@@ -343,14 +356,18 @@ class ScrapeWorkerImpl @Inject() (
     }
 
     val filtered = redirects.dropWhile(!_.isLocatedAt(uri.url))
-    if (filtered.headOption.exists(redirect => !redirect.isPermanent)) {
-      Future.successful(updateRedirectRestriction(uri, filtered.head))
-    } else {
-      hasFishy301(uri) flatMap { isFishy =>
-        if (isFishy && filtered.headOption.isDefined) {
-          Future.successful(updateRedirectRestriction(uri, filtered.head))
-        } else resolve(filtered)
-      }
+
+    filtered.headOption match {
+      case Some(redirect) if !redirect.isPermanent =>
+        Future.successful(updateRedirectRestriction(uri, redirect))
+      case Some(redirect) =>
+        hasFishy301(uri) flatMap { isFishy =>
+          if (isFishy) {
+            Future.successful(updateRedirectRestriction(uri, redirect))
+          } else resolve(filtered)
+        }
+      case None => // no redirects
+        Future.successful(uri)
     }
   }
 
@@ -365,15 +382,21 @@ class ScrapeWorkerImpl @Inject() (
   }
 
   private def hasFishy301(movedUri: NormalizedURI): Future[Boolean] = {
-    if (movedUri.restriction == Some(Restriction.http(301))) Future.successful(true)
-    else {
+    if (movedUri.restriction == Some(Restriction.http(301))) {
+      Future.successful(true)
+    } else {
       dbHelper.getLatestKeep(movedUri.url).map { keepOpt =>
-        keepOpt.filter(_.createdAt.isAfter(currentDateTime.minusHours(1))) match {
-          case Some(recentKeep) if recentKeep.source != KeepSource.bookmarkImport => true
+        keepOpt.filter(_.keptAt.isAfter(currentDateTime.minusHours(1))) match {
+          case Some(recentKeep) if !KeepSource.bulk.contains(recentKeep.source) =>
+            true
           case Some(importedBookmark) =>
             val parsedBookmarkUrl = URI.parse(importedBookmark.url).get
-            (parsedBookmarkUrl != movedUri.url) && (httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP).statusCode != HttpStatus.SC_MOVED_PERMANENTLY)
-          case None => false
+            val isFishy = (parsedBookmarkUrl.toString != movedUri.url) &&
+              !httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP).redirects.headOption.exists(_.isPermanent)
+            log.info(s"[hasFishy301] ${importedBookmark.uriId} result: $isFishy, ${parsedBookmarkUrl.toString} vs ${movedUri.url}")
+            isFishy
+          case None =>
+            false
         }
       }
     }

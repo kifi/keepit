@@ -218,8 +218,14 @@ class InviteCommander @Inject() (
         }
       }
       notifyClientsOfConnection(userId, senderUserId)
+      emailClientsOfConnection(userId, senderUserId)
       userConnectionRepo.addConnections(userId, Set(senderUserId), requested = true)
     }
+  }
+
+  private def emailClientsOfConnection(user1Id: Id[User], user2Id: Id[User]) = {
+    emailSenderProvider.connectionMade(user1Id, user2Id, NotificationCategory.User.CONNECTION_MADE)
+    emailSenderProvider.connectionMade(user2Id, user1Id, NotificationCategory.User.CONNECTION_MADE)
   }
 
   private def notifyClientsOfConnection(user1Id: Id[User], user2Id: Id[User]) = {
