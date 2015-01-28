@@ -41,7 +41,7 @@ trait SequenceAssigner extends RecurringTaskManager {
   override def doTask(): Unit = assignSequenceNumbers()
 }
 
-class SequenceNumberAssignmentStalling(seq: Long) extends Exception(s"sequence number assignment may be stalling: $seq")
+class SequenceNumberAssignmentStalling(name: String, seq: Long) extends Exception(s"sequence number assignment may be stalling on $name: $seq")
 
 abstract class SequencingActor(
     assigner: SequenceAssigner,
