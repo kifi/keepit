@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Singleton, ImplementedBy, Inject }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -10,8 +10,9 @@ import com.keepit.common.time.Clock
 @ImplementedBy(classOf[PersonaRepoImpl])
 trait PersonaRepo extends DbRepo[Persona] {
   def getByName(name: String)(implicit session: RSession): Option[Persona]
-  def getByNames(names: Set[String])(implicit session: RSession): Seq[Persona]
+  def getByNames(names: Set[String])(implicit session: RSession): Map[String, Persona]
   def getPersonasByIds(personaIds: Set[Id[Persona]])(implicit session: RSession): Seq[Persona]
+  def getByState(state: State[Persona])(implicit session: RSession): Seq[Persona]
 }
 
 @Singleton
@@ -42,12 +43,19 @@ class PersonaRepoImpl @Inject() (
     getByNameCompiled(name).firstOption
   }
 
-  def getByNames(names: Set[String])(implicit session: RSession): Seq[Persona] = {
-    (for { r <- rows if r.name.inSet(names) && r.state === PersonaStates.ACTIVE } yield r).list.toSeq
+  def getByNames(names: Set[String])(implicit session: RSession): Map[String, Persona] = {
+    (for { r <- rows if r.name.inSet(names) && r.state === PersonaStates.ACTIVE } yield (r.name, r)).list.toMap
   }
 
   def getPersonasByIds(personaIds: Set[Id[Persona]])(implicit session: RSession): Seq[Persona] = {
     (for { r <- rows if r.id.inSet(personaIds) && r.state === PersonaStates.ACTIVE } yield r).list.toSeq
+  }
+
+  private val getByStateCompiled = Compiled { (state: Column[State[Persona]]) =>
+    (for (r <- rows if r.state === state) yield r)
+  }
+  def getByState(state: State[Persona])(implicit session: RSession): Seq[Persona] = {
+    getByStateCompiled(state).list
   }
 
 }

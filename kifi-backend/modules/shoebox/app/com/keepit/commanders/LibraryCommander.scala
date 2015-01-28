@@ -165,7 +165,22 @@ class LibraryCommander @Inject() (
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
-          val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
+          val keeps = db.readOnlyMaster { implicit session =>
+            library.kind match {
+              case LibraryKind.USER_CREATED => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
+              case LibraryKind.SYSTEM_MAIN =>
+                assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
+                if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.ALL_KEEPS_VIEW)) { //cached
+                  keepRepo.getNonPrivate(library.ownerId, 0, maxKeepsShown) //not cached
+                } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
+              case LibraryKind.SYSTEM_SECRET =>
+                assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
+                if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.ALL_KEEPS_VIEW)) { //cached
+                  keepRepo.getPrivate(library.ownerId, 0, maxKeepsShown) //not cached
+                } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
+            }
+
+          }
           keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, withKeepTime)
         } else Future.successful(Seq.empty)
       }
@@ -190,15 +205,15 @@ class LibraryCommander @Inject() (
       db.readOnlyReplica { implicit s => basicUserRepo.loadAll(allUsersShown) }
     }
 
-    val keepCountsByLibraries = db.readOnlyReplica { implicit s =>
-      keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet)
+    val keepCountsByLibraries = db.readOnlyMaster { implicit s =>
+      keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet) //cached
     }
 
     val countsByLibraryId = libraries.map { library =>
-      val counts = followerInfosByLibraryId(library.id.get)._2
-      val collaboratorCount = counts(LibraryAccess.READ_WRITE)
-      val followerCount = counts(LibraryAccess.READ_INSERT) + counts(LibraryAccess.READ_ONLY)
-      val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0)
+      val counts = followerInfosByLibraryId(library.id.get)._2 //todo(eishay): switch on ALL_KEEPS_VIEW (should be zero)
+      val collaboratorCount = counts(LibraryAccess.READ_WRITE) //todo(eishay): switch on ALL_KEEPS_VIEW (should be zero)
+      val followerCount = counts(LibraryAccess.READ_INSERT) + counts(LibraryAccess.READ_ONLY) //todo(eishay): switch on ALL_KEEPS_VIEW (should be zero)
+      val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0) //todo(eishay): switch on ALL_KEEPS_VIEW
       library.id.get -> (collaboratorCount, followerCount, keepCount)
     }.toMap
 
@@ -249,11 +264,11 @@ class LibraryCommander @Inject() (
     val followersAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_ONLY)
     val relevantInviteStates = Set(LibraryInviteStates.ACTIVE)
 
-    val memberCount = db.readOnlyMaster { implicit s => libraryMembershipRepo.countWithLibraryIdByAccess(libraryId) }
+    val memberCount = db.readOnlyMaster { implicit s => libraryMembershipRepo.countWithLibraryIdByAccess(libraryId) } //todo(eishay): not cached
 
     if (limit > 0) db.readOnlyMaster { implicit session =>
       // Get Collaborators
-      val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, offset, limit, collaboratorsAccess)
+      val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, offset, limit, collaboratorsAccess) //not cached
       val collaboratorsShown = collaborators.length
 
       val numCollaborators = memberCount(LibraryAccess.READ_INSERT) + memberCount(LibraryAccess.READ_WRITE)
@@ -266,7 +281,7 @@ class LibraryCommander @Inject() (
           val collaboratorsTotal = numCollaborators
           offset - collaboratorsTotal
         }
-        libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, followersOffset, followersLimit, followersAccess)
+        libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, followersOffset, followersLimit, followersAccess) //not cached
       }
 
       // Get Invitees with Invites
@@ -277,7 +292,7 @@ class LibraryCommander @Inject() (
           val membersTotal = numMembers
           offset - membersTotal
         }
-        libraryInviteRepo.pageInviteesByLibraryId(libraryId, inviteesOffset, inviteesLimit, relevantInviteStates)
+        libraryInviteRepo.pageInviteesByLibraryId(libraryId, inviteesOffset, inviteesLimit, relevantInviteStates) //not cached
       }
       (collaborators, followers, inviteesWithInvites, memberCount)
     }

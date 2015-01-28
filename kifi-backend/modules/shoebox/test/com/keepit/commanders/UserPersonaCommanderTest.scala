@@ -33,40 +33,28 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
   )
 
   "UserPersonaCommander" should {
-    "retrieve personas" in {
-      withDb(modules: _*) { implicit injector =>
-        val (user1, allPersonas) = setupUserPersona
-        val userPersonaCommander = inject[UserPersonaCommander]
-        val personas = userPersonaCommander.getPersonasForUser(user1.id.get)
-        personas.length === 2
-        personas.map(_.name) === Seq("hero", "adventurer")
-      }
-    }
 
     "add personas" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, allPersonas) = setupUserPersona
         val userPersonaCommander = inject[UserPersonaCommander]
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getUserPersonaIds(user1.id.get) === Seq(allPersonas("hero"), allPersonas("adventurer"))
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq("hero", "adventurer")
         }
         // add an existing persona
-        val (personas1, libs1) = userPersonaCommander.addPersonasForUser(user1.id.get, Set("hero"))
-        personas1.length === 0
-        libs1.length === 0
+        val mapping1 = userPersonaCommander.addPersonasForUser(user1.id.get, Set("hero"))
+        mapping1.size === 0
 
         // add a new persona
-        val (personas2, libs2) = userPersonaCommander.addPersonasForUser(user1.id.get, Set("engineer"))
-        personas2.length === 1
-        libs2.length === 1
+        val mapping2 = userPersonaCommander.addPersonasForUser(user1.id.get, Set("engineer"))
+        mapping2.size === 1
 
         // add a mixed set
-        val (personas3, libs3) = userPersonaCommander.addPersonasForUser(user1.id.get, Set("engineer", "philanthropist", "foodie", "hero"))
-        personas3.length === 2
-        libs3.length === 2
+        val mapping3 = userPersonaCommander.addPersonasForUser(user1.id.get, Set("engineer", "philanthropist", "foodie", "hero"))
+        mapping3.size === 2
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getUserPersonaIds(user1.id.get) === Seq(allPersonas("hero"), allPersonas("adventurer"), allPersonas("engineer"), allPersonas("foodie"), allPersonas("philanthropist"))
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq("hero", "adventurer", "engineer", "foodie", "philanthropist")
         }
       }
     }
@@ -76,29 +64,30 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
         val (user1, allPersonas) = setupUserPersona
         val userPersonaCommander = inject[UserPersonaCommander]
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getUserPersonaIds(user1.id.get) === Seq(allPersonas("hero"), allPersonas("adventurer"))
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq("hero", "adventurer")
         }
         // remove one existing persona
-        userPersonaCommander.removePersonasForUser(user1.id.get, Set("hero")).length === 1
+        userPersonaCommander.removePersonasForUser(user1.id.get, Set("hero")).size === 1
 
         // remove a persona that doesn't exist
-        userPersonaCommander.removePersonasForUser(user1.id.get, Set("parent")).length === 0
+        userPersonaCommander.removePersonasForUser(user1.id.get, Set("parent")).size === 0
 
         // remove mixed set
-        userPersonaCommander.removePersonasForUser(user1.id.get, Set("hero", "adventurer", "parent")).length === 1
+        userPersonaCommander.removePersonasForUser(user1.id.get, Set("hero", "adventurer", "parent")).size === 1
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getUserPersonaIds(user1.id.get) === Seq()
+          userPersonaRepo.getPersonasForUser(user1.id.get) === Seq()
         }
       }
     }
   }
 
+  // sets up a Map of [String, Persona]
   private def setupPersonas()(implicit injector: Injector) = {
     val availablePersonas = Seq("foodie", "artist", "engineer", "athlete", "parent", "philanthropist", "hero", "adventurer")
     db.readWrite { implicit s =>
       availablePersonas.map { pName =>
-        (pName -> personaRepo.save(Persona(name = pName)).id.get)
+        (pName -> personaRepo.save(Persona(name = pName)))
       }
     }.toMap
   }
@@ -107,8 +96,8 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
     val allPersonas = setupPersonas
     val user1 = db.readWrite { implicit s =>
       val user1 = user().withName("Tony", "Stark").withUsername("tonystark").withEmailAddress("tony@stark.com").saved
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("hero")))
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("adventurer")))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("hero").id.get))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("adventurer").id.get))
       user1
     }
     (user1, allPersonas)

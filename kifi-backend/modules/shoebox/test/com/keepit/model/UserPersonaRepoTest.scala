@@ -5,6 +5,8 @@ import com.keepit.common.time.{ FakeClock, Clock }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import com.keepit.common.time._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory._
 
 class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
   "user persona repo" should {
@@ -23,10 +25,9 @@ class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyReplica { implicit s =>
           repo.getByUserAndPersona(Id[User](1), Id[Persona](1)).isDefined
-          repo.getUserPersonaIds(Id[User](1)).sortBy(_.id).map { _.id }.toList === List(1, 2)
+          repo.getPersonaIdsForUser(Id[User](1)).sortBy(_.id).map { _.id }.toList === List(1, 2)
           val actives = repo.getUserActivePersonas(Id[User](1))
           (actives.personas zip actives.updatedAt).toMap.get(Id[Persona](2)).get === editTime1
-
         }
 
         val editTime2 = now.plusHours(4)
@@ -38,6 +39,27 @@ class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
           val actives = repo.getUserActivePersonas(Id[User](1))
           actives.personas.map { _.id } === List(2)
           actives.updatedAt.head === editTime1
+        }
+      }
+    }
+
+    "retrieve personas by userId" in {
+      withDb() { implicit injector =>
+        val userPersonaRepo = inject[UserPersonaRepo]
+        val personaRepo = inject[PersonaRepo]
+
+        val user1 = db.readWrite { implicit s =>
+          val user1 = user().withName("Test", "Bro").withUsername("test").saved
+          val persona1 = personaRepo.save(Persona(name = "artist"))
+          val persona2 = personaRepo.save(Persona(name = "geek"))
+          val model = UserPersona(userId = user1.id.get, personaId = persona1.id.get)
+          userPersonaRepo.save(model)
+          userPersonaRepo.save(model.copy(personaId = persona2.id.get))
+          user1
+        }
+
+        db.readOnlyReplica { implicit s =>
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq("artist", "geek")
         }
       }
     }

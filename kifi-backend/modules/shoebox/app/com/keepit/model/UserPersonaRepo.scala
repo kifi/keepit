@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import javax.inject.Provider
+
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
@@ -11,7 +13,8 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[UserPersonaRepoImpl])
 trait UserPersonaRepo extends DbRepo[UserPersona] {
   def getByUserAndPersona(userId: Id[User], personaId: Id[Persona])(implicit session: RSession): Option[UserPersona]
-  def getUserPersonaIds(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]]
+  def getPersonasForUser(userId: Id[User])(implicit session: RSession): Seq[Persona]
+  def getPersonaIdsForUser(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]]
   def getUserActivePersonas(userId: Id[User])(implicit session: RSession): UserActivePersonas
 }
 
@@ -19,6 +22,7 @@ trait UserPersonaRepo extends DbRepo[UserPersona] {
 class UserPersonaRepoImpl @Inject() (
     val db: DataBaseComponent,
     userActivePersonasCache: UserActivePersonasCache,
+    val personaRepo: Provider[PersonaRepoImpl],
     val clock: Clock,
     airbrake: AirbrakeNotifier) extends DbRepo[UserPersona] with UserPersonaRepo {
 
@@ -62,11 +66,19 @@ class UserPersonaRepoImpl @Inject() (
     getByUserAndPersonaCompiled(userId, personaId).firstOption
   }
 
-  private val getUserPersonaIdsCompiled = Compiled { (userId: Column[Id[User]]) =>
+  private val getPersonaIdsForUserCompiled = Compiled { (userId: Column[Id[User]]) =>
     (for (r <- rows if r.userId === userId && r.state === UserPersonaStates.ACTIVE) yield r.personaId)
   }
-  def getUserPersonaIds(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]] = {
-    getUserPersonaIdsCompiled(userId).list
+  def getPersonaIdsForUser(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]] = {
+    getPersonaIdsForUserCompiled(userId).list
+  }
+
+  def getPersonasForUser(userId: Id[User])(implicit session: RSession): Seq[Persona] = {
+    val q = for {
+      up <- rows if up.userId === userId && up.state === UserPersonaStates.ACTIVE
+      p <- personaRepo.get.rows if p.id === up.personaId && p.state === PersonaStates.ACTIVE
+    } yield (p)
+    q.list
   }
 
   private val getUserPersonaIdAndUpdatedAtCompiled = Compiled { (userId: Column[Id[User]]) =>
