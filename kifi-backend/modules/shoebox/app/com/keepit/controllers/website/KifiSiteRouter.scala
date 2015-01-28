@@ -166,6 +166,8 @@ class AngularRouter @Inject() (
             if (isUserAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
           } else if (path.split.length == 1) { // user profile page
             Some(Angular(Some(userMetadata(user))))
+          } else if (path.split.length == 2 && path.split(1) == "libraries") { // user profile page (an alias that Angular will rectify)
+            Some(Angular(Some(userMetadata(user))))
           } else if (path.split.length == 3 && path.split(1) == "libraries" && (path.split(2) == "following" || path.split(2) == "invited")) { // user profile page (nested routes)
             Some(Angular(Some(userMetadata(user))))
           } else {
