@@ -5,20 +5,26 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel._
-import com.keepit.cortex.models.lda.{ LDAUserURIInterestScore, LDAUserURIInterestScores, DenseLDA, LDATopic }
+import com.keepit.cortex.models.lda.{ DenseLDA, LDATopic }
 import com.keepit.cortex.utils.MatrixUtils._
-import com.keepit.model.{ NormalizedURI, User, Persona }
+import com.keepit.model.{ User, Persona }
+import com.keepit.shoebox.ShoeboxServiceClient
+import play.api.libs.concurrent.Execution.Implicits._
+
+import scala.concurrent.Future
 
 @ImplementedBy(classOf[LDAPersonaCommanderImpl])
 trait LDAPersonaCommander {
   def getExistingPersonaFeature(personaId: Id[Persona])(implicit version: ModelVersion[DenseLDA]): Option[PersonaLDAFeature]
   def generatePersonaFeature(topicIds: Seq[LDATopic])(implicit version: ModelVersion[DenseLDA]): (UserTopicMean, Int)
   def savePersonaFeature(pid: Id[Persona], feature: UserTopicMean)(implicit version: ModelVersion[DenseLDA]): PersonaLDAFeature
+  def getUserPersonaFeatures(userId: Id[User])(implicit version: ModelVersion[DenseLDA]): Future[Seq[PersonaLDAFeature]]
 }
 
 @Singleton
 class LDAPersonaCommanderImpl @Inject() (
     db: Database,
+    shoebox: ShoeboxServiceClient,
     info: LDAInfoCommander,
     personaLDARepo: PersonaLDAFeatureRepo,
     userLDARepo: UserLDAStatsRepo) extends LDAPersonaCommander {
@@ -57,6 +63,12 @@ class LDAPersonaCommanderImpl @Inject() (
         case None => PersonaLDAFeature.create(pid, version, feature)
       }
       personaLDARepo.save(toSave)
+    }
+  }
+
+  def getUserPersonaFeatures(userId: Id[User])(implicit version: ModelVersion[DenseLDA]): Future[Seq[PersonaLDAFeature]] = {
+    shoebox.getUserActivePersonas(userId).map { peronsas =>
+      peronsas.personas.map { pid => getExistingPersonaFeature(pid).get }
     }
   }
 }

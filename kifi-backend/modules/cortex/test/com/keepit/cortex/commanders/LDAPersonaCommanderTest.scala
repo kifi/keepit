@@ -16,7 +16,7 @@ class LDAPersonaCommanderTest extends Specification with CortexTestInjector {
       withDb() { implicit injector =>
         val personaRepo = inject[PersonaLDAFeatureRepo]
         val ldaUserRepo = inject[UserLDAStatsRepo]
-        val commander = new LDAPersonaCommanderImpl(db, null, personaRepo, ldaUserRepo) {
+        val commander = new LDAPersonaCommanderImpl(db, null, null, personaRepo, ldaUserRepo) {
           override def getLDADimension(implicit version: ModelVersion[DenseLDA]): Int = 4
         }
 
@@ -53,7 +53,7 @@ class LDAPersonaCommanderTest extends Specification with CortexTestInjector {
       withDb() { implicit injector =>
         val personaRepo = inject[PersonaLDAFeatureRepo]
         val ldaUserRepo = inject[UserLDAStatsRepo]
-        val commander = new LDAPersonaCommanderImpl(db, null, personaRepo, ldaUserRepo) {
+        val commander = new LDAPersonaCommanderImpl(db, null, null, personaRepo, ldaUserRepo) {
           override def getLDADimension(implicit version: ModelVersion[DenseLDA]): Int = 4
         }
 
