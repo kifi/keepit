@@ -223,6 +223,8 @@ POST    /m/1/user/:id/include                   @com.keepit.controllers.mobile.M
 POST    /m/1/user/:id/exclude                   @com.keepit.controllers.mobile.MobileUserController.excludeFriend(id: ExternalId[User])
 GET     /m/1/user/settings                      @com.keepit.controllers.mobile.MobileUserController.getSettings()
 POST    /m/1/user/settings                      @com.keepit.controllers.mobile.MobileUserController.setSettings()
+GET     /m/1/user/personas                      @com.keepit.controllers.mobile.MobileUserPersonaController.getAllPersonas()
+POST    /m/1/user/personas                      @com.keepit.controllers.mobile.MobileUserPersonaController.selectPersonas()
 
 POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.MobileUserController.setAppsflyerAttribution()
 
