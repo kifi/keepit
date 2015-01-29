@@ -66,7 +66,7 @@ class ShoeboxScraperClientImpl @Inject() (
   }
 
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
-    call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
+    call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[ScrapeRequest]]
     }
   }
@@ -76,11 +76,11 @@ class ShoeboxScraperClientImpl @Inject() (
   }
 
   def savePageInfo(pageInfo: PageInfo): Future[Unit] = {
-    call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r => Unit }
+    call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = longTimeout).map { r => Unit }
   }
 
   def saveImageInfo(imgInfo: ImageInfo): Future[Unit] = {
-    call(Shoebox.internal.saveImageInfo(), Json.toJson(imgInfo), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r => Unit }
+    call(Shoebox.internal.saveImageInfo(), Json.toJson(imgInfo), callTimeouts = longTimeout).map { r => Unit }
   }
 
   @deprecated("Dangerous call. Use updateNormalizedURI instead.", "2014-01-30")
@@ -130,7 +130,7 @@ class ShoeboxScraperClientImpl @Inject() (
     )
     val payload = Json.obj(safeJsonParams: _*)
     val stripped = payload.stripJsNulls()
-    call(Shoebox.internal.updateNormalizedURI(uriId), stripped, callTimeouts = longTimeout, routingStrategy = leaderPriority).imap(_ => {})
+    call(Shoebox.internal.updateNormalizedURI(uriId), stripped, callTimeouts = longTimeout).imap(_ => {})
   }
 
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = {
