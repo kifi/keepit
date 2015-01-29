@@ -33,7 +33,7 @@ class LDAController @Inject() (
   private def getVersionForUser(versionOpt: Option[ModelVersion[DenseLDA]], userIdOpt: Option[Id[User]]): ModelVersion[DenseLDA] = {
     (versionOpt, userIdOpt) match {
       case (Some(v), _) => v
-      case (None, Some(uid)) => Await.result(versionCommander.getLDAVersionForUser(uid), 1 second) // use of Await is temp. (Only during model experimenting)
+      case (None, Some(uid)) => Await.result(versionCommander.getLDAVersionForUser(uid), 3 second) // use of Await is temp. (Only during model experimenting)
       case (None, None) => defaultVersion
     }
   }
