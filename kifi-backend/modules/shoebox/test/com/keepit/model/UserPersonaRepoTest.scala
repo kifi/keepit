@@ -50,8 +50,8 @@ class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
 
         val user1 = db.readWrite { implicit s =>
           val user1 = user().withName("Test", "Bro").withUsername("test").saved
-          val persona1 = personaRepo.save(Persona(name = "artist"))
-          val persona2 = personaRepo.save(Persona(name = "geek"))
+          val persona1 = personaRepo.save(Persona(name = PersonaName.ARTIST))
+          val persona2 = personaRepo.save(Persona(name = PersonaName.TECHIE))
           val model = UserPersona(userId = user1.id.get, personaId = persona1.id.get)
           userPersonaRepo.save(model)
           userPersonaRepo.save(model.copy(personaId = persona2.id.get))
@@ -59,7 +59,7 @@ class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
         }
 
         db.readOnlyReplica { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq("artist", "geek")
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name.value) === Seq("artist", "techie")
         }
       }
     }
