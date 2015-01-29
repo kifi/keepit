@@ -15,6 +15,8 @@ import com.keepit.cortex.models.lda._
 import com.keepit.model.{ Persona, Library, User, NormalizedURI }
 import com.keepit.common.db.Id
 
+import play.api.libs.concurrent.Execution.Implicits._
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -92,13 +94,13 @@ class LDAController @Inject() (
     Ok(Json.toJson(LDAUserURIInterestScores(scores2.global, scores1.recency, score3)))
   }
 
-  def batchUserURIsInterests(implicit versionOpt: Option[Int]) = Action(parse.tolerantJson) { request =>
+  def batchUserURIsInterests(implicit versionOpt: Option[Int]) = Action.async(parse.tolerantJson) { request =>
     val js = request.body
     val userId = (js \ "userId").as[Id[User]]
     val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
     val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, Some(userId))
-    val scores = lda.batchUserURIsInterests(userId, uriIds)(version)
-    Ok(Json.toJson(scores))
+    val scoresF = lda.batchUserURIsInterests(userId, uriIds)(version)
+    scoresF.map { scores => Ok(Json.toJson(scores)) }
   }
 
   def userTopicMean(userId: Id[User], version: Option[Int]) = Action { request =>
