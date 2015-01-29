@@ -41,6 +41,7 @@ class SearchFactory @Inject() (
     clickHistoryTracker: ClickHistoryTracker,
     searchConfigManager: SearchConfigManager,
     monitoredAwait: MonitoredAwait,
+    libraryQualityEvaluator: LibraryQualityEvaluator,
     implicit private val fortyTwoServices: FortyTwoServices) extends Logging {
 
   lazy val searchServiceStartedAt: Long = fortyTwoServices.started.getMillis()
@@ -274,6 +275,7 @@ class SearchFactory @Inject() (
             librarySearcher,
             keepSearcher,
             userSearcher,
+            libraryQualityEvaluator,
             friendIdsFuture,
             libraryIdsFuture,
             monitoredAwait,
