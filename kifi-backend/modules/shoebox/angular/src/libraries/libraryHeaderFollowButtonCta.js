@@ -34,10 +34,18 @@ angular.module('kifi')
               scope.ctaShownAbove = false;
             }
 
+            // If the follow button is "sticky" (i.e., its position is fixed),
+            // similarly fix the CTA's position so that it won't move upon scroll.
+            var position = 'absolute';
+            if (element.css('position') === 'fixed') {
+              position = 'fixed';
+              top = top - angular.element($window).scrollTop();
+            }
+
             // Center the CTA with respect to the follow button.
             var left = elementLeft - Math.round((cta.outerWidth() - element.outerWidth()) / 2);
 
-            cta.css({top: top + 'px', left: left + 'px'});
+            cta.css({position: position, top: top + 'px', left: left + 'px'});
             ctaOuterArrow.css({top: ctaOuterArrowTop + 'px'});
             ctaInnerArrow.css({top: ctaInnerArrowTop + 'px'});
 
@@ -92,12 +100,6 @@ angular.module('kifi')
           trackHover('hover');
         });
         element.on('mouseleave', hideCTA);
-
-        // TODO: make follow CTA sticky when follow button is sticky.
-        $window.addEventListener('scroll', hideCTA);
-        scope.$on('$destroy', function () {
-          $window.removeEventListener('scroll', hideCTA);
-        });
 
 
         //
