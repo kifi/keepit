@@ -44,6 +44,7 @@ trait LDACommander {
 @Singleton
 class LDACommanderImpl @Inject() (
     infoCommander: LDAInfoCommander,
+    personaCommander: LDAPersonaCommander,
     db: Database,
     userTopicRepo: UserLDAInterestsRepo,
     uriTopicRepo: URILDATopicRepo,
@@ -117,6 +118,7 @@ class LDACommanderImpl @Inject() (
 
     def isInJunkTopic(uriTopicOpt: Option[URILDATopic], junks: Set[Int]): Boolean = uriTopicOpt.exists(x => x.firstTopic.exists(t => junks.contains(t.index)))
 
+
     val junkTopics = infoCommander.inactiveTopics(version)
     db.readOnlyReplica { implicit s =>
       val userInterestOpt = userTopicRepo.getByUser(userId, version)
@@ -133,6 +135,22 @@ class LDACommanderImpl @Inject() (
         } else {
           LDAUserURIInterestScores(None, None, None)
         }
+      }
+    }
+  }
+
+  private def computePersonaInducedInterestScore(personas: Seq[PersonaLDAFeature], uriTopicOpt: Option[URILDATopic]): Option[LDAUserURIInterestScore] = {
+    if (personas.isEmpty) None
+    else {
+      uriTopicOpt match {
+        case Some(feat) =>
+          feat.feature.map{ uriFeat =>
+            val scores = personas.map{ p => cosineDistance(uriFeat.value, p.feature.mean)}
+            val score = scores.max
+            val conf = computeURIConfidence(feat.numOfWords, feat.timesFirstTopicChanged)
+            LDAUserURIInterestScore(score, conf)
+          }
+        case None => None
       }
     }
   }
