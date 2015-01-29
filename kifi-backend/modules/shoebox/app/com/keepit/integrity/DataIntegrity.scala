@@ -18,7 +18,7 @@ class DataIntegrityPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 7 minutes, 13 minutes, actor.ref, Cron)
+    scheduleTaskOnOneMachine(actor.system, 7 minutes, 13 minutes, actor.ref, Cron, getClass.getSimpleName)
   }
 }
 
