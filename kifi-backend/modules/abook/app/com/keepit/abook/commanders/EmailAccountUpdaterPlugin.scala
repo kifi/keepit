@@ -93,6 +93,6 @@ class EmailAccountUpdaterPlugin @Inject() (
   import EmailAccountUpdaterActorMessage._
 
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 2 minutes, 5 minutes, actor.ref, FetchEmailUpdates(100))
+    scheduleTaskOnOneMachine(actor.system, 2 minutes, 5 minutes, actor.ref, FetchEmailUpdates(100), FetchEmailUpdates.getClass.getSimpleName)
   }
 }

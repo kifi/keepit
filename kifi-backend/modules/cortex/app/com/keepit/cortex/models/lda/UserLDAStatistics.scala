@@ -62,7 +62,7 @@ class UserLDAStatisticsPluginImpl @Inject() (
   override def enabled: Boolean = true
 
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 5 minutes, 12 hours, actor.ref, UpdateUserLDAStatistics)
+    scheduleTaskOnOneMachine(actor.system, 5 minutes, 12 hours, actor.ref, UpdateUserLDAStatistics, UpdateUserLDAStatistics.getClass.getSimpleName)
   }
 }
 

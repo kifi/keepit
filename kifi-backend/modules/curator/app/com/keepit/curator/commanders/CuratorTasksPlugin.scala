@@ -58,7 +58,7 @@ class CuratorTasksPlugin @Inject() (
       libraryRecoCleanupCommander.cleanupLowMasterScoreRecos()
     }
 
-    scheduleTaskOnLeader(system, 10 minutes, 10 minutes, emailActor.ref, FeedDigestMessage.Send)
+    scheduleTaskOnOneMachine(system, 10 minutes, 10 minutes, emailActor.ref, FeedDigestMessage.Send, FeedDigestMessage.Send.getClass.getSimpleName)
     scheduleFeedDigestEmails()
   }
 
