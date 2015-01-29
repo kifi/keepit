@@ -22,8 +22,8 @@ angular.module('kifi')
         $scope.thanksVersion = 'installExt';
         $scope.installExtension = function() {
           $analytics.eventTrack('visitor_clicked_page', {type: 'installLibrary', action: 'install'});
-          installService.triggerInstall;
-        }
+          installService.triggerInstall();
+        };
       } else {
         $scope.thanksVersion = 'notSupported';
       }
@@ -34,7 +34,7 @@ angular.module('kifi')
 
       $scope.close = function () {
         $analytics.eventTrack('visitor_clicked_page', {type : 'installLibrary', action: 'close'});
-        modalService.close;
+        modalService.close();
       };
 
       modalService.open({
