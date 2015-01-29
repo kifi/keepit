@@ -352,9 +352,9 @@ class UriIntegrityPluginImpl @Inject() (
     val scheduling: SchedulingProperties) extends UriIntegrityPlugin with Logging {
   override def enabled = true
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(50))
-    scheduleTaskOnLeader(actor.system, 55 seconds, 47 seconds, actor.ref, BatchURLMigration(100))
-    scheduleTaskOnLeader(actor.system, 60 seconds, 53 seconds, actor.ref, FixDuplicateKeeps())
+    scheduleTaskOnOneMachine(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(50), BatchURIMigration.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 55 seconds, 47 seconds, actor.ref, BatchURLMigration(100), BatchURLMigration.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 60 seconds, 53 seconds, actor.ref, FixDuplicateKeeps(), FixDuplicateKeeps.getClass.getSimpleName)
   }
 
   def handleChangedUri(change: UriChangeMessage) = {
