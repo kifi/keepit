@@ -1,0 +1,56 @@
+kf-lh-fbc-blue = #0081f1
+kf-lh-fbc-gray = #9ea4aa
+kf-lh-fbc-width = 250px
+kf-lh-fbc-arrow-border-width = 15px
+
+.kf-lh-fbc
+  position: absolute
+  border: 1px solid kf-lh-fbc-blue
+  border-radius: 12px
+  padding: 30px 30px 10px
+  width: kf-lh-fbc-width
+  font-family: Lato, Helvetica, Arial, sans-serif
+  font-size: 14px
+  text-align: center
+  background: #fff
+  z-index: 500
+
+.kf-lh-fbc-arrow-outer
+.kf-lh-fbc-arrow-inner
+  position: absolute
+  left: (kf-lh-fbc-width/2) + kf-lh-fbc-arrow-border-width
+  border-left: kf-lh-fbc-arrow-border-width solid transparent
+  border-right: kf-lh-fbc-arrow-border-width solid transparent
+  width: 0
+  height: 0
+  content: ''
+
+.kf-lh-fbc-arrow-outer.kf-lh-fbc-arrow-bottom
+  border-top: kf-lh-fbc-arrow-border-width solid kf-lh-fbc-blue
+
+.kf-lh-fbc-arrow-inner.kf-lh-fbc-arrow-bottom
+  border-top: kf-lh-fbc-arrow-border-width solid #fff
+
+.kf-lh-fbc-arrow-outer.kf-lh-fbc-arrow-top
+  border-bottom: kf-lh-fbc-arrow-border-width solid kf-lh-fbc-blue
+
+.kf-lh-fbc-arrow-inner.kf-lh-fbc-arrow-top
+  border-bottom: kf-lh-fbc-arrow-border-width solid #fff
+
+.kf-lh-fbc-main-text
+  font-size: 1.1em
+  font-weight: 600
+  margin-bottom: 20px
+
+.kf-lh-fbc-user-quote-container
+  font-style: italic
+
+.kf-lh-fbc-user-quote
+  color: kf-lh-fbc-blue
+
+.kf-lh-fbc-user-quote-by
+  font-size: 0.9em
+  padding: 10px 0 12px
+  color: kf-lh-fbc-gray
+  text-align: right
+

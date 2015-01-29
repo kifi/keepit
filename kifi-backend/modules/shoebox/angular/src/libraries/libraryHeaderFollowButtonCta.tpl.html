@@ -1,0 +1,15 @@
+<div class="kf-lh-fbc">
+  <span class="kf-lh-fbc-arrow-outer"
+    ng-class="{'kf-lh-fbc-arrow-bottom': ctaShownAbove, 'kf-lh-fbc-arrow-top': !ctaShownAbove}"></span>
+  <span class="kf-lh-fbc-arrow-inner"
+    ng-class="{'kf-lh-fbc-arrow-bottom': ctaShownAbove, 'kf-lh-fbc-arrow-top': !ctaShownAbove}"></span>
+
+  <a ng-show="showX" class="dialog-x" href="javascript:" ng-click="closeCTA()"></a>
+  <div class="kf-lh-fbc-content">
+    <div class="kf-lh-fbc-main-text" ng-bind-html="ctaMainText"></div>
+    <div class="kf-lh-fbc-user-quote-container">
+      <q class="kf-lh-fbc-user-quote" ng-bind-html="ctaQuote"></q>
+      <footer class="kf-lh-fbc-user-quote-by">{{ ctaQuoteAttribution }}</footer>
+    </div>
+  </div>
+</div>
