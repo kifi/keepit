@@ -114,7 +114,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
     }
 
     private def precomputeRecommendationsForUser(alwaysInclude: Set[Id[Library]], recoGenState: LibraryRecommendationGenerationState): Future[Unit] = {
-      if (serviceDiscovery.isLeader()) {
+      if (serviceDiscovery.isRunnerFor(CuratorTasks.libraryRecommendationPrecomputation)) {
         log.info(s"precomputeRecommendationsForUser called userId=$userId seq=${recoGenState.seq}")
         val (candidateLibraries, excludedLibraries, newSeqNum) = getCandidateLibrariesForUser(recoGenState)
 

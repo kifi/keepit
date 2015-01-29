@@ -11,6 +11,15 @@ import us.theatr.akka.quartz.QuartzActor
 
 import scala.concurrent.duration._
 
+object CuratorTasks {
+  val completeDataIngestion = "complete data ingestion"
+  val uriRecommendationPrecomputation = "uri recommendation precomputation"
+  val uriRecommendationReaper = "uri recommendation reaper"
+  val publicFeedReaper = "public feed reaper"
+  val libraryRecommendationPrecomputation = "library recommendation precomputation"
+  val libraryRecommendationReaper = "library recommendation reaper"
+}
+
 @Singleton
 class CuratorTasksPlugin @Inject() (
     ingestionCommander: SeedIngestionCommander,
@@ -24,26 +33,28 @@ class CuratorTasksPlugin @Inject() (
     quartz: ActorInstance[QuartzActor],
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
+  import CuratorTasks._
+
   override def onStart() {
     log.info("CuratorTasksPlugin onStart")
-    scheduleTaskOnLeader(system, 5 minutes, 3 minutes, "complete data ingestion") {
+    scheduleTaskOnOneMachine(system, 5 minutes, 3 minutes, completeDataIngestion) {
       ingestionCommander.ingestAll()
     }
-    scheduleTaskOnLeader(system, 3 minutes, 2 minutes, "recommendation precomputation") {
+    scheduleTaskOnOneMachine(system, 3 minutes, 2 minutes, uriRecommendationPrecomputation) {
       uriRecoGenerationCommander.precomputeRecommendations()
     }
-    scheduleTaskOnLeader(system, 10 minutes, 10 minutes, "recommendation reaper") {
+    scheduleTaskOnOneMachine(system, 10 minutes, 10 minutes, uriRecommendationReaper) {
       uriRecoCleanupCommander.cleanup()
     }
 
-    scheduleTaskOnLeader(system, 1 hours, 5 hours, "public feed reaper") {
+    scheduleTaskOnOneMachine(system, 1 hours, 5 hours, publicFeedReaper) {
       feedCommander.cleanup()
     }
 
-    scheduleTaskOnLeader(system, 1 minutes, 3 minutes, "library recommendation precomputation") {
+    scheduleTaskOnOneMachine(system, 1 minutes, 3 minutes, libraryRecommendationPrecomputation) {
       libraryRecoGenerationCommander.precomputeRecommendations()
     }
-    scheduleTaskOnLeader(system, 10 minutes, 10 minutes, "library recommendation reaper") {
+    scheduleTaskOnOneMachine(system, 10 minutes, 10 minutes, libraryRecommendationReaper) {
       libraryRecoCleanupCommander.cleanupLowMasterScoreRecos()
     }
 

@@ -158,7 +158,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   }
 
   private def resetRoutingList() = {
-    routingList = Vector(instances.values.toSeq: _*)
+    routingList = instances.values.toVector.sortBy(_.node.path)
 
     customRouter.foreach { myRouter =>
       try {
