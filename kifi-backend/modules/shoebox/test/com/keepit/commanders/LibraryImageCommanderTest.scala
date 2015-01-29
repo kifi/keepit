@@ -64,7 +64,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 1
 
         db.readOnlyMaster { implicit s =>
-          val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
+          val libImages = libraryImageRepo.getActiveForLibraryId(lib.id.get)
           libImages.length === 1
           libImages.map(_.position === LibraryImagePosition(Some(40), None))
         }
@@ -78,7 +78,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         }
         inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 1
         db.readOnlyMaster { implicit s =>
-          val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
+          val libImages = libraryImageRepo.getActiveForLibraryId(lib.id.get)
           libImages.length === 1
           libImages.map(_.position === LibraryImagePosition(Some(0), Some(100)))
         }
@@ -93,10 +93,10 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 4
 
         db.readOnlyMaster { implicit s =>
-          val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
+          val libImages = libraryImageRepo.getActiveForLibraryId(lib.id.get)
           libImages.length === 3
           libImages.map(_.position === LibraryImagePosition(None, Some(77)))
-          libraryImageRepo.getForLibraryId(lib.id.get, None).length === 4
+          libraryImageRepo.getAllForLibraryId(lib.id.get).length === 4
         }
 
       }
@@ -115,7 +115,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
 
         db.readOnlyMaster { implicit s =>
-          val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
+          val libImages = libraryImageRepo.getActiveForLibraryId(lib.id.get)
           libImages.length === 1
           libImages.map(_.position === LibraryImagePosition(None, None))
         }
@@ -123,7 +123,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         // position one dimension
         commander.positionLibraryImage(lib.id.get, LibraryImagePosition(Some(30), None))
         db.readOnlyMaster { implicit s =>
-          val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
+          val libImages = libraryImageRepo.getActiveForLibraryId(lib.id.get)
           libImages.length === 1
           libImages.map(_.position === LibraryImagePosition(Some(30), None))
         }
@@ -131,7 +131,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         // position both dimensions
         commander.positionLibraryImage(lib.id.get, LibraryImagePosition(Some(35), Some(45)))
         db.readOnlyMaster { implicit s =>
-          val libImages = libraryImageRepo.getForLibraryId(lib.id.get)
+          val libImages = libraryImageRepo.getActiveForLibraryId(lib.id.get)
           libImages.length === 1
           libImages.map(_.position === LibraryImagePosition(Some(35), Some(45)))
         }
@@ -139,8 +139,8 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         // remove image
         commander.removeImageForLibrary(lib.id.get, user.id.get)(HeimdalContext.empty) === true
         db.readOnlyMaster { implicit s =>
-          libraryImageRepo.getForLibraryId(lib.id.get).length === 0
-          libraryImageRepo.getForLibraryId(lib.id.get, None).length === 1
+          libraryImageRepo.getActiveForLibraryId(lib.id.get).length === 0
+          libraryImageRepo.getAllForLibraryId(lib.id.get).length === 1
         }
       }
     }
