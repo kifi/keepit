@@ -4,6 +4,7 @@ import java.util.BitSet
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.cortex.core.ModelVersion
@@ -121,7 +122,7 @@ class LDACommanderImpl @Inject() (
 
     type UserFeaturesCombo = (Option[UserLDAInterests], Option[UserLDAStats], Seq[LibraryTopicMean])
 
-    def getUserFeaturesCombo(userId: Id[User], version: ModelVersion[DenseLDA]): UserFeaturesCombo = {
+    def getUserFeaturesCombo(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): UserFeaturesCombo = {
       val userInterestOpt = userTopicRepo.getByUser(userId, version)
       val userInterestStatOpt = userLDAStatRepo.getActiveByUser(userId, version)
       val libFeats = db.readOnlyReplica { implicit s => libTopicRepo.getUserFollowedLibraryFeatures(userId, version) }
@@ -145,18 +146,21 @@ class LDACommanderImpl @Inject() (
     }
 
     val junkTopics = infoCommander.inactiveTopics(version)
+
     personaCommander.getUserPersonaFeatures(userId).map { personaFeats =>
 
-      db.readOnlyReplica { implicit s =>
+      val (userFeatsCombo, uriTopicOpts) = db.readOnlyReplica { implicit s =>
         val userFeatsCombo = getUserFeaturesCombo(userId, version)
         val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, version)
         assert(uriTopicOpts.size == uriIds.size, "retreived uri lda features size doesn't match with num of uris")
-
-        uriTopicOpts.map { uriTopicOpt =>
-          if (!isInJunkTopic(uriTopicOpt, junkTopics)) scoreURI(uriTopicOpt, userFeatsCombo, personaFeats)
-          else LDAUserURIInterestScores(None, None, None)
-        }
+        (userFeatsCombo, uriTopicOpts)
       }
+
+      uriTopicOpts.map { uriTopicOpt =>
+        if (!isInJunkTopic(uriTopicOpt, junkTopics)) scoreURI(uriTopicOpt, userFeatsCombo, personaFeats)
+        else LDAUserURIInterestScores(None, None, None)
+      }
+
     }
 
   }

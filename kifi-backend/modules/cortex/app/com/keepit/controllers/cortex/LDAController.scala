@@ -15,6 +15,8 @@ import com.keepit.cortex.models.lda._
 import com.keepit.model.{ Persona, Library, User, NormalizedURI }
 import com.keepit.common.db.Id
 
+import play.api.libs.concurrent.Execution.Implicits._
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
