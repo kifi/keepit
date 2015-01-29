@@ -8,7 +8,6 @@ angular.module('kifi')
     var abTests = {
       '1': {
         name: 'exp_follow_popup',
-        treatment_duration: 60 * 60 * 24,  // one day
         treatments: [
           {
             name: 'none',
