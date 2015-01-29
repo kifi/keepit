@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfSmallLibraryCard', [
-  '$location', 'modalService', '$window',
-  function ($location, modalService, $window) {
+  '$location', 'modalService', '$window', 'platformService',
+  function ($location, modalService, $window, platformService) {
     return {
       restrict: 'A',
       replace: true,
@@ -23,6 +23,10 @@ angular.module('kifi')
         };
 
         scope.openFollowersList = function (lib) {
+          if (platformService.isSupportedMobilePlatform()) {
+            return;
+          }
+
           modalService.open({
             template: 'libraries/libraryFollowersModal.tpl.html',
             modalData: {

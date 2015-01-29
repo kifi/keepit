@@ -163,7 +163,7 @@ class MailMessageReceiverPluginImpl @Inject() (
     actor.ref ! FetchNewDiscussionReplies
   }
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 10 seconds, 15 seconds, actor.ref, FetchNewDiscussionReplies)
+    scheduleTaskOnOneMachine(actor.system, 10 seconds, 15 seconds, actor.ref, FetchNewDiscussionReplies, FetchNewDiscussionReplies.getClass.getSimpleName)
   }
 }
 
