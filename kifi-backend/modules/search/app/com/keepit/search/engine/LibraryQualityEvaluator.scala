@@ -28,7 +28,7 @@ class LibraryQualityEvaluator @Inject() (activeShards: ActiveShards) {
   // See http://www.nowherenearithaca.com/2013/12/equationlognormalhover-border1px-solid.html
   private val optimalLibrarySize = 70 // this is it
   private val sigma = 1.0 // eyeballed for reasonable decay
-  private val mu = Math.log(optimalLibrarySize + Math.pow(sigma, 2))
+  private val mu = Math.log(optimalLibrarySize) + Math.pow(sigma, 2)
   private val maxProbability = logNormalDensity(mu, sigma, optimalLibrarySize)
 
   @inline private def logNormalDensity(mu: Double, sigma: Double, x: Double): Double = if (x == 0) 0 else {
