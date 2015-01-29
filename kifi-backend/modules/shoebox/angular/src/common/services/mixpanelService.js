@@ -50,11 +50,8 @@
   }
 
   function trackPage(path, attributes) {
-    console.log(path);
-    console.log(attributes);
-
     var mixpanel = $window.mixpanel;
-    if (false && mixpanel) { // TODO: fake implementation for tests
+    if (mixpanel) { // TODO: fake implementation for tests
       attributes = attributes || {};
       var origin = attributes.origin || $window.location.origin;
 
@@ -64,11 +61,8 @@
   }
 
   function trackEvent(action, props) {
-    console.log(action);
-    console.log(props);
-
     var mixpanel = $window.mixpanel;
-    if (false && mixpanel) { // TODO: fake implementation for tests
+    if (mixpanel) { // TODO: fake implementation for tests
       if ('path' in props && !props.type) {
         props.type = getLocation(props.path);
         delete props.path;
