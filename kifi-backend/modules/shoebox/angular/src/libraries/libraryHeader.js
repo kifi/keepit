@@ -796,6 +796,10 @@ angular.module('kifi')
               }
             });
           } else {
+            if (platformService.isSupportedMobilePlatform()) {
+              return;
+            }
+
             modalService.open({
               template: 'libraries/libraryFollowersModal.tpl.html',
               modalData: {
