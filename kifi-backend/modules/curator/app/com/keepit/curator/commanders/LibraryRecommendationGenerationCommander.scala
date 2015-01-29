@@ -128,7 +128,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
           else Future.successful()
         } else processLibraries(candidateLibraries, newState, alwaysInclude)
       } else {
-        log.warn("precomputeRecommendationsForUser doing nothing on non-leader")
+        log.warn("precomputeRecommendationsForUser doing nothing on non-designated machine. Aborting.")
+        recommendationGenerationLock.clear()
         Future.successful()
       }
     }

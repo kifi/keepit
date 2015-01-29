@@ -228,8 +228,8 @@ class RecommendationGenerationCommander @Inject() (
         }
         res.map(_ => ())
       } else {
+        log.warn("Trying to run reco precomputation on non-designated machine. Aborting.")
         recommendationGenerationLock.clear()
-        if (serviceDiscovery.myStatus.exists(_ != ServiceStatus.STOPPING)) log.error("Trying to run reco precomputation on non-leader (and it's not a shut down)! Aborting.")
         Future.successful()
       }
     }
