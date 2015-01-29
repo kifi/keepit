@@ -1,7 +1,9 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
-import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.commanders.emails.activity.{ ActivityEmailDependencies, ActivityEmailLibraryHelpers, EmailUnreadThreadView, UserLibrariesComponent, UserUnreadMessagesComponent }
+import com.keepit.commanders.{ LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -9,18 +11,14 @@ import com.keepit.common.db.slick.DBSession.ROSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.template.helpers._
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.time._
-import com.keepit.curator.{ LibraryQualityHelper, CuratorServiceClient }
-import com.keepit.curator.model.{ FullUriRecoInfo, FullLibRecoInfo, RecommendationSource, RecommendationSubSource }
+import com.keepit.curator.model.{ FullUriRecoInfo, RecommendationSource, RecommendationSubSource }
+import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.eliza.model.{ MessageSenderNonUserView, MessageSenderView, UserThreadView, MessageView, MessageSenderUserView }
 import com.keepit.model._
-import org.joda.time.{ DateTime, Duration }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.twirl.api.Html
 
 import scala.concurrent.Future
 
@@ -51,44 +49,6 @@ case class KeepInfoView(private val keepInfo: KeepInfo) {
   val imageUrlAndWidth: Option[(String, Int)] = imageUrl flatMap { url => imageWidth map ((url, _)) }
 }
 
-// TODO (josh) much of the functionality below may not be necessary per the latest design, remove unused code
-// after design is final
-case class EmailUnreadThreadView(private val view: UserThreadView) {
-  val pageTitle = view.pageTitle
-  val lastSeen = view.lastSeen
-  val lastActive = view.notificationUpdatedAt
-  val allMessages = view.messages
-
-  val messageSendersToShow: Seq[Html] = {
-    val senders = view.messages collect {
-      case MessageView(MessageSenderUserView(id), _, _) => firstName(id)
-      case MessageView(MessageSenderNonUserView(identifier), _, _) => safeHtml(identifier)
-    }
-
-    val others = senders.size - view.messages.size
-    if (others > 0) senders :+ safeHtml(s"$others others")
-    else senders
-  }
-
-  val firstMessageSentTime: String = {
-    val msgCreatedAtPT = allMessages.head.createdAt.withZone(zones.PT)
-    val nowPT = currentDateTime(zones.PT)
-    val startOfTodayPT = nowPT.withTimeAtStartOfDay()
-    if (startOfTodayPT < msgCreatedAtPT) "today"
-    else if (startOfTodayPT.minusDays(1) < msgCreatedAtPT) "yesterday"
-    else if (startOfTodayPT.minusDays(6) < msgCreatedAtPT) msgCreatedAtPT.dayOfWeek().getAsText
-    else if (msgCreatedAtPT.minusDays(14) < msgCreatedAtPT) "last week"
-    else s"on ${msgCreatedAtPT.monthOfYear().getAsText} ${msgCreatedAtPT.dayOfMonth().getAsText}"
-  }
-
-  val userMessages = view.messages filter {
-    case MessageView(MessageSenderUserView(_), _, _) => true
-    case _ => false
-  }
-  val totalMessageCount = view.messages.size
-  val otherMessageCount = totalMessageCount - messageSendersToShow.size
-}
-
 case class ActivityEmailData(
   userId: Id[User],
   newKeepsInLibraries: Seq[(LibraryInfoView, Seq[KeepInfoView])],
@@ -109,23 +69,22 @@ trait ActivityFeedEmailSender {
 
 class ActivityFeedEmailSenderImpl @Inject() (
     val clock: Clock,
+    val libraryCommander: LibraryCommander,
+    val libraryRepo: LibraryRepo,
+    val membershipRepo: LibraryMembershipRepo,
+    val db: Database,
+    val eliza: ElizaServiceClient,
     curator: CuratorServiceClient,
-    eliza: ElizaServiceClient,
     userRepo: UserRepo,
     experimentCommander: LocalUserExperimentCommander,
     emailTemplateSender: EmailTemplateSender,
     recoCommander: RecommendationsCommander,
     libraryQualityHelper: LibraryQualityHelper,
-    val libraryCommander: LibraryCommander,
-    val libraryRepo: LibraryRepo,
-    val membershipRepo: LibraryMembershipRepo,
     keepRepo: KeepRepo,
     friendRequestRepo: FriendRequestRepo,
     userConnectionRepo: UserConnectionRepo,
     activityEmailRepo: ActivityEmailRepo,
-    val db: Database,
-    val libraryFollowerComponent: LibraryFollowerComponent,
-    private val airbrake: AirbrakeNotifier,
+    protected val airbrake: AirbrakeNotifier,
     private implicit val publicIdConfig: PublicIdConfiguration) extends ActivityFeedEmailSender with Logging {
 
   val reactiveLock = new ReactiveLock(8)
@@ -143,7 +102,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     experimentCommander.getUserIdsByExperiment(ExperimentType.ACTIVITY_EMAIL)
   }
 
-  def prepareEmailForUser(toUserId: Id[User]): Future[EmailToSend] = reactiveLock.withLockFuture {
+  def prepareEmailForUser(toUserId: Id[User]): Future[EmailToSend] = new SafeFuture(reactiveLock.withLockFuture {
     val previouslySentEmails = db.readOnlyReplica { implicit s => activityEmailRepo.getLatestToUser(toUserId) }
     val feed = new UserActivityFeedHelper(toUserId, previouslySentEmails)
 
@@ -151,13 +110,14 @@ class ActivityFeedEmailSenderImpl @Inject() (
       userConnectionRepo.getConnectedUsers(toUserId)
     }
 
+    val unreadMessageThreadsF = unreadMessages(toUserId)
+    val newFollowersOfMyLibrariesF = newFollowersOfUserLibraries(toUserId, previouslySentEmails)
+
     val newKeepsInLibrariesF = feed.getNewKeepsFromFollowedLibraries()
-    val unreadMessageThreadsF = feed.getUnreadMessageThreads()
     val pendingLibInvitesF = feed.getPendingLibraryInvitations()
     val pendingFriendRequestsF = feed.getPendingFriendRequests()
     val friendsWhoFollowedF = feed.getFriendsWhoFollowedLibraries(friends)
     val friendsWhoCreatedF = feed.getFriendsWhoCreatedLibraries(friends)
-    val newFollowersOfMyLibrariesF = feed.getNewFollowersOfUserLibraries()
     val uriRecosF = feed.getUriRecommendations()
     val libRecosF = feed.getLibraryRecommendations()
 
@@ -199,6 +159,27 @@ class ActivityFeedEmailSenderImpl @Inject() (
         category = NotificationCategory.User.ACTIVITY
       )
     }
+  })
+
+  protected trait BaseActivityEmailDependencies extends ActivityEmailDependencies {
+    private val parent = ActivityFeedEmailSenderImpl.this
+    val airbrake = parent.airbrake
+    val libraryCommander = parent.libraryCommander
+    val libraryRepo = parent.libraryRepo
+    val db = parent.db
+    val membershipRepo = parent.membershipRepo
+    val clock = parent.clock
+    val eliza = parent.eliza
+  }
+
+  private def newFollowersOfUserLibraries(toUserId: Id[User], previouslySent: Seq[ActivityEmail]) = {
+    val libraryComponent = new UserLibrariesComponent(toUserId, previouslySent) with BaseActivityEmailDependencies
+    libraryComponent()
+  }
+
+  private def unreadMessages(toUserId: Id[User]) = {
+    val messagesComponent = new UserUnreadMessagesComponent(toUserId) with BaseActivityEmailDependencies
+    messagesComponent()
   }
 
   private def persistActivityEmail(activityEmailData: ActivityEmailData) = db.readWrite { implicit rw =>
@@ -209,11 +190,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
       userFollowedLibraries = None))
   }
 
-  class UserActivityFeedHelper(val toUserId: Id[User], val previouslySent: Seq[ActivityEmail]) extends ActivityEmailPrepHelpers {
-    val libraryCommander = ActivityFeedEmailSenderImpl.this.libraryCommander
-    val db = ActivityFeedEmailSenderImpl.this.db
-    val clock = ActivityFeedEmailSenderImpl.this.clock
-
+  class UserActivityFeedHelper(val toUserId: Id[User], val previouslySent: Seq[ActivityEmail]) extends BaseActivityEmailDependencies with ActivityEmailLibraryHelpers {
     val recoSource = RecommendationSource.Email
     val recoSubSource = RecommendationSubSource.Unknown
 
@@ -251,32 +228,12 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
     val maxNewFollowersOfLibrariesUsers = 10
 
-    val minAgeOfUnreadNotificationThreads = emailPrepTime.minusWeeks(6)
-    val maxAgeOfUnreadNotificationThreads = emailPrepTime.minusHours(12)
-
-    val maxUnreadNotificationThreads = 10
-
     val libraryAgePredicate: Library => Boolean = lib => lib.createdAt > minRecordAge
 
     private lazy val (ownedPublishedLibs: Seq[Library], followedLibraries: Seq[Library], invitedLibraries: Seq[(LibraryInvite, Library)]) = {
       val (rawUserLibs, rawInvitedLibs) = libraryCommander.getLibrariesByUser(toUserId)
       val (ownedLibs, followedLibs) = rawUserLibs.filter(_._2.visibility == LibraryVisibility.PUBLISHED).partition(_._1.isOwner)
       (ownedLibs.map(_._2), followedLibs.map(_._2), rawInvitedLibs)
-    }
-
-    def getNewFollowersOfUserLibraries(): Future[Seq[(LibraryInfoView, Seq[Id[User]])]] = {
-      val sender = ActivityFeedEmailSenderImpl.this
-      val self = this
-      val x = new UserLibraryFollowerActivity {
-        val previouslySent = self.previouslySent
-        val toUserId = self.toUserId
-        val clock = sender.clock
-        val db = sender.db
-        val libraryCommander = sender.libraryCommander
-        val libraryRepo = sender.libraryRepo
-        val membershipRepo = sender.membershipRepo
-      }
-      ???
     }
 
     def getNewKeepsFromFollowedLibraries(): Future[Seq[(LibraryInfoView, Seq[KeepInfoView])]] = {
@@ -296,17 +253,6 @@ class ActivityFeedEmailSenderImpl @Inject() (
             val keepInfos = keeps map { k => KeepInfoView(KeepInfo.fromKeep(k)) }
             BaseLibraryInfoView(libId, libInfo) -> keepInfos
         }
-      }
-    }
-
-    def getUnreadMessageThreads(): Future[Seq[EmailUnreadThreadView]] = {
-      eliza.getUnreadNotifications(toUserId, maxUnreadNotificationThreads) map { userThreads =>
-        userThreads filter { thread =>
-          val threadLastActive = thread.notificationUpdatedAt
-          threadLastActive > minAgeOfUnreadNotificationThreads &&
-            threadLastActive < maxAgeOfUnreadNotificationThreads &&
-            thread.messages.nonEmpty && thread.messages.head.from.kind != MessageSenderView.SYSTEM
-        } take maxUnreadNotificationThreads map EmailUnreadThreadView
       }
     }
 
@@ -344,7 +290,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
             !lm.isOwner && library.visibility == LibraryVisibility.PUBLISHED &&
               lm.state == LibraryMembershipStates.ACTIVE && lm.lastJoinedAt.exists(minRecordAge <)
         }
-        val libraries = libMembershipAndLibraries.map(_._2)
+        val libraries = libMembershipAndLibraries.map(_._2).distinct
 
         (filterAndSortLibrariesByAge(libraries), libMembershipAndLibraries)
       }
@@ -365,10 +311,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
           case (_, (_, friendIds)) => -friendIds.size
         }.take(maxLibrariesFollowedByFriends).map {
           case (libId: Id[Library], (libInfoView: LibraryInfoView, followerIds: Seq[Id[User]])) =>
-            // TODO
-            val followerCount = db.readOnlyReplica { implicit s => membershipRepo.countWithLibraryId(libId) }
             (libId, libInfoView, followerIds)
-        }
+        }.sortBy(-_._2.numFollowers)
       }
     }
 
@@ -435,89 +379,6 @@ class ActivityFeedEmailSenderImpl @Inject() (
       onceFilteredLibraries.
         filter { lib => libraryStats.get(lib.id.get).map(_.keepCount).getOrElse(0) > 0 }.
         sortBy(-_.createdAt.getMillis)
-    }
-  }
-}
-
-trait LibraryActivityHelpers extends ActivityEmailPrepHelpers {
-  def libraryCommander: LibraryCommander
-  def membershipRepo: LibraryMembershipRepo
-  def libraryRepo: LibraryRepo
-}
-
-trait ActivityEmailPrepHelpers {
-  def db: Database
-  def clock: Clock
-  def libraryCommander: LibraryCommander
-  def toUserId: Id[User]
-
-  val emailPrepTime = clock.now()
-
-  // the most we will look back for certain records (libraries, followers)
-  val minRecordAge = emailPrepTime.minus(Duration.standardDays(7))
-
-  // previously sent activity emails for the `toUserId` user
-  val previouslySent: Seq[ActivityEmail]
-
-  // the last time the activity email was sent to this user
-  val lastEmailSentAt = previouslySent.headOption.map(_.createdAt).getOrElse(minRecordAge)
-
-  protected def createFullLibraryInfos(libraries: Seq[Library]) = {
-    libraryCommander.createFullLibraryInfos(viewerUserIdOpt = Some(toUserId),
-      showPublishedLibraries = true, maxKeepsShown = 10,
-      maxMembersShown = 0, idealKeepImageSize = ProcessedImageSize.Large.idealSize,
-      idealLibraryImageSize = ProcessedImageSize.Large.idealSize,
-      libraries = libraries, withKeepTime = true)
-  }
-}
-
-class LibraryFollowerComponent @Inject() (
-    val db: Database,
-    val libraryCommander: LibraryCommander,
-    val libraryRepo: LibraryRepo,
-    val membershipRepo: LibraryMembershipRepo) {
-}
-
-trait UserLibraryFollowerActivity extends LibraryActivityHelpers {
-
-  def apply(): Future[Seq[(LibraryInfoView, Seq[Id[User]])]] = {
-    val librariesToMembers = db.readOnlyReplica { implicit session =>
-      val mostMembersLibraries = membershipRepo.mostMembersSinceForUser(10, lastEmailSentAt, toUserId)
-      val libraries = libraryRepo.getLibraries(mostMembersLibraries.map(_._1).toSet)
-
-      mostMembersLibraries sortBy {
-        case (libraryId, membersSince) =>
-          val library = libraries(libraryId)
-
-          // sorts by the highest growth of members in libraries since the last email (descending)
-          // squaring membersSince gives libraries with a higher growth count the advantage
-          Math.pow(membersSince, 2) / -library.memberCount.toFloat
-      } map {
-        case (libraryId, membersSince) =>
-          val library = libraries(libraryId)
-
-          // gets followers of library and orders them by when they last joined desc
-          val members = membershipRepo.getWithLibraryId(library.id.get) filter { membership =>
-            membership.state == LibraryMembershipStates.ACTIVE && !membership.isOwner
-          } sortBy (-_.lastJoinedAt.map(_.getMillis).getOrElse(0L))
-
-          (library, members)
-      }
-    }
-
-    val librariesToMembersMap = librariesToMembers.map {
-      case (lib, members) => (lib.id.get, members)
-    }.toMap
-
-    val libraries = librariesToMembers.map(_._1)
-    val libInfosF = createFullLibraryInfos(libraries)
-    libInfosF map { libInfos =>
-      libInfos map {
-        case (libId, libInfo) =>
-          val members = librariesToMembersMap(libId) map (_.userId)
-          val libInfoView = BaseLibraryInfoView(libId, libInfo)
-          (libInfoView, members)
-      }
     }
   }
 }

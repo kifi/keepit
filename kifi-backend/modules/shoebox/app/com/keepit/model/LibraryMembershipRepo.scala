@@ -161,9 +161,9 @@ class LibraryMembershipRepoImpl @Inject() (
     sql"""select lm.library_id, count(*) as cnt from library_membership lm, library l where l.id = lm.library_id and l.state='active' and l.visibility='published' and lm.created_at > $since group by lm.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
-  def mostMembersSinceForUser(count: Int, since: DateTime, userId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)] = {
+  def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)] = {
     import StaticQuery.interpolation
-    sql"""select lm.library_id, count(*) as cnt from library_membership lm, library l where l.user_id=$userId and l.id = lm.library_id and l.state='active' and l.visibility='published' and lm.created_at > $since group by lm.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
+    sql"""select lm.library_id, count(*) as cnt from library_membership lm, library l where l.owner_id=$ownerId and l.id = lm.library_id and l.state='active' and l.visibility='published' and lm.created_at > $since group by lm.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
   private val countMembershipsCompiled = Compiled { (libraryId: Column[Id[Library]]) =>
