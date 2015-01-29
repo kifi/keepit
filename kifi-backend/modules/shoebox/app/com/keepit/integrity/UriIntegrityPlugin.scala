@@ -40,7 +40,8 @@ class UriIntegrityActor @Inject() (
     collectionRepo: CollectionRepo,
     renormRepo: RenormalizedURLRepo,
     centralConfig: CentralConfig,
-    airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
+    airbrake: AirbrakeNotifier,
+    keepUriUserCache: KeepUriUserCache) extends FortyTwoActor(airbrake) with Logging {
 
   /** tricky point: make sure (library, uri) pair is unique.  */
   private def handleBookmarks(oldBookmarks: Seq[Keep])(implicit session: RWSession): Unit = {
@@ -73,7 +74,7 @@ class UriIntegrityActor @Inject() (
         currentBookmarkOpt match {
           case None => {
             log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
-            keepRepo.deleteCache(oldBm) // NOTE: we touch two different cache keys here and the following line
+            keepUriUserCache.remove(KeepUriUserKey(oldBm.uriId, oldBm.userId)) // NOTE: we touch two different cache keys here and the following line
             keepRepo.save(oldBm.withNormUriId(newUriId))
             (Some(oldBm), None)
           }
@@ -87,7 +88,7 @@ class UriIntegrityActor @Inject() (
               val liveBm = keepRepo.save(
                 primary.copy(uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)
               )
-              keepRepo.deleteCache(deadBm)
+              keepUriUserCache.remove(KeepUriUserKey(deadBm.uriId, deadBm.userId))
               (Some(deadBm), Some(liveBm))
             }
 
