@@ -137,7 +137,7 @@ class LDACommanderImpl @Inject() (
       val s4 = computePersonaInducedInterestScore(userPersonas, uriTopicOpt)
       val s5 = combineScores(s2.global, s4)
       val (topic1, topic2) = (uriTopicOpt.flatMap(_.firstTopic), uriTopicOpt.flatMap(_.secondTopic))
-      LDAUserURIInterestScores(s2.global, s1.recency, s3, topic1, topic2)
+      LDAUserURIInterestScores(s5, s1.recency, s3, topic1, topic2)
     }
 
     // tweak later
