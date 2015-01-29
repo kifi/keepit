@@ -28,7 +28,7 @@ trait SequencingPlugin extends SchedulerPlugin {
   val sanityCheckInterval: FiniteDuration = 10 minutes
 
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 30 seconds, interval, actor.ref, SequencingPluginMessages.Process)
+    scheduleTaskOnOneMachine(actor.system, 30 seconds, interval, actor.ref, SequencingPluginMessages.Process, this.getClass.getSimpleName)
     scheduleTaskOnAllMachines(actor.system, 100 seconds, sanityCheckInterval, actor.ref, SequencingPluginMessages.SanityCheck)
   }
 }
