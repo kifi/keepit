@@ -104,16 +104,8 @@ angular.module('kifi')
         // On link.
         //
         if (scope.isUserLoggedOut) {
-          // A/B test experiments.
-          var experiment = scope.library.abTestExperiment;
-          if (!experiment) {
-            return;
-          }
-
-          if (platformService.isSupportedMobilePlatform() ||
-            experiment.treatment_is_control || !experiment.treatment_data ||
-            !experiment.treatment_data.mainText || !experiment.treatment_data.quote || !experiment.treatment_data.quoteAttribution
-          ) {
+          var treatment = scope.library.abTestTreatment;
+          if (!treatment || treatment.isControl || platformService.isSupportedMobilePlatform()) {
             return;
           }
 
@@ -132,9 +124,9 @@ angular.module('kifi')
           var kfHeaderHeight = angular.element('.kf-header').outerHeight();
 
           // Populate the CTA content.
-          scope.ctaMainText = experiment.treatment_data.mainText;
-          scope.ctaQuote = experiment.treatment_data.quote;
-          scope.ctaQuoteAttribution = experiment.treatment_data.quoteAttribution;
+          scope.ctaMainText = treatment.data.mainText;
+          scope.ctaQuote = treatment.data.quote;
+          scope.ctaQuoteAttribution = treatment.data.quoteAttribution;
 
           // Show the CTA after a certain amount of time.
           var autoShowCTAPromise = $timeout(function () {

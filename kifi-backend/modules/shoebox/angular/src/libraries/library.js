@@ -5,10 +5,41 @@ angular.module('kifi')
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window', 'util', 'initParams', 'library',
   'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'originTrackingService', 'installService',
-  'abTestService',
   function ($scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window, util, initParams, library,
-    keepDecoratorService, libraryService, modalService, platformService, profileService, originTrackingService, installService,
-    abTestService) {
+    keepDecoratorService, libraryService, modalService, platformService, profileService, originTrackingService, installService) {
+    //
+    // A/B Tests.
+    //
+    var abTest = {
+      name: 'exp_follow_popup',
+      salt: 'hgg1dv',
+      treatments: [
+        {
+          name: 'none',
+          isControl: true
+        },
+        {
+          name: 'popupLibrary',
+          data: {
+            buttonText: 'Follow',
+            mainText: 'Join Kifi to follow this library.<br/>Discover other libraries,<br/>and build your own!',
+            quote: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
+            quoteAttribution: 'Remy Weinstein, California'
+          }
+        },
+        {
+          name: 'popupCollection',
+          data: {
+            buttonText: 'Save',
+            mainText: 'Join Kifi to save this collection.<br/>Discover other collections,<br/>and build your own!',
+            quote: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
+            quoteAttribution: 'Remy Weinstein, California'
+          }
+        }
+      ]
+    };
+
+
     //
     // Internal data.
     //
@@ -258,6 +289,7 @@ angular.module('kifi')
       }
     });
 
-    library.abTestExperiment = abTestService.getExperiment('1') || null;
+    library.abTest = abTest;
+    library.abTestTreatment = util.chooseTreatment(library.abTest.salt, library.abTest.treatments);
   }
 ]);
