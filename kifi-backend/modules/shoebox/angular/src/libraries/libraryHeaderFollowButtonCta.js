@@ -51,6 +51,7 @@ angular.module('kifi')
 
             scope.$evalAsync(function () {
               cta.show();
+              ctaShown = true;
 
               if (autoShowCTAPromise) {
                 $timeout.cancel(autoShowCTAPromise);
@@ -63,6 +64,28 @@ angular.module('kifi')
         function hideCTA() {
           if (cta) {
             cta.hide();
+          }
+        }
+
+        function autoShowCTA(timeInMS) {
+          // Show the CTA only if the page is visible and if it hasn't
+          // been shown before.
+
+          // $document.hidden is undefined; use $window.document to get
+          // around this problem.
+          if (!$window.document.hidden) {
+            if (autoShowCTAPromise) {
+              $timeout.cancel(autoShowCTAPromise);
+              autoShowCTAPromise = null;
+            }
+
+            autoShowCTAPromise = $timeout(function () {
+              if (!$window.document.hidden && !ctaShown) {
+                showCTA(true);
+                ctaShown = true;
+                trackHover('timer');
+              }
+            }, timeInMS);
           }
         }
 
@@ -101,6 +124,15 @@ angular.module('kifi')
         });
         element.on('mouseleave', hideCTA);
 
+        // Show the CTA automatically when the user returns to the library page.
+        function autoShowCTAQuickly() {
+          autoShowCTA(2000);
+        }
+        document.addEventListener('visibilitychange', autoShowCTAQuickly);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener('visibilitychange', autoShowCTAQuickly);
+        });
+
 
         //
         // On link.
@@ -131,10 +163,9 @@ angular.module('kifi')
           scope.ctaQuoteAttribution = treatment.data.quoteAttribution;
 
           // Show the CTA after a certain amount of time.
-          var autoShowCTAPromise = $timeout(function () {
-            showCTA(true);
-            trackHover('timer');
-          }, 5000);
+          var ctaShown = false;
+          var autoShowCTAPromise = null;
+          autoShowCTA(5000);
         }
       }
     };
