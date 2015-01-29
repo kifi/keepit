@@ -96,7 +96,7 @@ trait SchedulerPlugin extends Plugin with Logging {
     if (scheduling.enabled) {
       log.info(s"Scheduling $taskName")
       scheduleTask(system, initialDelay, frequency, taskName) {
-        if (scheduling.enabledOnlyForOneMachine(taskName)) {
+        if (scheduling.enabledOnlyForOneMachine(name)) {
           timing(s"executing scheduled task: $taskName") {
             receiver ! message
           }
@@ -142,7 +142,7 @@ trait SchedulerPlugin extends Plugin with Logging {
     if (scheduling.enabled) {
       log.info(s"Scheduling $taskName")
       scheduleTask(system, initialDelay, frequency, taskName) {
-        if (scheduling.enabledOnlyForOneMachine(taskName)) {
+        if (scheduling.enabledOnlyForOneMachine(name)) {
           timing(s"executing scheduled task: $taskName") {
             f
           }
