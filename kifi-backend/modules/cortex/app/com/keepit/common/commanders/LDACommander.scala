@@ -2,7 +2,7 @@ package com.keepit.common.commanders
 
 import java.util.BitSet
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -15,8 +15,34 @@ import play.api.libs.json._
 import scala.math.exp
 import scala.util.Random
 
+@ImplementedBy(classOf[LDACommanderImpl])
+trait LDACommander {
+  // admin tools
+  def numOfTopics(implicit version: ModelVersion[DenseLDA]): Int
+  def userTopicMean(userId: Id[User])(implicit version: ModelVersion[DenseLDA]): Option[UserLDAInterests]
+  def libraryTopic(libId: Id[Library])(implicit version: ModelVersion[DenseLDA]): Option[LibraryLDATopic]
+  def userLibraryScore(userId: Id[User], libId: Id[Library])(implicit version: ModelVersion[DenseLDA]): Option[Float]
+  def libraryInducedUserURIInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): Option[LDAUserURIInterestScore]
+  def getSimilarUsers(userId: Id[User], topK: Int)(implicit version: ModelVersion[DenseLDA]): (Seq[Id[User]], Seq[Float])
+  def userSimilairty(userId1: Id[User], userId2: Id[User])(implicit version: ModelVersion[DenseLDA]): Option[Float]
+  def getSimilarURIs(uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): Seq[Id[NormalizedURI]]
+  def dumpFeature(dataType: String, id: Long)(implicit version: ModelVersion[DenseLDA]): JsValue
+  def recomputeUserLDAStats(implicit version: ModelVersion[DenseLDA]): Unit
+  def sampleURIs(topicId: Int)(implicit version: ModelVersion[DenseLDA]): Seq[(Id[NormalizedURI], Float)]
+  def uriKLDivergence(uriId1: Id[NormalizedURI], uriId2: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): Option[Float]
+
+  // exteral service: e.g., scoring methods
+  def userLibrariesScores(userId: Id[User], libIds: Seq[Id[Library]])(implicit version: ModelVersion[DenseLDA]): Seq[Option[Float]]
+  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): LDAUserURIInterestScores
+  def gaussianUserUriInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): LDAUserURIInterestScores
+  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[LDAUserURIInterestScores]
+  def getTopicNames(uris: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[Option[String]]
+  def explainFeed(userId: Id[User], uris: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[Seq[Id[Keep]]]
+  def getSimilarLibraries(libId: Id[Library], limit: Int)(implicit version: ModelVersion[DenseLDA]): Seq[Id[Library]]
+}
+
 @Singleton
-class LDACommander @Inject() (
+class LDACommanderImpl @Inject() (
     infoCommander: LDAInfoCommander,
     db: Database,
     userTopicRepo: UserLDAInterestsRepo,
@@ -26,7 +52,7 @@ class LDACommander @Inject() (
     userLDAStatRepo: UserLDAStatsRepo,
     libTopicRepo: LibraryLDATopicRepo,
     userStatUpdatePlugin: LDAUserStatDbUpdatePlugin,
-    ldaRelatedLibRepo: LDARelatedLibraryRepo) extends Logging {
+    ldaRelatedLibRepo: LDARelatedLibraryRepo) extends LDACommander with Logging {
 
   def numOfTopics(implicit version: ModelVersion[DenseLDA]): Int = infoCommander.getLDADimension
 
@@ -232,7 +258,7 @@ class LDACommander @Inject() (
     }
   }
 
-  def getUserLDAStats(version: ModelVersion[DenseLDA]): Option[UserLDAStatistics] = {
+  private def getUserLDAStats(version: ModelVersion[DenseLDA]): Option[UserLDAStatistics] = {
     userLDAStatsRetriever.getUserLDAStats(version)
   }
 
