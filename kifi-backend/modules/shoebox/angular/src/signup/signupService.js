@@ -138,11 +138,17 @@ angular.module('kifi')
       }
     };
 
+    $scope.twAuthFromLibrary = function() {
+      if ($scope.userData.libraryId) {
+        $rootScope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthTwitter' });
+      }
+    };
+
     $scope.fbAuthFromLibrary = function () {
       if ($scope.userData.libraryId) {
         $rootScope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthFacebook' });
       }
-      return $scope.fbAuth();
+      //return $scope.fbAuth(); //unused
     };
 
     $scope.fbAuth = function () {
@@ -205,7 +211,6 @@ angular.module('kifi')
         $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signup2Library' });
       }
 
-      $scope.onLoginClick = undefined;
       $scope.onToSClick = function() {
         $analytics.eventTrack('visitor_clicked_page', {type: 'signup2Library', action: 'termsOfService'});
       };
@@ -259,6 +264,7 @@ angular.module('kifi')
           // todo: do we need to handle the return resp?
           modalService.close();
           thanksForRegisteringModal();
+          $analytics.eventTrack('visitor_clicked_page', {type: 'signup2Library', action: 'signup'});
         })['catch'](function (resp) {
           if (resp.data && resp.data.error === 'user_exists_failed_auth') {
             $scope.requestActive = false;
