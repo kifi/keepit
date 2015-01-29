@@ -162,6 +162,7 @@ class LibraryCommander @Inject() (
 
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int,
     idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
+    libraries.groupBy(l => l.id.get).toMap.foreach { case (lib, set) => if (set.size > 1) throw new Exception(s"There are ${set.size} identical libraries of $lib") }
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
@@ -219,7 +220,8 @@ class LibraryCommander @Inject() (
         if (userLibs.size < libraries.size) {
           val privateLibOpt = libraries.find(_.kind == LibraryKind.SYSTEM_SECRET)
           val mainLibOpt = libraries.find(_.kind == LibraryKind.SYSTEM_MAIN)
-          val owner = privateLibOpt.map(_.ownerId).orElse(mainLibOpt.map(_.ownerId)).getOrElse(throw new Exception(s"no main or secret libs in $libraries while userLibs counts for $userLibs is $userLibCounts"))
+          val owner = privateLibOpt.map(_.ownerId).orElse(mainLibOpt.map(_.ownerId)).getOrElse(
+            throw new Exception(s"no main or secret libs in ${libraries.size} libs while userLibs counts for $userLibs is $userLibCounts. Libs are ${libraries.mkString("\n")}"))
           if (experimentCommander.userHasExperiment(owner, ExperimentType.ALL_KEEPS_VIEW)) {
             val (privateCount, publicCount) = keepRepo.getPrivatePublicCountByUser(owner)
             privateLibOpt foreach { privateLib =>
