@@ -154,27 +154,6 @@ angular.module('kifi')
     //
     // Watches and listeners.
     //
-
-    $scope.$watch('library.id', function (id) {
-      $rootScope.$broadcast('currentLibraryChanged', $scope.library);
-
-      if (id) {
-        $scope.library.abTestExperiment = abTestService.getExperiment('1') || null;
-
-        libraryService.getRelatedLibraries(id, profileService.me.id).then(function (libraries) {
-          $scope.relatedLibraries = libraries;
-          trackPageView({ libraryRecCount: libraries.length });
-          $rootScope.$broadcast('relatedLibrariesChanged', $scope.library, libraries);
-          if (initParams.install === '1' && !installService.installedVersion) {
-            showInstallModal();
-          }
-          if (initParams.intent === 'follow' && $scope.library.access === 'none') {
-            libraryService.joinLibrary($scope.library.id);
-          }
-        });
-      }
-    });
-
     [  // TODO: indent two spaces within this array
     $rootScope.$on('keepAdded', function (e, libSlug, keeps, library) {
       keeps.forEach(function (keep) {
@@ -278,5 +257,7 @@ angular.module('kifi')
         libraryService.joinLibrary($scope.library.id);
       }
     });
+
+    library.abTestExperiment = abTestService.getExperiment('1') || null;
   }
 ]);
