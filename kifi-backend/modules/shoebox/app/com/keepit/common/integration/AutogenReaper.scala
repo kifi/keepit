@@ -30,7 +30,7 @@ class AutogenReaperPluginImpl @Inject() (
     for (app <- Play.maybeApplication) {
       val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (5 minutes, 15 minutes) // todo: inject
       log.info(s"[onStart] ReaperPlugin started with initDelay=$initDelay freq=$freq")
-      scheduleTaskOnLeader(actor.system, initDelay, freq, actor.ref, Reap)
+      scheduleTaskOnOneMachine(actor.system, initDelay, freq, actor.ref, Reap, Reap.getClass.getSimpleName)
     }
   }
 

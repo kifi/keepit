@@ -102,7 +102,7 @@ class ImageDataIntegrityPluginImpl @Inject() (
   }
 
   override def onStart() {
-    scheduleTaskOnLeader(system, 6 hour, 1 day, actor.ref, VerifyAllPictures)
+    scheduleTaskOnOneMachine(system, 6 hour, 1 day, actor.ref, VerifyAllPictures, VerifyAllPictures.getClass.getSimpleName)
     super.onStart()
   }
 }

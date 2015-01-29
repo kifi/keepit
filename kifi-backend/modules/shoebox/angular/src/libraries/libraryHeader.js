@@ -141,6 +141,10 @@ angular.module('kifi')
             scope.coverImageUrl = env.picBase + '/' + image.path;
             scope.coverImagePos = formatCoverImagePos(image);
           }
+
+          scope.library.followButtonText = (scope.library.abTestTreatment && !scope.library.abTestTreatment.isControl) ?
+            scope.library.abTestTreatment.data.buttonText :
+            'Follow Library';
         }
 
         function augmentFollower(follower) {
@@ -792,6 +796,10 @@ angular.module('kifi')
               }
             });
           } else {
+            if (platformService.isSupportedMobilePlatform()) {
+              return;
+            }
+
             modalService.open({
               template: 'libraries/libraryFollowersModal.tpl.html',
               modalData: {

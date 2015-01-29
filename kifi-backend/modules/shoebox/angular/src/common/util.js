@@ -127,6 +127,21 @@ angular.module('util', [])
         parts[parts.length-1] = this.htmlEscape(parts[parts.length-1]);
 
         return parts.join('');
+      },
+      chooseTreatment: function (salt, treatments) {
+        // To generate the salt for an experiment:
+        // [0,0,0,0,0,0].map(function () { return Math.floor(Math.random() * 32).toString(32) }).join('')
+        try {
+          var id = $window.mixpanel.cookie.props.distinct_id;
+          var sourceDigits = (id.id || id).replace(/[^\da-f]/gi, '');
+          var chosenDigits = salt.split('').map(function (ch) {
+            return sourceDigits[parseInt(ch, 32)];
+          }).join('');
+          var treatmentIndex = parseInt(chosenDigits, 16);
+          return treatments[treatmentIndex % treatments.length];
+        } catch (e) {
+          return null;
+        }
       }
     };
   }

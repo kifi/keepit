@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.search.engine.LibraryQualityEvaluator
 import com.keepit.search.test.SearchTestInjector
 import org.specs2.mutable._
 import com.keepit.common.akka.MonitoredAwait
@@ -36,7 +37,7 @@ class UriSearchCommanderTest extends Specification with SearchTestInjector with 
         val searchConfig = noBoostConfig.overrideWith("myBookmarkBoost" -> "2", "sharingBoostInNetwork" -> "0.5", "sharingBoostOutOfNetwork" -> "0.1")
 
         val languageCommander = new LanguageCommanderImpl(inject[DistributedSearchServiceClient], searchFactory, shardedKeepIndexer)
-        val augmentationCommander = new AugmentationCommanderImpl(activeShards, shardedKeepIndexer, libraryIndexer, searchFactory, inject[DistributedSearchServiceClient])
+        val augmentationCommander = new AugmentationCommanderImpl(activeShards, shardedKeepIndexer, libraryIndexer, searchFactory, new LibraryQualityEvaluator(activeShards), inject[DistributedSearchServiceClient])
         val compatibilitySupport = new SearchBackwardCompatibilitySupport(libraryIndexer, augmentationCommander, shardedCollectionIndexer, inject[MonitoredAwait])
 
         val searchCommander = new UriSearchCommanderImpl(

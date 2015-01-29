@@ -101,8 +101,8 @@ class ElizaEmailNotifierPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ElizaEmailNotifierPluginImpl")
-    scheduleTaskOnLeader(nonUserEmailActor.system, 30 seconds, 2 minutes, nonUserEmailActor.ref, SendNextEmails())
-    scheduleTaskOnLeader(userEmailActor.system, 90 seconds, 2 minutes, userEmailActor.ref, SendNextEmails())
+    scheduleTaskOnOneMachine(nonUserEmailActor.system, 30 seconds, 2 minutes, nonUserEmailActor.ref, SendNextEmails(), "nonUserEmail")
+    scheduleTaskOnOneMachine(userEmailActor.system, 90 seconds, 2 minutes, userEmailActor.ref, SendNextEmails(), "userEmail")
   }
 
   def sendEmails() {

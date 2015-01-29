@@ -29,7 +29,7 @@
         <ng-pluralize count="lib.numKeeps" when="{'1':'{} Keep','other':'{{lib.numKeeps|number}} Keeps'}"></ng-pluralize>
       </a>
       <span class="kf-upl-count-dot" ng-if="lib.numFollowers > 0">·</span>
-      <a href="javascript:" class="kf-upl-count" ng-click="openFollowersList(lib)" ng-if="lib.numFollowers > 0">
+      <a href="javascript:" class="kf-upl-count kf-upl-count-followers" ng-click="openFollowersList(lib)" ng-if="lib.numFollowers > 0">
         <ng-pluralize count="lib.numFollowers" when="{'1':'{} Follower','other':'{{lib.numFollowers|number}} Followers'}"></ng-pluralize>
       </a>
     </div>
