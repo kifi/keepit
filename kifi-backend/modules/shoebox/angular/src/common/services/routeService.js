@@ -36,7 +36,7 @@ angular.module('kifi')
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
       profileSettings: route('/user/settings'),
-      logout: '/logout',
+      logoutUrl: env.navBase + '/logout',
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),

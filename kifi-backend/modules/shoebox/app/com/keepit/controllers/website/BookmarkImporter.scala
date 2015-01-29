@@ -1,9 +1,11 @@
 package com.keepit.controllers.website
 
 import java.net.URLConnection
+import java.util.concurrent.TimeoutException
 
 import com.keepit.classify.{ Domain, DomainRepo, DomainStates }
 import com.keepit.commanders.{ KeepsCommander, KeepInterner, UserCommander }
+import com.keepit.common.akka.{ TimeoutFuture, SafeFuture }
 import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick._
@@ -17,6 +19,7 @@ import play.api.libs.functional.syntax._
 
 import com.google.inject.Inject
 import play.api.mvc.{ MaxSizeExceeded, Request }
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Try, Failure, Success }
 import org.jsoup.Jsoup
 import java.io._
@@ -32,6 +35,7 @@ import com.keepit.common.performance._
 import org.joda.time.DateTime
 import java.util.zip.{ ZipInputStream, ZipFile, ZipEntry }
 import scala.collection.JavaConversions._
+import scala.concurrent.duration.Duration
 
 class BookmarkImporter @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -41,9 +45,10 @@ class BookmarkImporter @Inject() (
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
     keepsCommander: KeepsCommander,
     clock: Clock,
+    implicit val executionContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging {
 
-  def importFileToLibrary(pubId: PublicId[Library]) = UserAction(parse.maxLength(1024 * 1024 * 12, parse.temporaryFile)) { request =>
+  def importFileToLibrary(pubId: PublicId[Library]) = UserAction.async(parse.maxLength(1024 * 1024 * 12, parse.temporaryFile)) { request =>
     val startMillis = clock.getMillis()
     val id = humanFriendlyToken(8)
     log.info(s"[bmFileImport:$id] Processing bookmark file import for ${request.userId}")
@@ -51,87 +56,105 @@ class BookmarkImporter @Inject() (
     request.body match {
       case Right(bookmarks) =>
 
-        Try(bookmarks.file)
-          .flatMap({ file =>
-            val isZipped = Try {
-              val zip = new ZipFile(file)
-              val isZipped = zip.entries().toStream.exists { ze =>
-                ze.getName.startsWith("data/js/tweets")
-              }
-              zip.close()
-              isZipped
-            }.getOrElse(false)
-            if (isZipped) {
-              log.info(s"[bmFileImport:$id] Twitter import, ${file.getAbsoluteFile}")
-              parseTwitterArchive(file)
-            } else {
-              log.info(s"[bmFileImport:$id] Netscape import, ${file.getAbsoluteFile}")
-              parseNetscapeBookmarks(file)
-            }
-          }).map {
-            case (sourceOpt, parsed) =>
-              processBookmarkExtraction(sourceOpt, parsed, pubId, LoggingFields(startMillis, id, request))
-          } match {
-            case Success((keepSize, tagSize)) =>
-              log.info(s"[bmFileImport:$id] Done in ${clock.getMillis() - startMillis}ms")
-              log.info(s"Successfully processed bookmark file import for ${request.userId}. $keepSize keeps processed, $tagSize tags.")
-              Ok(s"""{"done": "kindly let the user know that it is working and may take a sec", "count": $keepSize}""")
-            case Failure(oops) =>
-              log.info(s"[bmFileImport:$id] Failure (ex) in ${clock.getMillis() - startMillis}ms")
-              log.error(s"Could not import bookmark file for ${request.userId}, had an exception.", oops)
-              BadRequest(s"""{"error": "couldnt_complete", "message": "${oops.getMessage}"}""")
+        val uploadAttempt = Try(bookmarks.file).flatMap({ file =>
+          val isTwitterZip = isLikelyTwitterImport(file)
+          if (isTwitterZip) {
+            log.info(s"[bmFileImport:$id] Twitter import, ${file.getAbsoluteFile}")
+            parseTwitterArchive(file)
+          } else {
+            log.info(s"[bmFileImport:$id] Netscape import, ${file.getAbsoluteFile}")
+            parseNetscapeBookmarks(file)
           }
+        }).map {
+          case (sourceOpt, parsed) =>
+            implicit val timeout = Duration("10 seconds")
+            TimeoutFuture {
+              processBookmarkExtraction(sourceOpt, parsed, pubId, LoggingFields(startMillis, id, request))
+            }.recover {
+              case ex: TimeoutException => // Since it didn't fail yet, we'll probably succeed. Don't keep the user waiting.
+                None
+            }
+        } match {
+          case Success(fut) => fut
+          case Failure(ex) => Future.failed(ex)
+        }
+
+        uploadAttempt.map {
+          case Some((keepSize, tagSize)) =>
+            log.info(s"[bmFileImport:$id] Returning to user in ${clock.getMillis() - startMillis}ms. Success for ${request.userId}: $keepSize keeps processed, $tagSize tags.")
+            Ok(Json.obj("count" -> keepSize))
+          case None =>
+            log.info(s"[bmFileImport:$id] Returning to user in ${clock.getMillis() - startMillis}ms, but timed out before finished processing.")
+            Ok(Json.obj("in_progress" -> true))
+        }.recover {
+          case ex =>
+            log.info(s"[bmFileImport:$id] Failure (ex) in ${clock.getMillis() - startMillis}ms")
+            log.error(s"Could not import bookmark file for ${request.userId}, had an exception.", ex)
+            BadRequest(Json.obj("error" -> "couldnt_complete", "message" -> ex.getMessage))
+        }
       case Left(err) =>
         log.info(s"[bmFileImport:$id] Failure (too large) in ${clock.getMillis() - startMillis}ms")
         log.warn(s"Could not import bookmark file for ${request.userId}, size too big: ${err.length}.\n${err.toString}")
-        BadRequest(s"""{"error": "file_too_large", "size": ${err.length}}""")
+        Future.successful(BadRequest(Json.obj("error" -> "file_too_large", "size" -> err.length)))
     }
   }
 
   // Internal
 
+  private def isLikelyTwitterImport(file: File) = {
+    Try {
+      val zip = new ZipFile(file)
+      val isZipped = zip.entries().toStream.exists { ze =>
+        ze.getName.startsWith("data/js/tweets")
+      }
+      zip.close()
+      isZipped
+    }.getOrElse(false)
+  }
+
   case class LoggingFields(startMillis: Long, id: String, request: UserRequest[Either[MaxSizeExceeded, play.api.libs.Files.TemporaryFile]])
 
-  private def processBookmarkExtraction(sourceOpt: Option[KeepSource], parsed: Seq[Bookmark], pubId: PublicId[Library], lf: LoggingFields): (Int, Int) = {
+  private def processBookmarkExtraction(sourceOpt: Option[KeepSource], parsed: Seq[Bookmark], pubId: PublicId[Library], lf: LoggingFields): Future[Option[(Int, Int)]] = {
     implicit val context = heimdalContextBuilderFactoryBean.withRequestInfoAndSource(lf.request, sourceOpt.getOrElse(KeepSource.bookmarkFileImport)).build
-
-    log.info(s"[bmFileImport:${lf.id}] Parsed in ${clock.getMillis() - lf.startMillis}ms")
-    val tagSet = scala.collection.mutable.Set.empty[String]
-    parsed.foreach { bm =>
-      bm.tags.map { tagName =>
-        tagSet.add(tagName)
+    SafeFuture("processBookmarkExtraction") {
+      log.info(s"[bmFileImport:${lf.id}] Parsed in ${clock.getMillis() - lf.startMillis}ms")
+      val tagSet = scala.collection.mutable.Set.empty[String]
+      parsed.foreach { bm =>
+        bm.tags.map { tagName =>
+          tagSet.add(tagName)
+        }
       }
+
+      val importTag = keepsCommander.getOrCreateTag(lf.request.userId, "Imported links")(context)
+
+      val tags = tagSet.map { tagStr =>
+        tagStr.trim -> timing(s"uploadBookmarkFile(${lf.request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(lf.request.userId, tagStr.trim)(context) }
+      }.toMap
+      val taggedKeeps = parsed.map {
+        case Bookmark(t, h, tagNames, createdDate, originalJson) =>
+          val keepTags = tagNames.map(tags.get).flatten.map(_.id.get) :+ importTag.id.get
+          BookmarkWithTagIds(t, h, keepTags, createdDate, originalJson)
+      }
+      log.info(s"[bmFileImport:${lf.id}] Tags extracted in ${clock.getMillis() - lf.startMillis}ms")
+
+      val (importId, rawKeeps) = Library.decodePublicId(pubId) match {
+        case Failure(ex) =>
+          // airbrake.notify(s"importing to library with invalid pubId ${pubId}")
+          throw new Exception(s"importing to library with invalid pubId ${pubId}")
+          ("", List.empty[RawKeep])
+        case Success(id) =>
+          createRawKeeps(lf.request.userId, sourceOpt, taggedKeeps, id)
+      }
+
+      log.info(s"[bmFileImport:${lf.id}] Raw keep start persisting in ${clock.getMillis() - lf.startMillis}ms")
+      keepInterner.persistRawKeeps(rawKeeps, Some(importId))
+
+      log.info(s"[bmFileImport:${lf.id}] Raw keep finished persisting in ${clock.getMillis() - lf.startMillis}ms")
+
+      log.info(s"[bmFileImport:${lf.id}] Done in ${clock.getMillis() - lf.startMillis}ms. Successfully processed bookmark file import for ${lf.request.userId}. $rawKeeps.length keeps processed, $tags.size tags.")
+
+      Some((rawKeeps.length, tags.size))
     }
-
-    val importTag = sourceOpt match {
-      case Some(source) => keepsCommander.getOrCreateTag(lf.request.userId, "Imported from " + source.value)(context)
-      case None => keepsCommander.getOrCreateTag(lf.request.userId, "Imported links")(context)
-    }
-    val tags = tagSet.map { tagStr =>
-      tagStr.trim -> timing(s"uploadBookmarkFile(${lf.request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(lf.request.userId, tagStr.trim)(context) }
-    }.toMap
-    val taggedKeeps = parsed.map {
-      case Bookmark(t, h, tagNames, createdDate, originalJson) =>
-        val keepTags = tagNames.map(tags.get).flatten.map(_.id.get) :+ importTag.id.get
-        BookmarkWithTagIds(t, h, keepTags, createdDate, originalJson)
-    }
-    log.info(s"[bmFileImport:${lf.id}] Tags extracted in ${clock.getMillis() - lf.startMillis}ms")
-
-    val (importId, rawKeeps) = Library.decodePublicId(pubId) match {
-      case Failure(ex) =>
-        // airbrake.notify(s"importing to library with invalid pubId ${pubId}")
-        throw new Exception(s"importing to library with invalid pubId ${pubId}")
-        ("", List.empty[RawKeep])
-      case Success(id) =>
-        createRawKeeps(lf.request.userId, sourceOpt, taggedKeeps, id)
-    }
-
-    log.info(s"[bmFileImport:${lf.id}] Raw keep start persisting in ${clock.getMillis() - lf.startMillis}ms")
-    keepInterner.persistRawKeeps(rawKeeps, Some(importId))
-
-    log.info(s"[bmFileImport:${lf.id}] Raw keep finished persisting in ${clock.getMillis() - lf.startMillis}ms")
-
-    (rawKeeps.length, tags.size)
   }
 
   /* Parses Netscape-bookmark formatted file, extracting useful fields */
@@ -189,7 +212,9 @@ class BookmarkImporter @Inject() (
   // Parses Twitter archives, from https://twitter.com/settings/account (click “Request your archive”)
   private def parseTwitterArchive(archive: File): Try[(Option[KeepSource], List[Bookmark])] = Try {
     val zip = new ZipFile(archive)
-    val links = zip.entries().toList.filter(_.getName.startsWith("data/js/tweets/")).map { ze =>
+    val filesInArchive = zip.entries().toList
+
+    val links = filesInArchive.filter(_.getName.startsWith("data/js/tweets/")).map { ze =>
       twitterEntryToJson(zip, ze).collect {
         case tweet if tweet.entities.urls.nonEmpty =>
           val tags = tweet.entities.hashtags.map(_.text).toList

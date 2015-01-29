@@ -172,6 +172,7 @@ object Shoebox extends Service {
     def getBasicKeeps(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeeps", Param("userId", userId))
     def getBasicLibraryStatistics() = ServiceRoute(POST, "/internal/shoebox/database/getBasicLibraryStatistics")
     def getLibrariesWithWriteAccess(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesWithWriteAccess", Param("userId", userId))
+    def getUserActivePersonas(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/user/activePersonas", Param("userId", userId))
   }
 }
 
@@ -374,6 +375,8 @@ object Cortex extends Service {
     def userLibrariesScores(userId: Id[User])(implicit version: LDAVersionOpt) = ServiceRoute(POST, "/internal/cortex/lda/userLibrariesScores", Param("userId", userId), Param("version", version))
     def similarURIs(uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/similarURIs", Param("uriId", uriId), Param("version", version))
     def similarLibraries(libId: Id[Library], limit: Int)(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/similarLibraries", Param("libId", libId), Param("limit", limit), Param("version", version))
+
+    def getExistingPersonaFeature(personaId: Id[Persona])(implicit version: ModelVersion[DenseLDA]) = ServiceRoute(GET, "/internal/cortex/lda/getExistingPersonaFeature", Param("personaId", personaId), Param("version", version))
     def generatePersonaFeature(implicit version: ModelVersion[DenseLDA]) = ServiceRoute(POST, "/internal/cortex/lda/generatePersonaFeature", Param("version", version))
     def savePersonaFeature(implicit version: ModelVersion[DenseLDA]) = ServiceRoute(POST, "/internal/cortex/lda/savePersonaFeature", Param("version", version))
 

@@ -1,12 +1,13 @@
 package com.keepit.normalizer
 
+import com.keepit.common.core._
+
 import scala.concurrent.Future
 import com.keepit.scraper.{ ScrapeScheduler, Signature }
-import com.keepit.model.{ URL, Normalization }
+import com.keepit.model.Normalization
 import com.keepit.scraper.extractor.{ ExtractorProviderTypes }
 import com.keepit.common.logging.Logging
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.net.{ URI, URIParser }
 import scala.util.{ Failure, Success, Try }
 
 trait ContentCheck extends PartialFunction[NormalizationCandidate, Future[Boolean]] {
@@ -70,7 +71,7 @@ case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: 
   def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && LinkedInNormalizer.linkedInCanonicalPublicProfile.findFirstIn(candidate.url).isDefined
   protected def check(publicProfileCandidate: NormalizationCandidate) = {
     for { idArticleOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(ExtractorProviderTypes.LINKEDIN_ID)) } yield {
-      println(idArticleOption); idArticleOption match {
+      idArticleOption match {
         case Some(idArticle) => idArticle.content == privateProfileId.toString
         case None => {
           log.error(s"Content check of LinkedIn public profile ${publicProfileCandidate.url} for id ${privateProfileId} failed.")
@@ -80,4 +81,23 @@ case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: 
     }
   }
   def getFailedAttempts() = Set.empty
+}
+
+case class AlternateUrlCheck(referenceUrl: String, prenormalize: String => Try[String])(implicit scraperPlugin: ScrapeScheduler) extends ContentCheck with Logging {
+
+  private var failedContentChecks = Set.empty[String]
+
+  private lazy val futureAlternateUrls: Future[Set[String]] = {
+    scraperPlugin.scrapeBasicArticle(referenceUrl, None).map {
+      case None => Set.empty[String]
+      case Some(basicArticle) => basicArticle.alternateUrls.map(prenormalize(_).toOption).flatten
+    }
+  }
+
+  def isDefinedAt(candidate: NormalizationCandidate) = candidate.isInstanceOf[AlternateCandidate]
+  protected def check(alternateCandidate: NormalizationCandidate) = futureAlternateUrls.map { alternateUrls =>
+    alternateUrls.contains(alternateCandidate.url) tap { isSuccessful => if (!isSuccessful) { failedContentChecks += alternateCandidate.url } }
+  }
+
+  def getFailedAttempts() = failedContentChecks.map((referenceUrl, _)).toSet
 }

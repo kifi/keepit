@@ -147,7 +147,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
             kept: o.kept
           });
           k.render('html/keeper/keepers', params, function (html) {
-            configureHover(hoverfuFriends($(html), o.keepers), {
+            configureHover(attachSocialToolTipHandlers($(html), params, 'keepButton'), {
               suppressed: isSticky,
               mustHoverFor: 100,
               canLeaveFor: 800,
@@ -158,7 +158,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
               category: 'socialToolTip',
               subsource: 'keepButton',
               friendsShown: params.keepers.length,
-              friendsElided: params.numMore || undefined
+              friendsElided: params.numMore || undefined,
+              librariesShown: params.libs.length
             });
           });
         } else {
@@ -327,8 +328,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     });
   }
 
-  function hoverfuFriends($tip, keepers) {
-    return $tip.on('click', '.kifi-keepers-pic', function () {
+  function attachSocialToolTipHandlers($tip, params, subsource) {
+    return $tip.on('click', '.kifi-keepers-pic,.kifi-keepers-lib', function () {
       var a = this, url = a.href;
       if (url.indexOf('?') < 0) {
         a.href = url + '?o=xst';
@@ -336,10 +337,18 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
           a.href = url;
         });
       }
+      api.port.emit('track_notification_click', {
+        category: 'socialToolTip',
+        action: a.classList.contains('kifi-keepers-lib') ? 'clickedLibrary' : 'clickedFriend',
+        subsource: subsource,
+        friendsShown: params.keepers.length,
+        friendsElided: params.numMore || undefined,
+        librariesShown: params.libs.length
+      });
     })
     .hoverfu('.kifi-keepers-pic', function (configureHover) {
       var $pic = $(this);
-      var friend = keepers.filter(idIs($pic.data('id')))[0];
+      var friend = params.keepers.filter(idIs($pic.data('id')))[0];
       k.render('html/friend_card', friend, function (html) {
         configureHover(html, {
           mustHoverFor: 100, hideAfter: 4000, parent: $tip,
@@ -570,7 +579,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                   $promo.detach();
                 }
                 configureHover($promo, {parent: $tile, mustHoverFor: 0, canLeaveFor: 1e9, ignoreWheel: true});
-                $promo
+                attachSocialToolTipHandlers($promo, params, 'tile')
                 .data('timeout', setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000 + 1800 * o.libraries.length))
                 .on('mouseover', function f(e) {
                   $promo.off(e.type, f).removeClass('kifi-slowly');
@@ -586,7 +595,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                   category: 'socialToolTip',
                   subsource: 'tile',
                   friendsShown: params.keepers.length,
-                  friendsElided: params.numMore || undefined
+                  friendsElided: params.numMore || undefined,
+                  librariesShown: params.libs.length
                 });
               });
             }).hoverfu('show');

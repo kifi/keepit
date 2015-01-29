@@ -205,7 +205,7 @@ class RecommendationGenerationCommander @Inject() (
 
   private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]], alwaysIncludeOpt: Option[Set[Id[NormalizedURI]]] = None): Future[Unit] = recommendationGenerationLock.withLockFuture {
     getPerUserGenerationLock(userId).withLockFuture {
-      if (serviceDiscovery.isLeader()) {
+      if (serviceDiscovery.isRunnerFor(CuratorTasks.uriRecommendationPrecomputation)) {
         val alwaysInclude: Set[Id[NormalizedURI]] = alwaysIncludeOpt.getOrElse(db.readOnlyReplica { implicit session => uriRecRepo.getUriIdsForUser(userId) })
         val state: UserRecommendationGenerationState = getStateOfUser(userId)
         val seedsAndSeqFuture: Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = getCandidateSeedsForUser(userId, state)
@@ -228,8 +228,8 @@ class RecommendationGenerationCommander @Inject() (
         }
         res.map(_ => ())
       } else {
+        log.warn("Trying to run reco precomputation on non-designated machine. Aborting.")
         recommendationGenerationLock.clear()
-        if (serviceDiscovery.myStatus.exists(_ != ServiceStatus.STOPPING)) log.error("Trying to run reco precomputation on non-leader (and it's not a shut down)! Aborting.")
         Future.successful()
       }
     }

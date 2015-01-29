@@ -156,4 +156,8 @@ case class ScraperCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def librariesWithWriteAccessCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new LibrariesWithWriteAccessCache(stats, accessLog, (outerRepo, 10 minutes))
+
+  @Provides @Singleton
+  def userActivePersonasCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserActivePersonasCache(stats, accessLog, (innerRepo, 24 hours), (outerRepo, 14 days))
 }

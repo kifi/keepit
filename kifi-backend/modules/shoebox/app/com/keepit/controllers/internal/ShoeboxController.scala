@@ -66,6 +66,7 @@ class ShoeboxController @Inject() (
   emailTemplateSender: EmailTemplateSender,
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
   userConnectionsCommander: UserConnectionsCommander,
+  userPersonaRepo: UserPersonaRepo,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
@@ -502,5 +503,10 @@ class ShoeboxController @Inject() (
   def getLibrariesWithWriteAccess(userId: Id[User]) = Action { request =>
     val libraryIds = libraryCommander.getLibrariesWithWriteAccess(userId)
     Ok(Json.toJson(libraryIds))
+  }
+
+  def getUserActivePersonas(userId: Id[User]) = Action { request =>
+    val model = db.readOnlyReplica { implicit s => userPersonaRepo.getUserActivePersonas(userId) }
+    Ok(Json.toJson(model))
   }
 }
