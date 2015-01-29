@@ -14,6 +14,8 @@ import com.keepit.model.{ Library, Keep, NormalizedURI, User }
 import play.api.libs.json._
 import scala.math.exp
 import scala.util.Random
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.Future
 
 @ImplementedBy(classOf[LDACommanderImpl])
 trait LDACommander {
@@ -35,7 +37,7 @@ trait LDACommander {
   def userLibrariesScores(userId: Id[User], libIds: Seq[Id[Library]])(implicit version: ModelVersion[DenseLDA]): Seq[Option[Float]]
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): LDAUserURIInterestScores
   def gaussianUserUriInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): LDAUserURIInterestScores
-  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[LDAUserURIInterestScores]
+  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Future[Seq[LDAUserURIInterestScores]]
   def getTopicNames(uris: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[Option[String]]
   def explainFeed(userId: Id[User], uris: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[Seq[Id[Keep]]]
   def getSimilarLibraries(libId: Id[Library], limit: Int)(implicit version: ModelVersion[DenseLDA]): Seq[Id[Library]]
@@ -114,29 +116,49 @@ class LDACommanderImpl @Inject() (
     }
   }
 
-  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[LDAUserURIInterestScores] = {
-
+  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Future[Seq[LDAUserURIInterestScores]] = {
     def isInJunkTopic(uriTopicOpt: Option[URILDATopic], junks: Set[Int]): Boolean = uriTopicOpt.exists(x => x.firstTopic.exists(t => junks.contains(t.index)))
 
+    type UserFeaturesCombo = (Option[UserLDAInterests], Option[UserLDAStats], Seq[LibraryTopicMean])
 
-    val junkTopics = infoCommander.inactiveTopics(version)
-    db.readOnlyReplica { implicit s =>
+    def getUserFeaturesCombo(userId: Id[User], version: ModelVersion[DenseLDA]): UserFeaturesCombo = {
       val userInterestOpt = userTopicRepo.getByUser(userId, version)
       val userInterestStatOpt = userLDAStatRepo.getActiveByUser(userId, version)
       val libFeats = db.readOnlyReplica { implicit s => libTopicRepo.getUserFollowedLibraryFeatures(userId, version) }
-      val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, version)
-      uriTopicOpts.map { uriTopicOpt =>
-        if (!isInJunkTopic(uriTopicOpt, junkTopics)) {
-          val s1 = computeCosineInterestScore(uriTopicOpt, userInterestOpt)
-          val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
-          val s3 = libraryInducedUserURIInterestScore(libFeats, uriTopicOpt)
-          LDAUserURIInterestScores(s2.global, s1.recency, s3,
-            uriTopicOpt.flatMap(_.firstTopic), uriTopicOpt.flatMap(_.secondTopic))
-        } else {
-          LDAUserURIInterestScores(None, None, None)
+      (userInterestOpt, userInterestStatOpt, libFeats)
+    }
+
+    def scoreURI(uriTopicOpt: Option[URILDATopic], userFeatCombo: UserFeaturesCombo, userPersonas: Seq[PersonaLDAFeature]): LDAUserURIInterestScores = {
+      val (userInterestOpt, userInterestStatOpt, libFeats) = userFeatCombo
+      val s1 = computeCosineInterestScore(uriTopicOpt, userInterestOpt)
+      val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
+      val s3 = libraryInducedUserURIInterestScore(libFeats, uriTopicOpt)
+      val s4 = computePersonaInducedInterestScore(userPersonas, uriTopicOpt)
+      val s5 = combineScores(s2.global, s4)
+      val (topic1, topic2) = (uriTopicOpt.flatMap(_.firstTopic), uriTopicOpt.flatMap(_.secondTopic))
+      LDAUserURIInterestScores(s2.global, s1.recency, s3, topic1, topic2)
+    }
+
+    // tweak later
+    def combineScores(keepInduced: Option[LDAUserURIInterestScore], personaInduced: Option[LDAUserURIInterestScore]): Option[LDAUserURIInterestScore] = {
+      keepInduced
+    }
+
+    val junkTopics = infoCommander.inactiveTopics(version)
+    personaCommander.getUserPersonaFeatures(userId).map { personaFeats =>
+
+      db.readOnlyReplica { implicit s =>
+        val userFeatsCombo = getUserFeaturesCombo(userId, version)
+        val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, version)
+        assert(uriTopicOpts.size == uriIds.size, "retreived uri lda features size doesn't match with num of uris")
+
+        uriTopicOpts.map { uriTopicOpt =>
+          if (!isInJunkTopic(uriTopicOpt, junkTopics)) scoreURI(uriTopicOpt, userFeatsCombo, personaFeats)
+          else LDAUserURIInterestScores(None, None, None)
         }
       }
     }
+
   }
 
   private def computePersonaInducedInterestScore(personas: Seq[PersonaLDAFeature], uriTopicOpt: Option[URILDATopic]): Option[LDAUserURIInterestScore] = {
@@ -144,8 +166,8 @@ class LDACommanderImpl @Inject() (
     else {
       uriTopicOpt match {
         case Some(feat) =>
-          feat.feature.map{ uriFeat =>
-            val scores = personas.map{ p => cosineDistance(uriFeat.value, p.feature.mean)}
+          feat.feature.map { uriFeat =>
+            val scores = personas.map { p => cosineDistance(uriFeat.value, p.feature.mean) }
             val score = scores.max
             val conf = computeURIConfidence(feat.numOfWords, feat.timesFirstTopicChanged)
             LDAUserURIInterestScore(score, conf)
