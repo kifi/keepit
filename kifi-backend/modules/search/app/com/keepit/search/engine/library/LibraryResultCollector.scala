@@ -46,9 +46,17 @@ class LibraryResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, 
         } else {
           othersHits
         }
-        score = score * libraryQualityEvaluator.getPopularityBoost(librarySearcher, id)
-        if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) score = score * myLibraryBoost
-        else score * libraryQualityEvaluator.getPublishedLibraryBoost(keepSearcher, id)
+        val popularityBoost = {
+          val memberCount = LibraryIndexable.getMemberCount(librarySearcher, id) getOrElse 1L
+          libraryQualityEvaluator.getPopularityBoost(memberCount)
+        }
+        score = score * popularityBoost
+        if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) { score = score * myLibraryBoost }
+        else {
+          val keepCount = libraryQualityEvaluator.estimateKeepCount(keepSearcher, id)
+          val publishedLibraryBoost = libraryQualityEvaluator.getPublishedLibraryBoost(keepCount)
+          score = score * publishedLibraryBoost
+        }
         relevantQueue.insert(id, score, visibility, ctx.secondaryId)
       }
 

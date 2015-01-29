@@ -54,7 +54,10 @@ class LibraryFromKeepsScoreVectorSource(
 
         if (visibility != Visibility.RESTRICTED) {
           val recencyBoost = getRecencyBoost(recencyScorer, docId)
-          val inverseLibraryFrequencyBoost = libraryQualityEvaluator.getInverseLibraryFrequencyBoost(searcher, libId)
+          val inverseLibraryFrequencyBoost = {
+            val keepCount = libraryQualityEvaluator.estimateKeepCount(searcher, libId)
+            libraryQualityEvaluator.getInverseLibraryFrequencyBoost(keepCount)
+          }
           val boost = recencyBoost * inverseLibraryFrequencyBoost
 
           // get all scores
