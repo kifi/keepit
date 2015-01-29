@@ -88,8 +88,8 @@ object LibraryIndexable {
     librarySearcher.getLongDocValue(LibraryFields.kindField, libId).map(LibraryFields.Kind.fromNumericCode)
   }
 
-  def getName(librarySearcher: Searcher, libraryId: Id[Library]): Option[String] = {
-    librarySearcher.getStringDocValue(LibraryFields.nameValueField, libraryId.id)
+  def getName(librarySearcher: Searcher, libId: Long): Option[String] = {
+    librarySearcher.getStringDocValue(LibraryFields.nameValueField, libId)
   }
 
   def getMemberCount(librarySearcher: Searcher, libraryId: Id[Library]): Option[Long] = {

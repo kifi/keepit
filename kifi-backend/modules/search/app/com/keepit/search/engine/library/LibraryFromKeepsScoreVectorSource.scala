@@ -20,6 +20,7 @@ class LibraryFromKeepsScoreVectorSource(
     filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
+    libraryQualityEvaluator: LibraryQualityEvaluator,
     explanation: Option[LibrarySearchExplanationBuilder]) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
   override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.textSearchFields)
@@ -53,7 +54,7 @@ class LibraryFromKeepsScoreVectorSource(
 
         if (visibility != Visibility.RESTRICTED) {
           val recencyBoost = getRecencyBoost(recencyScorer, docId)
-          val inverseLibraryFrequencyBoost = 1.0f / (1 + Math.log(1 + searcher.freq(new Term(KeepFields.libraryField, libId.toString))).toFloat) // number of keeps from this shard in this library (correlated with number of keeps in this library)
+          val inverseLibraryFrequencyBoost = libraryQualityEvaluator.getInverseLibraryFrequencyBoost(searcher, libId)
           val boost = recencyBoost * inverseLibraryFrequencyBoost
 
           // get all scores

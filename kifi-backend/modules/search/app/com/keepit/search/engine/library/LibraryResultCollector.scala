@@ -3,13 +3,13 @@ package com.keepit.search.engine.library
 import com.keepit.common.logging.Logging
 import com.keepit.model.LibraryKind
 import com.keepit.search.engine.uri.UriResultCollector
-import com.keepit.search.engine.{ Visibility, ScoreContext }
+import com.keepit.search.engine.{ LibraryQualityEvaluator, Visibility, ScoreContext }
 import com.keepit.search.engine.result.{ HitQueue, ResultCollector }
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryIndexable
 
-class LibraryResultCollector(librarySearcher: Searcher, maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float, explanation: Option[LibrarySearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
+class LibraryResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float, libraryQualityEvaluator: LibraryQualityEvaluator, explanation: Option[LibrarySearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
 
   import UriResultCollector._
 
@@ -46,7 +46,9 @@ class LibraryResultCollector(librarySearcher: Searcher, maxHitsPerCategory: Int,
         } else {
           othersHits
         }
+        score = score * libraryQualityEvaluator.getPopularityBoost(librarySearcher, id)
         if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) score = score * myLibraryBoost
+        else score * libraryQualityEvaluator.getPublishedLibraryBoost(keepSearcher, id)
         relevantQueue.insert(id, score, visibility, ctx.secondaryId)
       }
 
