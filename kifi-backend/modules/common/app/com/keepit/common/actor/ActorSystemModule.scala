@@ -51,6 +51,7 @@ case class DevActorSystemModule() extends ActorSystemModule {
     new SchedulingProperties {
       def enabled = enabledProp
       def enabledOnlyForLeader = enabledProp
+      def enabledOnlyForOneMachine(taskName: String) = enabledProp
     }
   }
 

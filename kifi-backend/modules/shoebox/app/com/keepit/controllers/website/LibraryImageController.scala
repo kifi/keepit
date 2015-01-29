@@ -65,7 +65,7 @@ class LibraryImageController @Inject() (
     imagePath match {
       case LibraryImageController.pathHashRe(hashStr) =>
         val currentHash = db.readOnlyMaster { implicit s =>
-          libraryImageRepo.getForLibraryId(libraryId)
+          libraryImageRepo.getActiveForLibraryId(libraryId)
         }.map(_.sourceFileHash).toSet
         if (currentHash.contains(ImageHash(hashStr))) {
           libraryImageCommander.positionLibraryImage(libraryId, LibraryImagePosition(posX, posY))

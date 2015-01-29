@@ -328,14 +328,14 @@ a.video-frame {
   background: #2379b1;
 }
 .form-network.twitter {
-  background: #00aced;
+  background: #55acee;
   display: none;
 }
 .form-network.twitter:hover {
-  background: #02baff;
+  background: #2092e9;
 }
 .form-network.twitter:active {
-  background: #1dcaff;
+  background: #55acee;
 }
 .form-network-icon {
   display: table-cell;
