@@ -162,6 +162,7 @@ class LibraryCommander @Inject() (
 
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int,
     idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
+    libraries.groupBy(l => l.id.get).toMap.foreach { case (lib, set) => if (set.size > 1) throw new Exception(s"There are ${set.size} identical libraries of $lib") }
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
@@ -187,41 +188,69 @@ class LibraryCommander @Inject() (
     }.toMap
 
     val followerInfosByLibraryId = libraries.map { library =>
-      val info = {
-        val (collaborators, followers, _, counts) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
-        val inviters: Seq[LibraryMembership] = viewerUserIdOpt.map { userId =>
-          db.readOnlyReplica { implicit session =>
-            libraryInviteRepo.getWithLibraryIdAndUserId(library.id.get, userId).filter { invite => //not cached
-              invite.inviterId != library.ownerId
-            }.map { invite =>
-              libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, invite.inviterId) //not cached
-            }
-          }.flatten
-        }.getOrElse(Seq.empty)
-        ((inviters ++ collaborators.filter(!inviters.contains(_)) ++ followers.filter(!inviters.contains(_))).map(_.userId), counts)
+      val info: (Seq[Id[User]], Map[LibraryAccess, Int]) = library.kind match {
+        case LibraryKind.USER_CREATED =>
+          val (collaborators, followers, _, counts) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
+          val inviters: Seq[LibraryMembership] = viewerUserIdOpt.map { userId =>
+            db.readOnlyReplica { implicit session =>
+              libraryInviteRepo.getWithLibraryIdAndUserId(library.id.get, userId).filter { invite => //not cached
+                invite.inviterId != library.ownerId
+              }.map { invite =>
+                libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, invite.inviterId) //not cached
+              }
+            }.flatten
+          }.getOrElse(Seq.empty)
+          val all = (inviters ++ collaborators.filter(!inviters.contains(_)) ++ followers.filter(!inviters.contains(_))).map(_.userId)
+          (all, counts)
+        case _ =>
+          (Seq.empty, Map.empty)
       }
       library.id.get -> info
     }.toMap
-
-    val keepCountsByLibraries = db.readOnlyMaster { implicit s =>
-      keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet) //cached
-    }
 
     val usersByIdF = {
       val allUsersShown = libraries.flatMap { library => followerInfosByLibraryId(library.id.get)._1 :+ library.ownerId }.toSet
       db.readOnlyMasterAsync { implicit s => basicUserRepo.loadAll(allUsersShown) } //cached
     }
 
-    val futureCountsByLibraryId = libraries.map { library =>
-      val counts = SafeFuture {
-        val counts = followerInfosByLibraryId(library.id.get)._2 //todo(eishay): switch on ALL_KEEPS_VIEW (should be zero)
-        val collaboratorCount = counts(LibraryAccess.READ_WRITE) //todo(eishay): switch on ALL_KEEPS_VIEW (should be zero)
-        val followerCount = counts(LibraryAccess.READ_INSERT) + counts(LibraryAccess.READ_ONLY) //todo(eishay): switch on ALL_KEEPS_VIEW (should be zero)
-        val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0) //todo(eishay): switch on ALL_KEEPS_VIEW
-        (collaboratorCount, followerCount, keepCount)
+    val futureCountsByLibraryId = {
+      val keepCountsByLibraries: Map[Id[Library], Int] = db.readOnlyMaster { implicit s =>
+        var userLibs = libraries.filter(_.kind == LibraryKind.USER_CREATED).map(_.id.get).toSet
+        var userLibCounts: Map[Id[Library], Int] = keepRepo.getCountsByLibrary(userLibs) //todo(eishay): switch on ALL_KEEPS_VIEW
+        if (userLibs.size < libraries.size) {
+          val privateLibOpt = libraries.find(_.kind == LibraryKind.SYSTEM_SECRET)
+          val mainLibOpt = libraries.find(_.kind == LibraryKind.SYSTEM_MAIN)
+          val owner = privateLibOpt.map(_.ownerId).orElse(mainLibOpt.map(_.ownerId)).getOrElse(
+            throw new Exception(s"no main or secret libs in ${libraries.size} libs while userLibs counts for $userLibs is $userLibCounts. Libs are ${libraries.mkString("\n")}"))
+          if (experimentCommander.userHasExperiment(owner, ExperimentType.ALL_KEEPS_VIEW)) {
+            val (privateCount, publicCount) = keepRepo.getPrivatePublicCountByUser(owner)
+            privateLibOpt foreach { privateLib =>
+              userLibCounts = userLibCounts + (privateLib.id.get -> privateCount)
+            }
+            mainLibOpt foreach { mainLib =>
+              userLibCounts = userLibCounts + (mainLib.id.get -> publicCount)
+            }
+          } else {
+            privateLibOpt foreach { privateLib =>
+              userLibCounts = userLibCounts + (privateLib.id.get -> keepRepo.getCountByLibrary(privateLib.id.get))
+            }
+            mainLibOpt foreach { mainLib =>
+              userLibCounts = userLibCounts + (mainLib.id.get -> keepRepo.getCountByLibrary(mainLib.id.get))
+            }
+          }
+        }
+        userLibCounts
       }
-      library.id.get -> counts
-    }.toMap
+      libraries.map { library =>
+        library.id.get -> SafeFuture {
+          val counts = followerInfosByLibraryId(library.id.get)._2
+          val collaboratorCount = counts(LibraryAccess.READ_WRITE)
+          val followerCount = counts(LibraryAccess.READ_INSERT) + counts(LibraryAccess.READ_ONLY)
+          val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0)
+          (collaboratorCount, followerCount, keepCount)
+        }
+      }.toMap
+    }
 
     val imagesF = libraries.map { library =>
       library.id.get -> SafeFuture { libraryImageCommander.getBestImageForLibrary(library.id.get, idealLibraryImageSize) } //not cached

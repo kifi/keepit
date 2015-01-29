@@ -2,6 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -142,7 +143,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     experimentCommander.getUserIdsByExperiment(ExperimentType.ACTIVITY_EMAIL)
   }
 
-  def prepareEmailForUser(toUserId: Id[User]): Future[EmailToSend] = reactiveLock.withLockFuture {
+  def prepareEmailForUser(toUserId: Id[User]): Future[EmailToSend] = new SafeFuture(reactiveLock.withLockFuture {
     val feed = new UserActivityFeedHelper(toUserId)
 
     val friends = db.readOnlyReplica { implicit session =>
@@ -194,7 +195,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
         category = NotificationCategory.User.ACTIVITY
       )
     }
-  }
+  })
 
   class UserActivityFeedHelper(val toUserId: Id[User]) {
 
@@ -354,7 +355,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
             !lm.isOwner && library.visibility == LibraryVisibility.PUBLISHED &&
               lm.state == LibraryMembershipStates.ACTIVE && lm.lastJoinedAt.exists(minRecordAge <)
         }
-        val libraries = libMembershipAndLibraries.map(_._2)
+        val libraries = libMembershipAndLibraries.map(_._2).distinct
+
+        libraries.groupBy(l => l.id.get).toMap.foreach { case (lib, set) => if (set.size > 1) throw new Exception(s"There are ${set.size} identical libraries of $lib") }
 
         (filterAndSortLibrariesByAge(libraries), libMembershipAndLibraries)
       }
