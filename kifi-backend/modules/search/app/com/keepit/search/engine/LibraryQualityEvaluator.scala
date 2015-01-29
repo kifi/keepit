@@ -44,6 +44,6 @@ class LibraryQualityEvaluator @Inject() (activeShards: ActiveShards) {
 
   private val LowQualityLibraryNamesRe = "(?i)(test|delicious|bookmark|pocket|kippt|asdf|pinboard|import|instapaper)".r
   def isPoorlyNamed(name: String): Boolean = {
-    name.size <= 2 || LowQualityLibraryNamesRe.findFirstIn(name).isDefined || name.toLowerCase.split("\\s+").exists(Profanity.all.contains)
+    LowQualityLibraryNamesRe.findFirstIn(name).isDefined || name.toLowerCase.split("\\s+").exists(Profanity.all.contains)
   }
 }
