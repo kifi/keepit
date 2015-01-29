@@ -291,7 +291,7 @@ angular.module('kifi')
           $scope.installExtension = function() {
             $analytics.eventTrack('visitor_clicked_page', {type: 'installLibrary', action: 'install'});
             $scope.installTriggered = true;
-            installService.triggerInstall();
+            return installService.triggerInstall;
           };
           $scope.thanksVersion = 'installExt';
         } else {
