@@ -221,7 +221,8 @@ class ShoeboxScraperController @Inject() (
     require(args != null && args.length >= 1, "Expect args to be url && opt[dstUrl] ")
     val url = args(0).as[String]
     val destinationUrl = if (args.length > 1) args(1).asOpt[String] else None
-    val res = urlPatternRuleRepo.rules().isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.rules().isUnscrapable(destinationUrl.get))
+    val rules = urlPatternRuleRepo.rules()
+    val res = rules.isUnscrapable(url) || (destinationUrl.isDefined && rules.isUnscrapable(destinationUrl.get))
     log.debug(s"[isUnscrapableP] time-lapsed:${System.currentTimeMillis - ts} url=$url dstUrl=${destinationUrl.getOrElse("")} result=$res")
     Ok(JsBoolean(res))
   }
