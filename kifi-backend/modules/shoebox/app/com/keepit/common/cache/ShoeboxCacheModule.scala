@@ -132,7 +132,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def urlPatternRuleAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UrlPatternRuleAllCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 30 days))
+    new UrlPatternRulesAllCache(stats, accessLog, (innerRepo, 1 hour), (outerRepo, 30 days))
 
   @Singleton
   @Provides

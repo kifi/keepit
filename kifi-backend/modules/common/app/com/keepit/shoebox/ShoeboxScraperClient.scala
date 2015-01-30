@@ -21,7 +21,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 trait ShoeboxScraperClient extends ServiceClient {
   private val ? = null
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]]
+  def getAllURLPatterns(): Future[UrlPatternRules]
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]]
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean]
   def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean]
@@ -45,7 +45,7 @@ class ShoeboxScraperClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
   override val httpClient: HttpClient,
   val airbrakeNotifier: AirbrakeNotifier,
-  urlPatternRuleAllCache: UrlPatternRuleAllCache)
+  urlPatternRuleAllCache: UrlPatternRulesAllCache)
     extends ShoeboxScraperClient with Logging {
 
   val MaxUrlLength = 3000
@@ -57,10 +57,10 @@ class ShoeboxScraperClientImpl @Inject() (
     }
   }
 
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = {
-    urlPatternRuleAllCache.getOrElseFuture(UrlPatternRuleAllKey()) {
+  def getAllURLPatterns(): Future[UrlPatternRules] = {
+    urlPatternRuleAllCache.getOrElseFuture(UrlPatternRulesAllKey()) {
       call(Shoebox.internal.allURLPatternRules()).map { r =>
-        Json.fromJson[Seq[UrlPatternRule]](r.json).get
+        Json.fromJson[UrlPatternRules](r.json).get
       }
     }
   }
