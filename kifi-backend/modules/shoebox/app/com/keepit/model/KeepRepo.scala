@@ -320,7 +320,6 @@ class KeepRepoImpl @Inject() (
 
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
     import StaticQuery.interpolation
-
     val sql = sql"select sum(is_private), sum(1 - is_private) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
     sql.as[(Int, Int)].first()
   }

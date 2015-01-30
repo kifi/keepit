@@ -16,6 +16,8 @@ import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerM
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
+import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.UserFactory._
@@ -59,6 +61,11 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
               library().withUser(owner).withName("Secret").saved, // secret - shouldn't be a reco
               library().withUser(owner).withName("Java").published().saved
             )
+          }
+          db.readWrite { implicit rw =>
+            keep().withLibrary(lib1).saved
+            keep().withLibrary(lib2).saved
+            keep().withLibrary(lib2).saved
           }
 
           curator.topLibraryRecosExpectations(user1.id.get) = Seq(
