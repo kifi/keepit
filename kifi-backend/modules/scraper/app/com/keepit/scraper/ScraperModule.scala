@@ -7,7 +7,7 @@ import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.shoebox.{ ProdShoeboxScraperClientModule, ProdShoeboxServiceClientModule }
 import com.keepit.common.store.StoreModule
-import com.keepit.common.concurrent.ForkJoinContextMonitorModule
+import com.keepit.common.concurrent.{ ExecutionContextModule, ForkJoinContextMonitorModule }
 import com.keepit.scraper.embedly.EmbedlyModule
 import com.keepit.common.zookeeper.ServiceTypeModule
 import com.keepit.common.service.ServiceType

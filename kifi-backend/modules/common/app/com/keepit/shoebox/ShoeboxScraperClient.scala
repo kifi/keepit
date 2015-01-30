@@ -23,8 +23,6 @@ trait ShoeboxScraperClient extends ServiceClient {
   private val ? = null
   def getAllURLPatterns(): Future[UrlPatternRules]
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]]
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean]
-  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean]
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit]
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI]
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
@@ -159,29 +157,6 @@ class ShoeboxScraperClientImpl @Inject() (
   def getProxyP(url: String): Future[Option[HttpProxy]] = {
     call(Shoebox.internal.getProxyP, Json.toJson(url), callTimeouts = longTimeout).map { r =>
       if (r.json == null) None else r.json.asOpt[HttpProxy]
-    }
-  }
-
-  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = {
-    call(Shoebox.internal.isUnscrapable(url.take(MaxUrlLength), destinationUrl.map(_.take(MaxUrlLength)))).map { r =>
-      r.json.as[Boolean]
-    }
-  }
-
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = {
-    val destUrl = if (destinationUrl.isDefined && url == destinationUrl.get) {
-      log.debug(s"[isUnscrapableP] url==destUrl $url; ignored") // todo: fix calling code
-      None
-    } else destinationUrl map { dUrl =>
-      log.debug(s"[isUnscrapableP] url($url) != destUrl($dUrl)")
-      dUrl
-    }
-    val payload = JsArray(destUrl match {
-      case Some(dUrl) => Seq(Json.toJson(url.take(MaxUrlLength)), Json.toJson(dUrl.take(MaxUrlLength)))
-      case None => Seq(Json.toJson(url.take(MaxUrlLength)))
-    })
-    call(Shoebox.internal.isUnscrapableP, payload, callTimeouts = longTimeout).map { r =>
-      r.json.as[Boolean]
     }
   }
 
