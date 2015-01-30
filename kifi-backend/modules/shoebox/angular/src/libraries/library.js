@@ -237,10 +237,8 @@ angular.module('kifi')
       $scope.librarySearch = toState.name === 'library.search';
     }),
 
-    $rootScope.$on('userLoggedInStateChange', function (e, me) {
-      if (!me) {
-        reloadThisLibrary();
-      }
+    $rootScope.$on('userLoggedInStateChange', function () {
+      reloadThisLibrary();
     })
 
     ].forEach(function (deregister) {
