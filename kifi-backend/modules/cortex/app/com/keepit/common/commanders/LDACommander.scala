@@ -7,12 +7,14 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ Library, Keep, NormalizedURI, User }
 import play.api.libs.json._
+import scala.concurrent.duration._
 import scala.math.exp
 import scala.util.Random
 import play.api.libs.concurrent.Execution.Implicits._
@@ -57,6 +59,8 @@ class LDACommanderImpl @Inject() (
     libTopicRepo: LibraryLDATopicRepo,
     userStatUpdatePlugin: LDAUserStatDbUpdatePlugin,
     ldaRelatedLibRepo: LDARelatedLibraryRepo) extends LDACommander with Logging {
+
+  private val consolidater = new RequestConsolidator[Id[User], Seq[PersonaLDAFeature]](FiniteDuration(2, MINUTES))
 
   def numOfTopics(implicit version: ModelVersion[DenseLDA]): Int = infoCommander.getLDADimension
 
@@ -160,7 +164,11 @@ class LDACommanderImpl @Inject() (
 
     val junkTopics = infoCommander.inactiveTopics(version)
 
-    personaCommander.getUserPersonaFeatures(userId).map { personaFeats =>
+    val personaFeatsFuture = consolidater(userId){ userId =>
+      personaCommander.getUserPersonaFeatures(userId)
+    }
+
+    personaFeatsFuture.map { personaFeats =>
 
       val (userFeatsCombo, uriTopicOpts) = db.readOnlyReplica { implicit s =>
         val userFeatsCombo = getUserFeaturesCombo(userId, version)
