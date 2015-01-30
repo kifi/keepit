@@ -18,6 +18,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     case socialConnectionGraphUpdate: SocialConnectionGraphUpdate => processSocialConnectionGraphUpdate(socialConnectionGraphUpdate)
     case keepGraphUpdate: KeepGraphUpdate => processKeepGraphUpdate(keepGraphUpdate)
     case ldaUpdate: SparseLDAGraphUpdate => processLDAUpdate(ldaUpdate)
+    case ldaCleanOldVersion: LDAOldVersionCleanupGraphUpdate => processLDACleanup(ldaCleanOldVersion)
     case uriUpdate: NormalizedUriGraphUpdate => processNormalizedUriGraphUpdate(uriUpdate)
     case emailAccountUpdate: EmailAccountGraphUpdate => processEmailAccountGraphUpdate(emailAccountUpdate)
     case emailContactUpdate: EmailContactGraphUpdate => processEmailContactGraphUpdate(emailContactUpdate)
@@ -149,6 +150,14 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
         writer.saveVertex(uriData)
         writer.saveEdge(uriVertexId, topicVertexId, WeightedEdgeData(score))
         writer.saveEdge(topicVertexId, uriVertexId, WeightedEdgeData(score))
+    }
+  }
+
+  private def processLDACleanup(ldaCleanOldVersion: LDAOldVersionCleanupGraphUpdate)(implicit writer: GraphWriter) = {
+    val LDAOldVersionCleanupGraphUpdate(version, numTopics) = ldaCleanOldVersion
+    (0 until numTopics).foreach { i =>
+      val topicId = LDATopicId(version, LDATopic(i))
+      writer.removeVertexIfExists(topicId)
     }
   }
 
