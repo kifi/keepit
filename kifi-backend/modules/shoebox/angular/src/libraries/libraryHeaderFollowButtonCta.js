@@ -34,15 +34,24 @@ angular.module('kifi')
               scope.ctaShownAbove = false;
             }
 
+            // If the follow button is "sticky" (i.e., its position is fixed),
+            // similarly fix the CTA's position so that it won't move upon scroll.
+            var position = 'absolute';
+            if (element.css('position') === 'fixed') {
+              position = 'fixed';
+              top = top - angular.element($window).scrollTop();
+            }
+
             // Center the CTA with respect to the follow button.
             var left = elementLeft - Math.round((cta.outerWidth() - element.outerWidth()) / 2);
 
-            cta.css({top: top + 'px', left: left + 'px'});
+            cta.css({position: position, top: top + 'px', left: left + 'px'});
             ctaOuterArrow.css({top: ctaOuterArrowTop + 'px'});
             ctaInnerArrow.css({top: ctaInnerArrowTop + 'px'});
 
             scope.$evalAsync(function () {
               cta.show();
+              ctaShown = true;
 
               if (autoShowCTAPromise) {
                 $timeout.cancel(autoShowCTAPromise);
@@ -56,6 +65,32 @@ angular.module('kifi')
           if (cta) {
             cta.hide();
           }
+        }
+
+        function autoShowCTA(timeInMS) {
+          // Show the CTA only if the page is visible and if it hasn't
+          // been shown before.
+
+          // $document.hidden is undefined; use $window.document to get
+          // around this problem.
+          if (!$window.document.hidden) {
+            if (autoShowCTAPromise) {
+              $timeout.cancel(autoShowCTAPromise);
+              autoShowCTAPromise = null;
+            }
+
+            autoShowCTAPromise = $timeout(function () {
+              if (!$window.document.hidden && !ctaShown) {
+                showCTA(true);
+                ctaShown = true;
+                trackHover('timer');
+              }
+            }, timeInMS);
+          }
+        }
+
+        function autoShowCTAQuickly() {
+          autoShowCTA(2000);
         }
 
         function trackHover(trigger) {
@@ -93,12 +128,6 @@ angular.module('kifi')
         });
         element.on('mouseleave', hideCTA);
 
-        // TODO: make follow CTA sticky when follow button is sticky.
-        $window.addEventListener('scroll', hideCTA);
-        scope.$on('$destroy', function () {
-          $window.removeEventListener('scroll', hideCTA);
-        });
-
 
         //
         // On link.
@@ -129,10 +158,15 @@ angular.module('kifi')
           scope.ctaQuoteAttribution = treatment.data.quoteAttribution;
 
           // Show the CTA after a certain amount of time.
-          var autoShowCTAPromise = $timeout(function () {
-            showCTA(true);
-            trackHover('timer');
-          }, 5000);
+          var ctaShown = false;
+          var autoShowCTAPromise = null;
+          autoShowCTA(5000);
+
+          // Show the CTA automatically when the user returns to the library page.
+          document.addEventListener('visibilitychange', autoShowCTAQuickly);
+          scope.$on('$destroy', function () {
+            $window.removeEventListener('visibilitychange', autoShowCTAQuickly);
+          });
         }
       }
     };
