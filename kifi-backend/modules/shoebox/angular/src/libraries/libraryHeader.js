@@ -756,6 +756,7 @@ angular.module('kifi')
         scope.followButtonMaxTop = platformService.isSupportedMobilePlatform() ? 25 : 15;
 
         scope.manageLibrary = function () {
+          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageLibrary' });
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html',
             modalData: {
@@ -779,6 +780,7 @@ angular.module('kifi')
         };
 
         scope.toggleEditKeeps = function () {
+          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedEditKeeps' });
           scope.toggleEdit();
           scope.editKeepsText = scope.editKeepsText === 'Edit Keeps' ? 'Done Editing' : 'Edit Keeps';
         };
@@ -787,6 +789,7 @@ angular.module('kifi')
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedViewFollowers' });
 
           if (scope.library.owner.id === profileService.me.id) {
+            $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageLibrary' });
             modalService.open({
               template: 'libraries/manageLibraryModal.tpl.html',
               modalData: {
