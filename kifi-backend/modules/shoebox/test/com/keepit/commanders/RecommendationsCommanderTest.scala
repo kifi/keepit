@@ -75,7 +75,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
           )
 
           val recosF = commander.topPublicLibraryRecos(user1.id.get, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed)
-          val recos = Await.result(recosF, Duration(5, "seconds"))
+          val recos = Await.result(recosF, Duration(5, "seconds")).map(_._2)
           recos.size === 2
           recos(0).itemInfo.name === "Java"
           recos(1).itemInfo.name === "Scala"

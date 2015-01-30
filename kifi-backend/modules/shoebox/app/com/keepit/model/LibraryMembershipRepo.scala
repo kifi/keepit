@@ -37,6 +37,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def updateLastEmailSent(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
   def getMemberCountSinceForLibrary(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
+  def mostMembersSinceForUser(count: Int, since: DateTime, userId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
   def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
   def countFollowersWithOwnerId(ownerId: Id[User])(implicit session: RSession): Int
@@ -158,6 +159,11 @@ class LibraryMembershipRepoImpl @Inject() (
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
     import StaticQuery.interpolation
     sql"""select lm.library_id, count(*) as cnt from library_membership lm, library l where l.id = lm.library_id and l.state='active' and l.visibility='published' and lm.created_at > $since group by lm.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
+  }
+
+  def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)] = {
+    import StaticQuery.interpolation
+    sql"""select lm.library_id, count(*) as cnt from library_membership lm, library l where l.owner_id=$ownerId and l.id = lm.library_id and l.state='active' and l.visibility='published' and lm.created_at > $since group by lm.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
   private val countMembershipsCompiled = Compiled { (libraryId: Column[Id[Library]]) =>
