@@ -135,14 +135,27 @@ class LDACommanderImpl @Inject() (
       val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
       val s3 = libraryInducedUserURIInterestScore(libFeats, uriTopicOpt)
       val s4 = computePersonaInducedInterestScore(userPersonas, uriTopicOpt)
-      val s5 = combineScores(s2.global, s4)
+      val s5 = combineScores(s2.global, s4, userInterestStatOpt.map { _.numOfEvidence })
       val (topic1, topic2) = (uriTopicOpt.flatMap(_.firstTopic), uriTopicOpt.flatMap(_.secondTopic))
       LDAUserURIInterestScores(s5, s1.recency, s3, topic1, topic2)
     }
 
-    // tweak later
-    def combineScores(keepInduced: Option[LDAUserURIInterestScore], personaInduced: Option[LDAUserURIInterestScore]): Option[LDAUserURIInterestScore] = {
-      keepInduced
+    // tweak
+    def combineScores(keepInduced: Option[LDAUserURIInterestScore], personaInduced: Option[LDAUserURIInterestScore], userKeeps: Option[Int]): Option[LDAUserURIInterestScore] = {
+      val keepWeight = {
+        val exponent = (userKeeps.getOrElse(-1000) - 50) / 50
+        1.0 / (1 + exp(-exponent))
+      }
+      val personaWeight = 1.0 - keepWeight // can include time info later
+
+      (keepInduced, personaInduced) match {
+        case (Some(kscore), Some(pscore)) =>
+          val score = (keepWeight * kscore.score + personaWeight * pscore.score) / (keepWeight + personaWeight)
+          Some(LDAUserURIInterestScore(score, kscore.confidence))
+        case (None, None) => None
+        case (None, Some(pscore)) => Some(pscore)
+        case (Some(kscore), None) => Some(kscore)
+      }
     }
 
     val junkTopics = infoCommander.inactiveTopics(version)
