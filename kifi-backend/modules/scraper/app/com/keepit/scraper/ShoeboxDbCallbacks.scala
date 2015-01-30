@@ -37,7 +37,6 @@ class ShoeboxDbCallbackHelper @Inject() (
   def getLatestKeep(url: String): Future[Option[Keep]] = shoeboxScraperClient.getLatestKeep(url)
   def saveBookmark(bookmark: Keep): Future[Keep] = shoeboxScraperClient.saveBookmark(bookmark)
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = shoeboxScraperClient.recordPermanentRedirect(uri, redirect)
-  def isUnscrapableP(url: URI, destinationUrl: Option[String]) = shoeboxScraperClient.isUnscrapableP(url.toString(), destinationUrl)
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = {
     shoeboxScraperClient.recordScrapedNormalization(uriId, uriSignature, candidateUrl, candidateNormalization, alternateUrls)
   }
@@ -57,7 +56,6 @@ trait ShoeboxDbCallbacks {
   def getLatestKeep(url: String): Future[Option[Keep]]
   def saveBookmark(bookmark: Keep): Future[Keep]
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
-  def isUnscrapableP(url: URI, destinationUrl: Option[String]): Future[Boolean]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
   def updateURIRestriction(uriId: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
 }

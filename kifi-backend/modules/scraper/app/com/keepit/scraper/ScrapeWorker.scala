@@ -17,7 +17,7 @@ import scala.util.Success
 import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.learning.porndetector.SlidingWindowPornDetector
 import com.keepit.search.Lang
-import com.keepit.shoebox.{ ShoeboxScraperClient, ShoeboxServiceClient }
+import com.keepit.shoebox.ShoeboxScraperClient
 import scala.concurrent.Future
 import com.keepit.common.db.Id
 import com.keepit.scraper.embedly.EmbedlyCommander
@@ -36,9 +36,10 @@ class ScrapeWorkerImpl @Inject() (
     extractorFactory: ExtractorFactory,
     articleStore: ArticleStore,
     pornDetectorFactory: PornDetectorFactory,
+    uriCommander: URICommander,
     dbHelper: ShoeboxDbCallbacks,
     shoeboxScraperClient: ShoeboxScraperClient,
-    shoeboxClient: ShoeboxServiceClient,
+    urlCommander: URICommander,
     wordCountCache: NormalizedURIWordCountCache,
     uriSummaryCache: URISummaryCache,
     embedlyCommander: EmbedlyCommander) extends ScrapeWorker with Logging {
@@ -266,7 +267,7 @@ class ScrapeWorkerImpl @Inject() (
   }
 
   private def runPornDetectorIfNecessary(normalizedUri: NormalizedURI, content: String, contentLang: Lang): Future[Unit] = {
-    isNonSensitive(normalizedUri.url).map { nonSensitive =>
+    uriCommander.isNonSensitive(normalizedUri.url).map { nonSensitive =>
       if (!nonSensitive) {
         if (contentLang == Lang("en") && content.size > 100) {
           val detector = new SlidingWindowPornDetector(pornDetectorFactory())
@@ -288,11 +289,10 @@ class ScrapeWorkerImpl @Inject() (
     val extractor = extractorFactory(url)
     log.debug(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
-
     httpFetcher.get(url, ifModifiedSince, proxy = proxyOpt) { input => extractor.process(input) } flatMap { fetchStatus =>
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
-          dbHelper.isUnscrapableP(url, fetchStatus.destinationUrl) flatMap { unscrapable =>
+          uriCommander.isUnscrapable(url, fetchStatus.destinationUrl) flatMap { unscrapable =>
             if (unscrapable) {
               Future.successful(NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects))
             } else {
@@ -422,12 +422,5 @@ class ScrapeWorkerImpl @Inject() (
       absoluteTargetUrl <- URI.absoluteUrl(baseUrl, actualTargetUrl)
       parsedTargetUri <- URI.safelyParse(absoluteTargetUrl)
     } yield parsedTargetUri.toString()
-  }
-
-  private def isNonSensitive(url: String): Future[Boolean] = {
-    shoeboxScraperClient.getAllURLPatterns().map { patterns =>
-      val pat = patterns.rules.find(rule => url.matches(rule.pattern))
-      pat.exists(_.nonSensitive)
-    }
   }
 }

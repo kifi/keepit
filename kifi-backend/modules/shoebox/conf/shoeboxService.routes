@@ -841,8 +841,6 @@ POST     /internal/shoebox/database/recordPermanentRedirect @com.keepit.controll
 POST     /internal/shoebox/database/recordScrapedNormalization @com.keepit.controllers.internal.ShoeboxScraperController.recordScrapedNormalization
 GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.internal.ShoeboxScraperController.getProxy(url:String)
 POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.internal.ShoeboxScraperController.getProxyP()
-GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.internal.ShoeboxScraperController.isUnscrapable(url: String, destinationUrl: Option[String])
-POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.internal.ShoeboxScraperController.isUnscrapableP
 GET      /internal/shoebox/database/getFriendRequestRecipientIdBySender @com.keepit.controllers.internal.ShoeboxController.getFriendRequestsRecipientIdBySender(senderId: Id[User])
 GET      /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.getUserValue(userId: Id[User], key: UserValueName)
 POST     /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: UserValueName)

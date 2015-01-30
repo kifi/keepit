@@ -209,25 +209,6 @@ class ShoeboxScraperController @Inject() (
     resFuture.map { res => Ok(Json.toJson(res)) }
   }
 
-  def isUnscrapable(url: String, destinationUrl: Option[String]) = SafeAsyncAction { request =>
-    val rules = urlPatternRules.rules()
-    val res = rules.isUnscrapable(url) || (destinationUrl.isDefined && rules.isUnscrapable(destinationUrl.get))
-    log.debug(s"[isUnscrapable($url, $destinationUrl)] result=$res")
-    Ok(JsBoolean(res))
-  }
-
-  def isUnscrapableP() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
-    val ts = System.currentTimeMillis
-    val args = request.body.as[JsArray].value
-    require(args != null && args.length >= 1, "Expect args to be url && opt[dstUrl] ")
-    val url = args(0).as[String]
-    val destinationUrl = if (args.length > 1) args(1).asOpt[String] else None
-    val rules = urlPatternRules.rules()
-    val res = rules.isUnscrapable(url) || (destinationUrl.isDefined && rules.isUnscrapable(destinationUrl.get))
-    log.debug(s"[isUnscrapableP] time-lapsed:${System.currentTimeMillis - ts} url=$url dstUrl=${destinationUrl.getOrElse("")} result=$res")
-    Ok(JsBoolean(res))
-  }
-
   // Todo(Eishay): Stop returning ImageInfo
   def saveImageInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
