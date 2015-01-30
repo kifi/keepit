@@ -29,7 +29,7 @@ class MobileRecommendationsController @Inject() (
     val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
-      Json.toJson(util.Random.shuffle(uris ++ libs))
+      Json.toJson(util.Random.shuffle(uris ++ libs.map(_._2)))
     }
   }
 
