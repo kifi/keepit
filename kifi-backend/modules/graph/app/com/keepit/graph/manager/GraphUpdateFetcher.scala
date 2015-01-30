@@ -13,6 +13,7 @@ import com.keepit.model.NormalizedURI
 import com.keepit.common.core._
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.models.lda.DenseLDA
+import com.keepit.cortex.core.ModelVersion
 
 trait GraphUpdateFetcher {
   def fetch[U <: GraphUpdate](kind: GraphUpdateKind[U], seq: SequenceNumber[U], fetchSize: Int): Future[Seq[U]]
@@ -23,6 +24,8 @@ class GraphUpdateFetcherImpl @Inject() (
     eliza: ElizaServiceClient,
     abook: ABookServiceClient,
     cortex: CortexServiceClient) extends GraphUpdateFetcher with Logging {
+
+  private var ldaCleanMsgSent = false
 
   def fetch[U <: GraphUpdate](kind: GraphUpdateKind[U], seq: SequenceNumber[U], fetchSize: Int): Future[Seq[U]] = {
 
@@ -46,6 +49,13 @@ class GraphUpdateFetcherImpl @Inject() (
           case (modelVersion, uriFeaturesBatch) =>
             uriFeaturesBatch.map { uriFeatures => SparseLDAGraphUpdate(modelVersion, uriFeatures) }
         }
+      }
+
+      case LDAOldVersionCleanupGraphUpdate => if (ldaCleanMsgSent) {
+        Future.successful(Seq())
+      } else {
+        ldaCleanMsgSent = true
+        Future.successful(Seq(LDAOldVersionCleanupGraphUpdate(ModelVersion[DenseLDA](2), 512)))
       }
 
       case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))
