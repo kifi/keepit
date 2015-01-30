@@ -4,7 +4,7 @@ import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck._
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.model.UrlPatternRuleAllCache
+import com.keepit.model.UrlPatternRulesAllCache
 
 import scala.concurrent.ExecutionContext
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
@@ -34,7 +34,7 @@ case class FakeShoeboxScraperClientModule() extends ShoeboxScraperClientModule {
     httpClient: HttpClient,
     serviceCluster: ServiceCluster,
     airbrakeNotifier: AirbrakeNotifier,
-    urlPatternRuleAllCache: UrlPatternRuleAllCache): ShoeboxScraperClient =
+    urlPatternRuleAllCache: UrlPatternRulesAllCache): ShoeboxScraperClient =
     new ShoeboxScraperClientImpl(serviceCluster, httpClient, airbrakeNotifier, urlPatternRuleAllCache)
 }
 

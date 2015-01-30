@@ -18,7 +18,7 @@ class ScrapeSchedulerImpl @Inject() (
   airbrake: AirbrakeNotifier,
   systemAdminMailSender: SystemAdminMailSender,
   scrapeInfoRepo: ScrapeInfoRepo,
-  urlPatternRuleRepo: UrlPatternRuleRepo,
+  urlPatternRules: UrlPatternRulesCommander,
   scraperConfig: ScraperSchedulerConfig,
   scraperClient: ScraperServiceClient) //only on leader
     extends ScrapeScheduler with Logging {
@@ -30,7 +30,7 @@ class ScrapeSchedulerImpl @Inject() (
     require(parseUriTr.isSuccess, s"java.net.URI parser failed to parse url=($url) error=${parseUriTr.failed.get}")
   }
 
-  @inline private def getProxy(url: String): Option[HttpProxy] = db.readOnlyMaster { implicit s => urlPatternRuleRepo.getProxy(url) } // cached; use master
+  @inline private def getProxy(url: String): Option[HttpProxy] = db.readOnlyMaster { implicit s => urlPatternRules.getProxy(url) } // cached; use master
 
   def scrapeBasicArticle(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     sanityCheck(url)
