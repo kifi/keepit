@@ -89,6 +89,10 @@ angular.module('kifi')
           }
         }
 
+        function autoShowCTAQuickly() {
+          autoShowCTA(2000);
+        }
+
         function trackHover(trigger) {
           libraryService.trackEvent('visitor_viewed_page', scope.library, {
             type: 'libraryLanding',
@@ -124,15 +128,6 @@ angular.module('kifi')
         });
         element.on('mouseleave', hideCTA);
 
-        // Show the CTA automatically when the user returns to the library page.
-        function autoShowCTAQuickly() {
-          autoShowCTA(2000);
-        }
-        document.addEventListener('visibilitychange', autoShowCTAQuickly);
-        scope.$on('$destroy', function () {
-          $window.removeEventListener('visibilitychange', autoShowCTAQuickly);
-        });
-
 
         //
         // On link.
@@ -166,6 +161,12 @@ angular.module('kifi')
           var ctaShown = false;
           var autoShowCTAPromise = null;
           autoShowCTA(5000);
+
+          // Show the CTA automatically when the user returns to the library page.
+          document.addEventListener('visibilitychange', autoShowCTAQuickly);
+          scope.$on('$destroy', function () {
+            $window.removeEventListener('visibilitychange', autoShowCTAQuickly);
+          });
         }
       }
     };
