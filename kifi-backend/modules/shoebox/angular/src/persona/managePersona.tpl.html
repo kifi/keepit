@@ -1,0 +1,21 @@
+<div class="manage-persona dialog-content">
+  <div class="dialog-body-wrap">
+    <div class="dialog-body">
+      <h1 class="dialog-header"> Who are you? </h1>
+
+      <div class="persona-table">
+        <div ng-repeat="persona in allPersonas.personas" class="persona-icon" ng-class="{active: persona.selected}" ng-click="toggleSelect(persona)">
+          <div class="persona-icon-image-wrapper">
+            <img class="persona-icon-image" src="{{persona.iconSrc}}">
+          </div>
+          <div class="persona-icon-display-name">{{persona.displayName}}</div>
+        </div>
+      </div>
+
+      <div class="dialog-button">
+        <button class="manage-persona-exit-button" ng-class="{active: numSelected > 0}" ng-click="close()">Done</button>
+      </div>
+
+    </div>
+  </div>
+</div>

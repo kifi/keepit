@@ -233,6 +233,19 @@ angular.module('kifi')
           (!_.isUndefined(opt_page) ? '&page=' + opt_page : '') +
           (!_.isUndefined(opt_size) ? '&size=' + opt_size : '')
         );
+      },
+
+      /////////////////////////////
+      // User Personas           //
+      /////////////////////////////
+      getAllPersonas: function() {
+        return route('/user/personas');
+      },
+      addPersona: function(personaName) {
+        return route('/user/persona/' + personaName);
+      },
+      removePersona: function(personaName) {
+        return route('/user/persona/' + personaName);
       }
     };
   }
