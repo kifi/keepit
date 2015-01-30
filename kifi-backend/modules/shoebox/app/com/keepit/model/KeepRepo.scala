@@ -320,7 +320,6 @@ class KeepRepoImpl @Inject() (
 
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
     import StaticQuery.interpolation
-
     val sql = sql"select sum(is_private), sum(1 - is_private) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
     sql.as[(Int, Int)].first()
   }
@@ -343,7 +342,7 @@ class KeepRepoImpl @Inject() (
     import StaticQuery.interpolation
 
     val sql = sql"""select source, count(*) from bookmark b
-      where b.state = '#${KeepStates.ACTIVE}' and kept_at between ${from} and ${to}
+      where b.state = '#${KeepStates.ACTIVE}' and created_at between ${from} and ${to}
       group by b.source;"""
     sql.as[(KeepSource, Int)].list
   }
@@ -351,7 +350,7 @@ class KeepRepoImpl @Inject() (
   def getPrivateCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int = {
     import StaticQuery.interpolation
 
-    val sql = sql"select count(*) as c from bookmark b where b.state = '#${KeepStates.ACTIVE}' and b.is_private = 1 and b.source=${source} and updated_at between ${from} and ${to};"
+    val sql = sql"select count(*) as c from bookmark b where b.state = '#${KeepStates.ACTIVE}' and b.is_private = 1 and b.source=${source} and created_at between ${from} and ${to};"
     sql.as[Int].first
   }
 

@@ -23,6 +23,7 @@ class LibrarySearch(
     librarySearcher: Searcher,
     keepSearcher: Searcher,
     userSearcher: Searcher,
+    libraryQualityEvaluator: LibraryQualityEvaluator,
     friendIdsFuture: Future[Set[Long]],
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     monitoredAwait: MonitoredAwait,
@@ -61,10 +62,10 @@ class LibrarySearch(
         new LibrarySearchExplanationBuilder(libraryId, (firstLang, secondLang), query, labels)
     }
 
-    val collector = new LibraryResultCollector(librarySearcher, numHitsToReturn * 5, myLibraryBoost, percentMatch / 100.0f, explanation)
+    val collector = new LibraryResultCollector(librarySearcher, keepSearcher, numHitsToReturn * 5, myLibraryBoost, percentMatch / 100.0f, libraryQualityEvaluator, explanation)
 
     val userScoreSource = new LibraryFromUserScoreVectorSource(librarySearcher, userSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait, explanation)
-    val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait, explanation)
+    val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait, libraryQualityEvaluator, explanation)
     val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait, explanation)
 
     if (debugFlags != 0) {

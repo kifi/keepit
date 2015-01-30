@@ -8,10 +8,10 @@
         <div class="kf-register-header">Join Kifi to get updates to this library</div>
 
         <div class="register-modal-social-block">
-          <a ng-href="{{facebookSignupPath}}" target="_self">
+          <a ng-href="{{facebookSignupPath}}" target="_self" ng-click="fbAuthFromLibrary()">
             <div class="kf-register-button facebook">Continue with Facebook</div>
           </a>
-          <a ng-href="{{twitterSignupPath}}" target="_self" ng-if="showTwitter">
+          <a ng-href="{{twitterSignupPath}}" target="_self" ng-if="showTwitter" ng-click="twAuthFromLibrary()">
             <div class="kf-register-button twitter">Continue with Twitter</div>
           </a>
           <div class="register-modal-we-are-nice">We will never post without your explicit permission.</div>
@@ -31,7 +31,7 @@
        --><input type="submit" value="Continue" class="register-submit register-continue">
         </div>
 
-        <div class="register-tagline-login">Already a member of Kifi? <a href="https://www.kifi.com/login" target="_self">Log in</a></div>
+        <div class="register-tagline-login">Already a member of Kifi? <a href="https://www.kifi.com/login" target="_self" ng-click="onLoginClick()">Log in</a></div>
 
       </div>
   </div>

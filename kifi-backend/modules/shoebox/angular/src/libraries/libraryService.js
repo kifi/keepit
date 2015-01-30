@@ -352,6 +352,7 @@ angular.module('kifi')
       },
 
       getCommonTrackingAttributes: function (library) {
+        var privacySetting = library.visibility === 'secret' ? 'private' : library.visibility;
         var defaultAttributes = {
           type: $rootScope.userLoggedIn ? 'library' : 'libraryLanding',
           followerCount: library.numFollowers,
@@ -361,10 +362,14 @@ angular.module('kifi')
           libraryOwnerUserId: library.owner.id,
           libraryOwnerUserName: library.owner.username,
           owner: this.isMyLibrary(library),
-          privacySetting: library.visibility,
+          privacySetting: privacySetting,
           hasCoverImage: !!library.image,
           source: 'site'
         };
+
+        if (library.abTest && library.abTestTreatment) {
+          defaultAttributes[library.abTest.name] = library.abTestTreatment.name;
+        }
 
         if (library.visibility === 'published') {
           defaultAttributes.libraryName = library.name;

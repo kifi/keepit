@@ -26,7 +26,8 @@ class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
         db.readOnlyReplica { implicit s =>
           repo.getByUserAndPersona(Id[User](1), Id[Persona](1)).isDefined
           repo.getPersonaIdsForUser(Id[User](1)).sortBy(_.id).map { _.id }.toList === List(1, 2)
-          repo.getUserLastEditTime(Id[User](1)).get.getMillis === editTime1.getMillis
+          val actives = repo.getUserActivePersonas(Id[User](1))
+          (actives.personas zip actives.updatedAt).toMap.get(Id[Persona](2)).get === editTime1
         }
 
         val editTime2 = now.plusHours(4)
@@ -35,7 +36,9 @@ class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
           val model = repo.getByUserAndPersona(Id[User](1), Id[Persona](1)).get
           clock.push(editTime2)
           repo.save(model.copy(state = UserPersonaStates.INACTIVE))
-          repo.getUserLastEditTime(Id[User](1)).get.getMillis === editTime2.getMillis
+          val actives = repo.getUserActivePersonas(Id[User](1))
+          actives.personas.map { _.id } === List(2)
+          actives.updatedAt.head === editTime1
         }
       }
     }
@@ -47,8 +50,8 @@ class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
 
         val user1 = db.readWrite { implicit s =>
           val user1 = user().withName("Test", "Bro").withUsername("test").saved
-          val persona1 = personaRepo.save(Persona(name = "artist"))
-          val persona2 = personaRepo.save(Persona(name = "geek"))
+          val persona1 = personaRepo.save(Persona(name = PersonaName.ARTIST, displayName = PersonaName.ARTIST.value, iconPath = "/icon/artist.jpg", activeIconPath = "/icon_artist_active.jpg"))
+          val persona2 = personaRepo.save(Persona(name = PersonaName.TECHIE, displayName = PersonaName.TECHIE.value, iconPath = "/icon/techie.jpg", activeIconPath = "/icon_techie_active.jpg"))
           val model = UserPersona(userId = user1.id.get, personaId = persona1.id.get)
           userPersonaRepo.save(model)
           userPersonaRepo.save(model.copy(personaId = persona2.id.get))
@@ -56,7 +59,7 @@ class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
         }
 
         db.readOnlyReplica { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq("artist", "geek")
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name.value) === Seq("artist", "techie")
         }
       }
     }

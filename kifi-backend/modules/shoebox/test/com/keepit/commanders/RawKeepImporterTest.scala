@@ -35,7 +35,6 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     FakeSlickModule(TestDbInfo.dbInfo),
     FakeElizaServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    UrlPatternRuleModule(),
     FakeSimpleQueueModule(),
     HeimdalQueueDevModule(),
     FakeNormalizationUpdateJobQueueModule(),

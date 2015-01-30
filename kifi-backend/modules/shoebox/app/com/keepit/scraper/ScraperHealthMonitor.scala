@@ -58,7 +58,7 @@ private[scraper] class ScraperHealthMonitor @Inject() (
         if (!orphaned.isEmpty) {
           val msg = s"[checkOverdues] orphaned scraper tasks(${orphaned.length}): ${orphaned.mkString(",")}"
           log.error(msg) // shouldn't happen -- airbrake
-          systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = Seq(SystemEmailAddress.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-orphaned", htmlBody = msg))
+          airbrake.notify(msg)
           db.readWrite(attempts = 2) { implicit rw =>
             for (info <- orphaned) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime))
@@ -70,7 +70,7 @@ private[scraper] class ScraperHealthMonitor @Inject() (
         if (!abandoned.isEmpty) {
           val msg = s"[checkOverdues] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
           log.warn(msg)
-          systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = Seq(SystemEmailAddress.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-abandoned", htmlBody = msg))
+          airbrake.notify(msg)
           db.readWrite(attempts = 2) { implicit rw =>
             for (info <- abandoned) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime)) // todo(ray): ask worker for status
@@ -80,7 +80,7 @@ private[scraper] class ScraperHealthMonitor @Inject() (
         if (!stalled.isEmpty) { // likely due to failed db updates
           val msg = s"[checkOverdues] stalled scraper tasks(${stalled.length}): ${stalled.mkString(",")}"
           log.warn(msg)
-          systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = Seq(SystemEmailAddress.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-stalled", htmlBody = msg))
+          airbrake.notify(msg)
           db.readWrite(attempts = 2) { implicit rw =>
             for (info <- stalled) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime.plusMinutes(util.Random.nextInt(30)))) // todo(ray): ask worker for status
@@ -96,7 +96,7 @@ private[scraper] class ScraperHealthMonitor @Inject() (
     val msg = s"[checkOverdueCount]: overdue-count=${overdueCount}"
     if (overdueCount > config.overdueCountThreshold) {
       log.warn(msg)
-      systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = Seq(SystemEmailAddress.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-many-overdues", htmlBody = msg))
+      airbrake.notify(msg)
     } else {
       log.info(msg)
     }
@@ -120,7 +120,7 @@ class ScraperHealthMonitorPluginImpl @Inject() (
 
   override def onStart() {
     log.info(s"[onStart] starting ScraperHealthMonitorPlugin with scraperConfig=$scraperConfig}")
-    scheduleTaskOnLeader(actor.system, 6 minutes, scraperConfig.scrapePendingFrequency seconds, actor.ref, CheckOverdues)
-    scheduleTaskOnLeader(actor.system, 7 minutes, scraperConfig.checkOverdueCountFrequency minutes, actor.ref, CheckOverdueCount)
+    scheduleTaskOnOneMachine(actor.system, 6 minutes, scraperConfig.scrapePendingFrequency seconds, actor.ref, CheckOverdues, CheckOverdues.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 7 minutes, scraperConfig.checkOverdueCountFrequency minutes, actor.ref, CheckOverdueCount, CheckOverdueCount.getClass.getSimpleName)
   }
 }

@@ -9,8 +9,8 @@ import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[PersonaRepoImpl])
 trait PersonaRepo extends DbRepo[Persona] {
-  def getByName(name: String)(implicit session: RSession): Option[Persona]
-  def getByNames(names: Set[String])(implicit session: RSession): Map[String, Persona]
+  def getByName(name: PersonaName)(implicit session: RSession): Option[Persona]
+  def getByNames(names: Set[PersonaName])(implicit session: RSession): Map[PersonaName, Persona]
   def getPersonasByIds(personaIds: Set[Id[Persona]])(implicit session: RSession): Seq[Persona]
   def getByState(state: State[Persona])(implicit session: RSession): Seq[Persona]
 }
@@ -25,9 +25,14 @@ class PersonaRepoImpl @Inject() (
 
   type RepoImpl = PersonaRepoTable
 
+  implicit val personaNameMapper = MappedColumnType.base[PersonaName, String](_.value, PersonaName.apply)
+
   class PersonaRepoTable(tag: Tag) extends RepoTable[Persona](db, tag, "persona") {
-    def name = column[String]("name")
-    def * = (id.?, createdAt, updatedAt, name, state) <> ((Persona.apply _).tupled, Persona.unapply _)
+    def name = column[PersonaName]("name", O.NotNull)
+    def displayName = column[String]("display_name", O.NotNull)
+    def iconPath = column[String]("icon_path", O.NotNull)
+    def activeIconPath = column[String]("active_icon_path", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, name, state, displayName, iconPath, activeIconPath) <> ((Persona.apply _).tupled, Persona.unapply _)
   }
 
   def table(tag: Tag) = new PersonaRepoTable(tag)
@@ -36,14 +41,14 @@ class PersonaRepoImpl @Inject() (
   def deleteCache(model: Persona)(implicit session: RSession): Unit = {}
   def invalidateCache(model: Persona)(implicit session: RSession): Unit = {}
 
-  private val getByNameCompiled = Compiled { (name: Column[String]) =>
+  private val getByNameCompiled = Compiled { (name: Column[PersonaName]) =>
     (for (r <- rows if r.name === name && r.state === PersonaStates.ACTIVE) yield r)
   }
-  def getByName(name: String)(implicit session: RSession): Option[Persona] = {
+  def getByName(name: PersonaName)(implicit session: RSession): Option[Persona] = {
     getByNameCompiled(name).firstOption
   }
 
-  def getByNames(names: Set[String])(implicit session: RSession): Map[String, Persona] = {
+  def getByNames(names: Set[PersonaName])(implicit session: RSession): Map[PersonaName, Persona] = {
     (for { r <- rows if r.name.inSet(names) && r.state === PersonaStates.ACTIVE } yield (r.name, r)).list.toMap
   }
 

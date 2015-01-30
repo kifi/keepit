@@ -50,17 +50,18 @@ class RelatedLibraryCommanderImpl @Inject() (
       case None => Set()
     }
 
-    def filterUnwantedRelatedLibs(relatedLibs: Seq[RelatedLibrary]) = {
-      relatedLibs.filter {
-        case RelatedLibrary(lib, kind) =>
-          !fakeUsers.contains(lib.ownerId) &&
-            !userLibs.contains(lib.id.get) &&
-            !libQualityHelper.isBadLibraryName(lib.name)
-      }
+    def isUnwantedLibrary(relatedLib: RelatedLibrary): Boolean = {
+      val lib = relatedLib.library
+
+      lib.state == LibraryStates.INACTIVE ||
+        fakeUsers.contains(lib.ownerId) ||
+        userLibs.contains(lib.id.get) ||
+        libQualityHelper.isBadLibraryName(lib.name)
+
     }
 
     suggestedLibsFut
-      .map { libs => filterUnwantedRelatedLibs(libs).take(RETURN_SIZE) }
+      .map { libs => libs.filter { !isUnwantedLibrary(_) }.take(RETURN_SIZE) }
       .flatMap { relatedLibs =>
         val t1 = System.currentTimeMillis
         val (libs, kinds) = relatedLibs.map { x => (x.library, x.kind) }.unzip

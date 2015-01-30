@@ -41,8 +41,10 @@ angular.module('kifi')
 ])
 
 .controller('SignupCtrl', [
-  '$scope', '$FB', '$twitter', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope', '$location', 'routeService',
-  function ($scope, $FB, $twitter, modalService, registrationService, $window, installService, $q, $log, $rootScope, $location, routeService) {
+  '$scope', '$FB', '$twitter', 'modalService', 'registrationService', '$window', 'installService',
+  '$q', '$log', '$rootScope', '$location', 'routeService', '$analytics',
+  function ($scope, $FB, $twitter, modalService, registrationService, $window, installService,
+    $q, $log, $rootScope, $location, routeService, $analytics) {
 
     // Shared data across several modals
 
@@ -52,11 +54,11 @@ angular.module('kifi')
     function setModalScope($modalScope, onClose) {
       $modalScope.close = modalService.close;
       $modalScope.$on('$destroy', function () {
-        $scope.registerFinalizeSubmitted = false;
-        $scope.requestActive = false;
         if (typeof onClose === 'function') {
           onClose($modalScope);
         }
+        $scope.registerFinalizeSubmitted = false;
+        $scope.requestActive = false;
       });
     }
 
@@ -82,11 +84,20 @@ angular.module('kifi')
 
       $scope.facebookSignupPath = createSignupPath('facebook');
       $scope.twitterSignupPath = createSignupPath('twitter');
+      $scope.emailSubmitted = false;
+
+      $scope.onLoginClick = function() {
+        $analytics.eventTrack('visitor_clicked_page', {type: 'signupLibrary', action: 'login'});
+      };
 
       setModalScope(modalService.open({
         template: 'signup/registerModal.tpl.html',
         scope: $scope
-      }));
+      }), function onClose() {
+        if (!$scope.emailSubmitted) { // did not submit email, so closed modal
+          $analytics.eventTrack('visitor_clicked_page', {type: 'signupLibrary', action: 'close'});
+        }
+      });
     };
 
     var facebookLogin = function () {
@@ -107,6 +118,7 @@ angular.module('kifi')
 
     $scope.submitEmail = function (form) {
       $scope.registerFinalizeSubmitted = true;
+      $scope.emailSubmitted = true;
       if (!form.$valid) {
         return false;
       }
@@ -126,11 +138,17 @@ angular.module('kifi')
       }
     };
 
+    $scope.twAuthFromLibrary = function() {
+      if ($scope.userData.libraryId) {
+        $rootScope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthTwitter' });
+      }
+    };
+
     $scope.fbAuthFromLibrary = function () {
       if ($scope.userData.libraryId) {
         $rootScope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthFacebook' });
       }
-      return $scope.fbAuth();
+      //return $scope.fbAuth(); //unused
     };
 
     $scope.fbAuth = function () {
@@ -193,12 +211,20 @@ angular.module('kifi')
         $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signup2Library' });
       }
 
+      $scope.onToSClick = function() {
+        $analytics.eventTrack('visitor_clicked_page', {type: 'signup2Library', action: 'termsOfService'});
+      };
+
       $scope.requestActive = false;
       $scope.registerFinalizeSubmitted = false;
       setModalScope(modalService.open({
         template: 'signup/registerFinalizeModal.tpl.html',
         scope: $scope
-      }));
+      }), function onClose() {
+        if (!$scope.registerFinalizeSubmitted) { // did not submit registration & closed modal
+          $analytics.eventTrack('visitor_clicked_page', {type: 'signup2Library', action: 'close'});
+        }
+      });
     };
 
     $scope.registerFinalizeSubmit = function (form) {
@@ -238,6 +264,7 @@ angular.module('kifi')
           // todo: do we need to handle the return resp?
           modalService.close();
           thanksForRegisteringModal();
+          $analytics.eventTrack('visitor_clicked_page', {type: 'signup2Library', action: 'signup'});
         })['catch'](function (resp) {
           if (resp.data && resp.data.error === 'user_exists_failed_auth') {
             $scope.requestActive = false;
@@ -253,6 +280,7 @@ angular.module('kifi')
     // 3rd confirm modal
     var thanksForRegisteringModal = function () {
       $scope.requestActive = false;
+      $scope.installTriggered = false;
       if (!installService.installedVersion) {
         if (installService.canInstall) {
           if (installService.isValidChrome) {
@@ -260,7 +288,11 @@ angular.module('kifi')
           } else if (installService.isValidFirefox) {
             $scope.platformName = 'Firefox';
           }
-          $scope.installExtension = installService.triggerInstall;
+          $scope.installExtension = function() {
+            $analytics.eventTrack('visitor_clicked_page', {type: 'installLibrary', action: 'install'});
+            $scope.installTriggered = true;
+            installService.triggerInstall();
+          };
           $scope.thanksVersion = 'installExt';
         } else {
           $scope.thanksVersion = 'notSupported';
@@ -274,6 +306,9 @@ angular.module('kifi')
           template: 'signup/thanksForRegisteringModal.tpl.html',
           scope: $scope
         }), function onClose() {
+          if (!$scope.installTriggered) {
+            $analytics.eventTrack('visitor_clicked_page', {type: 'installLibrary', action: 'close'});
+          }
           $scope.onSuccess();
         });
       } else {

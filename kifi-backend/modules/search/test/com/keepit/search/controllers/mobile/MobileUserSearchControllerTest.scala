@@ -90,7 +90,6 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
             "hits":
               [
                 {
-                  "userId":5,
                   "basicUser":
                     {
                       "id":"4e5f7b8c-951b-4497-8661-123456789004",
