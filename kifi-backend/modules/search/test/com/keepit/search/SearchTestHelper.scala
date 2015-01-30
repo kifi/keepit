@@ -12,7 +12,7 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.User
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.index.article.ArticleIndexer
-import com.keepit.search.engine.SearchFactory
+import com.keepit.search.engine.{ LibraryQualityEvaluator, SearchFactory }
 import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.keep.{ ShardedKeepIndexer, KeepIndexer }
 import com.keepit.search.index.graph.library.LibraryIndexer
@@ -76,6 +76,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
 
     val libraryIndexer = new LibraryIndexer(new VolatileIndexDirectory, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
     val phraseDetector = new PhraseDetector(new FakePhraseIndexer(inject[AirbrakeNotifier]))
+    val libraryQualityEvaluator = new LibraryQualityEvaluator(activeShards)
 
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
@@ -91,6 +92,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       inject[ClickHistoryTracker],
       inject[SearchConfigManager],
       inject[MonitoredAwait],
+      libraryQualityEvaluator,
       fortyTwoServices)
 
     (shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, searchFactory, shardedKeepIndexer, libraryIndexer)

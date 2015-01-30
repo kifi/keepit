@@ -9,7 +9,7 @@ import com.keepit.common.net.URI
 import com.keepit.model.HttpProxy
 import com.keepit.scraper.extractor.{ ExtractorFactory, ExtractorProviderType, ExtractorProviderTypes, LinkedInIdExtractor }
 import com.keepit.scraper.fetcher.HttpFetcher
-import com.keepit.scraper.{ BasicArticle, ShoeboxDbCallbacks, ScrapeWorker, ScraperConfig }
+import com.keepit.scraper._
 import play.api.http.Status
 
 import scala.concurrent.Future
@@ -17,6 +17,7 @@ import scala.concurrent.Future
 class FetchAgent @Inject() (
     airbrake: AirbrakeNotifier,
     helper: ShoeboxDbCallbacks,
+    uriCommander: URICommander,
     extractorFactory: ExtractorFactory,
     httpFetcher: HttpFetcher,
     worker: ScrapeWorker) extends FortyTwoActor(airbrake) with Logging with Status {
@@ -34,6 +35,7 @@ class FetchAgent @Inject() (
       fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt).pipeTo(sender)
     case m => throw new UnsupportedActorMessage(m)
   }
+
   private def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     val uri = URI.parse(url).get
     val extractor = extractorProviderTypeOpt match {
@@ -44,7 +46,7 @@ class FetchAgent @Inject() (
     val resF = httpFetcher.get(uri, proxy = proxyOpt)(input => extractor.process(input)) flatMap { fetchStatus =>
       fetchStatus.statusCode match {
         case OK =>
-          helper.isUnscrapableP(uri, fetchStatus.destinationUrl) map { isUnscrapable =>
+          uriCommander.isUnscrapable(uri, fetchStatus.destinationUrl) map { isUnscrapable =>
             if (isUnscrapable) None
             else Some(extractor.basicArticle(fetchStatus.destinationUrl getOrElse url))
           }

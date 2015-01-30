@@ -10,10 +10,10 @@ import com.keepit.model._
 
 @ImplementedBy(classOf[UserPersonaCommanderImpl])
 trait UserPersonaCommander {
-  def addPersonaForUser(userId: Id[User], persona: String)(implicit context: HeimdalContext): (Option[Persona], Option[Library])
-  def addPersonasForUser(userId: Id[User], personas: Set[String])(implicit context: HeimdalContext): Map[Persona, Option[Library]]
-  def removePersonaForUser(userId: Id[User], persona: String): Option[Persona]
-  def removePersonasForUser(userId: Id[User], personas: Set[String]): Set[Persona]
+  def addPersonaForUser(userId: Id[User], persona: PersonaName)(implicit context: HeimdalContext): (Option[Persona], Option[Library])
+  def addPersonasForUser(userId: Id[User], personas: Set[PersonaName])(implicit context: HeimdalContext): Map[Persona, Option[Library]]
+  def removePersonaForUser(userId: Id[User], persona: PersonaName): Option[Persona]
+  def removePersonasForUser(userId: Id[User], personas: Set[PersonaName]): Set[Persona]
 }
 
 @Singleton
@@ -24,17 +24,17 @@ class UserPersonaCommanderImpl @Inject() (
     libraryCommander: LibraryCommander,
     clock: Clock) extends UserPersonaCommander with Logging {
 
-  def addPersonaForUser(userId: Id[User], persona: String)(implicit context: HeimdalContext): (Option[Persona], Option[Library]) = {
+  def addPersonaForUser(userId: Id[User], persona: PersonaName)(implicit context: HeimdalContext): (Option[Persona], Option[Library]) = {
     addPersonasForUser(userId, Set(persona)).headOption match {
       case Some(pair) => (Some(pair._1), pair._2)
       case _ => (None, None)
     }
   }
 
-  def addPersonasForUser(userId: Id[User], personas: Set[String])(implicit context: HeimdalContext): Map[Persona, Option[Library]] = {
+  def addPersonasForUser(userId: Id[User], personas: Set[PersonaName])(implicit context: HeimdalContext): Map[Persona, Option[Library]] = {
     val personasToPersist = db.readOnlyMaster { implicit s =>
       val currentPersonas = userPersonaRepo.getPersonasForUser(userId).toSet
-      val personaNamesToAdd = personas.map(_.toLowerCase) diff currentPersonas.map(_.name)
+      val personaNamesToAdd = personas diff currentPersonas.map(_.name)
       personaRepo.getByNames(personaNamesToAdd)
     }
 
@@ -53,7 +53,7 @@ class UserPersonaCommanderImpl @Inject() (
     // create libraries based on added personas
     personasToPersist.map {
       case (personaName, persona) =>
-        val libraryAddReq = LibraryAddRequest(personaName, LibraryVisibility.PUBLISHED, None, personaName)
+        val libraryAddReq = LibraryAddRequest(personaName.value, LibraryVisibility.PUBLISHED, None, personaName.value)
         (persona, libraryCommander.addLibrary(libraryAddReq, userId))
     }.collect {
       case (persona, Right(lib)) => (persona, Some(lib)) // library successfully created
@@ -61,14 +61,14 @@ class UserPersonaCommanderImpl @Inject() (
     }.toMap
   }
 
-  def removePersonaForUser(userId: Id[User], persona: String): Option[Persona] = {
+  def removePersonaForUser(userId: Id[User], persona: PersonaName): Option[Persona] = {
     removePersonasForUser(userId, Set(persona)).headOption
   }
 
-  def removePersonasForUser(userId: Id[User], personas: Set[String]): Set[Persona] = {
+  def removePersonasForUser(userId: Id[User], personas: Set[PersonaName]): Set[Persona] = {
     val personasToRemove = db.readOnlyMaster { implicit s =>
       val currentPersonas = userPersonaRepo.getPersonasForUser(userId).toSet
-      val personaNamesToRemove = personas.map(_.toLowerCase) intersect currentPersonas.map(_.name)
+      val personaNamesToRemove = personas intersect currentPersonas.map(_.name)
       personaRepo.getByNames(personaNamesToRemove)
     }
 

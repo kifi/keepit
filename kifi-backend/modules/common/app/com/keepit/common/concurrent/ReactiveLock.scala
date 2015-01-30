@@ -68,8 +68,18 @@ class ReactiveLock(numConcurrent: Int = 1) {
   def running: Int = runningCount
 
   def clear(): Unit = lock.synchronized {
-    taskQueue.clear()
+    lazy val ex = new ReactiveLockTaskQueueClearedException("taskQueue is cleared")
+
+    var candidate: QueuedItem[_] = taskQueue.poll()
+    while (candidate != null) {
+      waitingCount.decrementAndGet()
+      candidate.promise.failure(ex)
+      candidate = taskQueue.poll()
+    }
   }
 
 }
 
+class ReactiveLockTaskQueueClearedException(msg: String) extends Exception(msg) {
+  override def fillInStackTrace = this
+}

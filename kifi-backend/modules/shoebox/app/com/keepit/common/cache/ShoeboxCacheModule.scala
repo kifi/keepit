@@ -31,6 +31,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def libraryImageCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new LibraryImageCache(stats, accessLog, (innerRepo, 30 minutes), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
   def usernameCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UsernameCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
@@ -127,7 +132,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def urlPatternRuleAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UrlPatternRuleAllCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 30 days))
+    new UrlPatternRulesAllCache(stats, accessLog, (innerRepo, 1 hour), (outerRepo, 30 days))
 
   @Singleton
   @Provides

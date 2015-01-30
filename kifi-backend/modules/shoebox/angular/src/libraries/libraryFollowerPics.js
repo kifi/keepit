@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryFollowerPics', [
-  '$window',
-  function ($window) {
+  '$window', 'platformService',
+  function ($window, platformService) {
     return {
       restrict: 'A',
       replace: true,
@@ -29,8 +29,14 @@ angular.module('kifi')
             siblingsWidth += this.offsetWidth;
           });
 
-          var additionalNeededWith = 70; // the number of followers, etc.
+          var additionalNeededWith = 70; // the additional number of followers, etc.
           var widthPerFollowerPic = 50;
+
+          if (platformService.isSupportedMobilePlatform()) {
+            siblingsWidth = 0;
+            additionalNeededWith = 120;
+            widthPerFollowerPic = 110;
+          }
 
           var maxFollowersToShow = Math.floor((parentWidth - siblingsWidth - additionalNeededWith) / widthPerFollowerPic);
           // If we only have one additional follower that we can't fit in, then we can fit that one
@@ -53,7 +59,7 @@ angular.module('kifi')
               scope.numAdditionalFollowers = scope.numFollowers - maxFollowersToShow;
             }
 
-            element.find('.kf-keep-lib-follower-pics')
+            element.find('.kf-lfp-pics')
               .width(maxFollowersToShow >= 1 ? maxFollowersToShow * widthPerFollowerPic : 0);
           });
         }

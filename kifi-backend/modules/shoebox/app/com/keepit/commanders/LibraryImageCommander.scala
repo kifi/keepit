@@ -47,7 +47,7 @@ class LibraryImageCommanderImpl @Inject() (
 
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage] = {
     val targetLibraryImages = db.readOnlyMaster { implicit s =>
-      libraryImageRepo.getForLibraryId(libraryId)
+      libraryImageRepo.getActiveForLibraryId(libraryId)
     }
     ProcessedImageSize.pickBestImage(idealSize, targetLibraryImages)
   }
@@ -66,7 +66,7 @@ class LibraryImageCommanderImpl @Inject() (
 
   def positionLibraryImage(libraryId: Id[Library], position: LibraryImagePosition): Seq[LibraryImage] = {
     db.readWrite { implicit s =>
-      val toPosition = libraryImageRepo.getForLibraryId(libraryId)
+      val toPosition = libraryImageRepo.getActiveForLibraryId(libraryId)
       val positionedImages = toPosition.map { libImage =>
         libraryImageRepo.save(libImage.copy(
           positionX = position.x,
@@ -80,7 +80,7 @@ class LibraryImageCommanderImpl @Inject() (
 
   def removeImageForLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Boolean = {
     val images = db.readWrite { implicit session =>
-      libraryImageRepo.getForLibraryId(libraryId).map { libImage =>
+      libraryImageRepo.getActiveForLibraryId(libraryId).map { libImage =>
         libraryImageRepo.save(libImage.copy(state = LibraryImageStates.INACTIVE))
       }
     }
@@ -140,7 +140,7 @@ class LibraryImageCommanderImpl @Inject() (
           libImg
       }
       db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
-        val existingImages = libraryImageRepo.getForLibraryId(libraryId, None).toSet
+        val existingImages = libraryImageRepo.getAllForLibraryId(libraryId).toSet
         replaceOldLibraryImagesWithNew(existingImages, libraryImages, position)
       }
       ImageProcessState.StoreSuccess(originalImage.format, libraryImages.filter(_.isOriginal).head.dimensions, originalImage.file.file.length.toInt)
@@ -210,7 +210,7 @@ class LibraryImageCommanderImpl @Inject() (
         val request = libraryImageRequestRepo.get(requestId)
         state match {
           case INACTIVE => // Success
-            val LibraryImageOpt = libraryImageRepo.getForLibraryId(libraryId).headOption
+            val LibraryImageOpt = libraryImageRepo.getActiveForLibraryId(libraryId).headOption
             libraryImageRequestRepo.save(request.copy(state = state, successHash = LibraryImageOpt.map(_.sourceFileHash)))
           case failureState =>
             libraryImageRequestRepo.save(request.copy(state = state, failureCode = failureCode, failureReason = failureReason))

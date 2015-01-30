@@ -9,6 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.actor.ActorInstance
+import com.keepit.scraper.ScrapeScheduler
 import scala.concurrent.duration._
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.plugin.SchedulerPlugin
@@ -29,18 +30,21 @@ case class BatchURLMigration(batchSize: Int)
 case class FixDuplicateKeeps()
 
 class UriIntegrityActor @Inject() (
-    db: Database,
+    val db: Database,
+    val scrapeInfoRepo: ScrapeInfoRepo,
+    val scraper: ScrapeScheduler,
     clock: Clock,
-    uriRepo: NormalizedURIRepo,
+    val nuriRepo: NormalizedURIRepo,
     normalizedURIInterner: NormalizedURIInterner,
     urlRepo: URLRepo,
-    keepRepo: KeepRepo,
+    val keepRepo: KeepRepo,
     changedUriRepo: ChangedURIRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionRepo: CollectionRepo,
     renormRepo: RenormalizedURLRepo,
     centralConfig: CentralConfig,
-    airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
+    airbrake: AirbrakeNotifier,
+    keepUriUserCache: KeepUriUserCache) extends FortyTwoActor(airbrake) with ScrapeInfoIntegrityChecker with Logging {
 
   /** tricky point: make sure (library, uri) pair is unique.  */
   private def handleBookmarks(oldBookmarks: Seq[Keep])(implicit session: RWSession): Unit = {
@@ -73,7 +77,7 @@ class UriIntegrityActor @Inject() (
         currentBookmarkOpt match {
           case None => {
             log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
-            keepRepo.deleteCache(oldBm) // NOTE: we touch two different cache keys here and the following line
+            keepUriUserCache.remove(KeepUriUserKey(oldBm.uriId, oldBm.userId)) // NOTE: we touch two different cache keys here and the following line
             keepRepo.save(oldBm.withNormUriId(newUriId))
             (Some(oldBm), None)
           }
@@ -87,7 +91,7 @@ class UriIntegrityActor @Inject() (
               val liveBm = keepRepo.save(
                 primary.copy(uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)
               )
-              keepRepo.deleteCache(deadBm)
+              keepUriUserCache.remove(KeepUriUserKey(deadBm.uriId, deadBm.userId))
               (Some(deadBm), Some(liveBm))
             }
 
@@ -161,9 +165,9 @@ class UriIntegrityActor @Inject() (
       }
     } else {
       db.readWrite { implicit s =>
-        uriRepo.get(newUriId) match {
+        nuriRepo.get(newUriId) match {
           case uri if uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED =>
-            uriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
+            nuriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
           case _ =>
         }
       }
@@ -177,14 +181,14 @@ class UriIntegrityActor @Inject() (
 
       // fix up redirections
       val previouslyRedirectedUris = db.readWrite { implicit s =>
-        uriRepo.getByRedirection(oldUriId)
+        nuriRepo.getByRedirection(oldUriId)
       }
       db.readWriteSeq(previouslyRedirectedUris) { (s, uri) =>
-        uriRepo.save(uri.withRedirect(newUriId, currentDateTime))(s)
+        nuriRepo.save(uri.withRedirect(newUriId, currentDateTime))(s)
       }
       db.readWrite { implicit s =>
-        val oldUri = uriRepo.get(oldUriId)
-        uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
+        val oldUri = nuriRepo.get(oldUriId)
+        nuriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
       }
 
       // retrieve bms by uri is more robust than by url (against cache bugs), in case bm and its url are pointing to different uris
@@ -195,6 +199,11 @@ class UriIntegrityActor @Inject() (
       bms.groupBy(_.userId).foreach {
         case (_, keeps) =>
           db.readWrite { implicit s => handleBookmarks(keeps) }
+      }
+
+      // some additional sanity check right away!
+      db.readWrite { implicit s =>
+        checkIntegrity(newUriId, readOnly = false, hasKnownKeep = bms.size > 0)
       }
 
       db.readWrite { implicit s =>
@@ -223,8 +232,8 @@ class UriIntegrityActor @Inject() (
 
     val oldUriId = url.normalizedUriId
     urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, oldUriId, URLHistoryCause.MIGRATED)))
-    val newUri = uriRepo.get(newUriId)
-    if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
+    val newUri = nuriRepo.get(newUriId)
+    if (newUri.redirect.isDefined) nuriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
   }
 
   private def batchURIMigration(batchSize: Int): Int = {
@@ -251,7 +260,7 @@ class UriIntegrityActor @Inject() (
           db.readWrite { implicit s => changedUriRepo.save((change.withState(ChangedURIStates.ACTIVE))) } // bump up seqNum. Will be retried.
 
           try {
-            db.readOnlyMaster { implicit s => List(uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId)) foreach { uriRepo.deleteCache } }
+            db.readOnlyMaster { implicit s => List(nuriRepo.get(change.oldUriId), nuriRepo.get(change.newUriId)) foreach { nuriRepo.deleteCache } }
           } catch {
             case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
           }
@@ -352,9 +361,9 @@ class UriIntegrityPluginImpl @Inject() (
     val scheduling: SchedulingProperties) extends UriIntegrityPlugin with Logging {
   override def enabled = true
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(50))
-    scheduleTaskOnLeader(actor.system, 55 seconds, 47 seconds, actor.ref, BatchURLMigration(100))
-    scheduleTaskOnLeader(actor.system, 60 seconds, 53 seconds, actor.ref, FixDuplicateKeeps())
+    scheduleTaskOnOneMachine(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(50), BatchURIMigration.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 55 seconds, 47 seconds, actor.ref, BatchURLMigration(100), BatchURLMigration.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 60 seconds, 53 seconds, actor.ref, FixDuplicateKeeps(), FixDuplicateKeeps.getClass.getSimpleName)
   }
 
   def handleChangedUri(change: UriChangeMessage) = {

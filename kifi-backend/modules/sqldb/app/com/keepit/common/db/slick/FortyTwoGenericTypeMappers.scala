@@ -7,6 +7,7 @@ import com.keepit.heimdal.DelightedAnswerSource
 import com.keepit.model._
 import java.sql.{ Clob, Date, Timestamp }
 import org.joda.time.{ DateTime, LocalDate }
+import scala.slick.ast.TypedType
 import scala.slick.jdbc.{ PositionedResult, GetResult, PositionedParameters, SetParameter }
 import play.api.libs.json._
 import com.keepit.common.net.UserAgent
@@ -38,6 +39,9 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit def externalIdTypeMapper[M <: Model[M]] = MappedColumnType.base[ExternalId[M], String](_.id, ExternalId[M])
   implicit def nameMapper[M <: Model[M]] = MappedColumnType.base[Name[M], String](_.name, Name[M])
   implicit val dateTimeMapper = MappedColumnType.base[DateTime, Timestamp](d => new Timestamp(d.getMillis), t => new DateTime(t.getTime, zones.UTC))
+
+  implicit def seqIdsMapper[M <: Model[M]]: TypedType[Seq[Id[M]]] = MappedColumnType.base[Seq[Id[M]], String](
+    { ids => Json.stringify(Json.toJson(ids)) }, { jstr => Json.parse(jstr).as[Seq[Id[M]]] })
 
   implicit def sequenceNumberTypeMapper[T] = MappedColumnType.base[SequenceNumber[T], Long](_.value, SequenceNumber[T](_))
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)

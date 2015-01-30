@@ -16,6 +16,8 @@ import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerM
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
+import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.UserFactory._
@@ -60,6 +62,11 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
               library().withUser(owner).withName("Java").published().saved
             )
           }
+          db.readWrite { implicit rw =>
+            keep().withLibrary(lib1).saved
+            keep().withLibrary(lib2).saved
+            keep().withLibrary(lib2).saved
+          }
 
           curator.topLibraryRecosExpectations(user1.id.get) = Seq(
             LibraryRecoInfo(user1.id.get, lib3.id.get, 7, ""),
@@ -68,7 +75,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
           )
 
           val recosF = commander.topPublicLibraryRecos(user1.id.get, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed)
-          val recos = Await.result(recosF, Duration(5, "seconds"))
+          val recos = Await.result(recosF, Duration(5, "seconds")).map(_._2)
           recos.size === 2
           recos(0).itemInfo.name === "Java"
           recos(1).itemInfo.name === "Scala"

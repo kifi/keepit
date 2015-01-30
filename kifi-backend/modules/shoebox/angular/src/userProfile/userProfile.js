@@ -313,6 +313,10 @@ angular.module('kifi')
     };
 
     $scope.openFollowersList = function (lib) {
+      if (platformService.isSupportedMobilePlatform()) {
+        return;
+      }
+
       modalService.open({
         template: 'libraries/libraryFollowersModal.tpl.html',
         modalData: {

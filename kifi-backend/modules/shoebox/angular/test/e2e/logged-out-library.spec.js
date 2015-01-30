@@ -18,11 +18,11 @@ describe('kifi angular logged-out library test suite', function () {
     });
 
     it('should display the library card header', function () {
-      expect(element(by.css('.library-card')).isPresent()).toBe(true);
+      expect(element(by.css('.kf-lh')).isPresent()).toBe(true);
     });
 
     it('should display the correct library name', function () {
-      expect(element.all(by.css('.library-card .kf-keep-lib-name')).first().getText()).toEqual('Halloween!');
+      expect(element.all(by.css('.kf-lh-name')).first().getText()).toEqual('Halloween!');
     });
 
     it('should display the join and login links', function () {

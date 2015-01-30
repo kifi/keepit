@@ -179,6 +179,10 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         val email1 :: email2 :: Nil = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.
           sortBy { _.to.head.address }
 
+        val activityEmails = db.readOnlyMaster { implicit s => inject[ActivityEmailRepo].all }
+        activityEmails.size === 2
+        activityEmails.find(_.userId == user1.id.get).get.libraryRecommendations.get.size === 3
+
         val html1: String = email1.htmlBody
         val html2: String = email2.htmlBody
 

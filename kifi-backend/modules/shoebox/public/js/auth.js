@@ -168,8 +168,8 @@ kifi.form = (function () {
   // todo (aaron): remove below for twitter launch
   // if twitter is a url query param
   if (getParameterByName('twitter')) {
-    // do not show linkedIn
-    var linkedInButtons = $('.form-network.linkedin');
+    // do not show linkedIn on signup
+    var linkedInButtons = $('.form-network.linkedin.signup');
     for (var i=0; i < linkedInButtons.length; i++) {
       linkedInButtons.eq(i).hide();
     }

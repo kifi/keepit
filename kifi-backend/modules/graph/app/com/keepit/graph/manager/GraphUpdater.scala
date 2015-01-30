@@ -1,5 +1,6 @@
 package com.keepit.graph.manager
 
+import com.keepit.common.logging.Logging
 import com.keepit.graph.model._
 import com.google.inject.Inject
 import com.keepit.model._
@@ -10,7 +11,7 @@ trait GraphUpdater {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit
 }
 
-class GraphUpdaterImpl @Inject() () extends GraphUpdater {
+class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit = update match {
     case userGraphUpdate: UserGraphUpdate => processUserGraphUpdate(userGraphUpdate)
     case userConnectionGraphUpdate: UserConnectionGraphUpdate => processUserConnectionGraphUpdate(userConnectionGraphUpdate)
@@ -18,6 +19,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     case socialConnectionGraphUpdate: SocialConnectionGraphUpdate => processSocialConnectionGraphUpdate(socialConnectionGraphUpdate)
     case keepGraphUpdate: KeepGraphUpdate => processKeepGraphUpdate(keepGraphUpdate)
     case ldaUpdate: SparseLDAGraphUpdate => processLDAUpdate(ldaUpdate)
+    case ldaCleanOldVersion: LDAOldVersionCleanupGraphUpdate => processLDACleanup(ldaCleanOldVersion)
     case uriUpdate: NormalizedUriGraphUpdate => processNormalizedUriGraphUpdate(uriUpdate)
     case emailAccountUpdate: EmailAccountGraphUpdate => processEmailAccountGraphUpdate(emailAccountUpdate)
     case emailContactUpdate: EmailContactGraphUpdate => processEmailContactGraphUpdate(emailContactUpdate)
@@ -150,6 +152,16 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
         writer.saveEdge(uriVertexId, topicVertexId, WeightedEdgeData(score))
         writer.saveEdge(topicVertexId, uriVertexId, WeightedEdgeData(score))
     }
+  }
+
+  private def processLDACleanup(ldaCleanOldVersion: LDAOldVersionCleanupGraphUpdate)(implicit writer: GraphWriter) = {
+    val LDAOldVersionCleanupGraphUpdate(version, numTopics) = ldaCleanOldVersion
+    log.info(s"start cleaning LDA old version: version = ${version}, numTopics = ${numTopics}")
+    (0 until numTopics).foreach { i =>
+      val topicId = LDATopicId(version, LDATopic(i))
+      writer.removeVertexIfExists(topicId)
+    }
+    log.info(s"done with cleaning LDA old version")
   }
 
   private def processNormalizedUriGraphUpdate(update: NormalizedUriGraphUpdate)(implicit writer: GraphWriter) = update.state match {

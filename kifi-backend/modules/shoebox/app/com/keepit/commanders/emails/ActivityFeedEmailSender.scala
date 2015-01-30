@@ -1,7 +1,9 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
-import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.commanders.emails.activity._
+import com.keepit.commanders.{ LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -9,18 +11,14 @@ import com.keepit.common.db.slick.DBSession.ROSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.template.helpers._
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.time._
-import com.keepit.curator.{ LibraryQualityHelper, CuratorServiceClient }
-import com.keepit.curator.model.{ FullUriRecoInfo, FullLibRecoInfo, RecommendationSource, RecommendationSubSource }
+import com.keepit.curator.model.{ FullUriRecoInfo, RecommendationSource, RecommendationSubSource }
+import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.eliza.model.{ MessageSenderNonUserView, MessageSenderView, UserThreadView, MessageView, MessageSenderUserView }
 import com.keepit.model._
-import org.joda.time.{ DateTime, Duration }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.twirl.api.Html
 
 import scala.concurrent.Future
 
@@ -39,10 +37,7 @@ trait LibraryInfoView {
 
 case class BaseLibraryInfoView(libraryId: Id[Library], libInfo: FullLibraryInfo) extends LibraryInfoView
 
-case class LibraryInviteInfoView(invitedByUsers: Seq[Id[User]],
-    libraryId: Id[Library],
-    libInfo: FullLibraryInfo) extends LibraryInfoView {
-}
+case class LibraryInviteInfoView(invitedByUsers: Seq[Id[User]], libraryId: Id[Library], libInfo: FullLibraryInfo) extends LibraryInfoView
 
 case class KeepInfoView(private val keepInfo: KeepInfo) {
   private val summary = keepInfo.summary
@@ -54,52 +49,15 @@ case class KeepInfoView(private val keepInfo: KeepInfo) {
   val imageUrlAndWidth: Option[(String, Int)] = imageUrl flatMap { url => imageWidth map ((url, _)) }
 }
 
-// TODO (josh) much of the functionality below may not be necessary per the latest design, remove unused code
-// after design is final
-case class EmailUnreadThreadView(private val view: UserThreadView) {
-  val pageTitle = view.pageTitle
-  val lastSeen = view.lastSeen
-  val lastActive = view.notificationUpdatedAt
-  val allMessages = view.messages
-
-  val messageSendersToShow: Seq[Html] = {
-    val senders = view.messages collect {
-      case MessageView(MessageSenderUserView(id), _, _) => firstName(id)
-      case MessageView(MessageSenderNonUserView(identifier), _, _) => safeHtml(identifier)
-    }
-
-    val others = senders.size - view.messages.size
-    if (others > 0) senders :+ safeHtml(s"$others others")
-    else senders
-  }
-
-  val firstMessageSentTime: String = {
-    val msgCreatedAtPT = allMessages.head.createdAt.withZone(zones.PT)
-    val nowPT = currentDateTime(zones.PT)
-    val startOfTodayPT = nowPT.withTimeAtStartOfDay()
-    if (startOfTodayPT < msgCreatedAtPT) "today"
-    else if (startOfTodayPT.minusDays(1) < msgCreatedAtPT) "yesterday"
-    else if (startOfTodayPT.minusDays(6) < msgCreatedAtPT) msgCreatedAtPT.dayOfWeek().getAsText
-    else if (msgCreatedAtPT.minusDays(14) < msgCreatedAtPT) "last week"
-    else s"on ${msgCreatedAtPT.monthOfYear().getAsText} ${msgCreatedAtPT.dayOfMonth().getAsText}"
-  }
-
-  val userMessages = view.messages filter {
-    case MessageView(MessageSenderUserView(_), _, _) => true
-    case _ => false
-  }
-  val totalMessageCount = view.messages.size
-  val otherMessageCount = totalMessageCount - messageSendersToShow.size
-}
-
 case class ActivityEmailData(
+  userId: Id[User],
   newKeepsInLibraries: Seq[(LibraryInfoView, Seq[KeepInfoView])],
   libraryInvites: Seq[LibraryInviteInfoView],
-  libraryRecos: Seq[FullLibRecoInfo],
+  libraryRecos: Seq[LibraryInfoView],
   uriRecos: Seq[FullUriRecoInfo],
   pendingFriendRequests: Seq[Id[User]],
   friendCreatedLibraries: Map[Id[User], Seq[LibraryInfoView]],
-  friendFollowedLibraries: Map[Id[Library], (LibraryInfoView, Seq[Id[User]])],
+  friendFollowedLibraries: Seq[(Id[Library], LibraryInfoView, Seq[Id[User]])],
   newFollowersOfLibraries: Seq[(LibraryInfoView, Seq[Id[User]])],
   unreadThreads: Seq[EmailUnreadThreadView])
 
@@ -109,22 +67,30 @@ trait ActivityFeedEmailSender {
   def apply(): Future[Unit]
 }
 
+class ActivityFeedEmailComponents @Inject() (
+  val libraryRecommendations: UserLibraryRecommendationsComponent,
+  val userLibraryFollowers: UserLibraryFollowersComponent,
+  val unreadMessages: UserUnreadMessagesComponent)
+
 class ActivityFeedEmailSenderImpl @Inject() (
+    val components: ActivityFeedEmailComponents,
+    val clock: Clock,
+    val libraryCommander: LibraryCommander,
+    val libraryRepo: LibraryRepo,
+    val membershipRepo: LibraryMembershipRepo,
+    val db: Database,
+    val eliza: ElizaServiceClient,
     curator: CuratorServiceClient,
-    eliza: ElizaServiceClient,
     userRepo: UserRepo,
     experimentCommander: LocalUserExperimentCommander,
     emailTemplateSender: EmailTemplateSender,
     recoCommander: RecommendationsCommander,
     libraryQualityHelper: LibraryQualityHelper,
-    libraryCommander: LibraryCommander,
-    libraryRepo: LibraryRepo,
-    membershipRepo: LibraryMembershipRepo,
     keepRepo: KeepRepo,
     friendRequestRepo: FriendRequestRepo,
     userConnectionRepo: UserConnectionRepo,
-    db: Database,
-    private val airbrake: AirbrakeNotifier,
+    activityEmailRepo: ActivityEmailRepo,
+    protected val airbrake: AirbrakeNotifier,
     private implicit val publicIdConfig: PublicIdConfiguration) extends ActivityFeedEmailSender with Logging {
 
   val reactiveLock = new ReactiveLock(8)
@@ -142,22 +108,24 @@ class ActivityFeedEmailSenderImpl @Inject() (
     experimentCommander.getUserIdsByExperiment(ExperimentType.ACTIVITY_EMAIL)
   }
 
-  def prepareEmailForUser(toUserId: Id[User]): Future[EmailToSend] = reactiveLock.withLockFuture {
-    val feed = new UserActivityFeedHelper(toUserId)
+  def prepareEmailForUser(toUserId: Id[User]): Future[EmailToSend] = new SafeFuture(reactiveLock.withLockFuture {
+    val previouslySentEmails = db.readOnlyReplica { implicit s => activityEmailRepo.getLatestToUser(toUserId) }
+    val feed = new UserActivityFeedHelper(toUserId, previouslySentEmails)
 
     val friends = db.readOnlyReplica { implicit session =>
       userConnectionRepo.getConnectedUsers(toUserId)
     }
 
+    val newFollowersOfMyLibrariesF = components.userLibraryFollowers(toUserId, previouslySentEmails)
+    val libRecosF = components.libraryRecommendations(toUserId, previouslySentEmails)
+    val unreadMessageThreadsF = components.unreadMessages(toUserId)
+
     val newKeepsInLibrariesF = feed.getNewKeepsFromFollowedLibraries()
-    val unreadMessageThreadsF = feed.getUnreadMessageThreads()
     val pendingLibInvitesF = feed.getPendingLibraryInvitations()
     val pendingFriendRequestsF = feed.getPendingFriendRequests()
     val friendsWhoFollowedF = feed.getFriendsWhoFollowedLibraries(friends)
     val friendsWhoCreatedF = feed.getFriendsWhoCreatedLibraries(friends)
-    val newFollowersOfMyLibrariesF = feed.getNewFollowersOfUserLibraries()
     val uriRecosF = feed.getUriRecommendations()
-    val libRecosF = feed.getLibraryRecommendations()
 
     for {
       newKeepsInLibraries <- newKeepsInLibrariesF
@@ -171,6 +139,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
       libRecos <- libRecosF
     } yield {
       val activityData = ActivityEmailData(
+        userId = toUserId,
         newKeepsInLibraries = newKeepsInLibraries,
         libraryInvites = pendingLibInvites map {
           case (libId, info, invites) =>
@@ -186,6 +155,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
         unreadThreads = unreadThreads
       )
 
+      persistActivityEmail(activityData)
+
       EmailToSend(
         from = SystemEmailAddress.NOTIFICATIONS,
         to = Left(toUserId),
@@ -194,24 +165,25 @@ class ActivityFeedEmailSenderImpl @Inject() (
         category = NotificationCategory.User.ACTIVITY
       )
     }
+  })
+
+  private def persistActivityEmail(activityEmailData: ActivityEmailData) = db.readWrite { implicit rw =>
+    activityEmailRepo.save(ActivityEmail(
+      userId = activityEmailData.userId,
+      libraryRecommendations = Some(activityEmailData.libraryRecos.map(_.libraryId)),
+      otherFollowedLibraries = None,
+      userFollowedLibraries = None))
   }
 
-  class UserActivityFeedHelper(val toUserId: Id[User]) {
-
-    val recoSource = RecommendationSource.Email
-    val recoSubSource = RecommendationSubSource.Unknown
+  class UserActivityFeedHelper(val toUserId: Id[User], val previouslySent: Seq[ActivityEmail]) extends ActivityEmailLibraryHelpers {
+    val clock = ActivityFeedEmailSenderImpl.this.clock
+    val libraryCommander = ActivityFeedEmailSenderImpl.this.libraryCommander
 
     // weight of URI reco recency... must be between 0..1
     val uriRecoRecencyWeight = 1
 
     // max URI recommendations to include in the feed
     val maxUriRecosToDeliver = 3
-
-    // max library recommendations to include in the feed
-    val maxLibRecostoDeliver = 3
-
-    // library recommendations to fetch from curator
-    val libRecosToFetch = maxLibRecostoDeliver * 2
 
     // max number of user-followed libraries to show new keeps for
     val maxFollowedLibrariesWithNewKeeps = 10
@@ -235,58 +207,12 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
     val maxNewFollowersOfLibrariesUsers = 10
 
-    val minAgeOfUnreadNotificationThreads = currentDateTime.minusWeeks(6)
-    val maxAgeOfUnreadNotificationThreads = currentDateTime.minusHours(12)
-
-    val maxUnreadNotificationThreads = 10
-
-    val minRecordAge = currentDateTime.minus(Duration.standardDays(7))
-
     val libraryAgePredicate: Library => Boolean = lib => lib.createdAt > minRecordAge
 
-    private lazy val (ownedLibs: Seq[Library], followedLibraries: Seq[Library], invitedLibraries: Seq[(LibraryInvite, Library)]) = {
+    private lazy val (ownedPublishedLibs: Seq[Library], followedLibraries: Seq[Library], invitedLibraries: Seq[(LibraryInvite, Library)]) = {
       val (rawUserLibs, rawInvitedLibs) = libraryCommander.getLibrariesByUser(toUserId)
-      val (ownedLibs, followedLibs) = rawUserLibs.partition(_._1.isOwner)
+      val (ownedLibs, followedLibs) = rawUserLibs.filter(_._2.visibility == LibraryVisibility.PUBLISHED).partition(_._1.isOwner)
       (ownedLibs.map(_._2), followedLibs.map(_._2), rawInvitedLibs)
-    }
-
-    protected def createFullLibraryInfos(libraries: Seq[Library]) = {
-      libraryCommander.createFullLibraryInfos(viewerUserIdOpt = Some(toUserId),
-        showPublishedLibraries = true, maxKeepsShown = 10,
-        maxMembersShown = 0, idealKeepImageSize = ProcessedImageSize.Large.idealSize,
-        idealLibraryImageSize = ProcessedImageSize.Large.idealSize,
-        libraries = libraries, withKeepTime = true)
-    }
-
-    def getNewFollowersOfUserLibraries(): Future[Seq[(LibraryInfoView, Seq[Id[User]])]] = {
-      val librariesToMembers = db.readOnlyReplica { implicit session =>
-        ownedLibs map { library =>
-          val members = membershipRepo.getWithLibraryId(library.id.get) filter { membership =>
-            membership.state == LibraryMembershipStates.ACTIVE && !membership.isOwner &&
-              membership.lastJoinedAt.exists(minRecordAge <)
-          } sortBy (-_.lastJoinedAt.map(_.getMillis).getOrElse(0L))
-          (library, members take maxNewFollowersOfLibrariesUsers)
-        } take maxNewFollowersOfLibraries
-      }
-
-      val libraries = db.readOnlyReplica { implicit session =>
-        val libraries = librariesToMembers.map(_._1)
-        filterAndSortLibrariesByAge(libraries)
-      }
-
-      val librariesToMembersMap = librariesToMembers.map {
-        case (lib, members) => (lib.id.get, members)
-      }.toMap
-
-      val libInfosF = createFullLibraryInfos(libraries)
-      libInfosF map { libInfos =>
-        libInfos map {
-          case (libId, libInfo) =>
-            val members = librariesToMembersMap(libId) map (_.userId)
-            val libInfoView = BaseLibraryInfoView(libId, libInfo)
-            (libInfoView, members)
-        }
-      }
     }
 
     def getNewKeepsFromFollowedLibraries(): Future[Seq[(LibraryInfoView, Seq[KeepInfoView])]] = {
@@ -299,7 +225,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
         } filter (_._2.nonEmpty) take maxFollowedLibrariesWithNewKeeps
       }
 
-      val libInfosF = createFullLibraryInfos(libraryKeeps.map(_._1))
+      val libInfosF = createFullLibraryInfos(toUserId, libraryKeeps.map(_._1))
       libInfosF map { libInfos =>
         libInfos.zip(libraryKeeps) map {
           case ((libId, libInfo), (lib, keeps)) =>
@@ -309,22 +235,11 @@ class ActivityFeedEmailSenderImpl @Inject() (
       }
     }
 
-    def getUnreadMessageThreads(): Future[Seq[EmailUnreadThreadView]] = {
-      eliza.getUnreadNotifications(toUserId, maxUnreadNotificationThreads) map { userThreads =>
-        userThreads filter { thread =>
-          val threadLastActive = thread.notificationUpdatedAt
-          threadLastActive > minAgeOfUnreadNotificationThreads &&
-            threadLastActive < maxAgeOfUnreadNotificationThreads &&
-            thread.messages.nonEmpty && thread.messages.head.from.kind != MessageSenderView.SYSTEM
-        } take maxUnreadNotificationThreads map EmailUnreadThreadView
-      }
-    }
-
     def getPendingLibraryInvitations(): Future[Seq[(Id[Library], FullLibraryInfo, Seq[LibraryInvite])]] = {
       val libraries = invitedLibraries map (_._2) groupBy (_.id) map (_._2.head) toSeq
       // groupBy().map().toSeq above is a hack around duplicate library invites from the same user (which is/was possible and should be cleaned up)
       val invitesByLibraryId = invitedLibraries map (_._1) groupBy (_.libraryId)
-      val fullLibraryInfosF = createFullLibraryInfos(libraries)
+      val fullLibraryInfosF = createFullLibraryInfos(toUserId, libraries)
 
       fullLibraryInfosF map { fullLibraryInfos =>
         fullLibraryInfos map {
@@ -345,7 +260,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
       }
     }
 
-    def getFriendsWhoFollowedLibraries(friends: Set[Id[User]]): Future[Map[Id[Library], (LibraryInfoView, Seq[Id[User]])]] = {
+    def getFriendsWhoFollowedLibraries(friends: Set[Id[User]]): Future[Seq[(Id[Library], LibraryInfoView, Seq[Id[User]])]] = {
       val (libraries, libMembershipAndLibraries) = db.readOnlyReplica { implicit session =>
         val libMembershipAndLibraries = friends.toSeq flatMap { friendUserId =>
           libraryRepo.getByUser(friendUserId)
@@ -354,25 +269,29 @@ class ActivityFeedEmailSenderImpl @Inject() (
             !lm.isOwner && library.visibility == LibraryVisibility.PUBLISHED &&
               lm.state == LibraryMembershipStates.ACTIVE && lm.lastJoinedAt.exists(minRecordAge <)
         }
-        val libraries = libMembershipAndLibraries.map(_._2)
+        val libraries = libMembershipAndLibraries.map(_._2).distinct
 
         (filterAndSortLibrariesByAge(libraries), libMembershipAndLibraries)
       }
 
-      val fullLibInfosF = createFullLibraryInfos(libraries)
+      val fullLibInfosF = createFullLibraryInfos(toUserId, libraries)
       fullLibInfosF map { libInfos =>
         val membershipsByLibraryId = libMembershipAndLibraries.groupBy(_._2.id.get)
-        val libIdsAndFriendUserIds = libInfos map {
+        val libIdsAndFriendUserIds: Seq[(Id[Library], (LibraryInfoView, Seq[Id[User]]))] = libInfos map {
           case (libId, libInfo) =>
             val memberships = membershipsByLibraryId(libId)
             val friendsWhoFollowThisLibrary = memberships map { case (membership, _) => membership.userId }
-            libId -> (BaseLibraryInfoView(libId, libInfo), friendsWhoFollowThisLibrary)
+            val baselibInfo: LibraryInfoView = BaseLibraryInfoView(libId, libInfo)
+            libId -> (baselibInfo, friendsWhoFollowThisLibrary)
         }
 
         // sorts libraries by # of friends following each one
         libIdsAndFriendUserIds.sortBy {
-          case (_, (_, friends)) => -friends.size
-        }.take(maxLibrariesFollowedByFriends).toMap
+          case (_, (_, friendIds)) => -friendIds.size
+        }.take(maxLibrariesFollowedByFriends).map {
+          case (libId: Id[Library], (libInfoView: LibraryInfoView, followerIds: Seq[Id[User]])) =>
+            (libId, libInfoView, followerIds)
+        }.sortBy(-_._2.numFollowers)
       }
     }
 
@@ -387,7 +306,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
       val ownerDiversifiedLibraries = libraries.groupBy(_.ownerId).map { case (_, libs) => libs.zipWithIndex }.
         toSeq.flatten.sortBy(_._2).take(maxFriendsWhoCreatedLibraries).map(_._1)
 
-      val fullLibInfosF = createFullLibraryInfos(ownerDiversifiedLibraries)
+      val fullLibInfosF = createFullLibraryInfos(toUserId, ownerDiversifiedLibraries)
 
       fullLibInfosF.map { libInfos =>
         val libraryInfoViews = libInfos.map { case (libId, libInfo) => BaseLibraryInfoView(libId, libInfo) }
@@ -398,21 +317,12 @@ class ActivityFeedEmailSenderImpl @Inject() (
       }
     }
 
-    def getLibraryRecommendations(): Future[Seq[FullLibRecoInfo]] = {
-      recoCommander.topPublicLibraryRecos(toUserId, libRecosToFetch, recoSource, recoSubSource) map { recos =>
-        // TODO(josh) maybe additional filtering
-        recos.take(maxLibRecostoDeliver)
-      }
-    } recover {
-      case e: Exception =>
-        airbrake.notify(s"ActivityFeedEmail Failed to load library recommendations for userId=$toUserId", e)
-        Seq.empty
-    }
-
     def getUriRecommendations(): Future[Seq[FullUriRecoInfo]] = {
+      val recoSource = RecommendationSource.Email
+      val recoSubSource = RecommendationSubSource.Unknown
       recoCommander.topRecos(toUserId, recoSource, recoSubSource, more = false, uriRecoRecencyWeight) map { recos =>
         // TODO(josh) maybe additional filtering
-        recos.take(maxUriRecosToDeliver)
+        recos take (maxUriRecosToDeliver)
       }
     } recover {
       case e: Exception =>

@@ -24,6 +24,7 @@ trait ServiceDiscovery {
   def register(): ServiceInstance
   def unRegister(): Unit = {}
   def isLeader(): Boolean
+  def isRunnerFor(taskName: String): Boolean
   def myClusterSize: Int = 0
   def startSelfCheck(): Future[Boolean]
   def changeStatus(newStatus: ServiceStatus): Unit
@@ -123,6 +124,18 @@ class ServiceDiscoveryImpl(
         if (logMe) logLeader(s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is")
         require(myCluster.size == 0)
         return false
+    }
+  }
+
+  def isRunnerFor(taskName: String): Boolean = if (isCanary) false else zkClient.session { zk =>
+    if (!stillRegistered()) {
+      log.warn(s"service did not register itself yet!")
+      return false
+    }
+
+    myInstance.exists { thisInst =>
+      val index = (taskName.hashCode() & 0x7FFFFFFF) % myCluster.allMembers.size
+      myCluster.allMembers(index) == thisInst
     }
   }
 
