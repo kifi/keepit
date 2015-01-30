@@ -40,7 +40,7 @@ abstract class BaseFeatureUpdatePlugin[K, T, M <: StatModel, FT <: FeatureRepres
   val name: String = getClass.toString
 
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, startTime, updateFrequency, actor.ref, Update, Update.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, startTime, updateFrequency, actor.ref, Update, this.getClass.getSimpleName + Update.getClass.getSimpleName)
   }
 
   override def update(): Unit = {
