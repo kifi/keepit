@@ -54,11 +54,11 @@ angular.module('kifi')
     function setModalScope($modalScope, onClose) {
       $modalScope.close = modalService.close;
       $modalScope.$on('$destroy', function () {
-        $scope.registerFinalizeSubmitted = false;
-        $scope.requestActive = false;
         if (typeof onClose === 'function') {
           onClose($modalScope);
         }
+        $scope.registerFinalizeSubmitted = false;
+        $scope.requestActive = false;
       });
     }
 
