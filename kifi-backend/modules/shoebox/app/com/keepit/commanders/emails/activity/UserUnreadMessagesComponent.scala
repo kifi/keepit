@@ -1,8 +1,10 @@
 package com.keepit.commanders.emails.activity
 
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.mail.template.helpers._
 import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.{ MessageSenderNonUserView, MessageSenderUserView, MessageSenderView, MessageView, UserThreadView }
 import com.keepit.model.User
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -47,17 +49,15 @@ case class EmailUnreadThreadView(private val view: UserThreadView) {
   val otherMessageCount = totalMessageCount - messageSendersToShow.size
 }
 
-class UserUnreadMessagesComponent(val toUserId: Id[User]) extends ActivityEmailHelpers {
-  this: ActivityEmailDependencies =>
-  override val previouslySent = Seq.empty
-
+@Singleton
+class UserUnreadMessagesComponent @Inject() (val clock: Clock, eliza: ElizaServiceClient) extends ActivityEmailHelpers {
   def minAgeOfUnreadNotificationThreads = emailPrepTime.minusWeeks(6)
 
   def maxAgeOfUnreadNotificationThreads = emailPrepTime.minusHours(12)
 
   val maxUnreadNotificationThreads = 10
 
-  def apply(): Future[Seq[EmailUnreadThreadView]] =
+  def apply(toUserId: Id[User]): Future[Seq[EmailUnreadThreadView]] =
     eliza.getUnreadNotifications(toUserId, maxUnreadNotificationThreads) map { threads =>
       threads.filter { thread =>
         val threadLastActive = thread.notificationUpdatedAt
@@ -65,17 +65,8 @@ class UserUnreadMessagesComponent(val toUserId: Id[User]) extends ActivityEmailH
           threadLastActive < maxAgeOfUnreadNotificationThreads &&
           thread.messages.nonEmpty && thread.messages.headOption.exists(_.from.kind != MessageSenderView.SYSTEM)
       } take maxUnreadNotificationThreads map EmailUnreadThreadView
-    } recover {
-      case e: Exception =>
-        airbrake.notify(s"failed to fetch unread messages for $toUserId", e)
-        Seq.empty
     }
 }
 
-class UserUnreadMessageCountComponent(val toUserId: Id[User]) extends ActivityEmailHelpers { this: ActivityEmailDependencies =>
-  override val previouslySent = Seq.empty
-
-  def apply(): Future[Int] = {
-    eliza.getUserThreadStats(toUserId) map (_.all)
-  }
+class UserUnreadMessageCountComponent() {
 }
