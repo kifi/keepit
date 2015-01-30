@@ -259,6 +259,7 @@ angular.module('kifi')
       // does not propagate to HeaderCtrl when it is injected there.
       // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
       _.assign($state.params, $location.search());
+      $rootScope.$emit('newSearch', $state.params);
       init();
     }, 250);
     $scope.$on('$locationChangeSuccess', function (event, newState, oldState) {
