@@ -164,7 +164,7 @@ class LDACommanderImpl @Inject() (
 
     val junkTopics = infoCommander.inactiveTopics(version)
 
-    val personaFeatsFuture = consolidater(userId){ userId =>
+    val personaFeatsFuture = consolidater(userId) { userId =>
       personaCommander.getUserPersonaFeatures(userId)
     }
 
