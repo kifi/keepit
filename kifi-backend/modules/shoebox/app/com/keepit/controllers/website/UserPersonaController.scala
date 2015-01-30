@@ -26,10 +26,15 @@ class UserPersonaController @Inject() (
       val allPersonas = personaRepo.getByState(PersonaStates.ACTIVE)
       (allPersonas, userPersonas)
     }
-    val personaMap = allPersonas.map { persona =>
-      (persona.name.value, userPersonas.contains(persona))
-    }.toMap
-    Ok(Json.obj("personas" -> Json.toJson(personaMap)))
+    val personaObjs = allPersonas.map { persona =>
+      Json.obj(
+        "id" -> persona.name,
+        "displayName" -> persona.displayName,
+        "selected" -> userPersonas.contains(persona),
+        "iconPath" -> persona.iconPath,
+        "activeIconPath" -> persona.activeIconPath)
+    }
+    Ok(Json.obj("personas" -> Json.toJson(personaObjs)))
   }
 
   def addPersona(personaStr: String) = UserAction { request =>
