@@ -244,8 +244,8 @@ class LibraryCommander @Inject() (
       libraries.map { library =>
         library.id.get -> SafeFuture {
           val counts = followerInfosByLibraryId(library.id.get)._2
-          val collaboratorCount = counts(LibraryAccess.READ_WRITE)
-          val followerCount = counts(LibraryAccess.READ_INSERT) + counts(LibraryAccess.READ_ONLY)
+          val collaboratorCount = counts.getOrElse(LibraryAccess.READ_WRITE, 0)
+          val followerCount = counts.getOrElse(LibraryAccess.READ_INSERT, 0) + counts.getOrElse(LibraryAccess.READ_ONLY, 0)
           val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0)
           (collaboratorCount, followerCount, keepCount)
         }
