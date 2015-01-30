@@ -10,7 +10,10 @@ case class Persona(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     name: PersonaName,
-    state: State[Persona] = PersonaStates.ACTIVE) extends ModelWithState[Persona] {
+    state: State[Persona] = PersonaStates.ACTIVE,
+    displayName: String,
+    iconPath: String,
+    activeIconPath: String) extends ModelWithState[Persona] {
   def withId(id: Id[Persona]): Persona = copy(id = Some(id))
 
   def withUpdateTime(now: DateTime): Persona = copy(updatedAt = now)
