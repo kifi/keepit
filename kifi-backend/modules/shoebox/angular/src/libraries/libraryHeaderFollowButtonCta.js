@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryHeaderFollowButtonCta', [
-  '$compile', '$rootElement', '$templateCache', '$timeout', '$window', 'libraryService', 'platformService',
-  function ($compile, $rootElement, $templateCache, $timeout, $window, libraryService, platformService) {
+  '$compile', '$rootElement', '$rootScope', '$templateCache', '$timeout', '$window', 'libraryService', 'platformService',
+  function ($compile, $rootElement, $rootScope, $templateCache, $timeout, $window, libraryService, platformService) {
     return {
       restrict: 'A',
       link: function (scope, element/*, attrs */) {
@@ -168,6 +168,14 @@ angular.module('kifi')
             $window.removeEventListener('visibilitychange', autoShowCTAQuickly);
           });
         }
+
+        var deregisterStateChange = $rootScope.$on('$stateChangeSuccess', function (event, toState) {
+          if (!toState.name.match(/^library\.keeps/)) {
+            $timeout.cancel(autoShowCTAPromise);
+            autoShowCTAPromise = null;
+          }
+        });
+        scope.$on('$destroy', deregisterStateChange);
       }
     };
   }
