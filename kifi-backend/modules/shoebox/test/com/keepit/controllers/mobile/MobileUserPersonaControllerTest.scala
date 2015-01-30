@@ -69,8 +69,7 @@ class MobileUserPersonaControllerTest extends Specification with ShoeboxTestInje
                 },
                 {
                   "id":"student",
-                  "displayName":
-                  "student",
+                  "displayName":"student",
                   "selected":true,
                   "iconPath":"icon/student.jpg",
                   "activeIconPath":"icon/active_student.jpg"
