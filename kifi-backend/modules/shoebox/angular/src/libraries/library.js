@@ -242,6 +242,7 @@ angular.module('kifi')
 
     $rootScope.$on('$stateChangeSuccess', function (e, toState) {
       $scope.librarySearch = toState.name === 'library.search';
+      setTitle(library);
     }),
 
     $rootScope.$on('userLoggedInStateChange', function () {
