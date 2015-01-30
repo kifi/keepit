@@ -38,7 +38,7 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
 
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
+  def getAllURLPatterns(): Future[UrlPatternRules] = ???
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
 

@@ -126,6 +126,6 @@ class LDARelatedLibraryPluginImpl @Inject() (
   override def enabled = true
 
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 10 minutes, 12 hours, actor.ref, UpdateLDARelatedLibrary)
+    scheduleTaskOnOneMachine(actor.system, 10 minutes, 12 hours, actor.ref, UpdateLDARelatedLibrary, UpdateLDARelatedLibrary.getClass.getSimpleName)
   }
 }

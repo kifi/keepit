@@ -36,7 +36,7 @@ class LDAInfoUpdatePluginImpl @Inject() (
   override def enabled: Boolean = true
 
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 5 minutes, 24 hours, actor.ref, UpdateTopicSizeCounts)
+    scheduleTaskOnOneMachine(actor.system, 5 minutes, 24 hours, actor.ref, UpdateTopicSizeCounts, UpdateTopicSizeCounts.getClass.getSimpleName)
   }
 }
 

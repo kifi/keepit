@@ -1,7 +1,7 @@
 package com.keepit.normalizer
 
 import com.keepit.common.net.URI
-import com.keepit.model.UrlPatternRuleRepo
+import com.keepit.model.{ UrlPatternRulesCommander, UrlPatternRuleRepo }
 import com.keepit.scraper.{ Signature, ScrapeScheduler }
 import com.google.inject.{ Inject, Singleton }
 import scala.util.{ Failure, Try }
@@ -9,7 +9,9 @@ import scala.util.{ Failure, Try }
 case class PrenormalizationException(cause: Throwable) extends Throwable(cause)
 
 @Singleton
-class PriorNormalizationKnowledge @Inject() (urlPatternRuleRepo: UrlPatternRuleRepo, scraperPlugin: ScrapeScheduler) {
+class PriorNormalizationKnowledge @Inject() (
+    urlPatternRules: UrlPatternRulesCommander,
+    scraperPlugin: ScrapeScheduler) {
   implicit val scraper = scraperPlugin
 
   def prenormalize(uriString: String): Try[String] = {
@@ -28,12 +30,12 @@ class PriorNormalizationKnowledge @Inject() (urlPatternRuleRepo: UrlPatternRuleR
     referenceUrl match {
       case LinkedInNormalizer.linkedInPrivateProfile(_, id) => Seq(LinkedInProfileCheck(id.toLong))
       case _ => Seq(
-        SignatureCheck(referenceUrl, referenceSignature, urlPatternRuleRepo.rules().getTrustedDomain(referenceUrl)),
+        SignatureCheck(referenceUrl, referenceSignature, urlPatternRules.rules().getTrustedDomain(referenceUrl)),
         AlternateUrlCheck(referenceUrl, prenormalize)
       )
     }
   }
 
-  private def getPreferredSchemeNormalizer(url: String): Option[StaticNormalizer] = urlPatternRuleRepo.rules().getPreferredNormalization(url).map(SchemeNormalizer(_))
+  private def getPreferredSchemeNormalizer(url: String): Option[StaticNormalizer] = urlPatternRules.rules().getPreferredNormalization(url).map(SchemeNormalizer(_))
 
 }

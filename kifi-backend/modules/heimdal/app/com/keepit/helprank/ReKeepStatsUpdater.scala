@@ -24,7 +24,7 @@ class ReKeepStatsUpdaterPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTaskOnLeader(actor.system, 15 minutes, 30 minutes, actor.ref, UpdateStats) // tweak
+    scheduleTaskOnOneMachine(actor.system, 15 minutes, 30 minutes, actor.ref, UpdateStats, UpdateStats.getClass.getSimpleName) // tweak
   }
 
   override def updateReKeepStats(): Unit = { actor.ref ! UpdateStats }

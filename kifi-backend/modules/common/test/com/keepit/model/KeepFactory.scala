@@ -25,11 +25,17 @@ object KeepFactory {
   def keeps(count: Int): Seq[PartialKeep] = List.fill(count)(keep())
 
   class PartialKeep private[KeepFactory] (keep: Keep) {
+    def withUser(id: Id[User]) = new PartialKeep(keep.copy(userId = id))
+    def withUser(user: User) = new PartialKeep(keep.copy(userId = user.id.get))
     def withId(id: Id[Keep]) = new PartialKeep(keep.copy(id = Some(id)))
     def withId(id: Int) = new PartialKeep(keep.copy(id = Some(Id[Keep](id))))
     def withId(id: ExternalId[Keep]) = new PartialKeep(keep.copy(externalId = id))
     def withId(id: String) = new PartialKeep(keep.copy(externalId = ExternalId[Keep](id)))
     def withTitle(title: String) = new PartialKeep(keep.copy(title = Some(title)))
+    def withVisibility(visibility: LibraryVisibility) = new PartialKeep(keep.copy(visibility = visibility))
+    def discoverable() = new PartialKeep(keep.copy(visibility = LibraryVisibility.DISCOVERABLE))
+    def published() = new PartialKeep(keep.copy(visibility = LibraryVisibility.PUBLISHED))
+    def secret() = new PartialKeep(keep.copy(visibility = LibraryVisibility.SECRET))
     def withLibrary(library: Library) = new PartialKeep(keep.copy(libraryId = library.id, userId = library.ownerId, visibility = library.visibility))
     def withLibrary(library: Id[Library]) = new PartialKeep(keep.copy(libraryId = Some(library)))
     def withState(state: State[Keep]) = new PartialKeep(keep.copy(state = state))

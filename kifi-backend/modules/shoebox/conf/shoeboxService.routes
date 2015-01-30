@@ -223,6 +223,8 @@ POST    /m/1/user/:id/include                   @com.keepit.controllers.mobile.M
 POST    /m/1/user/:id/exclude                   @com.keepit.controllers.mobile.MobileUserController.excludeFriend(id: ExternalId[User])
 GET     /m/1/user/settings                      @com.keepit.controllers.mobile.MobileUserController.getSettings()
 POST    /m/1/user/settings                      @com.keepit.controllers.mobile.MobileUserController.setSettings()
+GET     /m/1/user/personas                      @com.keepit.controllers.mobile.MobileUserPersonaController.getAllPersonas()
+POST    /m/1/user/personas                      @com.keepit.controllers.mobile.MobileUserPersonaController.selectPersonas()
 
 POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.MobileUserController.setAppsflyerAttribution()
 
@@ -279,6 +281,7 @@ GET     /install                    @com.keepit.controllers.website.HomeControll
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /terms                      @com.keepit.controllers.website.HomeController.route(path = "terms")
 GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
+GET     /parenting                  @com.keepit.controllers.website.HomeController.route(path = "parenting")
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 GET     /libraries/featured         @com.keepit.controllers.website.HomeController.route(path = "libraries/featured")
@@ -412,6 +415,10 @@ GET     /site/user/networks         @com.keepit.controllers.website.UserControll
 GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
 GET     /site/user/settings         @com.keepit.controllers.website.UserController.getSettings()
 POST    /site/user/settings         @com.keepit.controllers.website.UserController.setSettings()
+
+GET     /site/user/personas         @com.keepit.controllers.website.UserPersonaController.getAllPersonas()
+POST    /site/user/persona/:name    @com.keepit.controllers.website.UserPersonaController.addPersona(name: String)
+DELETE  /site/user/persona/:name    @com.keepit.controllers.website.UserPersonaController.removePersona(name: String)
 
 # regex below prevents route from usurping requests intended for other routes, like /site/user/friends
 GET     /site/user/$id<[0-9a-f-]{36}> @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)

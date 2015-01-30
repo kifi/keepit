@@ -217,7 +217,7 @@ class RecommendationsCommander @Inject() (
 
   def curatedPublicLibraryRecos(userId: Id[User]): Future[Seq[FullRecoInfo]] = {
     val curatedLibIds: Seq[Id[Library]] = Seq(
-      25537L, 25116L, 24542L, 25345L, 25471L, 25381L, 24203L, 25370L, 25388L, 25371L, 25340L, 25000L, 26106L, 26473L, 26460L
+      25537L, 25116L, 25345L, 24542L, 36680L, 25471L, 28148L, 25381L, 24203L, 27207L, 25370L, 25388L, 25371L, 25340L, 25000L, 26106L, 26473L, 26460L
     ).map(Id[Library])
 
     val curatedLibraries = {

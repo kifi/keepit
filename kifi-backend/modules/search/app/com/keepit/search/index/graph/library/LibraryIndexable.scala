@@ -21,6 +21,7 @@ object LibraryFields {
   val ownerIdField = "oid"
   val usersField = "u"
   val allUsersField = "a"
+  val allUsersCountField = "ac"
   val recordField = "rec"
 
   val textSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField, namePrefixField)
@@ -87,8 +88,12 @@ object LibraryIndexable {
     librarySearcher.getLongDocValue(LibraryFields.kindField, libId).map(LibraryFields.Kind.fromNumericCode)
   }
 
-  def getName(librarySearcher: Searcher, libraryId: Id[Library]): Option[String] = {
-    librarySearcher.getStringDocValue(LibraryFields.nameValueField, libraryId.id)
+  def getName(librarySearcher: Searcher, libId: Long): Option[String] = {
+    librarySearcher.getStringDocValue(LibraryFields.nameValueField, libId)
+  }
+
+  def getMemberCount(librarySearcher: Searcher, libId: Long): Option[Long] = {
+    librarySearcher.getLongDocValue(LibraryFields.allUsersCountField, libId)
   }
 
   def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
@@ -149,6 +154,7 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]
     doc.add(buildIteratorField(allUsersField, allUsers.iterator) { id => id.id.toString })
 
     doc.add(buildIdValueField(ownerIdField, library.ownerId))
+    doc.add(buildLongValueField(allUsersCountField, allUsers.size))
     doc.add(buildLongValueField(visibilityField, Visibility.toNumericCode(library.visibility)))
     doc.add(buildLongValueField(kindField, Kind.toNumericCode(library.kind)))
 

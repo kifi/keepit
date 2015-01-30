@@ -147,7 +147,7 @@ class URISummaryCommander @Inject() (
   private def fetchSummaryForRequest(nUri: NormalizedURIRef): Future[Option[URISummary]] = {
     log.info(s"fetchSummaryForRequest for ${nUri.id} -> ${nUri.url}")
     val stopper = Stopwatch(s"fetching from scraper embedly info for ${nUri.id} -> ${nUri.url}")
-    if (fetchPreviewLock.waiting > 50) { // Backlog is this deep, we're way behind.
+    if (fetchPreviewLock.waiting > 250) { // Backlog is this deep, we're way behind.
       log.info(s"fetchSummaryForRequest denied for ${nUri.id}, ${nUri.url} because lock waiting is ${fetchPreviewLock.waiting}")
       Future.successful(None)
     } else {

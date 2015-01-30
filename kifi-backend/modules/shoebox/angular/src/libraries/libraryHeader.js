@@ -141,6 +141,10 @@ angular.module('kifi')
             scope.coverImageUrl = env.picBase + '/' + image.path;
             scope.coverImagePos = formatCoverImagePos(image);
           }
+
+          scope.library.followButtonText = (scope.userLoggedOut && scope.library.abTestTreatment && !scope.library.abTestTreatment.isControl) ?
+            scope.library.abTestTreatment.data.buttonText :
+            'Follow Library';
         }
 
         function augmentFollower(follower) {
@@ -752,6 +756,7 @@ angular.module('kifi')
         scope.followButtonMaxTop = platformService.isSupportedMobilePlatform() ? 25 : 15;
 
         scope.manageLibrary = function () {
+          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageLibrary' });
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html',
             modalData: {
@@ -775,6 +780,7 @@ angular.module('kifi')
         };
 
         scope.toggleEditKeeps = function () {
+          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedEditKeeps' });
           scope.toggleEdit();
           scope.editKeepsText = scope.editKeepsText === 'Edit Keeps' ? 'Done Editing' : 'Edit Keeps';
         };
@@ -783,6 +789,7 @@ angular.module('kifi')
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedViewFollowers' });
 
           if (scope.library.owner.id === profileService.me.id) {
+            $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageLibrary' });
             modalService.open({
               template: 'libraries/manageLibraryModal.tpl.html',
               modalData: {
@@ -792,6 +799,10 @@ angular.module('kifi')
               }
             });
           } else {
+            if (platformService.isSupportedMobilePlatform()) {
+              return;
+            }
+
             modalService.open({
               template: 'libraries/libraryFollowersModal.tpl.html',
               modalData: {

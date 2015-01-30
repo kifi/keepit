@@ -21,7 +21,7 @@ import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 
 class ShoeboxScraperController @Inject() (
-  urlPatternRuleRepo: UrlPatternRuleRepo,
+  urlPatternRules: UrlPatternRulesCommander,
   db: Database,
   imageInfoRepo: ImageInfoRepo,
   normUriRepo: NormalizedURIRepo,
@@ -60,7 +60,7 @@ class ShoeboxScraperController @Inject() (
   }
 
   def getAllURLPatternRules() = Action { request =>
-    val patterns = urlPatternRuleRepo.rules.rules
+    val patterns = urlPatternRules.rules().rules
     Ok(Json.toJson(patterns))
   }
 
@@ -91,7 +91,7 @@ class ShoeboxScraperController @Inject() (
 
   def getProxy(url: String) = SafeAsyncAction { request =>
     val httpProxyOpt = db.readOnlyReplica(2) { implicit session =>
-      urlPatternRuleRepo.getProxy(url)
+      urlPatternRules.getProxy(url)
     }
     log.debug(s"[getProxy($url): result=$httpProxyOpt")
     Ok(Json.toJson(httpProxyOpt))
@@ -100,7 +100,7 @@ class ShoeboxScraperController @Inject() (
   def getProxyP = SafeAsyncAction(parse.tolerantJson) { request =>
     val url = request.body.as[String]
     val httpProxyOpt = db.readOnlyReplica(2) { implicit session =>
-      urlPatternRuleRepo.getProxy(url)
+      urlPatternRules.getProxy(url)
     }
     Ok(Json.toJson(httpProxyOpt))
   }
@@ -210,7 +210,8 @@ class ShoeboxScraperController @Inject() (
   }
 
   def isUnscrapable(url: String, destinationUrl: Option[String]) = SafeAsyncAction { request =>
-    val res = urlPatternRuleRepo.rules().isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.rules().isUnscrapable(destinationUrl.get))
+    val rules = urlPatternRules.rules()
+    val res = rules.isUnscrapable(url) || (destinationUrl.isDefined && rules.isUnscrapable(destinationUrl.get))
     log.debug(s"[isUnscrapable($url, $destinationUrl)] result=$res")
     Ok(JsBoolean(res))
   }
@@ -221,7 +222,8 @@ class ShoeboxScraperController @Inject() (
     require(args != null && args.length >= 1, "Expect args to be url && opt[dstUrl] ")
     val url = args(0).as[String]
     val destinationUrl = if (args.length > 1) args(1).asOpt[String] else None
-    val res = urlPatternRuleRepo.rules().isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.rules().isUnscrapable(destinationUrl.get))
+    val rules = urlPatternRules.rules()
+    val res = rules.isUnscrapable(url) || (destinationUrl.isDefined && rules.isUnscrapable(destinationUrl.get))
     log.debug(s"[isUnscrapableP] time-lapsed:${System.currentTimeMillis - ts} url=$url dstUrl=${destinationUrl.getOrElse("")} result=$res")
     Ok(JsBoolean(res))
   }

@@ -160,54 +160,115 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def countFollowerInfosByLibraryId(libraries: Seq[Library], maxMembersShown: Int, viewerUserIdOpt: Option[Id[User]]): Map[Id[Library], (Seq[Id[User]], Map[LibraryAccess, Int])] = libraries.map { library =>
+    val info: (Seq[Id[User]], Map[LibraryAccess, Int]) = library.kind match {
+      case LibraryKind.USER_CREATED =>
+        val (collaborators, followers, _, counts) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
+        val inviters: Seq[LibraryMembership] = viewerUserIdOpt.map { userId =>
+          db.readOnlyReplica { implicit session =>
+            libraryInviteRepo.getWithLibraryIdAndUserId(library.id.get, userId).filter { invite => //not cached
+              invite.inviterId != library.ownerId
+            }.map { invite =>
+              libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, invite.inviterId) //not cached
+            }
+          }.flatten
+        }.getOrElse(Seq.empty)
+        val all = (inviters ++ collaborators.filter(!inviters.contains(_)) ++ followers.filter(!inviters.contains(_))).map(_.userId)
+        (all, counts)
+      case _ =>
+        (Seq.empty, Map.empty)
+    }
+    library.id.get -> info
+  }.toMap
+
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int,
     idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
+    libraries.groupBy(l => l.id.get).toMap.foreach { case (lib, set) => if (set.size > 1) throw new Exception(s"There are ${set.size} identical libraries of $lib") }
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
-          val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
+          val keeps = db.readOnlyMaster { implicit session =>
+            library.kind match {
+              case LibraryKind.USER_CREATED => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
+              case LibraryKind.SYSTEM_MAIN =>
+                assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
+                if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.ALL_KEEPS_VIEW)) { //cached
+                  keepRepo.getNonPrivate(library.ownerId, 0, maxKeepsShown) //not cached
+                } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
+              case LibraryKind.SYSTEM_SECRET =>
+                assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
+                if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.ALL_KEEPS_VIEW)) { //cached
+                  keepRepo.getPrivate(library.ownerId, 0, maxKeepsShown) //not cached
+                } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
+            }
+
+          }
           keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, withKeepTime)
         } else Future.successful(Seq.empty)
       }
     }.toMap
 
-    val followerInfosByLibraryId = libraries.map { library =>
-      val (collaborators, followers, _, counts) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
-      val inviters: Seq[LibraryMembership] = viewerUserIdOpt.map { userId =>
-        db.readOnlyReplica { implicit session =>
-          libraryInviteRepo.getWithLibraryIdAndUserId(library.id.get, userId).filter { invite =>
-            invite.inviterId != library.ownerId
-          }.map { invite =>
-            libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, invite.inviterId)
-          }
-        }.flatten
-      }.getOrElse(Seq.empty)
-      library.id.get -> ((inviters ++ collaborators.filter(!inviters.contains(_)) ++ followers.filter(!inviters.contains(_))).map(_.userId), counts)
-    }.toMap
+    val followerInfosByLibraryId = countFollowerInfosByLibraryId(libraries, maxMembersShown, viewerUserIdOpt)
 
-    val usersById = {
+    val usersByIdF = {
       val allUsersShown = libraries.flatMap { library => followerInfosByLibraryId(library.id.get)._1 :+ library.ownerId }.toSet
-      db.readOnlyReplica { implicit s => basicUserRepo.loadAll(allUsersShown) }
+      db.readOnlyMasterAsync { implicit s => basicUserRepo.loadAll(allUsersShown) } //cached
     }
 
-    val keepCountsByLibraries = db.readOnlyReplica { implicit s =>
-      keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet)
+    val futureCountsByLibraryId = {
+      val keepCountsByLibraries: Map[Id[Library], Int] = db.readOnlyMaster { implicit s =>
+        val userLibs = libraries.filter(_.kind == LibraryKind.USER_CREATED).map(_.id.get).toSet
+        var userLibCounts: Map[Id[Library], Int] = keepRepo.getCountsByLibrary(userLibs) //todo(eishay): switch on ALL_KEEPS_VIEW
+        if (userLibs.size < libraries.size) {
+          val privateLibOpt = libraries.find(_.kind == LibraryKind.SYSTEM_SECRET)
+          val mainLibOpt = libraries.find(_.kind == LibraryKind.SYSTEM_MAIN)
+          val owner = privateLibOpt.map(_.ownerId).orElse(mainLibOpt.map(_.ownerId)).getOrElse(
+            throw new Exception(s"no main or secret libs in ${libraries.size} libs while userLibs counts for $userLibs is $userLibCounts. Libs are ${libraries.mkString("\n")}"))
+          if (experimentCommander.userHasExperiment(owner, ExperimentType.ALL_KEEPS_VIEW)) {
+            val (privateCount, publicCount) = keepRepo.getPrivatePublicCountByUser(owner)
+            privateLibOpt foreach { privateLib =>
+              userLibCounts = userLibCounts + (privateLib.id.get -> privateCount)
+            }
+            mainLibOpt foreach { mainLib =>
+              userLibCounts = userLibCounts + (mainLib.id.get -> publicCount)
+            }
+          } else {
+            privateLibOpt foreach { privateLib =>
+              userLibCounts = userLibCounts + (privateLib.id.get -> keepRepo.getCountByLibrary(privateLib.id.get))
+            }
+            mainLibOpt foreach { mainLib =>
+              userLibCounts = userLibCounts + (mainLib.id.get -> keepRepo.getCountByLibrary(mainLib.id.get))
+            }
+          }
+        }
+        userLibCounts
+      }
+      libraries.map { library =>
+        library.id.get -> SafeFuture {
+          val counts = followerInfosByLibraryId(library.id.get)._2
+          val collaboratorCount = counts.getOrElse(LibraryAccess.READ_WRITE, 0)
+          val followerCount = counts.getOrElse(LibraryAccess.READ_INSERT, 0) + counts.getOrElse(LibraryAccess.READ_ONLY, 0)
+          val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0)
+          (collaboratorCount, followerCount, keepCount)
+        }
+      }.toMap
     }
 
-    val countsByLibraryId = libraries.map { library =>
-      val counts = followerInfosByLibraryId(library.id.get)._2
-      val collaboratorCount = counts(LibraryAccess.READ_WRITE)
-      val followerCount = counts(LibraryAccess.READ_INSERT) + counts(LibraryAccess.READ_ONLY)
-      val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0)
-      library.id.get -> (collaboratorCount, followerCount, keepCount)
+    val imagesF = libraries.map { library =>
+      library.id.get -> SafeFuture { libraryImageCommander.getBestImageForLibrary(library.id.get, idealLibraryImageSize) } //not cached
     }.toMap
 
     val futureFullLibraryInfos = libraries.map { lib =>
-      futureKeepInfosByLibraryId(lib.id.get).map { keepInfos =>
-        val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(lib.id.get)
+      val libId = lib.id.get
+      for {
+        keepInfos <- futureKeepInfosByLibraryId(libId)
+        counts <- futureCountsByLibraryId(libId)
+        usersById <- usersByIdF
+        libImageOpt <- imagesF(libId)
+      } yield {
+        val (collaboratorCount, followerCount, keepCount) = counts
         val owner = usersById(lib.ownerId)
         val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_))
-        val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, idealLibraryImageSize)
         lib.id.get -> FullLibraryInfo(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -249,11 +310,11 @@ class LibraryCommander @Inject() (
     val followersAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_ONLY)
     val relevantInviteStates = Set(LibraryInviteStates.ACTIVE)
 
-    val memberCount = db.readOnlyMaster { implicit s => libraryMembershipRepo.countWithLibraryIdByAccess(libraryId) }
+    val memberCount = db.readOnlyMaster { implicit s => libraryMembershipRepo.countWithLibraryIdByAccess(libraryId) } //todo(eishay): not cached
 
     if (limit > 0) db.readOnlyMaster { implicit session =>
       // Get Collaborators
-      val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, offset, limit, collaboratorsAccess)
+      val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, offset, limit, collaboratorsAccess) //not cached
       val collaboratorsShown = collaborators.length
 
       val numCollaborators = memberCount(LibraryAccess.READ_INSERT) + memberCount(LibraryAccess.READ_WRITE)
@@ -266,7 +327,7 @@ class LibraryCommander @Inject() (
           val collaboratorsTotal = numCollaborators
           offset - collaboratorsTotal
         }
-        libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, followersOffset, followersLimit, followersAccess)
+        libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, followersOffset, followersLimit, followersAccess) //not cached
       }
 
       // Get Invitees with Invites
@@ -277,7 +338,7 @@ class LibraryCommander @Inject() (
           val membersTotal = numMembers
           offset - membersTotal
         }
-        libraryInviteRepo.pageInviteesByLibraryId(libraryId, inviteesOffset, inviteesLimit, relevantInviteStates)
+        libraryInviteRepo.pageInviteesByLibraryId(libraryId, inviteesOffset, inviteesLimit, relevantInviteStates) //not cached
       }
       (collaborators, followers, inviteesWithInvites, memberCount)
     }
@@ -1293,7 +1354,7 @@ class LibraryCommander @Inject() (
     }
 
     libs.par map { lib => // may want to optimize queries below into bulk queries
-      val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getForLibraryId(lib.id.get))
+      val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get))
       val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
       val (numFollowers, followersSample) = if (lib.memberCount > 1) {
         val count = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)

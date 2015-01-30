@@ -40,13 +40,13 @@ class KeepDecorator @Inject() (
       val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
         val idToLibrary = {
           val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
-          db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) }
+          db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) } //cached
         }
         val idToBasicUser = {
           val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
           val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
           val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
-          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners) }
+          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners) } //cached
         }
         val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
 
@@ -57,13 +57,13 @@ class KeepDecorator @Inject() (
       })
 
       val colls = db.readOnlyMaster { implicit s =>
-        keepToCollectionRepo.getCollectionsForKeeps(keeps)
+        keepToCollectionRepo.getCollectionsForKeeps(keeps) //cached
       }.map(collectionCommander.getBasicCollections)
 
       val allMyKeeps = perspectiveUserIdOpt.map { userId => getBasicKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[BasicKeep]]
 
       val librariesWithWriteAccess = perspectiveUserIdOpt.map { userId =>
-        db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) }
+        db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) } //cached
       } getOrElse Set.empty
 
       for {
