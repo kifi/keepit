@@ -470,7 +470,7 @@ k.keepBox = k.keepBox || (function () {
         });
       }
     } else {
-      var name = (el.firstElementChild || {}).textContent;
+      var name = $(el).find('.kifi-keep-box-lib-1').text();
       var $view = $(k.render('html/keeper/keep_box_new_lib', {name: name}));
       addCreateLibraryBindings($view);
       swipeTo($view);
