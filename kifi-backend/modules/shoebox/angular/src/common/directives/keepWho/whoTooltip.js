@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfWhoTooltip', [
-  '$window', '$timeout', '$rootElement', '$compile', '$templateCache', 'keepWhoService',
-  function ($window, $timeout, $rootElement, $compile, $templateCache, keepWhoService) {
+  '$window', '$timeout', '$rootElement', '$compile', '$templateCache', 'keepWhoService', 'platformService',
+  function ($window, $timeout, $rootElement, $compile, $templateCache, keepWhoService, platformService) {
     return {
       restrict: 'A',
       link: function (scope, element) {
@@ -40,6 +40,10 @@ angular.module('kifi')
         });
 
         scope.showTooltip = function () {
+          if (platformService.isSupportedMobilePlatform()) {
+            return;
+          }
+
           if (!tooltip) {
             // Create tooltip
             tooltip = angular.element($templateCache.get('common/directives/keepWho/friendCard.tpl.html'));
