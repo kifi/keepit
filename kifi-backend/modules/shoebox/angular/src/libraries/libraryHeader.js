@@ -142,7 +142,7 @@ angular.module('kifi')
             scope.coverImagePos = formatCoverImagePos(image);
           }
 
-          scope.library.followButtonText = (scope.library.abTestTreatment && !scope.library.abTestTreatment.isControl) ?
+          scope.library.followButtonText = (scope.userLoggedOut && scope.library.abTestTreatment && !scope.library.abTestTreatment.isControl) ?
             scope.library.abTestTreatment.data.buttonText :
             'Follow Library';
         }
