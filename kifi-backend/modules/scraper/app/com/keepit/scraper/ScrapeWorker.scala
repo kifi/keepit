@@ -426,7 +426,7 @@ class ScrapeWorkerImpl @Inject() (
 
   private def isNonSensitive(url: String): Future[Boolean] = {
     shoeboxScraperClient.getAllURLPatterns().map { patterns =>
-      val pat = patterns.find(rule => url.matches(rule.pattern))
+      val pat = patterns.rules.find(rule => url.matches(rule.pattern))
       pat.exists(_.nonSensitive)
     }
   }
