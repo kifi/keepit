@@ -52,7 +52,10 @@ angular.module('kifi')
       $scope.platformName = installService.getPlatformName();
       if ($scope.platformName) {
         $scope.thanksVersion = 'installExt';
-        $scope.installExtension = installService.triggerInstall;
+        $scope.installExtension = function() {
+          $analytics.eventTrack('visitor_clicked_page', {type: 'installLibrary', action: 'install'});
+          return installService.triggerInstall;
+        };
       } else {
         $scope.thanksVersion = 'notSupported';
       }
@@ -61,7 +64,11 @@ angular.module('kifi')
         $rootScope.$emit('trackLibraryEvent', 'view', { type: 'installLibrary' });
       }
 
-      $scope.close = modalService.close;
+      $scope.close = function () {
+        $analytics.eventTrack('visitor_clicked_page', {type : 'installLibrary', action: 'close'});
+        return modalService.close;
+      };
+
       modalService.open({
         template: 'signup/thanksForRegisteringModal.tpl.html',
         scope: $scope
