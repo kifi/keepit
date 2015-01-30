@@ -4,7 +4,7 @@ import akka.actor.{ ActorSystem, Props }
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.{ Inject, Provider, Singleton }
-import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.concurrent.{ ReactiveLock, ExecutionContext }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
@@ -61,6 +61,8 @@ class ScrapeProcessorActorImpl @Inject() (
 
   private[this] def getQueueSize(): Future[Int] = actor.ask(QueueSize).mapTo[Int]
 
+  private[this] val lock = new ReactiveLock(1)
+
   override def pull(): Unit = {
     getQueueSize() onComplete {
       case Success(qSize) =>
@@ -68,7 +70,8 @@ class ScrapeProcessorActorImpl @Inject() (
           log.info(s"[ScrapeProcessorActorImpl.pull] qSize=$qSize. Let's get some work.")
           serviceDiscovery.thisInstance.map { inst =>
             if (inst.isHealthy) {
-              asyncHelper.assignTasks(inst.id.id, config.pullMax).onComplete {
+              val taskFuture = lock.withLockFuture(asyncHelper.assignTasks(inst.id.id, config.pullMax))
+              taskFuture.onComplete {
                 case Failure(t) =>
                   log.error(s"[ScrapeProcessorActorImpl.pull(${inst.id.id})] Caught exception $t while pulling for tasks", t) // move along
                 case Success(requests) =>
