@@ -80,8 +80,9 @@ class ScrapeProcessorActorImpl @Inject() (
                 }
               }
             }
-            queuedFuture.onFailure { case e =>
-              airbrake.notify(s"failed si to parse and queue task", e)
+            queuedFuture.onFailure {
+              case e =>
+                airbrake.notify(s"failed si to parse and queue task", e)
             }
           }
         }
@@ -91,12 +92,12 @@ class ScrapeProcessorActorImpl @Inject() (
         log.info(s"[ScrapeProcessorActorImpl.pull] qSize=${qSize}; Skip a round")
       }
     }
-    futureTask.onFailure { case e =>
-      airbrake.notify(s"Failed to obtain qSize from supervisor", e)
+    futureTask.onFailure {
+      case e =>
+        airbrake.notify(s"Failed to obtain qSize from supervisor", e)
     }
     futureTask
   }
-
 
 }
 
