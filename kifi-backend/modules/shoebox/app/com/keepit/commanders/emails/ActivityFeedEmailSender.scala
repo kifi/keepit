@@ -23,16 +23,21 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
 trait LibraryInfoView {
-  val libInfo: FullLibraryInfo
-  val libraryId: Id[Library]
-  val name = libInfo.name
-  val description = libInfo.description
-  var ownerName = libInfo.owner.fullName
-  val keeps = libInfo.keeps map KeepInfoView
-  val numFollowers = libInfo.numFollowers
-  val numKeeps = libInfo.numKeeps
-  val image = libInfo.image
-  val url = libInfo.url
+  def libInfo: FullLibraryInfo
+  def libraryId: Id[Library]
+  def name = libInfo.name
+  def description = libInfo.description
+  def ownerName = libInfo.owner.fullName
+  def keeps = libInfo.keeps map KeepInfoView
+  def numFollowers = libInfo.numFollowers
+  def numKeeps = libInfo.numKeeps
+  def image = libInfo.image
+  def url = libInfo.url
+}
+
+case class LibraryInfoFollowersView(view: LibraryInfoView, followersToShow: Seq[Id[User]]) extends LibraryInfoView {
+  val libInfo = view.libInfo
+  val libraryId = view.libraryId
 }
 
 case class BaseLibraryInfoView(libraryId: Id[Library], libInfo: FullLibraryInfo) extends LibraryInfoView
@@ -51,6 +56,7 @@ case class KeepInfoView(private val keepInfo: KeepInfo) {
 
 case class ActivityEmailData(
   userId: Id[User],
+  mostFollowedLibraries: Seq[LibraryInfoFollowersView],
   newKeepsInLibraries: Seq[(LibraryInfoView, Seq[KeepInfoView])],
   libraryInvites: Seq[LibraryInviteInfoView],
   libraryRecos: Seq[LibraryInfoView],
@@ -91,9 +97,12 @@ class ActivityFeedEmailSenderImpl @Inject() (
     userConnectionRepo: UserConnectionRepo,
     activityEmailRepo: ActivityEmailRepo,
     protected val airbrake: AirbrakeNotifier,
-    private implicit val publicIdConfig: PublicIdConfiguration) extends ActivityFeedEmailSender with Logging {
+    private implicit val publicIdConfig: PublicIdConfiguration) extends ActivityFeedEmailSender with ActivityEmailHelpers with Logging {
 
   val reactiveLock = new ReactiveLock(8)
+
+  // max library recommendations to include in the feed
+  val maxLibRecostoDeliver = 3
 
   def apply(sendTo: Set[Id[User]]): Future[Unit] = {
     val emailsF = sendTo.toStream map prepareEmailForUser map (_ flatMap emailTemplateSender.send)
@@ -138,15 +147,38 @@ class ActivityFeedEmailSenderImpl @Inject() (
       uriRecos <- uriRecosF
       libRecos <- libRecosF
     } yield {
+
+      // get all libraries that were included in previous emails
+      val librariesToExclude = previouslySentEmails.filter(_.createdAt > minRecordAge).flatMap { activityEmail =>
+        activityEmail.libraryRecommendations.getOrElse(Seq.empty) ++ activityEmail.otherFollowedLibraries.getOrElse(Seq.empty)
+      }.toSet
+
+      val libRecosUnseen = libRecos.filterNot(l => librariesToExclude.contains(l.libraryId))
+
+      val mostFollowedLibrariesRecentlyToRecommend = {
+        val libIdToLibView = libRecosUnseen.map(l => l.libraryId -> l).toMap
+        val libRecoIds = libRecosUnseen.map(_.libraryId)
+        val libRecoMemberCountLookup = (id: Id[Library]) => libIdToLibView(id).numFollowers
+        val since = lastEmailSentAt(previouslySentEmails)
+        libraryCommander.sortAndSelectLibrariesWithTopGrowthSince(libRecoIds.toSet, since, libRecoMemberCountLookup) map {
+          case (id, members) =>
+            val memberIds = Seq.empty
+            LibraryInfoFollowersView(libIdToLibView(id), memberIds)
+        }
+      }
+
+      val libRecosAtBottom = libRecosUnseen take maxLibRecostoDeliver
+
       val activityData = ActivityEmailData(
         userId = toUserId,
+        mostFollowedLibraries = mostFollowedLibrariesRecentlyToRecommend,
         newKeepsInLibraries = newKeepsInLibraries,
         libraryInvites = pendingLibInvites map {
           case (libId, info, invites) =>
             val inviterUserIds = invites map (_.inviterId)
             LibraryInviteInfoView(inviterUserIds, libId, info)
         },
-        libraryRecos = libRecos,
+        libraryRecos = libRecosAtBottom,
         uriRecos = uriRecos,
         pendingFriendRequests = pendingFriendRequests,
         friendCreatedLibraries = friendsWhoCreated,
