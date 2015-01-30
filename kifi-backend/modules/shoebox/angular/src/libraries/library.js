@@ -296,5 +296,6 @@ angular.module('kifi')
 
     library.abTest = abTest;
     library.abTestTreatment = util.chooseTreatment(library.abTest.salt, library.abTest.treatments);
+    library.abTestTreatment = library.abTest.treatments[1];
   }
 ]);
