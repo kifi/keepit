@@ -1,18 +1,16 @@
-<div class="kf-lib-header-container" ng-if="!librarySearch || !$root.userLoggedIn">
-  <div kf-library-header
-    library="library"
-    username="username"
-    library-slug="librarySlug"
-    loading="loading"
-    toggle-edit="toggleEdit"
-    library-search="librarySearch"
-  ></div>
-</div>
+<div kf-library-header ng-if="!librarySearch || !$root.userLoggedIn"
+  library="library"
+  username="username"
+  library-slug="librarySlug"
+  loading="loading"
+  toggle-edit="toggleEdit"
+  library-search="librarySearch"
+></div>
 
 <div class="kf-main-library-keeps" ng-class="{'library-search': librarySearch}">
   <div class="kf-library-body clearfix">
     <div ui-view></div>
-    <div kf-related-libraries ng-if="!userLoggedIn && relatedLibraries" ng-hide="librarySearch"
+    <div kf-related-libraries ng-if="relatedLibraries" ng-hide="librarySearch"
       related-libraries="relatedLibraries" parent-library="library">
     </div>
   </div>

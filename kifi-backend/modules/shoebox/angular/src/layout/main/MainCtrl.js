@@ -314,43 +314,5 @@ angular.module('kifi')
       $scope.showDelightedSurvey = profileService.prefs && profileService.prefs.show_delighted_question;
     });
     $scope.$on('$destroy', deregisterPrefsChangedListener);
-
-    /**
-     * Make the page "extension-friendly"
-     */
-    var htmlElement = angular.element(document.documentElement);
-    // override right margin to always be 0
-    htmlElement.css({marginRight: 0});
-    $rootScope.$watch(function () {
-      return htmlElement[0].getAttribute('kifi-pane-parent') !== null;
-    }, function (res) {
-      var mainElement = $rootElement.find('.kf-main');
-      var rightCol = $rootElement.find('.kf-col-right');
-      var header = $rootElement.find('.kf-header-inner');
-      if (res) {
-        // find the margin-right rule that should have been applied
-        var fakeHtml = angular.element(document.createElement('html'));
-        fakeHtml.attr({
-          'kifi-pane-parent':'',
-          'kifi-with-pane':''
-        });
-        fakeHtml.hide().appendTo('html');
-        var marginRight = fakeHtml.css('margin-right');
-        fakeHtml.remove();
-
-        var currentRightColWidth = rightCol.width();
-        if (Math.abs(parseInt(marginRight,10) - currentRightColWidth) < 15) {
-          // avoid resizing if the width difference would be too small
-          marginRight = currentRightColWidth + 'px';
-        }
-        mainElement.css('width', 'calc(100% - ' + marginRight + ')');
-        rightCol.css('width', fakeHtml.css('margin-right'));
-        header.css('padding-right', marginRight);
-      } else {
-        mainElement.css('width', '');
-        rightCol.css('width', '');
-        header.css('padding-right', '');
-      }
-    });
   }
 ]);
