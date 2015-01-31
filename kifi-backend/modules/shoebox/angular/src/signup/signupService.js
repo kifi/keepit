@@ -41,10 +41,10 @@ angular.module('kifi')
 ])
 
 .controller('SignupCtrl', [
-  '$scope', '$FB', '$twitter', 'modalService', 'registrationService', '$window', 'installService',
-  '$q', '$log', '$rootScope', '$location', 'routeService', '$analytics',
-  function ($scope, $FB, $twitter, modalService, registrationService, $window, installService,
-    $q, $log, $rootScope, $location, routeService, $analytics) {
+  '$scope', 'modalService', 'registrationService', '$window', 'installService',
+  '$rootScope', '$location', 'routeService', '$state', 'util', '$analytics',
+  function ($scope, modalService, registrationService, $window, installService,
+    $rootScope, $location, routeService, $state, util, $analytics) {
 
     // Shared data across several modals
 
@@ -88,21 +88,23 @@ angular.module('kifi')
     }
 
     function trackEvent(eventName, typeBase, action) {
-      if ($scope.userData.libraryId) {
+      var currentState = $state.current.name;
+      if (util.startsWith(currentState, 'library.')) {
         typeBase += 'Library';
         $analytics.eventTrack(eventName, {type: typeBase, action: action});
-      } else {
+      } else if (util.startsWith(currentState, 'userProfile.')) {
         typeBase += 'UserProfile';
         $analytics.eventTrack(eventName, {type: typeBase, action: action});
       }
     }
 
     function emitTracking(eventType, typeBase, attributes) {
-      if ($scope.userData.libraryId) {
+      var currentState = $state.current.name;
+      if (util.startsWith(currentState, 'library.')) {
         typeBase += 'Library';
         attributes = _.extend({type: typeBase}, attributes || {});
         $rootScope.$emit('trackLibraryEvent', eventType, attributes);
-      } else {
+      } else if (util.startsWith(currentState, 'userProfile.')) {
         typeBase += 'UserProfile';
         attributes = _.extend({type: typeBase}, attributes || {});
         $rootScope.$emit('trackUserProfileEvent', eventType, attributes);
