@@ -1,4 +1,4 @@
-.kf-header
+.kf-lih
   position: fixed
   top: 0
   width: 100%
@@ -7,14 +7,14 @@
   z-index: 500
   user-select: none
 
-.kf-header-inner
+.kf-lih-inner
   height: 100%
   max-width: userAppMaxWidth
   margin: 0 auto
   transition: padding 0.5s
   box-sizing: border-box
 
-.kf-header-left
+.kf-lih-left
   float: left
   height: 100%
   width: 240px
@@ -22,91 +22,75 @@
   line-height: 62px
   box-sizing: border-box
 
-.kf-header-toggle-menu
-.kf-header-left-separator
-.kf-header-profile-picture
-.kf-header-logo
+.kf-lih-toggle-menu
+.kf-lih-left-separator
+.kf-lih-profile-picture
   vertical-align: middle
 
-.kf-header-toggle-menu
-.kf-header-left-separator
+.kf-lih-toggle-menu
+.kf-lih-left-separator
   display: none
 
-.kf-header-profile-picture
-.kf-header-logo
+.kf-lih-profile-picture
   display: inline-block
 
-.kf-header-toggle-menu
+.kf-lih-toggle-menu
   cursor: pointer
   margin: 0 13px
 
-.kf-header-left-separator
+.kf-lih-left-separator
   height: 35px
   border: 1px solid #7d7d7d
 
-.kf-header-profile-picture
+.kf-lih-profile-picture
   width: 32px
   height: 32px
   margin: 0 6px 0 6px
   border-radius: 100%
   background-size: 100%
 
-.kf-header-logo
+.kf-lih-logo
+  display: inline-block
+  vertical-align: middle
   width: 70px
   height: 27px
   margin-left: 10px
 
 @media (max-width: 1024px)
-  .kf-header-toggle-menu
-  .kf-header-left-separator
+  .kf-lih-toggle-menu
+  .kf-lih-left-separator
     display: inline-block
 
-  .kf-header-inner
-    .kf-header-search-bar
+  .kf-lih-inner
+    .kf-lih-search-bar
       width: calc(100% - 380px)
 
-  .kf-logged-in & .kf-header-left
+  .kf-lih-left
     margin-left: 20px
     width: 140px
 
-  .kf-header-toggle-menu
-    &.open
+  .kf-lih-toggle-menu
+    &.kf-open
       display: inline-block
-    &.closed
+    &.kf-closed
       display: none
 
   .kf-sidebar-inactive
-    .kf-header-toggle-menu
+    .kf-lih-toggle-menu
       &.open
         display: none
       &.closed
         display: inline-block
 
 
-a.kf-header-callout
-  position: relative
-  top: 12px
-  width: 60px
-  font-size: 10px
-  line-height: 10px
-  font-weight: 300
-  font-style: italic
-  font-smoothing: antialiased
-  color: #fff
-  text-decoration: none
-
-a.kf-header-callout:hover
-  text-decoration: underline
-
-
-.kf-header-search-bar
+.kf-lih-search-bar
   float: left
   box-sizing: border-box
   max-width: 850px
   width: calc(100% - 530px)
   padding-top: 7px
 
-.kf-query-lib-container
+.kf-lih-search-wrap
   position: relative
   z-index: 1
   box-sizing: border-box
@@ -118,7 +102,7 @@ a.kf-header-callout:hover
   border-radius: 3px
   background-color: #fff
 
-.kf-query-lib
+.kf-lih-search-query-wrap
   position: relative
   top: 3px
   display: inline-block
@@ -126,28 +110,24 @@ a.kf-header-callout:hover
   width: calc(70% - 125px)
   height: 24px
 
-  &.extend
+  &.kf-extend
     width: calc(100% - 90px)
     margin-left: 8px
 
-  input
+  .kf-lih-search-query-input
     width: 100%
     color: textDarkGray
 
-
-.kf-query-lib:focus + .kf-query-lib-icon
-  sprite2x($search-icon-active)
-
-.kf-query-lib-icon
+.kf-lih-search-icon
   display: inline-block
   margin-left: 5px
   sprite2x($search-icon-default)
   vertical-align: bottom
 
-  &.focused
+  &.kf-focused
     sprite2x($search-icon-active)
 
-.kf-search-bar-lib-owner-img
+.kf-lih-search-lib-owner-img
   position: relative
   left: 9px
   z-index: 1
@@ -155,7 +135,7 @@ a.kf-header-callout:hover
   height: 24px
   border-radius: 100%
 
-.kf-search-bar-lib-name
+.kf-lih-search-lib-name
   position: relative
   left: -10px
   vertical-align: bottom
@@ -170,7 +150,7 @@ a.kf-header-callout:hover
   white-space: nowrap
   text-overflow: ellipsis
 
-.kf-search-bar-lib-name-clear
+.kf-lih-search-lib-x
   position: relative
   left: -10px
   vertical-align: bottom
@@ -181,7 +161,7 @@ a.kf-header-callout:hover
   color: #fff
   cursor: pointer
 
-.kf-search-bar-clear
+.kf-lih-search-clear
   float: right
   margin-top: 3px
   margin-right: 8px
@@ -190,7 +170,7 @@ a.kf-header-callout:hover
   color: blueColor
   cursor: pointer
 
-.kf-header-right
+.kf-lih-right
   overflow: hidden
   height: 100%
   margin-right: 60px
@@ -198,6 +178,9 @@ a.kf-header-callout:hover
   text-align: right
   font-size: 14px
   box-sizing: border-box
+
+  @media screen and (max-width: 1280px)
+    margin-right: 30px
 
   .kf-dropdown-menu
     display: none
@@ -207,25 +190,19 @@ a.kf-header-callout:hover
     :active
       background-color: #ccc
 
-    .kf-dropdown-menu-item
-      cursor: pointer
-
   .sprite
     cursor: pointer
     margin: 0 5px
-
-  @media screen and (max-width: 1280px)
-    margin-right: 30px
 
   .sprite-add-link
     &:hover
       sprite2x($add-link-active)
 
-.kf-header-manage-tags
+.kf-lih-manage-tags
   height: 32px
   width: 32px
 
-.kf-header-icon-hover-container
+.kf-lih-dropdown-menu-trigger
   display: inline-block
 
   &:hover
@@ -235,84 +212,10 @@ a.kf-header-callout:hover
     .on-icon
       display: none
 
-.kf-header-friends
+.kf-lih-friends
   .kf-dropdown-menu
     margin-left: -128px
 
-.kf-header-profile
+.kf-lih-profile
   .kf-dropdown-menu
     margin-left: -50px
-
-.kf-header-icon-friends
-  position: relative
-
-.kf-friend-invite-badge
-  width: 12px
-  height: 12px
-  border-radius: 50%
-  background-color: redColor
-  animation: badge-zoom 1s infinite linear alternate
-
-.kf-friend-invite-badge.on-icon
-  position: absolute
-  top: -2px
-  left: 21px
-.kf-friend-invite-badge.on-item
-  float: left
-  margin-left: 16px
-  margin-top: 9px
-
-@keyframes badge-zoom {
-  from {
-    transform: scale(0.8)
-  }
-  to {
-    transform: scale(1)
-  }
-}
-
-
-//
-// Public header styles.
-//
-.public-header
-  &.kf-header
-    background-color: #f9fafb
-    border-bottom: 1px solid #dbdbdb
-
-  .kf-header-inner
-    width: 745px
-
-  .kifi-clover-logo-icon
-    display: inline-block
-    vertical-align: middle
-    margin-right: 2px
-    width: 28px
-    height: 28px
-    background-repeat: no-repeat
-
-  .kf-header-logo
-    margin-right: 4px
-    width: 40px
-    height: 21px
-    background-repeat: no-repeat
-
-  .public-header-tagline
-    display: inline-block
-    vertical-align: -7px
-    width: 100px
-    font-size: 11px
-    color: #7d7d7d
-    line-height: 1.1
-
-  .public-header-link
-  .public-header-dot
-    color: #818692
-
-  .public-header-link
-    &:focus
-    &:hover
-      color: #686d79
-
-  .public-header-dot
-    margin: 0 10px
