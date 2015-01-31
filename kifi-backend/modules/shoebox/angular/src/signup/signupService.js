@@ -67,6 +67,18 @@ angular.module('kifi')
       return hasError;
     };
 
+    $scope.trackWebstore = function() {
+      trackEvent('visitor_clicked_page', 'install', 'webstore');
+    };
+
+    $scope.trackGetChrome = function() {
+      trackEvent('visitor_clicked_page', 'install', 'getChrome');
+    };
+
+    $scope.trackGetFirefox = function() {
+      trackEvent('visitor_clicked_page', 'install', 'getFirefox');
+    };
+
     function createSignupPath(network) {
       return routeService.socialSignupWithRedirect(
           network,
