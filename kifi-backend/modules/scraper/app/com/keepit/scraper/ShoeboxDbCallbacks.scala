@@ -31,8 +31,6 @@ class ShoeboxDbCallbackHelper @Inject() (
   def saveNormalizedUri(uri: NormalizedURI): Future[NormalizedURI] = shoeboxScraperClient.saveNormalizedURI(uri)
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = shoeboxScraperClient.updateNormalizedURIState(uriId, state)
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = shoeboxScraperClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE))
-  def savePageInfo(info: PageInfo): Future[Unit] = shoeboxScraperClient.savePageInfo(info)
-  def saveImageInfo(info: ImageInfo): Future[Unit] = shoeboxScraperClient.saveImageInfo(info)
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]] = shoeboxScraperClient.getBookmarksByUriWithoutTitle(uriId)
   def getLatestKeep(url: String): Future[Option[Keep]] = shoeboxScraperClient.getLatestKeep(url)
   def saveBookmark(bookmark: Keep): Future[Keep] = shoeboxScraperClient.saveBookmark(bookmark)
@@ -50,8 +48,6 @@ trait ShoeboxDbCallbacks {
   def saveNormalizedUri(uri: NormalizedURI): Future[NormalizedURI]
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit]
-  def savePageInfo(info: PageInfo): Future[Unit]
-  def saveImageInfo(info: ImageInfo): Future[Unit]
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]]
   def getLatestKeep(url: String): Future[Option[Keep]]
   def saveBookmark(bookmark: Keep): Future[Keep]

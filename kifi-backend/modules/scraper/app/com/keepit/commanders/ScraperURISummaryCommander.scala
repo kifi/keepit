@@ -3,6 +3,7 @@ package com.keepit.commanders
 import java.awt.image.BufferedImage
 
 import com.keepit.common.logging.Logging
+import com.keepit.shoebox.ShoeboxScraperClient
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
@@ -35,8 +36,6 @@ import scala.util.{ Failure, Success }
 trait ScraperURISummaryCommander {
   // On the way in:
   def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]]
-  // On the way out:
-  def fetchFromEmbedly(uri: NormalizedURIRef): Future[Option[URISummary]]
 }
 
 class ScraperURISummaryCommanderImpl @Inject() (
@@ -47,27 +46,8 @@ class ScraperURISummaryCommanderImpl @Inject() (
     imageConfig: S3ImageConfig,
     airbrake: AirbrakeNotifier,
     uriImageCommander: UriImageCommander,
+    shoeboxScraperClient: ShoeboxScraperClient,
     callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander with Logging {
-
-  def fetchFromEmbedly(nUri: NormalizedURIRef): Future[Option[URISummary]] = {
-    fetchPageInfoAndImageInfo(nUri) map {
-      case (Some(pageInfo), imageInfoOpt) =>
-        callback.savePageInfo(pageInfo) // no wait
-
-        imageInfoOpt match {
-          case Some(imageInfo) =>
-            callback.saveImageInfo(imageInfo) // no wait
-
-            val urlOpt = imageInfoOpt.flatMap(getS3URL)
-            val widthOpt = imageInfoOpt.flatMap(_.width)
-            val heightOpt = imageInfoOpt.flatMap(_.height)
-            Some(URISummary(urlOpt, pageInfo.title, pageInfo.description, widthOpt, heightOpt))
-          case None =>
-            Some(URISummary(None, pageInfo.title, pageInfo.description))
-        }
-      case _ => None
-    }
-  }
 
   def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]] = {
     embedlyClient.getEmbedlyInfo(url).flatMap {
@@ -117,52 +97,6 @@ class ScraperURISummaryCommanderImpl @Inject() (
 
   // Internal:
 
-  private def fetchPageInfoAndImageInfo(nUri: NormalizedURIRef): Future[(Option[PageInfo], Option[ImageInfo])] = {
-    val watch = Stopwatch(s"[embedly] asking for $nUri")
-    val fullEmbedlyInfo = embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
-      watch.logTimeWith(s"got info: $embedlyInfoOpt") //this could be lots of logging, should remove it after problems resolved
-
-      val summaryOptF = for {
-        embedlyInfo <- embedlyInfoOpt
-      } yield {
-        val imageInfoOptF: Future[Option[ImageInfo]] = {
-          val name = RandomStringUtils.randomAlphanumeric(5)
-          val path = s3URIImageStore.getEmbedlyImageKey(nUri.externalId, name, ImageFormat.JPG.value)
-          val images = embedlyInfo.buildImageInfo(nUri.id, path, name)
-          val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.isValidImageUrl) }
-
-          nonBlankImages.headOption match {
-            case None =>
-              watch.logTimeWith(s"no selected image")
-              Future.successful(None)
-            case Some(image) =>
-              watch.logTimeWith(s"got a selected image : $image")
-              val future = fetchAndSaveImage(nUri, image)
-              future.onComplete { res =>
-                watch.logTimeWith(s"[success = ${res.isSuccess}}] fetched a selected image for : $image")
-              }
-              future
-          }
-        }
-        imageInfoOptF map { imageInfoOpt => (Some(embedlyInfo.toPageInfo(nUri.id)), imageInfoOpt) }
-      }
-      summaryOptF getOrElse Future.successful((None, None))
-    }
-    fullEmbedlyInfo.onComplete { res =>
-      watch.stop()
-    }
-    fullEmbedlyInfo
-  }
-
-  private def fetchAndSaveImage(uri: NormalizedURIRef, imageInfo: ImageInfo): Future[Option[ImageInfo]] = {
-    imageInfo.url match {
-      case Some(imageUrl) => imageFetcher.fetchRawImage(URI.parse(imageUrl).get) map { rawImageOpt =>
-        rawImageOpt flatMap { rawImage => storeImage(imageInfo, rawImage, uri) }
-      }
-      case None => Future.successful(None)
-    }
-  }
-
   /**
    * Stores image to S3
    */
@@ -176,13 +110,6 @@ class ScraperURISummaryCommanderImpl @Inject() (
         airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage}")
         None
     }
-  }
-
-  /**
-   * Get S3 url for image info
-   */
-  private def getS3URL(info: ImageInfo): Option[String] = {
-    Some(imageConfig.cdnBase + "/" + info.path)
   }
 
 }

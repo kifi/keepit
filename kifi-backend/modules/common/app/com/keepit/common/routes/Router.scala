@@ -126,8 +126,6 @@ object Shoebox extends Service {
     def assignScrapeTasks(zkId: Long, max: Int) = ServiceRoute(GET, "/internal/shoebox/database/assignScrapeTasks", Param("zkId", zkId), Param("max", max))
     def saveScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
     def saveNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/saveNormalizedURI")
-    def savePageInfo() = ServiceRoute(POST, "/internal/shoebox/database/savePageInfo")
-    def saveImageInfo() = ServiceRoute(POST, "/internal/shoebox/database/saveImageInfo")
     def updateNormalizedURI(uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/shoebox/database/updateNormalizedURI", Param("uriId", uriId))
     def recordPermanentRedirect() = ServiceRoute(POST, "/internal/shoebox/database/recordPermanentRedirect")
     def recordScrapedNormalization() = ServiceRoute(POST, "/internal/shoebox/database/recordScrapedNormalization")
@@ -330,7 +328,6 @@ object Scraper extends Service {
     def detectPorn() = ServiceRoute(POST, s"/internal/scraper/pornDetector/detectPorn")
     def whitelist() = ServiceRoute(POST, s"/internal/scraper/pornDetector/whitelist")
     def getEmbedlyInfo() = ServiceRoute(POST, s"/internal/scraper/embedly/embedlyInfo")
-    def getURISummaryFromEmbedly() = ServiceRoute(POST, s"/internal/scraper/uriSummary/embedly")
     def getURIWordCount() = ServiceRoute(POST, s"/internal/scraper/uriWordCount")
     def fetchAndPersistURIPreview() = ServiceRoute(POST, "/internal/scraper/fetchAndPersistURIPreview")
   }

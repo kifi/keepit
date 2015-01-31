@@ -209,24 +209,6 @@ class ShoeboxScraperController @Inject() (
     resFuture.map { res => Ok(Json.toJson(res)) }
   }
 
-  // Todo(Eishay): Stop returning ImageInfo
-  def saveImageInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val json = request.body
-    val info = json.as[ImageInfo]
-    scraperHelper.saveImageInfo(info)
-    Ok
-  }
-
-  def savePageInfo() = Action.async(parse.tolerantJson) { request =>
-    val json = request.body
-    val info = json.as[PageInfo]
-    val toSave = db.readOnlyMaster { implicit ro => pageInfoRepo.getByUri(info.uriId) } map { p => info.withId(p.id.get) } getOrElse info
-    scraperHelper.savePageInfo(toSave) map { saved =>
-      log.debug(s"[savePageInfo] result=$saved")
-      Ok
-    }
-  }
-
   def saveScrapeInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val ts = System.currentTimeMillis
     val json = request.body
