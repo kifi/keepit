@@ -146,8 +146,6 @@ trait ScraperServiceClient extends ServiceClient {
   def getURIWordCount(uriId: Id[NormalizedURI], url: String): Future[Int]
   def getURIWordCountOpt(uriId: Id[NormalizedURI], url: String): Option[Int]
   def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]]
-  // In the process of deprecation, please do not use:
-  def getURISummaryFromEmbedly(uri: NormalizedURIRef): Future[Option[URISummary]]
 
   // Admin only API (if you need one of these outside of admin, talk to Andrew):
   def status(): Seq[Future[(AmazonInstanceInfo, Seq[ScrapeJobStatus])]]
@@ -222,13 +220,6 @@ class ScraperServiceClientImpl @Inject() (
     val payload = Json.obj("whitelist" -> words)
     call(Scraper.internal.whitelist(), payload).map { r =>
       Json.fromJson[String](r.json).get
-    }
-  }
-
-  def getURISummaryFromEmbedly(uri: NormalizedURIRef): Future[Option[URISummary]] = {
-    val payload = Json.obj("uri" -> uri)
-    call(Scraper.internal.getURISummaryFromEmbedly, payload, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
-      r.json.as[Option[URISummary]]
     }
   }
 

@@ -67,33 +67,6 @@ class ScraperCallbackHelper @Inject() (
     requests
   }
 
-  def saveImageInfo(info: ImageInfo): Unit = {
-    imageInfoLock.withLock {
-      db.readWrite(attempts = 3) { implicit s =>
-        imageInfoRepo.save(info)
-      }
-    }
-  }
-
-  def savePageInfo(info: PageInfo): Future[PageInfo] = {
-    pageInfoLock.withLock {
-      db.readWrite(attempts = 3) { implicit s =>
-        try {
-          pageInfoRepo.save(info)
-        } catch {
-          case e: Exception => //typically MySQLIntegrityConstraintViolationException but any may do here
-            pageInfoRepo.getByUri(info.uriId) match {
-              case Some(fromDb) =>
-                //race condition. we lost, lets override...
-                pageInfoRepo.save(info.copy(id = fromDb.id))
-              case None =>
-                throw e
-            }
-        }
-      }
-    }
-  }
-
   def saveNormalizedURI(normalizedUri: NormalizedURI): NormalizedURI = {
     log.info(s"scraper callback: save uri: ${normalizedUri.id.get}")
     db.readWrite(attempts = 1) { implicit s =>
