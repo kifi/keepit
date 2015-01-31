@@ -146,11 +146,11 @@ angular.module('kifi')
       registerFinalizeModal();
     };
 
-    $scope.twAuthFromLibrary = function() {
+    $scope.twAuth = function() {
       emitTracking('click', 'signup', {action: 'clickAuthTwitter'});
     };
 
-    $scope.fbAuthFromLibrary = function () {
+    $scope.fbAuth = function () {
       emitTracking('click', 'signup', {action: 'clickAuthFacebook'});
     };
 
