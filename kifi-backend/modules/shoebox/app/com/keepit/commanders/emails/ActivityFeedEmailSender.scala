@@ -11,8 +11,8 @@ import com.keepit.common.db.slick.DBSession.ROSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.SystemEmailAddress
-import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.{ ElectronicMail, SystemEmailAddress }
+import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.common.time._
 import com.keepit.curator.model.{ FullUriRecoInfo, RecommendationSource, RecommendationSubSource }
 import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
@@ -69,7 +69,7 @@ case class ActivityEmailData(
 
 @ImplementedBy(classOf[ActivityFeedEmailSenderImpl])
 trait ActivityFeedEmailSender {
-  def apply(sendTo: Set[Id[User]]): Future[Unit]
+  def apply(sendTo: Set[Id[User]]): Future[Seq[ElectronicMail]]
   def apply(): Future[Unit]
 }
 
@@ -104,13 +104,13 @@ class ActivityFeedEmailSenderImpl @Inject() (
   // max library recommendations to include in the feed
   val maxLibRecostoDeliver = 3
 
-  def apply(sendTo: Set[Id[User]]): Future[Unit] = {
-    val emailsF = sendTo.toStream map prepareEmailForUser map (_ flatMap emailTemplateSender.send)
-    Future.sequence(emailsF) map (_ => Unit)
+  def apply(sendTo: Set[Id[User]]): Future[Seq[ElectronicMail]] = {
+    val emailsF = sendTo.toSeq map prepareEmailForUser map (_ flatMap emailTemplateSender.send)
+    Future.sequence(emailsF)
   }
 
   def apply(): Future[Unit] = {
-    apply(usersToSendEmailTo())
+    apply(usersToSendEmailTo()) map (_ => Unit)
   }
 
   def usersToSendEmailTo(): Set[Id[User]] = {
@@ -193,8 +193,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
         from = SystemEmailAddress.NOTIFICATIONS,
         to = Left(toUserId),
         subject = "Kifi Activity",
-        htmlTemplate = views.html.email.black.activityFeed(toUserId, activityData),
-        category = NotificationCategory.User.ACTIVITY
+        htmlTemplate = views.html.email.v3.activityFeed(activityData),
+        category = NotificationCategory.User.ACTIVITY,
+        templateOptions = Seq(TemplateOptions.CustomLayout).toMap
       )
     }
   })
