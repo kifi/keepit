@@ -89,10 +89,10 @@ angular.module('kifi')
 
     function trackEvent(eventName, typeBase, action) {
       var currentState = $state.current.name;
-      if (util.startsWith(currentState, 'library.')) {
+      if (util.startsWith(currentState, 'library')) {
         typeBase += 'Library';
         $analytics.eventTrack(eventName, {type: typeBase, action: action});
-      } else if (util.startsWith(currentState, 'userProfile.')) {
+      } else if (util.startsWith(currentState, 'userProfile')) {
         typeBase += 'UserProfile';
         $analytics.eventTrack(eventName, {type: typeBase, action: action});
       }
@@ -100,11 +100,11 @@ angular.module('kifi')
 
     function emitTracking(eventType, typeBase, attributes) {
       var currentState = $state.current.name;
-      if (util.startsWith(currentState, 'library.')) {
+      if (util.startsWith(currentState, 'library')) {
         typeBase += 'Library';
         attributes = _.extend({type: typeBase}, attributes || {});
         $rootScope.$emit('trackLibraryEvent', eventType, attributes);
-      } else if (util.startsWith(currentState, 'userProfile.')) {
+      } else if (util.startsWith(currentState, 'userProfile')) {
         typeBase += 'UserProfile';
         attributes = _.extend({type: typeBase}, attributes || {});
         $rootScope.$emit('trackUserProfileEvent', eventType, attributes);
