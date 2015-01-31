@@ -17,21 +17,12 @@ class UserLibraryRecommendationsComponent @Inject() (recoCommander: Recommendati
   val recoSource = RecommendationSource.Email
   val recoSubSource = RecommendationSubSource.Unknown
 
-  // max library recommendations to include in the feed
-  val maxLibRecostoDeliver = 3
-
-  // library recommendations to fetch from curator
-  val libRecosToFetch = maxLibRecostoDeliver * 2
+  val libRecosToFetch = 20
 
   def apply(toUserId: Id[User], previouslySent: Seq[ActivityEmail]): Future[Seq[LibraryInfoView]] = {
     recoCommander.topPublicLibraryRecos(toUserId, libRecosToFetch, recoSource, recoSubSource) map { recos =>
-      recos.take(maxLibRecostoDeliver).map { case (id, info) => BaseLibraryInfoView(id, info.itemInfo) }
+      recos.map { case (id, info) => BaseLibraryInfoView(id, info.itemInfo) }
     }
-  } recover {
-    case e: Exception =>
-      airbrake.notify(s"ActivityFeedEmail Failed to load library recommendations for userId=$toUserId", e)
-      Seq.empty
-
   }
 
 }
