@@ -35,7 +35,6 @@ object ScrapeTuple {
 
 case class ScrapeRequest(uri: NormalizedURI, scrapeInfo: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]) {
   override def toString = s"(${uri.toShortString},${scrapeInfo.toShortString},$pageInfoOpt,$proxyOpt)"
-  def toShortString = s"(${uri.id},${scrapeInfo.id},${pageInfoOpt.flatMap(_.id)},${uri.url.take(50)}"
 }
 
 object ScrapeRequest {
