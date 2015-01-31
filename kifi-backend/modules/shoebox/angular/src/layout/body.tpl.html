@@ -1,5 +1,4 @@
-<div ng-class="{'public-body': !$root.userLoggedIn}">
-  <header ng-include="$root.userLoggedIn ? 'layout/header/header.tpl.html' : 'layout/header/publicHeader.tpl.html'"></header>
+  <header ng-include="$root.userLoggedIn ? 'header/loggedInHeader.tpl.html' : 'header/loggedOutHeader.tpl.html'"></header>
   <div ng-show="navDropdown.visible" kf-nav-dropdown></div>
   <div class="kf-col-island">
     <section class="kf-scrollable-pane">
@@ -7,4 +6,3 @@
       <aside class="kf-col kf-col-right" ng-include="'layout/rightCol/rightCol.tpl.html'" ng-if="$root.userLoggedIn"></aside>
     </section>
   </div>
-</div>

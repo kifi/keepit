@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$rootScope', '$location', '$q', '$state', '$timeout', '$window', 'keepDecoratorService', 'searchActionService', 'libraryService',
-  function ($scope, $rootScope, $location, $q, $state, $timeout, $window, keepDecoratorService, searchActionService, libraryService) {
+  '$scope', '$rootScope', '$location', '$q', '$state', '$timeout', '$window', 'keepDecoratorService', 'searchActionService', 'libraryService', 'util',
+  function ($scope, $rootScope, $location, $q, $state, $timeout, $window, keepDecoratorService, searchActionService, libraryService, util) {
     //
     // Internal data.
     //
@@ -44,13 +44,25 @@ angular.module('kifi')
       }
     }
 
+    function setTitle() {
+      function getNormalizedQuery() {
+        if (util.startsWith(query, 'tag:')) {
+          return query.slice(4);
+        }
+        return query;
+      }
+
+      var libraryPart = library && library.name ? library.name + ' • ' : '';
+      $window.document.title = libraryPart + getNormalizedQuery() + ' • Kifi';
+    }
+
     function init() {
       query = $state.params.q || '';
       filter = $state.params.f || 'a';
       userName = $state.params.username || '';
       librarySlug = $state.params.librarySlug || '';
 
-      var libraryIdPromise = null;
+      var libraryPromise = null;
 
       if (userName && librarySlug) {
         if (!query) {
@@ -58,9 +70,9 @@ angular.module('kifi')
           return;
         }
 
-        libraryIdPromise = libraryService.getLibraryByUserSlug(userName, librarySlug, authToken, false).then(function (library) {
+        libraryPromise = libraryService.getLibraryByUserSlug(userName, librarySlug, authToken, false).then(function (library) {
           $rootScope.$emit('libraryUrl', library);
-          return library.id;
+          return library;
         });
       } else {
         if (!query) { // No query or blank query.
@@ -68,12 +80,12 @@ angular.module('kifi')
           return;
         }
 
-        libraryIdPromise = $q.when('');
+        libraryPromise = $q.when(null);
         $rootScope.$emit('libraryUrl', {});
       }
 
-      libraryIdPromise.then(function (libraryId) {
-        library = libraryId;
+      libraryPromise.then(function (lib) {
+        library = lib;
 
         lastResult = null;
         selectedCount = 0;
@@ -82,7 +94,7 @@ angular.module('kifi')
         $scope.scrollDistance = '100%';
         $scope.loading = false;
 
-        $window.document.title = 'Kifi • ' + query;
+        setTitle();
 
         searchActionService.reset();
         $scope.getNextKeeps(true);
@@ -247,6 +259,7 @@ angular.module('kifi')
       // does not propagate to HeaderCtrl when it is injected there.
       // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
       _.assign($state.params, $location.search());
+      $rootScope.$emit('newSearch', $state.params);
       init();
     }, 250);
     $scope.$on('$locationChangeSuccess', function (event, newState, oldState) {

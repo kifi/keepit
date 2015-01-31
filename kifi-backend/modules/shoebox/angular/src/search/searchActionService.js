@@ -134,7 +134,7 @@ angular.module('kifi')
           params: {
             q: query || void 0,
             f: filter || 'm',
-            l: library || void 0,
+            l: library && library.id || void 0,
             maxHits: 5,
             context: context || void 0
           }

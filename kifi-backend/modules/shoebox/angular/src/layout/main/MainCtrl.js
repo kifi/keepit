@@ -30,10 +30,6 @@ angular.module('kifi')
       });
     };
 
-    $scope.isEmpty = function () {
-      return !$scope.search.text;
-    };
-
     $scope.onKeydown = function (e) {
       if (e.keyCode === keyIndices.KEY_ESC) {
         $scope.clear();

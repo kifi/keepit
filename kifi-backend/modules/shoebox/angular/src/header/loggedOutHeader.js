@@ -2,7 +2,8 @@
 
 angular.module('kifi')
 
-.controller('PublicHeaderCtrl', ['$scope', '$rootScope', 'env', 'signupService', 'platformService', 'libraryService',
+.controller('LoggedOutHeaderCtrl', [
+  '$scope', '$rootScope', 'env', 'signupService', 'platformService', 'libraryService',
   function ($scope, $rootScope, env, signupService, platformService, libraryService) {
     $scope.navBase = env.navBase;
 

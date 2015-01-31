@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.controller('HeaderCtrl', [
+.controller('LoggedInHeaderCtrl', [
   '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService',
     '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state', 'routeService',
   function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService,
@@ -33,36 +33,41 @@ angular.module('kifi')
     //
     // Watchers & Listeners
     //
-    var deregisterLibraryChip = $rootScope.$on('libraryUrl', function (e, library) {
-      $scope.library = library;
+    [
+      $rootScope.$on('libraryUrl', function (e, library) {
+        $scope.library = library;
 
-      if ($scope.library.owner && !$scope.library.owner.picUrl) {
-        $scope.library.owner.picUrl = friendService.getPictureUrlForUser($scope.library.owner);
-      }
+        if ($scope.library.owner && !$scope.library.owner.picUrl) {
+          $scope.library.owner.picUrl = friendService.getPictureUrlForUser($scope.library.owner);
+        }
 
-      if ($scope.library.id) {
-        $scope.search.showName = true;
-      } else {
-        $scope.clearLibraryName();
-      }
+        if ($scope.library.id) {
+          $scope.search.showName = true;
+        } else {
+          $scope.clearLibraryName();
+        }
 
-      $scope.curatorProfileUrl = $scope.library.owner && routeService.getProfileUrl($scope.library.owner.username);
+        $scope.curatorProfileUrl = $scope.library.owner && routeService.getProfileUrl($scope.library.owner.username);
+      }),
+
+      $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
+        if ((toState.name === 'library.search') || (toState.name === 'search')) {
+          $scope.search.text = toParams.q;
+        } else {
+          $scope.search.text = '';
+        }
+      }),
+
+      $rootScope.$on('newSearch', function (event, params) {
+        $scope.search.text = params.q;
+      }),
+
+      $rootScope.$on('triggerAddKeep', function (e, library) {
+        $scope.addKeeps(library);
+      })
+    ].forEach(function (deregister) {
+      $scope.$on('$destroy', deregister);
     });
-    $scope.$on('$destroy', deregisterLibraryChip);
-
-    var deregisterUpdateSearchText = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
-      if ((toState.name === 'library.search') || (toState.name === 'search')) {
-        $scope.search.text = toParams.q;
-      } else {
-        $scope.search.text = '';
-      }
-    });
-    $scope.$on('$destroy', deregisterUpdateSearchText);
-
-    var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function (e, library) {
-      $scope.addKeeps(library);
-    });
-    $scope.$on('$destroy', deregisterAddKeep);
 
     $scope.focusInput = function () {
       $scope.isFocused = true;

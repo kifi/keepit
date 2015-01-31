@@ -1,0 +1,55 @@
+<div class="kf-lih" ng-controller="LoggedInHeaderCtrl">
+  <div class="kf-lih-inner">
+    <div class="kf-lih-left">
+      <div class="kf-lih-toggle-menu sprite sprite-burger" ng-click="toggleMenu()"></div>
+      <div class="kf-lih-left-separator"></div>
+      <a href="/" target="_self"><span class="kf-lih-logo svg-kifi-clover-white-text"></span></a>
+    </div>
+
+    <div class="kf-lih-search-bar">
+      <div class="kf-lih-search-wrap">
+        <div class="kf-lih-search-icon" ng-class="{'kf-focused': isFocused}"></div>
+
+        <a href="{{curatorProfileUrl}}">
+          <img class="kf-lih-search-lib-owner-img" ng-show="search.showName" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}">
+        </a>
+
+        <div class="kf-lih-search-lib-name" ng-show="search.showName" style="background-color:{{library.color}}">{{library.name}}</div>
+        <div class="kf-lih-search-lib-x" ng-show="search.showName" style="background-color:{{library.color}}" ng-click="clearLibraryName()">&times;</div>
+
+        <div class="kf-lih-search-query-wrap" ng-class="{'kf-extend': !search.showName}">
+          <input class="kf-lih-search-query-input" type="text" placeholder="Search Kifi…" ng-model="search.text" ng-focus="focusInput()" ng-blur="blurInput()" ng-change="changeSearchInput()" ng-keydown="onKeydown($event)" ng-click="onSearchBarClicked()">
+        </div>
+        <div class="kf-lih-search-clear" ng-show="search.text" ng-click="clearInput()">Clear</div>
+      </div>
+    </div>
+
+    <div class="kf-lih-right">
+      <div class="sprite sprite-add-link" ng-click="addKeeps(library)">Add a link</div>
+      <div kf-callout class="kf-callout-bubble-bottom kf-callout-tags" ng-if="showCallout()">
+        <div>Your tags are safe. Creating a new library from a tag is a snap.</div>
+        <div class="kf-callout-bubble-action">
+          <div class="kf-callout-bubble-button" ng-click="closeCallout()">Got it</div>
+        </div>
+      </div>
+      <a href="/tags/manage" class="kf-lih-manage-tags sprite svg-tag-black" ng-class="{'svg-tag-hover': hover, 'kf-callout-tags-button': showCallout()}" ng-mouseenter="hover = true" ng-mouseleave="hover = false">Manage your tags</a>
+      <div class="kf-lih-dropdown-menu-trigger kf-lih-friends">
+        <a href="/friends" class="kf-lih-icon-friends sprite sprite-friends">Friends</a>
+        <menu class="kf-dropdown-menu">
+          <a href="/friends">Your Kifi Friends</a>
+          <a href="/invite">Invite a friend to Kifi</a>
+        </menu>
+      </div>
+      <div class="kf-lih-dropdown-menu-trigger kf-lih-profile">
+        <a href="{{userProfileUrl}}">
+          <div class="kf-lih-profile-picture" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></div>
+        </a>
+        <menu class="kf-dropdown-menu">
+          <a href="{{userProfileUrl}}">Your Profile</a>
+          <a href="/profile">Settings</a>
+          <a href="{{logoutUrl}}" target="_top">Log out</a>
+        </menu>
+      </div>
+    </div>
+  </div>
+</div>
