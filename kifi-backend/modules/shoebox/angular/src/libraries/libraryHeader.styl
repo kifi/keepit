@@ -1,9 +1,9 @@
-.kf-lh
-  margin-bottom: 10px
+.kf-lh-wrapper
+  background: #fff
 
-  .kf-logged-out &
-    margin-bottom: 0
-    background-color: #fff
+.kf-lh
+  margin: 0 auto 10px
+  max-width: appMaxWidth
 
 lh-side-pad = 30px
 lh-cover-image-dur = .6s
@@ -19,11 +19,11 @@ lh-cover-image-dur = .6s
   &.kf-above-image
     transform: scale(1,2)
     transform-origin: center bottom
-    margin: 0 (-(lh-side-pad))
+    // margin: 0 (-(lh-side-pad))
 
 .kf-lh-cover-image
   height: 210px
-  margin: 0 (-(lh-side-pad))
+  // margin: 0 (-(lh-side-pad))
   background-color: #eee
   background-size: cover
   position: relative
@@ -305,8 +305,6 @@ cover-image-adjust-right = 24px
 .kf-logged-out .kf-lh-card
   border: none
   margin: 0 auto
-  padding-bottom: 20px
-  width: 745px
   max-height: 5000px
   transition: max-height 0.3s ease
   box-shadow: none
@@ -434,11 +432,6 @@ html:not(.kf-mobile) .library-search-in-progress
 
 
 .kf-lh-card
-  border: defaultBorder
-  border-radius: 3px
-  background-color: #fff
-  box-shadow: defaultBoxShadow
-
   invite-banner-orange = #ff7c3c
 
   // Do not display text on buttons when the card is very narrow
