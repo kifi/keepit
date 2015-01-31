@@ -22,7 +22,7 @@ class LibraryRecommendationsController @Inject() (
 
   def topLibRecos() = UserAction.async { request =>
     commander.topPublicLibraryRecos(request.userId, limit = 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed).map { recos =>
-      Ok(Json.toJson(recos))
+      Ok(Json.toJson(recos.map(_._2)))
     }
   }
 

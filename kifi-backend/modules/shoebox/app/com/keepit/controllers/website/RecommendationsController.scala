@@ -30,7 +30,7 @@ class RecommendationsController @Inject() (
     val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, more, recencyWeight)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
-      Json.toJson(util.Random.shuffle(uris ++ libs))
+      Json.toJson(util.Random.shuffle(uris ++ libs.map(_._2)))
     }
   }
 

@@ -42,15 +42,15 @@ case class ScrapeInfo(
       case ASSIGNED => copy(state = state, nextScrape = currentDateTime)
     }
     if (curState == INACTIVE && res.state == ACTIVE || curState == ACTIVE && res.state == INACTIVE)
-      log.warn(s"[withStateAndNextScrape($id, $uriId, ${destinationUrl.toString.take(50)})] ${curState.toString.toUpperCase} => ${res.state.toString.toUpperCase}; ${curNS} => ${res.nextScrape}")
+      log.warn(s"[withStateAndNextScrape($id, $uriId, ${destinationUrl.toString.take(50)})] ${curState.toString.toUpperCase} => ${res.state.toString.toUpperCase}; $curNS => ${res.nextScrape}")
     res
   }
 
   def withDestinationUrl(destinationUrl: Option[String]) = copy(destinationUrl = destinationUrl)
 
   def withFailure()(implicit config: ScraperSchedulerConfig) = {
-    val backoff = min(config.intervalConfig.maxBackoff, (config.intervalConfig.initialBackoff * (1 << failures).toDouble))
-    val newInterval = min(config.intervalConfig.maxInterval, (interval + config.intervalConfig.intervalIncrement))
+    val backoff = min(config.intervalConfig.maxBackoff, config.intervalConfig.initialBackoff * (1 << failures).toDouble)
+    val newInterval = min(config.intervalConfig.maxInterval, interval + config.intervalConfig.intervalIncrement)
     val now = currentDateTime
     copy(nextScrape = now.plusSeconds(hoursToSeconds(backoff) + config.randomDelay),
       interval = newInterval,
@@ -58,7 +58,7 @@ case class ScrapeInfo(
   }
 
   def withDocumentUnchanged()(implicit config: ScraperSchedulerConfig) = {
-    val newInterval = min(config.intervalConfig.maxInterval, (interval + config.intervalConfig.intervalIncrement))
+    val newInterval = min(config.intervalConfig.maxInterval, interval + config.intervalConfig.intervalIncrement)
     val now = currentDateTime
     copy(nextScrape = now.plusSeconds(hoursToSeconds(newInterval) + config.randomDelay),
       interval = newInterval,

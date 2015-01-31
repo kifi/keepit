@@ -63,38 +63,40 @@ class ScrapeProcessorActorImpl @Inject() (
 
   private[this] val lock = new ReactiveLock(1)
 
-  override def pull(): Unit = {
-    getQueueSize() onComplete {
-      case Success(qSize) =>
-        if (qSize <= config.pullThreshold) {
-          log.info(s"[ScrapeProcessorActorImpl.pull] qSize=$qSize. Let's get some work.")
-          serviceDiscovery.thisInstance.map { inst =>
-            if (inst.isHealthy) {
-              val taskFuture = lock.withLockFuture(asyncHelper.assignTasks(inst.id.id, config.pullMax))
-              taskFuture.onComplete {
-                case Failure(t) =>
-                  log.error(s"[ScrapeProcessorActorImpl.pull(${inst.id.id})] Caught exception $t while pulling for tasks", t) // move along
-                case Success(requests) =>
-                  log.info(s"[ScrapeProcessorActorImpl.pull(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
-                  for (sr <- requests) {
-                    val uri = sr.uri
-                    URI.parse(uri.url) match {
-                      case Success(_) => asyncScrape(uri, sr.scrapeInfo, sr.pageInfoOpt, sr.proxyOpt)
-                      case Failure(e) => throw new Exception(s"url can not be parsed for $uri in scrape request $sr", e)
-                    }
-
-                  }
-              }(ExecutionContext.fj)
+  override def pull(): Unit = lock.withLockFuture {
+    val futureTask = getQueueSize() map { qSize =>
+      if (qSize <= config.pullThreshold) {
+        log.info(s"[ScrapeProcessorActorImpl.pull] qSize=$qSize. Let's get some work.")
+        serviceDiscovery.thisInstance.map { inst =>
+          if (inst.isHealthy) {
+            val taskFuture = asyncHelper.assignTasks(inst.id.id, config.pullMax)
+            val queuedFuture = taskFuture map { requests =>
+              log.info(s"[ScrapeProcessorActorImpl.pull(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
+              for (sr <- requests) {
+                val uri = sr.uri
+                URI.parse(uri.url) match {
+                  case Success(_) => asyncScrape(uri, sr.scrapeInfo, sr.pageInfoOpt, sr.proxyOpt)
+                  case Failure(e) => throw new Exception(s"url can not be parsed for $uri in scrape request $sr", e)
+                }
+              }
+            }
+            queuedFuture.onFailure {
+              case e =>
+                airbrake.notify(s"failed si to parse and queue task", e)
             }
           }
-        } else if (qSize > WARNING_THRESHOLD) {
-          airbrake.notify(s"qSize=${qSize} has exceeded threshold=$WARNING_THRESHOLD")
-        } else {
-          log.info(s"[ScrapeProcessorActorImpl.pull] qSize=${qSize}; Skip a round")
         }
-      case Failure(e) =>
-        airbrake.notify(s"Failed to obtain qSize from supervisor; exception=$e; cause=${e.getCause}", e)
+      } else if (qSize > WARNING_THRESHOLD) {
+        airbrake.notify(s"qSize=${qSize} has exceeded threshold=$WARNING_THRESHOLD")
+      } else {
+        log.info(s"[ScrapeProcessorActorImpl.pull] qSize=${qSize}; Skip a round")
+      }
     }
+    futureTask.onFailure {
+      case e =>
+        airbrake.notify(s"Failed to obtain qSize from supervisor", e)
+    }
+    futureTask
   }
 
 }

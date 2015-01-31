@@ -47,4 +47,29 @@ pop-over(top, left, color)
     content: ''
     z-index: 10
 
+.kf-button
+  display: inline-block
+  position: relative
+  vertical-align: top
+  margin-right: 15px
+  border: 1px solid #bbb
+  border-radius: 5px
+  padding: 8px 15px 8px 40px
+  background: linear-gradient(to top, #f3f3f3, #fff)
+  font: 13px Lato, Helvetica, Arial, sans-serif
+  color: #666
+  a&
+    font-smoothing: auto
 
+    &:focus
+      outline: none
+
+.kf-button-icon
+  position: absolute
+  top: 7px
+  left: 12px
+  width: 18px
+  height: 18px
+  background-repeat: no-repeat
+  background-position: center center
+  background-size: contain

@@ -1,0 +1,185 @@
+.kf-library-share-search
+  position: relative
+  display: inline-block
+
+  [contenteditable]:empty::before
+    color: secondaryTextGray
+
+.library-share-menu
+  display: none
+  position: absolute
+  left: 0
+  box-sizing: border-box
+  margin-top: 5px
+  width: 320px
+  line-height: normal
+  z-index: 2
+
+.library-share-menu-content
+  overflow: hidden
+  border: 1px solid #b5b5b5
+  border-top: none
+  border-bottom-left-radius: 5px
+  border-bottom-right-radius: 5px
+  box-shadow: 0px 4px 8px 0px #afafaf
+
+  .library-share-input-box
+    position: relative
+    border-bottom: 1px solid #d2d2d2
+
+  .library-share-input
+    box-sizing: border-box
+    padding: 13px 10px
+    width: 320px
+    background-color: #f8f8f8
+    font-size: 12px
+    placeholder secondaryTextGray
+
+    &.library-share-message-input
+      min-height: 50px
+      resize: none
+      border-width: 1px 0px
+
+    .manage-lib-invite &
+      padding-left: 35px
+
+  .library-share-search-spinner
+    position: absolute
+    right: 0
+    padding: 3px 15px 0 0
+
+  .kf-query-icon
+    position: absolute;
+    top: 9px;
+    left: 10px;
+
+.library-share-menu-header
+  padding: 12px 18px
+  border-top-left-radius: 5px
+  border-top-right-radius: 5px
+  background-color: kifiBlack
+  font-size: 12px
+  color: #fff
+
+  &::before
+    position: absolute
+    top: -13px
+    left: 51px
+    border-left: 15px solid transparent
+    border-right: 15px solid transparent
+    border-bottom: 15px solid kifiBlack
+    width: 0
+    height: 0
+    content: ''
+
+.library-share-contact-list
+  max-height: 285px
+  overflow-x: hidden
+  overflow-y: auto
+
+.library-share-contact
+  box-sizing: border-box
+  border-top: 1px solid borderLightGray
+  padding: 8px 12px
+  width: 320px
+  height: 53px
+  background: #fff
+
+  &:first-child
+    border-top: none
+
+  &.library-share-selected
+    background-color: #f8f8f8
+
+.library-share-actionable
+  &:hover
+    cursor: pointer
+
+.library-share-sent
+.library-share-following
+  display: inline-block
+  position: absolute
+  top: 12px
+  color: green  // TODO(yiping): break out following into its own color
+
+.library-share-sent
+  right: 28px
+
+.library-share-following
+  right: 22px
+
+.library-share-contact-container
+  position: relative
+
+.library-share-contact-image
+  display: inline-block
+  margin-right: 15px
+  border-radius: 100%
+  width: 36px
+  height: 36px
+  vertical-align: top
+
+.library-share-contact-email-icon
+  @extend .library-share-contact-image
+  background-image: url(/img/mail.2x.png)
+  background-position: center 9px
+  background-repeat: no-repeat
+  background-size: 62% 48%
+  background-color: #e36766
+
+.library-share-contact-new-email-icon
+  @extend .library-share-contact-email-icon
+  background-color: #32495e
+
+.library-share-contact-gmail-icon
+  @extend .library-share-contact-email-icon
+  border: 1px solid borderLightGray
+  background-image: url("data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 45555 33097%22><path fill=%22%23e75a4d%22 d=%22M41608 250c2030,0 3691,1661 3691,3691l0 1070 -5128 3663 -17458 12026 -17458 -12148 0 24295 -1314 0c-2030,0 -3691,-1661 -3691,-3691l0 -25214c0,-2030 1661,-3691 3691,-3691l18772 13918 18894 -13918z%22/><polygon fill=%22%23e7e4d7%22 points=%225255,8552 5255,32847 40172,32847 40172,8674 22713,20700%22/><polygon fill=%22%23b8b7ae%22 points=%225255,32847 22713,20700 22634,20644 5255,32580%22/><polygon fill=%22%23b7b6ad%22 points=%2240172,8674 40182,32847 22713,20700%22/><path fill=%22%23b2392f%22 d=%22M45299 5011l6 24148c-88,2684 -1251,3642 -5123,3687l-10 -24173 5128 -3663z%22/><polygon fill=%22%23f7f5ed%22 points=%223941,250 22713,14168 41608,250%22/></svg>")
+  background-color: #fff
+
+.library-share-contact-summary
+  display: inline-block
+  margin-top: 3px
+  width: 164px
+  line-height: 1.4em
+
+.library-share-contact-name
+  overflow: hidden
+  font-size: 14px
+  color: #000
+  text-overflow: ellipsis
+  white-space: nowrap
+
+  .library-share-new-email &
+    font-weight: bold
+
+.library-share-contact-network
+  overflow: hidden
+  font-size: 12px
+  color: secondaryTextGray
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.library-share-contact-import-gmail
+  position: relative
+  top: 10px
+  overflow: hidden
+  font-size: 14px
+  color: #000
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.kf-library-share-search
+  .library-share-contact-button
+    @extend .kf-button
+    display: inline-block
+    position: absolute
+    top: 5px
+    padding: 5px 10px 5px 30px
+    font-size: 12px
+
+    .kf-button-icon
+      top: 5px
+      left: 10px
+      width: 15px
+      height: 15px

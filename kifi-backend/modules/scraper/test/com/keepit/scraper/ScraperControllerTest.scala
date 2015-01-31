@@ -1,6 +1,7 @@
 package com.keepit.scraper
 
 import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ScraperTestStoreModule
@@ -32,6 +33,7 @@ class ScraperControllerTest extends TestKitSupport with ScraperTestInjector {
       FakeEmbedlyModule(),
       FakeScraperProcessorActorModule(),
       ScraperTestStoreModule(),
+      FakeExecutionContextModule(),
       FakeShoeboxServiceModule(),
       FakeSecureSocialClientIdModule(),
       FakeUserActionsModule(),

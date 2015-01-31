@@ -4,7 +4,7 @@ import akka.pattern.ask
 import akka.testkit.TestActorRef
 import akka.util.Timeout
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
-import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.concurrent.{ FJExecutionContextModule, WatchableExecutionContext, FakeExecutionContextModule, ExecutionContext }
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ScraperTestStoreModule
@@ -38,6 +38,7 @@ class FetchAgentTest extends TestKitSupport with SpecificationLike with ScraperT
     Seq(
       testFetcherModule,
       FakeEmbedlyModule(),
+      FakeExecutionContextModule(),
       FakeScraperProcessorActorModule(),
       ScraperTestStoreModule(),
       FakeShoeboxServiceModule(),

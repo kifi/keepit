@@ -48,7 +48,6 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     FakeScrapeSchedulerConfigModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
-    UrlPatternRuleModule(),
     FakeCuratorServiceClientModule()
   )
 

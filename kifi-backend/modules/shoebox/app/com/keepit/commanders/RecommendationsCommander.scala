@@ -208,14 +208,14 @@ class RecommendationsCommander @Inject() (
     }
 
     if (userExperimentCommander.userHasExperiment(userId, ExperimentType.LIBRARIES)) {
-      for (uriRecos <- uriRecosFut; libRecos <- curatedPublicLibraryRecos(userId)) yield libRecos ++ uriRecos
+      for (uriRecos <- uriRecosFut; libRecos <- curatedPublicLibraryRecos(userId)) yield libRecos.map(_._2) ++ uriRecos
     } else {
       uriRecosFut
     }
 
   }
 
-  def curatedPublicLibraryRecos(userId: Id[User]): Future[Seq[FullRecoInfo]] = {
+  def curatedPublicLibraryRecos(userId: Id[User]): Future[Seq[(Id[Library], FullRecoInfo)]] = {
     val curatedLibIds: Seq[Id[Library]] = Seq(
       25537L, 25116L, 25345L, 24542L, 36680L, 25471L, 28148L, 25381L, 24203L, 27207L, 25370L, 25388L, 25371L, 25340L, 25000L, 26106L, 26473L, 26460L
     ).map(Id[Library])
@@ -230,7 +230,7 @@ class RecommendationsCommander @Inject() (
     createFullLibraryInfos(userId, curatedLibraries)
   }
 
-  def topPublicLibraryRecos(userId: Id[User], limit: Int, source: RecommendationSource, subSource: RecommendationSubSource): Future[Seq[FullLibRecoInfo]] = {
+  def topPublicLibraryRecos(userId: Id[User], limit: Int, source: RecommendationSource, subSource: RecommendationSubSource): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {
     // get extra recos from curator incase we filter out some below
     curator.topLibraryRecos(userId, Some(limit * 4)) flatMap { libInfos =>
       val libIds = libInfos.map(_.libraryId).toSet
@@ -262,7 +262,7 @@ class RecommendationsCommander @Inject() (
       maxKeepsShown = 0, ProcessedImageSize.Large.idealSize, libraries,
       ProcessedImageSize.Large.idealSize, true).map { fullLibraryInfos =>
         fullLibraryInfos.map {
-          case (id, libInfo) => FullLibRecoInfo(metaData = None, itemInfo = libInfo, explain = explainer(id))
+          case (id, libInfo) => id -> FullLibRecoInfo(metaData = None, itemInfo = libInfo, explain = explainer(id))
         }
       }
   }

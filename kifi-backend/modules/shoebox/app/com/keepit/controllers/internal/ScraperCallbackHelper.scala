@@ -17,7 +17,7 @@ import scala.concurrent.Future
 class ScraperCallbackHelper @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
-    urlPatternRuleRepo: UrlPatternRuleRepo,
+    urlPatternRules: UrlPatternRulesCommander,
     normUriRepo: NormalizedURIRepo,
     pageInfoRepo: PageInfoRepo,
     imageInfoRepo: ImageInfoRepo,
@@ -29,12 +29,12 @@ class ScraperCallbackHelper @Inject() (
   private val imageInfoLock = new ReactiveLock(1)
 
   def assignTasks(zkId: Id[ScraperWorker], max: Int): Future[Seq[ScrapeRequest]] = timing(s"assignTasks($zkId,$max)") {
-    val rules = urlPatternRuleRepo.rules()
+    val rules = db.readOnlyMaster { implicit s => urlPatternRules.rules() }
     val requests: Future[Seq[ScrapeRequest]] = assignLock.withLock {
       val res = db.readWrite(attempts = 1) { implicit rw =>
         val builder = Seq.newBuilder[ScrapeRequest]
         val limit = if (max < 10) max * 2 else max
-        val overdues = timingWithResult[Seq[ScrapeInfo]](s"assignTasks($zkId,$max) getOverdueList(${limit})", { r: Seq[ScrapeInfo] => s"${r.length} overdues: ${r.map(_.toShortString).mkString(",")}" }) { scrapeInfoRepo.getOverdueList(limit) }
+        val overdues = timingWithResult[Seq[ScrapeInfo]](s"assignTasks($zkId,$max) getOverdueList($limit)", { r: Seq[ScrapeInfo] => s"${r.length} overdues: ${r.map(_.toShortString).mkString(",")}" }) { scrapeInfoRepo.getOverdueList(limit) }
         var count = 0
         for (info <- overdues if count < max) {
           val nuri = normUriRepo.get(info.uriId)
@@ -44,9 +44,9 @@ class ScraperCallbackHelper @Inject() (
               log.warn(s"[assignTasks($zkId,$max)] ${nuri.url} is considered unscrapable; skipped for now. savedInfo=$saved; uri=${nuri.toShortString}")
             } else {
               val pageInfoOpt = pageInfoRepo.getByUri(nuri.id.get)
-              val proxy = urlPatternRuleRepo.getProxy(nuri.url)
+              val proxy = urlPatternRules.getProxy(nuri.url)
               val savedInfo = scrapeInfoRepo.save(info.withWorkerId(zkId).withState(ScrapeInfoStates.ASSIGNED))
-              log.debug(s"[assignTasks($zkId,$max)] #${count} assigned (${nuri.id.get},${savedInfo.id.get},${nuri.url}) to worker $zkId")
+              log.debug(s"[assignTasks($zkId,$max)] #$count assigned (${nuri.id.get},${savedInfo.id.get},${nuri.url}) to worker $zkId")
               count += 1
               builder += ScrapeRequest(nuri, savedInfo, pageInfoOpt, proxy)
             }
@@ -55,7 +55,7 @@ class ScraperCallbackHelper @Inject() (
             log.warn(s"[assignTasks($zkId,$max)] ${nuri.state} in DO_NOT_SCRAPE list; uri=$nuri; deactivated scrapeInfo=$saved")
           }
         }
-        builder.result
+        builder.result()
       }
       if (res.length == 0) {
         log.warn(s"[assignTask($zkId,$max)] 0 tasks assigned") // can be more aggressive

@@ -96,6 +96,16 @@ case object SparseLDAGraphUpdate extends GraphUpdateKind[SparseLDAGraphUpdate] {
   val code = "sparse_lda_graph_update"
 }
 
+case class LDAOldVersionCleanupGraphUpdate(modelVersion: ModelVersion[DenseLDA], numTopics: Int) extends GraphUpdate {
+  type U = LDAOldVersionCleanupGraphUpdate
+  def kind = LDAOldVersionCleanupGraphUpdate
+  val seq = kind.seq(modelVersion.version.toLong)
+}
+
+case object LDAOldVersionCleanupGraphUpdate extends GraphUpdateKind[LDAOldVersionCleanupGraphUpdate] {
+  val code = "lda_old_version_cleanup_graph_update"
+}
+
 case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], state: State[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI]) extends GraphUpdate {
   type U = NormalizedUriGraphUpdate
   def kind = NormalizedUriGraphUpdate

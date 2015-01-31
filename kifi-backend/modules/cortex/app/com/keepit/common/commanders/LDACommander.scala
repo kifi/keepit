@@ -7,12 +7,14 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ Library, Keep, NormalizedURI, User }
 import play.api.libs.json._
+import scala.concurrent.duration._
 import scala.math.exp
 import scala.util.Random
 import play.api.libs.concurrent.Execution.Implicits._
@@ -57,6 +59,8 @@ class LDACommanderImpl @Inject() (
     libTopicRepo: LibraryLDATopicRepo,
     userStatUpdatePlugin: LDAUserStatDbUpdatePlugin,
     ldaRelatedLibRepo: LDARelatedLibraryRepo) extends LDACommander with Logging {
+
+  private val consolidater = new RequestConsolidator[Id[User], Seq[PersonaLDAFeature]](FiniteDuration(2, MINUTES))
 
   def numOfTopics(implicit version: ModelVersion[DenseLDA]): Int = infoCommander.getLDADimension
 
@@ -135,19 +139,36 @@ class LDACommanderImpl @Inject() (
       val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
       val s3 = libraryInducedUserURIInterestScore(libFeats, uriTopicOpt)
       val s4 = computePersonaInducedInterestScore(userPersonas, uriTopicOpt)
-      val s5 = combineScores(s2.global, s4)
+      val s5 = combineScores(s2.global, s4, userInterestStatOpt.map { _.numOfEvidence })
       val (topic1, topic2) = (uriTopicOpt.flatMap(_.firstTopic), uriTopicOpt.flatMap(_.secondTopic))
       LDAUserURIInterestScores(s5, s1.recency, s3, topic1, topic2)
     }
 
-    // tweak later
-    def combineScores(keepInduced: Option[LDAUserURIInterestScore], personaInduced: Option[LDAUserURIInterestScore]): Option[LDAUserURIInterestScore] = {
-      keepInduced
+    // tweak
+    def combineScores(keepInduced: Option[LDAUserURIInterestScore], personaInduced: Option[LDAUserURIInterestScore], userKeeps: Option[Int]): Option[LDAUserURIInterestScore] = {
+      val keepWeight = {
+        val exponent = (userKeeps.getOrElse(-1000) - 50) / 50
+        1.0 / (1 + exp(-exponent))
+      }
+      val personaWeight = 1.0 - keepWeight // can include time info later
+
+      (keepInduced, personaInduced) match {
+        case (Some(kscore), Some(pscore)) =>
+          val score = (keepWeight * kscore.score + personaWeight * pscore.score) / (keepWeight + personaWeight)
+          Some(LDAUserURIInterestScore(score, kscore.confidence))
+        case (None, None) => None
+        case (None, Some(pscore)) => Some(pscore)
+        case (Some(kscore), None) => Some(kscore)
+      }
     }
 
     val junkTopics = infoCommander.inactiveTopics(version)
 
-    personaCommander.getUserPersonaFeatures(userId).map { personaFeats =>
+    val personaFeatsFuture = consolidater(userId) { userId =>
+      personaCommander.getUserPersonaFeatures(userId)
+    }
+
+    personaFeatsFuture.map { personaFeats =>
 
       val (userFeatsCombo, uriTopicOpts) = db.readOnlyReplica { implicit s =>
         val userFeatsCombo = getUserFeaturesCombo(userId, version)

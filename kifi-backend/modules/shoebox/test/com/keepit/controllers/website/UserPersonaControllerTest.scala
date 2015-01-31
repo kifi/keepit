@@ -51,20 +51,37 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         contentAsJson(result1) === Json.parse(
-          s"""{
-              "personas":{
-                  "parent":false,
-                  "techie":false,
-                  "designer":false,
-                  "photographer":false,
-                  "student":true,
-                  "artist":false,
-                  "foodie":false,
-                  "athlete":false,
-                  "gamer":false,
-                  "adventurer":true
+          s"""{"personas":[
+                {
+                  "id":"adventurer",
+                  "displayName":"adventurer",
+                  "selected":true,
+                  "iconPath":"icon/adventurer.jpg",
+                  "activeIconPath":"icon/active_adventurer.jpg"
+                },
+                {
+                  "id":"photographer",
+                  "displayName":"photographer",
+                  "selected":false,
+                  "iconPath":"icon/photographer.jpg",
+                  "activeIconPath":"icon/active_photographer.jpg"
+                },
+                {
+                  "id":"student",
+                  "displayName":
+                  "student",
+                  "selected":true,
+                  "iconPath":"icon/student.jpg",
+                  "activeIconPath":"icon/active_student.jpg"
+                },
+                {
+                  "id":"foodie",
+                  "displayName":"foodie",
+                  "selected":false,
+                  "iconPath":"icon/foodie.jpg",
+                  "activeIconPath":"icon/active_foodie.jpg"
                 }
-              }"""
+              ]}"""
         )
       }
     }
@@ -127,10 +144,12 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
 
   // sets up a Map of [String, Persona]
   private def setupPersonas()(implicit injector: Injector) = {
-    val availablePersonas = PersonaName.allPersonas
+    val availablePersonas = Set("adventurer", "photographer", "student", "foodie")
     db.readWrite { implicit s =>
       availablePersonas.map { pName =>
-        (pName -> personaRepo.save(Persona(name = pName)))
+        val iconPath = "icon/" + pName + ".jpg"
+        val activeIconPath = "icon/active_" + pName + ".jpg"
+        (pName -> personaRepo.save(Persona(name = PersonaName(pName), displayName = pName, iconPath = iconPath, activeIconPath = activeIconPath)))
       }
     }.toMap
   }
@@ -139,8 +158,8 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
     val allPersonas = setupPersonas
     val user1 = db.readWrite { implicit s =>
       val user1 = user().withName("Peter", "Parker").withUsername("peterparker").withEmailAddress("peterparker@gmail.com").saved
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas(PersonaName.ADVENTURER).id.get))
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas(PersonaName.STUDENT).id.get))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("adventurer").id.get))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("student").id.get))
       user1
     }
     (user1, allPersonas)
