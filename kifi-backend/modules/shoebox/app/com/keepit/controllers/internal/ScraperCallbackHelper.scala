@@ -41,7 +41,7 @@ class ScraperCallbackHelper @Inject() (
         for (info <- overdues if count < max) {
           val nuri = normUriRepo.get(info.uriId)
           if (URI.parse(nuri.url).isFailure) {
-            scrapeInfoRepo.save(info.copy(state = ScrapeInfoStates.INACTIVE, nextScrape = END_OF_TIME))
+            scrapeInfoRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
             airbrake.notify(s"can't parse $nuri, not passing it to the scraper, marking as unscrapable")
           } else if (!NormalizedURIStates.DO_NOT_SCRAPE.contains(nuri.state)) { // todo(ray): batch
             if (rules.isUnscrapable(nuri.url)) {
