@@ -35,7 +35,7 @@ class RelatedLibraryCommanderImpl @Inject() (
     libQualityHelper: LibraryQualityHelper,
     airbrake: AirbrakeNotifier) extends RelatedLibraryCommander with Logging {
 
-  private val DEFAULT_MIN_FOLLOW = 5
+  protected val DEFAULT_MIN_FOLLOW = 5
   private val RETURN_SIZE = 5
 
   private val consolidater = new RequestConsolidator[Id[Library], Seq[RelatedLibrary]](FiniteDuration(10, MINUTES))
