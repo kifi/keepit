@@ -5,10 +5,10 @@ angular.module('kifi')
 .controller('UserProfileCtrl', [
   '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window', 'profile',
   'env', 'inviteService', 'keepWhoService', 'originTrackingService', 'profileService',
-  'installService', 'modalService', 'initParams',
+  'installService', 'modalService', 'initParams', 'userProfileActionService',
   function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window, profile,
             env, inviteService, keepWhoService, originTrackingService, profileService,
-            installService, modalService, initParams) {
+            installService, modalService, initParams, userProfileActionService) {
 
     //
     // Internal data.
@@ -110,6 +110,20 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregisterCurrentLibrary);
 
+    var deregisterTrackUserProfile = $rootScope.$on('trackUserProfileEvent', function (e, eventType, attributes) {
+      if (eventType === 'click') {
+        if (!$rootScope.userLoggedIn) {
+          attributes.type = attributes.type || 'userProfileLanding';
+          userProfileActionService.trackEvent('visitor_clicked_page', $scope.profile.id, attributes);
+        } else {
+          attributes.type = attributes.type || 'userProfile';
+          userProfileActionService.trackEvent('user_clicked_page', $scope.profile.id, attributes);
+        }
+      } else if (eventType === 'view') {
+        trackPageView(attributes);
+      }
+    });
+    $scope.$on('$destroy', deregisterTrackUserProfile);
 
     //
     // Initialize controller.

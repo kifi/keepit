@@ -19,7 +19,7 @@ import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.{ ExperimentType, _ }
+import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
@@ -80,14 +80,29 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
 
         val curator = inject[CuratorServiceClient].asInstanceOf[FakeCuratorServiceClientImpl]
 
-        // setup Lib Recos
+        val randomFollowers = db.readWrite { implicit rw => users(30).map(_.saved) }
+
+        // setup Lib Recos with followers
         val user1Libs = createLibWithKeeps("u1/lib1-reco")
         val user2Libs = createLibWithKeeps("u2/lib2-reco")
         for {
           (user, libs) <- Seq((user1, user1Libs), (user2, user2Libs))
         } yield {
+
+          // create followers for each library
+          db.readWrite { implicit session =>
+            libs.foreach {
+              case (lib, _) =>
+                val followers = util.Random.shuffle(randomFollowers).take(util.Random.nextInt(randomFollowers.size))
+                followers.foreach { user =>
+                  membership().withLibraryFollower(lib, user).saved
+                }
+            }
+          }
+
           curator.topLibraryRecosExpectations(user.id.get) = libs.map {
-            case (lib, _) => LibraryRecoInfo(userId = user.id.get, libraryId = lib.id.get, masterScore = 8f, explain = "")
+            case (lib, _) =>
+              LibraryRecoInfo(userId = user.id.get, libraryId = lib.id.get, masterScore = 8f, explain = "")
           }
         }
 

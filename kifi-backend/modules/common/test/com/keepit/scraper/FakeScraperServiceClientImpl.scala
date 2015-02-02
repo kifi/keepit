@@ -36,8 +36,6 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
 
   def adminOnlyGetEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = Future.successful(Seq.empty)
 
-  def getURISummaryFromEmbedly(uri: NormalizedURIRef): Future[Option[URISummary]] = Future.successful(None)
-
   def getURIWordCount(uriId: Id[NormalizedURI], url: String): Future[Int] = Future.successful(0)
 
   def getURIWordCountOpt(uriId: Id[NormalizedURI], url: String): Option[Int] = None

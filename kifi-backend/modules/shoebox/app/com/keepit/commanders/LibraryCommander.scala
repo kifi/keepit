@@ -820,7 +820,7 @@ class LibraryCommander @Inject() (
         val (invites, inviteesWithAccess) = invitesAndInvitees.flatten.unzip
         processInvites(invites)
         future {
-          libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
+          libraryAnalytics.sendLibraryInvite(inviterId, targetLib, inviteList.map { _._1 }, eventContext)
         }
 
         Right(inviteesWithAccess)
@@ -906,7 +906,7 @@ class LibraryCommander @Inject() (
   private def updateLibraryJoin(userId: Id[User], library: Library, eventContext: HeimdalContext): Future[Unit] = SafeFuture {
     val libraryId = library.id.get
     val keepCount = db.readOnlyMaster { implicit s => keepRepo.getCountByLibrary(libraryId) }
-    libraryAnalytics.acceptLibraryInvite(userId, libraryId, eventContext)
+    libraryAnalytics.acceptLibraryInvite(userId, library, eventContext)
     libraryAnalytics.followLibrary(userId, library, keepCount, eventContext)
     searchClient.updateLibraryIndex()
   }

@@ -19,6 +19,7 @@ import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.twirl.api.Html
 
 import scala.concurrent.Future
 
@@ -56,6 +57,7 @@ case class KeepInfoView(private val keepInfo: KeepInfo) {
 
 case class ActivityEmailData(
   userId: Id[User],
+  activityComponents: Seq[Html],
   mostFollowedLibraries: Seq[LibraryInfoFollowersView],
   newKeepsInLibraries: Seq[(LibraryInfoView, Seq[KeepInfoView])],
   libraryInvites: Seq[LibraryInviteInfoView],
@@ -102,7 +104,11 @@ class ActivityFeedEmailSenderImpl @Inject() (
   val reactiveLock = new ReactiveLock(8)
 
   // max library recommendations to include in the feed
-  val maxLibRecostoDeliver = 3
+  val maxLibraryRecosInBottom = 3
+
+  val maxMostFollowedLibrariesRecentlyToRecommend = 3
+
+  val maxFollowerImagesToShow = 9
 
   def apply(sendTo: Set[Id[User]]): Future[Seq[ElectronicMail]] = {
     val emailsF = sendTo.toSeq map prepareEmailForUser map (_ flatMap emailTemplateSender.send)
@@ -155,22 +161,30 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
       val libRecosUnseen = libRecos.filterNot(l => librariesToExclude.contains(l.libraryId))
 
+      // sorts the library recommendations by the most growth since the last sent email for this user
+      // these will be mentioned in the activity feed along with the # of followers
       val mostFollowedLibrariesRecentlyToRecommend = {
         val libIdToLibView = libRecosUnseen.map(l => l.libraryId -> l).toMap
         val libRecoIds = libRecosUnseen.map(_.libraryId)
         val libRecoMemberCountLookup = (id: Id[Library]) => libIdToLibView(id).numFollowers
         val since = lastEmailSentAt(previouslySentEmails)
-        libraryCommander.sortAndSelectLibrariesWithTopGrowthSince(libRecoIds.toSet, since, libRecoMemberCountLookup) map {
+        libraryCommander.sortAndSelectLibrariesWithTopGrowthSince(libRecoIds.toSet, since, libRecoMemberCountLookup).map {
           case (id, members) =>
-            val memberIds = Seq.empty
+            val memberIds = members.filterNot(_.isOwner).map(_.userId).take(maxFollowerImagesToShow)
             LibraryInfoFollowersView(libIdToLibView(id), memberIds)
-        }
+        }.take(maxMostFollowedLibrariesRecentlyToRecommend)
       }
 
-      val libRecosAtBottom = libRecosUnseen take maxLibRecostoDeliver
+      val libRecosAtBottom = libRecosUnseen take maxLibraryRecosInBottom
+
+      val activityComponents: Seq[Html] = {
+        val mostFollowedHtmls = mostFollowedLibrariesRecentlyToRecommend map { view => views.html.email.v3.activityFeedOtherLibFollowersPartial(view) }
+        mostFollowedHtmls
+      }
 
       val activityData = ActivityEmailData(
         userId = toUserId,
+        activityComponents = activityComponents,
         mostFollowedLibraries = mostFollowedLibrariesRecentlyToRecommend,
         newKeepsInLibraries = newKeepsInLibraries,
         libraryInvites = pendingLibInvites map {
