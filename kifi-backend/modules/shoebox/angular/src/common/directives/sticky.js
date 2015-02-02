@@ -38,17 +38,15 @@ angular.module('kifi')
         var isMobile = platformService.isSupportedMobilePlatform();
 
         var marginTop, marginLeft,
-          borderLeftWidth, borderTopWidth, borderRightWidth, borderBottomWidth,
+          borderLeftWidth, borderRightWidth,
           offsetTop, offsetLeft,
-          width, height;
+          width;
 
         function updateProperties() {
           marginLeft = getCssPixelProperty('marginLeft');
           marginTop = getCssPixelProperty('marginTop');
           borderLeftWidth = getCssPixelProperty('borderLeftWidth');
-          borderTopWidth = getCssPixelProperty('borderTopWidth');
           borderRightWidth = getCssPixelProperty('borderRightWidth');
-          borderBottomWidth = getCssPixelProperty('borderBottomWidth');
 
           function update() {
             offsetTop = element.offset().top - marginTop;
@@ -57,7 +55,6 @@ angular.module('kifi')
             if (isWidthCalculated) {
               width = element.width() + borderLeftWidth + borderRightWidth;
             }
-            height = element.height() + borderTopWidth + borderBottomWidth;
           }
 
           // This timeout is needed for mobile Safari.
@@ -102,7 +99,6 @@ angular.module('kifi')
                 position: 'fixed',
                 top: scope.maxTop,
                 left: offsetLeft,
-                height: height,
                 zIndex: 501
               };
               if (isWidthCalculated) {
@@ -134,7 +130,6 @@ angular.module('kifi')
                 top: '',
                 left: '',
                 width: '',
-                height: '',
                 zIndex: ''
               });
 
