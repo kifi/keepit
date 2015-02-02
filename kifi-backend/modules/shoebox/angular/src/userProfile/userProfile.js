@@ -50,24 +50,21 @@ angular.module('kifi')
     function trackPageView() {
       var url = $analytics.settings.pageTracking.basePath + $location.url();
       $analytics.pageTrack(url, originTrackingService.applyAndClear({
-        type: 'userProfile',
+        type: $rootScope.userLoggedIn ? 'userProfile' : 'userProfileLanding',
         profileOwnerUserId: $scope.profile.id,
         profileOwnedBy: $scope.viewingOwnProfile ? 'viewer' : ($scope.profile.isFriend ? 'viewersFriend' : 'other'),
         libraryCount: $scope.profile.numLibraries
       }));
     }
 
-    function trackPageClick(/* attributes */) {
-      return;
-
-      /* TODO(yiping): Uncomment this after tracking review with product.
+    function trackPageClick(attributes) {
       var profileEventTrackAttributes = _.extend(attributes || {}, {
-        type: 'profile',
+        type: attributes.type || ($rootScope.userLoggedIn ? 'userProfile' : 'userProfileLanding'),
+        profileOwnerUserId: $scope.profile.id,
         profileOwnedBy: $scope.viewingOwnProfile ? 'viewer' : ($scope.profile.friendsWith ? 'viewersFriend' : 'other')
       });
 
-      $analytics.eventTrack('user_clicked_page', profileEventTrackAttributes);
-      */
+      $analytics.eventTrack($rootScope.userLoggedIn ? 'user_clicked_page' : 'visitor_clicked_page', profileEventTrackAttributes);
     }
 
 
@@ -75,20 +72,20 @@ angular.module('kifi')
     // Scope methods.
     //
 
-    $scope.trackUplCardClick = function (lib) {
-      trackPageClick({
-        action: 'clickedLibrary',
-        libraryOwnerUserId: lib.owner.id,
+    $scope.trackUplCardClick = function (/* lib */) {
+      // trackPageClick({
+      //   action: 'clickedLibrary',
+      //   libraryOwnerUserId: lib.owner.id,
 
-        // lib.owner.friendsWith needs backend support.
-        libraryOwnedBy: lib.owner.id === profileService.me.id ? 'viewer' : (lib.owner.friendsWith ? 'viewersFriend' : 'other')
-      });
+      //   // lib.owner.friendsWith needs backend support.
+      //   libraryOwnedBy: lib.owner.id === profileService.me.id ? 'viewer' : (lib.owner.friendsWith ? 'viewersFriend' : 'other')
+      // });
     };
 
     $scope.trackProfileClick = function () {
-      trackPageClick({
-        action: 'clickedProfile'
-      });
+      // trackPageClick({
+      //   action: 'clickedProfile'
+      // });
     };
 
 
@@ -112,13 +109,7 @@ angular.module('kifi')
 
     var deregisterTrackUserProfile = $rootScope.$on('trackUserProfileEvent', function (e, eventType, attributes) {
       if (eventType === 'click') {
-        if (!$rootScope.userLoggedIn) {
-          attributes.type = attributes.type || 'userProfileLanding';
-          userProfileActionService.trackEvent('visitor_clicked_page', $scope.profile.id, attributes);
-        } else {
-          attributes.type = attributes.type || 'userProfile';
-          userProfileActionService.trackEvent('user_clicked_page', $scope.profile.id, attributes);
-        }
+        trackPageClick(attributes);
       } else if (eventType === 'view') {
         trackPageView(attributes);
       }
