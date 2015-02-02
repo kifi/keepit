@@ -2,6 +2,8 @@ package com.keepit.search.util
 
 import javax.xml.bind.DatatypeConverter._
 
+import com.keepit.serializer.ArrayBinaryFormat
+
 trait IdFilterBase[T <: Set[Long]] {
 
   protected val emptySet: T
@@ -28,4 +30,21 @@ trait IdFilterBase[T <: Set[Long]] {
 
 class IdFilterCompressorException(msg: String, exception: Exception) extends Exception(msg) {
   def this(msg: String) = this(msg, null)
+}
+
+class LongSetIdFilter extends IdFilterBase[Set[Long]] {
+  protected val emptySet: Set[Long] = Set()
+
+  private val formatter = ArrayBinaryFormat.longArrayFormat
+
+  protected def toByteArray(ids: Set[Long]): Array[Byte] = {
+    formatter.writes(Some(ids.toArray))
+  }
+
+  protected def toSet(bytes: Array[Byte]): Set[Long] = {
+    formatter.reads(bytes) match {
+      case Some(arr) => arr.toSet
+      case None => emptySet
+    }
+  }
 }
