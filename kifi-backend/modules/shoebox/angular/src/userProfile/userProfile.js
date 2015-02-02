@@ -5,10 +5,10 @@ angular.module('kifi')
 .controller('UserProfileCtrl', [
   '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window', 'profile',
   'env', 'inviteService', 'keepWhoService', 'originTrackingService', 'profileService',
-  'installService', 'modalService', 'initParams', 'userProfileActionService',
+  'installService', 'modalService', 'initParams',
   function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window, profile,
             env, inviteService, keepWhoService, originTrackingService, profileService,
-            installService, modalService, initParams, userProfileActionService) {
+            installService, modalService, initParams) {
 
     //
     // Internal data.
