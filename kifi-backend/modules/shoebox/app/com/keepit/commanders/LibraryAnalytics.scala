@@ -58,7 +58,7 @@ class LibraryAnalytics @Inject() (
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "followed")
-      contextBuilder += ("privacySetting", library.visibility.toString)
+      contextBuilder += ("privacySetting", getLibraryVisibility(library.visibility))
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("followerCount", library.memberCount - 1)
@@ -75,7 +75,7 @@ class LibraryAnalytics @Inject() (
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "unfollowed")
-      contextBuilder += ("privacySetting", library.visibility.toString)
+      contextBuilder += ("privacySetting", getLibraryVisibility(library.visibility))
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("followerCount", library.memberCount - 1)
@@ -91,7 +91,7 @@ class LibraryAnalytics @Inject() (
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "created")
-      contextBuilder += ("privacySetting", library.visibility.toString)
+      contextBuilder += ("privacySetting", getLibraryVisibility(library.visibility))
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
@@ -105,7 +105,7 @@ class LibraryAnalytics @Inject() (
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "deleted")
-      contextBuilder += ("privacySetting", library.visibility.toString)
+      contextBuilder += ("privacySetting", getLibraryVisibility(library.visibility))
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
@@ -129,7 +129,7 @@ class LibraryAnalytics @Inject() (
           contextBuilder += ("subAction", "importedKeeps")
         case _ =>
       }
-      contextBuilder += ("privacySetting", library.visibility.toString)
+      contextBuilder += ("privacySetting", getLibraryVisibility(library.visibility))
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
@@ -362,6 +362,14 @@ class LibraryAnalytics @Inject() (
   private def getDaysSinceLibraryCreated(library: Library): Float = {
     val daysSinceLibraryCreated = (currentDateTime.getMillis.toFloat - library.createdAt.getMillis) / (24 * 3600 * 1000)
     (daysSinceLibraryCreated - daysSinceLibraryCreated % 0.0001).toFloat
+  }
+  private def getLibraryVisibility(visibility: LibraryVisibility): String = {
+    visibility match {
+      case LibraryVisibility.SECRET =>
+        "private"
+      case _ =>
+        visibility.value.toLowerCase
+    }
   }
 
   def taggedPage(tag: Collection, keep: Keep, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit = {
