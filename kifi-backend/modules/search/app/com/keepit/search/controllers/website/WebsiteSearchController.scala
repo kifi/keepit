@@ -58,7 +58,7 @@ class WebsiteSearchController @Inject() (
       getWebsiteUriSearchResults(userId, uriSearchResult).imap {
         case (hits, users, libraries) =>
           val librariesJson = libraries.map { library =>
-            Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility)
+            Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
           }
           val result = Json.obj(
             "uuid" -> uriSearchResult.uuid,
@@ -225,7 +225,7 @@ class WebsiteSearchController @Inject() (
         getWebsiteUriSearchResults(userId, uriSearchResult).imap {
           case (hits, users, libraries) =>
             val librariesJson = libraries.map { library =>
-              Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility)
+              Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
             }
             Json.obj(
               "uuid" -> uriSearchResult.uuid,
@@ -266,6 +266,7 @@ class WebsiteSearchController @Inject() (
                   "score" -> hit.score,
                   "name" -> library.name,
                   "description" -> description,
+                  "color" -> library.color,
                   "path" -> path,
                   "visibility" -> visibility,
                   "owner" -> owner,

@@ -39,7 +39,7 @@ object KeepInfo {
 
   implicit val writes = {
     implicit val libraryWrites = Writes[BasicLibrary] { library =>
-      Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "secret" -> library.isSecret) //todo(Léo): remove secret field
+      Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "color" -> library.color, "secret" -> library.isSecret) //todo(Léo): remove secret field
     }
     implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[BasicLibrary, BasicUser]
     Json.writes[KeepInfo]

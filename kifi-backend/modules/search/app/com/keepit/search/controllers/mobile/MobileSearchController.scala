@@ -83,6 +83,7 @@ class MobileSearchController @Inject() (
                 "score" -> hit.score,
                 "name" -> library.name,
                 "description" -> description,
+                "color" -> library.color,
                 "path" -> path,
                 "visibility" -> visibility,
                 "owner" -> owner,
