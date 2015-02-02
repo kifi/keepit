@@ -26,7 +26,7 @@ class LibraryAnalytics @Inject() (
       builder.addExistingContext(eventContext)
       builder += ("action", "sent")
       builder += ("category", "libraryInvitation")
-      builder += ("libraryId", library.id.get.id.toString)
+      builder += ("libraryId", library.id.get.toString)
       builder += ("libraryOwnerId", userId.id.toString)
       val numUsers = inviteeList.count(_.isLeft)
       val numEmails = inviteeList.size - numUsers
@@ -45,7 +45,7 @@ class LibraryAnalytics @Inject() (
       builder.addExistingContext(eventContext)
       builder += ("action", "accepted")
       builder += ("category", "libraryInvitation")
-      builder += ("libraryId", library.id.get.id.toString)
+      builder += ("libraryId", library.id.get.toString)
       builder += ("daysSinceLibraryCreated", numDays)
       heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED, when))
     }
@@ -59,7 +59,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "followed")
       contextBuilder += ("privacySetting", library.visibility.toString)
-      contextBuilder += ("libraryId", library.id.toString)
+      contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("followerCount", library.memberCount - 1)
       contextBuilder += ("keepCount", keepCount)
@@ -76,7 +76,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "unfollowed")
       contextBuilder += ("privacySetting", library.visibility.toString)
-      contextBuilder += ("libraryId", library.id.toString)
+      contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("followerCount", library.memberCount - 1)
       contextBuilder += ("keepCount", keepCount)
@@ -92,7 +92,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "created")
       contextBuilder += ("privacySetting", library.visibility.toString)
-      contextBuilder += ("libraryId", library.id.toString)
+      contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
@@ -106,7 +106,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder.data ++= context.data
       contextBuilder += ("action", "deleted")
       contextBuilder += ("privacySetting", library.visibility.toString)
-      contextBuilder += ("libraryId", library.id.toString)
+      contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
       contextBuilder += ("daysSinceLibraryCreated", numDays)
@@ -130,7 +130,7 @@ class LibraryAnalytics @Inject() (
         case _ =>
       }
       contextBuilder += ("privacySetting", library.visibility.toString)
-      contextBuilder += ("libraryId", library.id.toString)
+      contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
       contextBuilder += ("daysSinceLibraryCreated", numDays)
@@ -148,7 +148,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("imageBytes", imageBytes)
       contextBuilder += ("imageWidth", imageSize.width)
       contextBuilder += ("imageHeight", imageSize.height)
-      contextBuilder += ("libraryId", library.id.get.id.toString)
+      contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("daysSinceLibraryCreated", numDays)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
@@ -163,7 +163,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("imageType", imageFormat.value)
       contextBuilder += ("imageWidth", imageSize.width)
       contextBuilder += ("imageHeight", imageSize.height)
-      contextBuilder += ("libraryId", library.id.get.id.toString)
+      contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("daysSinceLibraryCreated", numDays)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
