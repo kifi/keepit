@@ -18,32 +18,42 @@ class LibraryAnalytics @Inject() (
     db: Database,
     keepRepo: KeepRepo)(heimdal: HeimdalServiceClient) {
 
-  def sendLibraryInvite(userId: Id[User], libId: Id[Library], inviteeList: Seq[(Either[Id[User], EmailAddress])], eventContext: HeimdalContext) = {
-    val builder = new HeimdalContextBuilder
-    builder.addExistingContext(eventContext)
-    builder += ("action", "sent")
-    builder += ("category", "libraryInvitation")
-    builder += ("libraryId", libId.id.toString)
-    builder += ("libraryOwnerId", userId.id.toString)
-    val numUsers = inviteeList.count(_.isLeft)
-    val numEmails = inviteeList.size - numUsers
-    builder += ("numUserInvited", numUsers)
-    builder += ("numNonUserInvited", numEmails)
-
-    heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
+  def sendLibraryInvite(userId: Id[User], library: Library, inviteeList: Seq[(Either[Id[User], EmailAddress])], eventContext: HeimdalContext) = {
+    val when = currentDateTime
+    val numDays = getDaysSinceLibraryCreated(library)
+    SafeFuture {
+      val builder = new HeimdalContextBuilder
+      builder.addExistingContext(eventContext)
+      builder += ("action", "sent")
+      builder += ("category", "libraryInvitation")
+      builder += ("libraryId", library.id.get.id.toString)
+      builder += ("libraryOwnerId", userId.id.toString)
+      val numUsers = inviteeList.count(_.isLeft)
+      val numEmails = inviteeList.size - numUsers
+      builder += ("numUserInvited", numUsers)
+      builder += ("numNonUserInvited", numEmails)
+      builder += ("daysSinceLibraryCreated", numDays)
+      heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED, when))
+    }
   }
 
-  def acceptLibraryInvite(userId: Id[User], libId: Id[Library], eventContext: HeimdalContext) = {
-    val builder = new HeimdalContextBuilder
-    builder.addExistingContext(eventContext)
-    builder += ("action", "accepted")
-    builder += ("category", "libraryInvitation")
-    builder += ("libraryId", libId.id.toString)
-    heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
+  def acceptLibraryInvite(userId: Id[User], library: Library, eventContext: HeimdalContext) = {
+    val when = currentDateTime
+    val numDays = getDaysSinceLibraryCreated(library)
+    SafeFuture {
+      val builder = new HeimdalContextBuilder
+      builder.addExistingContext(eventContext)
+      builder += ("action", "accepted")
+      builder += ("category", "libraryInvitation")
+      builder += ("libraryId", library.id.get.id.toString)
+      builder += ("daysSinceLibraryCreated", numDays)
+      heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED, when))
+    }
   }
 
   def followLibrary(userId: Id[User], library: Library, keepCount: Int, context: HeimdalContext): Unit = {
     val when = currentDateTime
+    val numDays = getDaysSinceLibraryCreated(library)
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -53,12 +63,14 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("followerCount", library.memberCount - 1)
       contextBuilder += ("keepCount", keepCount)
+      contextBuilder += ("daysSinceLibraryCreated", numDays)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, when))
     }
   }
 
   def unfollowLibrary(userId: Id[User], library: Library, keepCount: Int, context: HeimdalContext): Unit = {
     val when = currentDateTime
+    val numDays = getDaysSinceLibraryCreated(library)
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -68,6 +80,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("followerCount", library.memberCount - 1)
       contextBuilder += ("keepCount", keepCount)
+      contextBuilder += ("daysSinceLibraryCreated", numDays)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, when))
     }
   }
@@ -87,6 +100,7 @@ class LibraryAnalytics @Inject() (
   }
   def deleteLibrary(userId: Id[User], library: Library, context: HeimdalContext): Unit = {
     val when = currentDateTime
+    val numDays = getDaysSinceLibraryCreated(library)
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -95,11 +109,13 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryId", library.id.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
+      contextBuilder += ("daysSinceLibraryCreated", numDays)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
   def editLibrary(userId: Id[User], library: Library, context: HeimdalContext, subAction: Option[String] = None): Unit = {
     val when = currentDateTime
+    val numDays = getDaysSinceLibraryCreated(library)
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -117,11 +133,13 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryId", library.id.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
+      contextBuilder += ("daysSinceLibraryCreated", numDays)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
-  def updatedCoverImage(userId: Id[User], libraryId: Id[Library], context: HeimdalContext, imageFormat: ImageFormat, imageSize: ImageSize, imageBytes: Int): Unit = {
+  def updatedCoverImage(userId: Id[User], library: Library, context: HeimdalContext, imageFormat: ImageFormat, imageSize: ImageSize, imageBytes: Int): Unit = {
     val when = currentDateTime
+    val numDays = getDaysSinceLibraryCreated(library)
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -130,12 +148,14 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("imageBytes", imageBytes)
       contextBuilder += ("imageWidth", imageSize.width)
       contextBuilder += ("imageHeight", imageSize.height)
-      contextBuilder += ("libraryId", libraryId.toString)
+      contextBuilder += ("libraryId", library.id.get.id.toString)
+      contextBuilder += ("daysSinceLibraryCreated", numDays)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
-  def removedCoverImage(userId: Id[User], libraryId: Id[Library], context: HeimdalContext, imageFormat: ImageFormat, imageSize: ImageSize): Unit = {
+  def removedCoverImage(userId: Id[User], library: Library, context: HeimdalContext, imageFormat: ImageFormat, imageSize: ImageSize): Unit = {
     val when = currentDateTime
+    val numDays = getDaysSinceLibraryCreated(library)
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -143,7 +163,8 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("imageType", imageFormat.value)
       contextBuilder += ("imageWidth", imageSize.width)
       contextBuilder += ("imageHeight", imageSize.height)
-      contextBuilder += ("libraryId", libraryId.toString)
+      contextBuilder += ("libraryId", library.id.get.id.toString)
+      contextBuilder += ("daysSinceLibraryCreated", numDays)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
@@ -212,7 +233,7 @@ class LibraryAnalytics @Inject() (
       keepRepo.getCountByLibrary(library.id.get)
     }
 
-    val numDays = (currentDateTime.getMillis.toFloat - library.createdAt.getMillis) / (24 * 3600 * 1000)
+    val numDays = getDaysSinceLibraryCreated(library)
     val contextBuilder = new HeimdalContextBuilder
     contextBuilder += ("libraryId", library.id.get.toString)
     contextBuilder += ("libraryOwnerId", library.ownerId.toString)
@@ -336,6 +357,11 @@ class LibraryAnalytics @Inject() (
       heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, updatedKeep.updatedAt))
     }
 
+  }
+
+  private def getDaysSinceLibraryCreated(library: Library): Float = {
+    val daysSinceLibraryCreated = (currentDateTime.getMillis.toFloat - library.createdAt.getMillis) / (24 * 3600 * 1000)
+    (daysSinceLibraryCreated - daysSinceLibraryCreated % 0.0001).toFloat
   }
 
   def taggedPage(tag: Collection, keep: Keep, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit = {
