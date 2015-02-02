@@ -9,9 +9,9 @@ import java.util.zip.Adler32
 
 object IdFilterCompressor extends IdFilterBase[LongArraySet] {
 
-  override val emptySet: LongArraySet = LongArraySet.empty
+  override protected val emptySet: LongArraySet = LongArraySet.empty
 
-  override def toByteArray(ids: Set[Long]): Array[Byte] = {
+  def toByteArray(ids: Set[Long]): Array[Byte] = {
     val arr = ids.toArray
     Arrays.sort(arr)
     val baos = new ByteArrayOutputStream(arr.length * 4)
@@ -44,7 +44,7 @@ object IdFilterCompressor extends IdFilterBase[LongArraySet] {
     bytes(4) = (checksum).toByte
   }
 
-  override def toSet(bytes: Array[Byte]): LongArraySet = {
+  def toSet(bytes: Array[Byte]): LongArraySet = {
     val in = new InputStreamDataInput(new ByteArrayInputStream(bytes))
 
     val version = in.readByte().toInt
