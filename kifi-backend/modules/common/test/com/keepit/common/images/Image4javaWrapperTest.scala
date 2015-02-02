@@ -19,7 +19,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
   def getJpgImage(name: String = "image1"): BufferedImage = ImageIO.read(new File(s"test/data/$name.jpg"))
   def getGifImage(name: String = "image1"): BufferedImage = ImageIO.read(new File(s"test/data/$name.gif"))
 
-  def range(actual: Int, expected: Int, window: Double = 0.04): Result = {
+  def range(actual: Int, expected: Int, window: Double = 0.25): Result = {
     val delta = Math.abs((actual - expected).toDouble / actual.toDouble)
     val msg = s"actual: $actual, expected: $expected, window: $window, delta = $delta"
     if (delta > window) {
