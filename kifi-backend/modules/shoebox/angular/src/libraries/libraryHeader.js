@@ -36,7 +36,7 @@ angular.module('kifi')
         var coverImageMoveTracked;
         var URL = $window.URL || $window.webkitURL;
 
-        var headerLinksElement = angular.element('.kf-header-right');
+        var headerLinksElement = angular.element('.kf-loh-right');
         var searchFollowElement = angular.element('.kf-lh-follow-btn-searching');
 
         //
@@ -745,11 +745,11 @@ angular.module('kifi')
           }
 
           if (isStuck) {
-            angular.element('html.kf-mobile .kf-header-right').css({'display': 'none'});
-            angular.element('.kf-header-right').css({'margin-right': '150px'});
+            angular.element('html.kf-mobile .kf-loh-right').css({'display': 'none'});
+            angular.element('.kf-loh-right').css({'margin-right': '150px'});
           } else {
-            angular.element('html.kf-mobile .kf-header-right').css({'display': ''});
-            angular.element('.kf-header-right').css({'margin-right': ''});
+            angular.element('html.kf-mobile .kf-loh-right').css({'display': ''});
+            angular.element('.kf-loh-right').css({'margin-right': ''});
           }
         };
 
