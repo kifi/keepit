@@ -5,10 +5,12 @@ import org.apache.lucene.store.InputStreamDataInput
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
 import java.util.Arrays
-import javax.xml.bind.DatatypeConverter._
 import java.util.zip.Adler32
 
-object IdFilterCompressor {
+object IdFilterCompressor extends IdFilterBase[LongArraySet] {
+
+  override protected val emptySet: LongArraySet = LongArraySet.empty
+
   def toByteArray(ids: Set[Long]): Array[Byte] = {
     val arr = ids.toArray
     Arrays.sort(arr)
@@ -75,21 +77,4 @@ object IdFilterCompressor {
     adler32.getValue.toInt
   }
 
-  def fromSetToBase64(ids: Set[Long]): String = printBase64Binary(toByteArray(ids))
-
-  def fromBase64ToSet(base64: String): LongArraySet = {
-    if (base64.length == 0) LongArraySet.empty
-    else {
-      val bytes = try {
-        parseBase64Binary(base64)
-      } catch {
-        case e: Exception => throw new IdFilterCompressorException("failed to decode base64", e)
-      }
-      toSet(bytes)
-    }
-  }
-}
-
-class IdFilterCompressorException(msg: String, exception: Exception) extends Exception(msg) {
-  def this(msg: String) = this(msg, null)
 }
