@@ -26,8 +26,6 @@ trait ShoeboxScraperClient extends ServiceClient {
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit]
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI]
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
-  def savePageInfo(pageInfo: PageInfo): Future[Unit]
-  def saveImageInfo(imgInfo: ImageInfo): Future[Unit]
   def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?, updatedAt: => DateTime = ?, externalId: => ExternalId[NormalizedURI] = ?, title: => Option[String] = ?, url: => String = ?, urlHash: => UrlHash = UrlHash(?), state: => State[NormalizedURI] = ?, seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1), screenshotUpdatedAt: => Option[DateTime] = ?, restriction: => Option[Restriction] = ?, normalization: => Option[Normalization] = ?, redirect: => Option[Id[NormalizedURI]] = ?, redirectTime: => Option[DateTime] = ?): Future[Unit]
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
@@ -71,14 +69,6 @@ class ShoeboxScraperClientImpl @Inject() (
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = {
     call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout).map { r => Unit }
-  }
-
-  def savePageInfo(pageInfo: PageInfo): Future[Unit] = {
-    call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = longTimeout).map { r => Unit }
-  }
-
-  def saveImageInfo(imgInfo: ImageInfo): Future[Unit] = {
-    call(Shoebox.internal.saveImageInfo(), Json.toJson(imgInfo), callTimeouts = longTimeout).map { r => Unit }
   }
 
   @deprecated("Dangerous call. Use updateNormalizedURI instead.", "2014-01-30")

@@ -276,14 +276,14 @@
                                 </tr>
                                 <tr>
                                   <td align="center" valign="top">
-                                    <a href="https://www.kifi.com" target="_blank"><img src="@assetV3Url("kifi.png")" width="81" height="35" alt="KIFI" style="display:block;" border="0"/></a>
+                                    <a href="@kifiUrl("header")" target="_blank"><img src="@assetV3Url("kifi.png")" width="81" height="35" alt="Kifi" style="display:block;" border="0"/></a>
                                   </td>
                                 </tr>
                                 <tr>
                                   <td height="12" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                 </tr>
                                 <tr>
-                                  <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:18px;line-height:20px;color:#ffffff;">Your kifi updates</td>
+                                  <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:18px;line-height:20px;color:#ffffff;">Your Kifi updates</td>
                                 </tr>
                                 <tr>
                                   <td height="25" style="font-size:1px; line-height:1px;">&nbsp;</td>
@@ -313,8 +313,8 @@
                                             </tr>
                                             <tr>
                                               <td align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;color:#7f7f7f;">
-                                                <span style="color:#4f5b67;font-weight:bold;">Hi Danny,</span><br/>
-                                                Your kifi relevant updates,<br/>
+                                                <span style="color:#4f5b67;font-weight:bold;">Hi @firstName(activityData.userId),</span><br/>
+                                                Your Kifi relevant updates,<br/>
                                                 recommendations and more
                                               </td>
                                             </tr>
@@ -337,7 +337,7 @@
                                                           <td align="left" valign="top" width="141">
                                                             <table width="141" border="0" cellspacing="0" cellpadding="0">
                                                               <tr>
-                                                                <td align="center" valign="middle" height="33" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:15px;line-height:17px;color:#3e4854;font-weight:bold;">Go mobile with kifi</td>
+                                                                <td align="center" valign="middle" height="33" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:15px;line-height:17px;color:#3e4854;font-weight:bold;">Go mobile with Kifi</td>
                                                               </tr>
                                                               <tr>
                                                                 <td align="center" valign="top">
@@ -384,53 +384,9 @@
                                       <tr>
                                         <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Activity by people who share your interest</td>
                                       </tr>
-                                      <tr>
-                                        <td align="left" valign="top">
-                                          <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-                                            <tr>
-                                              <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
-                                            <tr>
-                                              <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">15 fellow foodies Followed
-                                                <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;">All things san francisco</a> ,<br class="br"/>
-                                                <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;">Photography</a>,
-                                                <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;">Be more crea5ve</a>,
-                                                <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;">travel the world</a>
-                                              </td>
-                                            </tr>
-                                            <tr>
-                                              <td height="15" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
-                                            <tr>
-                                              <td align="left" valign="top">
-                                                <table width="201" border="0" cellspacing="0" cellpadding="0" align="left">
-                                                  <tr>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img1.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img2.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img3.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img4.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img5.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                  </tr>
-                                                </table>
-                                              </td>
-                                            </tr>
-                                          </table>
-                                        </td>
-                                      </tr>
+                                      @activityData.activityComponents.map { html =>
+                                      @html
+                                      }
                                       <tr>
                                         <td align="left" valign="top">
                                           <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
@@ -519,7 +475,7 @@
                                             </tr>
                                             <tr>
                                               <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">Your Useful design stuff 2015 library was recommended<br class="br"/>
-                                                by kifi to 2369 people
+                                                by Kifi to 2369 people
                                               </td>
                                             </tr>
                                             <tr>
@@ -624,266 +580,7 @@
                                             <tr>
                                               <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Relevant libraries to follow</td>
                                             </tr>
-                                            <tr>
-                                              <td align="left" valign="top">
-                                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                  <tr>
-                                                    <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td class="title1" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:23px;line-height:25px;color:#62BE73;">
-                                                      <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;">Useful Design Stuff 2015</a>
-                                                    </td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td height="5" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:14px;line-height:20px;color:#7f7f7f;">By
-                                                      <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;"> Danny Blumenfeld </a>&nbsp; 234 followers
-                                                    </td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td height="5" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td class="txt1" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:22px;color:#505c68;">Wonderful collec5on of handpicked design resources for biggner
-                                                      to an expert designer.
-                                                    </td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td height="16" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td align="left" valign="top">
-                                                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                        <tr>
-                                                          <td align="left" valign="top">
-                                                            <table width="223" border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper">
-                                                              <tr>
-                                                                <td>
-                                                                  <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-                                                                    <tr>
-                                                                      <td>
-                                                                        <table width="107" border="0" cellspacing="0" cellpadding="0" class="wrapper">
-                                                                          <tr>
-                                                                            <td align="center" valign="top">
-                                                                              <a href="#" target="_blank"><img src="@assetV3Url("square_1.png")" width="107" height="107" alt="" style="display:block;" border="0" class="full_width"/></a>
-                                                                            </td>
-                                                                          </tr>
-                                                                        </table>
-                                                                      </td>
-                                                                      <td width="9"></td>
-                                                                      <td>
-                                                                        <table width="107" border="0" cellspacing="0" cellpadding="0" class="wrapper">
-                                                                          <tr>
-                                                                            <td align="center" valign="top">
-                                                                              <a href="#" target="_blank"><img src="@assetV3Url("square_2.png")" width="107" height="107" alt="" style="display:block;" border="0" class="full_width"/></a>
-                                                                            </td>
-                                                                          </tr>
-                                                                        </table>
-                                                                      </td>
-                                                                    </tr>
-                                                                  </table>
-                                                                </td>
-                                                              </tr>
-                                                            </table>
-                                                            <table width="233" border="0" cellspacing="0" cellpadding="0" align="left" class="hide">
-                                                              <tr>
-                                                                <td width="10" class="hide"></td>
-                                                                <td class="top_padding">
-                                                                  <table width="223" border="0" cellspacing="0" cellpadding="0" align="center">
-                                                                    <tr>
-                                                                      <td align="center" valign="top">
-                                                                        <a href="#" target="_blank"><img src="@assetV3Url("square_3.png")" width="107" height="107" alt="" style="display:block;" border="0"/></a>
-                                                                      </td>
-                                                                      <td width="9"></td>
-                                                                      <td align="center" valign="top">
-                                                                        <a href="#" target="_blank"><img src="@assetV3Url("square_4.png")" width="107" height="107" alt="" style="display:block;" border="0"/></a>
-                                                                      </td>
-                                                                    </tr>
-                                                                  </table>
-                                                                </td>
-                                                              </tr>
-                                                            </table>
-                                                          </td>
-                                                        </tr>
-                                                      </table>
-                                                    </td>
-                                                  </tr>
-                                                </table>
-                                              </td>
-                                            </tr>
-                                            <tr>
-                                              <td align="left" valign="top">
-                                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                  <tr>
-                                                    <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td class="title1" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:23px;line-height:25px;color:#62BE73;">
-                                                      <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;">Useful stuff for a Startup CEO</a>
-                                                    </td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td height="5" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:14px;line-height:20px;color:#7f7f7f;">By
-                                                      <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;"> Danny Blumenfeld </a>&nbsp; 234 followers
-                                                    </td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td height="10" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td align="left" valign="top">
-                                                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                        <tr>
-                                                          <td align="left" valign="top">
-                                                            <table width="223" border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper">
-                                                              <tr>
-                                                                <td>
-                                                                  <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-                                                                    <tr>
-                                                                      <td>
-                                                                        <table width="107" border="0" cellspacing="0" cellpadding="0" class="wrapper">
-                                                                          <tr>
-                                                                            <td align="center" valign="top">
-                                                                              <a href="#" target="_blank"><img src="@assetV3Url("square_5.png")" width="107" height="107" alt="" style="display:block;" border="0" class="full_width"/></a>
-                                                                            </td>
-                                                                          </tr>
-                                                                        </table>
-                                                                      </td>
-                                                                      <td width="9"></td>
-                                                                      <td>
-                                                                        <table width="107" border="0" cellspacing="0" cellpadding="0" class="wrapper">
-                                                                          <tr>
-                                                                            <td align="center" valign="top">
-                                                                              <a href="#" target="_blank"><img src="@assetV3Url("square_6.png")" width="107" height="107" alt="" style="display:block;" border="0" class="full_width"/></a>
-                                                                            </td>
-                                                                          </tr>
-                                                                        </table>
-                                                                      </td>
-                                                                    </tr>
-                                                                  </table>
-                                                                </td>
-                                                              </tr>
-                                                            </table>
-                                                            <table width="233" border="0" cellspacing="0" cellpadding="0" align="left" class="hide">
-                                                              <tr>
-                                                                <td width="10" class="hide"></td>
-                                                                <td class="top_padding">
-                                                                  <table width="223" border="0" cellspacing="0" cellpadding="0" align="center">
-                                                                    <tr>
-                                                                      <td align="center" valign="top">
-                                                                        <a href="#" target="_blank"><img src="@assetV3Url("square_7.png")" width="107" height="107" alt="" style="display:block;" border="0"/></a>
-                                                                      </td>
-                                                                      <td width="9"></td>
-                                                                      <td align="center" valign="top">
-                                                                        <a href="#" target="_blank"><img src="@assetV3Url("square_8.png")" width="107" height="107" alt="" style="display:block;" border="0"/></a>
-                                                                      </td>
-                                                                    </tr>
-                                                                  </table>
-                                                                </td>
-                                                              </tr>
-                                                            </table>
-                                                          </td>
-                                                        </tr>
-                                                      </table>
-                                                    </td>
-                                                  </tr>
-                                                </table>
-                                              </td>
-                                            </tr>
-                                            <tr>
-                                              <td align="left" valign="top">
-                                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                  <tr>
-                                                    <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td class="title1" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:23px;line-height:25px;color:#62BE73;">
-                                                      <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;">Wearables</a>
-                                                    </td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td height="5" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:14px;line-height:20px;color:#7f7f7f;">By
-                                                      <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;"> Leor stern </a>&nbsp; 234 followers
-                                                    </td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td height="10" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                  </tr>
-                                                  <tr>
-                                                    <td align="left" valign="top">
-                                                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                        <tr>
-                                                          <td align="left" valign="top">
-                                                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                              <tr>
-                                                                <td align="left" valign="top">
-                                                                  <table width="223" border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper">
-                                                                    <tr>
-                                                                      <td>
-                                                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-                                                                          <tr>
-                                                                            <td>
-                                                                              <table width="107" border="0" cellspacing="0" cellpadding="0" class="wrapper">
-                                                                                <tr>
-                                                                                  <td align="center" valign="top">
-                                                                                    <a href="#" target="_blank"><img src="@assetV3Url("square_9.png")" width="107" height="107" alt="" style="display:block;" border="0" class="full_width"/></a>
-                                                                                  </td>
-                                                                                </tr>
-                                                                              </table>
-                                                                            </td>
-                                                                            <td width="9"></td>
-                                                                            <td>
-                                                                              <table width="107" border="0" cellspacing="0" cellpadding="0" class="wrapper">
-                                                                                <tr>
-                                                                                  <td align="center" valign="top">
-                                                                                    <a href="#" target="_blank"><img src="@assetV3Url("square_10.png")" width="107" height="107" alt="" style="display:block;" border="0" class="full_width"/></a>
-                                                                                  </td>
-                                                                                </tr>
-                                                                              </table>
-                                                                            </td>
-                                                                          </tr>
-                                                                        </table>
-                                                                      </td>
-                                                                    </tr>
-                                                                  </table>
-                                                                  <table width="233" border="0" cellspacing="0" cellpadding="0" align="left" class="hide">
-                                                                    <tr>
-                                                                      <td width="10" class="hide"></td>
-                                                                      <td class="top_padding">
-                                                                        <table width="223" border="0" cellspacing="0" cellpadding="0" align="center">
-                                                                          <tr>
-                                                                            <td align="center" valign="top">
-                                                                              <a href="#" target="_blank"><img src="@assetV3Url("square_11.png")" width="107" height="107" alt="" style="display:block;" border="0"/></a>
-                                                                            </td>
-                                                                            <td width="9"></td>
-                                                                            <td align="center" valign="top">
-                                                                              <a href="#" target="_blank"><img src="@assetV3Url("square_12.png")" width="107" height="107" alt="" style="display:block;" border="0"/></a>
-                                                                            </td>
-                                                                          </tr>
-                                                                        </table>
-                                                                      </td>
-                                                                    </tr>
-                                                                  </table>
-                                                                </td>
-                                                              </tr>
-                                                            </table>
-                                                          </td>
-                                                        </tr>
-                                                      </table>
-                                                    </td>
-                                                  </tr>
-                                                </table>
-                                              </td>
-                                            </tr>
+                                            @views.html.email.v3.activityFeedLibRecoPartial()
                                             <tr>
                                               <td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                             </tr>
@@ -903,7 +600,7 @@
                                         <td height="34" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                       </tr>
                                       <tr>
-                                        <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">You are almost a kifi contributor</td>
+                                        <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">You are almost a Kifi contributor</td>
                                       </tr>
                                       <tr>
                                         <td height="18" style="font-size:1px; line-height:1px;">&nbsp;</td>
@@ -1054,7 +751,7 @@
                                 </tr>
                                 <tr>
                                   <td align="center" class="txt11" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:13px;line-height:22px;color:#a7adb3;">
-                                    <a href="#" target="_blank" style="text-decoration:none;color:#a7adb3;">Your kifi</a> |
+                                    <a href="#" target="_blank" style="text-decoration:none;color:#a7adb3;">Your Kifi</a> |
                                     <a href="#" target="_blank" style="text-decoration:none;color:#a7adb3;">Privacy policy</a> |
                                     <a href="#" target="_blank" style="text-decoration:none;color:#a7adb3;">Help Center</a>
                                     <span class="hide">|</span>

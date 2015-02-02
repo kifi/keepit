@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ URI, URIParser }
 import com.keepit.common.performance._
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer._
 import com.keepit.scraper.{ HttpRedirect, Signature }
@@ -209,30 +209,18 @@ class ShoeboxScraperController @Inject() (
     resFuture.map { res => Ok(Json.toJson(res)) }
   }
 
-  // Todo(Eishay): Stop returning ImageInfo
-  def saveImageInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val json = request.body
-    val info = json.as[ImageInfo]
-    scraperHelper.saveImageInfo(info)
-    Ok
-  }
-
-  def savePageInfo() = Action.async(parse.tolerantJson) { request =>
-    val json = request.body
-    val info = json.as[PageInfo]
-    val toSave = db.readOnlyMaster { implicit ro => pageInfoRepo.getByUri(info.uriId) } map { p => info.withId(p.id.get) } getOrElse info
-    scraperHelper.savePageInfo(toSave) map { saved =>
-      log.debug(s"[savePageInfo] result=$saved")
-      Ok
-    }
-  }
-
   def saveScrapeInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val ts = System.currentTimeMillis
     val json = request.body
     val info = json.as[ScrapeInfo]
     val saved = db.readWrite(attempts = 3) { implicit s =>
-      scrapeInfoRepo.save(info)
+      val nuri = normUriRepo.get(info.uriId)
+      if (URI.parse(nuri.url).isFailure) {
+        scrapeInfoRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+        airbrake.notify(s"can't parse $nuri, not passing it to the scraper, marking as unscrapable")
+      } else {
+        scrapeInfoRepo.save(info)
+      }
     }
     log.debug(s"[saveScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
     Ok
