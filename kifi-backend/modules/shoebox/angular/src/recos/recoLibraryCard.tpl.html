@@ -44,12 +44,11 @@
         </div>
       </div>
       <div class="kf-rcl-buttons clearfix">
-        <button ng-if="!alreadyFollowingLibrary()" class="kf-button kf-rcl-float-right kf-rcl-follow-btn" ng-click="followLibrary()">
-          Follow Library
-        </button>
-        <button ng-if="alreadyFollowingLibrary()" class="kf-button kf-rcl-float-right kf-rcl-unfollow-btn" ng-click="unfollowLibrary()"></button>
-        <div kf-library-share-search library="library" current-page-origin="libraryPage" class="kf-rcl-float-right"></div>
-
+        <div style="float:right">
+          <div kf-library-share-search library="library" current-page-origin="libraryPage"></div>
+          <button class="kf-button kf-rcl-unfollow-btn" ng-if="alreadyFollowingLibrary()" ng-click="unfollowLibrary()"></button>
+          <button class="kf-button kf-rcl-follow-btn" ng-if="!alreadyFollowingLibrary()" ng-click="followLibrary()">Follow Library</button>
+        </div>
         <a class="kf-button kf-button-text-optional" ng-click="shareTwitter()" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}">
           <span class="kf-button-icon svg-twitter"></span> Tweet
         </a>
