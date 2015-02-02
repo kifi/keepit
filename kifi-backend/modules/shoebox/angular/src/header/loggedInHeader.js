@@ -51,8 +51,10 @@ angular.module('kifi')
 
         if ($scope.library.id) {
           $scope.search.showName = true;
-        } else {
+        } else if ($scope.search.showName) {
           $scope.clearLibraryName();
+        } else if (util.startsWith($state.params.q, 'tag:')) {
+          $scope.search.text = $state.params.q;
         }
 
         $scope.curatorProfileUrl = $scope.library.owner && routeService.getProfileUrl($scope.library.owner.username);
@@ -64,10 +66,6 @@ angular.module('kifi')
         } else {
           $scope.search.text = '';
         }
-      }),
-
-      $rootScope.$on('newSearch', function (event, params) {
-        $scope.search.text = params.q;
       }),
 
       $rootScope.$on('triggerAddKeep', function (e, library) {
