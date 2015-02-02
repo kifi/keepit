@@ -53,6 +53,8 @@ angular.module('kifi')
           $scope.search.showName = true;
         } else if ($scope.search.showName) {
           $scope.clearLibraryName();
+        } else if (util.startsWith($state.params.q, 'tag:')) {
+          $scope.search.text = $state.params.q;
         }
 
         $scope.curatorProfileUrl = $scope.library.owner && routeService.getProfileUrl($scope.library.owner.username);
