@@ -110,6 +110,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
   val maxFollowerImagesToShow = 9
 
+  // library recommendations to fetch from curator (doesn't mean they will all be used)
+  val libRecosToFetch = 20
+
   def apply(sendTo: Set[Id[User]]): Future[Seq[ElectronicMail]] = {
     val emailsF = sendTo.toSeq map prepareEmailForUser map (_ flatMap emailTemplateSender.send)
     Future.sequence(emailsF)
@@ -132,7 +135,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     }
 
     val newFollowersOfMyLibrariesF = components.userLibraryFollowers(toUserId, previouslySentEmails)
-    val libRecosF = components.libraryRecommendations(toUserId, previouslySentEmails)
+    val libRecosF = components.libraryRecommendations(toUserId, previouslySentEmails, libRecosToFetch)
     val unreadMessageThreadsF = components.unreadMessages(toUserId)
 
     val newKeepsInLibrariesF = feed.getNewKeepsFromFollowedLibraries()

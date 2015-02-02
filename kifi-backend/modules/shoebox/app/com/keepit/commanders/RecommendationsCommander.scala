@@ -230,7 +230,7 @@ class RecommendationsCommander @Inject() (
     createFullLibraryInfos(userId, curatedLibraries)
   }
 
-  def topPublicLibraryRecos(userId: Id[User], limit: Int, source: RecommendationSource, subSource: RecommendationSubSource): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {
+  def topPublicLibraryRecos(userId: Id[User], limit: Int, source: RecommendationSource, subSource: RecommendationSubSource, trackDelivery: Boolean = true): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {
     // get extra recos from curator incase we filter out some below
     curator.topLibraryRecos(userId, Some(limit * 4)) flatMap { libInfos =>
       val libIds = libInfos.map(_.libraryId).toSet
@@ -246,7 +246,7 @@ class RecommendationsCommander @Inject() (
       val libToRecoInfoMap = libsAndRecoInfos.map { case (lib, info) => info.libraryId -> info }.toMap
 
       // for analytics and delivery tracking
-      SafeFuture {
+      if (trackDelivery) SafeFuture {
         val deliveredIds = libraries.map(_._1).toSet
         curator.notifyLibraryRecosDelivered(userId, deliveredIds, source, subSource)
       }
