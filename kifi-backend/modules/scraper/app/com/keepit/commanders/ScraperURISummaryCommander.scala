@@ -16,7 +16,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.ImageFetcher
 import com.keepit.common.store.{ S3ImageConfig, ImageSize, S3URIImageStore }
 import com.keepit.model._
-import com.keepit.scraper.{ URIPreviewFetchResult, NormalizedURIRef, ShoeboxDbCallbackHelper }
+import com.keepit.scraper.{ URIPreviewFetchResult, NormalizedURIRef }
 import com.keepit.scraper.embedly.{ EmbedlyImage, EmbedlyClient }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -46,8 +46,7 @@ class ScraperURISummaryCommanderImpl @Inject() (
     imageConfig: S3ImageConfig,
     airbrake: AirbrakeNotifier,
     uriImageCommander: UriImageCommander,
-    shoeboxScraperClient: ShoeboxScraperClient,
-    callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander with Logging {
+    shoeboxScraperClient: ShoeboxScraperClient) extends ScraperURISummaryCommander with Logging {
 
   def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]] = {
     embedlyClient.getEmbedlyInfo(url).flatMap {

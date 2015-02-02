@@ -21,7 +21,7 @@ object URI extends Logging {
   def safelyParse(uriString: String): Option[URI] = parse(uriString) match {
     case Success(uri) => Some(uri)
     case Failure(e) =>
-      log.error("uri parsing failed: [%s] caused by [%s]".format(uriString, e.getMessage))
+      log.error(s"uri parsing failed: [$uriString]", e)
       None
   }
 
