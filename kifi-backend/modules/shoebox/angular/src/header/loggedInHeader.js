@@ -51,7 +51,7 @@ angular.module('kifi')
 
         if ($scope.library.id) {
           $scope.search.showName = true;
-        } else {
+        } else if ($scope.search.showName) {
           $scope.clearLibraryName();
         }
 
@@ -64,10 +64,6 @@ angular.module('kifi')
         } else {
           $scope.search.text = '';
         }
-      }),
-
-      $rootScope.$on('newSearch', function (event, params) {
-        $scope.search.text = params.q;
       }),
 
       $rootScope.$on('triggerAddKeep', function (e, library) {
