@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.controller('HeaderCtrl', [
+.controller('LoggedInHeaderCtrl', [
   '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService',
     '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state', 'routeService',
   function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService,

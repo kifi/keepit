@@ -12,6 +12,7 @@ import com.keepit.model._
 import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
+import scala.collection.mutable
 
 import scala.concurrent.Future
 
@@ -34,7 +35,7 @@ class RelatedLibraryCommanderImpl @Inject() (
     libQualityHelper: LibraryQualityHelper,
     airbrake: AirbrakeNotifier) extends RelatedLibraryCommander with Logging {
 
-  private val DEFAULT_MIN_FOLLOW = 5
+  protected val DEFAULT_MIN_FOLLOW = 5
   private val RETURN_SIZE = 5
 
   private val consolidater = new RequestConsolidator[Id[Library], Seq[RelatedLibrary]](FiniteDuration(10, MINUTES))
@@ -89,7 +90,16 @@ class RelatedLibraryCommanderImpl @Inject() (
       ownerLibs <- ownerLibsF
       popular <- popularF
     } yield {
-      topicRelated ++ ownerLibs.sortBy(-_.library.memberCount) ++ util.Random.shuffle(popular.filter(_.library.id.get != libId))
+      val libs = topicRelated ++ ownerLibs.sortBy(-_.library.memberCount) ++ util.Random.shuffle(popular.filter(_.library.id.get != libId))
+      // dedup
+      val libIds = mutable.Set.empty[Id[Library]]
+      libs.flatMap { lib =>
+        if (libIds.contains(lib.library.id.get)) None
+        else {
+          libIds += lib.library.id.get
+          Some(lib)
+        }
+      }
     }
   }
 

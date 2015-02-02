@@ -1,0 +1,16 @@
+<div class="kf-loh" ng-controller="LoggedOutHeaderCtrl">
+  <div class="kf-loh-inner">
+    <div class="kf-loh-left">
+      <a href="/" target="_self" ng-click="clickLogo()">
+        <span class="kf-loh-clover-logo svg-kifi-clover-logo"></span>
+        <span class="kf-loh-kifi-logo svg-kifi-name"></span>
+        <span class="kf-loh-tagline">Connecting people with knowledge</span>
+      </a>
+    </div>
+    <div class="kf-loh-right">
+      <a class="kf-loh-link" ng-click="join($event)" href="{{navBase}}/signup" target="_self">Join Kifi</a>
+      <span class="kf-loh-dot">•</span>
+      <a class="kf-loh-link" ng-click="login($event)" href="{{navBase}}/login" target="_self" rel="nofollow">Log in</a>
+    </div>
+  </div>
+</div>

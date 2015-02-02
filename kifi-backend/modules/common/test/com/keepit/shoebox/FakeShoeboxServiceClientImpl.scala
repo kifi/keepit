@@ -42,10 +42,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
 
-  def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???
-
-  def saveImageInfo(imageInfo: ImageInfo): Future[Unit] = ???
-
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
 
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = ???

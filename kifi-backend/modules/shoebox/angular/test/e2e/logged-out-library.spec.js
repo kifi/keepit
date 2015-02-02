@@ -26,7 +26,7 @@ describe('kifi angular logged-out library test suite', function () {
     });
 
     it('should display the join and login links', function () {
-      var headerLinks = element.all(by.css('.public-header-link'));
+      var headerLinks = element.all(by.css('.kf-loh-link'));
 
       expect(headerLinks.get(0).getText()).toEqual('Join Kifi');
       expect(headerLinks.get(1).getText()).toEqual('Log in');
