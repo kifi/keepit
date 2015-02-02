@@ -35,7 +35,7 @@ class ScrapeProcessorActorImpl @Inject() (
     scrapeSupervisorProvider: Provider[ScrapeAgentSupervisor],
     scrapeProcActorProvider: Provider[ScrapeAgent],
     serviceDiscovery: ServiceDiscovery,
-    asyncHelper: ShoeboxDbCallbacks) extends ScrapeProcessor with Logging {
+    shoeboxCommander: ShoeboxCommander) extends ScrapeProcessor with Logging {
 
   import ScraperMessages._
 
@@ -69,7 +69,7 @@ class ScrapeProcessorActorImpl @Inject() (
         log.info(s"[ScrapeProcessorActorImpl.pull] qSize=$qSize. Let's get some work.")
         serviceDiscovery.thisInstance.map { inst =>
           if (inst.isHealthy) {
-            val taskFuture = asyncHelper.assignTasks(inst.id.id, config.pullMax)
+            val taskFuture = shoeboxCommander.assignTasks(inst.id.id, config.pullMax)
             val queuedFuture = taskFuture map { requests =>
               log.info(s"[ScrapeProcessorActorImpl.pull(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
               for (sr <- requests) {

@@ -16,7 +16,7 @@ import scala.concurrent.Future
 
 class FetchAgent @Inject() (
     airbrake: AirbrakeNotifier,
-    helper: ShoeboxDbCallbacks,
+    shoeboxCommander: ShoeboxCommander,
     uriCommander: URICommander,
     extractorFactory: ExtractorFactory,
     httpFetcher: HttpFetcher,
