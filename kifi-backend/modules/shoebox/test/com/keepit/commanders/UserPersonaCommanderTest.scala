@@ -87,7 +87,9 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
     val availablePersonas = PersonaName.allPersonas
     db.readWrite { implicit s =>
       availablePersonas.map { pName =>
-        (pName -> personaRepo.save(Persona(name = pName)))
+        val iconPath = "icon/" + pName + ".jpg"
+        val activeIconPath = "icon/active_" + pName + ".jpg"
+        (pName -> personaRepo.save(Persona(name = pName, displayName = pName.value, iconPath = iconPath, activeIconPath = activeIconPath)))
       }
     }.toMap
   }

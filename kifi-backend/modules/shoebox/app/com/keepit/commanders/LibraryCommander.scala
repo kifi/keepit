@@ -1,42 +1,38 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Provider, Inject }
-import com.keepit.commanders.emails.{ LibraryInviteEmailSender, EmailOptOutCommander }
+import com.google.inject.{ Inject, Provider }
+import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.model.RichContact
+import com.keepit.commanders.emails.{ EmailOptOutCommander, LibraryInviteEmailSender }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache._
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.core._
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
-import com.keepit.common.db.{ State, Id, ExternalId }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.{ AccessLog, Logging }
-import com.keepit.common.mail.template.tags
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ BasicContact, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient, HeimdalContextBuilderFactory, UserEvent, UserEventTypes }
-import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.LibraryVisibility.PUBLISHED
+import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{ BasicNonUser, SocialNetworks, BasicUser }
+import com.keepit.social.{ BasicNonUser, BasicUser }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import views.html.admin.{ libraries, library }
+
 import scala.collection.parallel.ParSeq
 import scala.concurrent._
-import scala.concurrent.duration.Duration
 import scala.util.Success
-import com.keepit.common.json
-import com.keepit.common.core._
-import com.keepit.abook.ABookServiceClient
-import com.keepit.abook.model.RichContact
 
 @json case class MarketingSuggestedLibrarySystemValue(
   id: Id[Library],
@@ -824,7 +820,7 @@ class LibraryCommander @Inject() (
         val (invites, inviteesWithAccess) = invitesAndInvitees.flatten.unzip
         processInvites(invites)
         future {
-          libraryAnalytics.sendLibraryInvite(inviterId, libraryId, inviteList.map { _._1 }, eventContext)
+          libraryAnalytics.sendLibraryInvite(inviterId, targetLib, inviteList.map { _._1 }, eventContext)
         }
 
         Right(inviteesWithAccess)
@@ -910,7 +906,7 @@ class LibraryCommander @Inject() (
   private def updateLibraryJoin(userId: Id[User], library: Library, eventContext: HeimdalContext): Future[Unit] = SafeFuture {
     val libraryId = library.id.get
     val keepCount = db.readOnlyMaster { implicit s => keepRepo.getCountByLibrary(libraryId) }
-    libraryAnalytics.acceptLibraryInvite(userId, libraryId, eventContext)
+    libraryAnalytics.acceptLibraryInvite(userId, library, eventContext)
     libraryAnalytics.followLibrary(userId, library, keepCount, eventContext)
     searchClient.updateLibraryIndex()
   }
@@ -939,6 +935,35 @@ class LibraryCommander @Inject() (
           Right()
         }
       }
+    }
+  }
+
+  // sorts by the highest growth of members in libraries since the last email (descending)
+  //
+  def sortAndSelectLibrariesWithTopGrowthSince(libraryIds: Set[Id[Library]], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])] = {
+    val libraryMemberCountsSince = db.readOnlyReplica { implicit session =>
+      libraryIds.map { id => id -> libraryMembershipRepo.getMemberCountSinceForLibrary(id, since) }.toMap
+    }
+
+    sortAndSelectLibrariesWithTopGrowthSince(libraryMemberCountsSince, since, totalMemberCount)
+  }
+
+  def sortAndSelectLibrariesWithTopGrowthSince(libraryMemberCountsSince: Map[Id[Library], Int], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])] = {
+    libraryMemberCountsSince.toSeq sortBy {
+      case (libraryId, membersSince) =>
+        // squaring membersSince gives libraries with a higher growth count the advantage
+        Math.pow(membersSince, 2) / -totalMemberCount(libraryId).toFloat
+    } map {
+      case (libraryId, membersSince) =>
+
+        // gets followers of library and orders them by when they last joined desc
+        val members = db.readOnlyReplica { implicit s =>
+          libraryMembershipRepo.getWithLibraryId(libraryId) filter { membership =>
+            membership.state == LibraryMembershipStates.ACTIVE && !membership.isOwner
+          } sortBy (-_.lastJoinedAt.map(_.getMillis).getOrElse(0L))
+        }
+
+        (libraryId, members)
     }
   }
 

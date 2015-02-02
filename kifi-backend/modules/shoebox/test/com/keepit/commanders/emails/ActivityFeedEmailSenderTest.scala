@@ -19,7 +19,7 @@ import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.{ ExperimentType, _ }
+import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
@@ -80,14 +80,29 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
 
         val curator = inject[CuratorServiceClient].asInstanceOf[FakeCuratorServiceClientImpl]
 
-        // setup Lib Recos
+        val randomFollowers = db.readWrite { implicit rw => users(30).map(_.saved) }
+
+        // setup Lib Recos with followers
         val user1Libs = createLibWithKeeps("u1/lib1-reco")
         val user2Libs = createLibWithKeeps("u2/lib2-reco")
         for {
           (user, libs) <- Seq((user1, user1Libs), (user2, user2Libs))
         } yield {
+
+          // create followers for each library
+          db.readWrite { implicit session =>
+            libs.foreach {
+              case (lib, _) =>
+                val followers = util.Random.shuffle(randomFollowers).take(util.Random.nextInt(randomFollowers.size))
+                followers.foreach { user =>
+                  membership().withLibraryFollower(lib, user).saved
+                }
+            }
+          }
+
           curator.topLibraryRecosExpectations(user.id.get) = libs.map {
-            case (lib, _) => LibraryRecoInfo(userId = user.id.get, libraryId = lib.id.get, masterScore = 8f, explain = "")
+            case (lib, _) =>
+              LibraryRecoInfo(userId = user.id.get, libraryId = lib.id.get, masterScore = 8f, explain = "")
           }
         }
 
@@ -177,75 +192,19 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         Await.ready(senderF, Duration(5, "seconds"))
 
         val email1 :: email2 :: Nil = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.
-          sortBy { _.to.head.address }
+          sortBy {
+            _.to.head.address
+          }
+
+        val activityEmails = db.readOnlyMaster { implicit s => inject[ActivityEmailRepo].all }
+        activityEmails.size === 2
+        activityEmails.find(_.userId == user1.id.get).get.libraryRecommendations.get.size === 3
 
         val html1: String = email1.htmlBody
         val html2: String = email2.htmlBody
 
         email1.to === Seq(EmailAddress("u1@kifi.com"))
         email2.to === Seq(EmailAddress("u2@kifi.com"))
-
-        // test library recos
-        // library names
-        html1 must contain("LIB1 RECO L0")
-        html2 must contain("LIB2 RECO L0")
-        // library urls
-        html1 must contain("/u1/lib1-reco-l0")
-        html2 must contain("/u2/lib2-reco-l0")
-
-        // test URI recos
-        html1 must contain("K0 URI1 RECO L0")
-        html2 must contain("K0 URI2 RECO L0")
-
-        // test new keeps in libraries followed
-        // library names
-        html1 must contain("FOLLOWED1 L0")
-        html2 must contain("FOLLOWED2 L0")
-        // library urls
-        html1 must contain("/u1/followed1-l0")
-        html2 must contain("/u2/followed2-l0")
-        // keep titles
-        html1 must contain("K0 FOLLOWED1 L0")
-        html2 must contain("K0 FOLLOWED2 L0")
-
-        // test pending library invites
-        // invited by
-        html1 must contain("Invited by User U1")
-        html2 must contain("Invited by User U2")
-        // library names
-        html1 must contain("INVITE1 L0")
-        html2 must contain("INVITE2 L0")
-        // library urls
-        html1 must contain("/u1/invite1-l0")
-        html2 must contain("/u2/invite2-l0")
-
-        // test friend requests
-        html1 must contain(s""">${user2.fullName}</a>""")
-        html2 must contain(s""">${user1.fullName}</a>""")
-
-        // test friend created libraries
-        html1 must contain("u1/friendCreated0")
-        html1 must contain("u1/friendCreated1")
-        html1 must contain("u1/friendCreated2")
-        html2 must contain("u2/friendCreated0")
-        html2 must contain("u2/friendCreated1")
-        html2 must contain("u2/friendCreated2")
-
-        // test friend followed libraries
-        html1 must contain("u1/friendFollowed0")
-        html1 must contain("John Doe0")
-        html1 must contain("Bobby Tullip0")
-        html2 must contain("u2/friendFollowed1")
-        html2 must contain("John Doe1")
-        html2 must contain("Bobby Tullip1")
-
-        // test new followers of users' libraries
-        html1 must contain("u1/newFollowersMyLibs")
-        html1 must contain("New Follower1")
-        html1 must contain("New Follower2")
-        html2 must contain("u2/newFollowersMyLibs")
-        html2 must contain("New Follower1")
-        html2 must contain("New Follower2")
 
       }
     }

@@ -11,6 +11,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.curator.commanders.email.{ RecentInterestRankStrategy, EngagementEmailActor, FeedDigestEmailSender }
 import com.keepit.curator.commanders._
+import com.keepit.curator.commanders.persona.PersonaRecommendationIngestor
 import com.keepit.curator.model.{ RecommendationSubSource, LibraryRecoSelectionParams, LibraryRecoInfo, RecommendationSource, LibraryRecommendation }
 import com.keepit.model.{ LibraryRecommendationFeedback, Library, UserValueName, UriRecommendationFeedback, NormalizedURI, ExperimentType, User, UriRecommendationScores }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -35,6 +36,7 @@ class CuratorController @Inject() (
     scheduler: Scheduler,
     feedEmailSender: FeedDigestEmailSender,
     userExperimentCommander: RemoteUserExperimentCommander,
+    personaRecoIngestor: PersonaRecommendationIngestor,
     protected val airbrake: AirbrakeNotifier) extends CuratorServiceController {
 
   val topScoreRecoStrategy = new TopScoreRecoSelectionStrategy()

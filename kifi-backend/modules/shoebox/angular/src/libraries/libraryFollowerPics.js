@@ -59,7 +59,7 @@ angular.module('kifi')
               scope.numAdditionalFollowers = scope.numFollowers - maxFollowersToShow;
             }
 
-            element.find('.kf-keep-lib-follower-pics')
+            element.find('.kf-lfp-pics')
               .width(maxFollowersToShow >= 1 ? maxFollowersToShow * widthPerFollowerPic : 0);
           });
         }

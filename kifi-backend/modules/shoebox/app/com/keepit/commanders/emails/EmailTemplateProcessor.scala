@@ -10,9 +10,9 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.template.Tag.tagRegex
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.common.mail.template.{ EmailLayout, EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
+import com.keepit.common.mail.template.{ helpers, EmailLayout, EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
 import com.keepit.common.mail.template.EmailLayout._
-import com.keepit.common.mail.template.helpers.{ toHttpsUrl, fullName }
+import com.keepit.common.mail.template.helpers.{ toHttpsUrl, fullName, baseUrl }
 import com.keepit.model.{ Library, LibraryRepo, UserEmailAddressRepo, UserRepo, User }
 import com.keepit.social.BasicUser
 import org.jsoup.Jsoup
@@ -179,6 +179,7 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.lastName => basicUser.lastName
         case tags.fullName => basicUser.firstName + " " + basicUser.lastName
         case tags.avatarUrl => toHttpsUrl(input.imageUrls(userId))
+        case tags.profileUrl => config.applicationBaseUrl + "/" + basicUser.username.value
         case tags.libraryUrl =>
           val libOwner = input.users(library.ownerId)
           config.applicationBaseUrl + Library.formatLibraryPath(libOwner.username, library.slug)
@@ -224,7 +225,7 @@ class EmailTemplateProcessorImpl @Inject() (
       @inline def userId = jsValueAsUserId(tagArgs(0))
 
       tagWrapper.label match {
-        case tags.firstName | tags.lastName | tags.fullName |
+        case tags.firstName | tags.lastName | tags.fullName | tags.profileUrl |
           tags.unsubscribeUserUrl | tags.userExternalId => UserNeeded(userId)
         case tags.avatarUrl => AvatarUrlNeeded(userId)
         case tags.libraryName | tags.libraryUrl | tags.libraryOwnerFullName =>

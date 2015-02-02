@@ -70,7 +70,7 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
         libRepo.save(Library(name = s"Library 11", ownerId = Id[User](1), visibility = LibraryVisibility.SECRET, slug = LibrarySlug("slug"), memberCount = 1))
 
         // 1 other library from user 1
-        libRepo.save(Library(name = s"Library 12", ownerId = Id[User](1), visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("slug"), memberCount = 2))
+        libRepo.save(Library(name = s"Library 12", ownerId = Id[User](1), visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("slug"), memberCount = 3))
 
       }
     }
@@ -162,6 +162,25 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
       val resF2 = commander.suggestedLibrariesInfo(Id[Library](2), Some(Id[User](8)))
       val res2 = Await.result(resF2, FiniteDuration(5, SECONDS))._1
       res2.seq.sortBy(_.numFollowers).map { _.owner.firstName } === List(7).map { i => "test" + i }
+
+    }
+
+    "dedup" in {
+      val fakeCortex2 = new FakeCortexServiceClientImpl(null) {
+        override def similarLibraries(libId: Id[Library], limit: Int)(implicit version: LDAVersionOpt): Future[Seq[Id[Library]]] = {
+          if (libId == Id[Library](1)) Future.successful(List(2, 12).map { Id[Library](_) })
+          else Future.successful(Seq())
+        }
+      }
+
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], null, null, fakeCortex2, inject[UserCommander], inject[LibraryQualityHelper], null) {
+        override val DEFAULT_MIN_FOLLOW = 2
+      }
+
+      val libsF = commander.suggestedLibraries(Id[Library](1))
+      val libs = Await.result(libsF, FiniteDuration(5, SECONDS))
+      libs.take(2).map { _.library }.map { _.id.get.id }.toList === List(2, 12) // 12 occurs as similar library
+      libs.drop(2).map { _.library }.sortBy(_.id.get).map { _.id.get.id }.toList === List(3, 4, 5, 6, 7, 8, 9, 10) // 12 is deduped, even though it's from same owner, and "popular" (DEFAULT_MIN_FOLLOW = 2)
 
     }
   }

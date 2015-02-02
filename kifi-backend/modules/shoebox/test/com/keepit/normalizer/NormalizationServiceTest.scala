@@ -33,9 +33,6 @@ class NormalizationServiceTest extends TestKitSupport with SpecificationLike wit
   }
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
-    db.readWrite { implicit session =>
-      inject[UrlPatternRuleRepo].loadCache()
-    }
     val uriIntegrityPlugin = inject[UriIntegrityPlugin]
     val seqAssigner = inject[ChangedURISeqAssigner]
     val id = Await.result(normalizationService.update(NormalizationReference(uri), candidates: _*), 5 seconds)

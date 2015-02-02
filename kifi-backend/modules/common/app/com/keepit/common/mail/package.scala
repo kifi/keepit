@@ -32,6 +32,7 @@ package object template {
     val unsubscribeUserUrl = TagLabel("unsubscribeUserUrl")
     val unsubscribeEmailUrl = TagLabel("unsubscribeEmailUrl")
     val userExternalId = TagLabel("userExternalId")
+    val profileUrl = TagLabel("profileUrl")
     val kcid = TagLabel("kcid")
     val campaign = TagLabel("campaign")
     val channel = TagLabel("channel")
@@ -51,10 +52,13 @@ package object template {
     val iTunesAppStoreUrl = "https://itunes.apple.com/us/app/kifi/id740232575"
     private val cdnBaseUrl = "https://djty7jcqog9qu.cloudfront.net"
     private val assetBaseUrl = cdnBaseUrl + "/assets/black"
+    private val assetV3BaseUrl = cdnBaseUrl + "/assets/email-v3"
 
     val footerHtml = Tag0(tags.footerHtml).toHtml
 
     def assetUrl(path: String) = assetBaseUrl + '/' + path
+
+    def assetV3Url(path: String) = assetV3BaseUrl + '/' + path
 
     def firstName(id: Id[User]) = Tag1(tags.firstName, id).toHtml
 
@@ -65,6 +69,8 @@ package object template {
     def avatarUrl(id: Id[User]) = Tag1(tags.avatarUrl, id).toHtml
 
     def userExternalId(id: Id[User]) = Tag1(tags.userExternalId, id).toHtml
+
+    def profileUrl(id: Id[User]) = Tag1(tags.profileUrl, id).toHtml
 
     def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
 

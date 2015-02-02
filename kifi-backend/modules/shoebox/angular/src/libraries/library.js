@@ -54,7 +54,7 @@ angular.module('kifi')
         $scope.thanksVersion = 'installExt';
         $scope.installExtension = function() {
           $analytics.eventTrack('visitor_clicked_page', {type: 'installLibrary', action: 'install'});
-          return installService.triggerInstall;
+          installService.triggerInstall();
         };
       } else {
         $scope.thanksVersion = 'notSupported';
@@ -66,7 +66,7 @@ angular.module('kifi')
 
       $scope.close = function () {
         $analytics.eventTrack('visitor_clicked_page', {type : 'installLibrary', action: 'close'});
-        return modalService.close;
+        modalService.close();
       };
 
       modalService.open({
@@ -203,61 +203,62 @@ angular.module('kifi')
     //
     // Watches and listeners.
     //
-    [  // TODO: indent two spaces within this array
-    $rootScope.$on('keepAdded', function (e, libSlug, keeps, library) {
-      keeps.forEach(function (keep) {
-        // checks if the keep was added to the secret library from main or
-        // vice-versa.  If so, it removes the keep from the current library
-        if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
-            (libSlug === 'main' && $scope.librarySlug === 'secret')) {
-          var idx = _.findIndex($scope.keeps, { url: keep.url });
-          if (idx > -1) {
-            $scope.keeps.splice(idx, 1);
+    [
+      $rootScope.$on('keepAdded', function (e, libSlug, keeps, library) {
+        keeps.forEach(function (keep) {
+          // checks if the keep was added to the secret library from main or
+          // vice-versa.  If so, it removes the keep from the current library
+          if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
+              (libSlug === 'main' && $scope.librarySlug === 'secret')) {
+            var idx = _.findIndex($scope.keeps, { url: keep.url });
+            if (idx > -1) {
+              $scope.keeps.splice(idx, 1);
+            }
+          } else if (libSlug === $scope.librarySlug) {
+            $scope.keeps.unshift(keep);
           }
-        } else if (libSlug === $scope.librarySlug) {
-          $scope.keeps.unshift(keep);
+
+          // add the new keep to the keep card's "my keeps" array
+          var existingKeep = _.find($scope.keeps, { url: keep.url });
+          if (existingKeep && !_.find($scope.keeps, { id: keep.id })) {
+            existingKeep.keeps.push({
+              id: keep.id,
+              isMine: true,
+              libraryId: library.id,
+              mine: true,
+              visibility: library.visibility
+            });
+          }
+        });
+      }),
+
+      $rootScope.$on('getCurrentLibrary', function (e, args) {
+        args.callback($scope.library);
+      }),
+
+      $rootScope.$on('trackLibraryEvent', function (e, eventType, attributes) {
+        attributes.libraryRecCount = $scope.relatedLibraries ? $scope.relatedLibraries.length : 0;
+        if (eventType === 'click') {
+          if (!$rootScope.userLoggedIn) {
+            attributes.type = attributes.type || 'libraryLanding';
+            libraryService.trackEvent('visitor_clicked_page', $scope.library, attributes);
+          } else {
+            attributes.type = attributes.type || 'library';
+            libraryService.trackEvent('user_clicked_page', $scope.library, attributes);
+          }
+        } else if (eventType === 'view') {
+          trackPageView(attributes);
         }
+      }),
 
-        // add the new keep to the keep card's "my keeps" array
-        var existingKeep = _.find($scope.keeps, { url: keep.url });
-        if (existingKeep && !_.find($scope.keeps, { id: keep.id })) {
-          existingKeep.keeps.push({
-            id: keep.id,
-            isMine: true,
-            libraryId: library.id,
-            mine: true,
-            visibility: library.visibility
-          });
-        }
-      });
-    }),
+      $rootScope.$on('$stateChangeSuccess', function (e, toState) {
+        $scope.librarySearch = toState.name === 'library.search';
+        setTitle(library);
+      }),
 
-    $rootScope.$on('getCurrentLibrary', function (e, args) {
-      args.callback($scope.library);
-    }),
-
-    $rootScope.$on('trackLibraryEvent', function (e, eventType, attributes) {
-      attributes.libraryRecCount = $scope.relatedLibraries ? $scope.relatedLibraries.length : 0;
-      if (eventType === 'click') {
-        if (!$rootScope.userLoggedIn) {
-          attributes.type = attributes.type || 'libraryLanding';
-          libraryService.trackEvent('visitor_clicked_page', $scope.library, attributes);
-        } else {
-          attributes.type = attributes.type || 'library';
-          libraryService.trackEvent('user_clicked_page', $scope.library, attributes);
-        }
-      } else if (eventType === 'view') {
-        trackPageView(attributes);
-      }
-    }),
-
-    $rootScope.$on('$stateChangeSuccess', function (e, toState) {
-      $scope.librarySearch = toState.name === 'library.search';
-    }),
-
-    $rootScope.$on('userLoggedInStateChange', function () {
-      reloadThisLibrary();
-    })
+      $rootScope.$on('userLoggedInStateChange', function () {
+        reloadThisLibrary();
+      })
 
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);

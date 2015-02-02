@@ -2,13 +2,6 @@ keepBorderRadius = 3px
 tagOutlineColor = #bdc4c9
 kifiGreen = #73c583
 
-.kf-my-keeps
-  .kf-keep
-    margin-bottom: 10px
-
-  .kf-keep-selection-tools
-    margin-top: 10px
-
 .kf-keep
 .kf-keep-selection-tools
   box-sizing: border-box
@@ -158,57 +151,37 @@ kifiGreen = #73c583
     color: #92add3
 
 .kf-keep-footer-buttons-wrapper
-  .kf-keep-lib-footer-button
-    float: right
-    box-sizing: border-box
-    padding-left: 0
-    padding-right: 0
-    text-align: center
-
-.kf-keep-footer.kf-keep-footer-buttons-wrapper
   padding: 7px 5px
 
-.kf-keep-footer-button-wrapper
-  .kf-keep-lib-footer-button
+  .kf-button
+    float: right
+    height: 30px
+    line-height: 30px
+    padding: 0 10px 0 12px
     margin-right: 10px
-    padding-left: 10px
-    padding-right: 10px
+
+  .kf-button-icon
+    width: 16px
 
 .kf-keep-tag-button
-  span
-    background-size: 17px 14px
-    background-repeat: no-repeat
-    background-position: 0 0
-    padding-left: 23px
-
-.kf-keep-share-button
-  margin-right: 10px
-  span
-    background-size: 17px 14px
-    background-repeat: no-repeat
-    background-position: 0 0
-    padding-left: 23px
+  .kf-button-icon
+    width: 14px
+    margin-right: 4px
 
 .kf-keep-master-btn
-  margin-right: 10px
   &.state-kept-public
-    span
-      color: #73c885
-      background-size: 16px 14px
-      background-repeat: no-repeat
-      padding-left: 21px
-  &.state-kept-private
-    span
-      color: libraryRed
-      background-size: 10px 14px
-      background-repeat: no-repeat
-      padding-left: 15px
+    color: #73c885
 
-  &.state-not-kept
-    span
-      background-size: 16px 14px
-      background-repeat: no-repeat
-      padding-left: 21px
+  &.state-kept-private
+    color: libraryRed
+
+  .kf-button-icon
+    margin-right: 3px
+
+  .svg-small-lock
+    width: 10px
+    margin-top: -1px
+    margin-left: -2px
 
 .kf-keep-footer-link a
   color: linkBlueColor
@@ -301,11 +274,7 @@ kifiGreen = #73c583
 
 .kf-keep-title
   margin-bottom: 12px
-  font-family: 'Lato', serif
-  max-width: 100%
-  font-size: 27px
-  font-weight: 900
-  line-height: 30px
+  font: keepTitleFont
   font-smoothing: antialiased
   word-break: break-word
 

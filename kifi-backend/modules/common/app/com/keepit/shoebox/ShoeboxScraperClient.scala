@@ -21,15 +21,11 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 trait ShoeboxScraperClient extends ServiceClient {
   private val ? = null
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]]
+  def getAllURLPatterns(): Future[UrlPatternRules]
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]]
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean]
-  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean]
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit]
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI]
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
-  def savePageInfo(pageInfo: PageInfo): Future[Unit]
-  def saveImageInfo(imgInfo: ImageInfo): Future[Unit]
   def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?, updatedAt: => DateTime = ?, externalId: => ExternalId[NormalizedURI] = ?, title: => Option[String] = ?, url: => String = ?, urlHash: => UrlHash = UrlHash(?), state: => State[NormalizedURI] = ?, seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1), screenshotUpdatedAt: => Option[DateTime] = ?, restriction: => Option[Restriction] = ?, normalization: => Option[Normalization] = ?, redirect: => Option[Id[NormalizedURI]] = ?, redirectTime: => Option[DateTime] = ?): Future[Unit]
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
@@ -45,7 +41,7 @@ class ShoeboxScraperClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
   override val httpClient: HttpClient,
   val airbrakeNotifier: AirbrakeNotifier,
-  urlPatternRuleAllCache: UrlPatternRuleAllCache)
+  urlPatternRuleAllCache: UrlPatternRulesAllCache)
     extends ShoeboxScraperClient with Logging {
 
   val MaxUrlLength = 3000
@@ -57,10 +53,10 @@ class ShoeboxScraperClientImpl @Inject() (
     }
   }
 
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = {
-    urlPatternRuleAllCache.getOrElseFuture(UrlPatternRuleAllKey()) {
+  def getAllURLPatterns(): Future[UrlPatternRules] = {
+    urlPatternRuleAllCache.getOrElseFuture(UrlPatternRulesAllKey()) {
       call(Shoebox.internal.allURLPatternRules()).map { r =>
-        Json.fromJson[Seq[UrlPatternRule]](r.json).get
+        Json.fromJson[UrlPatternRules](r.json).get
       }
     }
   }
@@ -73,14 +69,6 @@ class ShoeboxScraperClientImpl @Inject() (
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = {
     call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout).map { r => Unit }
-  }
-
-  def savePageInfo(pageInfo: PageInfo): Future[Unit] = {
-    call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = longTimeout).map { r => Unit }
-  }
-
-  def saveImageInfo(imgInfo: ImageInfo): Future[Unit] = {
-    call(Shoebox.internal.saveImageInfo(), Json.toJson(imgInfo), callTimeouts = longTimeout).map { r => Unit }
   }
 
   @deprecated("Dangerous call. Use updateNormalizedURI instead.", "2014-01-30")
@@ -159,29 +147,6 @@ class ShoeboxScraperClientImpl @Inject() (
   def getProxyP(url: String): Future[Option[HttpProxy]] = {
     call(Shoebox.internal.getProxyP, Json.toJson(url), callTimeouts = longTimeout).map { r =>
       if (r.json == null) None else r.json.asOpt[HttpProxy]
-    }
-  }
-
-  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = {
-    call(Shoebox.internal.isUnscrapable(url.take(MaxUrlLength), destinationUrl.map(_.take(MaxUrlLength)))).map { r =>
-      r.json.as[Boolean]
-    }
-  }
-
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = {
-    val destUrl = if (destinationUrl.isDefined && url == destinationUrl.get) {
-      log.debug(s"[isUnscrapableP] url==destUrl $url; ignored") // todo: fix calling code
-      None
-    } else destinationUrl map { dUrl =>
-      log.debug(s"[isUnscrapableP] url($url) != destUrl($dUrl)")
-      dUrl
-    }
-    val payload = JsArray(destUrl match {
-      case Some(dUrl) => Seq(Json.toJson(url.take(MaxUrlLength)), Json.toJson(dUrl.take(MaxUrlLength)))
-      case None => Seq(Json.toJson(url.take(MaxUrlLength)))
-    })
-    call(Shoebox.internal.isUnscrapableP, payload, callTimeouts = longTimeout).map { r =>
-      r.json.as[Boolean]
     }
   }
 

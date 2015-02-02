@@ -57,7 +57,10 @@ class LibraryImageCommanderImpl @Inject() (
       finalizeImageRequestState(libraryId, requestId, done)
       done match {
         case ImageProcessState.StoreSuccess(format, size, bytes) =>
-          libraryAnalytics.updatedCoverImage(userId, libraryId, context, format, size, bytes)
+          val targetLibrary = db.readOnlyMaster { implicit s =>
+            libraryRepo.get(libraryId)
+          }
+          libraryAnalytics.updatedCoverImage(userId, targetLibrary, context, format, size, bytes)
         case _ =>
       }
       done
@@ -79,15 +82,17 @@ class LibraryImageCommanderImpl @Inject() (
   }
 
   def removeImageForLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Boolean = {
-    val images = db.readWrite { implicit session =>
-      libraryImageRepo.getActiveForLibraryId(libraryId).map { libImage =>
+    val (library, images) = db.readWrite { implicit session =>
+      val library = libraryRepo.get(libraryId)
+      val images = libraryImageRepo.getActiveForLibraryId(libraryId).map { libImage =>
         libraryImageRepo.save(libImage.copy(state = LibraryImageStates.INACTIVE))
       }
+      (library, images)
     }
     log.info("[lic] Removing: " + images.map(_.imagePath))
     if (images.nonEmpty) {
       images.filter(_.isOriginal) foreach { orig =>
-        libraryAnalytics.removedCoverImage(userId, libraryId, context, orig.format, orig.dimensions)
+        libraryAnalytics.removedCoverImage(userId, library, context, orig.format, orig.dimensions)
       }
       true
     } else {
