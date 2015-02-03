@@ -1,8 +1,8 @@
-package com.keepit.search.index.user
+package com.keepit.search.user
 
-import com.keepit.social.BasicUser
 import com.keepit.common.db.Id
 import com.keepit.model.User
+import com.keepit.social.BasicUser
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 

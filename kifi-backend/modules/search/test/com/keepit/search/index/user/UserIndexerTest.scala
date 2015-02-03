@@ -2,7 +2,7 @@ package com.keepit.search.index.user
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
-import com.keepit.search.engine.user.{ UserSearchFilterFactory, UserSearcher, UserQueryParser }
+import com.keepit.search.user.{ UserSearchFilterFactory, UserSearcher, UserQueryParser }
 import com.keepit.search.index.{ VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.test._

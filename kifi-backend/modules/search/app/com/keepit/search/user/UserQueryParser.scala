@@ -1,4 +1,4 @@
-package com.keepit.search.engine.user
+package com.keepit.search.user
 
 import java.io.StringReader
 

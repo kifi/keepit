@@ -1,13 +1,10 @@
-package com.keepit.search.index.user
+package com.keepit.search.user
 
-import com.keepit.search.engine.user.UserSearchFilterFactory
-import org.specs2.mutable.Specification
-import com.keepit.model.{ Username, User }
-import com.keepit.shoebox.FakeShoeboxServiceClientImpl
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.test.CommonTestInjector
+import com.keepit.model.{ User, Username }
 import com.keepit.search.util.IdFilterCompressor
+import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
+import com.keepit.test.CommonTestInjector
+import org.specs2.mutable.Specification
 
 class UserSearchFilterTest extends Specification with CommonTestInjector {
 

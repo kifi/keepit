@@ -10,8 +10,8 @@ import com.keepit.common.net.{ ClientResponse, HttpClient }
 import com.keepit.common.routes.{ ServiceRoute, Search, Common }
 import com.keepit.model.{ LibraryAndMemberships, Library, NormalizedURI, User }
 import com.keepit.search.index.{ IndexInfo }
-import com.keepit.search.index.user.UserSearchResult
-import com.keepit.search.index.user.UserSearchRequest
+import com.keepit.search.user.UserSearchResult
+import com.keepit.search.user.UserSearchRequest
 import play.api.libs.json._
 import play.twirl.api.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

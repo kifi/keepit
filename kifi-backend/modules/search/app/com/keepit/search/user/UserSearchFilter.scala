@@ -1,4 +1,4 @@
-package com.keepit.search.engine.user
+package com.keepit.search.user
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id

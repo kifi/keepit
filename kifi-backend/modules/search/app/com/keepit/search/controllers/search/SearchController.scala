@@ -12,7 +12,7 @@ import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import play.api.libs.json._
 import com.keepit.search.index.sharding.ShardSpecParser
-import com.keepit.search.index.user.UserSearchRequest
+import com.keepit.search.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.routes.Search
