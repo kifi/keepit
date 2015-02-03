@@ -50,12 +50,13 @@ POST        /site/search/events/searched        @com.keepit.search.controllers.w
 ##########################################
 
 POST        /internal/search/dist/search          @com.keepit.search.controllers.search.SearchController.distSearch()
-POST        /internal/search/dist/search2         @com.keepit.search.controllers.search.SearchController.distSearchUris()
-POST        /internal/search/dist/search/uri         @com.keepit.search.controllers.search.SearchController.distSearchUris()
 POST        /internal/search/dist/langFreqs       @com.keepit.search.controllers.search.SearchController.distLangFreqs()
 POST        /internal/search/dist/augmentation    @com.keepit.search.controllers.search.SearchController.distAugmentation()
-POST        /internal/search/dist/librarySearch   @com.keepit.search.controllers.search.SearchController.distSearchLibraries()
+POST        /internal/search/dist/search/uri         @com.keepit.search.controllers.search.SearchController.distSearchUris()
 POST        /internal/search/dist/search/library   @com.keepit.search.controllers.search.SearchController.distSearchLibraries()
+
+GET         /internal/search/search/uri/explain        @com.keepit.search.controllers.search.SearchController.explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], debug: Option[String])
+GET         /internal/search/search/library/explain        @com.keepit.search.controllers.search.SearchController.explainLibraryResult(query: String, doPrefixSearch: Boolean, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String])
 
 GET         /internal/search/warmUp/:userId        @com.keepit.search.controllers.search.SearchController.warmUpUser(userId: Id[User])
 
@@ -84,8 +85,6 @@ POST        /internal/search/index/library/document  @com.keepit.search.controll
 
 POST        /internal/search/search/users        @com.keepit.search.controllers.search.SearchController.searchUsers()
 POST        /internal/search/search/userTypeahead        @com.keepit.search.controllers.search.SearchController.userTypeahead()
-GET         /internal/search/search/uri/explain        @com.keepit.search.controllers.search.SearchController.explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], debug: Option[String])
-GET         /internal/search/search/library/explain        @com.keepit.search.controllers.search.SearchController.explainLibraryResult(query: String, doPrefixSearch: Boolean, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String])
 POST        /internal/searchWithConfig        @com.keepit.search.controllers.search.SearchController.searchWithConfig
 
 GET         /internal/search/searchConfig/:id        @com.keepit.search.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
