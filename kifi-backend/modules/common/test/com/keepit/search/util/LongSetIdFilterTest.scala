@@ -19,6 +19,8 @@ class LongSetIdFilterTest extends Specification {
       filter.fromBase64ToSet(t2) === s2
       filter.fromBase64ToSet(t3) === s3
 
+      filter.fromBase64ToSet("") === Set()
+
     }
   }
 
