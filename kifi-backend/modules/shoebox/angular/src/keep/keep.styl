@@ -1,4 +1,6 @@
+keepBorderWidth = 1px
 keepBorderRadius = 3px
+keepEditToolsWidth = 28px
 tagOutlineColor = #bdc4c9
 kifiGreen = #73c583
 
@@ -36,7 +38,7 @@ kifiGreen = #73c583
   line-height: 33px
 
 .kf-keep-selection-tools
-  margin-left: 3px
+  margin-left: keepBorderWidth - keepEditToolsWidth
   margin-right: 25px
 
 .kf-keep-selected-count
@@ -206,8 +208,8 @@ kifiGreen = #73c583
   position: absolute
   top: -1px
   bottom: 0
-  left: -28px
-  width: 28px
+  left: -(keepEditToolsWidth)
+  width: keepEditToolsWidth
   height: 110px
   background-color: #fff
   border: defaultBorder
