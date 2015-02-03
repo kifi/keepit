@@ -158,7 +158,8 @@ class RecommendationsCommander @Inject() (
   }
 
   def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[FullUriRecoInfo]] = {
-    curator.topRecos(userId, source, subSource, more, recencyWeight).flatMap { recos =>
+    curator.topRecos(userId, source, subSource, more, recencyWeight).flatMap { recoResults =>
+      val recos = recoResults.recos
       val recosWithUris: Seq[(RecoInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
         recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }
       }
@@ -232,7 +233,8 @@ class RecommendationsCommander @Inject() (
 
   def topPublicLibraryRecos(userId: Id[User], limit: Int, source: RecommendationSource, subSource: RecommendationSubSource, trackDelivery: Boolean = true): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {
     // get extra recos from curator incase we filter out some below
-    curator.topLibraryRecos(userId, Some(limit * 4)) flatMap { libInfos =>
+    curator.topLibraryRecos(userId, Some(limit * 4)) flatMap { libResults =>
+      val libInfos = libResults.recos
       val libIds = libInfos.map(_.libraryId).toSet
       val libraries = db.readOnlyReplica { implicit s =>
         libRepo.getLibraries(libIds).toSeq.filter(_._2.visibility == LibraryVisibility.PUBLISHED)
