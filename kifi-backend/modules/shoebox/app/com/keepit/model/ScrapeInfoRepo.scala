@@ -19,7 +19,6 @@ trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
   def getAssignedCount(due: DateTime = currentDateTime)(implicit session: RSession): Int
   def getAssignedList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo]
   def setForRescrapeByRegex(urlRegex: String, withinMinutes: Int)(implicit session: RSession): Int
-  def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -98,27 +97,6 @@ class ScrapeInfoRepoImpl @Inject() (
     }
     updateCount
 
-  }
-
-  def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = {
-    val uriId = uri.id.get
-    if (!NormalizedURIStates.DO_NOT_SCRAPE.contains(uri.state)) {
-      val info = getByUriId(uriId)
-      val toSave = info match {
-        case Some(s) => s.state match {
-          case ScrapeInfoStates.ACTIVE => s.withNextScrape(date)
-          case ScrapeInfoStates.ASSIGNED => s // no change
-          case ScrapeInfoStates.INACTIVE => {
-            log.warn(s"[scheduleScrape(${uri.toShortString})] scheduling INACTIVE $s")
-            s.withState(ScrapeInfoStates.ACTIVE).withNextScrape(date) // todo(Ray): dangerous; revisit
-          }
-        }
-        case None => ScrapeInfo(uriId = uriId, nextScrape = date)
-      }
-      val saved = save(toSave)
-      log.info(s"[scheduleScrape] scheduled for ${uri.toShortString}; saved=$saved")
-      // todo(Ray): It may be nice to force trigger a scrape directly
-    }
   }
 }
 
