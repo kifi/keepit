@@ -9,109 +9,105 @@
 
 .kf-lih-inner
   height: 100%
+  width: 100%
   max-width: appMaxWidth
   margin: 0 auto
-  transition: padding 0.5s
-  box-sizing: border-box
+  display: table
+  table-layout: fixed
+
+left-height = 37px
+left-burger-width = 32px
+left-sep-width = 2px
+left-logo-width = 92px
 
 .kf-lih-left
-  float: left
-  height: 100%
-  width: 240px
-  line-height: 62px
-  box-sizing: border-box
+  display: table-cell
+  vertical-align: middle
+  width: left-burger-width + left-sep-width + left-logo-width + 3px
 
 .kf-lih-toggle-menu
+  display: inline-block
+  height: left-height
+  width: left-burger-width
+  vertical-align: middle
+  text-align: left
+  cursor: pointer
+  border: none
+  background-color: transparent
+  padding: 0
+  outline-color: #fff
+
+  &:hover:not(.active)
+    .sprite-burger
+      sprite2x($burger-hover)
+
 .kf-lih-left-separator
-.kf-lih-profile-picture
   display: inline-block
   vertical-align: middle
-
-.kf-lih-profile-picture
-  display: inline-block
-
-.kf-lih-toggle-menu
-  cursor: pointer
-  margin: 0 13px
-
-.kf-lih-left-separator
-  height: 35px
-  border: 1px solid #7d7d7d
-
-.kf-lih-profile-picture
-  width: 32px
-  height: 32px
-  margin: 0 6px 0 6px
-  border-radius: 100%
-  background-size: 100%
+  height: left-height
+  width: left-sep-width
+  background-color: #7d7d7d
 
 .kf-lih-logo
   display: inline-block
   vertical-align: middle
-  width: 70px
-  height: 27px
-  margin-left: 10px
+  width: left-logo-width
+  height: left-height
+  background-position: center
+  background-repeat: no-repeat
+  background-size: 70px auto
+  outline-color: #fff
 
-.kf-lih-search-bar
-  float: left
-  box-sizing: border-box
-  max-width: 850px
-  width: calc(100% - 530px)
-  padding-top: 7px
+.kf-lih-center
+  display: table-cell
+  vertical-align: middle
 
-.kf-lih-search-wrap
-  position: relative
-  z-index: 1
-  box-sizing: border-box
-  width: 90%
-  margin-left: 30px
-  margin-top: 5px
-  padding: 5px 0
+search-height = 28px
+
+.kf-lih-search
+  display: table
+  width: 100%
+  height: search-height
   border: defaultBorder
   border-radius: 3px
   background-color: #fff
 
-.kf-lih-search-query-wrap
-  position: relative
-  top: 3px
-  display: inline-block
-  vertical-align: bottom
-  width: calc(70% - 125px)
-  height: 24px
-
-  &.kf-extend
-    width: calc(100% - 90px)
-    margin-left: 8px
-
-  .kf-lih-search-query-input
-    width: 100%
-    color: textDarkGray
+.kf-lih-search-left
+  display: table-cell
+  max-width: 40%
+  vertical-align: middle
+  padding: 0 5px
+  white-space: nowrap
+  font-size: 0
 
 .kf-lih-search-icon
   display: inline-block
-  margin-left: 5px
+  vertical-align: middle
+  transform: scale(.8)
   sprite2x($search-icon-default)
-  vertical-align: bottom
 
   &.kf-focused
     sprite2x($search-icon-active)
 
+lib-owner-img-radius = 12px
+
 .kf-lih-search-lib-owner-img
+  display: inline-block
+  vertical-align: middle
   position: relative
-  left: 9px
   z-index: 1
-  width: 24px
-  height: 24px
-  border-radius: 100%
+  width: 2 * lib-owner-img-radius
+  height: 2 * lib-owner-img-radius
+  margin-left: 3px
+  border-radius: 50%
+  background-size: contain
 
 .kf-lih-search-lib-name
-  position: relative
-  left: -10px
-  vertical-align: bottom
   display: inline-block
-  padding: 4px 5px 4px 24px
-  max-width: 25%
-  border-radius: 8px 0 0 8px
+  vertical-align: middle
+  margin-left: -(lib-owner-img-radius)
+  padding: 0 5px 0 (4px + lib-owner-img-radius)
+  line-height: search-height - 4px
   font-size: 13px
   font-weight: 100
   color: #fff
@@ -120,70 +116,106 @@
   text-overflow: ellipsis
 
 .kf-lih-search-lib-x
-  position: relative
-  left: -10px
-  vertical-align: bottom
   display: inline-block
-  padding: 3px 8px 4px 2px
+  vertical-align: middle
   border-radius: 0 8px 8px 0
+  padding: 0 6px 0 4px
+  line-height: search-height - 4px
   font-size: 14px
   color: #fff
   cursor: pointer
 
+  &:hover
+    opacity: .8
+
+    &:active
+      opacity: .9
+
+.kf-lih-search-center
+  display: table-cell
+  width: 99%
+
+input.kf-lih-search-input
+  width: 100%
+  line-height: search-height
+
+.kf-lib-search-right
+  display: table-cell
+  width: 1%
+  white-space: nowrap
+  vertical-align: middle
+
 .kf-lih-search-clear
-  float: right
-  margin-top: 3px
-  margin-right: 8px
+  border: none
+  background-color: transparent
+  padding: 0 8px 0 0
+  line-height: search-height
   font-weight: 200
   font-size: 16px
   color: blueColor
   cursor: pointer
 
+btn-diam = 32px
+btn-space = 10px
+
 .kf-lih-right
-  overflow: hidden
-  height: 100%
-  margin-right: 10px
-  line-height: appHeaderHeight
+  display: table-cell
+  width: btn-diam * 4 + btn-space * 4 + 6px
+  vertical-align: middle
   text-align: right
-  font-size: 14px
+  font-size: 0
 
-  @media screen and (max-width: 1280px)
-    margin-right: 30px
-
-  .kf-dropdown-menu
-    display: none
-
-    :hover
-      background-color: #eee
-    :active
-      background-color: #ccc
-
-  .sprite
-    cursor: pointer
-    margin: 0 5px
-
-  .sprite-add-link
-    &:hover
-      sprite2x($add-link-active)
-
-.kf-lih-manage-tags
-  height: 32px
-  width: 32px
-
-.kf-lih-dropdown-menu-trigger
-  display: inline-block
+.kf-lih-add-link
+  background-color: transparent
+  border: none
+  padding: 0
+  width: btn-diam !important
+  height: btn-diam !important  // our sprite generator sets height to 33px
+  cursor: pointer
 
   &:hover
-    .kf-dropdown-menu
-      display: block
-      margin-top: -10px
-    .on-icon
-      display: none
+    sprite2x($add-link-active)
 
-.kf-lih-friends
+.kf-lih-dropdown-parent
+  display: inline-block
+  position: relative
+  margin-left: btn-space
+
   .kf-dropdown-menu
-    margin-left: -128px
+    dur = .08s
+    top: 100%
+    right: -24px
+    transform: translate(0, 6px)
+    transform-origin: 80% top
+    transition: visibility 0s, opacity linear dur, transform dur
+
+  &:not(:hover)>.kf-dropdown-menu:not(:hover)
+    dur = .05s
+    visibility: hidden
+    opacity: 0
+    transform: scale(.5)
+    transition-duration: 0s, dur, dur
+    transition-delay: dur, 0s, 0s
+
+  &:hover::before
+    content: ''
+    position: absolute
+    top: 100%
+    left: -6px
+    right: -6px
+    height: 6px
+
+.kf-lih-manage-tags
+  margin-left: btn-space
 
 .kf-lih-profile
-  .kf-dropdown-menu
-    margin-left: -50px
+.kf-lih-friends
+.kf-lih-manage-tags
+  width: btn-diam !important
+  height: btn-diam !important  // our sprite generator sets some of these to 33px
+
+.kf-lih-profile
+  display: inline-block
+  vertical-align: middle
+  border-radius: 50%
+  background-size: cover
