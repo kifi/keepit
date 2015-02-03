@@ -10,8 +10,8 @@ import com.keepit.common.net.{ ClientResponse, HttpClient }
 import com.keepit.common.routes.{ ServiceRoute, Search, Common }
 import com.keepit.model.{ LibraryAndMemberships, Library, NormalizedURI, User }
 import com.keepit.search.index.{ IndexInfo }
-import com.keepit.search.user.UserSearchResult
-import com.keepit.search.user.UserSearchRequest
+import com.keepit.search.user.DeprecatedUserSearchResult
+import com.keepit.search.user.DeprecatedUserSearchRequest
 import play.api.libs.json._
 import play.twirl.api.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -46,7 +46,7 @@ trait SearchServiceClient extends ServiceClient {
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]]
   def refreshSearcher(): Unit
   def refreshPhrases(): Unit
-  def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
+  def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[DeprecatedUserSearchResult]
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]]
   def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html]
@@ -143,17 +143,17 @@ class SearchServiceClientImpl(
     broadcast(Search.internal.refreshPhrases())
   }
 
-  def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = {
-    val payload = Json.toJson(UserSearchRequest(userId, query, maxHits, context, filter))
+  def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[DeprecatedUserSearchResult] = {
+    val payload = Json.toJson(DeprecatedUserSearchRequest(userId, query, maxHits, context, filter))
     call(Search.internal.searchUsers(), payload).map { r =>
-      Json.fromJson[UserSearchResult](r.json).get
+      Json.fromJson[DeprecatedUserSearchResult](r.json).get
     }
   }
 
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]] = {
-    val payload = Json.toJson(UserSearchRequest(Some(userId), query, maxHits, context, filter))
+    val payload = Json.toJson(DeprecatedUserSearchRequest(Some(userId), query, maxHits, context, filter))
     call(Search.internal.userTypeahead(), payload).map { r =>
-      val userSearchResult = Json.fromJson[UserSearchResult](r.json).get
+      val userSearchResult = Json.fromJson[DeprecatedUserSearchResult](r.json).get
       if (userSearchResult.hits.isEmpty) Seq[TypeaheadHit[BasicUser]]()
       else {
         val queryTerms = PrefixFilter.normalize(query).split("\\s+")
@@ -170,9 +170,9 @@ class SearchServiceClientImpl(
   }
 
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]] = {
-    val payload = Json.toJson(UserSearchRequest(Some(userId), query, maxHits, context, filter))
+    val payload = Json.toJson(DeprecatedUserSearchRequest(Some(userId), query, maxHits, context, filter))
     call(Search.internal.userTypeahead(), payload).map { r =>
-      val userSearchResult = Json.fromJson[UserSearchResult](r.json).get
+      val userSearchResult = Json.fromJson[DeprecatedUserSearchResult](r.json).get
       if (userSearchResult.hits.isEmpty) Seq()
       else {
         val queryTerms = PrefixFilter.normalize(query).split("\\s+")

@@ -11,48 +11,48 @@ import com.keepit.typeahead.PrefixFilter
 
 @ImplementedBy(classOf[UserSearchCommanderImpl])
 trait UserSearchCommander {
-  def searchUsers(userSearchRequest: UserSearchRequest): UserSearchResult
-  def searchUsers(userId: Option[Id[User]], queryText: String, maxHits: Int, context: Option[String], filter: Option[String], excludeSelf: Boolean): UserSearchResult
-  def userTypeahead(userSearchRequest: UserSearchRequest, excludedExperiments: Seq[String]): UserSearchResult
-  def userTypeahead(userId: Option[Id[User]], queryText: String, pageNum: Int, pageSize: Int, context: Option[String], filter: Option[String], excludedExperiments: Seq[String]): UserSearchResult
+  def searchUsers(userSearchRequest: DeprecatedUserSearchRequest): DeprecatedUserSearchResult
+  def searchUsers(userId: Option[Id[User]], queryText: String, maxHits: Int, context: Option[String], filter: Option[String], excludeSelf: Boolean): DeprecatedUserSearchResult
+  def userTypeahead(userSearchRequest: DeprecatedUserSearchRequest, excludedExperiments: Seq[String]): DeprecatedUserSearchResult
+  def userTypeahead(userId: Option[Id[User]], queryText: String, pageNum: Int, pageSize: Int, context: Option[String], filter: Option[String], excludedExperiments: Seq[String]): DeprecatedUserSearchResult
 }
 
 class UserSearchCommanderImpl @Inject() (
     userIndexer: UserIndexer,
-    userSearchFilterFactory: UserSearchFilterFactory) extends UserSearchCommander with Logging {
+    userSearchFilterFactory: DeprecatedUserSearchFilterFactory) extends UserSearchCommander with Logging {
 
-  def searchUsers(userSearchRequest: UserSearchRequest): UserSearchResult = {
-    val UserSearchRequest(userId, queryText, maxHits, context, filter) = userSearchRequest
+  def searchUsers(userSearchRequest: DeprecatedUserSearchRequest): DeprecatedUserSearchResult = {
+    val DeprecatedUserSearchRequest(userId, queryText, maxHits, context, filter) = userSearchRequest
     searchUsers(userId, queryText, maxHits, context = Some(context), filter = Some(filter), excludeSelf = false)
   }
 
-  def searchUsers(userId: Option[Id[User]], queryText: String, maxHits: Int, context: Option[String], filter: Option[String], excludeSelf: Boolean): UserSearchResult = {
+  def searchUsers(userId: Option[Id[User]], queryText: String, maxHits: Int, context: Option[String], filter: Option[String], excludeSelf: Boolean): DeprecatedUserSearchResult = {
     val searcher = getUserSearcher
-    val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
+    val parser = new DeprecatedUserQueryParser(DefaultAnalyzer.defaultAnalyzer)
     val userFilter = createFilter(userId, filter, context, excludeSelf)
     parser.parse(queryText) match {
-      case None => UserSearchResult(Array.empty[UserHit], context.getOrElse(""))
+      case None => DeprecatedUserSearchResult(Array.empty[DeprecatedUserHit], context.getOrElse(""))
       case Some(q) => searcher.search(q, maxHits, userFilter)
     }
   }
 
-  def userTypeahead(userSearchRequest: UserSearchRequest, excludedExperiments: Seq[String]): UserSearchResult = {
-    val UserSearchRequest(userId, queryText, maxHits, context, filter) = userSearchRequest
+  def userTypeahead(userSearchRequest: DeprecatedUserSearchRequest, excludedExperiments: Seq[String]): DeprecatedUserSearchResult = {
+    val DeprecatedUserSearchRequest(userId, queryText, maxHits, context, filter) = userSearchRequest
     userTypeahead(userId, queryText, 0, maxHits, context = Some(context), filter = Some(filter), excludedExperiments = excludedExperiments)
   }
 
-  def userTypeahead(userId: Option[Id[User]], queryText: String, pageNum: Int, pageSize: Int, context: Option[String], filter: Option[String], excludedExperiments: Seq[String]): UserSearchResult = {
+  def userTypeahead(userId: Option[Id[User]], queryText: String, pageNum: Int, pageSize: Int, context: Option[String], filter: Option[String], excludedExperiments: Seq[String]): DeprecatedUserSearchResult = {
     val searchFilter = createFilter(userId, filter, context, true)
     val searcher = getUserSearcher
-    val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
+    val parser = new DeprecatedUserQueryParser(DefaultAnalyzer.defaultAnalyzer)
     val queryTerms = PrefixFilter.normalize(queryText).split("\\s+")
     parser.parseWithUserExperimentConstrains(queryText, excludedExperiments) match {
-      case None => UserSearchResult(Array.empty[UserHit], context = "")
+      case None => DeprecatedUserSearchResult(Array.empty[DeprecatedUserHit], context = "")
       case Some(q) => searcher.searchPaging(q, searchFilter, pageNum, pageSize, queryTerms)
     }
   }
 
-  private def getUserSearcher = new UserSearcher(userIndexer.getSearcher)
+  private def getUserSearcher = new DeprecatedUserSearcher(userIndexer.getSearcher)
 
   private def createFilter(userId: Option[Id[User]], filter: Option[String], context: Option[String], excludeSelf: Boolean) = {
     filter match {

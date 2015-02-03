@@ -2,7 +2,7 @@ package com.keepit.search.index.user
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
-import com.keepit.search.user.{ UserSearchFilterFactory, UserSearcher, UserQueryParser }
+import com.keepit.search.user.{ DeprecatedUserSearchFilterFactory, DeprecatedUserSearcher, DeprecatedUserQueryParser }
 import com.keepit.search.index.{ VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.test._
@@ -71,7 +71,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
       Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
       val searcher = indexer.getSearcher
       val analyzer = DefaultAnalyzer.defaultAnalyzer
-      val parser = new UserQueryParser(analyzer)
+      val parser = new DeprecatedUserQueryParser(analyzer)
       var query = parser.parse("wood")
       searcher.searchAll(query.get).seq.size === 1
       query = parser.parse("     woody      all    ")
@@ -94,7 +94,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
       Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
       val searcher = indexer.getSearcher
       val analyzer = DefaultAnalyzer.defaultAnalyzer
-      val parser = new UserQueryParser(analyzer)
+      val parser = new DeprecatedUserQueryParser(analyzer)
       val query = parser.parse("woody.allen@gmail.com")
       searcher.searchAll(query.get).seq.size === 1
       searcher.searchAll(query.get).seq.head.id === 5
@@ -110,11 +110,11 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
         indexer.numDocs === 5
 
-        val searcher = new UserSearcher(indexer.getSearcher)
+        val searcher = new DeprecatedUserSearcher(indexer.getSearcher)
         val analyzer = DefaultAnalyzer.defaultAnalyzer
-        val parser = new UserQueryParser(analyzer)
+        val parser = new DeprecatedUserQueryParser(analyzer)
         val query = parser.parse("woody.allen@gmail.com")
-        val filterFactory = inject[UserSearchFilterFactory]
+        val filterFactory = inject[DeprecatedUserSearchFilterFactory]
         val filter = filterFactory.default(None)
         val hits = searcher.search(query.get, maxHit = 5, searchFilter = filter).hits
         hits.size === 1
@@ -136,14 +136,14 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
         indexer.numDocs === 5
 
-        val searcher = new UserSearcher(indexer.getSearcher)
+        val searcher = new DeprecatedUserSearcher(indexer.getSearcher)
         val analyzer = DefaultAnalyzer.defaultAnalyzer
-        val parser = new UserQueryParser(analyzer)
+        val parser = new DeprecatedUserQueryParser(analyzer)
         val query = parser.parse("firstNa")
 
         var context = ""
         var idfilter = IdFilterCompressor.fromBase64ToSet(context)
-        val filterFactory = inject[UserSearchFilterFactory]
+        val filterFactory = inject[DeprecatedUserSearchFilterFactory]
         var filter = filterFactory.default(None, Some(context), excludeSelf = false)
         var res = searcher.search(query.get, maxHit = 2, searchFilter = filter)
         res.hits.size === 2
@@ -169,11 +169,11 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         client.saveUsers(users(0).withState(UserStates.INACTIVE))
         Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
 
-        val searcher = new UserSearcher(indexer.getSearcher)
+        val searcher = new DeprecatedUserSearcher(indexer.getSearcher)
         val analyzer = DefaultAnalyzer.defaultAnalyzer
-        val parser = new UserQueryParser(analyzer)
+        val parser = new DeprecatedUserQueryParser(analyzer)
         val query = parser.parse("firstNa")
-        val filterFactory = inject[UserSearchFilterFactory]
+        val filterFactory = inject[DeprecatedUserSearchFilterFactory]
         val filter = filterFactory.default(None)
         val hits = searcher.search(query.get, maxHit = 10, searchFilter = filter).hits
         hits.size === 3
@@ -189,7 +189,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
 
         val searcher = indexer.getSearcher
         val analyzer = DefaultAnalyzer.defaultAnalyzer
-        val parser = new UserQueryParser(analyzer)
+        val parser = new DeprecatedUserQueryParser(analyzer)
         var query = parser.parseWithUserExperimentConstrains("firstNa", Seq())
 
         searcher.searchAll(query.get).seq.size === 4
@@ -218,10 +218,10 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
         Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
 
-        val searcher = new UserSearcher(indexer.getSearcher)
+        val searcher = new DeprecatedUserSearcher(indexer.getSearcher)
         val analyzer = DefaultAnalyzer.defaultAnalyzer
-        val parser = new UserQueryParser(analyzer)
-        val filterFactory = inject[UserSearchFilterFactory]
+        val parser = new DeprecatedUserQueryParser(analyzer)
+        val filterFactory = inject[DeprecatedUserSearchFilterFactory]
         val filter = filterFactory.default(None)
         var query = parser.parseWithUserExperimentConstrains("ab de", Seq(), useLucenePrefixQuery = false)
         var queryTerms = PrefixFilter.tokenize("ab de")
@@ -264,10 +264,10 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
         Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
 
-        val searcher = new UserSearcher(indexer.getSearcher)
+        val searcher = new DeprecatedUserSearcher(indexer.getSearcher)
         val analyzer = DefaultAnalyzer.defaultAnalyzer
-        val parser = new UserQueryParser(analyzer)
-        val filterFactory = inject[UserSearchFilterFactory]
+        val parser = new DeprecatedUserQueryParser(analyzer)
+        val filterFactory = inject[DeprecatedUserSearchFilterFactory]
         val filter = filterFactory.default(None)
         var query = parser.parseWithUserExperimentConstrains("ab gh", Seq(), useLucenePrefixQuery = false)
         var queryTerms = PrefixFilter.tokenize("ab gh")

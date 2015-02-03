@@ -11,7 +11,7 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.{ BooleanQuery, PrefixQuery, Query, TermQuery }
 
-class UserQueryParser(
+class DeprecatedUserQueryParser(
     analyzer: Analyzer) extends QueryParser(analyzer, analyzer) {
 
   override val fields: Set[String] = Set.empty[String]

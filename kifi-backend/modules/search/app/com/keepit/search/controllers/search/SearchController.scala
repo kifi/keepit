@@ -12,7 +12,7 @@ import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import play.api.libs.json._
 import com.keepit.search.index.sharding.ShardSpecParser
-import com.keepit.search.user.UserSearchRequest
+import com.keepit.search.user.DeprecatedUserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.routes.Search
@@ -159,13 +159,13 @@ class SearchController @Inject() (
   }
 
   def searchUsers() = Action(parse.tolerantJson) { request =>
-    val userSearchRequest = Json.fromJson[UserSearchRequest](request.body).get
+    val userSearchRequest = Json.fromJson[DeprecatedUserSearchRequest](request.body).get
     val res = userSearchCommander.searchUsers(userSearchRequest)
     Ok(Json.toJson(res))
   }
 
   def userTypeahead() = Action(parse.json) { request =>
-    val userSearchRequest = Json.fromJson[UserSearchRequest](request.body).get
+    val userSearchRequest = Json.fromJson[DeprecatedUserSearchRequest](request.body).get
     val res = userSearchCommander.userTypeahead(userSearchRequest, excludedExperiments = Seq("fake")) // TODO(yingjie): Address admins differently
     Ok(Json.toJson(res))
   }
