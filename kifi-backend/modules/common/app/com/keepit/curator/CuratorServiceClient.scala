@@ -52,8 +52,8 @@ class CuratorServiceClientImpl(
     call(Curator.internal.topRecos(userId), body = payload).map { response =>
       val js = response.json
       js.validate[URIRecoResults] match {
-        case JsSuccess(res) => res
-        case JsError(_) =>
+        case res: JsSuccess[URIRecoResults] => res.get
+        case err: JsError =>
           val recos = js.as[Seq[RecoInfo]]
           URIRecoResults(recos, "")
       }
@@ -98,8 +98,8 @@ class CuratorServiceClientImpl(
     call(Curator.internal.topLibraryRecos(userId, limit)).map { response =>
       val js = response.json
       js.validate[LibraryRecoResults] match {
-        case JsSuccess(res) => res
-        case JsError(_) =>
+        case res: JsSuccess[LibraryRecoResults] => res.get
+        case err: JsError =>
           val recos = js.as[Seq[LibraryRecoInfo]]
           LibraryRecoResults(recos, "")
       }
