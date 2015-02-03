@@ -31,38 +31,6 @@ Activity email (still a work in progress)
     <br/>
 }
 
-<h1>Pending Library Invites</h1>
-@activityData.libraryInvites.map { lib =>
-    Invited by @{Html(lib.invitedByUsers.map(fullName).mkString(", "))}<br/>
-    <a href="@libraryUrl(lib.libraryId, "")">@lib.name</a> by
-    @lib.ownerName<br/>
-    @lib.description.getOrElse("")<br/>
-    @lib.numKeeps Keeps | @lib.numFollowers Followers<br/>
-    @lib.image.map { image =>
-        <img src="@libraryImageUrl(image.path)" alt="@lib.name" width="400"/>
-    }
-}
-<br/>
-
-<h1>Pending Unread Messages</h1>
-@activityData.unreadThreads.map { thread =>
-    @thread.messageSendersToShow.zipWithIndex.map { case (senderHtml, i) =>
-        @{senderHtml}@if(thread.messageSendersToShow.size > 2 && i < thread.messageSendersToShow.size - 1){,}
-        @if(i == thread.messageSendersToShow.size - 2){and}
-    }
-    sent a message @thread.firstMessageSentTime<br/>
-    "@{thread.allMessages.head.messageText}"<br/><br/>
-    @{/* TODO(josh) linkable url? waiting for design to finish this detail */}
-}
-<br/>
-
-<h1>Pending Friend Requests</h1>
-@activityData.pendingFriendRequests.map { senderId =>
-    <a href="@kifiFriendsUrl("clickedFriendRequestName")">@fullName(senderId)</a>
-    <br/>
-}
-<br/>
-
 <h1>Your Libraries Have New Followers</h1>
 @activityData.newFollowersOfLibraries.map { lib =>
     @lib.followers.zipWithIndex.map { case (id, i) =>
@@ -117,16 +85,6 @@ TODO
     <br/>
 }
 <br/>
-
-<h1>Recommendations</h1>
-@activityData.uriRecos.map { reco  =>
-    <a href="@reco.itemInfo.url">@reco.itemInfo.title</a><br/>
-    @reco.itemInfo.summary.description.getOrElse("")<br/>
-    @reco.itemInfo.summary.imageUrl.map { url =>
-        <img src="@toHttpsUrl(url)" alt="@reco.itemInfo.title" width="400"/><br/>
-    }
-    <br/><br/>
-}
 
 <h1>Library Recommendations</h1>
 @activityData.libraryRecos.map { lib =>
