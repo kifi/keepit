@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.directive('kfNavDropdown', [
+.directive('kfLibraryMenu', [
   '$document', '$interval', '$location', '$rootScope', '$window', '$timeout',
   'friendService', 'libraryService', 'modalService', 'profileService', 'routeService', 'tagService', 'util',
   function ($document, $interval, $location, $rootScope, $window, $timeout,

@@ -119,7 +119,7 @@ angular.module('kifi', [
         }
       });
 
-      $scope.navDropdown = {
+      $scope.libraryMenu = {
         visible: false
       };
     }
