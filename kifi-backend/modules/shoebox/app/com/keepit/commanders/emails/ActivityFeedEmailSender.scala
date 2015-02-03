@@ -18,6 +18,7 @@ import com.keepit.curator.model.{ FullUriRecoInfo, RecommendationSource, Recomme
 import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
+import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.twirl.api.Html
 
@@ -26,14 +27,15 @@ import scala.concurrent.Future
 trait LibraryInfoView {
   def libInfo: FullLibraryInfo
   def libraryId: Id[Library]
-  def name = libInfo.name
-  def description = libInfo.description
-  def ownerName = libInfo.owner.fullName
-  def keeps = libInfo.keeps map KeepInfoView
-  def numFollowers = libInfo.numFollowers
-  def numKeeps = libInfo.numKeeps
-  def image = libInfo.image
-  def url = libInfo.url
+  def name: String = libInfo.name
+  def description: Option[String] = libInfo.description
+  def ownerName: String = libInfo.owner.fullName
+  def owner: BasicUser = libInfo.owner
+  def keeps: Seq[KeepInfoView] = libInfo.keeps map KeepInfoView
+  def numFollowers: Int = libInfo.numFollowers
+  def numKeeps: Int = libInfo.numKeeps
+  def image: Option[LibraryImageInfo] = libInfo.image
+  def url: String = libInfo.url // this is not a full URL, just the /<owner>/<library> part
 }
 
 case class LibraryInfoFollowersView(view: LibraryInfoView, followersToShow: Seq[Id[User]]) extends LibraryInfoView {
@@ -178,7 +180,10 @@ class ActivityFeedEmailSenderImpl @Inject() (
         }.take(maxMostFollowedLibrariesRecentlyToRecommend)
       }
 
-      val libRecosAtBottom = libRecosUnseen take maxLibraryRecosInBottom
+      val libRecosAtBottom = {
+        val excludeIds = mostFollowedLibrariesRecentlyToRecommend.map(_.libraryId).toSet
+        libRecosUnseen filterNot { l => excludeIds.contains(l.libraryId) } take maxLibraryRecosInBottom
+      }
 
       val activityComponents: Seq[Html] = {
         val mostFollowedHtmls = mostFollowedLibrariesRecentlyToRecommend map { view => views.html.email.v3.activityFeedOtherLibFollowersPartial(view) }
@@ -204,7 +209,13 @@ class ActivityFeedEmailSenderImpl @Inject() (
         unreadThreads = unreadThreads
       )
 
-      persistActivityEmail(activityData)
+      db.readWrite { implicit rw =>
+        activityEmailRepo.save(ActivityEmail(
+          userId = activityData.userId,
+          libraryRecommendations = Some(activityData.libraryRecos.map(_.libraryId)),
+          otherFollowedLibraries = Some(activityData.mostFollowedLibraries.map(_.libraryId)),
+          userFollowedLibraries = None))
+      }
 
       EmailToSend(
         from = SystemEmailAddress.NOTIFICATIONS,
@@ -216,14 +227,6 @@ class ActivityFeedEmailSenderImpl @Inject() (
       )
     }
   })
-
-  private def persistActivityEmail(activityEmailData: ActivityEmailData) = db.readWrite { implicit rw =>
-    activityEmailRepo.save(ActivityEmail(
-      userId = activityEmailData.userId,
-      libraryRecommendations = Some(activityEmailData.libraryRecos.map(_.libraryId)),
-      otherFollowedLibraries = None,
-      userFollowedLibraries = None))
-  }
 
   class UserActivityFeedHelper(val toUserId: Id[User], val previouslySent: Seq[ActivityEmail]) extends ActivityEmailLibraryHelpers {
     val clock = ActivityFeedEmailSenderImpl.this.clock

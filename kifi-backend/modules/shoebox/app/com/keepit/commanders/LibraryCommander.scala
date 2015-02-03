@@ -957,7 +957,7 @@ class LibraryCommander @Inject() (
           val growthRate = membersSince.toFloat / -totalMembers
 
           // multiplier gives more weight to libraries with more members (cap at 30 total before it doesn't grow)
-          val multiplier = Math.exp(-5f / totalMembers.min(30))
+          val multiplier = Math.exp(-10f / totalMembers.min(30))
           growthRate * multiplier
         } else 0
     } map {
