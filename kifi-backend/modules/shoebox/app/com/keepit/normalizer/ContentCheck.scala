@@ -69,6 +69,7 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
 case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: ScrapeScheduler) extends ContentCheck with Logging {
 
   def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && LinkedInNormalizer.linkedInCanonicalPublicProfile.findFirstIn(candidate.url).isDefined
+
   protected def check(publicProfileCandidate: NormalizationCandidate) = {
     for { idArticleOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(ExtractorProviderTypes.LINKEDIN_ID)) } yield {
       idArticleOption match {
