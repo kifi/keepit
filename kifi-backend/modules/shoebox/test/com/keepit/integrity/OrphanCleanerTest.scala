@@ -2,6 +2,7 @@ package com.keepit.integrity
 
 import com.google.inject.Module
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.db.{ ModelWithSeqNumber, Model }
 import com.keepit.common.db.slick._
 import com.keepit.common.social.FakeSocialGraphModule
@@ -18,6 +19,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
     FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
+    FakeExecutionContextModule(),
     FakeKeepImportsModule()
   )
 
@@ -119,6 +121,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         val seqAssigner = inject[ChangedURISeqAssigner]
         seqAssigner.assignSequenceNumbers()
         cleaner.cleanNormalizedURIsByChangedURIs(readOnly = false)
+        inject[WatchableExecutionContext].drain(1000)
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
