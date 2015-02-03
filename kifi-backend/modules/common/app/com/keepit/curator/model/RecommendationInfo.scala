@@ -33,3 +33,5 @@ object RecoKind {
   explain: Option[String], //some explanation of the score, *not* meant to be seen by the user
   attribution: Option[SeedAttribution])
 
+@json case class URIRecoResults(recos: Seq[RecoInfo], context: String)
+

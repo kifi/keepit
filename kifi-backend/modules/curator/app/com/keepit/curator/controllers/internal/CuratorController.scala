@@ -67,7 +67,9 @@ class CuratorController @Inject() (
         else topScoreRecoStrategy
       val scoringStrategy = nonlinearRecoScoringStrategy
 
-      Ok(Json.toJson(recoRetrievalCommander.topRecos(userId, more, recencyWeight, source, subSource, sortStrategy, scoringStrategy)))
+      val recoResults = recoRetrievalCommander.topRecos(userId, more, recencyWeight, source, subSource, sortStrategy, scoringStrategy)
+
+      Ok(Json.toJson(recoResults.recos))
     }
   }
 
@@ -123,7 +125,8 @@ class CuratorController @Inject() (
       val sortStrategy = topScoreLibraryRecoStrategy
       val scoringStrategy = nonlinearLibraryRecoScoringStrategy
 
-      val libRecoInfos = libraryRecoGenCommander.getTopRecommendations(userId, limit, sortStrategy, scoringStrategy)
+      val recoResults = libraryRecoGenCommander.getTopRecommendations(userId, limit, sortStrategy, scoringStrategy)
+      val libRecoInfos = recoResults.recos
       log.info(s"topLibraryRecos returning userId=$userId resultCount=${libRecoInfos.size}")
       Ok(Json.toJson(libRecoInfos))
     }
