@@ -10,7 +10,7 @@
   <!--[if !mso]><!-->
   <link href='http://fonts.googleapis.com/css?family=Lato:400,100,300,700' rel='stylesheet' type='text/css'>
   <!--<![endif]-->
-  <title>KIFI</title>
+  <title>Kifi</title>
   <style type="text/css">
     table {
     padding: 0px !important;
@@ -580,7 +580,9 @@
                                             <tr>
                                               <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Relevant libraries to follow</td>
                                             </tr>
-                                            @views.html.email.v3.activityFeedLibRecoPartial()
+                                            @activityData.libraryRecos.map { lib =>
+                                            @views.html.email.v3.activityFeedLibRecoPartial(lib)
+                                            }
                                             <tr>
                                               <td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                             </tr>

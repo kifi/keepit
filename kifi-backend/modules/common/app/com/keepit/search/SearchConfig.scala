@@ -45,7 +45,7 @@ object SearchConfig {
       "proximityGapPenalty" -> "0.05",
       "proximityPowerFactor" -> "1.0",
       "messageHalfLifeHours" -> "24",
-      "minMyLibraries" -> "0",
+      "minMyLibraries" -> "1",
       "myLibraryBoost" -> "1.5"
     )
   private[this] val descriptions =

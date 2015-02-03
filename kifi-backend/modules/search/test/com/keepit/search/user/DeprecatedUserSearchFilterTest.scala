@@ -1,15 +1,12 @@
-package com.keepit.search.index.user
+package com.keepit.search.user
 
-import com.keepit.search.engine.user.UserSearchFilterFactory
-import org.specs2.mutable.Specification
-import com.keepit.model.{ Username, User }
-import com.keepit.shoebox.FakeShoeboxServiceClientImpl
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.test.CommonTestInjector
+import com.keepit.model.{ User, Username }
 import com.keepit.search.util.IdFilterCompressor
+import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
+import com.keepit.test.CommonTestInjector
+import org.specs2.mutable.Specification
 
-class UserSearchFilterTest extends Specification with CommonTestInjector {
+class DeprecatedUserSearchFilterTest extends Specification with CommonTestInjector {
 
   private def setup(implicit client: FakeShoeboxServiceClientImpl) = {
 
@@ -29,7 +26,7 @@ class UserSearchFilterTest extends Specification with CommonTestInjector {
     "work" in {
       withInjector(FakeShoeboxServiceModule()) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-        val factory = inject[UserSearchFilterFactory]
+        val factory = inject[DeprecatedUserSearchFilterFactory]
         val users = setup(client)
         var filter = factory.default(None)
         filter.accept(1) === true
@@ -49,7 +46,7 @@ class UserSearchFilterTest extends Specification with CommonTestInjector {
     "work" in {
       withInjector(FakeShoeboxServiceModule()) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-        val factory = inject[UserSearchFilterFactory]
+        val factory = inject[DeprecatedUserSearchFilterFactory]
         val users = setup(client)
         var filter = factory.friendsOnly(users(0).id.get, None)
         filter.accept(users(1).id.get.id) === true
@@ -70,7 +67,7 @@ class UserSearchFilterTest extends Specification with CommonTestInjector {
     "work" in {
       withInjector(FakeShoeboxServiceModule()) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-        val factory = inject[UserSearchFilterFactory]
+        val factory = inject[DeprecatedUserSearchFilterFactory]
         val users = setup(client)
         var filter = factory.nonFriendsOnly(users(0).id.get, context = None)
         filter.accept(users(0).id.get.id) === false

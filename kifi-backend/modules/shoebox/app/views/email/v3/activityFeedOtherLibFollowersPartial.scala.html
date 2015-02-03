@@ -9,7 +9,7 @@
       <tr>
         <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">
           @libInfoView.numFollowers fellow users followed
-          <a href="@libInfoView.url" target="_blank" style="text-decoration:none;color:#62BE73;">@libInfoView.name</a>
+          <a href="@libraryUrl(libInfoView.url, "recentLib")" target="_blank" style="text-decoration:none;color:#62BE73;">@libInfoView.name</a>
         </td>
       </tr>
       <tr>
@@ -21,7 +21,7 @@
             <tr>
               @for(i <- 0 until libInfoView.followersToShow.size; userId = libInfoView.followersToShow(i)) {
               <td width="33" align="left" valign="top">
-                <a href="@profileUrl(userId)" target="_blank"><img src="@avatarUrl(userId)" width="33" height="32" alt="@fullName(userId)" style="display:block;border-radius:17px;" border="0"/></a>
+                <a href="@profileUrl(userId, "recentLib")" target="_blank"><img src="@avatarUrl(userId)" width="33" height="32" alt="@fullName(userId)" style="display:block;border-radius:17px;" border="0"/></a>
               </td>
               @if(i != libInfoView.followersToShow.size - 1){<td width="9"></td>}
               }

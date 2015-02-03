@@ -102,7 +102,7 @@ trait SearchControllerUtil {
 
   protected def makeBasicLibrary(library: LibraryRecord, visibility: LibraryVisibility, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
     val path = Library.formatLibraryPath(owner.username, library.slug)
-    BasicLibrary(Library.publicId(library.id), library.name, path, visibility)
+    BasicLibrary(Library.publicId(library.id), library.name, path, visibility, library.color)
   }
 
   def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[ExperimentType]) = {

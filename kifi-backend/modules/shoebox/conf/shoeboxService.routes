@@ -676,6 +676,10 @@ POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminL
 POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepImageController.loadPrevImageForKeep(startUserId: Long, endUserId: Long)
 POST    /admin/libraries/updateLibraryOwner @com.keepit.controllers.admin.AdminLibraryController.updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User])
 
+GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
+POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()
+POST    /admin/personas/:id         @com.keepit.controllers.admin.AdminPersonaController.editPersona(id: Id[Persona])
+
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
 GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], query:String ?= "")
