@@ -55,6 +55,11 @@ angular.module('kifi')
           }
         }
 
+        function openMenu() {
+          positionMenu();
+          scope.changeList();
+        }
+
         function setLibListHeight() {
           if (scrollableLibList.offset()) {
             scrollableLibList.height(w.height() - (scrollableLibList.offset().top - w[0].pageYOffset));
@@ -69,7 +74,9 @@ angular.module('kifi')
           librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
           invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
 
-          scope.changeList();
+          if (scope.libraryMenu.visible) {
+            scope.changeList();
+          }
         }
 
         function setStickySeparator(refetchSeparators) {
@@ -115,7 +122,7 @@ angular.module('kifi')
         }
 
         function fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight) {
-          var stickToMaxTop = 308;
+          var stickToMaxTop = 253;
           // all 3 separators properties need to be set because this function is debounced and a user might scroll too fast
           if (offset <= firstLimit) {
             setPositioning(separators[0], 'fixed', stickToMaxTop);
@@ -255,7 +262,11 @@ angular.module('kifi')
         });
 
         // Position menu w/r to the toggle menu burger.
-        scope.$watch('libraryMenu.visible', positionMenu);
+        scope.$watch('libraryMenu.visible', function (visible) {
+          if (visible) {
+            openMenu();
+          }
+        });
         var positionMenuOnResize = _.debounce(positionMenu, 20);
         $window.addEventListener('resize', positionMenuOnResize);
         scope.$on('$destroy', function () {
@@ -425,7 +436,8 @@ angular.module('kifi')
 
         function onClick(event) {
           // On a click outside the menu, close the menu.
-          if (scope.libraryMenu.visible && !element[0].contains(event.target)) {
+          if (scope.libraryMenu.visible && !element[0].contains(event.target) &&
+              !getElement('.kf-lih-toggle-menu')[0].contains(event.target)) {
             scope.libraryMenu.visible = false;
           }
 
