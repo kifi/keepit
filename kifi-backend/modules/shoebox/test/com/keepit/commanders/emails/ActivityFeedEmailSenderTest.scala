@@ -83,8 +83,8 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         val randomFollowers = db.readWrite { implicit rw => users(30).map(_.saved) }
 
         // setup Lib Recos with followers
-        val user1Libs = createLibWithKeeps("u1/lib1-reco")
-        val user2Libs = createLibWithKeeps("u2/lib2-reco")
+        val user1Libs = createLibWithKeeps("u1/lib1-reco", 6)
+        val user2Libs = createLibWithKeeps("u2/lib2-reco", 6)
         for {
           (user, libs) <- Seq((user1, user1Libs), (user2, user2Libs))
         } yield {
@@ -94,9 +94,7 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
             libs.foreach {
               case (lib, _) =>
                 val followers = util.Random.shuffle(randomFollowers).take(util.Random.nextInt(randomFollowers.size))
-                followers.foreach { user =>
-                  membership().withLibraryFollower(lib, user).saved
-                }
+                followers.foreach { user => membership().withLibraryFollower(lib, user).saved }
             }
           }
 
@@ -191,13 +189,11 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         val senderF = sender()
         Await.ready(senderF, Duration(5, "seconds"))
 
-        val email1 :: email2 :: Nil = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.
-          sortBy {
-            _.to.head.address
-          }
+        val email1 :: email2 :: Nil = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)
 
         val activityEmails = db.readOnlyMaster { implicit s => inject[ActivityEmailRepo].all }
         activityEmails.size === 2
+        activityEmails.find(_.userId == user1.id.get).get.otherFollowedLibraries.get.size === 3
         activityEmails.find(_.userId == user1.id.get).get.libraryRecommendations.get.size === 3
 
         val html1: String = email1.htmlBody
