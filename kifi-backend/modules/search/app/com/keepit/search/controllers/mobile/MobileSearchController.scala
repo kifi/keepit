@@ -30,11 +30,6 @@ class MobileSearchController @Inject() (
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
-    kifiVersion: Option[KifiVersion] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None,
     withUriSummary: Boolean = false) = UserAction { request =>
 
     val userId = request.userId

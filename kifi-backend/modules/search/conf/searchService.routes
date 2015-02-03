@@ -26,7 +26,7 @@ GET         /ext/search/message            @com.keepit.search.controllers.ext.Ex
 ##########################################
 # Mobile V1
 ##########################################
-GET         /m/1/search        @com.keepit.search.controllers.mobile.MobileSearchController.searchV1(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], withUriSummary: Boolean ?= false)
+GET         /m/1/search        @com.keepit.search.controllers.mobile.MobileSearchController.searchV1(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], withUriSummary: Boolean ?= false)
 GET         /m/1/search/users/page        @com.keepit.search.controllers.mobile.MobileUserSearchController.pageV1(query: String, filter: Option[String], pageNum: Int, pageSize: Int)
 GET         /m/1/search/users/search        @com.keepit.search.controllers.mobile.MobileUserSearchController.searchV1(query: String, filter: Option[String], context: Option[String], maxHits: Int)
 POST        /m/1/search/events/clickedSearchResult        @com.keepit.search.controllers.mobile.MobileSearchEventController.clickedSearchResult()
