@@ -216,7 +216,13 @@ class RecommendationGenerationCommander @Inject() (
               db.readWrite { implicit session =>
                 genStateRepo.save(newState)
               }
-              if (state.seq < newSeqNum) { precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude)) }
+              if (state.seq < newSeqNum) {
+                if (recommendationGenerationLock.waiting < 500) {
+                  precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
+                } else {
+                  precomputeRecommendationsForUser(userId, boostedKeepers) //No point in keeping all that data in memory when it's not needed soon
+                }
+              }
               Future.successful(false)
             } else {
               processSeeds(seeds, newState, userId, boostedKeepers, alwaysInclude)

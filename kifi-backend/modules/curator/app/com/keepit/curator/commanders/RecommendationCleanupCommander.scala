@@ -7,19 +7,21 @@ import com.keepit.curator.model.{ PublicFeedRepo, UriRecommendationRepo }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import scala.util.{ Failure, Random }
+import com.keepit.common.logging.Logging
 
 class RecommendationCleanupCommander @Inject() (
     db: Database,
     uriRecoRepo: UriRecommendationRepo,
-    feedsRepo: PublicFeedRepo) {
+    feedsRepo: PublicFeedRepo) extends Logging {
 
   private val recosTTL = 30 // days (by updateAt)
-  private val defaultLimitNumRecosForUser = 500
+  private val defaultLimitNumRecosForUser = 300
   def cleanup(overrideLimit: Option[Int] = None, overrideTimeCutoff: Option[DateTime] = None): Unit = {
     val userToClean = Random.shuffle(db.readOnlyReplica { implicit session => uriRecoRepo.getUsersWithRecommendations() }.toSeq).take(50)
+    log.info(s"Running Uri Reco Cleanup for $userToClean")
     db.readWriteBatch(userToClean) { (session, userId) =>
       uriRecoRepo.cleanupOldRecos(userId, currentDateTime.minusDays(recosTTL))(session)
-      uriRecoRepo.cleanupLowMasterScoreRecos(userId, overrideLimit.getOrElse(defaultLimitNumRecosForUser), overrideTimeCutoff.getOrElse(currentDateTime.minusDays(4)))(session)
+      uriRecoRepo.cleanupLowMasterScoreRecos(userId, overrideLimit.getOrElse(defaultLimitNumRecosForUser), overrideTimeCutoff.getOrElse(currentDateTime.minusDays(3)))(session)
     }.foreach {
       case (userId, res) =>
         res match {
