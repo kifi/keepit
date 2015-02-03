@@ -92,7 +92,7 @@ class ExtSearchController @Inject() (
           case (users, libraries) =>
 
             val librariesJson = libraries.map { library =>
-              json.minify(Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "secret" -> library.isSecret))
+              json.minify(Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "secret" -> library.isSecret))
             }
 
             Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> librariesJson)
