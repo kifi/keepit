@@ -32,14 +32,14 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
     "search keeps (V1)" in {
       withInjector(modules: _*) { implicit injector =>
         val mobileSearchController = inject[MobileSearchController]
-        val path = com.keepit.search.controllers.mobile.routes.MobileSearchController.searchV1("test", None, 7, None, None, None, None, None, None, None).toString
+        val path = com.keepit.search.controllers.mobile.routes.MobileSearchController.searchV1("test", None, 7, None, None).toString
         path === "/m/1/search?q=test&maxHits=7"
 
         inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setDecoratedResults(MobileSearchControllerTest.decoratedTestResults)
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
-        val result = mobileSearchController.searchV1("test", None, 7, None, None, None, None, None, None, None)(request)
+        val result = mobileSearchController.searchV1("test", None, 7, None, None)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
