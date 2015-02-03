@@ -31,7 +31,7 @@ class AdminPersonaController @Inject() (
 
   def createPersona() = AdminUserPage { implicit request =>
     val personaOpt = request.body.asJson.map { json =>
-      val name = (json \ "name").as[PersonaName]
+      val name = (json \ "name").as[PersonaName] // note: can only create personas that are typesafe. Look at PersonaName
       val displayNameOpt = (json \ "displayName").as[Option[String]]
       val iconPath = (json \ "iconPath").as[String]
       val activeIconPath = (json \ "activeIconPath").as[String]
