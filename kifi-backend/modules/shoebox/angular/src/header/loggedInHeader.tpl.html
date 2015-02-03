@@ -6,9 +6,9 @@
       <a class="kf-lih-logo svg-kifi-clover-white-text" ui-sref="home"></a>
     </div>
     <div class="kf-lih-center">
-      <label class="kf-lih-search">
+      <label class="kf-lih-search" ng-class="{'kf-focused': isFocused}">
         <span class="kf-lih-search-left">
-          <span class="kf-lih-search-icon" ng-class="{'kf-focused': isFocused}"></span>
+          <span class="kf-lih-search-icon"></span>
           <a class="kf-lih-search-lib-owner-img" ng-if="search.showName" style="background-image:url({{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.100.png'}})" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></a>
           <span class="kf-lih-search-lib-name" ng-if="search.showName" style="background-color:{{library.color}}">{{library.name}}</span>
           <a class="kf-lih-search-lib-x" ng-if="search.showName" style="background-color:{{library.color}}" ng-click="clearLibraryName()" href="javascript:">&times;</a>

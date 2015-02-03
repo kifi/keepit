@@ -68,9 +68,13 @@ search-height = 28px
   display: table
   width: 100%
   height: search-height
-  border: defaultBorder
+  border: 1px solid alpha(defaultBorderColor, .2)
   border-radius: 3px
-  background-color: #fff
+  background-color: alpha(#fff, .2)
+
+  &.kf-focused
+    border-color: defaultBorderColor
+    background-color: #fff
 
 .kf-lih-search-left
   display: table-cell
@@ -86,7 +90,7 @@ search-height = 28px
   transform: scale(.8)
   sprite2x($search-icon-default)
 
-  &.kf-focused
+  .kf-focused &
     sprite2x($search-icon-active)
 
 lib-owner-img-radius = 12px
@@ -117,19 +121,26 @@ lib-owner-img-radius = 12px
 
 .kf-lih-search-lib-x
   display: inline-block
+  position: relative
   vertical-align: middle
   border-radius: 0 8px 8px 0
   padding: 0 6px 0 4px
   line-height: search-height - 4px
   font-size: 14px
   color: #fff
-  cursor: pointer
 
-  &:hover
-    opacity: .8
+  &:hover::before
+    content: ''
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    border-radius: '%s' % inherit  // github.com/tj/nib/issues/271
+    background-color: alpha(#fff, .15)
 
-    &:active
-      opacity: .9
+  &:hover:active::before
+    background-color: alpha(#fff, .075)
 
 .kf-lih-search-center
   display: table-cell
@@ -138,6 +149,7 @@ lib-owner-img-radius = 12px
 input.kf-lih-search-input
   width: 100%
   line-height: search-height
+  background-color: transparent
 
 .kf-lib-search-right
   display: table-cell
