@@ -2,6 +2,8 @@ package com.keepit.curator.commanders
 
 import com.keepit.search.util.LongSetIdFilter
 
+import scala.collection.mutable.ArrayBuffer
+
 trait RecoIdFilter[R] {
   type FilterResult = (Seq[R], String) // accepted recos, and new context string
 
@@ -12,5 +14,26 @@ trait RecoIdFilter[R] {
     val newSet = exclude ++ accepted.map { idFunc(_) }
     val newContext = idFilter.fromSetToBase64(newSet)
     (accepted, newContext)
+  }
+
+  def take(recos: Seq[R], context: Option[String], limit: Int)(idFunc: R => Long): FilterResult = {
+    require(recos.size == recos.map { idFunc(_) }.distinct.size, "recos should contain distinct ids")
+
+    val idFilter = new LongSetIdFilter()
+    val exclude = idFilter.fromBase64ToSet(context.getOrElse(""))
+    val buf = new ArrayBuffer[R]()
+    var i = 0
+    val iter = recos.iterator
+    while (iter.hasNext && i < limit) {
+      val item = iter.next()
+      val id = idFunc(item)
+      if (!exclude.contains(id)) {
+        buf.append(item)
+        i += 1
+      }
+    }
+    val newSet = exclude ++ buf.map { idFunc(_) }.toSet
+    val newContext = idFilter.fromSetToBase64(newSet)
+    (buf, newContext)
   }
 }
