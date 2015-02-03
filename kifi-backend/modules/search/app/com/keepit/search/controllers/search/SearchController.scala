@@ -127,12 +127,12 @@ class SearchController @Inject() (
     }
   }
 
-  def distLibrarySearch() = Action.async(parse.tolerantJson) { request =>
+  def distSearchLibraries() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
     val librarySearchRequest = (json \ "request").as[LibrarySearchRequest]
-    librarySearchCommander.distLibrarySearch(shards, librarySearchRequest).map { libraryShardResults =>
+    librarySearchCommander.distSearchLibraries(shards, librarySearchRequest).map { libraryShardResults =>
       Ok(Json.toJson(libraryShardResults))
     }
   }
@@ -184,7 +184,7 @@ class SearchController @Inject() (
   def explainLibraryResult(query: String, doPrefixSearch: Boolean, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String]) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     val langs = acceptLangs.split(",").filter(_.nonEmpty)
-    librarySearchCommander.librarySearch(userId, langs, userExperiments, query, None, None, 1, doPrefixSearch, None, debug, Some(libraryId)).map { result =>
+    librarySearchCommander.searchLibraries(userId, langs, userExperiments, query, None, None, 1, doPrefixSearch, None, debug, Some(libraryId)).map { result =>
       Ok(html.admin.explainLibraryResult(userId, libraryId, result.explanation))
     }
   }
