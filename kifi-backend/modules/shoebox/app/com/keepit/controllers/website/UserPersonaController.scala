@@ -30,6 +30,7 @@ class UserPersonaController @Inject() (
       Json.obj(
         "id" -> persona.name,
         "displayName" -> persona.displayName,
+        "displayNamePlural" -> persona.displayNamePlural,
         "selected" -> userPersonas.contains(persona),
         "iconPath" -> persona.iconPath,
         "activeIconPath" -> persona.activeIconPath)
