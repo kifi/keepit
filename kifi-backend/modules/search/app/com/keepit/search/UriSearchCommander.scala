@@ -48,7 +48,7 @@ trait UriSearchCommander {
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): PartialSearchResult
 
-  def search2(
+  def searchUris(
     userId: Id[User],
     acceptLangs: Seq[String],
     experiments: Set[ExperimentType],
@@ -61,7 +61,7 @@ trait UriSearchCommander {
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None): Future[UriSearchResult]
 
-  def distSearch2(
+  def distSearchUris(
     shards: Set[Shard[NormalizedURI]],
     userId: Id[User],
     firstLang: Lang,
@@ -219,7 +219,7 @@ class UriSearchCommanderImpl @Inject() (
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None): PartialSearchResult = {
 
-    val future = distSearch2(
+    val future = distSearchUris(
       localShards,
       userId,
       firstLang,
@@ -240,7 +240,7 @@ class UriSearchCommanderImpl @Inject() (
     compatibilitySupport.toPartialSearchResult(localShards, userId, friendIds, result)
   }
 
-  def search2(
+  def searchUris(
     userId: Id[User],
     acceptLangs: Seq[String],
     experiments: Set[ExperimentType],
@@ -285,14 +285,14 @@ class UriSearchCommanderImpl @Inject() (
 
     if (dispatchPlan.nonEmpty) {
       // dispatch query
-      searchClient.distSearch2(dispatchPlan, userId, firstLang, secondLang, query, filter, libraryContext, maxHits, context, debug).foreach { f =>
+      searchClient.distSearchUris(dispatchPlan, userId, firstLang, secondLang, query, filter, libraryContext, maxHits, context, debug).foreach { f =>
         resultFutures += f.map(json => new UriShardResult(json))(immediate)
       }
     }
 
     // do the local part
     if (localShards.nonEmpty) {
-      resultFutures += distSearch2(localShards, userId, firstLang, secondLang, experiments, query, filter, libraryContext, maxHits, context, predefinedConfig, debug)
+      resultFutures += distSearchUris(localShards, userId, firstLang, secondLang, experiments, query, filter, libraryContext, maxHits, context, predefinedConfig, debug)
     }
     val searchFilter = SearchFilter(filter, libraryContext, context)
 
@@ -344,7 +344,7 @@ class UriSearchCommanderImpl @Inject() (
     }
   }
 
-  def distSearch2(
+  def distSearchUris(
     localShards: Set[Shard[NormalizedURI]],
     userId: Id[User],
     firstLang: Lang,
