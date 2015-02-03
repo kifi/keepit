@@ -55,6 +55,7 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
                 {
                   "id":"artist",
                   "displayName":"artist",
+                  "displayNamePlural":"artists",
                   "selected":true,
                   "iconPath":"icon/artist.jpg",
                   "activeIconPath":"icon/active_artist.jpg"
@@ -62,6 +63,7 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
                 {
                   "id":"science_buff",
                   "displayName":"science buff",
+                  "displayNamePlural":"science buffs",
                   "selected":false,
                   "iconPath":"icon/science_buff.jpg",
                   "activeIconPath":"icon/active_science_buff.jpg"
@@ -69,6 +71,7 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
                 {
                   "id":"student",
                   "displayName":"student",
+                  "displayNamePlural":"students",
                   "selected":true,
                   "iconPath":"icon/student.jpg",
                   "activeIconPath":"icon/active_student.jpg"
@@ -76,6 +79,7 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
                 {
                   "id":"foodie",
                   "displayName":"foodie",
+                  "displayNamePlural":"foodies",
                   "selected":false,
                   "iconPath":"icon/foodie.jpg",
                   "activeIconPath":"icon/active_foodie.jpg"
