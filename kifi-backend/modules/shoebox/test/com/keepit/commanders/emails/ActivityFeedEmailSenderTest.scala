@@ -206,6 +206,8 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         email1.to === Seq(EmailAddress("u1@kifi.com"))
         email2.to === Seq(EmailAddress("u2@kifi.com"))
 
+        html1 must contain("/u1/lib1-reco")
+
       }
     }
   }

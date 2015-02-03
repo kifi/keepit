@@ -17,10 +17,9 @@ class UserLibraryRecommendationsComponent @Inject() (recoCommander: Recommendati
   val recoSource = RecommendationSource.Email
   val recoSubSource = RecommendationSubSource.Unknown
 
-  val libRecosToFetch = 20
-
-  def apply(toUserId: Id[User], previouslySent: Seq[ActivityEmail]): Future[Seq[LibraryInfoView]] = {
-    recoCommander.topPublicLibraryRecos(toUserId, libRecosToFetch, recoSource, recoSubSource) map { recos =>
+  def apply(toUserId: Id[User], previouslySent: Seq[ActivityEmail], limit: Int): Future[Seq[LibraryInfoView]] = {
+    // does not track deliveries since some of the results may not be included in the email
+    recoCommander.topPublicLibraryRecos(toUserId, limit, recoSource, recoSubSource, trackDelivery = false) map { recos =>
       recos.map { case (id, info) => BaseLibraryInfoView(id, info.itemInfo) }
     }
   }

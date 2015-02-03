@@ -16,7 +16,7 @@ Activity email (still a work in progress)
 
 <h1>Libraries you follow have new Keeps </h1>
 @activityData.newKeepsInLibraries.map { case (lib, keeps) =>
-    <a href="@libraryUrl(lib.libraryId)">@lib.name</a><br/>
+    <a href="@libraryUrl(lib.libraryId, "")">@lib.name</a><br/>
     curated by @lib.ownerName<br/>
     @lib.description.getOrElse("")<br/>
     @lib.numKeeps Keeps | @lib.numFollowers Followers<br/>
@@ -34,7 +34,7 @@ Activity email (still a work in progress)
 <h1>Pending Library Invites</h1>
 @activityData.libraryInvites.map { lib =>
     Invited by @{Html(lib.invitedByUsers.map(fullName).mkString(", "))}<br/>
-    <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
+    <a href="@libraryUrl(lib.libraryId, "")">@lib.name</a> by
     @lib.ownerName<br/>
     @lib.description.getOrElse("")<br/>
     @lib.numKeeps Keeps | @lib.numFollowers Followers<br/>
@@ -69,7 +69,7 @@ Activity email (still a work in progress)
         @if(i == followers.size - 1){and}
         @fullName(id)@if(i < followers.size - 1){,}
     }
-    <a href="@libraryUrl(lib.libraryId)">@lib.name</a> by
+    <a href="@libraryUrl(lib.libraryId, "")">@lib.name</a> by
     @lib.ownerName<br/>
     @lib.description.getOrElse("")<br/>
     @lib.numKeeps Keeps | @lib.numFollowers Followers<br/>
