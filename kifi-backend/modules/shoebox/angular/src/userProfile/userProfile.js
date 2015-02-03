@@ -59,19 +59,11 @@ angular.module('kifi')
     // Scope methods and data.
     //
 
-    // Mapping of library type to origin contexts for tracking.
+    // Mapping of library type to library names for tracking.
     $scope.libraryTypesToNames = {
       'own': 'MyLibraries',
       'following': 'FollowedLibraries',
       'invited': 'InvitedLibraries'
-    };
-
-    $scope.trackUplCardClick = function (/* lib */) {
-
-    };
-
-    $scope.trackProfileClick = function () {
-
     };
 
 
@@ -209,14 +201,6 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
-    $scope.trackLibraryNav = function (toLibraryType) {
-      debugger;
-
-      $rootScope.$emit('trackUserProfileEvent', 'click', {
-        'action': 'clicked' + $scope.libraryTypesToNames[toLibraryType]
-      });
-    };
-
     $scope.fetchLibraries = function () {
       if (loading) {
         return;
@@ -342,6 +326,24 @@ angular.module('kifi')
         });
       })['finally'](function () {
         $event.target.disabled = false;
+      });
+    };
+
+    $scope.trackLibraryNav = function (toLibraryType) {
+      $rootScope.$emit('trackUserProfileEvent', 'click', {
+        'action': 'clicked' + $scope.libraryTypesToNames[toLibraryType]
+      });
+    };
+
+    $scope.trackUplCardClick = function (lib, subAction) {
+      $rootScope.$emit('trackUserProfileEvent', 'click', {
+        action: 'clickedLibraryCard',
+        subAction: subAction,
+        libraryName: lib.name,
+        libraryOwnerUserName: lib.owner.username,
+        libraryId: lib.id,
+        libraryOwnerUserId: lib.owner.id,
+        profileTab: $scope.libraryTypesToNames[$scope.libraryType]
       });
     };
   }
