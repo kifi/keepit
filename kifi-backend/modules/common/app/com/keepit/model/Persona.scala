@@ -12,6 +12,7 @@ case class Persona(
     name: PersonaName,
     state: State[Persona] = PersonaStates.ACTIVE,
     displayName: String,
+    displayNamePlural: String,
     iconPath: String,
     activeIconPath: String) extends ModelWithState[Persona] {
   def withId(id: Id[Persona]): Persona = copy(id = Some(id))

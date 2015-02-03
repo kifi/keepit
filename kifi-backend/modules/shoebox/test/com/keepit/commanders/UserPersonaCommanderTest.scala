@@ -89,7 +89,13 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
       availablePersonas.map { pName =>
         val iconPath = "icon/" + pName + ".jpg"
         val activeIconPath = "icon/active_" + pName + ".jpg"
-        (pName -> personaRepo.save(Persona(name = PersonaName(pName), displayName = pName.replace("_", " "), iconPath = iconPath, activeIconPath = activeIconPath)))
+        val displayName = pName.replace("_", " ")
+        (pName -> personaRepo.save(Persona(
+          name = PersonaName(pName),
+          displayName = displayName,
+          displayNamePlural = displayName + "s",
+          iconPath = iconPath,
+          activeIconPath = activeIconPath)))
       }
     }.toMap
   }
