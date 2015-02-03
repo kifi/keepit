@@ -61,7 +61,7 @@ angular.module('kifi')
 
     // Mapping of library type to library names for tracking.
     $scope.libraryTypesToNames = {
-      'own': 'MyLibraries',
+      'own': 'OwnedLibraries',
       'following': 'FollowedLibraries',
       'invited': 'InvitedLibraries'
     };
