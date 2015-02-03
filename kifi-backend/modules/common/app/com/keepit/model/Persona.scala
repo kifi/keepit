@@ -25,33 +25,59 @@ object PersonaName {
   implicit def format[T]: Format[PersonaName] =
     Format(__.read[String].map(PersonaName(_)), new Writes[PersonaName] { def writes(o: PersonaName) = JsString(o.value) })
 
-  case object FOODIE extends PersonaName("foodie")
-  case object ARTIST extends PersonaName("artist")
-  case object PARENT extends PersonaName("parent")
-  case object STUDENT extends PersonaName("student")
-  case object DESIGNER extends PersonaName("designer")
-  case object PHOTOGRAPHER extends PersonaName("photographer")
-  case object ATHLETE extends PersonaName("athlete")
+  case object DEVELOPER extends PersonaName("developer")
   case object TECHIE extends PersonaName("techie")
+  case object ENTREPRENEUR extends PersonaName("entrepreneur")
+  case object ARTIST extends PersonaName("artist")
+  case object FOODIE extends PersonaName("foodie")
+  case object SCIENCE_BUFF extends PersonaName("science_buff")
+  case object FASHIONISTA extends PersonaName("fashionista")
+  case object HEALTH_NUT extends PersonaName("health_nut")
+  case object STUDENT extends PersonaName("student")
+  case object INVESTOR extends PersonaName("investor")
+  case object TRAVELER extends PersonaName("traveler")
   case object GAMER extends PersonaName("gamer")
-  case object ADVENTURER extends PersonaName("adventurer")
+  case object PARENT extends PersonaName("parent")
+  case object ANIMAL_LOVER extends PersonaName("animal_lover")
+  case object DEEP_THINKER extends PersonaName("deep_thinker")
 
   def apply(str: String) = {
     str.toLowerCase match {
-      case FOODIE.value => FOODIE
-      case ARTIST.value => ARTIST
-      case PARENT.value => PARENT
-      case STUDENT.value => STUDENT
-      case DESIGNER.value => DESIGNER
-      case PHOTOGRAPHER.value => PHOTOGRAPHER
-      case ATHLETE.value => ATHLETE
+      case DEVELOPER.value => DEVELOPER
       case TECHIE.value => TECHIE
+      case ENTREPRENEUR.value => ENTREPRENEUR
+      case ARTIST.value => ARTIST
+      case FOODIE.value => FOODIE
+      case SCIENCE_BUFF.value => SCIENCE_BUFF
+      case FASHIONISTA.value => FASHIONISTA
+      case HEALTH_NUT.value => HEALTH_NUT
+      case STUDENT.value => STUDENT
+      case INVESTOR.value => INVESTOR
+      case TRAVELER.value => TRAVELER
       case GAMER.value => GAMER
-      case ADVENTURER.value => ADVENTURER
+      case PARENT.value => PARENT
+      case ANIMAL_LOVER.value => ANIMAL_LOVER
+      case DEEP_THINKER.value => DEEP_THINKER
     }
   }
 
-  val allPersonas: Set[PersonaName] = Set(FOODIE, ARTIST, PARENT, STUDENT, DESIGNER, PHOTOGRAPHER, ATHLETE, TECHIE, GAMER, ADVENTURER)
+  val allPersonas: Set[PersonaName] = Set(
+    DEVELOPER,
+    TECHIE,
+    ENTREPRENEUR,
+    ARTIST,
+    FOODIE,
+    SCIENCE_BUFF,
+    FASHIONISTA,
+    HEALTH_NUT,
+    STUDENT,
+    INVESTOR,
+    TRAVELER,
+    GAMER,
+    PARENT,
+    ANIMAL_LOVER,
+    DEEP_THINKER
+  )
 }
 
 object PersonaStates extends States[Persona]

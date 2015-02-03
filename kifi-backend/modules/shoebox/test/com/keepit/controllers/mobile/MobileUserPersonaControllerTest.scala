@@ -8,7 +8,6 @@ import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.controllers.mobile.MobileUserPersonaController
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ PersonaName, UserPersona, Persona }
@@ -54,18 +53,11 @@ class MobileUserPersonaControllerTest extends Specification with ShoeboxTestInje
         contentAsJson(result1) === Json.parse(
           s"""{"personas":[
                 {
-                  "id":"adventurer",
-                  "displayName":"adventurer",
-                  "selected":true,
-                  "iconPath":"icon/adventurer.jpg",
-                  "activeIconPath":"icon/active_adventurer.jpg"
-                },
-                {
-                  "id":"photographer",
-                  "displayName":"photographer",
+                  "id":"science_buff",
+                  "displayName":"science buff",
                   "selected":false,
-                  "iconPath":"icon/photographer.jpg",
-                  "activeIconPath":"icon/active_photographer.jpg"
+                  "iconPath":"icon/science_buff.jpg",
+                  "activeIconPath":"icon/active_science_buff.jpg"
                 },
                 {
                   "id":"student",
@@ -80,6 +72,13 @@ class MobileUserPersonaControllerTest extends Specification with ShoeboxTestInje
                   "selected":false,
                   "iconPath":"icon/foodie.jpg",
                   "activeIconPath":"icon/active_foodie.jpg"
+                },
+                {
+                  "id":"techie",
+                  "displayName":"techie",
+                  "selected":true,
+                  "iconPath":"icon/techie.jpg",
+                  "activeIconPath":"icon/active_techie.jpg"
                 }
               ]}"""
         )
@@ -100,21 +99,21 @@ class MobileUserPersonaControllerTest extends Specification with ShoeboxTestInje
         inject[FakeUserActionsHelper].setUser(user1)
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ADVENTURER, PersonaName.STUDENT)
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.TECHIE, PersonaName.STUDENT)
         }
 
         val testPath = com.keepit.controllers.mobile.routes.MobileUserPersonaController.selectPersonas().url
         val request = FakeRequest("POST", testPath)
 
-        // add new persona "photographer", remove "student"
-        val result1 = controller.selectPersonas()(request.withBody(Json.obj("personas" -> Seq("adventurer", "photographer"))))
+        // add new persona "artist", remove "student"
+        val result1 = controller.selectPersonas()(request.withBody(Json.obj("personas" -> Seq("techie", "science_buff"))))
         status(result1) must equalTo(OK)
         val resultJson1 = contentAsJson(result1)
-        (resultJson1 \ "added").as[Seq[String]] === Seq("photographer")
+        (resultJson1 \ "added").as[Seq[String]] === Seq("science_buff")
         (resultJson1 \ "removed").as[Seq[String]] === Seq("student")
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ADVENTURER, PersonaName.PHOTOGRAPHER)
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.TECHIE, PersonaName.SCIENCE_BUFF)
         }
 
       }
@@ -124,12 +123,12 @@ class MobileUserPersonaControllerTest extends Specification with ShoeboxTestInje
 
   // sets up a Map of [String, Persona]
   private def setupPersonas()(implicit injector: Injector) = {
-    val availablePersonas = Set("adventurer", "photographer", "student", "foodie")
+    val availablePersonas = Set("science_buff", "student", "foodie", "techie")
     db.readWrite { implicit s =>
       availablePersonas.map { pName =>
         val iconPath = "icon/" + pName + ".jpg"
         val activeIconPath = "icon/active_" + pName + ".jpg"
-        (pName -> personaRepo.save(Persona(name = PersonaName(pName), displayName = pName, iconPath = iconPath, activeIconPath = activeIconPath)))
+        (pName -> personaRepo.save(Persona(name = PersonaName(pName), displayName = pName.replace("_", " "), iconPath = iconPath, activeIconPath = activeIconPath)))
       }
     }.toMap
   }
@@ -138,7 +137,7 @@ class MobileUserPersonaControllerTest extends Specification with ShoeboxTestInje
     val allPersonas = setupPersonas
     val user1 = db.readWrite { implicit s =>
       val user1 = user().withName("Peter", "Parker").withUsername("peterparker").withEmailAddress("peterparker@gmail.com").saved
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("adventurer").id.get))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("techie").id.get))
       userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("student").id.get))
       user1
     }

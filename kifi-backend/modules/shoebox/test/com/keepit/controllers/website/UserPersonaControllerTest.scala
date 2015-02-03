@@ -53,23 +53,22 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
         contentAsJson(result1) === Json.parse(
           s"""{"personas":[
                 {
-                  "id":"adventurer",
-                  "displayName":"adventurer",
+                  "id":"artist",
+                  "displayName":"artist",
                   "selected":true,
-                  "iconPath":"icon/adventurer.jpg",
-                  "activeIconPath":"icon/active_adventurer.jpg"
+                  "iconPath":"icon/artist.jpg",
+                  "activeIconPath":"icon/active_artist.jpg"
                 },
                 {
-                  "id":"photographer",
-                  "displayName":"photographer",
+                  "id":"science_buff",
+                  "displayName":"science buff",
                   "selected":false,
-                  "iconPath":"icon/photographer.jpg",
-                  "activeIconPath":"icon/active_photographer.jpg"
+                  "iconPath":"icon/science_buff.jpg",
+                  "activeIconPath":"icon/active_science_buff.jpg"
                 },
                 {
                   "id":"student",
-                  "displayName":
-                  "student",
+                  "displayName":"student",
                   "selected":true,
                   "iconPath":"icon/student.jpg",
                   "activeIconPath":"icon/active_student.jpg"
@@ -93,22 +92,22 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
         inject[FakeUserActionsHelper].setUser(user1)
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ADVENTURER, PersonaName.STUDENT)
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ARTIST, PersonaName.STUDENT)
         }
 
-        val testPath = com.keepit.controllers.website.routes.UserPersonaController.addPersona("photographer").url
+        val testPath = com.keepit.controllers.website.routes.UserPersonaController.addPersona("science_buff").url
         val request = FakeRequest("POST", testPath)
 
         // add new persona
-        val result1 = controller.addPersona("photographer")(request)
+        val result1 = controller.addPersona("science_buff")(request)
         status(result1) must equalTo(NO_CONTENT)
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ADVENTURER, PersonaName.STUDENT, PersonaName.PHOTOGRAPHER)
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ARTIST, PersonaName.STUDENT, PersonaName.SCIENCE_BUFF)
         }
 
         // add existing persona
-        val result2 = controller.addPersona("photographer")(request)
+        val result2 = controller.addPersona("science_buff")(request)
         status(result2) must equalTo(BAD_REQUEST)
       }
     }
@@ -120,7 +119,7 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
         inject[FakeUserActionsHelper].setUser(user1)
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ADVENTURER, PersonaName.STUDENT)
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ARTIST, PersonaName.STUDENT)
         }
 
         val testPath = com.keepit.controllers.website.routes.UserPersonaController.removePersona("student").url
@@ -135,7 +134,7 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
         status(result2) must equalTo(BAD_REQUEST)
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ADVENTURER)
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ARTIST)
         }
 
       }
@@ -144,12 +143,12 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
 
   // sets up a Map of [String, Persona]
   private def setupPersonas()(implicit injector: Injector) = {
-    val availablePersonas = Set("adventurer", "photographer", "student", "foodie")
+    val availablePersonas = Set("artist", "science_buff", "student", "foodie")
     db.readWrite { implicit s =>
       availablePersonas.map { pName =>
         val iconPath = "icon/" + pName + ".jpg"
         val activeIconPath = "icon/active_" + pName + ".jpg"
-        (pName -> personaRepo.save(Persona(name = PersonaName(pName), displayName = pName, iconPath = iconPath, activeIconPath = activeIconPath)))
+        (pName -> personaRepo.save(Persona(name = PersonaName(pName), displayName = pName.replace("_", " "), iconPath = iconPath, activeIconPath = activeIconPath)))
       }
     }.toMap
   }
@@ -158,7 +157,7 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
     val allPersonas = setupPersonas
     val user1 = db.readWrite { implicit s =>
       val user1 = user().withName("Peter", "Parker").withUsername("peterparker").withEmailAddress("peterparker@gmail.com").saved
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("adventurer").id.get))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("artist").id.get))
       userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("student").id.get))
       user1
     }
