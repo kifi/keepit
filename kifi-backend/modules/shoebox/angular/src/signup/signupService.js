@@ -147,11 +147,11 @@ angular.module('kifi')
     };
 
     $scope.twAuth = function() {
-      emitTracking('click', 'signup', {action: 'clickedAuthTwitter'});
+      emitTracking('click', 'signup', { action: 'clickedAuthTwitter' });
     };
 
     $scope.fbAuth = function () {
-      emitTracking('click', 'signup', {action: 'clickedAuthFacebook'});
+      emitTracking('click', 'signup', { action: 'clickedAuthFacebook' });
     };
 
     // 2nd Register modal
