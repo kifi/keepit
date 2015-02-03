@@ -424,6 +424,11 @@ angular.module('kifi')
         };
 
         function onClick(event) {
+          // On a click outside the menu, close the menu.
+          if (scope.libraryMenu.visible && !element[0].contains(event.target)) {
+            scope.libraryMenu.visible = false;
+          }
+
           if (angular.element(event.target).closest('.kf-sort-libs-button').length) {
             scope.$apply( function() {
               scope.toggleDropdown();
