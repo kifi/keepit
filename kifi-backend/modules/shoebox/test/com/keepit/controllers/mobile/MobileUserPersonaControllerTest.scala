@@ -8,6 +8,7 @@ import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.controllers.mobile.MobileUserPersonaController
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ PersonaName, UserPersona, Persona }

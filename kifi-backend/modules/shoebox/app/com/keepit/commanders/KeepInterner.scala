@@ -132,13 +132,11 @@ class KeepInterner @Inject() (
     } map { persistedBookmarksWithUri =>
       val bookmark = persistedBookmarksWithUri.bookmark
       if (persistedBookmarksWithUri.isNewKeep) {
-        if (library.kind == LibraryKind.USER_CREATED) SafeFuture {
-          libraryCommander.notifyFollowersOfNewKeeps(library, bookmark)
-          libraryAnalytics.keptPages(userId, Seq(bookmark), library, context)
-          heimdalClient.processKeepAttribution(userId, Seq(bookmark))
-        }
+        if (library.kind == LibraryKind.USER_CREATED) SafeFuture { libraryCommander.notifyFollowersOfNewKeeps(library, bookmark) }
+        libraryAnalytics.keptPages(userId, Seq(bookmark), library, context)
+        heimdalClient.processKeepAttribution(userId, Seq(bookmark))
       }
-      db.readWriteAsync { implicit s => libraryRepo.updateLastKept(library.id.get) } // do not update seq num, only update if successful keep
+      db.readWrite { implicit s => libraryRepo.updateLastKept(library.id.get) } // do not update seq num, only update if successful keep
       (bookmark, persistedBookmarksWithUri.isNewKeep)
     }
   }
