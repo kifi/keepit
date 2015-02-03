@@ -50,7 +50,7 @@ class MobileSearchController @Inject() (
     Ok
   }
 
-  def librarySearch(
+  def searchLibrariesV1(
     query: String,
     filter: Option[String],
     maxHits: Int,
