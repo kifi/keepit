@@ -23,10 +23,11 @@ left-logo-width = 92px
 .kf-lih-left
   display: table-cell
   vertical-align: middle
-  width: left-burger-width + left-sep-width + left-logo-width + 3px
+  width: left-burger-width + left-sep-width + left-logo-width + 6px
 
 .kf-lih-toggle-menu
   display: inline-block
+  margin-right: 3px
   height: left-height
   width: left-burger-width
   vertical-align: middle
@@ -40,6 +41,15 @@ left-logo-width = 92px
   &:hover:not(.active)
     .sprite-burger
       sprite2x($burger-hover)
+
+  .sprite-burger
+    border: 5px solid pageHeaderColor
+
+.kf-lih-toggle-menu-visible
+  .sprite-burger
+    background-color: #555
+    border-color: #555
+    border-radius: 15%
 
 .kf-lih-left-separator
   display: inline-block
