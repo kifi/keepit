@@ -122,7 +122,7 @@ angular.module('kifi')
         }
 
         function fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight) {
-          var stickToMaxTop = 253;
+          var stickToMaxTop = 264;
           // all 3 separators properties need to be set because this function is debounced and a user might scroll too fast
           if (offset <= firstLimit) {
             setPositioning(separators[0], 'fixed', stickToMaxTop);
