@@ -36,10 +36,25 @@ angular.module('kifi')
           friendsNotifCount: friendService.requests.length
         };
 
-
         //
         // Internal methods.
         //
+        function getElement(selector) {
+          var cache = {};
+
+          if (!cache[selector] || !cache[selector].length) {
+            cache[selector] = angular.element(selector);
+          }
+
+          return cache[selector];
+        }
+
+        function positionMenu() {
+          if (scope.libraryMenu.visible) {
+            element.css({'left': getElement('.kf-lih-toggle-menu').offset().left + 'px'});
+          }
+        }
+
         function setLibListHeight() {
           if (scrollableLibList.offset()) {
             scrollableLibList.height(w.height() - (scrollableLibList.offset().top - w[0].pageYOffset));
@@ -239,6 +254,14 @@ angular.module('kifi')
           });
         });
 
+        // Position menu w/r to the toggle menu burger.
+        scope.$watch('libraryMenu.visible', positionMenu);
+        var positionMenuOnResize = _.debounce(positionMenu, 20);
+        $window.addEventListener('resize', positionMenuOnResize);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener(positionMenuOnResize);
+        });
+
 
         //
         // Scrolling.
@@ -422,7 +445,6 @@ angular.module('kifi')
         scope.$on('$destroy', function() {
           $document.off('mousedown', onClick);
         });
-
       }
     };
   }
