@@ -62,7 +62,7 @@ class SearchController @Inject() (
     Ok(result.json)
   }
 
-  def distSearch2() = Action.async(parse.tolerantJson) { request =>
+  def distSearchUris() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val searchRequest = (json \ "request")
@@ -85,7 +85,7 @@ class SearchController @Inject() (
     val id = Id[User](userId)
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(id), 5 seconds)
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    uriSearchCommander.distSearch2(
+    uriSearchCommander.distSearchUris(
       shards,
       id,
       Lang(lang1),

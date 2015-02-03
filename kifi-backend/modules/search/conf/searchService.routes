@@ -50,11 +50,12 @@ POST        /site/search/events/searched        @com.keepit.search.controllers.w
 ##########################################
 
 POST        /internal/search/dist/search          @com.keepit.search.controllers.search.SearchController.distSearch()
-POST        /internal/search/dist/search2         @com.keepit.search.controllers.search.SearchController.distSearch2()
+POST        /internal/search/dist/search2         @com.keepit.search.controllers.search.SearchController.distSearchUris()
+POST        /internal/search/dist/search/uri         @com.keepit.search.controllers.search.SearchController.distSearchUris()
 POST        /internal/search/dist/langFreqs       @com.keepit.search.controllers.search.SearchController.distLangFreqs()
 POST        /internal/search/dist/augmentation    @com.keepit.search.controllers.search.SearchController.distAugmentation()
 POST        /internal/search/dist/librarySearch   @com.keepit.search.controllers.search.SearchController.distSearchLibraries()
-POST        /internal/search/dist/search/libraries   @com.keepit.search.controllers.search.SearchController.distSearchLibraries()
+POST        /internal/search/dist/search/library   @com.keepit.search.controllers.search.SearchController.distSearchLibraries()
 
 GET         /internal/search/warmUp/:userId        @com.keepit.search.controllers.search.SearchController.warmUpUser(userId: Id[User])
 
