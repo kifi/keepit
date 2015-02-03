@@ -83,8 +83,8 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         val randomFollowers = db.readWrite { implicit rw => users(30).map(_.saved) }
 
         // setup Lib Recos with followers
-        val user1Libs = createLibWithKeeps("u1/lib1-reco", 6)
-        val user2Libs = createLibWithKeeps("u2/lib2-reco", 6)
+        val user1Libs = createLibWithKeeps("u1/lib1-reco", 10)
+        val user2Libs = createLibWithKeeps("u2/lib2-reco", 10)
         for {
           (user, libs) <- Seq((user1, user1Libs), (user2, user2Libs))
         } yield {
@@ -174,15 +174,13 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
 
         // setup new followers of user's libraries
         db.readWrite { implicit rw =>
-          val follower1 = user().withName("New", "Follower1").saved
-          val follower2 = user().withName("New", "Follower2").saved
-
           Seq(user1, user2).zipWithIndex map {
             case (user, userIdx) =>
               val lib = library().withUser(user).withSlug(s"u${userIdx + 1}/newFollowersMyLibs").published().saved
               keep().withLibrary(lib).saved
-              val x1 = membership().withLibraryOwner(lib).withLibraryFollower(lib, follower1).saved
-              val x2 = membership().withLibraryOwner(lib).withLibraryFollower(lib, follower2).saved
+
+              val followers = util.Random.shuffle(randomFollowers).take(util.Random.nextInt(randomFollowers.size))
+              followers.foreach { follower => membership().withLibraryFollower(lib, follower).saved }
           }
         }
 
@@ -193,8 +191,11 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
 
         val activityEmails = db.readOnlyMaster { implicit s => inject[ActivityEmailRepo].all }
         activityEmails.size === 2
-        activityEmails.find(_.userId == user1.id.get).get.otherFollowedLibraries.get.size === 3
-        activityEmails.find(_.userId == user1.id.get).get.libraryRecommendations.get.size === 3
+
+        val activityEmail1 = activityEmails.find(_.userId == user1.id.get).get
+        activityEmail1.otherFollowedLibraries.get.size === 4
+        activityEmail1.userFollowedLibraries.get.size === 1
+        activityEmail1.libraryRecommendations.get.size === 3
 
         val html1: String = email1.htmlBody
         val html2: String = email2.htmlBody

@@ -64,10 +64,10 @@ Activity email (still a work in progress)
 <br/>
 
 <h1>Your Libraries Have New Followers</h1>
-@activityData.newFollowersOfLibraries.map { case (lib, followers) =>
-    @followers.zipWithIndex.map { case (id, i) =>
-        @if(i == followers.size - 1){and}
-        @fullName(id)@if(i < followers.size - 1){,}
+@activityData.newFollowersOfLibraries.map { lib =>
+    @lib.followers.zipWithIndex.map { case (id, i) =>
+        @if(i == lib.followers.size - 1){and}
+        @fullName(id)@if(i < lib.followers.size - 1){,}
     }
     <a href="@libraryUrl(lib.libraryId, "")">@lib.name</a> by
     @lib.ownerName<br/>
