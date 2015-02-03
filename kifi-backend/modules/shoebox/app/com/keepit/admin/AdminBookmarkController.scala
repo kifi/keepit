@@ -106,12 +106,12 @@ class AdminBookmarksController @Inject() (
 
   def rescrape = AdminUserAction(parse.tolerantJson) { request =>
     val id = Id[Keep]((request.body \ "id").as[Int])
-    val uri = db.readOnlyMaster { implicit session =>
+    db.readWrite { implicit session =>
       val bookmark = keepRepo.get(id)
-      uriRepo.get(bookmark.uriId)
+      val uri = uriRepo.get(bookmark.uriId)
+      scraper.scheduleScrape(uri)
+      Ok(JsObject(Seq("status" -> JsString("ok"))))
     }
-    scraper.scheduleScrape(uri)
-    Ok(JsObject(Seq("status" -> JsString("ok"))))
   }
 
   //post request with a list of private/public and active/inactive
