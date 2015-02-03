@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('userProfileActionService', [
-  '$http', '$q', 'routeService', 'Clutch', '$analytics',
-  function ($http, $q, routeService, Clutch, $analytics) {
+  '$http', '$q', 'routeService', 'Clutch',
+  function ($http, $q, routeService, Clutch) {
     var clutchParams = {
       cacheDuration: 10000
     };
@@ -26,13 +26,6 @@ angular.module('kifi')
       },
       getLibraries: function (username, filter, page, size) {
         return userLibrariesService.get(username, filter, page, size);
-      },
-      trackEvent: function (eventName, profileUserId, attributes) {
-        var defaultAttributes = {
-          profileOwnerUserId: profileUserId
-        };
-        attributes = _.extend(defaultAttributes, attributes || {});
-        $analytics.eventTrack(eventName, attributes);
       }
     };
 

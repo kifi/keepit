@@ -1,29 +1,21 @@
-keepsColumnWidth = 800px
-relatedLibrariesColumnWidth = 226px
+keepsColumnWidth = 690px
+relatedLibrariesColumnWidth = 210px
 desktopBorderRadius = 19px
 mobileBorderRadius = 54px
 
-.kf-logged-out
+html:not(.kf-mobile)
   .kf-library-results-wrapper
     width: keepsColumnWidth
     float: left
 
-  &.kf-mobile .kf-library-results-wrapper
-    max-width: initial
-    float: none
-
   .kf-library-body
     min-width: keepsColumnWidth + relatedLibrariesColumnWidth
-    .kf-main-keeps
-      max-width: keepsColumnWidth
 
-  &.kf-mobile .kf-library-body
-    min-width: initial
-    .kf-main-keeps
-      max-width: initial
+  .kf-main-keeps
+    max-width: keepsColumnWidth
 
 .kf-related-libraries
-  margin-top: 42px
+  margin-top: 20px
   float: left
   width: relatedLibrariesColumnWidth
   box-sizing: border-box
@@ -75,10 +67,9 @@ mobileBorderRadius = 54px
   display: block
   font-size: 14px
   font-weight: bold
-  text-align: left
+  text-align: center
   margin-bottom: 1em
   .kf-mobile &
-    text-align: center
     background: #e8e8e8
     font-size: 30px
     line-height: 3em

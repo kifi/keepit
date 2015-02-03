@@ -1,37 +1,13 @@
 .kf-logged-in .kf-main
-  min-width: 454px
-  width: calc(100% - 310px)
   margin-top: 15px
 
-  @media screen and (max-width: 1280px)
-    width: calc(100% - 270px)
+.kf-main-keeps
+  padding-top: 20px
 
-  &>.kf-col-inner
-    //border-left: 1px solid #dbdee3
-    //border-right: 1px solid #dbdee3
-    box-sizing: border-box
-
-.kf-logged-out .kf-main
-  width: 100%
-
-  .kf-main-keeps
-    padding-top: 42px
-
-.kf-logged-out .kf-main .library-search
+.kf-logged-out .library-search
   .kf-main-head
-    padding-top: 0
-
   .kf-main-keeps
     padding-top: 0
-
-@media only screen and (max-width: 1024px)
-  .kf-main
-    -webkit-transition: width sidebarTransitionDuration;
-    transition: width sidebarTransitionDuration;
-
-  .kf-sidebar-inactive .kf-main
-    width: calc(100% - 270px)
-
 
 .kf-main-head
   position: relative

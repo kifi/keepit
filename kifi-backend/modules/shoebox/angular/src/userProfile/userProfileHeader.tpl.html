@@ -38,17 +38,15 @@
           </div>
         </div>
 
-        <a ng-switch-when="self" class="kf-user-profile-settings-link" ui-sref="settings">
+        <a ng-switch-when="self" class="kf-user-profile-settings-link" ui-sref="settings" ng-click="trackClickedSettings()">
           <span class="kf-user-profile-settings-gear svg-settings-gear"></span>
           <span class="kf-user-profile-action">Settings</span>
         </a>
-
       </div>
       <div class="kf-user-profile-progress" ng-if="connectionWithUser==='not_friends'">
         <div class="kf-user-profile-progress-bar"></div>
         <div class="kf-user-profile-progress-check"></div>
       </div>
-
     </div>
 
     <div class="kf-user-profile-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</div>

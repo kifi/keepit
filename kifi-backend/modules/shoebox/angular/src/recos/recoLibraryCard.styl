@@ -10,12 +10,12 @@ rcl-side-pad = 30px
   &.kf-above-image
     transform: scale(1,2)
     transform-origin: center bottom
-    margin: 0 (-(rcl-side-pad))
+    // margin: 0 (-(rcl-side-pad))
 
 .kf-rcl-cover-image
   display: block
   height: 210px
-  margin: 0 (-(rcl-side-pad))
+  // margin: 0 (-(rcl-side-pad))
   background-color: #eee
   background-size: cover
 
@@ -25,15 +25,6 @@ rcl-side-pad = 30px
   border-radius: 0 0 3px 3px
   background-color: #fff
   box-shadow: defaultBoxShadow
-
-  // Do not display text on buttons when the card is very narrow
-  @media screen and (max-width: 1250px)
-    .kf-button-text-optional
-      padding: 0 7px 0 14px
-      font-size: 0
-
-    .library-share-menu
-      left: -44px
 
   .kf-rcl-body
     padding: 0 rcl-side-pad 5px

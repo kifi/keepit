@@ -9,11 +9,7 @@
       </div>
       <button class="kf-button kf-lh-follow-btn kf-lh-follow-btn-searching" ng-if="isUserLoggedOut" ng-click="followLibrary()">Follow Library</button>
       <div class="kf-lh-body">
-        <div class="kf-lh-name-wrap-2">
-          <div class="kf-lh-name-wrap-1">
-            <span class="kf-lh-name" itemtype="name">{{library.name}}</span>
-          </div>
-        </div>
+        <h1 class="kf-lh-name" itemtype="name">{{library.name}}</h1>
 
         <div class="kf-lh-color" ng-class="{'kf-above-image': coverImageUrl || coverImagePreview}" style="background-color:{{library.color}}"></div>
         <div ng-if="coverImageUrl || coverImagePreview" class="kf-lh-cover-image" ng-style="{'background-image':'{{coverImageUrl ? 'url(' + coverImageUrl + ')' : ''}}','background-position':'{{coverImagePos}}'}" itemtype="image">
