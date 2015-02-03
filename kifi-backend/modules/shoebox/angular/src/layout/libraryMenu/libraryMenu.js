@@ -8,9 +8,9 @@ angular.module('kifi')
   function ($document, $interval, $location, $rootScope, $window, $timeout,
   friendService, libraryService, modalService, profileService, routeService, tagService, util) {
     return {
-      //replace: true,
       restrict: 'A',
-      templateUrl: 'layout/nav/nav.tpl.html',
+      replace: true,
+      templateUrl: 'layout/libraryMenu/libraryMenu.tpl.html',
       link: function (scope , element /*, attrs*/) {
         //
         // Internal data.
