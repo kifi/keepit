@@ -9,7 +9,7 @@ import com.keepit.common.service.ServiceType
 import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 import com.keepit.common.db.Id
-import com.keepit.curator.model.{ RecommendationSubSource, LibraryRecoSelectionParams, LibraryRecoInfo, RecoInfo, RecommendationSource }
+import com.keepit.curator.model._
 import collection.mutable.ListBuffer
 
 class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends CuratorServiceClient {
@@ -20,8 +20,11 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   var fakeTopRecos: Map[Id[User], Seq[RecoInfo]] = Map.empty
 
-  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]] =
-    Future.successful(fakeTopRecos.getOrElse(userId, Seq[RecoInfo]()))
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[URIRecoResults] =
+    Future.successful {
+      val recos = fakeTopRecos.getOrElse(userId, Seq[RecoInfo]())
+      URIRecoResults(recos, "")
+    }
 
   def topPublicRecos(userId: Option[Id[User]]): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)
 
@@ -41,8 +44,11 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def refreshUserRecos(userId: Id[User]): Future[Unit] = { Future.successful() }
 
-  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[Seq[LibraryRecoInfo]] =
-    Future.successful(topLibraryRecosExpectations(userId))
+  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[LibraryRecoResults] =
+    Future.successful {
+      val recos = topLibraryRecosExpectations(userId)
+      LibraryRecoResults(recos, "")
+    }
 
   def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None): Future[Unit] = {
     Future.successful()
