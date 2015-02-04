@@ -1,8 +1,9 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ Id, ModelWithState, State, States }
+import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class Persona(
@@ -16,8 +17,22 @@ case class Persona(
     iconPath: String,
     activeIconPath: String) extends ModelWithState[Persona] {
   def withId(id: Id[Persona]): Persona = copy(id = Some(id))
-
   def withUpdateTime(now: DateTime): Persona = copy(updatedAt = now)
+}
+
+object Persona {
+  implicit val personaIdFormat = Id.format[Persona]
+  implicit val format = (
+    (__ \ 'id).formatNullable(Id.format[Persona]) and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
+    (__ \ 'name).format[PersonaName] and
+    (__ \ 'state).format(State.format[Persona]) and
+    (__ \ 'displayName).format[String] and
+    (__ \ 'displayNamePlural).format[String] and
+    (__ \ 'iconPath).format[String] and
+    (__ \ 'activeIconPath).format[String]
+  )(Persona.apply, unlift(Persona.unapply))
 }
 
 sealed abstract class PersonaName(val value: String)

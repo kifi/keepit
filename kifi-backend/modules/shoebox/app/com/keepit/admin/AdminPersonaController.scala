@@ -19,14 +19,7 @@ class AdminPersonaController @Inject() (
     val allPersonas = db.readOnlyReplica { implicit s =>
       personaRepo.all
     }
-    Ok(Json.obj("personas" -> allPersonas.map(p => Json.obj(
-      "id" -> p.id,
-      "name" -> p.name,
-      "state" -> p.state,
-      "displayName" -> p.displayName,
-      "iconPath" -> p.iconPath,
-      "activeIconPath" -> p.activeIconPath
-    ))))
+    Ok(views.html.admin.personaOverview(allPersonas))
   }
 
   def createPersona() = AdminUserPage { implicit request =>
@@ -63,7 +56,7 @@ class AdminPersonaController @Inject() (
       case None =>
         BadRequest(Json.obj("error" -> "unable_to_create_persona"))
       case Some(persona) =>
-        NoContent
+        Ok(Json.toJson(persona))
     }
   }
 
