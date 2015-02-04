@@ -129,8 +129,15 @@ class AuthController @Inject() (
   // Note: some of the below code is taken from ProviderController in SecureSocial
   // Logout is still handled by SecureSocial directly.
 
-  def loginSocial(provider: String) = MaybeUserAction { implicit request =>
-    handleAuth(provider)
+  def loginSocial(provider: String, close: Boolean) = MaybeUserAction { implicit request =>
+    var res = handleAuth(provider)
+    if (close && res.header.status == 303) {
+      authHelper.transformResult(res) { (_, session: Session) =>
+        res.withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.afterLoginClosePopup.url))
+      }
+    } else {
+      res
+    }
   }
   def logInWithUserPass(link: String) = MaybeUserAction { implicit request =>
     handleAuth("userpass") match {
@@ -307,6 +314,14 @@ class AuthController @Inject() (
           // Ok(views.html.website.welcome(msg = request.flash.get("error")))
         }
     }
+  }
+
+  def afterLoginClosePopup() = MaybeUserAction { implicit req =>
+    val message = req match {
+      case request: UserRequest[_] => "authed"
+      case request: NonUserRequest[_] => "not_authed"
+    }
+    Ok(s"<!doctype html><script>if(window.opener)opener.postMessage('$message',location.origin);window.close()</script>").as(HTML)
   }
 
   def signup(provider: String, redirect: Option[String] = None, intent: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
