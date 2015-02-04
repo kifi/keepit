@@ -13,9 +13,8 @@
   user-select: none
   margin-top: 10px
 
-.kf-nav-link-box
-  display: inline-block
-  cursor: pointer
+.kf-nav-link
+  display: block
 
 .kf-nav-name
 .kf-nav-count
@@ -113,12 +112,16 @@
 
 .kf-nav-lib-name
   width: 165px
-  font-size: 12px
+  font-size: 13px
   font-weight: 400
   color: textDarkColor
 
   .active &
     font-weight: bold
+
+.kf-nav-lib-item:hover
+  .kf-nav-lib-name
+    color: #71c885
 
 .kf-nav-lib-text
   font-size: 11px
