@@ -31,15 +31,15 @@ class MobileRecommendationsController @Inject() (
     }
   }
 
-  def topRecosV3(more: Boolean, recencyWeight: Float, context: Option[String]) = UserAction.async { request =>
-    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight, context = context)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = context)
+  def topRecosV3(more: Boolean, recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
+    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight, context = uriContext)
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = libContext)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
-      val FullUriRecoResults(urisReco, urisContext) = uris
-      val FullLibRecoResults(libsReco, libsContext) = libs
+      val FullUriRecoResults(urisReco, newUrisContext) = uris
+      val FullLibRecoResults(libsReco, newLibsContext) = libs
       val shuffled = util.Random.shuffle(urisReco ++ libsReco.map(_._2))
-      Json.obj("recos" -> shuffled, "uctx" -> urisContext, "lctx" -> libsContext)
+      Json.obj("recos" -> shuffled, "uctx" -> newUrisContext, "lctx" -> newLibsContext)
     }
   }
 

@@ -37,6 +37,18 @@ class RecommendationsController @Inject() (
     }
   }
 
+  def topRecosV2(more: Boolean, recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = uriContext)
+    val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, more, recencyWeight, context = libContext)
+
+    for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
+      val FullUriRecoResults(urisReco, newUriContext) = uris
+      val FullLibRecoResults(libsReco, newLibContext) = libs
+      val shuffled = util.Random.shuffle(urisReco ++ libsReco.map(_._2))
+      Json.obj("recos" -> shuffled, "uctx" -> newUriContext, "lctx" -> newLibContext)
+    }
+  }
+
   def topPublicRecos() = UserAction.async { request =>
     commander.topPublicRecos(request.userId).map { recos =>
       Ok(Json.toJson(recos))
