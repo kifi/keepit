@@ -26,6 +26,12 @@ import com.keepit.search.controllers.website.WebsiteSearchController._
 import com.keepit.search.augmentation.{ AugmentedItem, AugmentationCommander }
 import com.keepit.social.BasicUser
 
+object WebsiteSearchController {
+  private[WebsiteSearchController] val maxKeepersShown = 20
+  private[WebsiteSearchController] val maxLibrariesShown = 10
+  private[WebsiteSearchController] val maxTagsShown = 15
+}
+
 class WebsiteSearchController @Inject() (
     val userActionsHelper: UserActionsHelper,
     val shoeboxClient: ShoeboxServiceClient,
@@ -53,7 +59,7 @@ class WebsiteSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    uriSearchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { uriSearchResult =>
+    uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { uriSearchResult =>
 
       getWebsiteUriSearchResults(userId, uriSearchResult).imap {
         case (hits, users, libraries) =>
@@ -221,7 +227,7 @@ class WebsiteSearchController @Inject() (
     // Uri Search
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
-      uriSearchCommander.search2(userId, acceptLangs, experiments, query, filter, Future.successful(LibraryContext.None), maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
+      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filter, Future.successful(LibraryContext.None), maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
         getWebsiteUriSearchResults(userId, uriSearchResult).imap {
           case (hits, users, libraries) =>
             val librariesJson = libraries.map { library =>
@@ -245,7 +251,7 @@ class WebsiteSearchController @Inject() (
     // Library Search
 
     val futureLibrarySearchResultJson = if (maxLibraries <= 0) Future.successful(JsNull) else {
-      librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, libraryContext, maxLibraries, doPrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
+      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, filter, libraryContext, maxLibraries, doPrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
         val librarySearcher = libraryIndexer.getSearcher
         val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
@@ -325,11 +331,4 @@ class WebsiteSearchController @Inject() (
       Ok(json)
     }
   }
-}
-
-object WebsiteSearchController {
-
-  private[WebsiteSearchController] val maxKeepersShown = 20
-  private[WebsiteSearchController] val maxLibrariesShown = 10
-  private[WebsiteSearchController] val maxTagsShown = 15
 }

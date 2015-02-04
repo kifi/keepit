@@ -65,7 +65,7 @@ class FixedResultUriSearchCommander extends UriSearchCommander {
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): PartialSearchResult = ???
 
-  def search2(
+  def searchUris(
     userId: Id[User],
     acceptLangs: Seq[String],
     experiments: Set[ExperimentType],
@@ -78,7 +78,7 @@ class FixedResultUriSearchCommander extends UriSearchCommander {
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None) = Future.successful(plainResults(query))
 
-  def distSearch2(
+  def distSearchUris(
     shards: Set[Shard[NormalizedURI]],
     userId: Id[User],
     firstLang: Lang,

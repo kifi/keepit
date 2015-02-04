@@ -7,7 +7,7 @@ import com.keepit.common.net.{ HttpClient, CallTimeouts }
 import com.keepit.common.routes.Curator
 import com.keepit.common.db.Id
 import com.keepit.model._
-import com.keepit.curator.model.{ RecommendationSubSource, LibraryRecoSelectionParams, LibraryRecoInfo, RecoInfo, RecommendationSource }
+import com.keepit.curator.model._
 
 import scala.concurrent.Future
 import play.api.libs.json._
@@ -17,14 +17,14 @@ trait CuratorServiceClient extends ServiceClient {
   final val serviceType = ServiceType.CURATOR
 
   def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[RecoInfo]]
-  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]]
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[URIRecoResults]
   def topPublicRecos(userId: Option[Id[User]]): Future[Seq[RecoInfo]]
   def generalRecos(): Future[Seq[RecoInfo]]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean]
   def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Future[Boolean]
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String]
   def refreshUserRecos(userId: Id[User]): Future[Unit]
-  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[Seq[LibraryRecoInfo]]
+  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None, context: Option[String]): Future[LibraryRecoResults]
   def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None): Future[Unit]
   def notifyLibraryRecosDelivered(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource): Future[Unit]
 }
@@ -42,15 +42,22 @@ class CuratorServiceClientImpl(
     }
   }
 
-  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]] = {
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[URIRecoResults] = {
     val payload = Json.obj(
       "source" -> source,
       "subSource" -> subSource,
       "more" -> more,
-      "recencyWeight" -> recencyWeight
+      "recencyWeight" -> recencyWeight,
+      "context" -> context
     )
     call(Curator.internal.topRecos(userId), body = payload).map { response =>
-      response.json.as[Seq[RecoInfo]]
+      val js = response.json
+      js.validate[URIRecoResults] match {
+        case res: JsSuccess[URIRecoResults] => res.get
+        case err: JsError =>
+          val recos = js.as[Seq[RecoInfo]]
+          URIRecoResults(recos, "")
+      }
     }
   }
 
@@ -88,8 +95,16 @@ class CuratorServiceClientImpl(
     callLeader(Curator.internal.refreshUserRecos(userId), callTimeouts = longTimeout).map { x => }
   }
 
-  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[Seq[LibraryRecoInfo]] = {
-    call(Curator.internal.topLibraryRecos(userId, limit)).map { response => response.json.as[Seq[LibraryRecoInfo]] }
+  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None, context: Option[String]): Future[LibraryRecoResults] = {
+    call(Curator.internal.topLibraryRecos(userId, limit, context)).map { response =>
+      val js = response.json
+      js.validate[LibraryRecoResults] match {
+        case res: JsSuccess[LibraryRecoResults] => res.get
+        case err: JsError =>
+          val recos = js.as[Seq[LibraryRecoInfo]]
+          LibraryRecoResults(recos, "")
+      }
+    }
   }
 
   def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None) = {

@@ -103,15 +103,18 @@ class RecommendationRetrievalCommander @Inject() (
     analytics: CuratorAnalytics,
     publicFeedRepo: PublicFeedRepo) {
 
-  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, source: RecommendationSource, subSource: RecommendationSubSource, recoSortStrategy: RecoSelectionStrategy, scoringStrategy: RecoScoringStrategy): Seq[RecoInfo] = {
+  val idFilter = new RecoIdFilter[UriRecoScore] {}
+
+  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, source: RecommendationSource, subSource: RecommendationSubSource, recoSortStrategy: RecoSelectionStrategy, scoringStrategy: RecoScoringStrategy, context: Option[String] = None): URIRecoResults = {
     require(recencyWeight <= 1.0f && recencyWeight >= 0.0f, "recencyWeight must be between 0 and 1")
 
     def scoreReco(reco: UriRecommendation) =
       UriRecoScore(scoringStrategy.scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
 
-    val recos = db.readOnlyReplica { implicit session =>
+    val (recos, newContext) = db.readOnlyReplica { implicit session =>
       val recosByTopScore = uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
-      recoSortStrategy.sort(recosByTopScore) take 10
+      val finalSorted = recoSortStrategy.sort(recosByTopScore)
+      idFilter.take(finalSorted, context, limit = 10)((x: UriRecoScore) => x.reco.uriId.id)
     }
 
     SafeFuture {
@@ -123,7 +126,7 @@ class RecommendationRetrievalCommander @Inject() (
       }
     }
 
-    recos.map {
+    val recosInfo = recos.map {
       case UriRecoScore(score, reco) =>
         RecoInfo(
           userId = Some(reco.userId),
@@ -133,6 +136,8 @@ class RecommendationRetrievalCommander @Inject() (
           attribution = Some(reco.attribution)
         )
     }
+
+    URIRecoResults(recosInfo, newContext)
 
   }
 

@@ -129,13 +129,20 @@ class AuthController @Inject() (
   // Note: some of the below code is taken from ProviderController in SecureSocial
   // Logout is still handled by SecureSocial directly.
 
-  def loginSocial(provider: String) = MaybeUserAction { implicit request =>
-    handleAuth(provider)
+  def loginSocial(provider: String, close: Boolean) = MaybeUserAction { implicit request =>
+    var res = handleAuth(provider)
+    if (close && res.header.status == 303) {
+      authHelper.transformResult(res) { (_, session: Session) =>
+        res.withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.afterLoginClosePopup.url))
+      }
+    } else {
+      res
+    }
   }
   def logInWithUserPass(link: String) = MaybeUserAction { implicit request =>
     handleAuth("userpass") match {
       case res: Result if res.header.status == 303 =>
-        authHelper.authHandler(request, res) { (cookies: Seq[Cookie], sess: Session) =>
+        authHelper.transformResult(res) { (cookies: Seq[Cookie], sess: Session) =>
           val newSession = if (link != "") {
             sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
           } else sess
@@ -309,10 +316,18 @@ class AuthController @Inject() (
     }
   }
 
+  def afterLoginClosePopup() = MaybeUserAction { implicit req =>
+    val message = req match {
+      case request: UserRequest[_] => "authed"
+      case request: NonUserRequest[_] => "not_authed"
+    }
+    Ok(s"<!doctype html><script>if(window.opener)opener.postMessage('$message',location.origin);window.close()</script>").as(HTML)
+  }
+
   def signup(provider: String, redirect: Option[String] = None, intent: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map { result =>
-      authHelper.authHandler(request, result) { (_, sess: Session) =>
+      authHelper.transformResult(result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
         val res = result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
 

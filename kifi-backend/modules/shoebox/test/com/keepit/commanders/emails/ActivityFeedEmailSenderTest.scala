@@ -83,8 +83,8 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         val randomFollowers = db.readWrite { implicit rw => users(30).map(_.saved) }
 
         // setup Lib Recos with followers
-        val user1Libs = createLibWithKeeps("u1/lib1-reco")
-        val user2Libs = createLibWithKeeps("u2/lib2-reco")
+        val user1Libs = createLibWithKeeps("u1/lib1-reco", 10)
+        val user2Libs = createLibWithKeeps("u2/lib2-reco", 10)
         for {
           (user, libs) <- Seq((user1, user1Libs), (user2, user2Libs))
         } yield {
@@ -94,9 +94,7 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
             libs.foreach {
               case (lib, _) =>
                 val followers = util.Random.shuffle(randomFollowers).take(util.Random.nextInt(randomFollowers.size))
-                followers.foreach { user =>
-                  membership().withLibraryFollower(lib, user).saved
-                }
+                followers.foreach { user => membership().withLibraryFollower(lib, user).saved }
             }
           }
 
@@ -176,35 +174,36 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
 
         // setup new followers of user's libraries
         db.readWrite { implicit rw =>
-          val follower1 = user().withName("New", "Follower1").saved
-          val follower2 = user().withName("New", "Follower2").saved
-
           Seq(user1, user2).zipWithIndex map {
             case (user, userIdx) =>
               val lib = library().withUser(user).withSlug(s"u${userIdx + 1}/newFollowersMyLibs").published().saved
               keep().withLibrary(lib).saved
-              val x1 = membership().withLibraryOwner(lib).withLibraryFollower(lib, follower1).saved
-              val x2 = membership().withLibraryOwner(lib).withLibraryFollower(lib, follower2).saved
+
+              val followers = util.Random.shuffle(randomFollowers).take(util.Random.nextInt(randomFollowers.size))
+              followers.foreach { follower => membership().withLibraryFollower(lib, follower).saved }
           }
         }
 
         val senderF = sender()
         Await.ready(senderF, Duration(5, "seconds"))
 
-        val email1 :: email2 :: Nil = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.
-          sortBy {
-            _.to.head.address
-          }
+        val email1 :: email2 :: Nil = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)
 
         val activityEmails = db.readOnlyMaster { implicit s => inject[ActivityEmailRepo].all }
         activityEmails.size === 2
-        activityEmails.find(_.userId == user1.id.get).get.libraryRecommendations.get.size === 3
+
+        val activityEmail1 = activityEmails.find(_.userId == user1.id.get).get
+        activityEmail1.otherFollowedLibraries.get.size === 4
+        activityEmail1.userFollowedLibraries.get.size === 1
+        activityEmail1.libraryRecommendations.get.size === 3
 
         val html1: String = email1.htmlBody
         val html2: String = email2.htmlBody
 
         email1.to === Seq(EmailAddress("u1@kifi.com"))
         email2.to === Seq(EmailAddress("u2@kifi.com"))
+
+        html1 must contain("/u1/lib1-reco")
 
       }
     }

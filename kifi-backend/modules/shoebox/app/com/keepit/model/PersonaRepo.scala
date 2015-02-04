@@ -30,9 +30,10 @@ class PersonaRepoImpl @Inject() (
   class PersonaRepoTable(tag: Tag) extends RepoTable[Persona](db, tag, "persona") {
     def name = column[PersonaName]("name", O.NotNull)
     def displayName = column[String]("display_name", O.NotNull)
+    def displayNamePlural = column[String]("display_name_plural", O.NotNull)
     def iconPath = column[String]("icon_path", O.NotNull)
     def activeIconPath = column[String]("active_icon_path", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, name, state, displayName, iconPath, activeIconPath) <> ((Persona.apply _).tupled, Persona.unapply _)
+    def * = (id.?, createdAt, updatedAt, name, state, displayName, displayNamePlural, iconPath, activeIconPath) <> ((Persona.apply _).tupled, Persona.unapply _)
   }
 
   def table(tag: Tag) = new PersonaRepoTable(tag)

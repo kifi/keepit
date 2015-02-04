@@ -1,10 +1,14 @@
 package com.keepit.commanders.emails.activity
 
+import com.keepit.commanders.emails.{ BaseLibraryInfoView, LibraryInfoFollowersView }
 import com.keepit.commanders.{ LibraryCommander, ProcessedImageSize }
 import com.keepit.common.db.Id
 import com.keepit.common.time._
-import com.keepit.model.{ ActivityEmail, Library, User }
+import com.keepit.model.{ ActivityEmail, Library, LibraryMembership, LibraryMembershipRepo, User }
 import org.joda.time.Duration
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.concurrent.Future
 
 trait ActivityEmailHelpers {
   def clock: Clock
@@ -30,3 +34,28 @@ trait ActivityEmailLibraryHelpers extends ActivityEmailHelpers {
   }
 }
 
+trait ActivityEmailLibraryMembershipHelpers extends ActivityEmailLibraryHelpers {
+  def membershipRepo: LibraryMembershipRepo
+
+  def createLibraryInfoFollowersViews(toUserId: Id[User],
+    libraries: Map[Id[Library], Library],
+    librariesToMembersMap: Map[Id[Library], Seq[LibraryMembership]],
+    friends: Set[Id[User]]): Future[Seq[LibraryInfoFollowersView]] = {
+
+    val libInfosF = createFullLibraryInfos(toUserId, libraries.map(_._2).toSeq)
+    libInfosF map { libInfos =>
+      libInfos map {
+        case (libId, libInfo) =>
+          val members = librariesToMembersMap(libId) map (_.userId) sortBy friendsFirstSorter(friends)
+          val libInfoView = BaseLibraryInfoView(libId, libInfo)
+          LibraryInfoFollowersView(libInfoView, members)
+      }
+    }
+  }
+
+  // sorts users by friend status, randomly shuffling the friends and others while ensuring all friends are first
+  def friendsFirstSorter(friends: Set[Id[User]]) = (userId: Id[User]) => {
+    val rand = Math.abs(util.Random.nextInt())
+    if (friends.contains(userId)) -rand else rand
+  }
+}

@@ -951,8 +951,15 @@ class LibraryCommander @Inject() (
   def sortAndSelectLibrariesWithTopGrowthSince(libraryMemberCountsSince: Map[Id[Library], Int], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])] = {
     libraryMemberCountsSince.toSeq sortBy {
       case (libraryId, membersSince) =>
-        // squaring membersSince gives libraries with a higher growth count the advantage
-        Math.pow(membersSince, 2) / -totalMemberCount(libraryId).toFloat
+        val totalMembers = totalMemberCount(libraryId)
+        if (totalMembers > 0) {
+          // negative number so higher growth rates are sorted at the front of the list
+          val growthRate = membersSince.toFloat / -totalMembers
+
+          // multiplier gives more weight to libraries with more members (cap at 30 total before it doesn't grow)
+          val multiplier = Math.exp(-10f / totalMembers.min(30))
+          growthRate * multiplier
+        } else 0
     } map {
       case (libraryId, membersSince) =>
 

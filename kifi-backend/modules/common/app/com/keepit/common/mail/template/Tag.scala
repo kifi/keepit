@@ -16,10 +16,11 @@ trait Tag {
 
   def args: Seq[JsValue]
 
-  def toHtml = Html(toString())
+  def value: String = Tag.tagLeftDelim + Json.stringify(JsArray(Seq(JsString(label.value)) ++ args)) + Tag.tagRightDelim
 
-  override def toString() =
-    Tag.tagLeftDelim + JsArray(Seq(JsString(label.value)) ++ args).toString() + Tag.tagRightDelim
+  def toHtml: Html = Html(value)
+
+  override def toString() = value
 }
 
 case class Tag0(label: TagLabel) extends Tag {
