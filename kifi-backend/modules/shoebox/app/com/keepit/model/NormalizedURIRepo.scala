@@ -37,6 +37,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime)(implicit session: RWSession): Unit
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI]
   def checkRecommendable(uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
+  def getFromId(fromId: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
 }
 
 @Singleton
@@ -220,5 +221,9 @@ class NormalizedURIRepoImpl @Inject() (
     assert(info.size == uriIds.distinct.size, s"looks like some uriIds are missing in normalized_uri_repo")
     val m = info.map { case (id, noRestriction, state) => (id, noRestriction && (state == NormalizedURIStates.SCRAPED)) }.toMap
     uriIds.map { id => m(id) }
+  }
+
+  def getFromId(fromId: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI] = {
+    (for (t <- rows if t.id > fromId) yield t).list
   }
 }
