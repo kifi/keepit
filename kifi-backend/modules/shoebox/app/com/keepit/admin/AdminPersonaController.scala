@@ -31,7 +31,6 @@ class AdminPersonaController @Inject() (
       val activeIconPath = (json \ "activeIconPath").as[String]
       val displayName = displayNameOpt.getOrElse(name.value)
       val displayNamePlural = displayNamePluralOpt.getOrElse(displayName + "s")
-
       db.readWrite { implicit s =>
         personaRepo.getByName(name) match {
           case None =>
