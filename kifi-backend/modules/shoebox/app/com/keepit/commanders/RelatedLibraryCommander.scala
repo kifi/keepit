@@ -36,6 +36,10 @@ class RelatedLibraryCommanderImpl @Inject() (
 
   private val DEFAULT_MIN_FOLLOW = 5
   private val RETURN_SIZE = 5
+  private val SUB_RETURN_SIZE = 20 // cap return from component
+  private val SPECIAL_OWNER_RETURN_SIZE = 1
+
+  private val SPECIAL_OWNERS = Set(Id[User](10015)) // e.g. Kifi Editorial
 
   private val consolidater = new RequestConsolidator[Id[Library], Seq[RelatedLibrary]](FiniteDuration(10, MINUTES))
 
@@ -89,12 +93,14 @@ class RelatedLibraryCommanderImpl @Inject() (
       ownerLibs <- ownerLibsF
       popular <- popularF
     } yield {
-      topicRelated ++ ownerLibs.sortBy(-_.library.memberCount) ++ util.Random.shuffle(popular.filter(_.library.id.get != libId))
+      topicRelated ++
+        ownerLibs.sortBy(-_.library.memberCount).take(SUB_RETURN_SIZE) ++
+        util.Random.shuffle(popular.filter(_.library.id.get != libId)).take(SUB_RETURN_SIZE)
     }
   }
 
   def topicRelatedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]] = {
-    cortex.similarLibraries(libId, limit = 20).map { ids =>
+    cortex.similarLibraries(libId, limit = SUB_RETURN_SIZE).map { ids =>
       db.readOnlyReplica { implicit s =>
         ids.map { id => libRepo.get(id) }
       }.filter(_.visibility == LibraryVisibility.PUBLISHED)
@@ -105,9 +111,12 @@ class RelatedLibraryCommanderImpl @Inject() (
   def librariesFromSameOwner(libId: Id[Library], minFollow: Int = DEFAULT_MIN_FOLLOW): Future[Seq[RelatedLibrary]] = {
     db.readOnlyReplicaAsync { implicit s =>
       val owner = libRepo.get(libId).ownerId
-      libRepo.getAllByOwner(owner)
+      val libs = libRepo.getAllByOwner(owner)
         .filter { x => x.id.get != libId && x.visibility == LibraryVisibility.PUBLISHED && x.memberCount >= (minFollow + 1) }
         .map { lib => RelatedLibrary(lib, RelatedLibraryKind.OWNER) }
+      if (SPECIAL_OWNERS.contains(owner)) {
+        libs.take(SPECIAL_OWNER_RETURN_SIZE)
+      } else libs
     }
   }
 
