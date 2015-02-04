@@ -98,13 +98,21 @@
                 <ul class="dropdown-menu" role="menu">
                     <li><a href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.getExperiments">Search Experiments</a>
                     <li><a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases()">Phrases</a>
+                </ul>
+               </li>
+
+               <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:">Cortex</a>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminLDAController.index">LDA</a>
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminLDAController.unamedTopics(5)">LDA Naming</a>
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminLDAController.persona">LDA Persona</a>
                     <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.userBookmarkKeywords">User Keywords</a>
                     <li><a href="@com.keepit.controllers.admin.routes.AdminPornDetectorController.index">Porn Detector</a>
                     <li><a href="@com.keepit.controllers.admin.routes.AdminWord2VecController.index">Word2Vec</a>
-                    <li><a href="@com.keepit.controllers.admin.routes.AdminLDAController.index">LDA</a>
-                    <li><a href="@com.keepit.controllers.admin.routes.AdminLDAController.unamedTopics(5)">LDA Naming</a>
                 </ul>
                </li>
+
 
               <li class="dropdown">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="@com.keepit.controllers.admin.routes.AdminHealthController.serviceView">Service</a>
