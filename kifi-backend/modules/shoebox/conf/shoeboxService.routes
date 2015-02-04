@@ -39,7 +39,8 @@ POST    /-authenticate/:provider     securesocial.controllers.ProviderController
 # custom auth routes which set some session state
 
 GET     /login/after                @com.keepit.controllers.core.AuthController.afterLogin()
-GET     /login/:provider            @com.keepit.controllers.core.AuthController.loginSocial(provider)
+GET     /login/close                @com.keepit.controllers.core.AuthController.afterLoginClosePopup()
+GET     /login/:provider            @com.keepit.controllers.core.AuthController.loginSocial(provider, close: Boolean ?= false)
 POST    /auth/log-in                @com.keepit.controllers.core.AuthController.logInWithUserPass(link: String ?= "")
 
 GET     /connect/:provider          @com.keepit.controllers.core.AuthController.popupBeforeLinkSocial(provider)
