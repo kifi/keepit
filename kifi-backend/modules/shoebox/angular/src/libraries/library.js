@@ -80,7 +80,9 @@ angular.module('kifi')
         template: 'persona/managePersonaModal.tpl.html',
         modalData: {
           onClose: function() {
-            showInstallModal();
+            if (!installService.installedVersion) {
+              showInstallModal();
+            }
           }
         }
       });

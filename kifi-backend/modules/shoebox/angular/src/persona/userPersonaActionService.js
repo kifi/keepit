@@ -27,7 +27,7 @@ angular.module('kifi')
       },
 
       removePersona: function(personaId) {
-        return $http.delete(routeService.removePersona(personaId));
+        return $http.delete(routeService.removePersona(personaId)); // jshint ignore:line
       }
     };
 
