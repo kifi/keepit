@@ -221,15 +221,14 @@ object DetailedLibraryView {
   implicit val format = Json.format[DetailedLibraryView]
 }
 
-case class BasicLibrary(id: PublicId[Library], name: String, path: String, visibility: LibraryVisibility) {
+case class BasicLibrary(id: PublicId[Library], name: String, path: String, visibility: LibraryVisibility, color: Option[LibraryColor]) {
   def isSecret = (visibility == LibraryVisibility.SECRET)
 }
 
 object BasicLibrary {
-
   def apply(library: Library, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
     val path = Library.formatLibraryPath(owner.username, library.slug)
-    BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility)
+    BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
   }
 }
 

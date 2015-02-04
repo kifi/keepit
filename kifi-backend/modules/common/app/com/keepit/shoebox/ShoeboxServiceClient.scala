@@ -769,9 +769,8 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = {
-    cacheProvider.userActivePersonaCache.get(UserActivePersonasKey(userId)) match {
-      case Some(personas) => Future.successful(personas)
-      case None => call(Shoebox.internal.getUserActivePersonas(userId)).map { _.json.as[UserActivePersonas] }
+    cacheProvider.userActivePersonaCache.getOrElseFuture(UserActivePersonasKey(userId)) {
+      call(Shoebox.internal.getUserActivePersonas(userId), callTimeouts = longTimeout).map { _.json.as[UserActivePersonas] }
     }
   }
 }

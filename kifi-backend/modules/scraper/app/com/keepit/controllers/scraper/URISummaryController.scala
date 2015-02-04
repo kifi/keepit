@@ -16,14 +16,6 @@ class URISummaryController @Inject() (
     summaryCmdr: ScraperURISummaryCommander,
     wordCountCmdr: WordCountCommander) extends ScraperServiceController {
 
-  def getURISummaryFromEmbedly() = Action.async(parse.tolerantJson) { request =>
-    val js = request.body
-    val uri = (js \ "uri").as[NormalizedURIRef]
-    summaryCmdr.fetchFromEmbedly(uri).map { res =>
-      Ok(Json.toJson(res))
-    }
-  }
-
   def getURIWordCount() = Action.async(parse.tolerantJson) { request =>
     val js = request.body
     val uriId = (js \ "uriId").as[Id[NormalizedURI]]

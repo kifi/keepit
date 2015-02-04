@@ -28,7 +28,7 @@ class URIWanderingTest extends Specification with URIWanderingTestHelper with Gr
         val wanderingCmdr = new WanderingCommander(manager, clock)
         val uriWanderingCmder = new URIWanderingCommander(manager, wanderingCmdr)
         manager.update(allUpdates: _*)
-        val uriScores = Await.result(uriWanderingCmder.wander(Id[User](1), 1000), Duration(5, "seconds"))
+        val uriScores = Await.result(uriWanderingCmder.wander(Id[User](1), 10000), Duration(5, "seconds"))
         uriScores.keySet.map { _.id }.toList === List(1, 2) // uri 3 is not reachable
         uriScores(Id[NormalizedURI](1)) should be > 0
         uriScores(Id[NormalizedURI](2)) should be > 0

@@ -115,7 +115,11 @@ angular.module('kifi')
         //
         // Scope Functions
         //
-        scope.toggleFriendMenu = function() {
+        scope.trackClickedSettings = function () {
+          $rootScope.$emit('trackUserProfileEvent', 'click', { 'action': 'clickedSettings' });
+        };
+
+        scope.toggleFriendMenu = function () {
           if (scope.showFriendMenu) {
             toggleFriendMenuOff();
           } else {
@@ -123,7 +127,9 @@ angular.module('kifi')
           }
         };
 
-        scope.sendFriendRequest = function() {
+        scope.sendFriendRequest = function () {
+          $rootScope.$emit('trackUserProfileEvent', 'click', { 'action': 'clickedAddFriend' });
+
           var progressBar = angular.element('.kf-user-profile-progress-bar');
           var progressCheckmark = angular.element('.kf-user-profile-progress-check');
 
@@ -154,7 +160,9 @@ angular.module('kifi')
           });
         };
 
-        scope.acceptFriendRequest = function() {
+        scope.acceptFriendRequest = function () {
+          $rootScope.$emit('trackUserProfileEvent', 'click', { 'action': 'clickedAcceptFriend' });
+
           friendService.acceptRequest(scope.profile.id).then(function() {
             var friendsIcon = angular.element('.kf-user-profile-connect-image');
             var nextAnimation = function() {
@@ -168,14 +176,16 @@ angular.module('kifi')
           });
         };
 
-        scope.ignoreFriendRequest = function() {
+        scope.ignoreFriendRequest = function () {
+          $rootScope.$emit('trackUserProfileEvent', 'click', { 'action': 'clickedDeclineFriend' });
+
           friendService.ignoreRequest(scope.profile.id).then(function() {
             closeFriendRequestHeader();
             scope.connectionWithUser = 'not_friends';
           });
         };
 
-        scope.unfriend = function() {
+        scope.unfriend = function () {
           friendService.unfriend(scope.profile.id).then(function() {
             scope.connectionWithUser = 'not_friends';
           });

@@ -78,7 +78,7 @@ class ExtSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val plainResultFuture = searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt)
+    val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt)
     val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
@@ -92,7 +92,7 @@ class ExtSearchController @Inject() (
           case (users, libraries) =>
 
             val librariesJson = libraries.map { library =>
-              json.minify(Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "secret" -> library.isSecret))
+              json.minify(Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "secret" -> library.isSecret))
             }
 
             Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> librariesJson)

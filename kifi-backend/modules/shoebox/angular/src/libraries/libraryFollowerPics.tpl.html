@@ -1,10 +1,10 @@
-<div class="kf-keep-lib-follower-preview">
-  <div class="kf-keep-lib-follower-pics">
+<div class="kf-lfp">
+  <div class="kf-lfp-pics">
     <span ng-repeat="follower in followersToShow">
       <a href="{{follower.profileUrl}}"
          kf-track-origin origin="{{currentPageOrigin}}/follower">
         <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
-          class="kf-keep-lib-user-image"
+          class="kf-lfp-pic"
           kf-who-tooltip
           keeper="follower"
           ng-mouseenter="showTooltip()"
@@ -14,7 +14,7 @@
         ></a>
     </span>
   </div>
-  <div ng-if="numAdditionalFollowers" class="kf-keep-lib-additional-followers" ng-click="showFollowers()">
-    <span class="kf-keep-lib-additional-followers-text">+ {{numAdditionalFollowers}}</span>
+  <div class="kf-lfp-more" ng-if="numAdditionalFollowers" ng-click="showFollowers()">
+    <span class="kf-lfp-more-text">+ {{numAdditionalFollowers}}</span>
   </div>
 </div>

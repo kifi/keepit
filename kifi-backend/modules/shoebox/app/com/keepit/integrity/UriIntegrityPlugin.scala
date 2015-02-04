@@ -34,7 +34,7 @@ class UriIntegrityActor @Inject() (
     val scrapeInfoRepo: ScrapeInfoRepo,
     val scraper: ScrapeScheduler,
     clock: Clock,
-    val nuriRepo: NormalizedURIRepo,
+    val normUriRepo: NormalizedURIRepo,
     normalizedURIInterner: NormalizedURIInterner,
     urlRepo: URLRepo,
     val keepRepo: KeepRepo,
@@ -43,7 +43,7 @@ class UriIntegrityActor @Inject() (
     collectionRepo: CollectionRepo,
     renormRepo: RenormalizedURLRepo,
     centralConfig: CentralConfig,
-    airbrake: AirbrakeNotifier,
+    val airbrake: AirbrakeNotifier,
     keepUriUserCache: KeepUriUserCache) extends FortyTwoActor(airbrake) with ScrapeInfoIntegrityChecker with Logging {
 
   /** tricky point: make sure (library, uri) pair is unique.  */
@@ -75,12 +75,11 @@ class UriIntegrityActor @Inject() (
           keepRepo.getPrimaryByUriAndLibrary(newUriId, libId)
 
         currentBookmarkOpt match {
-          case None => {
+          case None =>
             log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
             keepUriUserCache.remove(KeepUriUserKey(oldBm.uriId, oldBm.userId)) // NOTE: we touch two different cache keys here and the following line
             keepRepo.save(oldBm.withNormUriId(newUriId))
             (Some(oldBm), None)
-          }
           case Some(currentPrimary) => {
 
             def save(duplicate: Keep, primary: Keep): (Option[Keep], Option[Keep]) = {
@@ -165,9 +164,9 @@ class UriIntegrityActor @Inject() (
       }
     } else {
       db.readWrite { implicit s =>
-        nuriRepo.get(newUriId) match {
+        normUriRepo.get(newUriId) match {
           case uri if uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED =>
-            nuriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
+            normUriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
           case _ =>
         }
       }
@@ -181,14 +180,14 @@ class UriIntegrityActor @Inject() (
 
       // fix up redirections
       val previouslyRedirectedUris = db.readWrite { implicit s =>
-        nuriRepo.getByRedirection(oldUriId)
+        normUriRepo.getByRedirection(oldUriId)
       }
       db.readWriteSeq(previouslyRedirectedUris) { (s, uri) =>
-        nuriRepo.save(uri.withRedirect(newUriId, currentDateTime))(s)
+        normUriRepo.save(uri.withRedirect(newUriId, currentDateTime))(s)
       }
       db.readWrite { implicit s =>
-        val oldUri = nuriRepo.get(oldUriId)
-        nuriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
+        val oldUri = normUriRepo.get(oldUriId)
+        normUriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
       }
 
       // retrieve bms by uri is more robust than by url (against cache bugs), in case bm and its url are pointing to different uris
@@ -207,7 +206,7 @@ class UriIntegrityActor @Inject() (
       }
 
       db.readWrite { implicit s =>
-        changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
+        changedUriRepo.saveWithoutIncreSeqnum(change.withState(ChangedURIStates.APPLIED))
       }
     }
   }
@@ -228,12 +227,12 @@ class UriIntegrityActor @Inject() (
   }
 
   private def handleURLMigrationNoBookmarks(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
-    log.info(s"migrating url ${url.id} to new uri: ${newUriId}")
+    log.info(s"migrating url ${url.id} to new uri: $newUriId")
 
     val oldUriId = url.normalizedUriId
     urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, oldUriId, URLHistoryCause.MIGRATED)))
-    val newUri = nuriRepo.get(newUriId)
-    if (newUri.redirect.isDefined) nuriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
+    val newUri = normUriRepo.get(newUriId)
+    if (newUri.redirect.isDefined) normUriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
   }
 
   private def batchURIMigration(batchSize: Int): Int = {
@@ -255,16 +254,15 @@ class UriIntegrityActor @Inject() (
       try {
         handleURIMigration(change)
       } catch {
-        case e: Exception => {
+        case e: Exception =>
           airbrake.notify(s"Exception in migrating uri ${change.oldUriId} to ${change.newUriId}. Going to delete them from cache", e)
-          db.readWrite { implicit s => changedUriRepo.save((change.withState(ChangedURIStates.ACTIVE))) } // bump up seqNum. Will be retried.
+          db.readWrite { implicit s => changedUriRepo.save(change.withState(ChangedURIStates.ACTIVE)) } // bump up seqNum. Will be retried.
 
           try {
-            db.readOnlyMaster { implicit s => List(nuriRepo.get(change.oldUriId), nuriRepo.get(change.newUriId)) foreach { nuriRepo.deleteCache } }
+            db.readOnlyMaster { implicit s => List(normUriRepo.get(change.oldUriId), normUriRepo.get(change.newUriId)) foreach { normUriRepo.deleteCache } }
           } catch {
             case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
           }
-        }
       }
     }
 
@@ -275,7 +273,7 @@ class UriIntegrityActor @Inject() (
 
   private def getOverDueList(fetchSize: Int = -1) = {
     val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
-    log.info(s"batch uri migration: fetching tasks from seqNum ${lowSeq}")
+    log.info(s"batch uri migration: fetching tasks from seqNum $lowSeq")
     db.readOnlyReplica { implicit s => changedUriRepo.getChangesSince(lowSeq, fetchSize, state = ChangedURIStates.ACTIVE) }
   }
 
@@ -309,7 +307,7 @@ class UriIntegrityActor @Inject() (
   private def fixDuplicateKeeps(): Unit = {
     val seq = centralConfig(FixDuplicateKeepsSeqNumKey) getOrElse SequenceNumber.ZERO
 
-    log.debug(s"start deduping keeps: fetching tasks from seqNum ${seq}")
+    log.debug(s"start deduping keeps: fetching tasks from seqNum $seq")
     try {
       var dedupedSuccessCount = 0
       val keeps = db.readOnlyReplica { implicit s => keepRepo.getBookmarksChanged(seq, 1000) }

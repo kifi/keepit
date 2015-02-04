@@ -26,11 +26,11 @@ class RecommendationsController @Inject() (
   }
 
   def topRecos(more: Boolean, recencyWeight: Float) = UserAction.async { request =>
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed)
-    val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, more, recencyWeight)
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = None)
+    val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, more, recencyWeight, context = None)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
-      Json.toJson(util.Random.shuffle(uris ++ libs))
+      Json.toJson(util.Random.shuffle(uris ++ libs.map(_._2)))
     }
   }
 

@@ -4,6 +4,7 @@ import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.net.URI._
 import com.keepit.model._
 import com.keepit.scraper.extractor._
 import com.keepit.scraper.fetcher.HttpFetcher
@@ -13,11 +14,11 @@ import org.joda.time.Days
 import com.keepit.common.time._
 import com.keepit.common.net.URI
 import org.apache.http.HttpStatus
-import scala.util.Success
+import scala.util.{ Try, Failure, Success }
 import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.learning.porndetector.SlidingWindowPornDetector
 import com.keepit.search.Lang
-import com.keepit.shoebox.{ ShoeboxScraperClient, ShoeboxServiceClient }
+import com.keepit.shoebox.ShoeboxScraperClient
 import scala.concurrent.Future
 import com.keepit.common.db.Id
 import com.keepit.scraper.embedly.EmbedlyCommander
@@ -36,9 +37,10 @@ class ScrapeWorkerImpl @Inject() (
     extractorFactory: ExtractorFactory,
     articleStore: ArticleStore,
     pornDetectorFactory: PornDetectorFactory,
-    dbHelper: ShoeboxDbCallbacks,
+    uriCommander: URICommander,
+    shoeboxCommander: ShoeboxCommander,
     shoeboxScraperClient: ShoeboxScraperClient,
-    shoeboxClient: ShoeboxServiceClient,
+    urlCommander: URICommander,
     wordCountCache: NormalizedURIWordCountCache,
     uriSummaryCache: URISummaryCache,
     embedlyCommander: EmbedlyCommander) extends ScrapeWorker with Logging {
@@ -53,18 +55,18 @@ class ScrapeWorkerImpl @Inject() (
       case t: Throwable =>
         airbrake.notify(t)
         recordScrapeFailure(uri) flatMap { _ =>
-          dbHelper.saveScrapeInfo(info.withFailure()) map { _ => None }
+          shoeboxCommander.saveScrapeInfo(info.withFailure()) map { _ => None }
         }
     }
   }
 
   private def recordScrapeFailure(uri: NormalizedURI): Future[Unit] = {
-    dbHelper.getNormalizedUri(uri).flatMap { latestUriOpt =>
+    shoeboxCommander.getNormalizedUri(uri).flatMap { latestUriOpt =>
       latestUriOpt match {
         case None => Future.successful[Unit]()
         case Some(latestUri) =>
           if (latestUri.state != NormalizedURIStates.INACTIVE && latestUri.state != NormalizedURIStates.REDIRECTED) {
-            dbHelper.updateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPE_FAILED)
+            shoeboxCommander.updateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPE_FAILED)
           } else Future.successful[Unit]()
       }
     }
@@ -109,7 +111,7 @@ class ScrapeWorkerImpl @Inject() (
     // scrape has happened. Excellent cleanup task for anyone learning scraper architecture.
 
     @inline def postProcess(scrapedURI: NormalizedURI, article: Article, signature: Signature): Future[Option[String]] = {
-      dbHelper.getBookmarksByUriWithoutTitle(scrapedURI.id.get) flatMap { bookmarks =>
+      shoeboxCommander.getBookmarksByUriWithoutTitle(scrapedURI.id.get) flatMap { bookmarks =>
         // Update bookmarks that have an empty title. For links that are clearly shortened URLs, fix them.
         val updatedBookmarks = bookmarks.map { bookmark =>
           val isShortenedUrl = URI.parse(bookmark.url).toOption.flatMap(_.host.map(_.name)).exists(shortenedUrls.contains)
@@ -118,7 +120,7 @@ class ScrapeWorkerImpl @Inject() (
           } else {
             bookmark.copy(title = scrapedURI.title)
           }
-          dbHelper.saveBookmark(updatedBookmark)
+          shoeboxCommander.saveBookmark(updatedBookmark)
         }
         Future.sequence(updatedBookmarks) flatMap { updatedBookmarks =>
           article.canonicalUrl.fold(Future.successful())(recordScrapedNormalization(latestUri, signature, _, article.alternateUrls)) flatMap { _ =>
@@ -131,15 +133,15 @@ class ScrapeWorkerImpl @Inject() (
 
     processRedirects(latestUri, redirects) flatMap { updatedUri =>
       if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) {
-        dbHelper.saveScrapeInfo(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE)) map { _ => None }
+        shoeboxCommander.saveScrapeInfo(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE)) map { _ => None }
       } else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
-        dbHelper.saveScrapeInfo(info.withDocumentUnchanged()) map { _ => None }
+        shoeboxCommander.saveScrapeInfo(info.withDocumentUnchanged()) map { _ => None }
       } else {
         articleStore += (latestUri.id.get -> article)
         updateWordCountCache(latestUri.id.get, Some(article))
         for {
-          scrapedURI <- dbHelper.saveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
-          _ <- dbHelper.saveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
+          scrapedURI <- shoeboxCommander.saveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          _ <- shoeboxCommander.saveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
           uriImage <- postProcess(scrapedURI, article, signature)
         } yield {
           log.info(s"[handleSuccessfulScraped] scrapedURI=${scrapedURI.toShortString} uriImage=${uriImage}")
@@ -153,12 +155,12 @@ class ScrapeWorkerImpl @Inject() (
     val NotScrapable(destinationUrl, redirects) = notScrapable
 
     val unscrapableUriF = {
-      dbHelper.saveScrapeInfo(info.withDestinationUrl(destinationUrl).withDocumentUnchanged()) flatMap { _ =>
+      shoeboxCommander.saveScrapeInfo(info.withDestinationUrl(destinationUrl).withDocumentUnchanged()) flatMap { _ =>
         processRedirects(latestUri, redirects) flatMap { updatedUri =>
           if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED))
             Future.successful(updatedUri)
           else {
-            dbHelper.updateNormalizedURIState(updatedUri.id.get, NormalizedURIStates.UNSCRAPABLE) map { _ =>
+            shoeboxCommander.updateNormalizedURIState(updatedUri.id.get, NormalizedURIStates.UNSCRAPABLE) map { _ =>
               updatedUri.withState(NormalizedURIStates.UNSCRAPABLE)
             }
           }
@@ -173,7 +175,7 @@ class ScrapeWorkerImpl @Inject() (
   }
 
   private def handleNotModified(url: String, info: ScrapeInfo): Future[Option[Article]] = {
-    dbHelper.saveScrapeInfo(info.withDocumentUnchanged()) map { _ => None }
+    shoeboxCommander.saveScrapeInfo(info.withDocumentUnchanged()) map { _ => None }
   }
 
   private def handleScrapeError(latestUri: NormalizedURI, error: Error, info: ScrapeInfo): Future[Option[Article]] = {
@@ -201,8 +203,8 @@ class ScrapeWorkerImpl @Inject() (
     articleStore += (latestUri.id.get -> article)
 
     // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
-    dbHelper.saveScrapeInfo(info.withFailure()) flatMap { _ =>
-      dbHelper.updateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPE_FAILED) map { _ =>
+    shoeboxCommander.saveScrapeInfo(info.withFailure()) flatMap { _ =>
+      shoeboxCommander.updateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPE_FAILED) map { _ =>
         log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=(${latestUri.id}, ${latestUri.state}, ${latestUri.url})")
         updateWordCountCache(latestUri.id.get, None)
         None
@@ -216,7 +218,7 @@ class ScrapeWorkerImpl @Inject() (
 
   private def process(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Future[Option[Article]] = {
     val resF = safeFetch(uri, info, proxyOpt) flatMap { scraperResult =>
-      dbHelper.getNormalizedUri(uri) flatMap { uriOpt =>
+      shoeboxCommander.getNormalizedUri(uri) flatMap { uriOpt =>
         val articleOpt = uriOpt match {
           case None => Future.successful(None)
           case Some(latestUri) =>
@@ -266,13 +268,13 @@ class ScrapeWorkerImpl @Inject() (
   }
 
   private def runPornDetectorIfNecessary(normalizedUri: NormalizedURI, content: String, contentLang: Lang): Future[Unit] = {
-    isNonSensitive(normalizedUri.url).map { nonSensitive =>
+    uriCommander.isNonSensitive(normalizedUri.url).map { nonSensitive =>
       if (!nonSensitive) {
         if (contentLang == Lang("en") && content.size > 100) {
           val detector = new SlidingWindowPornDetector(pornDetectorFactory())
           detector.isPorn(content.take(100000)) match {
-            case true if normalizedUri.restriction == None => dbHelper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
-            case false if normalizedUri.restriction == Some(Restriction.ADULT) => dbHelper.updateURIRestriction(normalizedUri.id.get, None)
+            case true if normalizedUri.restriction == None => shoeboxCommander.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
+            case false if normalizedUri.restriction == Some(Restriction.ADULT) => shoeboxCommander.updateURIRestriction(normalizedUri.id.get, None)
             case _ => Future.successful(())
           }
         }
@@ -288,11 +290,10 @@ class ScrapeWorkerImpl @Inject() (
     val extractor = extractorFactory(url)
     log.debug(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
-
     httpFetcher.get(url, ifModifiedSince, proxy = proxyOpt) { input => extractor.process(input) } flatMap { fetchStatus =>
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
-          dbHelper.isUnscrapableP(url, fetchStatus.destinationUrl) flatMap { unscrapable =>
+          uriCommander.isUnscrapable(url, fetchStatus.destinationUrl) flatMap { unscrapable =>
             if (unscrapable) {
               Future.successful(NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects))
             } else {
@@ -348,7 +349,7 @@ class ScrapeWorkerImpl @Inject() (
       HttpRedirect.resolvePermanentRedirects(uri.url, permanentsRedirects).map { absoluteDestination =>
         val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, uri.url, absoluteDestination)
         log.debug(s"Found permanent $validRedirect for $uri")
-        dbHelper.recordPermanentRedirect(removeRedirectRestriction(uri), validRedirect)
+        shoeboxCommander.recordPermanentRedirect(removeRedirectRestriction(uri), validRedirect)
       } getOrElse {
         permanentsRedirects.headOption.foreach(relative301 => log.warn(s"Ignoring relative permanent $relative301 for $uri"))
         Future.successful(removeRedirectRestriction(uri))
@@ -385,7 +386,7 @@ class ScrapeWorkerImpl @Inject() (
     if (movedUri.restriction == Some(Restriction.http(301))) {
       Future.successful(true)
     } else {
-      dbHelper.getLatestKeep(movedUri.url).map { keepOpt =>
+      shoeboxCommander.getLatestKeep(movedUri.url).map { keepOpt =>
         keepOpt.filter(_.keptAt.isAfter(currentDateTime.minusHours(1))) match {
           case Some(recentKeep) if !KeepSource.bulk.contains(recentKeep.source) =>
             true
@@ -407,7 +408,7 @@ class ScrapeWorkerImpl @Inject() (
       case None => Future.successful(())
       case Some(properCanonicalUrl) =>
         val properAlternateUrls = alternateUrls.flatMap(sanitize(uri.url, _)) - uri.url - properCanonicalUrl
-        dbHelper.recordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL, properAlternateUrls)
+        shoeboxCommander.recordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL, properAlternateUrls)
     }
   }
 
@@ -420,14 +421,21 @@ class ScrapeWorkerImpl @Inject() (
     for {
       actualTargetUrl <- actualTargetUrlOption
       absoluteTargetUrl <- URI.absoluteUrl(baseUrl, actualTargetUrl)
-      parsedTargetUri <- URI.safelyParse(absoluteTargetUrl)
+      parsedTargetUri <- safelyParse(absoluteTargetUrl)
     } yield parsedTargetUri.toString()
   }
 
-  private def isNonSensitive(url: String): Future[Boolean] = {
-    shoeboxScraperClient.getAllURLPatterns().map { patterns =>
-      val pat = patterns.rules.find(rule => url.matches(rule.pattern))
-      pat.exists(_.nonSensitive)
-    }
+  private def safelyParse(uriString: String): Option[URI] = URI.parse(uriString) match {
+    case Success(uri) =>
+      Try { java.net.URI.create(uri.toString()) } match {
+        case Success(_) => Some(uri)
+        case Failure(e) =>
+          log.error(s"uri parsing by java...URI failed: [$uriString]", e)
+          None
+      }
+    case Failure(e) =>
+      log.error(s"uri parsing by keepit...URI failed: [$uriString]", e)
+      None
   }
+
 }

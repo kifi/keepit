@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryCard', [
+.directive('kfRecoLibraryCard', [
   '$FB', '$q', '$rootScope', '$timeout', '$twitter', 'env', 'friendService', 'libraryService',
   'modalService','profileService', 'routeService', 'util',
   function ($FB, $q, $rootScope, $timeout, $twitter, env, friendService, libraryService,
@@ -15,7 +15,7 @@ angular.module('kifi')
         followCallback: '&',
         clickLibraryCallback: '&'
       },
-      templateUrl: 'libraries/libraryCard.tpl.html',
+      templateUrl: 'recos/recoLibraryCard.tpl.html',
       link: function (scope) {
 
         //
@@ -32,32 +32,6 @@ angular.module('kifi')
         // TODO(yiping): make new libraryDecoratorService to do this. Then, DRY up the code that is
         // currently in nav.js too.
         function augmentData() {
-
-          // Figure out whether this library is a library that the user has been invited to.
-          function getInvitePromise() {
-            var promise = null;
-
-            if (libraryService.invitedSummaries.length) {
-              promise = $q.when(libraryService.invitedSummaries);
-            } else {
-              promise = libraryService.fetchLibrarySummaries(true).then(function () {
-                return libraryService.invitedSummaries;
-              });
-            }
-
-            return promise.then(function (invitedSummaries) {
-              var maybeLib = _.find(invitedSummaries, { 'id' : scope.library.id });
-
-              if (maybeLib) {
-                return {
-                  inviterName: maybeLib.inviter.firstName + ' ' + maybeLib.inviter.lastName,
-                  actedOn: false
-                };
-              } else {
-                return null;
-              }
-            });
-          }
 
           // Libraries created with the extension do not have the description field.
           if (!scope.library.description) {
@@ -96,10 +70,6 @@ angular.module('kifi')
             '&kcid=na-vf_twitter-library_share-lid_' + scope.library.id);
           scope.library.shareText = 'Discover this amazing @Kifi library about ' + scope.library.name + '!';
 
-          getInvitePromise().then(function (invite) {
-            scope.library.invite = invite;
-          });
-
           var image = scope.library.image;
           if (image) {
             scope.coverImageUrl = env.picBase + '/' + image.path;
@@ -125,17 +95,6 @@ angular.module('kifi')
         //
         // Scope methods.
         //
-        scope.acceptInvitation = function () {
-          scope.followLibrary();
-        };
-
-        scope.ignoreInvitation = function () {
-          if (scope.library.invite) {
-            libraryService.declineToJoinLibrary(scope.library.id).then(function () {
-              scope.library.invite.actedOn = true;
-            })['catch'](modalService.openGenericErrorModal);
-          }
-        };
 
         scope.showLongDescription = function () {
           scope.clippedDescription = false;
@@ -195,7 +154,6 @@ angular.module('kifi')
           $rootScope.$on('libraryJoined', function (e, libraryId) {
             var lib = scope.library;
             if (lib && libraryId === lib.id && lib.access === 'none') {
-              (lib.invite || {}).actedOn = true;
               lib.access = 'read_only';
               lib.numFollowers++;
               var me = profileService.me;

@@ -22,12 +22,12 @@ describe('kifi angular sanity suite', function () {
     });
 
     it('should have a user image', function () {
-      expect(element(by.css('.kf-header-profile-picture')).getAttribute('style')).toMatch('4a560421-e075-4c1b-8cc4-452e9105b6d6');
+      expect(element(by.css('.kf-lih-profile-picture')).getAttribute('style')).toMatch('4a560421-e075-4c1b-8cc4-452e9105b6d6');
     });
 
     it('should display user profile when the upper-right settings icon is clicked', function () {
       // Find and click on settings (gear) icon.
-      var settingsIcon = element(by.css('.kf-header-profile-picture'));
+      var settingsIcon = element(by.css('.kf-lih-profile-picture'));
       settingsIcon.click();
 
       // Check that the user profile is displayed.

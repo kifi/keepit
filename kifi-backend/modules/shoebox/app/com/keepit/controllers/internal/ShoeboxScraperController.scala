@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ URI, URIParser }
 import com.keepit.common.performance._
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer._
 import com.keepit.scraper.{ HttpRedirect, Signature }
@@ -209,49 +209,18 @@ class ShoeboxScraperController @Inject() (
     resFuture.map { res => Ok(Json.toJson(res)) }
   }
 
-  def isUnscrapable(url: String, destinationUrl: Option[String]) = SafeAsyncAction { request =>
-    val rules = urlPatternRules.rules()
-    val res = rules.isUnscrapable(url) || (destinationUrl.isDefined && rules.isUnscrapable(destinationUrl.get))
-    log.debug(s"[isUnscrapable($url, $destinationUrl)] result=$res")
-    Ok(JsBoolean(res))
-  }
-
-  def isUnscrapableP() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
-    val ts = System.currentTimeMillis
-    val args = request.body.as[JsArray].value
-    require(args != null && args.length >= 1, "Expect args to be url && opt[dstUrl] ")
-    val url = args(0).as[String]
-    val destinationUrl = if (args.length > 1) args(1).asOpt[String] else None
-    val rules = urlPatternRules.rules()
-    val res = rules.isUnscrapable(url) || (destinationUrl.isDefined && rules.isUnscrapable(destinationUrl.get))
-    log.debug(s"[isUnscrapableP] time-lapsed:${System.currentTimeMillis - ts} url=$url dstUrl=${destinationUrl.getOrElse("")} result=$res")
-    Ok(JsBoolean(res))
-  }
-
-  // Todo(Eishay): Stop returning ImageInfo
-  def saveImageInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val json = request.body
-    val info = json.as[ImageInfo]
-    scraperHelper.saveImageInfo(info)
-    Ok
-  }
-
-  def savePageInfo() = Action.async(parse.tolerantJson) { request =>
-    val json = request.body
-    val info = json.as[PageInfo]
-    val toSave = db.readOnlyMaster { implicit ro => pageInfoRepo.getByUri(info.uriId) } map { p => info.withId(p.id.get) } getOrElse info
-    scraperHelper.savePageInfo(toSave) map { saved =>
-      log.debug(s"[savePageInfo] result=$saved")
-      Ok
-    }
-  }
-
   def saveScrapeInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val ts = System.currentTimeMillis
     val json = request.body
     val info = json.as[ScrapeInfo]
     val saved = db.readWrite(attempts = 3) { implicit s =>
-      scrapeInfoRepo.save(info)
+      val nuri = normUriRepo.get(info.uriId)
+      if (URI.parse(nuri.url).isFailure) {
+        scrapeInfoRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+        airbrake.notify(s"can't parse $nuri, not passing it to the scraper, marking as unscrapable")
+      } else {
+        scrapeInfoRepo.save(info)
+      }
     }
     log.debug(s"[saveScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
     Ok

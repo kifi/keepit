@@ -30,11 +30,6 @@ class MobileSearchController @Inject() (
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
-    kifiVersion: Option[KifiVersion] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None,
     withUriSummary: Boolean = false) = UserAction { request =>
 
     val userId = request.userId
@@ -50,7 +45,7 @@ class MobileSearchController @Inject() (
     Ok
   }
 
-  def librarySearch(
+  def searchLibrariesV1(
     query: String,
     filter: Option[String],
     maxHits: Int,
@@ -62,7 +57,7 @@ class MobileSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, context, maxHits, true, None, debugOpt, None).flatMap { librarySearchResult =>
+    librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, filter, context, maxHits, true, None, debugOpt, None).flatMap { librarySearchResult =>
       val librarySearcher = libraryIndexer.getSearcher
       val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
       val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
@@ -83,6 +78,7 @@ class MobileSearchController @Inject() (
                 "score" -> hit.score,
                 "name" -> library.name,
                 "description" -> description,
+                "color" -> library.color,
                 "path" -> path,
                 "visibility" -> visibility,
                 "owner" -> owner,

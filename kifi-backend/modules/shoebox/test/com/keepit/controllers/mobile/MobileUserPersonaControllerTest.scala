@@ -52,20 +52,40 @@ class MobileUserPersonaControllerTest extends Specification with ShoeboxTestInje
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         contentAsJson(result1) === Json.parse(
-          s"""{
-              "personas":{
-                  "parent": false,
-                  "techie": false,
-                  "designer": false,
-                  "photographer": false,
-                  "student": true,
-                  "artist": false,
-                  "foodie": false,
-                  "athlete": false,
-                  "gamer": false,
-                  "adventurer": true
+          s"""{"personas":[
+                {
+                  "id":"science_buff",
+                  "displayName":"science buff",
+                  "displayNamePlural":"science buffs",
+                  "selected":false,
+                  "iconPath":"icon/science_buff.jpg",
+                  "activeIconPath":"icon/active_science_buff.jpg"
+                },
+                {
+                  "id":"student",
+                  "displayName":"student",
+                  "displayNamePlural":"students",
+                  "selected":true,
+                  "iconPath":"icon/student.jpg",
+                  "activeIconPath":"icon/active_student.jpg"
+                },
+                {
+                  "id":"foodie",
+                  "displayName":"foodie",
+                  "displayNamePlural":"foodies",
+                  "selected":false,
+                  "iconPath":"icon/foodie.jpg",
+                  "activeIconPath":"icon/active_foodie.jpg"
+                },
+                {
+                  "id":"techie",
+                  "displayName":"techie",
+                  "displayNamePlural":"techies",
+                  "selected":true,
+                  "iconPath":"icon/techie.jpg",
+                  "activeIconPath":"icon/active_techie.jpg"
                 }
-              }"""
+              ]}"""
         )
 
         // view as anonymous user (all personas should be unset)
@@ -73,22 +93,7 @@ class MobileUserPersonaControllerTest extends Specification with ShoeboxTestInje
         val result2 = controller.getAllPersonas()(request)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
-        contentAsJson(result2) === Json.parse(
-          s"""{
-              "personas":{
-                  "parent": false,
-                  "techie": false,
-                  "designer": false,
-                  "photographer": false,
-                  "student": false,
-                  "artist": false,
-                  "foodie": false,
-                  "athlete": false,
-                  "gamer": false,
-                  "adventurer": false
-                }
-              }"""
-        )
+        (contentAsJson(result2) \\ "selected").map(_.as[Boolean]) === Seq(false, false, false, false)
       }
     }
 
@@ -99,21 +104,21 @@ class MobileUserPersonaControllerTest extends Specification with ShoeboxTestInje
         inject[FakeUserActionsHelper].setUser(user1)
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ADVENTURER, PersonaName.STUDENT)
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.TECHIE, PersonaName.STUDENT)
         }
 
         val testPath = com.keepit.controllers.mobile.routes.MobileUserPersonaController.selectPersonas().url
         val request = FakeRequest("POST", testPath)
 
-        // add new persona "photographer", remove "student"
-        val result1 = controller.selectPersonas()(request.withBody(Json.obj("personas" -> Seq("adventurer", "photographer"))))
+        // add new persona "artist", remove "student"
+        val result1 = controller.selectPersonas()(request.withBody(Json.obj("personas" -> Seq("techie", "science_buff"))))
         status(result1) must equalTo(OK)
         val resultJson1 = contentAsJson(result1)
-        (resultJson1 \ "added").as[Seq[String]] === Seq("photographer")
+        (resultJson1 \ "added").as[Seq[String]] === Seq("science_buff")
         (resultJson1 \ "removed").as[Seq[String]] === Seq("student")
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ADVENTURER, PersonaName.PHOTOGRAPHER)
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.TECHIE, PersonaName.SCIENCE_BUFF)
         }
 
       }
@@ -123,10 +128,18 @@ class MobileUserPersonaControllerTest extends Specification with ShoeboxTestInje
 
   // sets up a Map of [String, Persona]
   private def setupPersonas()(implicit injector: Injector) = {
-    val availablePersonas = PersonaName.allPersonas
+    val availablePersonas = Set("science_buff", "student", "foodie", "techie")
     db.readWrite { implicit s =>
       availablePersonas.map { pName =>
-        (pName -> personaRepo.save(Persona(name = pName)))
+        val iconPath = "icon/" + pName + ".jpg"
+        val activeIconPath = "icon/active_" + pName + ".jpg"
+        val displayName = pName.replace("_", " ")
+        (pName -> personaRepo.save(Persona(
+          name = PersonaName(pName),
+          displayName = displayName,
+          displayNamePlural = displayName + "s",
+          iconPath = iconPath,
+          activeIconPath = activeIconPath)))
       }
     }.toMap
   }
@@ -135,8 +148,8 @@ class MobileUserPersonaControllerTest extends Specification with ShoeboxTestInje
     val allPersonas = setupPersonas
     val user1 = db.readWrite { implicit s =>
       val user1 = user().withName("Peter", "Parker").withUsername("peterparker").withEmailAddress("peterparker@gmail.com").saved
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas(PersonaName.ADVENTURER).id.get))
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas(PersonaName.STUDENT).id.get))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("techie").id.get))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("student").id.get))
       user1
     }
     (user1, allPersonas)

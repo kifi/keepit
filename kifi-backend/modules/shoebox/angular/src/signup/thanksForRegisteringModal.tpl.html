@@ -9,7 +9,7 @@
 
         <div class="register-install-ext-btn" ng-click="installExtension()">Get Kifi for {{platformName}}</div>
 
-        <a href="https://chrome.google.com/webstore/detail/kifi/fpjooibalklfinmkiodaamcckfbcjhin?hl=en" title="Kifi in the Chrome Web Store"><img src="/img/available-in-chrome-webstore.png" class="register-chrome-webstore" ng-if="platformName === 'Chrome'"></a>
+        <a href="https://chrome.google.com/webstore/detail/kifi/fpjooibalklfinmkiodaamcckfbcjhin?hl=en" title="Kifi in the Chrome Web Store" ng-click="trackWebstore()"><img src="/img/available-in-chrome-webstore.png" class="register-chrome-webstore" ng-if="platformName === 'Chrome'"></a>
 
       </div>
       <div class="dialog-body" ng-if="thanksVersion === 'notSupported'">
@@ -20,7 +20,7 @@
 
           <p class="register-unsupported-p">The Kifi plugin is not yet available for your browser.</p>
 
-          <p class="register-unsupported-p">In the meantime, you can try <a href="https://www.google.com/chrome/browser/">Chrome</a> or <a href="https://www.mozilla.org/en-US/firefox/new/">Firefox</a> and come back to install the plugin.</p>
+          <p class="register-unsupported-p">In the meantime, you can try <a href="https://www.google.com/chrome/browser/" ng-click="trackGetChrome()">Chrome</a> or <a href="https://www.mozilla.org/en-US/firefox/new/" ng-click="trackGetFirefox()">Firefox</a> and come back to install the plugin.</p>
         </div>
 
       </div>

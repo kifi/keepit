@@ -39,10 +39,10 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
         val (user1, allPersonas) = setupUserPersona
         val userPersonaCommander = inject[UserPersonaCommander]
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ADVENTURER, PersonaName.TECHIE)
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.INVESTOR, PersonaName.TECHIE)
         }
         // add an existing persona
-        val mapping1 = userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.ADVENTURER))
+        val mapping1 = userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.INVESTOR))
         mapping1.size === 0
 
         // add a new persona
@@ -50,11 +50,11 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
         mapping2.size === 1
 
         // add a mixed set
-        val mapping3 = userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.ADVENTURER, PersonaName.ARTIST, PersonaName.FOODIE))
+        val mapping3 = userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.INVESTOR, PersonaName.DEVELOPER, PersonaName.FOODIE))
         mapping3.size === 1
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ADVENTURER, PersonaName.TECHIE, PersonaName.FOODIE, PersonaName.ARTIST)
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.INVESTOR, PersonaName.TECHIE, PersonaName.FOODIE, PersonaName.DEVELOPER)
         }
       }
     }
@@ -64,16 +64,16 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
         val (user1, allPersonas) = setupUserPersona
         val userPersonaCommander = inject[UserPersonaCommander]
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ADVENTURER, PersonaName.TECHIE)
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.INVESTOR, PersonaName.TECHIE)
         }
         // remove one existing persona
-        userPersonaCommander.removePersonasForUser(user1.id.get, Set(PersonaName.ADVENTURER)).size === 1
+        userPersonaCommander.removePersonasForUser(user1.id.get, Set(PersonaName.INVESTOR)).size === 1
 
         // remove a persona that doesn't exist
         userPersonaCommander.removePersonasForUser(user1.id.get, Set(PersonaName.FOODIE)).size === 0
 
         // remove mixed set
-        userPersonaCommander.removePersonasForUser(user1.id.get, Set(PersonaName.ADVENTURER, PersonaName.TECHIE, PersonaName.FOODIE)).size === 1
+        userPersonaCommander.removePersonasForUser(user1.id.get, Set(PersonaName.INVESTOR, PersonaName.TECHIE, PersonaName.FOODIE)).size === 1
 
         db.readOnlyMaster { implicit s =>
           userPersonaRepo.getPersonasForUser(user1.id.get) === Seq()
@@ -84,10 +84,18 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
 
   // sets up a Map of [String, Persona]
   private def setupPersonas()(implicit injector: Injector) = {
-    val availablePersonas = PersonaName.allPersonas
+    val availablePersonas = Set("techie", "investor", "science_buff", "foodie", "developer")
     db.readWrite { implicit s =>
       availablePersonas.map { pName =>
-        (pName -> personaRepo.save(Persona(name = pName)))
+        val iconPath = "icon/" + pName + ".jpg"
+        val activeIconPath = "icon/active_" + pName + ".jpg"
+        val displayName = pName.replace("_", " ")
+        (pName -> personaRepo.save(Persona(
+          name = PersonaName(pName),
+          displayName = displayName,
+          displayNamePlural = displayName + "s",
+          iconPath = iconPath,
+          activeIconPath = activeIconPath)))
       }
     }.toMap
   }
@@ -96,8 +104,8 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
     val allPersonas = setupPersonas
     val user1 = db.readWrite { implicit s =>
       val user1 = user().withName("Tony", "Stark").withUsername("tonystark").withEmailAddress("tony@stark.com").saved
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas(PersonaName.ADVENTURER).id.get))
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas(PersonaName.TECHIE).id.get))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("investor").id.get))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("techie").id.get))
       user1
     }
     (user1, allPersonas)

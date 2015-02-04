@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryHeaderFollowButtonCta', [
-  '$compile', '$rootElement', '$templateCache', '$timeout', '$window', 'libraryService', 'platformService',
-  function ($compile, $rootElement, $templateCache, $timeout, $window, libraryService, platformService) {
+  '$compile', '$rootElement', '$rootScope', '$templateCache', '$timeout', '$window', 'libraryService', 'platformService',
+  function ($compile, $rootElement, $rootScope, $templateCache, $timeout, $window, libraryService, platformService) {
     return {
       restrict: 'A',
       link: function (scope, element/*, attrs */) {
@@ -70,27 +70,26 @@ angular.module('kifi')
         function autoShowCTA(timeInMS) {
           // Show the CTA only if the page is visible and if it hasn't
           // been shown before.
+          if (autoShowCTAPromise) {
+            $timeout.cancel(autoShowCTAPromise);
+            autoShowCTAPromise = null;
+          }
 
+          autoShowCTAPromise = $timeout(function () {
+            if (!$window.document.hidden && !ctaShown) {
+              showCTA(true);
+              ctaShown = true;
+              trackHover('timer');
+            }
+          }, timeInMS);
+        }
+
+        function autoShowCTAUnlessHidden() {
           // $document.hidden is undefined; use $window.document to get
           // around this problem.
           if (!$window.document.hidden) {
-            if (autoShowCTAPromise) {
-              $timeout.cancel(autoShowCTAPromise);
-              autoShowCTAPromise = null;
-            }
-
-            autoShowCTAPromise = $timeout(function () {
-              if (!$window.document.hidden && !ctaShown) {
-                showCTA(true);
-                ctaShown = true;
-                trackHover('timer');
-              }
-            }, timeInMS);
+            autoShowCTA(2000);
           }
-        }
-
-        function autoShowCTAQuickly() {
-          autoShowCTA(2000);
         }
 
         function trackHover(trigger) {
@@ -163,11 +162,17 @@ angular.module('kifi')
           autoShowCTA(5000);
 
           // Show the CTA automatically when the user returns to the library page.
-          document.addEventListener('visibilitychange', autoShowCTAQuickly);
+          $window.addEventListener('visibilitychange', autoShowCTAUnlessHidden);
           scope.$on('$destroy', function () {
-            $window.removeEventListener('visibilitychange', autoShowCTAQuickly);
+            $window.removeEventListener('visibilitychange', autoShowCTAUnlessHidden);
           });
         }
+
+        var deregisterStateChange = $rootScope.$on('$stateChangeStart', function () {
+          $timeout.cancel(autoShowCTAPromise);
+          autoShowCTAPromise = null;
+        });
+        scope.$on('$destroy', deregisterStateChange);
       }
     };
   }

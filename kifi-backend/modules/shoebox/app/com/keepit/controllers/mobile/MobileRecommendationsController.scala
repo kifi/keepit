@@ -20,16 +20,16 @@ class MobileRecommendationsController @Inject() (
     db: Database) extends UserActions with ShoeboxServiceController {
 
   def topRecosV1(more: Boolean, recencyWeight: Float) = UserAction.async { request =>
-    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight)
+    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight, None)
     uriRecosF map { recos => Ok(Json.toJson(recos)) }
   }
 
   def topRecosV2(more: Boolean, recencyWeight: Float) = UserAction.async { request =>
-    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed)
+    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight, None)
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = None)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
-      Json.toJson(util.Random.shuffle(uris ++ libs))
+      Json.toJson(util.Random.shuffle(uris ++ libs.map(_._2)))
     }
   }
 

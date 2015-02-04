@@ -84,7 +84,6 @@ class AdminUserController @Inject() (
     mailRepo: ElectronicMailRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
     keepRepo: KeepRepo,
-    libraryMembershipRepo: LibraryMembershipRepo,
     socialConnectionRepo: SocialConnectionRepo,
     searchFriendRepo: SearchFriendRepo,
     userConnectionRepo: UserConnectionRepo,
@@ -97,6 +96,8 @@ class AdminUserController @Inject() (
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     libraryRepo: LibraryRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
+    libraryInviteRepo: LibraryInviteRepo,
     invitationRepo: InvitationRepo,
     userSessionRepo: UserSessionRepo,
     imageStore: S3ImageStore,
@@ -804,6 +805,11 @@ class AdminUserController @Inject() (
           // URI Graph
           keepRepo.getByUser(userId).foreach { bookmark => keepRepo.save(bookmark.withActive(false)) }
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
+
+          // Libraries Data
+          libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.INACTIVE)).foreach { case (invite, _) => libraryInviteRepo.save(invite.withState(LibraryInviteStates.INACTIVE)) } // Library Invites
+          libraryMembershipRepo.getWithUserId(userId).foreach { membership => libraryMembershipRepo.save(membership.withState(LibraryMembershipStates.INACTIVE)) } // Library Memberships
+          libraryRepo.getAllByOwner(userId).foreach { library => libraryRepo.save(library.withState(LibraryStates.INACTIVE)) } // Libraries
 
           // Personal Info
           userSessionRepo.invalidateByUser(userId) // User Session
