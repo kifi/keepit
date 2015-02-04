@@ -176,10 +176,8 @@ angular.module('kifi')
           profileService.savePrefs(save);
         };
 
-        scope.addLibrary = function () {
-          modalService.open({
-            template: 'libraries/manageLibraryModal.tpl.html'
-          });
+        scope.closeMenu = function () {
+          scope.libraryMenu.visible = false;
         };
 
         scope.isActive = function (path) {
