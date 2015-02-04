@@ -106,12 +106,12 @@ class AdminBookmarksController @Inject() (
 
   def rescrape = AdminUserAction(parse.tolerantJson) { request =>
     val id = Id[Keep]((request.body \ "id").as[Int])
-    val uri = db.readOnlyMaster { implicit session =>
+    db.readWrite { implicit session =>
       val bookmark = keepRepo.get(id)
-      uriRepo.get(bookmark.uriId)
+      val uri = uriRepo.get(bookmark.uriId)
+      scraper.scheduleScrape(uri)
+      Ok(JsObject(Seq("status" -> JsString("ok"))))
     }
-    scraper.scheduleScrape(uri)
-    Ok(JsObject(Seq("status" -> JsString("ok"))))
   }
 
   //post request with a list of private/public and active/inactive
@@ -166,6 +166,18 @@ class AdminBookmarksController @Inject() (
       keepRepo.delete(id)
       Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
     }
+  }
+
+  def rescrapeFrom(fromId: Id[NormalizedURI]) = AdminUserAction { implicit request =>
+    val uris = db.readOnlyMaster { implicit s =>
+      uriRepo.getFromId(fromId)
+    }
+    db.readWrite { implicit s =>
+      uris.foreach { uri =>
+        scraper.scheduleScrape(uri, clock.now())
+      }
+    }
+    Ok(uris.size.toString)
   }
 
   def bookmarksView(page: Int = 0) = AdminUserPage.async { implicit request =>

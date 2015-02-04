@@ -32,7 +32,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
     seedCommander: SeedIngestionCommander,
     serviceDiscovery: ServiceDiscovery) extends Logging {
 
-  val recommendationGenerationLock = new ReactiveLock(8)
+  val recommendationGenerationLock = new ReactiveLock(4)
   val defaultLibraryScoreParams = LibraryRecoSelectionParams.default
 
   val MIN_KEEPS_PER_USER = 5

@@ -69,14 +69,13 @@ case class ActivityEmailData(
   activityComponents: Seq[Html],
   mostFollowedLibraries: Seq[LibraryInfoFollowersView],
   newKeepsInLibraries: Seq[(LibraryInfoView, Seq[KeepInfoView])],
-  libraryInvites: Seq[LibraryInviteInfoView],
   libraryRecos: Seq[LibraryInfoView],
-  uriRecos: Seq[FullUriRecoInfo],
-  pendingFriendRequests: Seq[Id[User]],
+  connectionRequests: Int,
+  libraryInviteCount: Int,
+  unreadMessageCount: Int = 0, /* todo(josh) */
   friendCreatedLibraries: Map[Id[User], Seq[LibraryInfoView]],
   friendFollowedLibraries: Seq[(Id[Library], LibraryInfoView, Seq[Id[User]])],
-  newFollowersOfLibraries: Seq[LibraryInfoFollowersView],
-  unreadThreads: Seq[EmailUnreadThreadView])
+  newFollowersOfLibraries: Seq[LibraryInfoFollowersView])
 
 @ImplementedBy(classOf[ActivityFeedEmailSenderImpl])
 trait ActivityFeedEmailSender {
@@ -88,7 +87,9 @@ class ActivityFeedEmailComponents @Inject() (
   val othersFollowedYourLibraryComponent: OthersFollowedYourLibraryComponent,
   val libraryRecommendations: UserLibraryRecommendationsComponent,
   val userLibraryFollowers: UserLibraryFollowersComponent,
-  val unreadMessages: UserUnreadMessagesComponent)
+  val unreadMessages: UserUnreadMessagesComponent,
+  val requestCountComponent: ConnectionRequestCountComponent,
+  val libraryInviteCountComponent: LibraryInviteCountComponent)
 
 class ActivityFeedEmailSenderImpl @Inject() (
     val components: ActivityFeedEmailComponents,
@@ -114,7 +115,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
   val reactiveLock = new ReactiveLock(8)
 
   // max library recommendations to include in the feed
-  val maxLibraryRecosInBottom = 3
+  val maxLibraryRecosInFeed = 3
 
   val maxActivityComponents = 5
 
@@ -150,10 +151,10 @@ class ActivityFeedEmailSenderImpl @Inject() (
     val libRecosF = components.libraryRecommendations(toUserId, previouslySentEmails, libRecosToFetch)
     val unreadMessageThreadsF = components.unreadMessages(toUserId)
     val othersFollowedYourLibraryF = components.othersFollowedYourLibraryComponent(toUserId, previouslySentEmails, friends)
+    val connectionRequestsF = components.requestCountComponent(toUserId)
+    val libInviteCountF = components.libraryInviteCountComponent(toUserId)
 
     val newKeepsInLibrariesF = feed.getNewKeepsFromFollowedLibraries()
-    val pendingLibInvitesF = feed.getPendingLibraryInvitations()
-    val pendingFriendRequestsF = feed.getPendingFriendRequests()
     val friendsWhoFollowedF = feed.getFriendsWhoFollowedLibraries(friends)
     val friendsWhoCreatedF = feed.getFriendsWhoCreatedLibraries(friends)
     val uriRecosF = feed.getUriRecommendations()
@@ -161,14 +162,14 @@ class ActivityFeedEmailSenderImpl @Inject() (
     for {
       newKeepsInLibraries <- newKeepsInLibrariesF
       unreadThreads <- unreadMessageThreadsF
-      pendingLibInvites <- pendingLibInvitesF
-      pendingFriendRequests <- pendingFriendRequestsF
       friendsWhoFollowed <- friendsWhoFollowedF
       friendsWhoCreated <- friendsWhoCreatedF
       newFollowersOfLibraries <- newFollowersOfMyLibrariesF
       uriRecos <- uriRecosF
       libRecos <- libRecosF
       othersFollowedYourLibraryRaw <- othersFollowedYourLibraryF
+      connectionRequests <- connectionRequestsF
+      libraryInviteCount <- libInviteCountF
     } yield {
 
       // get all libraries that were included in previous emails
@@ -176,6 +177,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
         activityEmail.libraryRecommendations.getOrElse(Seq.empty) ++ activityEmail.otherFollowedLibraries.getOrElse(Seq.empty)
       }.toSet
 
+      // library recos they haven't already seen in email
       val libRecosUnseen = libRecos.filterNot(l => librariesToExclude.contains(l.libraryId))
 
       val othersFollowedYourLibrary = othersFollowedYourLibraryRaw filter (_.followers.size > 0) take maxOthersFollowedYourLibrary
@@ -196,7 +198,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
       val libRecosAtBottom = {
         val excludeIds = mostFollowedLibrariesRecentlyToRecommend.map(_.libraryId).toSet
-        libRecosUnseen filterNot { l => excludeIds.contains(l.libraryId) } take maxLibraryRecosInBottom
+        libRecosUnseen filterNot { l => excludeIds.contains(l.libraryId) } take maxLibraryRecosInFeed
       }
 
       val activityComponents: Seq[Html] = {
@@ -210,18 +212,12 @@ class ActivityFeedEmailSenderImpl @Inject() (
         activityComponents = activityComponents,
         mostFollowedLibraries = mostFollowedLibrariesRecentlyToRecommend,
         newKeepsInLibraries = newKeepsInLibraries,
-        libraryInvites = pendingLibInvites map {
-          case (libId, info, invites) =>
-            val inviterUserIds = invites map (_.inviterId)
-            LibraryInviteInfoView(inviterUserIds, libId, info)
-        },
         libraryRecos = libRecosAtBottom,
-        uriRecos = uriRecos,
-        pendingFriendRequests = pendingFriendRequests,
+        connectionRequests = connectionRequests,
+        libraryInviteCount = libraryInviteCount,
         friendCreatedLibraries = friendsWhoCreated,
         friendFollowedLibraries = friendsWhoFollowed,
-        newFollowersOfLibraries = newFollowersOfLibraries,
-        unreadThreads = unreadThreads
+        newFollowersOfLibraries = newFollowersOfLibraries
       )
 
       db.readWrite { implicit rw =>
@@ -260,12 +256,6 @@ class ActivityFeedEmailSenderImpl @Inject() (
     // max number of new keeps per user-followed libraries to show
     val maxNewKeepsPerLibrary = 10
 
-    // max number of pending invited-to libraries to display
-    val maxInvitedLibraries = 10
-
-    // max number of friend requests to display
-    val maxFriendRequests = 10
-
     // max number of libraries to show created by friends
     val maxFriendsWhoCreatedLibraries = 10
 
@@ -301,31 +291,6 @@ class ActivityFeedEmailSenderImpl @Inject() (
             val keepInfos = keeps map { k => KeepInfoView(KeepInfo.fromKeep(k)) }
             BaseLibraryInfoView(libId, libInfo) -> keepInfos
         }
-      }
-    }
-
-    def getPendingLibraryInvitations(): Future[Seq[(Id[Library], FullLibraryInfo, Seq[LibraryInvite])]] = {
-      val libraries = invitedLibraries map (_._2) groupBy (_.id) map (_._2.head) toSeq
-      // groupBy().map().toSeq above is a hack around duplicate library invites from the same user (which is/was possible and should be cleaned up)
-      val invitesByLibraryId = invitedLibraries map (_._1) groupBy (_.libraryId)
-      val fullLibraryInfosF = createFullLibraryInfos(toUserId, libraries)
-
-      fullLibraryInfosF map { fullLibraryInfos =>
-        fullLibraryInfos map {
-          case (libraryId, fullLibInfo) => (libraryId, fullLibInfo, invitesByLibraryId(libraryId))
-        } take maxInvitedLibraries
-      }
-    } recover {
-      case e: Exception =>
-        airbrake.notify(e)
-        Seq.empty
-    }
-
-    def getPendingFriendRequests(): Future[Seq[Id[User]]] = {
-      db.readOnlyReplicaAsync { implicit session =>
-        friendRequestRepo.getByRecipient(userId = toUserId, states = Set(FriendRequestStates.ACTIVE))
-      } map {
-        _ sortBy (-_.updatedAt.getMillis) map (_.senderId) take maxFriendRequests
       }
     }
 

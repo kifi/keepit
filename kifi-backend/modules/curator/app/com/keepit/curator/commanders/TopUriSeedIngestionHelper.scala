@@ -29,7 +29,7 @@ class TopUriSeedIngestionHelper @Inject() (
 
   val uriIngestionFreq = 120 //hours
 
-  val graphCallLimiterLock = new ReactiveLock(8)
+  val graphCallLimiterLock = new ReactiveLock(4)
 
   private def updateUserTrackItem(userTrackItem: LastTopUriIngestion, lastSeen: DateTime)(implicit session: RWSession): Unit = {
     lastTopUriIngestionRepo.save(userTrackItem.copy(

@@ -39,7 +39,8 @@ POST    /-authenticate/:provider     securesocial.controllers.ProviderController
 # custom auth routes which set some session state
 
 GET     /login/after                @com.keepit.controllers.core.AuthController.afterLogin()
-GET     /login/:provider            @com.keepit.controllers.core.AuthController.loginSocial(provider)
+GET     /login/close                @com.keepit.controllers.core.AuthController.afterLoginClosePopup()
+GET     /login/:provider            @com.keepit.controllers.core.AuthController.loginSocial(provider, close: Boolean ?= false)
 POST    /auth/log-in                @com.keepit.controllers.core.AuthController.logInWithUserPass(link: String ?= "")
 
 GET     /connect/:provider          @com.keepit.controllers.core.AuthController.popupBeforeLinkSocial(provider)
@@ -498,6 +499,7 @@ GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyti
 POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
 GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
 
+GET     /admin/keeps/rescrape/from  @com.keepit.controllers.admin.AdminBookmarksController.rescrapeFrom(fromId: Id[NormalizedURI])
 GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])

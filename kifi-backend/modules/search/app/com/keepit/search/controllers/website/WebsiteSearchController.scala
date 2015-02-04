@@ -26,6 +26,12 @@ import com.keepit.search.controllers.website.WebsiteSearchController._
 import com.keepit.search.augmentation.{ AugmentedItem, AugmentationCommander }
 import com.keepit.social.BasicUser
 
+object WebsiteSearchController {
+  private[WebsiteSearchController] val maxKeepersShown = 20
+  private[WebsiteSearchController] val maxLibrariesShown = 10
+  private[WebsiteSearchController] val maxTagsShown = 15
+}
+
 class WebsiteSearchController @Inject() (
     val userActionsHelper: UserActionsHelper,
     val shoeboxClient: ShoeboxServiceClient,
@@ -325,11 +331,4 @@ class WebsiteSearchController @Inject() (
       Ok(json)
     }
   }
-}
-
-object WebsiteSearchController {
-
-  private[WebsiteSearchController] val maxKeepersShown = 20
-  private[WebsiteSearchController] val maxLibrariesShown = 10
-  private[WebsiteSearchController] val maxTagsShown = 15
 }

@@ -14,7 +14,7 @@
             @if(idx > 0 && idx == followerNames.size - 1){and}
             @value match {
               case Left(num) => {@num others}
-              case Right(userId) => {<a href="@profileUrl(userId, "othersFollowedMyLibrary")" target="_blank">@fullName(userId)</a>}
+              case Right(userId) => {<a href="@profileUrl(userId, "othersFollowedMyLibrary")" target="_blank" style="text-decoration:none;color:#62BE73;">@fullName(userId)</a>}
             }@if(idx < followerNames.size - 1 && followerNames.size > 2){,}
           }
           followed your library

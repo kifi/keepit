@@ -174,6 +174,14 @@ document.addEventListener('keydown', function (e) {
       case 'facebook':
         FB.login($.noop, {scope: 'email'});
         break;
+      case 'twitter':
+        window.open('/login/twitter?close=1', '_blank', 'width=450,height=480,resizable,scrollbars=yes,status=1').focus();
+        window.addEventListener('message', function (e) {
+          if (e.data === 'authed' && e.origin === location.origin) {
+            parent.postMessage({authenticated: true}, '*');
+          }
+        });
+        break;
       case 'linkedin':
         IN.UI.Authorize().place();
         break;

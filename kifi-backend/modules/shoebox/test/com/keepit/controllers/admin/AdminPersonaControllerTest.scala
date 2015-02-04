@@ -78,7 +78,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         // create new persona
         val request1 = FakeRequest("POST", testPath).withBody(jsonBody)
         val result1 = route(request1).get
-        status(result1) must equalTo(NO_CONTENT)
+        status(result1) must equalTo(OK)
 
         db.readOnlyMaster { implicit s =>
           personaRepo.all.length === 5
@@ -87,7 +87,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         // submit same persona
         val request2 = FakeRequest("POST", testPath).withBody(jsonBody)
         val result2 = route(request2).get
-        status(result2) must equalTo(NO_CONTENT)
+        status(result2) must equalTo(OK)
 
         db.readOnlyMaster { implicit s =>
           personaRepo.all.length === 5
