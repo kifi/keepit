@@ -1,7 +1,70 @@
+.kf-library-menu
+  position: fixed
+  border: 1px solid #e6e6e6
+  padding: 0 15px
+  width: 250px
+  background: #fff
+  box-shadow: 0 0 7px rgba(0, 40, 90, 0.2)
+  overflow: hidden
+  z-index: 1
+
+.kf-nav-item
+  font-size: 13px
+  user-select: none
+  margin-top: 10px
+
+.kf-nav-link-box
+  display: inline-block
+  cursor: pointer
+
+.kf-nav-name
+.kf-nav-count
+  line-height: 26px
+  vertical-align: top
+
+.pre-libraries-style
+  text-transform: uppercase
+
+.kf-nav-name
+  display: inline-block
+  padding: 0 5px
+  color: textDarkColor
+  font-weight: 400
+  font-smoothing: antialiased
+
+  .active &
+    font-weight: bold
+
+.kf-nav-count
+  font-size: 12px
+  font-weight: 200
+  padding: 2px 0
+  color: countGreyColor
+  float: right
+
+  &.empty
+    display: none
+
+.kf-nav-group
+  padding-top: 10px
+  height: 100%
+
+.kf-nav-group-name
+  margin: 0 40px 0 20px
+  font-size: 14px
+  line-height: 36px
+  color: textDarkColor
+  font-weight: 400
+  font-smoothing: antialiased
+
+// Formerly, navLibs.styl
 .kf-nav-lib-recos
   border-bottom: 1px solid separatorColor
   padding-bottom: 8px
   font-size: 13px
+
+.kf-lm-libraries
+  height: calc(100% - 45px)
 
 .kf-nav-lib-system
   border-bottom: 1px solid separatorColor
@@ -90,7 +153,8 @@
 
 .kf-scrollable-libs
   position: relative
-  width: calc(100% + 40px)
+  width: calc(100% + 15px)
+  height: calc(100% - 175px)
 
   // This is a hack to hide the scrollbar
   // (cf. comments in scrollbar.js)
@@ -106,12 +170,15 @@
 .kf-lib-search
   position: relative
   display: inline-block
+  margin-top: 10px
   width: 100%
   height: 33px
+  background-color: #fff
+  z-index: 5
 
 .kf-lib-input-box
   height: 25px
-  width: calc(100% - 42px)
+  width: calc(100% - 30px)
   float: left
   margin-bottom: 8px
   box-sizing: border-box
@@ -170,7 +237,6 @@
   float: right
   width: 24px
   height: 25px
-  margin-right: 14px
   box-sizing: border-box
   border: 1px solid #e6e6e6
   border-radius: 0 4px 4px 0
@@ -235,3 +301,4 @@
     color: blueColor
     background-color: #fff
     cursor: default
+

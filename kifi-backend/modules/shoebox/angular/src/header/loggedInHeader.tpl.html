@@ -1,7 +1,7 @@
 <div class="kf-lih" ng-controller="LoggedInHeaderCtrl">
   <div class="kf-lih-inner">
     <div class="kf-lih-left">
-      <button class="kf-lih-toggle-menu" ng-click="toggleMenu()"><span class="sprite sprite-burger"></span></button>
+      <button class="kf-lih-toggle-menu" ng-class="{'kf-lih-toggle-menu-visible': libraryMenu.visible}" ng-click="toggleMenu()"><span class="sprite sprite-burger"></span></button>
       <div class="kf-lih-left-separator"></div>
       <a class="kf-lih-logo svg-kifi-clover-white-text" ui-sref="home"></a>
     </div>

@@ -9,8 +9,8 @@ angular.module('kifi')
     $location, util, keyIndices, modalService, $timeout, $state, routeService) {
 
     $scope.toggleMenu = function () {
-      // navDropdown is inherited from AppCtrl scope.
-      $scope.navDropdown.visible = !$scope.navDropdown.visible;
+      // libraryMenu is inherited from AppCtrl scope.
+      $scope.libraryMenu.visible = !$scope.libraryMenu.visible;
     };
 
     $scope.isFocused = false;

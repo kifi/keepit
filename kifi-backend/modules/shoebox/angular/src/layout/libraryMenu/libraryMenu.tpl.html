@@ -1,4 +1,4 @@
-<div class="kf-nav-dropdown">
+<div class="kf-library-menu">
   <div class="kf-nav-group">
     <div class="kf-nav-lib-recos" ng-class="{ active: isActive('/') }">
       <a class="kf-nav-link" href="/">
@@ -7,7 +7,7 @@
       </a>
     </div>
 
-    <div>
+    <div class="kf-lm-libraries">
       <div kf-callout class="kf-callout-bubble-right" ng-if="showCallout()">
           <div>Your main and private libraries hold all of your existing keeps. You can create additional libraries if you wish.</div>
           <div class="kf-callout-bubble-action">
@@ -46,13 +46,6 @@
           </a>
         </li>
       </ul>
-
-      <div class="kf-nav-lib-item kf-create-new-library">
-        <a class="kf-nav-link" ng-click="addLibrary()">
-          <span class="library-icon svg-add-a-library-icon"></span>
-          <span class="kf-nav-name">Create a new Library</span>
-        </a>
-      </div>
 
       <div class="kf-lib-search">
         <div class="kf-lib-input-box" ng-class="{ 'focused': isFilterFocused }">
