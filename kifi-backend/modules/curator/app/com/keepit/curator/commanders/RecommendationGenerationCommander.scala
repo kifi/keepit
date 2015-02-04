@@ -41,7 +41,7 @@ class RecommendationGenerationCommander @Inject() (
     serviceDiscovery: ServiceDiscovery) extends Logging {
 
   val defaultScore = 0.0f
-  val recommendationGenerationLock = new ReactiveLock(8)
+  val recommendationGenerationLock = new ReactiveLock(4)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
 
@@ -217,7 +217,7 @@ class RecommendationGenerationCommander @Inject() (
                 genStateRepo.save(newState)
               }
               if (state.seq < newSeqNum) {
-                if (recommendationGenerationLock.waiting < 500) {
+                if (recommendationGenerationLock.waiting < 300) {
                   precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
                 } else {
                   precomputeRecommendationsForUser(userId, boostedKeepers) //No point in keeping all that data in memory when it's not needed soon
