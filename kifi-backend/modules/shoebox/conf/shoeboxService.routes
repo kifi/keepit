@@ -497,6 +497,7 @@ GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyti
 POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
 GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
 
+GET     /admin/keeps/rescrape/from  @com.keepit.controllers.admin.AdminBookmarksController.rescrapeFrom(fromId: Id[NormalizedURI])
 GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
@@ -675,6 +676,10 @@ POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminL
 POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminLibraryController.updateLibraries
 POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepImageController.loadPrevImageForKeep(startUserId: Long, endUserId: Long)
 POST    /admin/libraries/updateLibraryOwner @com.keepit.controllers.admin.AdminLibraryController.updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User])
+
+GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
+POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()
+POST    /admin/personas/:id         @com.keepit.controllers.admin.AdminPersonaController.editPersona(id: Id[Persona])
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")

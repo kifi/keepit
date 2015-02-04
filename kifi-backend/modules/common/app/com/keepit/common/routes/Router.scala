@@ -209,11 +209,11 @@ object Search extends Service {
     def augment() = ServiceRoute(POST, "/internal/search/augment")
 
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
-    def distSearch2() = ServiceRoute(POST, "/internal/search/dist/search2")
+    def distSearchUris() = ServiceRoute(POST, "/internal/search/dist/search/uri")
     def distLangFreqs() = ServiceRoute(POST, "/internal/search/dist/langFreqs")
     def distFeeds() = ServiceRoute(POST, "/internal/search/dist/feeds")
     def distAugmentation() = ServiceRoute(POST, "/internal/search/dist/augmentation")
-    def distLibrarySearch() = ServiceRoute(POST, "/internal/search/dist/librarySearch")
+    def distSearchLibraries() = ServiceRoute(POST, "/internal/search/dist/search/library")
   }
 }
 
@@ -405,7 +405,7 @@ object Curator extends Service {
     def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library]) = ServiceRoute(POST, "/internal/curator/updateLibraryRecommendationFeedback", Param("userId", userId), Param("libraryId", libraryId))
     def triggerEmailToUser(code: String, userId: Id[User]) = ServiceRoute(POST, "/internal/curator/triggerEmailToUser", Param("code", code), Param("userId", userId))
     def refreshUserRecos(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/refreshUserRecos", Param("userId", userId))
-    def topLibraryRecos(userId: Id[User], limit: Option[Int]) = ServiceRoute(POST, "/internal/curator/topLibraryRecos", Param("userId", userId), Param("limit", limit))
+    def topLibraryRecos(userId: Id[User], limit: Option[Int], context: Option[String]) = ServiceRoute(POST, "/internal/curator/topLibraryRecos", Param("userId", userId), Param("limit", limit), Param("context", context))
     def refreshLibraryRecos(userId: Id[User], await: Boolean) = ServiceRoute(POST, "/internal/curator/refreshLibraryRecos", Param("userId", userId), Param("await", await))
     def notifyLibraryRecosDelivered(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/notifyLibraryRecosDelivered", Param("userId", userId))
   }

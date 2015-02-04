@@ -1,5 +1,7 @@
 @(libInfoView: com.keepit.commanders.emails.LibraryInfoFollowersView)
 @import com.keepit.common.mail.template.helpers._
+@followerNames  = @{libInfoView.followerNamesToDisplay}
+
 <tr>
   <td align="left" valign="top">
     <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
@@ -8,8 +10,15 @@
       </tr>
       <tr>
         <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">
-          @libInfoView.numFollowers fellow users followed
-          <a href="@libInfoView.url" target="_blank" style="text-decoration:none;color:#62BE73;">@libInfoView.name</a>
+          @followerNames.zipWithIndex.map { case (value, idx) =>
+            @if(idx > 0 && idx == followerNames.size - 1){and}
+            @value match {
+              case Left(num) => {@num others}
+              case Right(userId) => {<a href="@profileUrl(userId, "otherLibFollowers")" target="_blank">@fullName(userId)</a>}
+            }@if(idx < followerNames.size - 1 && followerNames.size > 2){,}
+          }
+          followed
+          <a href="@libraryUrl(libInfoView.url, "otherLibFollowers")" target="_blank" style="text-decoration:none;color:#62BE73;">@libInfoView.name</a>
         </td>
       </tr>
       <tr>
@@ -19,11 +28,11 @@
         <td align="left" valign="top">
           <table border="0" cellspacing="0" cellpadding="0" align="left">
             <tr>
-              @for(i <- 0 until libInfoView.followersToShow.size; userId = libInfoView.followersToShow(i)) {
+              @for(i <- 0 until libInfoView.followerImagesToShow.size; userId = libInfoView.followerImagesToShow(i)) {
               <td width="33" align="left" valign="top">
-                <a href="@profileUrl(userId)" target="_blank"><img src="@avatarUrl(userId)" width="33" height="32" alt="@fullName(userId)" style="display:block;border-radius:17px;" border="0"/></a>
+                <a href="@profileUrl(userId, "otherLibFollowers")" target="_blank"><img src="@avatarUrl(userId)" width="33" height="32" alt="@fullName(userId)" style="display:block;border-radius:17px;" border="0"/></a>
               </td>
-              @if(i != libInfoView.followersToShow.size - 1){<td width="9"></td>}
+              @if(i != libInfoView.followerImagesToShow.size - 1){<td width="9"></td>}
               }
             </tr>
           </table>

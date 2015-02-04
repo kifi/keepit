@@ -135,9 +135,9 @@ class ImageInfoRepoImpl @Inject() (
     }
     if (candidates.nonEmpty) {
       Some(candidates.minBy { i =>
-        val size = if (i.width.isDefined && i.height.isDefined) i.width.get + i.height.get else Int.MaxValue
+        val size = if (i.width.isDefined && i.height.isDefined) i.width.get + i.height.get else 0
         // Sort by priority, image size (lower is better, since we already filtered out min sizes), -id (newer is better)
-        (i.priority.getOrElse(Int.MaxValue), size, -1 * i.id.get.id)
+        (i.priority.getOrElse(Int.MaxValue), -1 * size, -1 * i.id.get.id)
       })
     } else {
       None

@@ -3,44 +3,62 @@
 angular.module('kifi')
 
 .controller('LoggedOutHeaderCtrl', [
-  '$scope', '$rootScope', 'env', 'signupService', 'platformService', 'libraryService',
-  function ($scope, $rootScope, env, signupService, platformService, libraryService) {
+  '$scope', '$rootScope', '$state', 'env', 'signupService', 'platformService', 'libraryService', 'util',
+  function ($scope, $rootScope, $state, env, signupService, platformService, libraryService, util) {
     $scope.navBase = env.navBase;
 
     $scope.clickLogo = function () {
-      $scope.$emit('getCurrentLibrary', { callback: function (lib) {
-        if (lib && lib.id) {
-          libraryService.trackEvent('visitor_clicked_page', lib, {
-            type: 'libraryLanding',
-            action: 'clickedLogo'
-          });
-        }
-      }});
+      if (util.startsWith($state.current.name, 'library')) {
+        $scope.$emit('getCurrentLibrary', { callback: function (lib) {
+          if (lib && lib.id) {
+            libraryService.trackEvent('visitor_clicked_page', lib, {
+              type: 'libraryLanding',
+              action: 'clickedLogo'
+            });
+          }
+        }});
+      } else if (util.startsWith($state.current.name, 'userProfile')) {
+        $rootScope.$emit('trackUserProfileEvent', 'click', {
+          action: 'clickedLogo'
+        });
+      }
     };
 
     $scope.join = function ($event) {
       $event.preventDefault();
 
-      $scope.$emit('getCurrentLibrary', {
-        callback: function (lib) {
-          var userData;
+      if (util.startsWith($state.current.name, 'library')) {
+        $scope.$emit('getCurrentLibrary', {
+          callback: function (lib) {
+            var userData;
 
-          if (lib && lib.id) {
-            userData = { libraryId: lib.id };
+            if (lib && lib.id) {
+              userData = { libraryId: lib.id };
 
-            libraryService.trackEvent('visitor_clicked_page', lib, {
-              type: 'libraryLanding',
-              action: 'clickedSignupHeader'
-            });
+              libraryService.trackEvent('visitor_clicked_page', lib, {
+                type: 'libraryLanding',
+                action: 'clickedSignupHeader'
+              });
+            }
+
+            if (platformService.isSupportedMobilePlatform()) {
+              platformService.goToAppOrStore();
+            } else {
+              signupService.register(userData);
+            }
           }
+        });
+      } else if (util.startsWith($state.current.name, 'userProfile')) {
+        $rootScope.$emit('trackUserProfileEvent', 'click', {
+          action: 'clickedSignupHeader'
+        });
 
-          if (platformService.isSupportedMobilePlatform()) {
-            platformService.goToAppOrStore();
-          } else {
-            signupService.register(userData);
-          }
+        if (platformService.isSupportedMobilePlatform()) {
+          platformService.goToAppOrStore();
+        } else {
+          signupService.register();
         }
-      });
+      }
     };
 
     $scope.login = function ($event) {
@@ -48,20 +66,30 @@ angular.module('kifi')
         $event.preventDefault();
       }
 
-      $scope.$emit('getCurrentLibrary', {
-        callback: function (lib) {
-          if (lib && lib.id) {
-            libraryService.trackEvent('visitor_clicked_page', lib, {
-              type: 'libraryLanding',
-              action: 'clickedLoginHeader'
-            });
-          }
+      if (util.startsWith($state.current.name, 'library')) {
+        $scope.$emit('getCurrentLibrary', {
+          callback: function (lib) {
+            if (lib && lib.id) {
+              libraryService.trackEvent('visitor_clicked_page', lib, {
+                type: 'libraryLanding',
+                action: 'clickedLoginHeader'
+              });
+            }
 
-          if (platformService.isSupportedMobilePlatform()) {
-            platformService.goToAppOrStore();
+            if (platformService.isSupportedMobilePlatform()) {
+              platformService.goToAppOrStore();
+            }
           }
+        });
+      } else if (util.startsWith($state.current.name, 'userProfile')) {
+        $rootScope.$emit('trackUserProfileEvent', 'click', {
+          action: 'clickedLoginHeader'
+        });
+
+        if (platformService.isSupportedMobilePlatform()) {
+          platformService.goToAppOrStore();
         }
-      });
+      }
     };
   }
 ]);

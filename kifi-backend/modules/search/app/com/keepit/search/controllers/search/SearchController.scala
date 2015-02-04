@@ -12,7 +12,7 @@ import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import play.api.libs.json._
 import com.keepit.search.index.sharding.ShardSpecParser
-import com.keepit.search.index.user.UserSearchRequest
+import com.keepit.search.user.DeprecatedUserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.routes.Search
@@ -62,7 +62,7 @@ class SearchController @Inject() (
     Ok(result.json)
   }
 
-  def distSearch2() = Action.async(parse.tolerantJson) { request =>
+  def distSearchUris() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val searchRequest = (json \ "request")
@@ -85,7 +85,7 @@ class SearchController @Inject() (
     val id = Id[User](userId)
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(id), 5 seconds)
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    uriSearchCommander.distSearch2(
+    uriSearchCommander.distSearchUris(
       shards,
       id,
       Lang(lang1),
@@ -127,12 +127,12 @@ class SearchController @Inject() (
     }
   }
 
-  def distLibrarySearch() = Action.async(parse.tolerantJson) { request =>
+  def distSearchLibraries() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
     val librarySearchRequest = (json \ "request").as[LibrarySearchRequest]
-    librarySearchCommander.distLibrarySearch(shards, librarySearchRequest).map { libraryShardResults =>
+    librarySearchCommander.distSearchLibraries(shards, librarySearchRequest).map { libraryShardResults =>
       Ok(Json.toJson(libraryShardResults))
     }
   }
@@ -159,13 +159,13 @@ class SearchController @Inject() (
   }
 
   def searchUsers() = Action(parse.tolerantJson) { request =>
-    val userSearchRequest = Json.fromJson[UserSearchRequest](request.body).get
+    val userSearchRequest = Json.fromJson[DeprecatedUserSearchRequest](request.body).get
     val res = userSearchCommander.searchUsers(userSearchRequest)
     Ok(Json.toJson(res))
   }
 
   def userTypeahead() = Action(parse.json) { request =>
-    val userSearchRequest = Json.fromJson[UserSearchRequest](request.body).get
+    val userSearchRequest = Json.fromJson[DeprecatedUserSearchRequest](request.body).get
     val res = userSearchCommander.userTypeahead(userSearchRequest, excludedExperiments = Seq("fake")) // TODO(yingjie): Address admins differently
     Ok(Json.toJson(res))
   }
@@ -184,7 +184,7 @@ class SearchController @Inject() (
   def explainLibraryResult(query: String, doPrefixSearch: Boolean, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String]) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     val langs = acceptLangs.split(",").filter(_.nonEmpty)
-    librarySearchCommander.librarySearch(userId, langs, userExperiments, query, None, None, 1, doPrefixSearch, None, debug, Some(libraryId)).map { result =>
+    librarySearchCommander.searchLibraries(userId, langs, userExperiments, query, None, None, 1, doPrefixSearch, None, debug, Some(libraryId)).map { result =>
       Ok(html.admin.explainLibraryResult(userId, libraryId, result.explanation))
     }
   }

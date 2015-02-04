@@ -4,6 +4,7 @@ import com.google.common.html.HtmlEscapers
 import com.keepit.common.db.Id
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.{ Library, User }
+import com.keepit.social.BasicUser
 import play.twirl.api.Html
 
 object KifiMobileAppLinkFlag {
@@ -70,11 +71,15 @@ package object template {
 
     def userExternalId(id: Id[User]) = Tag1(tags.userExternalId, id).toHtml
 
-    def profileUrl(id: Id[User]) = Tag1(tags.profileUrl, id).toHtml
+    def profileUrl(id: Id[User], content: String) = Html(appendTrackingParams(Tag1(tags.profileUrl, id) + "?", content, openInAppIfMobile = true))
+
+    def profileUrl(user: BasicUser, content: String) = Html(appendTrackingParams(s"$baseUrl/${user.username.value}?", content, openInAppIfMobile = true))
 
     def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
 
-    def libraryUrl(id: Id[Library]) = Tag1(tags.libraryUrl, id).toHtml
+    def libraryUrl(id: Id[Library], content: String) = Html(appendTrackingParams(Tag1(tags.libraryUrl, id) + "?", content, openInAppIfMobile = true))
+
+    def libraryUrl(path: String, content: String) = Html(appendTrackingParams(Tag0(tags.baseUrl).value + path + "?", content, openInAppIfMobile = true))
 
     def libraryOwnerFullName(id: Id[Library]) = Tag1(tags.libraryOwnerFullName, id).toHtml
 
