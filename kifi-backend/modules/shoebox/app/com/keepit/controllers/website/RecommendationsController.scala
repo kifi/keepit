@@ -6,7 +6,7 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource }
+import com.keepit.curator.model.{ FullUriRecoResults, RecommendationSubSource, RecommendationSource }
 import com.keepit.model.{ LibraryRecommendationFeedback, Library, ExperimentType, NormalizedURI, UriRecommendationFeedback, UriRecommendationScores }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, Json }
@@ -30,7 +30,9 @@ class RecommendationsController @Inject() (
     val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, more, recencyWeight, context = None)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
-      Json.toJson(util.Random.shuffle(uris ++ libs.map(_._2)))
+      val FullUriRecoResults(urisReco, _) = uris
+      val shuffled = util.Random.shuffle(urisReco ++ libs.map(_._2))
+      Json.toJson(shuffled)
     }
   }
 

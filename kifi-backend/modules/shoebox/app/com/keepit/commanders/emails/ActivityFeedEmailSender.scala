@@ -389,9 +389,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
     def getUriRecommendations(): Future[Seq[FullUriRecoInfo]] = {
       val recoSource = RecommendationSource.Email
       val recoSubSource = RecommendationSubSource.Unknown
-      recoCommander.topRecos(toUserId, recoSource, recoSubSource, more = false, uriRecoRecencyWeight, None) map { recos =>
+      recoCommander.topRecos(toUserId, recoSource, recoSubSource, more = false, uriRecoRecencyWeight, None) map { recosInfo =>
         // TODO(josh) maybe additional filtering
-        recos take (maxUriRecosToDeliver)
+        recosInfo.recos take (maxUriRecosToDeliver)
       }
     } recover {
       case e: Exception =>

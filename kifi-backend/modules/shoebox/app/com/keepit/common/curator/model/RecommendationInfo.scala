@@ -41,6 +41,8 @@ object FullUriRecoInfo {
   implicit val writes = Json.writes[FullUriRecoInfo]
 }
 
+case class FullUriRecoResults(recos: Seq[FullUriRecoInfo], context: String)
+
 case class FullLibRecoInfo(
   kind: RecoKind = RecoKind.Library,
   metaData: Option[RecoMetaData],
@@ -50,6 +52,8 @@ case class FullLibRecoInfo(
 object FullLibRecoInfo {
   implicit val writes = Json.writes[FullLibRecoInfo]
 }
+
+case class FullLibRecoResults(recos: Seq[FullLibRecoInfo], context: String)
 
 object FullRecoInfo {
   implicit val writes = new Writes[FullRecoInfo] {

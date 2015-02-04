@@ -157,13 +157,13 @@ class RecommendationsCommander @Inject() (
     libraryAttrInfos ++ topicAttrInfos //++ keepAttrInfos
   }
 
-  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[Seq[FullUriRecoInfo]] = {
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[FullUriRecoResults] = {
     curator.topRecos(userId, source, subSource, more, recencyWeight, context).flatMap { recoResults =>
       val recos = recoResults.recos
       val recosWithUris: Seq[(RecoInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
         recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }
       }
-      Future.sequence(recosWithUris.map {
+      val infoF = Future.sequence(recosWithUris.map {
         case (reco, nUri) => uriSummaryCommander.getDefaultURISummary(nUri, waiting = false).map { uriSummary =>
           val itemInfo = constructRecoItemInfo(nUri, uriSummary, reco)
           val attributionInfo = (reco.attribution map contstructAttributionInfos) map RecoMetaData.apply
@@ -175,6 +175,8 @@ class RecommendationsCommander @Inject() (
           )
         }
       })
+
+      infoF.map { info => FullUriRecoResults(info, recoResults.context) }
     }
   }
 
