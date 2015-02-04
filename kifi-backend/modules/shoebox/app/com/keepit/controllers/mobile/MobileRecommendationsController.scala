@@ -24,8 +24,9 @@ class MobileRecommendationsController @Inject() (
     val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = None)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
-      val FullUriRecoResults(urisReco, urisContext) = uris
-      val shuffled = util.Random.shuffle(urisReco ++ libs.map(_._2))
+      val FullUriRecoResults(urisReco, _) = uris
+      val FullLibRecoResults(libsReco, _) = libs
+      val shuffled = util.Random.shuffle(urisReco ++ libsReco.map(_._2))
       Json.toJson(shuffled)
     }
   }
@@ -36,8 +37,9 @@ class MobileRecommendationsController @Inject() (
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
       val FullUriRecoResults(urisReco, urisContext) = uris
-      val shuffled = util.Random.shuffle(urisReco ++ libs.map(_._2))
-      Json.obj("recos" -> shuffled, "uctx" -> urisContext, "lctx" -> "")
+      val FullLibRecoResults(libsReco, libsContext) = libs
+      val shuffled = util.Random.shuffle(urisReco ++ libsReco.map(_._2))
+      Json.obj("recos" -> shuffled, "uctx" -> urisContext, "lctx" -> libsContext)
     }
   }
 
