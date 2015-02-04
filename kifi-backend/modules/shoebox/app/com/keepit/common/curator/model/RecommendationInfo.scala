@@ -1,7 +1,7 @@
 package com.keepit.curator.model
 
 import com.keepit.common.crypto.PublicId
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model.{ FullLibraryInfo, Library, NormalizedURI, URISummary }
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
@@ -41,6 +41,8 @@ object FullUriRecoInfo {
   implicit val writes = Json.writes[FullUriRecoInfo]
 }
 
+case class FullUriRecoResults(recos: Seq[FullUriRecoInfo], context: String)
+
 case class FullLibRecoInfo(
   kind: RecoKind = RecoKind.Library,
   metaData: Option[RecoMetaData],
@@ -50,6 +52,8 @@ case class FullLibRecoInfo(
 object FullLibRecoInfo {
   implicit val writes = Json.writes[FullLibRecoInfo]
 }
+
+case class FullLibRecoResults(recos: Seq[(Id[Library], FullLibRecoInfo)], context: String)
 
 object FullRecoInfo {
   implicit val writes = new Writes[FullRecoInfo] {

@@ -14,6 +14,7 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.shoebox.model.ids.UserSessionExternalId
@@ -62,6 +63,7 @@ class ShoeboxController @Inject() (
   scrapeScheduler: ScrapeScheduler,
   userInteractionCommander: UserInteractionCommander,
   libraryCommander: LibraryCommander,
+  libraryImageCommander: LibraryImageCommander,
   libraryRepo: LibraryRepo,
   emailTemplateSender: EmailTemplateSender,
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
@@ -497,6 +499,16 @@ class ShoeboxController @Inject() (
     val basicStatisticsByLibraryId = libraryCommander.getBasicLibraryStatistics(libraryIds)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryStatistics]
     val result = Json.toJson(basicStatisticsByLibraryId.toSeq)
+    Ok(result)
+  }
+
+  def getLibraryImageUrls() = Action(parse.tolerantJson) { request =>
+    val libraryIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
+    val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
+    val imagesByLibraryId = libraryImageCommander.getBestImageForLibraries(libraryIds, idealImageSize)
+    val imageUrlsByLibraryId = imagesByLibraryId.mapValues(libraryImageCommander.getUrl)
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], String]
+    val result = Json.toJson(imageUrlsByLibraryId.toSeq)
     Ok(result)
   }
 

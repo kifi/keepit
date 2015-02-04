@@ -231,8 +231,8 @@ POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.M
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
-GET     /m/1/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV1(more: Boolean, recency: Float)
 GET     /m/2/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV2(more: Boolean, recency: Float)
+GET     /m/2/recos/topV3                        @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3(more: Boolean, recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
 GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
 POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
 
@@ -396,6 +396,7 @@ POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.Libr
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
+GET     /site/recos/topV2           @com.keepit.controllers.website.RecommendationsController.topRecosV2(more: Boolean, recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
 GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
 POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
@@ -872,6 +873,7 @@ POST     /internal/shoebox/image/getUriSummaries     @com.keepit.controllers.int
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
 POST     /internal/shoebox/database/getBasicKeeps   @com.keepit.controllers.internal.ShoeboxController.getBasicKeeps(userId: Id[User])
 POST     /internal/shoebox/database/getBasicLibraryStatistics   @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryStatistics()
+POST     /internal/shoebox/database/getLibraryImageUrls   @com.keepit.controllers.internal.ShoeboxController.getLibraryImageUrls()
 GET      /internal/shoebox/database/getLibrariesWithWriteAccess @com.keepit.controllers.internal.ShoeboxController.getLibrariesWithWriteAccess(userId: Id[User])
 POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.internal.NormalizedURIController.getCandidateURIs()
 

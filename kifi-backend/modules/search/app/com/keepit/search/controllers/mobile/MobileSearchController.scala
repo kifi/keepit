@@ -1,5 +1,6 @@
 package com.keepit.search.controllers.mobile
 
+import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.search.augmentation.AugmentationCommander
@@ -162,9 +163,11 @@ class MobileSearchController @Inject() (
         val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
         val futureLibraryStatistics = shoeboxClient.getBasicLibraryStatistics(libraryRecordsAndVisibilityById.keySet)
+        val futureLibraryImages = shoeboxClient.getLibraryImageUrls(libraryRecordsAndVisibilityById.keySet, ProcessedImageSize.Medium.idealSize) // todo(Léo): Ask for square image
         for {
           usersById <- futureUsers
           libraryStatisticsById <- futureLibraryStatistics
+          libraryImagesById <- futureLibraryImages
         } yield {
           val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
             libraryRecordsAndVisibilityById.get(hit.id).map {
@@ -173,12 +176,14 @@ class MobileSearchController @Inject() (
                 val path = Library.formatLibraryPath(owner.username, library.slug)
                 val statistics = libraryStatisticsById(library.id)
                 val description = library.description.getOrElse("")
+                val imageUrl = libraryImagesById(library.id)
                 Json.obj(
                   "id" -> Library.publicId(hit.id),
                   "score" -> hit.score,
                   "name" -> library.name,
                   "description" -> description,
                   "color" -> library.color,
+                  "imageUrl" -> imageUrl,
                   "path" -> path,
                   "visibility" -> visibility,
                   "owner" -> owner,
