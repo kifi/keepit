@@ -1,0 +1,86 @@
+@(personas: Seq[com.keepit.model.Persona])(implicit request: com.keepit.common.controller.UserRequest[_])
+
+<script type="text/javascript">
+
+  function submitForm(event) {
+    event.preventDefault();
+    var name = document.getElementById('formName').value;
+    var displayName = document.getElementById('formDisplayName').value;
+    var displayNamePlural = document.getElementById('formDisplayNamePlural').value;
+    var iconPath = document.getElementById('formIconPath').value;
+    var activeIconPath = document.getElementById('formActiveIconPath').value;
+
+    if (name && displayName && displayNamePlural && iconPath && activeIconPath) {
+      var postUrl = "@com.keepit.controllers.admin.routes.AdminPersonaController.createPersona()";
+      var json = JSON.stringify({
+        name: name,
+        displayName: displayName,
+        displayNamePlural: displayNamePlural,
+        iconPath: iconPath,
+        activeIconPath: activeIconPath
+      });
+
+      $.ajax({
+        contentType: "application/json", // data sending to server
+        data: json,
+        dataType: "json", // data expecting back from server
+        error: function(jqXHR, status, errorThrown) { alert("Error! Failed to create Persona... (" + status + ":" + errorThrown + ")"); },
+        success: function(data, status, jqXHR) {
+          alert("Persona "+ data.name + " created!");
+        },
+        url: postUrl,
+        type: "POST"
+      });
+    } else {
+      alert("fill in all fields!");
+    }
+  }
+
+</script>
+
+@admin("All Personas"){
+
+  Create a new persona
+  <form id="create-form">
+    name<input type="text" name="name" id="formName"><br>
+    displayName<input type="text" name="displayName" id="formDisplayName"><br>
+    displayNamePlural<input type="text" name="displayNamePlural" id="formDisplayNamePlural"><br>
+    iconPath<input type="text" name="iconPath" id="formIconPath"><br>
+    activeIconPath<input type="text" name="activeIconPath" id="formActiveIconPath"><br>
+    <br>
+    <input type="submit" value="Submit">
+  </form>
+
+  <table class="table table-condensed table-striped">
+    <thead>
+      <th>Persona Id</th>
+      <th>Name</th>
+      <th>Display Name (Singular)</th>
+      <th>Display Name (Plural)</th>
+      <th>State</th>
+      <th>Icon Path</th>
+      <th>Active Icon Path</th>
+      <th>Action</th>
+    </thead>
+    <tbody>
+      @for(persona <- personas) {
+          <tr>
+            <td>@persona.id.get</td>
+            <td>@persona.name</td>
+            <td>@persona.displayName</td>
+            <td>@{persona.displayName + 's'}</td>
+            <td>@persona.state</td>
+            <td>@persona.iconPath</td>
+            <td>@persona.activeIconPath</td>
+            <td><button>Edit</button></td>
+          </tr>
+      }
+    </tbody>
+  </table>
+}
+
+<script>
+  $(function() {
+    $("#create-form").submit(submitForm);
+  });
+</script>
