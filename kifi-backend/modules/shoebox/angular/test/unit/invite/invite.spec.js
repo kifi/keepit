@@ -84,7 +84,7 @@ describe('kifi.invite', function () {
 
         compile();
         // better to stub the http call and test the success/error functions, but I'm out of time
-        spyOn(inviteService, 'invite').andReturn(mockPromise());
+        spyOn(inviteService, 'invite').and.returnValue(mockPromise());
         iscope().invite();
         expect(inviteService.invite).toHaveBeenCalledWith('facebook', fakeSocialId);
       });
@@ -97,7 +97,7 @@ describe('kifi.invite', function () {
 
         compile();
         // better to stub the http call and test the success/error functions, but I'm out of time
-        spyOn(inviteService, 'friendRequest').andReturn(mockPromise());
+        spyOn(inviteService, 'friendRequest').and.returnValue(mockPromise());
         iscope().invite();
         expect(inviteService.friendRequest).toHaveBeenCalledWith(fakeSocialId);
       });
