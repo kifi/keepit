@@ -2,13 +2,12 @@ package com.keepit.commanders.emails.activity
 
 import com.google.inject.Inject
 import com.keepit.commanders.LibraryCommander
-import com.keepit.commanders.emails.{ BaseLibraryInfoView, LibraryInfoView }
+import com.keepit.commanders.emails.LibraryInfoFollowersView
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
-import com.keepit.model.{ Library, ActivityEmail, LibraryMembershipRepo, LibraryRepo, User }
+import com.keepit.model.{ ActivityEmail, Library, LibraryMembershipRepo, LibraryRepo, User }
 import org.joda.time.DateTime
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 
@@ -16,26 +15,13 @@ class UserLibraryFollowersComponent @Inject() (val libraryCommander: LibraryComm
     val clock: Clock,
     val membershipRepo: LibraryMembershipRepo,
     db: Database,
-    libraryRepo: LibraryRepo) extends ActivityEmailLibraryHelpers {
+    libraryRepo: LibraryRepo) extends ActivityEmailLibraryMembershipHelpers {
 
-  def apply(toUserId: Id[User], previouslySent: Seq[ActivityEmail]): Future[Seq[(LibraryInfoView, Seq[Id[User]])]] = {
-    val since = previouslySent.headOption.map(_.createdAt).getOrElse(minRecordAge)
-
+  def apply(toUserId: Id[User], previouslySent: Seq[ActivityEmail], friends: Set[Id[User]]): Future[Seq[LibraryInfoFollowersView]] = {
+    val since = lastEmailSentAt(previouslySent)
     val (librariesToMembers, libraries) = this.librariesToMembers(toUserId, since)
-    val libInfosF = createFullLibraryInfos(toUserId, libraries.map(_._2).toSeq)
-    libInfosF map { libInfos =>
-      libInfos map {
-        case (libId, libInfo) =>
-
-          val librariesToMembersMap = librariesToMembers.map {
-            case (lib, members) => (libId, members)
-          }.toMap
-
-          val members = librariesToMembersMap(libId) map (_.userId)
-          val libInfoView = BaseLibraryInfoView(libId, libInfo)
-          (libInfoView, members)
-      }
-    }
+    val librariesToMembersMap = librariesToMembers.toMap
+    createLibraryInfoFollowersViews(toUserId, libraries, librariesToMembersMap, friends)
   }
 
   private def librariesToMembers(toUserId: Id[User], since: DateTime) = db.readOnlyReplica { implicit session =>

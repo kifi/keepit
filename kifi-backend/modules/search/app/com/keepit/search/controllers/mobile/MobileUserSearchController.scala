@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, SearchServiceController }
 import com.keepit.common.logging.Logging
 import com.keepit.search.UserSearchCommander
-import com.keepit.search.index.user._
+import com.keepit.search.user.DeprecatedUserHit
 import play.api.libs.json.Json
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
@@ -30,7 +30,7 @@ class MobileUserSearchController @Inject() (
     val requestedUsers = Await.result(friendRequests, 5 seconds).toSet
 
     val jsVals = res.hits.map {
-      case UserHit(id, basicUser, isFriend) =>
+      case DeprecatedUserHit(id, basicUser, isFriend) =>
         val status = {
           if (isFriend) "friend"
           else if (requestedUsers.contains(id)) "requested"

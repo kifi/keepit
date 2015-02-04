@@ -50,8 +50,8 @@ class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
 
         val user1 = db.readWrite { implicit s =>
           val user1 = user().withName("Test", "Bro").withUsername("test").saved
-          val persona1 = personaRepo.save(Persona(name = PersonaName.ARTIST, displayName = PersonaName.ARTIST.value, iconPath = "/icon/artist.jpg", activeIconPath = "/icon_artist_active.jpg"))
-          val persona2 = personaRepo.save(Persona(name = PersonaName.TECHIE, displayName = PersonaName.TECHIE.value, iconPath = "/icon/techie.jpg", activeIconPath = "/icon_techie_active.jpg"))
+          val persona1 = personaRepo.save(Persona(name = PersonaName.ARTIST, displayName = "artist", displayNamePlural = "artists", iconPath = "/icon/artist.jpg", activeIconPath = "/icon_artist_active.jpg"))
+          val persona2 = personaRepo.save(Persona(name = PersonaName.TECHIE, displayName = "techie", displayNamePlural = "techies", iconPath = "/icon/techie.jpg", activeIconPath = "/icon_techie_active.jpg"))
           val model = UserPersona(userId = user1.id.get, personaId = persona1.id.get)
           userPersonaRepo.save(model)
           userPersonaRepo.save(model.copy(personaId = persona2.id.get))

@@ -311,7 +311,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
 
         implicit def libId(id: Int) = Id[Library](id.toLong)
         def libName(id: Id[Library]): String = libraryName(id).body
-        def libUrl(id: Id[Library]): String = libraryUrl(id).body
+        def libUrl(id: Id[Library]): String = libraryUrl(id, "libReco").body
 
         // match the html with strings we expect to be in it
         Seq(libName(4), libUrl(4), libName(1), libUrl(1), libName(2), libUrl(2),

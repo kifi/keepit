@@ -168,7 +168,7 @@ class MobileAuthController @Inject() (
   def loginWithUserPass(link: String) = MaybeUserAction.async(parse.anyContent) { implicit request =>
     ProviderController.authenticate("userpass")(request).map {
       case res: Result if res.header.status == 303 =>
-        authHelper.authHandler(request, res) { (cookies: Seq[Cookie], sess: Session) =>
+        authHelper.transformResult(res) { (cookies: Seq[Cookie], sess: Session) =>
           val newSession = if (link != "") {
             sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
           } else sess

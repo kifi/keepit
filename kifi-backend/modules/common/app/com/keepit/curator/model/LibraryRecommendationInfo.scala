@@ -33,3 +33,5 @@ object LibraryRecoSelectionParams {
     minMembers = 3,
     reset = false)
 }
+
+@json case class LibraryRecoResults(recos: Seq[LibraryRecoInfo], context: String)

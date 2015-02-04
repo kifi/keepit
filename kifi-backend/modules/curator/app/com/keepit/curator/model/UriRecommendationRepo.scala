@@ -138,7 +138,7 @@ class UriRecommendationRepoImpl @Inject() (
     sqlu"""
       DELETE FROM uri_recommendation WHERE user_id=$userId AND master_score < (SELECT MIN(master_score) FROM (
         SELECT master_score FROM uri_recommendation WHERE user_id=$userId ORDER BY master_score DESC LIMIT $limitNumRecosForUser
-      ) AS mScoreTable) AND updated_at < $before""".first()
+      ) AS mScoreTable) AND (updated_at < $before OR delivered>0)""".first()
 
   }
 
