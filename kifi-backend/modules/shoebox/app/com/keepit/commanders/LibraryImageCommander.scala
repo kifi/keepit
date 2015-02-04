@@ -22,6 +22,7 @@ trait LibraryImageCommander {
 
   def getUrl(libraryImage: LibraryImage): String
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage]
+  def getBestImageForLibraries(libraryIds: Set[Id[Library]], idealSize: ImageSize): Map[Id[Library], LibraryImage]
   def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, userId: Id[User], requestId: Option[Id[LibraryImageRequest]] = None)(implicit content: HeimdalContext): Future[ImageProcessDone]
   def positionLibraryImage(libraryId: Id[Library], position: LibraryImagePosition): Seq[LibraryImage]
   def removeImageForLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Boolean // Returns true if images were removed, false otherwise
@@ -50,6 +51,13 @@ class LibraryImageCommanderImpl @Inject() (
       libraryImageRepo.getActiveForLibraryId(libraryId)
     }
     ProcessedImageSize.pickBestImage(idealSize, targetLibraryImages)
+  }
+
+  def getBestImageForLibraries(libraryIds: Set[Id[Library]], idealSize: ImageSize): Map[Id[Library], LibraryImage] = {
+    val availableLibraryImages = db.readOnlyMaster { implicit s =>
+      libraryImageRepo.getActiveForLibraryIds(libraryIds)
+    }
+    availableLibraryImages.mapValues(ProcessedImageSize.pickBestImage(idealSize, _)).collect { case (libraryId, Some(image)) => libraryId -> image }
   }
 
   def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, userId: Id[User], requestId: Option[Id[LibraryImageRequest]])(implicit context: HeimdalContext): Future[ImageProcessDone] = {
