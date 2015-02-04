@@ -17,7 +17,7 @@ class RecommendationCleanupCommander @Inject() (
   private val recosTTL = 30 // days (by updateAt)
   private val defaultLimitNumRecosForUser = 300
   def cleanup(overrideLimit: Option[Int] = None, overrideTimeCutoff: Option[DateTime] = None): Unit = {
-    val userToClean = Random.shuffle(db.readOnlyReplica { implicit session => uriRecoRepo.getUsersWithRecommendations() }.toSeq).take(50)
+    val userToClean = Random.shuffle(db.readOnlyReplica { implicit session => uriRecoRepo.getUsersWithRecommendations() }.toSeq).take(75)
     log.info(s"Running Uri Reco Cleanup for $userToClean")
     db.readWriteBatch(userToClean) { (session, userId) =>
       uriRecoRepo.cleanupOldRecos(userId, currentDateTime.minusDays(recosTTL))(session)
