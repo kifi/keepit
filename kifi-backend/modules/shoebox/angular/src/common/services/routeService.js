@@ -5,6 +5,10 @@ angular.module('kifi')
 .factory('routeService', [
   '$location', 'env', '$window',
   function ($location, env, $window) {
+
+    var cdnImageBase = 'https://djty7jcqog9qu.cloudfront.net/'; // for dynamic images (keeps, library images, user profile pics, etc.)
+    var cdnAssetBase = 'https://d1dwdv9wd966qu.cloudfront.net/'; // for static assets (icons)
+
     function route(url) {
       return env.xhrBase + url;
     }
@@ -18,6 +22,8 @@ angular.module('kifi')
     }
 
     return {
+      cdnImageBase : cdnImageBase,
+      cdnAssetBase : cdnAssetBase,
       disconnectNetwork: function (network) {
         return env.navBase + '/disconnect/' + network;
       },

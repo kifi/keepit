@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfManagePersona', [ 'userPersonaActionService',
-  function (userPersonaActionService) {
+.directive('kfManagePersona', [ 'userPersonaActionService', 'routeService',
+  function (userPersonaActionService, routeService) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -49,7 +49,7 @@ angular.module('kifi')
         // On link.
         //
         // call for List of Personas
-        var cdnBase = 'https://d1dwdv9wd966qu.cloudfront.net/';
+        var cdnBase = routeService.cdnAssetBase;
         userPersonaActionService.getPersonas().then(function (data) {
           _.map(data.personas, function(p) {
             p.displayName = p.displayName.toUpperCase();

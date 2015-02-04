@@ -300,10 +300,13 @@ angular.module('kifi')
       trackPageView({libraryRecCount: libraries.length});
       $scope.relatedLibraries = libraries;
       $rootScope.$broadcast('relatedLibrariesChanged', libraries);
-      if (initParams.install === '1') {
+
       //if (initParams.install === '1' && !installService.installedVersion) {
-        showPersonaModal();
         //showInstallModal();
+        //}
+      if (initParams.install === '1') {
+        showPersonaModal();
+        initParams.install = undefined;
       }
       if (initParams.intent === 'follow' && $scope.library.access === 'none') {
         libraryService.joinLibrary($scope.library.id);

@@ -127,6 +127,7 @@ angular.module('kifi')
     //}
     if (initParams.install === '1') {
       showPersonaModal();
+      initParams.install = undefined;
     }
   }
 ])
