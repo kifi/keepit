@@ -135,7 +135,7 @@ class AuthController @Inject() (
   def logInWithUserPass(link: String) = MaybeUserAction { implicit request =>
     handleAuth("userpass") match {
       case res: Result if res.header.status == 303 =>
-        authHelper.authHandler(request, res) { (cookies: Seq[Cookie], sess: Session) =>
+        authHelper.transformResult(res) { (cookies: Seq[Cookie], sess: Session) =>
           val newSession = if (link != "") {
             sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
           } else sess
@@ -312,7 +312,7 @@ class AuthController @Inject() (
   def signup(provider: String, redirect: Option[String] = None, intent: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map { result =>
-      authHelper.authHandler(request, result) { (_, sess: Session) =>
+      authHelper.transformResult(result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
         val res = result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
 
