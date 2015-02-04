@@ -55,8 +55,14 @@ angular.module('kifi')
           }
         }
 
+        function setMenuHeight() {
+          var menuHeight = Math.floor(($window.innerHeight - getElement('.kf-lih').outerHeight()) * 0.9);
+          element.css({'height': menuHeight + 'px'});
+        }
+
         function openMenu() {
           positionMenu();
+          setMenuHeight();
           scope.changeList();
         }
 
