@@ -21,9 +21,10 @@ class LibraryRecommendationsController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
   def topLibRecos() = UserAction.async { request =>
-    commander.topPublicLibraryRecos(request.userId, limit = 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed).map { recos =>
-      Ok(Json.toJson(recos.map(_._2)))
-    }
+    commander.topPublicLibraryRecos(request.userId, limit = 5, source = RecommendationSource.Site,
+      subSource = RecommendationSubSource.RecommendationsFeed, trackDelivery = true, context = None).map { recos =>
+        Ok(Json.toJson(recos.map(_._2)))
+      }
   }
 
   def updateLibraryRecommendationFeedback(pubId: PublicId[Library]): Action[JsValue] = UserAction.async[JsValue](parse.tolerantJson) { request =>

@@ -59,7 +59,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           |<img src="${avatarUrl(id3)}" alt="${fullName(id3)}"/>
           |<img src="${avatarUrl(id4)}" alt="${fullName(id4)}"/>
           |Join my library: ${libraryName(library.id.get)}
-          |liburl: ${libraryUrl(library.id.get)}
+          |liburl: ${libraryUrl(library.id.get, "")}
           |<a href="$unsubscribeUrl">Unsubscribe Me</a>
           |<a href="${unsubscribeUrl(id3)}">Unsubscribe User</a>
           |<a href="${unsubscribeUrl(user3.primaryEmail.get)}">Unsubscribe Email</a>
@@ -70,7 +70,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           s"""
           |${firstName(id2)} ${lastName(id2)} and ${fullName(id1)} joined!
           |Join my library: ${libraryName(library.id.get)}
-          |liburl: ${libraryUrl(library.id.get)}
+          |liburl: ${libraryUrl(library.id.get, "")}
           |${avatarUrl(id3)}
           |unsub1 $unsubscribeUrl
           |unsub2 ${unsubscribeUrl(id3)}

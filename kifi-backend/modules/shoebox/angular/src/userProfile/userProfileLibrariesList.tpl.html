@@ -6,7 +6,7 @@
   <div class="kf-upl-card kf-upl-lib-card" ng-repeat="lib in libraries" ng-style="{'background-color': lib.color}"
        ng-class="{'justAddedBelow': lib.justAddedBelow, 'justAddedBelowAcross': lib.justAddedBelowAcross}">
     <a class="kf-upl-card-setting svg-settings-gear" ng-if="lib.owner.id === profile.id && lib.kind==='user_created'" href="javascript:" ng-click="openModifyLibrary(lib)"></a>
-    <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib)">
+    <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib, 'clickedLibraryTitle')">
       <div class="kf-upl-card-icon" ng-class="{system_main: 'kf-sys svg-card-star', system_secret: 'kf-sys svg-card-lock'}[lib.kind] || 'kf-user svg-card-lock'" ng-if="lib.visibility === 'secret' || lib.kind === 'system_main'"></div>
       <div class="kf-upl-card-cover">
         <div class="kf-upl-card-cover-image" ng-attr-style="background-image:url({{lib.imageUrl}});background-position:{{lib.image.x}}% {{lib.image.y}}%" ng-if="lib.image"></div>
@@ -18,25 +18,26 @@
       </div>
     </a>
     <div>
-      <a class="kf-upl-card-owner" href="{{lib.ownerProfileUrl}}" kf-track-origin origin="{{currentPageOrigin}}/curator">
+      <a class="kf-upl-card-owner" href="{{lib.ownerProfileUrl}}" kf-track-origin origin="{{currentPageOrigin}}/curator"
+        ng-click="trackUplCardClick(lib, 'clickedLibraryCurator')">
         <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" ng-if="libraryType !== 'own'">
         <span class="kf-upl-card-by">by</span>
         <span class="kf-upl-card-by-name">{{lib.owner.firstName}} {{lib.owner.lastName}}</span>
       </a>
     </div>
     <div ng-class="{'kf-upl-counts': true, 'kf-mine': lib.owner.id === me.id}">
-      <a href="{{lib.path}}" class="kf-upl-count" ng-click="trackUplCardClick(lib)">
+      <a href="{{lib.path}}" class="kf-upl-count" ng-click="trackUplCardClick(lib, 'clickedLibraryKeepsTotal')">
         <ng-pluralize count="lib.numKeeps" when="{'1':'{} Keep','other':'{{lib.numKeeps|number}} Keeps'}"></ng-pluralize>
       </a>
       <span class="kf-upl-count-dot" ng-if="lib.numFollowers > 0">·</span>
-      <a href="javascript:" class="kf-upl-count kf-upl-count-followers" ng-click="openFollowersList(lib)" ng-if="lib.numFollowers > 0">
+      <a href="javascript:" class="kf-upl-count kf-upl-count-followers" ng-click="openFollowersList(lib); trackUplCardClick(lib, 'clickedLibraryFollowersTotal')" ng-if="lib.numFollowers > 0">
         <ng-pluralize count="lib.numFollowers" when="{'1':'{} Follower','other':'{{lib.numFollowers|number}} Followers'}"></ng-pluralize>
       </a>
     </div>
-    <button ng-class="{'kf-upl-card-follow': true, 'kf-following': lib.following}" ng-if="lib.owner.id !== me.id" ng-click="onFollowButtonClick(lib, $event)"></button>
+    <button ng-class="{'kf-upl-card-follow': true, 'kf-following': lib.following}" ng-if="lib.owner.id !== me.id" ng-click="onFollowButtonClick(lib, $event); trackUplCardClick(lib, 'clickedLibraryFollowButton')"></button>
     <div class="kf-upl-card-foot" ng-switch="lib.visibility === 'published' && !lib.listed ? 'unlisted' : lib.followers.length ? 'followers' : lib.lastKept ? 'updated' : ''">
       <div class="kf-upl-followers" ng-switch-when="followers">
-        <a href="{{user.profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" kf-track-origin origin="{{currentPageOrigin}}/follower" ng-click="trackProfileClick()"
+        <a href="{{user.profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" kf-track-origin origin="{{currentPageOrigin}}/follower" ng-click="trackUplCardClick(lib, 'clickedLibraryFollowersFace')"
            ng-attr-style="background-image:url({{user.picUrl}})"></a>
         <span ng-if="lib.numFollowers === lib.followers.length">
           <a href="javascript:" ng-click="openFollowersList(lib)" class="kf-upl-followers-number">
@@ -44,7 +45,7 @@
           </a>
         </span>
         <span ng-if="lib.numFollowers > lib.followers.length">
-          <a href="javascript:" ng-click="openFollowersList(lib)" class="kf-upl-followers-number">+ {{lib.numFollowers - lib.followers.length}} are following</a>
+          <a href="javascript:" ng-click="openFollowersList(lib); trackUplCardClick(lib, 'clickedLibraryFollowersMoreFollowing')" class="kf-upl-followers-number">+ {{lib.numFollowers - lib.followers.length}} are following</a>
         </span>
       </div>
       <div class="kf-upl-updated" ng-switch-when="updated">

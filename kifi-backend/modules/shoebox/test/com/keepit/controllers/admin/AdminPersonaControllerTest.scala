@@ -54,7 +54,6 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         val request1 = FakeRequest("GET", testPath)
         val result1 = controller.getAllPersonas()(request1)
         status(result1) must equalTo(OK)
-        contentType(result1) must beSome("application/json")
       }
     }
 
@@ -70,8 +69,8 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         }
 
         val jsonBody = Json.obj(
-          "name" -> "athlete",
-          "displayName" -> "athlete",
+          "name" -> "developer",
+          "displayName" -> "developer",
           "iconPath" -> "/icon/0.jpg",
           "activeIconPath" -> "/icon/0.jpg"
         )
@@ -79,7 +78,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         // create new persona
         val request1 = FakeRequest("POST", testPath).withBody(jsonBody)
         val result1 = route(request1).get
-        status(result1) must equalTo(NO_CONTENT)
+        status(result1) must equalTo(OK)
 
         db.readOnlyMaster { implicit s =>
           personaRepo.all.length === 5
@@ -88,7 +87,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         // submit same persona
         val request2 = FakeRequest("POST", testPath).withBody(jsonBody)
         val result2 = route(request2).get
-        status(result2) must equalTo(NO_CONTENT)
+        status(result2) must equalTo(OK)
 
         db.readOnlyMaster { implicit s =>
           personaRepo.all.length === 5
@@ -161,12 +160,18 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
 
   // sets up a Map of [String, Persona]
   private def setupPersonas()(implicit injector: Injector) = {
-    val availablePersonas = Set("adventurer", "photographer", "student", "foodie")
+    val availablePersonas = Set("artist", "science_buff", "student", "foodie")
     db.readWrite { implicit s =>
       availablePersonas.map { pName =>
         val iconPath = "icon/" + pName + ".jpg"
         val activeIconPath = "icon/active_" + pName + ".jpg"
-        (pName -> personaRepo.save(Persona(name = PersonaName(pName), displayName = pName, iconPath = iconPath, activeIconPath = activeIconPath)))
+        val displayName = pName.replace("_", " ")
+        (pName -> personaRepo.save(Persona(
+          name = PersonaName(pName),
+          displayName = displayName,
+          displayNamePlural = displayName + "s",
+          iconPath = iconPath,
+          activeIconPath = activeIconPath)))
       }
     }.toMap
   }
@@ -175,7 +180,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
     val allPersonas = setupPersonas
     val user1 = db.readWrite { implicit s =>
       val user1 = user().withName("Peter", "Parker").withUsername("peterparker").withEmailAddress("peterparker@gmail.com").saved
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("adventurer").id.get))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("artist").id.get))
       userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("student").id.get))
       user1
     }

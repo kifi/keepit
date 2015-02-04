@@ -125,7 +125,7 @@ class AugmentationCommanderImpl @Inject() (
   // todo(Léo): this is currently very much unrestricted in order to push for library discovery
   private def showThisPublishedLibrary(librarySearcher: Searcher, libraryId: Long): Boolean = {
     LibraryIndexable.getName(librarySearcher, libraryId).exists { name =>
-      libraryQualityEvaluator.isPoorlyNamed(name)
+      !libraryQualityEvaluator.isPoorlyNamed(name)
     }
   }
 

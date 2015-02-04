@@ -32,10 +32,12 @@ class LibraryRecommendationGenerationCommander @Inject() (
     seedCommander: SeedIngestionCommander,
     serviceDiscovery: ServiceDiscovery) extends Logging {
 
-  val recommendationGenerationLock = new ReactiveLock(8)
+  val recommendationGenerationLock = new ReactiveLock(4)
   val defaultLibraryScoreParams = LibraryRecoSelectionParams.default
 
   val MIN_KEEPS_PER_USER = 5
+
+  private val idFilter = new RecoIdFilter[LibraryRecoScore] {}
 
   private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] =
     Random.shuffle(seedCommander.getUsersWithSufficientData(MIN_KEEPS_PER_USER).toSeq)
@@ -60,16 +62,18 @@ class LibraryRecommendationGenerationCommander @Inject() (
     else Future.successful(Unit)
   }
 
-  def getTopRecommendations(userId: Id[User], howManyMax: Int, recoSortStrategy: LibraryRecoSelectionStrategy, scoringStrategy: LibraryRecoScoringStrategy): Seq[LibraryRecoInfo] = {
+  def getTopRecommendations(userId: Id[User], howManyMax: Int, recoSortStrategy: LibraryRecoSelectionStrategy, scoringStrategy: LibraryRecoScoringStrategy, context: Option[String] = None): LibraryRecoResults = {
     def scoreReco(reco: LibraryRecommendation) =
       LibraryRecoScore(scoringStrategy.scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, None, false, 0f), reco)
 
-    val recos = db.readOnlyReplica { implicit session =>
+    val (recos, newContext) = db.readOnlyReplica { implicit session =>
       val recosByTopScore = libraryRecRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
-      recoSortStrategy.sort(recosByTopScore) take howManyMax
+      val finalSorted = recoSortStrategy.sort(recosByTopScore)
+      idFilter.take(finalSorted, context, limit = howManyMax)((x: LibraryRecoScore) => x.reco.libraryId.id)
     }
 
-    recos.map { case LibraryRecoScore(s, r) => LibraryRecommendation.toLibraryRecoInfo(r) }
+    val recosInfo = recos.map { case LibraryRecoScore(s, r) => LibraryRecommendation.toLibraryRecoInfo(r) }
+    LibraryRecoResults(recosInfo, newContext)
   }
 
   /**

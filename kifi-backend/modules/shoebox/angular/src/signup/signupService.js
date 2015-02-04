@@ -139,7 +139,7 @@ angular.module('kifi')
       if (!form.$valid) {
         return false;
       }
-      emitTracking('click', 'signup', { action: 'clickSignUpButton' });
+      emitTracking('click', 'signup', {action: 'clickedSignUpButton'});
 
       modalService.close();
       $scope.userData.method = 'email';
@@ -147,11 +147,11 @@ angular.module('kifi')
     };
 
     $scope.twAuth = function() {
-      emitTracking('click', 'signup', {action: 'clickAuthTwitter'});
+      emitTracking('click', 'signup', {action: 'clickedAuthTwitter'});
     };
 
     $scope.fbAuth = function () {
-      emitTracking('click', 'signup', {action: 'clickAuthFacebook'});
+      emitTracking('click', 'signup', {action: 'clickedAuthFacebook'});
     };
 
     // 2nd Register modal

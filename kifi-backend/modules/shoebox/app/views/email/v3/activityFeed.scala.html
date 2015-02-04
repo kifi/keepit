@@ -2,6 +2,7 @@
 @import com.keepit.common.db.Id
 @import com.keepit.common.mail.template.helpers._
 
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -10,7 +11,7 @@
   <!--[if !mso]><!-->
   <link href='http://fonts.googleapis.com/css?family=Lato:400,100,300,700' rel='stylesheet' type='text/css'>
   <!--<![endif]-->
-  <title>KIFI</title>
+  <title>Kifi</title>
   <style type="text/css">
     table {
     padding: 0px !important;
@@ -520,6 +521,7 @@
                                     </table>
                                   </td>
                                 </tr>
+                                @if(activityData.connectionRequests + activityData.libraryInviteCount + activityData.unreadMessageCount > 0) {
                                 <tr>
                                   <td align="left" valign="top">
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0">
@@ -535,27 +537,44 @@
                                             <tr>
                                               <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                             </tr>
+                                            @if(activityData.connectionRequests > 0) {
                                             <tr>
                                               <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">
-                                                <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;"><span style="font-size:25px;line-height:27px;font-weight:bold;">2 </span> Conneciton requests</a>
+                                                <a href="@kifiFriendsUrl("connectionRequestCount")" target="_blank" style="text-decoration:none;color:#62BE73;">
+                                                  <span style="font-size:25px;line-height:27px;font-weight:bold;">
+                                                    @activityData.connectionRequests
+                                                  </span>
+                                                  Connection request@if(activityData.connectionRequests != 1){s}
+                                                </a>
                                               </td>
                                             </tr>
+                                            }
+                                            @if(activityData.libraryInviteCount > 0) {
                                             <tr>
                                               <td height="10" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                             </tr>
                                             <tr>
                                               <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">
-                                                <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;"><span style="font-size:25px;line-height:27px;font-weight:bold;">5 </span> Pending library invites</a>
+                                                @* need better url for library invite count *@
+                                                <a href="@kifiUrl("libraryInviteCount")" target="_blank" style="text-decoration:none;color:#62BE73;">
+                                                  <span style="font-size:25px;line-height:27px;font-weight:bold;">@activityData.libraryInviteCount</span>
+                                                  Pending library invites
+                                                </a>
                                               </td>
                                             </tr>
+                                            }
                                             <tr>
                                               <td height="10" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                             </tr>
+                                            @if(activityData.unreadMessageCount > 0) {
                                             <tr>
                                               <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">
-                                                <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;"><span style="font-size:25px;line-height:27px;font-weight:bold;">124 </span> Unread messages</a>
+                                                <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;"><span style="font-size:25px;line-height:27px;font-weight:bold;">@activityData.unreadMessageCount</span>
+                                                  Unread message@if(activityData.unreadMessageCount != 1){s}
+                                                </a>
                                               </td>
                                             </tr>
+                                            }
                                           </table>
                                         </td>
                                       </tr>
@@ -568,6 +587,7 @@
                                     </table>
                                   </td>
                                 </tr>
+                                }
                                 <tr>
                                   <td align="left" valign="top">
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
@@ -580,7 +600,9 @@
                                             <tr>
                                               <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Relevant libraries to follow</td>
                                             </tr>
-                                            @views.html.email.v3.activityFeedLibRecoPartial()
+                                            @activityData.libraryRecos.map { lib =>
+                                            @views.html.email.v3.activityFeedLibRecoPartial(lib)
+                                            }
                                             <tr>
                                               <td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                             </tr>

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryMiniCard', [
-  '$rootScope', '$state', 'libraryService', 'profileService', 'friendService', 'modalService', 'routeService', '$location',
-  function ($rootScope, $state, libraryService, profileService, friendService, modalService, routeService, $location) {
+  '$rootScope', '$state', 'libraryService', 'profileService', 'friendService', 'modalService', 'routeService', 'signupService', '$location',
+  function ($rootScope, $state, libraryService, profileService, friendService, modalService, routeService, signupService, $location) {
     return {
       restrict: 'A',
       replace: true,
@@ -22,6 +22,11 @@ angular.module('kifi')
         // Internal helper methods.
         //
         function followLibrary() {
+          if ($rootScope.userLoggedIn === false) {
+            scope.showMiniCard = false;
+            return signupService.register({libraryId: scope.library.id, intent: 'follow'});
+          }
+
           libraryService.joinLibrary(scope.library.id).then(function () {
             if ($location.path() === scope.library.url) {
               $state.reload();

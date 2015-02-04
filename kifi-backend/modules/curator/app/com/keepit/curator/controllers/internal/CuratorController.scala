@@ -60,6 +60,7 @@ class CuratorController @Inject() (
     val subSource = (request.body \ "subSource").as[RecommendationSubSource]
     val more = (request.body \ "more").as[Boolean]
     val recencyWeight = (request.body \ "recencyWeight").as[Float]
+    val context = (request.body \ "context").asOpt[String]
 
     userExperimentCommander.getExperimentsByUser(userId) map { experiments =>
       val sortStrategy =
@@ -67,7 +68,9 @@ class CuratorController @Inject() (
         else topScoreRecoStrategy
       val scoringStrategy = nonlinearRecoScoringStrategy
 
-      Ok(Json.toJson(recoRetrievalCommander.topRecos(userId, more, recencyWeight, source, subSource, sortStrategy, scoringStrategy)))
+      val recoResults = recoRetrievalCommander.topRecos(userId, more, recencyWeight, source, subSource, sortStrategy, scoringStrategy, context)
+
+      Ok(Json.toJson(recoResults))
     }
   }
 
@@ -116,16 +119,17 @@ class CuratorController @Inject() (
     Ok
   }
 
-  def topLibraryRecos(userId: Id[User], limit: Int) = Action.async(parse.tolerantJson) { request =>
+  def topLibraryRecos(userId: Id[User], limit: Int, context: Option[String]) = Action.async(parse.tolerantJson) { request =>
     log.info(s"topLibraryRecos called userId=$userId limit=$limit")
 
     userExperimentCommander.getExperimentsByUser(userId) map { experiments =>
       val sortStrategy = topScoreLibraryRecoStrategy
       val scoringStrategy = nonlinearLibraryRecoScoringStrategy
 
-      val libRecoInfos = libraryRecoGenCommander.getTopRecommendations(userId, limit, sortStrategy, scoringStrategy)
+      val recoResults = libraryRecoGenCommander.getTopRecommendations(userId, limit, sortStrategy, scoringStrategy, context)
+      val libRecoInfos = recoResults.recos
       log.info(s"topLibraryRecos returning userId=$userId resultCount=${libRecoInfos.size}")
-      Ok(Json.toJson(libRecoInfos))
+      Ok(Json.toJson(recoResults))
     }
   }
 
