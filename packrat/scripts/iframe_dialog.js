@@ -9,7 +9,7 @@ var iframeDialog = function () {
   'use strict';
   var configs = {
     login: {
-      height: 372,
+      height: 386,
       width: 660,
       templatePath: 'html/login_dialog',
       styles: ['styles/iframes/login.css'],
