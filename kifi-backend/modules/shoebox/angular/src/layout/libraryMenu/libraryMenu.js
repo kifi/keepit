@@ -19,6 +19,7 @@ angular.module('kifi')
         var scrollableLibList = element.find('.kf-scrollable-libs');
         var antiscrollLibList = scrollableLibList.find('.antiscroll-inner');
         var separators = antiscrollLibList.find('.kf-nav-lib-separator');
+        var elementCache = {};
 
         //
         // Scope data.
@@ -39,13 +40,11 @@ angular.module('kifi')
         // Internal methods.
         //
         function getElement(selector) {
-          var cache = {};
-
-          if (!cache[selector] || !cache[selector].length) {
-            cache[selector] = angular.element(selector);
+          if (!elementCache[selector] || !elementCache[selector].length) {
+            elementCache[selector] = angular.element(selector);
           }
 
-          return cache[selector];
+          return elementCache[selector];
         }
 
         function positionMenu() {
