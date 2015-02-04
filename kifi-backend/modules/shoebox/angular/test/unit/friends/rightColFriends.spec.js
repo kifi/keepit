@@ -26,8 +26,8 @@ describe('kifi.friends.rightColFriendsView', function () {
     });
 
     it('should have the correct friend count text', function () {
-      spyOn(friendService, 'totalFriends').andReturn(2);
-      spyOn(friendService, 'getKifiFriends').andReturn(promise([{}, {}]));
+      spyOn(friendService, 'totalFriends').and.returnValue(2);
+      spyOn(friendService, 'getKifiFriends').and.returnValue(promise([{}, {}]));
 
       scope.$digest();
 
