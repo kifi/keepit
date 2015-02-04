@@ -16,7 +16,6 @@ angular.module('kifi')
         // Internal data.
         //
         var allUserLibs = [];
-        var w = angular.element($window);
         var scrollableLibList = element.find('.kf-scrollable-libs');
         var antiscrollLibList = scrollableLibList.find('.antiscroll-inner');
         var separators = antiscrollLibList.find('.kf-nav-lib-separator');
@@ -64,13 +63,6 @@ angular.module('kifi')
           positionMenu();
           setMenuHeight();
           scope.changeList();
-        }
-
-        function setLibListHeight() {
-          if (scrollableLibList.offset()) {
-            scrollableLibList.height(w.height() - (scrollableLibList.offset().top - w[0].pageYOffset));
-          }
-          scope.$broadcast('refreshScroll');
         }
 
         function updateNavLibs() {
@@ -162,6 +154,11 @@ angular.module('kifi')
           if (dom) {
             dom.style.position = position;
             dom.style.top = top + 'px';
+            if (position === 'fixed') {
+              dom.style.left = angular.element(dom).parent().offset().left + 'px';
+            } else {
+              dom.style.left = '0px';
+            }
           }
         }
 
@@ -260,49 +257,42 @@ angular.module('kifi')
           scope.changeList();
         });
 
-        // on resizing window -> trigger new turn -> reset library list height
-        w.bind('resize', function () {
-          scope.$apply(function () {
-            setLibListHeight();
-          });
-        });
-
-        // Position menu w/r to the toggle menu burger.
         scope.$watch('libraryMenu.visible', function (visible) {
           if (visible) {
             openMenu();
           }
         });
-        var positionMenuOnResize = _.debounce(positionMenu, 20);
-        $window.addEventListener('resize', positionMenuOnResize);
-        scope.$on('$destroy', function () {
-          $window.removeEventListener(positionMenuOnResize);
-        });
 
+        // On window resize, if the library menu is open, close it during the
+        // resize and reopen after resizing has completed.
+        var closedOnResize = false;
+        var reopenOnResizeComplete = _.debounce(function () {
+          if (closedOnResize) {
+            $timeout(function () {
+              scope.libraryMenu.visible = true;
+              closedOnResize = false;
+            });
+          }
+        }, 500);
+        var hideAndReopenOnResize = function () {
+          $timeout(function () {
+            if (scope.libraryMenu.visible) {
+              scope.libraryMenu.visible = false;
+              closedOnResize = true;
+            }
+
+            $timeout(reopenOnResizeComplete);
+          });
+        };
+        $window.addEventListener('resize', hideAndReopenOnResize);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener(hideAndReopenOnResize);
+        });
 
         //
         // Scrolling.
         //
-
-        // we thought about putting this check into the watch function above,
-        // but even when libraries are enabled, the element is found but the offset is 0
-        // in setLibListHeight(), if the offset is 0, the height of scrollableLibList == window height
-        // and thus no scrolly-bar =[
-        // once the offset is not 0, we know it's in the correct position and we can cancel this interval
-        var lastHeight = 0;
-        var promiseLibList = $interval(function() {
-          scrollableLibList = element.find('.kf-scrollable-libs');
-          if (scrollableLibList.offset() && scrollableLibList.offset().top > 0) {
-            setLibListHeight();
-            if (lastHeight === scrollableLibList.height()) {
-              $interval.cancel(promiseLibList);
-            }
-            lastHeight = scrollableLibList.height(); // probably a better way to do this - sometimes scrollbar is buggy but this secures the height
-          }
-        }, 100);
-
         antiscrollLibList.bind('scroll', _.debounce(setStickySeparator, 10));
-
 
         //
         // Filtering.
@@ -337,7 +327,6 @@ angular.module('kifi')
         scope.onFilterChange = function () {
           return scope.changeList();
         };
-
 
         scope.changeList = function () {
           var term = scope.filter.name;
