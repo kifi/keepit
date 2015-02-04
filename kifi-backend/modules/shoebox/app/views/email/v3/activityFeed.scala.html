@@ -395,88 +395,8 @@
                                               <td height="30" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                             </tr>
                                             <tr>
-                                              <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">3 fellow Techi’s Followed
-                                                <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;">best apps 2015</a>
-                                              </td>
-                                            </tr>
-                                            <tr>
-                                              <td height="15" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
-                                            <tr>
-                                              <td align="left" valign="top">
-                                                <table width="201" border="0" cellspacing="0" cellpadding="0" align="left">
-                                                  <tr>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img1.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img2.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img3.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top"></td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top"></td>
-                                                  </tr>
-                                                </table>
-                                              </td>
-                                            </tr>
-                                          </table>
-                                        </td>
-                                      </tr>
-                                      <tr>
-                                        <td align="left" valign="top">
-                                          <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-                                            <tr>
-                                              <td height="30" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
-                                            <tr>
-                                              <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">
-                                                <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;font-weight:bold;">Eishay Smith, Tom Duterme and</a> 45 other techis<br/>
-                                                Followed your library
-                                                <a href="#" target="_blank" style="text-decoration:none;color:#62BE73;">Useful stuff for a startup CEO</a>
-                                              </td>
-                                            </tr>
-                                            <tr>
-                                              <td height="15" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
-                                            <tr>
-                                              <td align="left" valign="top">
-                                                <table width="201" border="0" cellspacing="0" cellpadding="0" align="left">
-                                                  <tr>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img1.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img2.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top"></td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top"></td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top"></td>
-                                                  </tr>
-                                                </table>
-                                              </td>
-                                            </tr>
-                                          </table>
-                                        </td>
-                                      </tr>
-                                      <tr>
-                                        <td align="left" valign="top">
-                                          <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-                                            <tr>
-                                              <td height="30" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
-                                            <tr>
-                                              <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">Your Useful design stuff 2015 library was recommended<br class="br"/>
-                                                by Kifi to 2369 people
+                                              <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">Your Blah Blah Blah library was recommended<br class="br"/>
+                                                by Kifi to 1234 people
                                               </td>
                                             </tr>
                                             <tr>
@@ -601,7 +521,7 @@
                                               <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Relevant libraries to follow</td>
                                             </tr>
                                             @activityData.libraryRecos.map { lib =>
-                                            @views.html.email.v3.activityFeedLibRecoPartial(lib)
+                                            @activityFeedLibRecoPartial(lib)
                                             }
                                             <tr>
                                               <td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td>
@@ -615,159 +535,13 @@
                                     </table>
                                   </td>
                                 </tr>
-                                <tr>
-                                  <td align="left" valign="top">
-                                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                      <tr>
-                                        <td height="34" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                      </tr>
-                                      <tr>
-                                        <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">You are almost a Kifi contributor</td>
-                                      </tr>
-                                      <tr>
-                                        <td height="18" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                      </tr>
-                                      <tr>
-                                        <td align="left" valign="top">
-                                          <table width="450" border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper">
-                                            <tr>
-                                              <td align="center" valign="top">
-                                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                  <tr>
-                                                    <td class="txt1" align="left" valign="middle" width="142" height="26" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:20px;color:#7f7f7f;">Keeps 5 things</td>
-                                                    <td align="left" valign="top" style="font-size:0px;line-height:0px;" class="width_1">
-                                                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                        <tr>
-                                                          <td class="height" height="10" style="line-height:1px;font-size:1px;">&nbsp;</td>
-                                                        </tr>
-                                                        <tr>
-                                                          <td height="7" style="border-radius:9px;background-color:#d7d7d7;line-height:1px;font-size:1px;">
-                                                            <table width="306" border="0" cellspacing="0" cellpadding="0" align="center" class="width_1">
-                                                              <tr>
-                                                                <td>
-                                                                  <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                                    <tr>
-                                                                      <td class="width_11" width="118" height="5" style="border-radius:10px;background-color:#56b163;line-height:1px;font-size:1px;">&nbsp;</td>
-                                                                      <td bgcolor="#FFFFFF" height="5" style="line-height:1px;font-size:1px;">&nbsp;</td>
-                                                                    </tr>
-                                                                  </table>
-                                                                </td>
-                                                              </tr>
-                                                            </table>
-                                                          </td>
-                                                        </tr>
-                                                      </table>
-                                                    </td>
-                                                  </tr>
-                                                </table>
-                                              </td>
-                                            </tr>
-                                            <tr>
-                                              <td align="center" valign="top">
-                                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                  <tr>
-                                                    <td class="txt1" align="left" valign="middle" width="142" height="26" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:20px;color:#7f7f7f;">Create 2 libraries</td>
-                                                    <td align="left" valign="top" style="font-size:0px;line-height:0px;" class="width_1">
-                                                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                        <tr>
-                                                          <td class="height" height="10" style="line-height:1px;font-size:1px;">&nbsp;</td>
-                                                        </tr>
-                                                        <tr>
-                                                          <td height="7" style="border-radius:9px;background-color:#d7d7d7;line-height:1px;font-size:1px;">
-                                                            <table width="306" border="0" cellspacing="0" cellpadding="0" align="center" class="width_1">
-                                                              <tr>
-                                                                <td>
-                                                                  <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                                    <tr>
-                                                                      <td class="width_12" width="158" height="5" style="border-radius:10px;background-color:#56b163;line-height:1px;font-size:1px;">&nbsp;</td>
-                                                                      <td bgcolor="#FFFFFF" height="5" style="line-height:1px;font-size:1px;">&nbsp;</td>
-                                                                    </tr>
-                                                                  </table>
-                                                                </td>
-                                                              </tr>
-                                                            </table>
-                                                          </td>
-                                                        </tr>
-                                                      </table>
-                                                    </td>
-                                                  </tr>
-                                                </table>
-                                              </td>
-                                            </tr>
-                                            <tr>
-                                              <td align="center" valign="top">
-                                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                  <tr>
-                                                    <td class="txt1" align="left" valign="middle" width="142" height="26" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:20px;color:#7f7f7f;">Follow 2 libraries</td>
-                                                    <td align="left" valign="top" style="font-size:0px;line-height:0px;" class="width_1">
-                                                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                        <tr>
-                                                          <td class="height" height="10" style="line-height:1px;font-size:1px;">&nbsp;</td>
-                                                        </tr>
-                                                        <tr>
-                                                          <td height="7" style="border-radius:9px;background-color:#d7d7d7;line-height:1px;font-size:1px;">
-                                                            <table width="306" border="0" cellspacing="0" cellpadding="0" align="center" class="width_1">
-                                                              <tr>
-                                                                <td>
-                                                                  <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                                    <tr>
-                                                                      <td class="width_12" height="5" style="border-radius:10px;background-color:#56b163;line-height:1px;font-size:1px;">&nbsp;</td>
-                                                                    </tr>
-                                                                  </table>
-                                                                </td>
-                                                              </tr>
-                                                            </table>
-                                                          </td>
-                                                        </tr>
-                                                      </table>
-                                                    </td>
-                                                  </tr>
-                                                </table>
-                                              </td>
-                                            </tr>
-                                            <tr>
-                                              <td align="center" valign="top">
-                                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                  <tr>
-                                                    <td class="txt1" align="left" valign="middle" width="142" height="26" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:20px;color:#7f7f7f;">Share 1 library</td>
-                                                    <td align="left" valign="top" style="font-size:0px;line-height:0px;" class="width_1">
-                                                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                        <tr>
-                                                          <td class="height" height="11" style="line-height:1px;font-size:1px;">&nbsp;</td>
-                                                        </tr>
-                                                        <tr>
-                                                          <td height="7" style="border-radius:9px;background-color:#d7d7d7;line-height:1px;font-size:1px;">
-                                                            <table width="306" border="0" cellspacing="0" cellpadding="0" align="center" class="width_1">
-                                                              <tr>
-                                                                <td>
-                                                                  <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                                    <tr>
-                                                                      <td class="width_12" height="5" style="border-radius:10px;background-color:#ffffff;line-height:1px;font-size:1px;">&nbsp;</td>
-                                                                    </tr>
-                                                                  </table>
-                                                                </td>
-                                                              </tr>
-                                                            </table>
-                                                          </td>
-                                                        </tr>
-                                                      </table>
-                                                    </td>
-                                                  </tr>
-                                                </table>
-                                              </td>
-                                            </tr>
-                                          </table>
-                                        </td>
-                                      </tr>
-                                      <tr>
-                                        <td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                      </tr>
-                                      <tr>
-                                        <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                      </tr>
-                                    </table>
-                                  </td>
-                                </tr>
+
+                                @*********************************************************************************
+                                * TODO kifi contributor progress bars
+                                **********************************************************************************
+                                @activityFeedKifiContributorStatusPartial()
+                                *********************************************************************************@
+
                                 <tr>
                                   <td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                 </tr>
