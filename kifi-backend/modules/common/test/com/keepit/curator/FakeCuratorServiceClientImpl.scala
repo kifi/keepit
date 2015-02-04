@@ -20,7 +20,7 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   var fakeTopRecos: Map[Id[User], Seq[RecoInfo]] = Map.empty
 
-  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[URIRecoResults] =
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[URIRecoResults] =
     Future.successful {
       val recos = fakeTopRecos.getOrElse(userId, Seq[RecoInfo]())
       URIRecoResults(recos, "")
@@ -44,7 +44,7 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def refreshUserRecos(userId: Id[User]): Future[Unit] = { Future.successful() }
 
-  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[LibraryRecoResults] =
+  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None, context: Option[String]): Future[LibraryRecoResults] =
     Future.successful {
       val recos = topLibraryRecosExpectations(userId)
       LibraryRecoResults(recos, "")

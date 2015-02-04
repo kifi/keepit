@@ -157,8 +157,8 @@ class RecommendationsCommander @Inject() (
     libraryAttrInfos ++ topicAttrInfos //++ keepAttrInfos
   }
 
-  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[Seq[FullUriRecoInfo]] = {
-    curator.topRecos(userId, source, subSource, more, recencyWeight).flatMap { recoResults =>
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[Seq[FullUriRecoInfo]] = {
+    curator.topRecos(userId, source, subSource, more, recencyWeight, context).flatMap { recoResults =>
       val recos = recoResults.recos
       val recosWithUris: Seq[(RecoInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
         recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }
@@ -231,9 +231,9 @@ class RecommendationsCommander @Inject() (
     createFullLibraryInfos(userId, curatedLibraries)
   }
 
-  def topPublicLibraryRecos(userId: Id[User], limit: Int, source: RecommendationSource, subSource: RecommendationSubSource, trackDelivery: Boolean = true): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {
+  def topPublicLibraryRecos(userId: Id[User], limit: Int, source: RecommendationSource, subSource: RecommendationSubSource, trackDelivery: Boolean = true, context: Option[String]): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {
     // get extra recos from curator incase we filter out some below
-    curator.topLibraryRecos(userId, Some(limit * 4)) flatMap { libResults =>
+    curator.topLibraryRecos(userId, Some(limit * 4), context) flatMap { libResults =>
       val libInfos = libResults.recos
       val libIds = libInfos.map(_.libraryId).toSet
       val libraries = db.readOnlyReplica { implicit s =>

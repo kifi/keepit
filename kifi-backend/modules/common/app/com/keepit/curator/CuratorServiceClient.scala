@@ -17,14 +17,14 @@ trait CuratorServiceClient extends ServiceClient {
   final val serviceType = ServiceType.CURATOR
 
   def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[RecoInfo]]
-  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[URIRecoResults]
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[URIRecoResults]
   def topPublicRecos(userId: Option[Id[User]]): Future[Seq[RecoInfo]]
   def generalRecos(): Future[Seq[RecoInfo]]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean]
   def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Future[Boolean]
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String]
   def refreshUserRecos(userId: Id[User]): Future[Unit]
-  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[LibraryRecoResults]
+  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None, context: Option[String]): Future[LibraryRecoResults]
   def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None): Future[Unit]
   def notifyLibraryRecosDelivered(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource): Future[Unit]
 }
@@ -42,12 +42,13 @@ class CuratorServiceClientImpl(
     }
   }
 
-  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float): Future[URIRecoResults] = {
+  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[URIRecoResults] = {
     val payload = Json.obj(
       "source" -> source,
       "subSource" -> subSource,
       "more" -> more,
-      "recencyWeight" -> recencyWeight
+      "recencyWeight" -> recencyWeight,
+      "context" -> context
     )
     call(Curator.internal.topRecos(userId), body = payload).map { response =>
       val js = response.json
@@ -94,8 +95,8 @@ class CuratorServiceClientImpl(
     callLeader(Curator.internal.refreshUserRecos(userId), callTimeouts = longTimeout).map { x => }
   }
 
-  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None): Future[LibraryRecoResults] = {
-    call(Curator.internal.topLibraryRecos(userId, limit)).map { response =>
+  def topLibraryRecos(userId: Id[User], limit: Option[Int] = None, context: Option[String]): Future[LibraryRecoResults] = {
+    call(Curator.internal.topLibraryRecos(userId, limit, context)).map { response =>
       val js = response.json
       js.validate[LibraryRecoResults] match {
         case res: JsSuccess[LibraryRecoResults] => res.get
