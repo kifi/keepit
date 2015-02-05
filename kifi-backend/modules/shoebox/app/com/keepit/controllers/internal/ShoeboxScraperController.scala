@@ -167,8 +167,8 @@ class ShoeboxScraperController @Inject() (
     require(!args.isEmpty && args.length == 2, "Both uri and redirect need to be supplied")
     val uri = args(0).as[NormalizedURI]
     val redirect = args(1).as[HttpRedirect]
-    require(redirect.isPermanent, "HTTP redirect is not permanent.")
     require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
+    require(redirect.isPermanent || redirect.isShortener, "HTTP redirect is neither permanent nor from a shortener.")
     val verifiedCandidateOption = normalizationServiceProvider.get.prenormalize(redirect.newDestination).toOption.flatMap { prenormalizedDestination =>
       db.readWrite { implicit session =>
         val (candidateUrl, candidateNormalizationOption) = normUriRepo.getByNormalizedUrl(prenormalizedDestination) match {
