@@ -49,7 +49,6 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
     FakeScrapeSchedulerConfigModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
-    UrlPatternRuleModule(),
     FakeCuratorServiceClientModule()
   )
 

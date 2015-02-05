@@ -34,8 +34,6 @@ angular.module('kifi')
 
     $scope.addEmailInput = {};
 
-    $scope.logout = profileService.logout;
-
     $scope.saveDescription = function (value) {
       profileService.postMe({
         description: value

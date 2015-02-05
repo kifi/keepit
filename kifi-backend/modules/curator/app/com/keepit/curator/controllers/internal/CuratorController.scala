@@ -11,6 +11,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.curator.commanders.email.{ RecentInterestRankStrategy, EngagementEmailActor, FeedDigestEmailSender }
 import com.keepit.curator.commanders._
+import com.keepit.curator.commanders.persona.PersonaRecommendationIngestor
 import com.keepit.curator.model.{ RecommendationSubSource, LibraryRecoSelectionParams, LibraryRecoInfo, RecommendationSource, LibraryRecommendation }
 import com.keepit.model.{ LibraryRecommendationFeedback, Library, UserValueName, UriRecommendationFeedback, NormalizedURI, ExperimentType, User, UriRecommendationScores }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -35,6 +36,7 @@ class CuratorController @Inject() (
     scheduler: Scheduler,
     feedEmailSender: FeedDigestEmailSender,
     userExperimentCommander: RemoteUserExperimentCommander,
+    personaRecoIngestor: PersonaRecommendationIngestor,
     protected val airbrake: AirbrakeNotifier) extends CuratorServiceController {
 
   val topScoreRecoStrategy = new TopScoreRecoSelectionStrategy()
@@ -58,6 +60,7 @@ class CuratorController @Inject() (
     val subSource = (request.body \ "subSource").as[RecommendationSubSource]
     val more = (request.body \ "more").as[Boolean]
     val recencyWeight = (request.body \ "recencyWeight").as[Float]
+    val context = (request.body \ "context").asOpt[String]
 
     userExperimentCommander.getExperimentsByUser(userId) map { experiments =>
       val sortStrategy =
@@ -65,7 +68,9 @@ class CuratorController @Inject() (
         else topScoreRecoStrategy
       val scoringStrategy = nonlinearRecoScoringStrategy
 
-      Ok(Json.toJson(recoRetrievalCommander.topRecos(userId, more, recencyWeight, source, subSource, sortStrategy, scoringStrategy)))
+      val recoResults = recoRetrievalCommander.topRecos(userId, more, recencyWeight, source, subSource, sortStrategy, scoringStrategy, context)
+
+      Ok(Json.toJson(recoResults))
     }
   }
 
@@ -114,16 +119,17 @@ class CuratorController @Inject() (
     Ok
   }
 
-  def topLibraryRecos(userId: Id[User], limit: Int) = Action.async(parse.tolerantJson) { request =>
+  def topLibraryRecos(userId: Id[User], limit: Int, context: Option[String]) = Action.async(parse.tolerantJson) { request =>
     log.info(s"topLibraryRecos called userId=$userId limit=$limit")
 
     userExperimentCommander.getExperimentsByUser(userId) map { experiments =>
       val sortStrategy = topScoreLibraryRecoStrategy
       val scoringStrategy = nonlinearLibraryRecoScoringStrategy
 
-      val libRecoInfos = libraryRecoGenCommander.getTopRecommendations(userId, limit, sortStrategy, scoringStrategy)
+      val recoResults = libraryRecoGenCommander.getTopRecommendations(userId, limit, sortStrategy, scoringStrategy, context)
+      val libRecoInfos = recoResults.recos
       log.info(s"topLibraryRecos returning userId=$userId resultCount=${libRecoInfos.size}")
-      Ok(Json.toJson(libRecoInfos))
+      Ok(Json.toJson(recoResults))
     }
   }
 

@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, SearchServiceController }
 import com.keepit.common.logging.Logging
 import com.keepit.search.UserSearchCommander
-import com.keepit.search.index.user._
+import com.keepit.search.user.DeprecatedUserHit
 import play.api.libs.json.Json
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
@@ -30,7 +30,7 @@ class MobileUserSearchController @Inject() (
     val requestedUsers = Await.result(friendRequests, 5 seconds).toSet
 
     val jsVals = res.hits.map {
-      case UserHit(id, basicUser, isFriend) =>
+      case DeprecatedUserHit(id, basicUser, isFriend) =>
         val status = {
           if (isFriend) "friend"
           else if (requestedUsers.contains(id)) "requested"
@@ -45,8 +45,17 @@ class MobileUserSearchController @Inject() (
 
   def searchV1(queryText: String, filter: Option[String], context: Option[String], maxHits: Int) = UserAction { request =>
     val userId = request.userId
-    val res = userSearchCommander.searchUsers(Some(userId), queryText, maxHits, context = context, filter = filter, excludeSelf = true)
-    Ok(Json.toJson(res))
+    val userSearchResult = userSearchCommander.searchUsers(Some(userId), queryText, maxHits, context = context, filter = filter, excludeSelf = true)
+    val json = Json.obj(
+      "context" -> userSearchResult.context,
+      "hits" -> JsArray(userSearchResult.hits.map { hit =>
+        Json.obj(
+          "isFriend" -> hit.isFriend,
+          "basicUser" -> hit.basicUser
+        )
+      })
+    )
+    Ok(Json.toJson(json))
   }
 
 }

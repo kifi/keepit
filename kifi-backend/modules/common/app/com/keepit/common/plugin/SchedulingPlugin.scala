@@ -18,10 +18,12 @@ trait SchedulingProperties {
   //bad name, can you think of anything else?
   //method returns true if schedualing is enabled and the instance is the leader
   def enabledOnlyForLeader: Boolean
+  def enabledOnlyForOneMachine(taskName: String): Boolean
 }
 
 class SchedulingPropertiesImpl(serviceDiscovery: ServiceDiscovery, val enabled: Boolean = true) extends SchedulingProperties {
   def enabledOnlyForLeader: Boolean = enabled && serviceDiscovery.isLeader()
+  def enabledOnlyForOneMachine(taskName: String): Boolean = enabled && serviceDiscovery.isRunnerFor(taskName)
 }
 
 case class NamedCancellable(underlying: Cancellable, taskName: String) extends Cancellable {
@@ -89,6 +91,22 @@ trait SchedulerPlugin extends Plugin with Logging {
     }
   }
 
+  def scheduleTaskOnOneMachine(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any, name: String): Unit = {
+    val taskName = s"[$name] send message $message to actor $receiver on one machine only"
+    if (scheduling.enabled) {
+      log.info(s"Scheduling $taskName")
+      scheduleTask(system, initialDelay, frequency, taskName) {
+        if (scheduling.enabledOnlyForOneMachine(name)) {
+          timing(s"executing scheduled task: $taskName") {
+            receiver ! message
+          }
+        }
+      }
+    } else {
+      log.debug(s"permanently disable scheduling for task: $taskName")
+    }
+  }
+
   def scheduleTaskOnAllMachines(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit = {
     val taskName = s"send message $message to actor $receiver on all machines"
     if (scheduling.enabled) {
@@ -104,7 +122,7 @@ trait SchedulerPlugin extends Plugin with Logging {
   }
 
   def scheduleTaskOnLeader(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, name: String)(f: => Unit): Unit = {
-    val taskName = s"call task function $name on leader only"
+    val taskName = s"[$name] call task function on leader only"
     if (scheduling.enabled) {
       log.info(s"Scheduling $taskName")
       scheduleTask(system, initialDelay, frequency, taskName) {
@@ -119,8 +137,24 @@ trait SchedulerPlugin extends Plugin with Logging {
     }
   }
 
+  def scheduleTaskOnOneMachine(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, name: String)(f: => Unit): Unit = {
+    val taskName = s"[$name] call task function on one machine only"
+    if (scheduling.enabled) {
+      log.info(s"Scheduling $taskName")
+      scheduleTask(system, initialDelay, frequency, taskName) {
+        if (scheduling.enabledOnlyForOneMachine(name)) {
+          timing(s"executing scheduled task: $taskName") {
+            f
+          }
+        }
+      }
+    } else {
+      log.debug(s"permanently disable scheduling for task: $taskName")
+    }
+  }
+
   def scheduleTaskOnAllMachines(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, name: String)(f: => Unit): Unit = {
-    val taskName = s"call task function $name on all machines"
+    val taskName = s"[$name] call task function on all machines"
     if (scheduling.enabled) {
       log.info(s"Scheduling $taskName")
       scheduleTask(system, initialDelay, frequency, taskName) {

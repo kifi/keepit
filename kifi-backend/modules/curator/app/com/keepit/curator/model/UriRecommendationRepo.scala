@@ -17,7 +17,7 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[UriRecommendationRepoImpl])
 trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[UriRecommendation]
-  def getByUriAndUserId(uriId: Id[NormalizedURI], userId: Id[User], uriRecommendationState: Option[State[UriRecommendation]])(implicit session: RSession): Option[UriRecommendation]
+  def getByUriAndUserId(uriId: Id[NormalizedURI], userId: Id[User], excludeUriRecommendationState: Option[State[UriRecommendation]])(implicit session: RSession): Option[UriRecommendation]
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
   def getRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[UriRecommendation]
   def getDigestRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int, masterScoreThreshold: Float = 0f)(implicit session: RSession): Seq[UriRecommendation]
@@ -138,7 +138,7 @@ class UriRecommendationRepoImpl @Inject() (
     sqlu"""
       DELETE FROM uri_recommendation WHERE user_id=$userId AND master_score < (SELECT MIN(master_score) FROM (
         SELECT master_score FROM uri_recommendation WHERE user_id=$userId ORDER BY master_score DESC LIMIT $limitNumRecosForUser
-      ) AS mScoreTable) AND updated_at < $before""".first()
+      ) AS mScoreTable) AND (updated_at < $before OR delivered>0)""".first()
 
   }
 

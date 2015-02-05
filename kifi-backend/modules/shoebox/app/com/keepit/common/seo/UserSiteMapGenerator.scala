@@ -26,7 +26,7 @@ import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 object UserSiteMapGenerator {
-  val BaselineDate = new LocalDate(2015, 1, 22)
+  val BaselineDate = new LocalDate(2015, 1, 28)
 }
 
 @Singleton

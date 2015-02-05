@@ -168,6 +168,18 @@ class AdminBookmarksController @Inject() (
     }
   }
 
+  def rescrapeFrom(fromId: Id[NormalizedURI]) = AdminUserAction { implicit request =>
+    val uris = db.readOnlyMaster { implicit s =>
+      uriRepo.getFromId(fromId)
+    }
+    db.readWrite { implicit s =>
+      uris.foreach { uri =>
+        scraper.scheduleScrape(uri, clock.now())
+      }
+    }
+    Ok(uris.size.toString)
+  }
+
   def bookmarksView(page: Int = 0) = AdminUserPage.async { implicit request =>
     val PAGE_SIZE = 25
 
@@ -191,6 +203,7 @@ class AdminBookmarksController @Inject() (
             }
           }
         }
+
         val scrapesFuture = future {
           timing("load scrape info") {
             db.readOnlyReplica { implicit s =>
@@ -216,6 +229,7 @@ class AdminBookmarksController @Inject() (
         }
       }
     }
+
     val privateKeeperKeepCountFuture = future {
       timing("load private keeper counts from today") {
         db.readOnlyReplica { implicit s =>

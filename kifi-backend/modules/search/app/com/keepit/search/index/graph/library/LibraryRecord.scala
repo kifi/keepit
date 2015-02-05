@@ -1,23 +1,24 @@
 package com.keepit.search.index.graph.library
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ LibrarySlug, User, Library }
+import com.keepit.model.{ LibraryColor, LibrarySlug, User, Library }
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
 
-case class LibraryRecord(name: String, description: Option[String], id: Id[Library], ownerId: Id[User], slug: LibrarySlug)
+case class LibraryRecord(id: Id[Library], name: String, description: Option[String], color: Option[LibraryColor], ownerId: Id[User], slug: LibrarySlug)
 
 object LibraryRecord {
-  def apply(library: Library): LibraryRecord = LibraryRecord(library.name, library.description, library.id.get, library.ownerId, library.slug)
+  def apply(library: Library): LibraryRecord = LibraryRecord(library.id.get, library.name, library.description, library.color, library.ownerId, library.slug)
 
   implicit def toByteArray(record: LibraryRecord): Array[Byte] = {
     val baos = new ByteArrayOutputStream()
     val out = new OutputStreamDataOutput(baos)
 
-    out.writeByte(2) // version
+    out.writeByte(3) // version
+    out.writeLong(record.id.id)
     out.writeString(record.name)
     out.writeString(record.description.getOrElse(""))
-    out.writeLong(record.id.id)
+    out.writeString(record.color.map(_.hex).getOrElse(""))
     out.writeLong(record.ownerId.id)
     out.writeString(record.slug.value)
 
@@ -39,7 +40,15 @@ object LibraryRecord {
         val id = Id[Library](in.readLong())
         val ownerId = Id[User](in.readLong())
         val slug = LibrarySlug(in.readString())
-        LibraryRecord(name, description, id, ownerId, slug)
+        LibraryRecord(id, name, description, None, ownerId, slug)
+      case 3 =>
+        val id = Id[Library](in.readLong())
+        val name = in.readString()
+        val description = Some(in.readString()).filter(_.nonEmpty)
+        val color = Some(in.readString()).filter(_.nonEmpty).map(LibraryColor.apply(_))
+        val ownerId = Id[User](in.readLong())
+        val slug = LibrarySlug(in.readString())
+        LibraryRecord(id, name, description, color, ownerId, slug)
       case _ => throw new Exception(s"invalid data [version=${version}]")
     }
   }

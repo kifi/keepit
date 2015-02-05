@@ -17,11 +17,11 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.Logging
-import com.keepit.search.engine.SearchFactory
+import com.keepit.search.engine.{ LibraryQualityEvaluator, SearchFactory }
 import com.keepit.common.core._
 import com.keepit.search.{ LibraryContext, DistributedSearchServiceClient }
 import com.keepit.search.augmentation.AugmentationCommander.DistributionPlan
-import com.keepit.search.index.graph.library.{ LibraryRecord, LibraryFields, LibraryIndexer }
+import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryRecord, LibraryFields, LibraryIndexer }
 import com.keepit.common.strings.Profanity
 
 object AugmentationCommander {
@@ -41,6 +41,7 @@ class AugmentationCommanderImpl @Inject() (
     shardedKeepIndexer: ShardedKeepIndexer,
     libraryIndexer: LibraryIndexer,
     searchFactory: SearchFactory,
+    libraryQualityEvaluator: LibraryQualityEvaluator,
     val searchClient: DistributedSearchServiceClient) extends AugmentationCommander with Sharding with Logging {
 
   def getAugmentedItems(itemAugmentationRequest: ItemAugmentationRequest): Future[Map[AugmentableItem, AugmentedItem]] = {
@@ -122,9 +123,9 @@ class AugmentationCommanderImpl @Inject() (
   }
 
   // todo(Léo): this is currently very much unrestricted in order to push for library discovery
-  private def showPublishedLibrary(librarySearcher: Searcher, libraryId: Long): Boolean = {
-    librarySearcher.getDecodedDocValue[LibraryRecord](LibraryFields.recordField, libraryId).exists { record =>
-      !record.name.toLowerCase.split("\\s+").exists(Profanity.all.contains)
+  private def showThisPublishedLibrary(librarySearcher: Searcher, libraryId: Long): Boolean = {
+    LibraryIndexable.getName(librarySearcher, libraryId).exists { name =>
+      !libraryQualityEvaluator.isPoorlyNamed(name)
     }
   }
 
@@ -174,7 +175,7 @@ class AugmentationCommanderImpl @Inject() (
           else visibility match { // kept by others
             case PUBLISHED =>
               uniqueKeepers += userId
-              if (showPublishedLibraries) { // todo(Léo): replace with showPublishedLibrary(librarySearcher, libraryId)) when mobile front-end is fixed
+              if (showPublishedLibraries && showThisPublishedLibrary(librarySearcher, libraryId)) {
                 val record = getKeepRecord(docId)
                 keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), record.tags)
               } else {
@@ -193,12 +194,12 @@ class AugmentationCommanderImpl @Inject() (
     FullAugmentationInfo(keeps.toList, otherPublishedKeeps, otherDiscoverableKeeps, uniqueKeepers.size)
   }
 
-  private def computeAugmentationScores(weigthedAugmentationInfos: Iterable[(FullAugmentationInfo, Float)]): AugmentationScores = {
+  private def computeAugmentationScores(weightedAugmentationInfos: Iterable[(FullAugmentationInfo, Float)]): AugmentationScores = {
     val libraryScores = MutableMap[Id[Library], Float]() withDefaultValue 0f
     val userScores = MutableMap[Id[User], Float]() withDefaultValue 0f
     val tagScores = MutableMap[Hashtag, Float]() withDefaultValue 0f
 
-    weigthedAugmentationInfos.foreach {
+    weightedAugmentationInfos.foreach {
       case (info, weight) =>
         (info.keeps).foreach {
           case RestrictedKeepInfo(_, libraryIdOpt, userIdOpt, tags) =>

@@ -1,8 +1,10 @@
 package com.keepit.model
 
+import javax.inject.Provider
+
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time.Clock
@@ -11,13 +13,16 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[UserPersonaRepoImpl])
 trait UserPersonaRepo extends DbRepo[UserPersona] {
   def getByUserAndPersona(userId: Id[User], personaId: Id[Persona])(implicit session: RSession): Option[UserPersona]
-  def getUserPersonas(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]]
-  def getUserLastEditTime(userId: Id[User])(implicit session: RSession): Option[DateTime]
+  def getPersonasForUser(userId: Id[User])(implicit session: RSession): Seq[Persona]
+  def getPersonaIdsForUser(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]]
+  def getUserActivePersonas(userId: Id[User])(implicit session: RSession): UserActivePersonas
 }
 
 @Singleton
 class UserPersonaRepoImpl @Inject() (
     val db: DataBaseComponent,
+    userActivePersonasCache: UserActivePersonasCache,
+    val personaRepo: Provider[PersonaRepoImpl],
     val clock: Clock,
     airbrake: AirbrakeNotifier) extends DbRepo[UserPersona] with UserPersonaRepo {
 
@@ -34,8 +39,25 @@ class UserPersonaRepoImpl @Inject() (
   def table(tag: Tag) = new UserPersonaRepoTable(tag)
   initTable()
 
-  def deleteCache(model: UserPersona)(implicit session: RSession): Unit = {}
-  def invalidateCache(model: UserPersona)(implicit session: RSession): Unit = {}
+  implicit def userId2UserPersonasKey(userId: Id[User]): UserActivePersonasKey = UserActivePersonasKey(userId)
+
+  def deleteCache(model: UserPersona)(implicit session: RSession): Unit = {
+    userActivePersonasCache.remove(model.userId)
+  }
+
+  def invalidateCache(model: UserPersona)(implicit session: RSession): Unit = {
+    val current = {
+      val (pids, updates) = getUserPersonaIdAndUpdatedAtCompiled(model.userId).list.unzip
+      UserActivePersonas(pids, updates)
+    }
+    userActivePersonasCache.set(model.userId, current)
+  }
+
+  override def save(model: UserPersona)(implicit session: RWSession): UserPersona = {
+    val saved = super.save(model)
+    invalidateCache(saved)
+    saved
+  }
 
   private val getByUserAndPersonaCompiled = Compiled { (userId: Column[Id[User]], personaId: Column[Id[Persona]]) =>
     (for (r <- rows if r.userId === userId && r.personaId === personaId) yield r)
@@ -44,17 +66,30 @@ class UserPersonaRepoImpl @Inject() (
     getByUserAndPersonaCompiled(userId, personaId).firstOption
   }
 
-  private val getUserPersonasCompiled = Compiled { (userId: Column[Id[User]]) =>
+  private val getPersonaIdsForUserCompiled = Compiled { (userId: Column[Id[User]]) =>
     (for (r <- rows if r.userId === userId && r.state === UserPersonaStates.ACTIVE) yield r.personaId)
   }
-  def getUserPersonas(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]] = {
-    getUserPersonasCompiled(userId).list
+  def getPersonaIdsForUser(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]] = {
+    getPersonaIdsForUserCompiled(userId).list
   }
 
-  private val getUserLastEditTimeCompiled = Compiled { (userId: Column[Id[User]]) =>
-    (for (r <- rows if r.userId === userId) yield r).sortBy(_.updatedAt.desc)
+  def getPersonasForUser(userId: Id[User])(implicit session: RSession): Seq[Persona] = {
+    val q = for {
+      up <- rows if up.userId === userId && up.state === UserPersonaStates.ACTIVE
+      p <- personaRepo.get.rows if p.id === up.personaId && p.state === PersonaStates.ACTIVE
+    } yield (p)
+    q.list
   }
-  def getUserLastEditTime(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
-    getUserLastEditTimeCompiled(userId).firstOption.map { _.updatedAt }
+
+  private val getUserPersonaIdAndUpdatedAtCompiled = Compiled { (userId: Column[Id[User]]) =>
+    (for (r <- rows if r.userId === userId && r.state === UserPersonaStates.ACTIVE) yield (r.personaId, r.updatedAt))
   }
+
+  def getUserActivePersonas(userId: Id[User])(implicit session: RSession): UserActivePersonas = {
+    userActivePersonasCache.getOrElse(userId) {
+      val (pids, updates) = getUserPersonaIdAndUpdatedAtCompiled(userId).list.unzip
+      UserActivePersonas(pids, updates)
+    }
+  }
+
 }

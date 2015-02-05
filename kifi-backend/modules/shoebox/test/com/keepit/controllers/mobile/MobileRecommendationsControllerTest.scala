@@ -6,7 +6,7 @@ import com.keepit.commanders.{ FakeRecommendationsCommander, FakeShoeboxCommande
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule, UserActionsHelper }
 import com.keepit.common.crypto.PublicId
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ Id, ExternalId }
 
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -104,8 +104,8 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
              "summary":{"title":"Yo!"}},
              "explain":"because :-)"}""".stripMargin
 
-      val libRecoInfos = Seq(
-        FullLibRecoInfo(
+      val libRecoInfos = Seq.tabulate(1) { i: Int =>
+        Id[Library](i) -> FullLibRecoInfo(
           metaData = None,
           itemInfo = FullLibraryInfo(
             id = PublicId[Library]("123"),
@@ -125,7 +125,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
             numCollaborators = 0,
             numFollowers = 10)
         )
-      )
+      }
 
       val expectedLibRecoInfosJson =
         s"""
@@ -155,20 +155,6 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
         contentType(result2) must beSome("application/json")
 
         result2
-      }
-
-      "version 1 includes keeps" in {
-        withDb(modules: _*) { implicit injector =>
-          topRecosSetup()
-
-          val call = com.keepit.controllers.mobile.routes.MobileRecommendationsController.topRecosV1(true, 0.75f)
-          call.url === "/m/1/recos/top?more=true&recency=0.75"
-          call.method === "GET"
-
-          val result = runCommonTopRecosTests(call, request => inject[MobileRecommendationsController].topRecosV1(true, 0.75f)(request))
-          val json = Json.parse(contentAsString(result))
-          json === Json.parse("[" + expectedRecoInfosJson + "]")
-        }
       }
 
       "version 2 includes keeps and libraries" in {

@@ -10,6 +10,7 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
 import com.keepit.common.net.URI
 import com.keepit.common.service.ServiceType
+import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
@@ -38,13 +39,9 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
 
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
+  def getAllURLPatterns(): Future[UrlPatternRules] = Future.successful(UrlPatternRules(Seq.empty))
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
-
-  def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???
-
-  def saveImageInfo(imageInfo: ImageInfo): Future[Unit] = ???
 
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
 
@@ -76,10 +73,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 
   def getProxyP(url: String): Future[Option[HttpProxy]] = ???
-
-  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
-
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = Future.successful(false)
 
   def getLatestKeep(url: String): Future[Option[Keep]] = ???
 
@@ -766,8 +759,14 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]] = ???
 
+  def getKeepCounts(userId: Set[Id[User]]): Future[Map[Id[User], Int]] = ???
+
+  def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]] = ???
+
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]] = Future.successful {
     allLibraryMemberships.values.collect { case membership if membership.userId == userId && membership.canWrite => membership.libraryId }.toSet
   }
+
+  def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = ???
 
 }

@@ -2,6 +2,7 @@ package com.keepit.shoebox
 
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.store.ImageSize
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
@@ -120,7 +121,10 @@ trait ShoeboxServiceClient extends ServiceClient {
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]]
+  def getKeepCounts(userIds: Set[Id[User]]): Future[Map[Id[User], Int]]
+  def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]]
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
+  def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -144,7 +148,8 @@ case class ShoeboxCacheProvider @Inject() (
   userSegmentCache: UserSegmentCache,
   extensionVersionCache: ExtensionVersionInstallationIdCache,
   allFakeUsersCache: AllFakeUsersCache,
-  librariesWithWriteAccessCache: LibrariesWithWriteAccessCache)
+  librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
+  userActivePersonaCache: UserActivePersonasCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -759,10 +764,38 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getKeepCounts(userIds: Set[Id[User]]): Future[Map[Id[User], Int]] = {
+    if (userIds.isEmpty) Future.successful(Map.empty[Id[User], Int]) else {
+      call(Shoebox.internal.getKeepCounts, Json.toJson(userIds)).map { r =>
+        implicit val readsFormat = TupleFormat.tuple2Reads[Id[User], Int]
+        r.json.as[Seq[(Id[User], Int)]].toMap.withDefaultValue(0)
+      }
+    }
+  }
+
+  def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]] = {
+    if (libraryIds.isEmpty) Future.successful(Map.empty[Id[Library], String]) else {
+      val payload = Json.obj(
+        "libraryIds" -> libraryIds,
+        "idealImageSize" -> idealImageSize
+      )
+      call(Shoebox.internal.getLibraryImageUrls, payload).map { r =>
+        implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], String]
+        r.json.as[Seq[(Id[Library], String)]].toMap
+      }
+    }
+  }
+
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]] = {
     cacheProvider.librariesWithWriteAccessCache.get(LibrariesWithWriteAccessUserKey(userId)) match {
       case Some(cachedLibraryIds) => Future.successful(cachedLibraryIds)
       case None => call(Shoebox.internal.getLibrariesWithWriteAccess(userId)).map(_.json.as[Set[Id[Library]]])
+    }
+  }
+
+  def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = {
+    cacheProvider.userActivePersonaCache.getOrElseFuture(UserActivePersonasKey(userId)) {
+      call(Shoebox.internal.getUserActivePersonas(userId), callTimeouts = longTimeout).map { _.json.as[UserActivePersonas] }
     }
   }
 }

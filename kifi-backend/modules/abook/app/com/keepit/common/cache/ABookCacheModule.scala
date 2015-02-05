@@ -38,7 +38,7 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def urlPatternRuleAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UrlPatternRuleAllCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 30 days))
+    new UrlPatternRulesAllCache(stats, accessLog, (innerRepo, 10 hours), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -179,4 +179,8 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides @Singleton
   def librariesWithWriteAccessCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new LibrariesWithWriteAccessCache(stats, accessLog, (outerRepo, 10 minutes))
+
+  @Provides @Singleton
+  def userActivePersonasCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserActivePersonasCache(stats, accessLog, (innerRepo, 24 hours), (outerRepo, 14 days))
 }

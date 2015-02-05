@@ -12,6 +12,7 @@ import com.keepit.model._
 import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
+import scala.collection.mutable
 
 import scala.concurrent.Future
 
@@ -34,8 +35,12 @@ class RelatedLibraryCommanderImpl @Inject() (
     libQualityHelper: LibraryQualityHelper,
     airbrake: AirbrakeNotifier) extends RelatedLibraryCommander with Logging {
 
-  private val DEFAULT_MIN_FOLLOW = 5
+  protected val DEFAULT_MIN_FOLLOW = 5
   private val RETURN_SIZE = 5
+  private val SUB_RETURN_SIZE = 20 // cap return from component
+  private val SPECIAL_OWNER_RETURN_SIZE = 1
+
+  private val SPECIAL_OWNERS = Set(Id[User](10015)) // e.g. Kifi Editorial
 
   private val consolidater = new RequestConsolidator[Id[Library], Seq[RelatedLibrary]](FiniteDuration(10, MINUTES))
 
@@ -50,17 +55,18 @@ class RelatedLibraryCommanderImpl @Inject() (
       case None => Set()
     }
 
-    def filterUnwantedRelatedLibs(relatedLibs: Seq[RelatedLibrary]) = {
-      relatedLibs.filter {
-        case RelatedLibrary(lib, kind) =>
-          !fakeUsers.contains(lib.ownerId) &&
-            !userLibs.contains(lib.id.get) &&
-            !libQualityHelper.isBadLibraryName(lib.name)
-      }
+    def isUnwantedLibrary(relatedLib: RelatedLibrary): Boolean = {
+      val lib = relatedLib.library
+
+      lib.state == LibraryStates.INACTIVE ||
+        fakeUsers.contains(lib.ownerId) ||
+        userLibs.contains(lib.id.get) ||
+        libQualityHelper.isBadLibraryName(lib.name)
+
     }
 
     suggestedLibsFut
-      .map { libs => filterUnwantedRelatedLibs(libs).take(RETURN_SIZE) }
+      .map { libs => libs.filter { !isUnwantedLibrary(_) }.take(RETURN_SIZE) }
       .flatMap { relatedLibs =>
         val t1 = System.currentTimeMillis
         val (libs, kinds) = relatedLibs.map { x => (x.library, x.kind) }.unzip
@@ -88,12 +94,24 @@ class RelatedLibraryCommanderImpl @Inject() (
       ownerLibs <- ownerLibsF
       popular <- popularF
     } yield {
-      topicRelated ++ ownerLibs.sortBy(-_.library.memberCount) ++ util.Random.shuffle(popular.filter(_.library.id.get != libId))
+      val libs = topicRelated ++
+        ownerLibs.sortBy(-_.library.memberCount).take(SUB_RETURN_SIZE) ++
+        util.Random.shuffle(popular.filter(_.library.id.get != libId)).take(SUB_RETURN_SIZE)
+
+      // dedup
+      val libIds = mutable.Set.empty[Id[Library]]
+      libs.flatMap { lib =>
+        if (libIds.contains(lib.library.id.get)) None
+        else {
+          libIds += lib.library.id.get
+          Some(lib)
+        }
+      }
     }
   }
 
   def topicRelatedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]] = {
-    cortex.similarLibraries(libId, limit = 20).map { ids =>
+    cortex.similarLibraries(libId, limit = SUB_RETURN_SIZE).map { ids =>
       db.readOnlyReplica { implicit s =>
         ids.map { id => libRepo.get(id) }
       }.filter(_.visibility == LibraryVisibility.PUBLISHED)
@@ -104,9 +122,12 @@ class RelatedLibraryCommanderImpl @Inject() (
   def librariesFromSameOwner(libId: Id[Library], minFollow: Int = DEFAULT_MIN_FOLLOW): Future[Seq[RelatedLibrary]] = {
     db.readOnlyReplicaAsync { implicit s =>
       val owner = libRepo.get(libId).ownerId
-      libRepo.getAllByOwner(owner)
+      val libs = libRepo.getAllByOwner(owner)
         .filter { x => x.id.get != libId && x.visibility == LibraryVisibility.PUBLISHED && x.memberCount >= (minFollow + 1) }
         .map { lib => RelatedLibrary(lib, RelatedLibraryKind.OWNER) }
+      if (SPECIAL_OWNERS.contains(owner)) {
+        libs.take(SPECIAL_OWNER_RETURN_SIZE)
+      } else libs
     }
   }
 

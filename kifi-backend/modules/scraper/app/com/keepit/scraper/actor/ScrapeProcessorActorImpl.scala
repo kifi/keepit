@@ -4,7 +4,7 @@ import akka.actor.{ ActorSystem, Props }
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.{ Inject, Provider, Singleton }
-import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.concurrent.{ ReactiveLock, ExecutionContext }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
@@ -35,7 +35,7 @@ class ScrapeProcessorActorImpl @Inject() (
     scrapeSupervisorProvider: Provider[ScrapeAgentSupervisor],
     scrapeProcActorProvider: Provider[ScrapeAgent],
     serviceDiscovery: ServiceDiscovery,
-    asyncHelper: ShoeboxDbCallbacks) extends ScrapeProcessor with Logging {
+    shoeboxCommander: ShoeboxCommander) extends ScrapeProcessor with Logging {
 
   import ScraperMessages._
 
@@ -61,37 +61,42 @@ class ScrapeProcessorActorImpl @Inject() (
 
   private[this] def getQueueSize(): Future[Int] = actor.ask(QueueSize).mapTo[Int]
 
-  override def pull(): Unit = {
-    getQueueSize() onComplete {
-      case Success(qSize) =>
-        if (qSize <= config.pullThreshold) {
-          log.info(s"[ScrapeProcessorActorImpl.pull] qSize=$qSize. Let's get some work.")
-          serviceDiscovery.thisInstance.map { inst =>
-            if (inst.isHealthy) {
-              asyncHelper.assignTasks(inst.id.id, config.pullMax).onComplete {
-                case Failure(t) =>
-                  log.error(s"[ScrapeProcessorActorImpl.pull(${inst.id.id})] Caught exception $t while pulling for tasks", t) // move along
-                case Success(requests) =>
-                  log.info(s"[ScrapeProcessorActorImpl.pull(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
-                  for (sr <- requests) {
-                    val uri = sr.uri
-                    URI.parse(uri.url) match {
-                      case Success(_) => asyncScrape(uri, sr.scrapeInfo, sr.pageInfoOpt, sr.proxyOpt)
-                      case Failure(e) => throw new Exception(s"url can not be parsed for $uri in scrape request $sr", e)
-                    }
+  private[this] val lock = new ReactiveLock(1)
 
-                  }
-              }(ExecutionContext.fj)
+  override def pull(): Unit = lock.withLockFuture {
+    val futureTask = getQueueSize() map { qSize =>
+      if (qSize <= config.pullThreshold) {
+        log.info(s"[ScrapeProcessorActorImpl.pull] qSize=$qSize. Let's get some work.")
+        serviceDiscovery.thisInstance.map { inst =>
+          if (inst.isHealthy) {
+            val taskFuture = shoeboxCommander.assignTasks(inst.id.id, config.pullMax)
+            val queuedFuture = taskFuture map { requests =>
+              log.info(s"[ScrapeProcessorActorImpl.pull(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
+              for (sr <- requests) {
+                val uri = sr.uri
+                URI.parse(uri.url) match {
+                  case Success(_) => asyncScrape(uri, sr.scrapeInfo, sr.pageInfoOpt, sr.proxyOpt)
+                  case Failure(e) => throw new Exception(s"url can not be parsed for $uri in scrape request $sr", e)
+                }
+              }
+            }
+            queuedFuture.onFailure {
+              case e =>
+                airbrake.notify(s"failed si to parse and queue task", e)
             }
           }
-        } else if (qSize > WARNING_THRESHOLD) {
-          airbrake.notify(s"qSize=${qSize} has exceeded threshold=$WARNING_THRESHOLD")
-        } else {
-          log.info(s"[ScrapeProcessorActorImpl.pull] qSize=${qSize}; Skip a round")
         }
-      case Failure(e) =>
-        airbrake.notify(s"Failed to obtain qSize from supervisor; exception=$e; cause=${e.getCause}", e)
+      } else if (qSize > WARNING_THRESHOLD) {
+        airbrake.notify(s"qSize=${qSize} has exceeded threshold=$WARNING_THRESHOLD")
+      } else {
+        log.info(s"[ScrapeProcessorActorImpl.pull] qSize=${qSize}; Skip a round")
+      }
     }
+    futureTask.onFailure {
+      case e =>
+        airbrake.notify(s"Failed to obtain qSize from supervisor", e)
+    }
+    futureTask
   }
 
 }

@@ -22,6 +22,7 @@ angular.module('kifi')
       .when('/friends/invite', '/invite')
       .when('/friends/requests', '/friends')
       .when('/friends/requests/:network', '/friends')
+      .when('/:username/libraries', '/:username')
       .when('/recommendations', '/')
       .otherwise('/');  // last resort
 

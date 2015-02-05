@@ -15,6 +15,8 @@ import com.keepit.cortex.models.lda._
 import com.keepit.model.{ Persona, Library, User, NormalizedURI }
 import com.keepit.common.db.Id
 
+import play.api.libs.concurrent.Execution.Implicits._
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -33,7 +35,7 @@ class LDAController @Inject() (
   private def getVersionForUser(versionOpt: Option[ModelVersion[DenseLDA]], userIdOpt: Option[Id[User]]): ModelVersion[DenseLDA] = {
     (versionOpt, userIdOpt) match {
       case (Some(v), _) => v
-      case (None, Some(uid)) => Await.result(versionCommander.getLDAVersionForUser(uid), 1 second) // use of Await is temp. (Only during model experimenting)
+      case (None, Some(uid)) => Await.result(versionCommander.getLDAVersionForUser(uid), 3 second) // use of Await is temp. (Only during model experimenting)
       case (None, None) => defaultVersion
     }
   }
@@ -92,13 +94,13 @@ class LDAController @Inject() (
     Ok(Json.toJson(LDAUserURIInterestScores(scores2.global, scores1.recency, score3)))
   }
 
-  def batchUserURIsInterests(implicit versionOpt: Option[Int]) = Action(parse.tolerantJson) { request =>
+  def batchUserURIsInterests(implicit versionOpt: Option[Int]) = Action.async(parse.tolerantJson) { request =>
     val js = request.body
     val userId = (js \ "userId").as[Id[User]]
     val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
     val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, Some(userId))
-    val scores = lda.batchUserURIsInterests(userId, uriIds)(version)
-    Ok(Json.toJson(scores))
+    val scoresF = lda.batchUserURIsInterests(userId, uriIds)(version)
+    scoresF.map { scores => Ok(Json.toJson(scores)) }
   }
 
   def userTopicMean(userId: Id[User], version: Option[Int]) = Action { request =>
@@ -199,7 +201,7 @@ class LDAController @Inject() (
   }
 
   def getSimilarLibraries(libId: Id[Library], limit: Int, version: Option[Int]) = Action { request =>
-    val ver = ModelVersion[DenseLDA](3) // just use this for now.
+    implicit val ver = toVersion(version)
     val libs = statsd.time("ldaController.getSimilarLibraries", 1.0) { _ => lda.getSimilarLibraries(libId, limit)(ver) }
     Ok(Json.toJson(libs))
   }
@@ -211,6 +213,11 @@ class LDAController @Inject() (
     Ok
   }
 
+  def getExistingPersonaFeature(personaId: Id[Persona], version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
+    val modelOpt = personaCommander.getExistingPersonaFeature(personaId)(version)
+    Ok(Json.toJson(modelOpt.map { _.feature.mean }))
+  }
+
   def generatePersonaFeature(version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
     val js = request.body
     val topicIds = (js \ "topicIds").as[Seq[Int]].map { LDATopic(_) }
@@ -220,9 +227,14 @@ class LDAController @Inject() (
 
   def savePersonaFeature(version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
     val js = request.body
-    val feature = (js \ "topic").as[JsArray].value.map { _.as[Float] }.toArray
+    val feature = (js \ "feature").as[Array[Float]]
     val personaId = Id[Persona]((js \ "personaId").as[Int])
     personaCommander.savePersonaFeature(personaId, UserTopicMean(feature))(version)
     Ok
+  }
+
+  def evaluatePersona(personaId: Id[Persona], version: ModelVersion[DenseLDA]) = Action { request =>
+    val scores = personaCommander.evaluatePersonaFeature(personaId, sampleSize = 50)(version)
+    Ok(Json.toJson(scores))
   }
 }

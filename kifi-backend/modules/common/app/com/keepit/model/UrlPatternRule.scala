@@ -45,13 +45,25 @@ object UrlPatternRule {
   )(UrlPatternRule.apply, unlift(UrlPatternRule.unapply))
 }
 
-case class UrlPatternRuleAllKey() extends Key[Seq[UrlPatternRule]] {
-  override val version = 4
-  val namespace = "url_pattern_rule_all"
+object UrlPatternRuleStates extends States[UrlPatternRule]
+
+case class UrlPatternRules(rules: Seq[UrlPatternRule]) {
+  private[model] def findFirst(url: String): Option[UrlPatternRule] = rules.find(rule => url.matches(rule.pattern))
+  def isUnscrapable(url: String): Boolean = findFirst(url).map(_.isUnscrapable).getOrElse(false)
+  def getTrustedDomain(url: String): Option[String] = for { rule <- findFirst(url); trustedDomain <- rule.trustedDomain } yield trustedDomain
+  def getPreferredNormalization(url: String): Option[Normalization] = for { rule <- findFirst(url); normalization <- rule.normalization } yield normalization
+}
+
+object UrlPatternRules {
+  implicit val format = Json.format[UrlPatternRules]
+}
+
+case class UrlPatternRulesAllKey() extends Key[UrlPatternRules] {
+  override val version = 1
+  val namespace = "url_pattern_rules_all"
   def toKey(): String = "all"
 }
 
-class UrlPatternRuleAllCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UrlPatternRuleAllKey, Seq[UrlPatternRule]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+class UrlPatternRulesAllCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UrlPatternRulesAllKey, UrlPatternRules](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-object UrlPatternRuleStates extends States[UrlPatternRule]

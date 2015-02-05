@@ -7,7 +7,7 @@ import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.social.SecureSocialModule
 import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
-import com.keepit.model.{ UrlPatternRuleModule, ProdSliderHistoryTrackerModule }
+import com.keepit.model.{ ProdSliderHistoryTrackerModule }
 import com.keepit.scraper.{ ScraperHealthMonitorModule, ScrapeSchedulerModule, ScraperServiceClientModule }
 import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.store.ShoeboxDevStoreModule
@@ -71,7 +71,6 @@ abstract class ShoeboxModule(
   val geckoboardModule = GeckoboardModule()
   val dataIntegrityModule = DataIntegrityModule()
   val keepImportsModule = KeepImportsModule()
-  val urlPatternRuleModule = UrlPatternRuleModule()
 
   val repoChangeListenerModule = ShoeboxRepoChangeListenerModule()
 

@@ -9,19 +9,6 @@ angular.module('kifi')
   function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window, profile,
             env, inviteService, keepWhoService, originTrackingService, profileService,
             installService, modalService, initParams) {
-
-    //
-    // Internal data.
-    //
-
-    // Mapping of library type to origin contexts for tracking.
-    var originContexts = {
-      'own': 'MyLibraries',
-      'following': 'FollowedLibraries',
-      'invited': 'InvitedLibraries'
-    };
-
-
     //
     // Internal functions.
     //
@@ -43,59 +30,40 @@ angular.module('kifi')
     }
 
     function getCurrentPageOrigin() {
-      var originContext = originContexts[$state.current.data.libraryType];
+      var originContext = $scope.libraryTypesToNames[$state.current.data.libraryType];
       return 'profilePage' +  (originContext ? '.' + originContext : '');
     }
 
     function trackPageView() {
-      var pageOrigin = originTrackingService.getAndClear();
       var url = $analytics.settings.pageTracking.basePath + $location.url();
-      var originsArray = (pageOrigin && pageOrigin.split('/')) || [];
-
-      var profilePageTrackAttributes = {
-        type: 'userProfile',
+      $analytics.pageTrack(url, originTrackingService.applyAndClear({
+        type: $rootScope.userLoggedIn ? 'userProfile' : 'userProfileLanding',
         profileOwnerUserId: $scope.profile.id,
         profileOwnedBy: $scope.viewingOwnProfile ? 'viewer' : ($scope.profile.isFriend ? 'viewersFriend' : 'other'),
-        origin: originsArray[0] || '',
-        subOrigin: originsArray[1] || '',
         libraryCount: $scope.profile.numLibraries
-      };
-
-      $analytics.pageTrack(url, profilePageTrackAttributes);
+      }));
     }
 
-    function trackPageClick(/* attributes */) {
-      return;
-
-      /* TODO(yiping): Uncomment this after tracking review with product.
+    function trackPageClick(attributes) {
       var profileEventTrackAttributes = _.extend(attributes || {}, {
-        type: 'profile',
-        profileOwnedBy: $scope.viewingOwnProfile ? 'viewer' : ($scope.profile.friendsWith ? 'viewersFriend' : 'other')
+        type: attributes.type || ($rootScope.userLoggedIn ? 'userProfile' : 'userProfileLanding'),
+        profileOwnerUserId: $scope.profile.id,
+        profileOwnedBy: $scope.viewingOwnProfile ? 'viewer' : ($scope.profile.isFriend ? 'viewersFriend' : 'other')
       });
 
-      $analytics.eventTrack('user_clicked_page', profileEventTrackAttributes);
-      */
+      $analytics.eventTrack($rootScope.userLoggedIn ? 'user_clicked_page' : 'visitor_clicked_page', profileEventTrackAttributes);
     }
 
 
     //
-    // Scope methods.
+    // Scope methods and data.
     //
 
-    $scope.trackUplCardClick = function (lib) {
-      trackPageClick({
-        action: 'clickedLibrary',
-        libraryOwnerUserId: lib.owner.id,
-
-        // lib.owner.friendsWith needs backend support.
-        libraryOwnedBy: lib.owner.id === profileService.me.id ? 'viewer' : (lib.owner.friendsWith ? 'viewersFriend' : 'other')
-      });
-    };
-
-    $scope.trackProfileClick = function () {
-      trackPageClick({
-        action: 'clickedProfile'
-      });
+    // Mapping of library type to library names for tracking.
+    $scope.libraryTypesToNames = {
+      'own': 'OwnedLibraries',
+      'following': 'FollowedLibraries',
+      'invited': 'InvitedLibraries'
     };
 
 
@@ -106,7 +74,7 @@ angular.module('kifi')
     var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
       // When routing among the nested states, track page view again.
       if ((/^userProfile/.test(toState.name)) && (/^userProfile/.test(fromState.name)) && (toParams.username === fromParams.username)) {
-        trackPageView(originTrackingService.getAndClear());
+        trackPageView();
         $scope.currentPageOrigin = getCurrentPageOrigin();
       }
     });
@@ -117,6 +85,14 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregisterCurrentLibrary);
 
+    var deregisterTrackUserProfile = $rootScope.$on('trackUserProfileEvent', function (e, eventType, attributes) {
+      if (eventType === 'click') {
+        trackPageClick(attributes);
+      } else if (eventType === 'view') {
+        trackPageView(attributes);
+      }
+    });
+    $scope.$on('$destroy', deregisterTrackUserProfile);
 
     //
     // Initialize controller.
@@ -320,6 +296,10 @@ angular.module('kifi')
     };
 
     $scope.openFollowersList = function (lib) {
+      if (platformService.isSupportedMobilePlatform()) {
+        return;
+      }
+
       modalService.open({
         template: 'libraries/libraryFollowersModal.tpl.html',
         modalData: {
@@ -346,6 +326,24 @@ angular.module('kifi')
         });
       })['finally'](function () {
         $event.target.disabled = false;
+      });
+    };
+
+    $scope.trackLibraryNav = function (toLibraryType) {
+      $rootScope.$emit('trackUserProfileEvent', 'click', {
+        'action': 'clicked' + $scope.libraryTypesToNames[toLibraryType]
+      });
+    };
+
+    $scope.trackUplCardClick = function (lib, subAction) {
+      $rootScope.$emit('trackUserProfileEvent', 'click', {
+        action: 'clickedLibraryCard',
+        subAction: subAction,
+        libraryName: lib.name,
+        libraryOwnerUserName: lib.owner.username,
+        libraryId: lib.id,
+        libraryOwnerUserId: lib.owner.id,
+        profileTab: $scope.libraryTypesToNames[$scope.libraryType]
       });
     };
   }

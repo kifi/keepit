@@ -3,10 +3,43 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window', 'library',
-  'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'util', 'initParams', 'installService',
-  function ($scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window, library,
-    keepDecoratorService, libraryService, modalService, platformService, profileService, util, initParams, installService) {
+  '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window', 'util', 'initParams', 'library',
+  'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'originTrackingService', 'installService',
+  function ($scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window, util, initParams, library,
+    keepDecoratorService, libraryService, modalService, platformService, profileService, originTrackingService, installService) {
+    //
+    // A/B Tests.
+    //
+    var abTest = {
+      name: 'exp_follow_popup',
+      salt: 'hgg1dv',
+      treatments: [
+        {
+          name: 'none',
+          isControl: true
+        },
+        {
+          name: 'popupLibrary',
+          data: {
+            buttonText: 'Follow',
+            mainText: 'Join Kifi to follow this library.<br/>Discover other libraries,<br/>and build your own!',
+            quote: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
+            quoteAttribution: 'Remy Weinstein, California'
+          }
+        },
+        {
+          name: 'popupCollection',
+          data: {
+            buttonText: 'Save',
+            mainText: 'Join Kifi to save this collection.<br/>Discover other collections,<br/>and build your own!',
+            quote: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
+            quoteAttribution: 'Remy Weinstein, California'
+          }
+        }
+      ]
+    };
+
+
     //
     // Internal data.
     //
@@ -19,7 +52,10 @@ angular.module('kifi')
       $scope.platformName = installService.getPlatformName();
       if ($scope.platformName) {
         $scope.thanksVersion = 'installExt';
-        $scope.installExtension = installService.triggerInstall;
+        $scope.installExtension = function() {
+          $analytics.eventTrack('visitor_clicked_page', {type: 'installLibrary', action: 'install'});
+          installService.triggerInstall();
+        };
       } else {
         $scope.thanksVersion = 'notSupported';
       }
@@ -28,7 +64,11 @@ angular.module('kifi')
         $rootScope.$emit('trackLibraryEvent', 'view', { type: 'installLibrary' });
       }
 
-      $scope.close = modalService.close;
+      $scope.close = function () {
+        $analytics.eventTrack('visitor_clicked_page', {type : 'installLibrary', action: 'close'});
+        modalService.close();
+      };
+
       modalService.open({
         template: 'signup/thanksForRegisteringModal.tpl.html',
         scope: $scope
@@ -38,11 +78,13 @@ angular.module('kifi')
     function trackPageView(attributes) {
       var url = $analytics.settings.pageTracking.basePath + $location.url();
 
-      $analytics.pageTrack(url, _.extend(
-        attributes || {},
-        libraryService.getCommonTrackingAttributes(library),
-        $rootScope.userLoggedIn ? {owner: $scope.userIsOwner ? 'Yes' : 'No'} : null
-      ));
+      attributes = _.extend(libraryService.getCommonTrackingAttributes(library), attributes);
+      attributes = originTrackingService.applyAndClear(attributes);
+      if ($rootScope.userLoggedIn) {
+        attributes.owner = $scope.userIsOwner ? 'Yes' : 'No';
+      }
+
+      $analytics.pageTrack(url, attributes);
     }
 
     function setTitle(lib) {
@@ -150,64 +192,62 @@ angular.module('kifi')
     //
     // Watches and listeners.
     //
-    [  // TODO: indent two spaces within this array
-
-    $rootScope.$on('keepAdded', function (e, libSlug, keeps, library) {
-      keeps.forEach(function (keep) {
-        // checks if the keep was added to the secret library from main or
-        // vice-versa.  If so, it removes the keep from the current library
-        if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
-            (libSlug === 'main' && $scope.librarySlug === 'secret')) {
-          var idx = _.findIndex($scope.keeps, { url: keep.url });
-          if (idx > -1) {
-            $scope.keeps.splice(idx, 1);
+    [
+      $rootScope.$on('keepAdded', function (e, libSlug, keeps, library) {
+        keeps.forEach(function (keep) {
+          // checks if the keep was added to the secret library from main or
+          // vice-versa.  If so, it removes the keep from the current library
+          if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
+              (libSlug === 'main' && $scope.librarySlug === 'secret')) {
+            var idx = _.findIndex($scope.keeps, { url: keep.url });
+            if (idx > -1) {
+              $scope.keeps.splice(idx, 1);
+            }
+          } else if (libSlug === $scope.librarySlug) {
+            $scope.keeps.unshift(keep);
           }
-        } else if (libSlug === $scope.librarySlug) {
-          $scope.keeps.unshift(keep);
+
+          // add the new keep to the keep card's "my keeps" array
+          var existingKeep = _.find($scope.keeps, { url: keep.url });
+          if (existingKeep && !_.find($scope.keeps, { id: keep.id })) {
+            existingKeep.keeps.push({
+              id: keep.id,
+              isMine: true,
+              libraryId: library.id,
+              mine: true,
+              visibility: library.visibility
+            });
+          }
+        });
+      }),
+
+      $rootScope.$on('getCurrentLibrary', function (e, args) {
+        args.callback($scope.library);
+      }),
+
+      $rootScope.$on('trackLibraryEvent', function (e, eventType, attributes) {
+        attributes.libraryRecCount = $scope.relatedLibraries ? $scope.relatedLibraries.length : 0;
+        if (eventType === 'click') {
+          if (!$rootScope.userLoggedIn) {
+            attributes.type = attributes.type || 'libraryLanding';
+            libraryService.trackEvent('visitor_clicked_page', $scope.library, attributes);
+          } else {
+            attributes.type = attributes.type || 'library';
+            libraryService.trackEvent('user_clicked_page', $scope.library, attributes);
+          }
+        } else if (eventType === 'view') {
+          trackPageView(attributes);
         }
+      }),
 
-        // add the new keep to the keep card's "my keeps" array
-        var existingKeep = _.find($scope.keeps, { url: keep.url });
-        if (existingKeep && !_.find($scope.keeps, { id: keep.id })) {
-          existingKeep.keeps.push({
-            id: keep.id,
-            isMine: true,
-            libraryId: library.id,
-            mine: true,
-            visibility: library.visibility
-          });
-        }
-      });
-    }),
+      $rootScope.$on('$stateChangeSuccess', function (e, toState) {
+        $scope.librarySearch = toState.name === 'library.search';
+        setTitle(library);
+      }),
 
-    $rootScope.$on('getCurrentLibrary', function (e, args) {
-      args.callback($scope.library);
-    }),
-
-    $rootScope.$on('trackLibraryEvent', function (e, eventType, attributes) {
-      attributes.libraryRecCount = $scope.relatedLibraries ? $scope.relatedLibraries.length : 0;
-      if (eventType === 'click') {
-        if (!$rootScope.userLoggedIn) {
-          attributes.type = attributes.type || 'libraryLanding';
-          libraryService.trackEvent('visitor_clicked_page', $scope.library, attributes);
-        } else {
-          attributes.type = attributes.type || 'library';
-          libraryService.trackEvent('user_clicked_page', $scope.library, attributes);
-        }
-      } else if (eventType === 'view') {
-        trackPageView(attributes);
-      }
-    }),
-
-    $rootScope.$on('$stateChangeSuccess', function (e, toState) {
-      $scope.librarySearch = toState.name === 'library.search';
-    }),
-
-    $rootScope.$on('userLoggedInStateChange', function (e, me) {
-      if (!me) {
+      $rootScope.$on('userLoggedInStateChange', function () {
         reloadThisLibrary();
-      }
-    })
+      })
 
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);
@@ -254,5 +294,8 @@ angular.module('kifi')
         libraryService.joinLibrary($scope.library.id);
       }
     });
+
+    library.abTest = abTest;
+    library.abTestTreatment = util.chooseTreatment(library.abTest.salt, library.abTest.treatments);
   }
 ]);

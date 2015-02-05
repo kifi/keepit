@@ -22,6 +22,7 @@ trait LibraryImageCommander {
 
   def getUrl(libraryImage: LibraryImage): String
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage]
+  def getBestImageForLibraries(libraryIds: Set[Id[Library]], idealSize: ImageSize): Map[Id[Library], LibraryImage]
   def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, userId: Id[User], requestId: Option[Id[LibraryImageRequest]] = None)(implicit content: HeimdalContext): Future[ImageProcessDone]
   def positionLibraryImage(libraryId: Id[Library], position: LibraryImagePosition): Seq[LibraryImage]
   def removeImageForLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Boolean // Returns true if images were removed, false otherwise
@@ -47,9 +48,16 @@ class LibraryImageCommanderImpl @Inject() (
 
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage] = {
     val targetLibraryImages = db.readOnlyMaster { implicit s =>
-      libraryImageRepo.getForLibraryId(libraryId)
+      libraryImageRepo.getActiveForLibraryId(libraryId)
     }
     ProcessedImageSize.pickBestImage(idealSize, targetLibraryImages)
+  }
+
+  def getBestImageForLibraries(libraryIds: Set[Id[Library]], idealSize: ImageSize): Map[Id[Library], LibraryImage] = {
+    val availableLibraryImages = db.readOnlyMaster { implicit s =>
+      libraryImageRepo.getActiveForLibraryIds(libraryIds)
+    }
+    availableLibraryImages.mapValues(ProcessedImageSize.pickBestImage(idealSize, _)).collect { case (libraryId, Some(image)) => libraryId -> image }
   }
 
   def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, userId: Id[User], requestId: Option[Id[LibraryImageRequest]])(implicit context: HeimdalContext): Future[ImageProcessDone] = {
@@ -57,7 +65,10 @@ class LibraryImageCommanderImpl @Inject() (
       finalizeImageRequestState(libraryId, requestId, done)
       done match {
         case ImageProcessState.StoreSuccess(format, size, bytes) =>
-          libraryAnalytics.updatedCoverImage(userId, libraryId, context, format, size, bytes)
+          val targetLibrary = db.readOnlyMaster { implicit s =>
+            libraryRepo.get(libraryId)
+          }
+          libraryAnalytics.updatedCoverImage(userId, targetLibrary, context, format, size, bytes)
         case _ =>
       }
       done
@@ -66,7 +77,7 @@ class LibraryImageCommanderImpl @Inject() (
 
   def positionLibraryImage(libraryId: Id[Library], position: LibraryImagePosition): Seq[LibraryImage] = {
     db.readWrite { implicit s =>
-      val toPosition = libraryImageRepo.getForLibraryId(libraryId)
+      val toPosition = libraryImageRepo.getActiveForLibraryId(libraryId)
       val positionedImages = toPosition.map { libImage =>
         libraryImageRepo.save(libImage.copy(
           positionX = position.x,
@@ -79,15 +90,17 @@ class LibraryImageCommanderImpl @Inject() (
   }
 
   def removeImageForLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Boolean = {
-    val images = db.readWrite { implicit session =>
-      libraryImageRepo.getForLibraryId(libraryId).map { libImage =>
+    val (library, images) = db.readWrite { implicit session =>
+      val library = libraryRepo.get(libraryId)
+      val images = libraryImageRepo.getActiveForLibraryId(libraryId).map { libImage =>
         libraryImageRepo.save(libImage.copy(state = LibraryImageStates.INACTIVE))
       }
+      (library, images)
     }
     log.info("[lic] Removing: " + images.map(_.imagePath))
     if (images.nonEmpty) {
       images.filter(_.isOriginal) foreach { orig =>
-        libraryAnalytics.removedCoverImage(userId, libraryId, context, orig.format, orig.dimensions)
+        libraryAnalytics.removedCoverImage(userId, library, context, orig.format, orig.dimensions)
       }
       true
     } else {
@@ -140,7 +153,7 @@ class LibraryImageCommanderImpl @Inject() (
           libImg
       }
       db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
-        val existingImages = libraryImageRepo.getForLibraryId(libraryId, None).toSet
+        val existingImages = libraryImageRepo.getAllForLibraryId(libraryId).toSet
         replaceOldLibraryImagesWithNew(existingImages, libraryImages, position)
       }
       ImageProcessState.StoreSuccess(originalImage.format, libraryImages.filter(_.isOriginal).head.dimensions, originalImage.file.file.length.toInt)
@@ -210,7 +223,7 @@ class LibraryImageCommanderImpl @Inject() (
         val request = libraryImageRequestRepo.get(requestId)
         state match {
           case INACTIVE => // Success
-            val LibraryImageOpt = libraryImageRepo.getForLibraryId(libraryId).headOption
+            val LibraryImageOpt = libraryImageRepo.getActiveForLibraryId(libraryId).headOption
             libraryImageRequestRepo.save(request.copy(state = state, successHash = LibraryImageOpt.map(_.sourceFileHash)))
           case failureState =>
             libraryImageRequestRepo.save(request.copy(state = state, failureCode = failureCode, failureReason = failureReason))

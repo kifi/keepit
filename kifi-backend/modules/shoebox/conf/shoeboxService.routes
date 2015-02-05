@@ -39,7 +39,8 @@ POST    /-authenticate/:provider     securesocial.controllers.ProviderController
 # custom auth routes which set some session state
 
 GET     /login/after                @com.keepit.controllers.core.AuthController.afterLogin()
-GET     /login/:provider            @com.keepit.controllers.core.AuthController.loginSocial(provider)
+GET     /login/close                @com.keepit.controllers.core.AuthController.afterLoginClosePopup()
+GET     /login/:provider            @com.keepit.controllers.core.AuthController.loginSocial(provider, close: Boolean ?= false)
 POST    /auth/log-in                @com.keepit.controllers.core.AuthController.logInWithUserPass(link: String ?= "")
 
 GET     /connect/:provider          @com.keepit.controllers.core.AuthController.popupBeforeLinkSocial(provider)
@@ -223,13 +224,15 @@ POST    /m/1/user/:id/include                   @com.keepit.controllers.mobile.M
 POST    /m/1/user/:id/exclude                   @com.keepit.controllers.mobile.MobileUserController.excludeFriend(id: ExternalId[User])
 GET     /m/1/user/settings                      @com.keepit.controllers.mobile.MobileUserController.getSettings()
 POST    /m/1/user/settings                      @com.keepit.controllers.mobile.MobileUserController.setSettings()
+GET     /m/1/user/personas                      @com.keepit.controllers.mobile.MobileUserPersonaController.getAllPersonas()
+POST    /m/1/user/personas                      @com.keepit.controllers.mobile.MobileUserPersonaController.selectPersonas()
 
 POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.MobileUserController.setAppsflyerAttribution()
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
-GET     /m/1/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV1(more: Boolean, recency: Float)
 GET     /m/2/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV2(more: Boolean, recency: Float)
+GET     /m/2/recos/topV3                        @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3(more: Boolean, recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
 GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
 POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
 
@@ -279,6 +282,8 @@ GET     /install                    @com.keepit.controllers.website.HomeControll
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /terms                      @com.keepit.controllers.website.HomeController.route(path = "terms")
 GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
+GET     /parenting                  @com.keepit.controllers.website.HomeController.route(path = "parenting")
+GET     /home                       @com.keepit.controllers.website.HomeController.route(path = "home")
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 GET     /libraries/featured         @com.keepit.controllers.website.HomeController.route(path = "libraries/featured")
@@ -391,6 +396,7 @@ POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.Libr
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
+GET     /site/recos/topV2           @com.keepit.controllers.website.RecommendationsController.topRecosV2(more: Boolean, recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
 GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
 POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
@@ -412,6 +418,10 @@ GET     /site/user/networks         @com.keepit.controllers.website.UserControll
 GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
 GET     /site/user/settings         @com.keepit.controllers.website.UserController.getSettings()
 POST    /site/user/settings         @com.keepit.controllers.website.UserController.setSettings()
+
+GET     /site/user/personas         @com.keepit.controllers.website.UserPersonaController.getAllPersonas()
+POST    /site/user/persona/:name    @com.keepit.controllers.website.UserPersonaController.addPersona(name: String)
+DELETE  /site/user/persona/:name    @com.keepit.controllers.website.UserPersonaController.removePersona(name: String)
 
 # regex below prevents route from usurping requests intended for other routes, like /site/user/friends
 GET     /site/user/$id<[0-9a-f-]{36}> @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
@@ -489,6 +499,7 @@ GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyti
 POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
 GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
 
+GET     /admin/keeps/rescrape/from  @com.keepit.controllers.admin.AdminBookmarksController.rescrapeFrom(fromId: Id[NormalizedURI])
 GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
@@ -668,6 +679,10 @@ POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminL
 POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepImageController.loadPrevImageForKeep(startUserId: Long, endUserId: Long)
 POST    /admin/libraries/updateLibraryOwner @com.keepit.controllers.admin.AdminLibraryController.updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User])
 
+GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
+POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()
+POST    /admin/personas/:id         @com.keepit.controllers.admin.AdminPersonaController.editPersona(id: Id[Persona])
+
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
 GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], query:String ?= "")
@@ -730,6 +745,10 @@ GET     /admin/cortex/lda/unamedTopics                     @com.keepit.controlle
 POST    /admin/cortex/lda/libraryTopic                     @com.keepit.controllers.admin.AdminLDAController.libraryTopic
 POST    /admin/cortex/lda/userLibraryScore                 @com.keepit.controllers.admin.AdminLDAController.userLibraryScore
 GET     /admin/cortex/lda/similarURIs                      @com.keepit.controllers.admin.AdminLDAController.similarURIs(uriId: Id[NormalizedURI])
+GET     /adimin/cortex/lda/persona                         @com.keepit.controllers.admin.AdminLDAController.persona
+GET     /adimin/cortex/lda/persona/version                 @com.keepit.controllers.admin.AdminLDAController.personaVersioned(version: ModelVersion[DenseLDA])
+POST    /admin/cortex/lda/persona/generate                 @com.keepit.controllers.admin.AdminLDAController.generateLDAPersonaFeature
+POST    /admin/cortex/lda/persona/evaluate                 @com.keepit.controllers.admin.AdminLDAController.evaluatePersona
 
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
@@ -826,16 +845,12 @@ POST    /internal/geckoboard/refresh                  @com.keepit.reports.Geckob
 
 GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxScraperController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxScraperController.saveScrapeInfo
-POST     /internal/shoebox/database/savePageInfo      @com.keepit.controllers.internal.ShoeboxScraperController.savePageInfo
-POST     /internal/shoebox/database/saveImageInfo     @com.keepit.controllers.internal.ShoeboxScraperController.saveImageInfo
 POST     /internal/shoebox/database/saveNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.saveNormalizedURI
 POST     /internal/shoebox/database/updateNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.updateNormalizedURI(uriId: Id[NormalizedURI])
 POST     /internal/shoebox/database/recordPermanentRedirect @com.keepit.controllers.internal.ShoeboxScraperController.recordPermanentRedirect
 POST     /internal/shoebox/database/recordScrapedNormalization @com.keepit.controllers.internal.ShoeboxScraperController.recordScrapedNormalization
 GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.internal.ShoeboxScraperController.getProxy(url:String)
 POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.internal.ShoeboxScraperController.getProxyP()
-GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.internal.ShoeboxScraperController.isUnscrapable(url: String, destinationUrl: Option[String])
-POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.internal.ShoeboxScraperController.isUnscrapableP
 GET      /internal/shoebox/database/getFriendRequestRecipientIdBySender @com.keepit.controllers.internal.ShoeboxController.getFriendRequestsRecipientIdBySender(senderId: Id[User])
 GET      /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.getUserValue(userId: Id[User], key: UserValueName)
 POST     /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: UserValueName)
@@ -859,6 +874,8 @@ POST     /internal/shoebox/image/getUriSummaries     @com.keepit.controllers.int
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
 POST     /internal/shoebox/database/getBasicKeeps   @com.keepit.controllers.internal.ShoeboxController.getBasicKeeps(userId: Id[User])
 POST     /internal/shoebox/database/getBasicLibraryStatistics   @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryStatistics()
+POST     /internal/shoebox/database/getKeepCounts   @com.keepit.controllers.internal.ShoeboxController.getKeepCounts()
+POST     /internal/shoebox/database/getLibraryImageUrls   @com.keepit.controllers.internal.ShoeboxController.getLibraryImageUrls()
 GET      /internal/shoebox/database/getLibrariesWithWriteAccess @com.keepit.controllers.internal.ShoeboxController.getLibrariesWithWriteAccess(userId: Id[User])
 POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.internal.NormalizedURIController.getCandidateURIs()
 
@@ -868,6 +885,7 @@ GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controll
 
 POST    /internal/shoebox/user/addInteractions            @com.keepit.controllers.internal.ShoeboxController.addInteractions(userId: Id[User])
 POST    /internal/shoebox/libraries/canView             @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
+GET     /internal/shoebox/user/activePersonas           @com.keepit.controllers.internal.ShoeboxController.getUserActivePersonas(userId: Id[User])
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)

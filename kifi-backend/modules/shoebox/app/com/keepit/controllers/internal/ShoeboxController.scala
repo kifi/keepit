@@ -14,6 +14,7 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.shoebox.model.ids.UserSessionExternalId
@@ -62,10 +63,12 @@ class ShoeboxController @Inject() (
   scrapeScheduler: ScrapeScheduler,
   userInteractionCommander: UserInteractionCommander,
   libraryCommander: LibraryCommander,
+  libraryImageCommander: LibraryImageCommander,
   libraryRepo: LibraryRepo,
   emailTemplateSender: EmailTemplateSender,
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
   userConnectionsCommander: UserConnectionsCommander,
+  userPersonaRepo: UserPersonaRepo,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
@@ -499,8 +502,33 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
+  def getKeepCounts() = Action(parse.tolerantJson) { request =>
+    val userIds = request.body.as[Set[Id[User]]]
+    val keepCountsByUserId = db.readOnlyMaster { implicit session =>
+      keepRepo.getCountByUsers(userIds)
+    }
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[User], Int]
+    val result = Json.toJson(keepCountsByUserId.toSeq)
+    Ok(result)
+  }
+
+  def getLibraryImageUrls() = Action(parse.tolerantJson) { request =>
+    val libraryIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
+    val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
+    val imagesByLibraryId = libraryImageCommander.getBestImageForLibraries(libraryIds, idealImageSize)
+    val imageUrlsByLibraryId = imagesByLibraryId.mapValues(libraryImageCommander.getUrl)
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], String]
+    val result = Json.toJson(imageUrlsByLibraryId.toSeq)
+    Ok(result)
+  }
+
   def getLibrariesWithWriteAccess(userId: Id[User]) = Action { request =>
     val libraryIds = libraryCommander.getLibrariesWithWriteAccess(userId)
     Ok(Json.toJson(libraryIds))
+  }
+
+  def getUserActivePersonas(userId: Id[User]) = Action { request =>
+    val model = db.readOnlyReplica { implicit s => userPersonaRepo.getUserActivePersonas(userId) }
+    Ok(Json.toJson(model))
   }
 }

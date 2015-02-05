@@ -42,7 +42,9 @@ GET     /internal/cortex/lda/dumpFeature                                        
 GET     /internal/cortex/lda/similarURIs                                            @com.keepit.controllers.cortex.LDAController.getSimilarURIs(uriId: Id[NormalizedURI], version: Option[Int] ?= None)
 GET     /internal/cortex/lda/similarLibraries                                       @com.keepit.controllers.cortex.LDAController.getSimilarLibraries(libId: Id[Library], limit: Int, version: Option[Int] ?= None)
 POST    /internal/cortex/lda/uploadPMIScores                                        @com.keepit.controllers.cortex.LDAController.uploadPMIScores(version: ModelVersion[DenseLDA])
+GET     /internal/cortex/lda/getExistingPersonaFeature                              @com.keepit.controllers.cortex.LDAController.getExistingPersonaFeature(personaId: Id[Persona], version: ModelVersion[DenseLDA])
 POST    /internal/cortex/lda/generatePersonaFeature                                 @com.keepit.controllers.cortex.LDAController.generatePersonaFeature(version: ModelVersion[DenseLDA])
 POST    /internal/cortex/lda/savePersonaFeature                                     @com.keepit.controllers.cortex.LDAController.savePersonaFeature(version: ModelVersion[DenseLDA])
+GET     /internal/cortex/lda/evaluatePersona                                        @com.keepit.controllers.cortex.LDAController.evaluatePersona(personaId: Id[Persona], version: ModelVersion[DenseLDA])
 
 GET     /internal/cortex/data/sparseLDAFeaturesChanged                              @com.keepit.controllers.cortex.CortexDataPipeController.getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)

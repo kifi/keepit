@@ -1,7 +1,7 @@
 package com.keepit.search.controllers.mobile
 
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.search.engine.user.UserSearchFilterFactory
+import com.keepit.search.user.DeprecatedUserSearchFilterFactory
 import com.keepit.search.test.SearchTestInjector
 import org.specs2.mutable._
 
@@ -53,7 +53,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
     usersWithId
   }
 
-  def filterFactory(implicit injector: Injector) = inject[UserSearchFilterFactory]
+  def filterFactory(implicit injector: Injector) = inject[DeprecatedUserSearchFilterFactory]
 
   def modules = {
     Seq(
@@ -90,7 +90,6 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
             "hits":
               [
                 {
-                  "userId":5,
                   "basicUser":
                     {
                       "id":"4e5f7b8c-951b-4497-8661-123456789004",

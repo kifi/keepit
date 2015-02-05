@@ -41,8 +41,10 @@ angular.module('kifi')
 ])
 
 .controller('SignupCtrl', [
-  '$scope', '$FB', '$twitter', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope', '$location', 'routeService',
-  function ($scope, $FB, $twitter, modalService, registrationService, $window, installService, $q, $log, $rootScope, $location, routeService) {
+  '$scope', 'modalService', 'registrationService', '$window', 'installService',
+  '$rootScope', '$location', 'routeService', '$state', 'util', '$analytics',
+  function ($scope, modalService, registrationService, $window, installService,
+    $rootScope, $location, routeService, $state, util, $analytics) {
 
     // Shared data across several modals
 
@@ -52,17 +54,29 @@ angular.module('kifi')
     function setModalScope($modalScope, onClose) {
       $modalScope.close = modalService.close;
       $modalScope.$on('$destroy', function () {
-        $scope.registerFinalizeSubmitted = false;
-        $scope.requestActive = false;
         if (typeof onClose === 'function') {
           onClose($modalScope);
         }
+        $scope.registerFinalizeSubmitted = false;
+        $scope.requestActive = false;
       });
     }
 
     $scope.fieldHasError = function (field) {
       var hasError = field.$invalid && $scope.registerFinalizeSubmitted;
       return hasError;
+    };
+
+    $scope.trackWebstore = function() {
+      trackEvent('visitor_clicked_page', 'install', 'webstore');
+    };
+
+    $scope.trackGetChrome = function() {
+      trackEvent('visitor_clicked_page', 'install', 'getChrome');
+    };
+
+    $scope.trackGetFirefox = function() {
+      trackEvent('visitor_clicked_page', 'install', 'getFirefox');
     };
 
     function createSignupPath(network) {
@@ -73,132 +87,90 @@ angular.module('kifi')
         );
     }
 
+    function trackEvent(eventName, typeBase, action) {
+      var currentState = $state.current.name;
+      if (util.startsWith(currentState, 'library')) {
+        typeBase += 'Library';
+        $analytics.eventTrack(eventName, {type: typeBase, action: action});
+      } else if (util.startsWith(currentState, 'userProfile')) {
+        typeBase += 'UserProfile';
+        $analytics.eventTrack(eventName, {type: typeBase, action: action});
+      }
+    }
+
+    function emitTracking(eventType, typeBase, attributes) {
+      var currentState = $state.current.name;
+      if (util.startsWith(currentState, 'library')) {
+        typeBase += 'Library';
+        attributes = _.extend({type: typeBase}, attributes || {});
+        $rootScope.$emit('trackLibraryEvent', eventType, attributes);
+      } else if (util.startsWith(currentState, 'userProfile')) {
+        typeBase += 'UserProfile';
+        attributes = _.extend({type: typeBase}, attributes || {});
+        $rootScope.$emit('trackUserProfileEvent', eventType, attributes);
+      }
+    }
+
     // First Register modal
 
     var registerModal = function () {
-      if ($scope.userData.libraryId) {
-        $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signupLibrary' });
-      }
+      emitTracking('view', 'signup');
+      $scope.onLoginClick = function() {
+        trackEvent('visitor_clicked_page', 'signup', 'login');
+      };
 
       $scope.facebookSignupPath = createSignupPath('facebook');
       $scope.twitterSignupPath = createSignupPath('twitter');
+      $scope.emailSubmitted = false;
 
       setModalScope(modalService.open({
         template: 'signup/registerModal.tpl.html',
         scope: $scope
-      }));
-    };
-
-    var facebookLogin = function () {
-      return $FB.getLoginStatus().then(function (loginStatus) {
-        if (loginStatus.status === 'connected') {
-          return loginStatus;
-        } else {
-          return $FB.login({'scope':'public_profile,user_friends,email', 'return_scopes': true}).then(function (loginResult) {
-            if (loginResult.status === 'unknown' || !loginResult.authResponse) {
-              return {'error': 'user_denied_login'};
-            } else {
-              return loginResult;
-            }
-          });
+      }), function onClose() {
+        if (!$scope.emailSubmitted) { // did not submit email, so closed modal
+          trackEvent('visitor_clicked_page', 'signup', 'close');
         }
       });
     };
 
     $scope.submitEmail = function (form) {
       $scope.registerFinalizeSubmitted = true;
+      $scope.emailSubmitted = true;
       if (!form.$valid) {
         return false;
       }
-
-      if ($scope.userData.libraryId) {
-        $rootScope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickSignUpButton' });
-      }
+      emitTracking('click', 'signup', {action: 'clickedSignUpButton'});
 
       modalService.close();
       $scope.userData.method = 'email';
       registerFinalizeModal();
     };
 
-    $scope.fbInit = function () {
-      if (!$FB.failedToLoad) {
-        $FB.init();
-      }
-    };
-
-    $scope.fbAuthFromLibrary = function () {
-      if ($scope.userData.libraryId) {
-        $rootScope.$emit('trackLibraryEvent', 'click', { type: 'signupLibrary', action: 'clickAuthFacebook' });
-      }
-      return $scope.fbAuth();
+    $scope.twAuth = function() {
+      emitTracking('click', 'signup', {action: 'clickedAuthTwitter'});
     };
 
     $scope.fbAuth = function () {
-      if ($FB.failedToLoad) {
-        $scope.onError({'code': 'fb_blocked', redirect: 'https://www.kifi.com/signup/facebook'});
-        return;
-      }
-      $scope.requestActive = true;
-      facebookLogin().then(function (fbResp) {
-        if (!fbResp) {
-          $scope.onError({'code': 'fb_blocked', redirect: 'https://www.kifi.com/signup/facebook'});
-          return;
-        } else if (fbResp.error) {
-          $scope.requestActive = false;
-          return;
-        } else if (fbResp.status === 'connected') {
-          var fbMeP = $FB.api('/me', {});
-          var regP = registrationService.socialRegister('facebook', fbResp.authResponse);
-
-          $q.all([fbMeP, regP]).then(function (responses) {
-            $scope.requestActive = false;
-            var fbMe = responses[0];
-            var resp = responses[1];
-
-            $scope.userData.firstName = fbMe.first_name;
-            $scope.userData.lastName = fbMe.last_name;
-            $scope.userData.email = fbMe.email;
-
-            if (resp.code === 'user_logged_in') {
-              // todo: follow or other action
-              $rootScope.$emit('appStart');
-              modalService.close();
-              $scope.onSuccess();
-            } else if (resp.code && resp.code === 'continue_signup') {
-              // todo: handle case when emails match, so backend auto-logs in user - andrew
-              modalService.close();
-              $scope.userData.method = 'social';
-              registerFinalizeModal();
-            } else if (resp.code && resp.code === 'connect_option') {
-              // todo, figure out what this could be, handle errors - andrew
-              $scope.onError({'code': 'connect_option', redirect: resp.uri});
-            }
-          })['catch'](function (err) {
-            // Combo request failed. Would love to get logs of this.
-            $scope.requestActive = false;
-            $scope.onError({'code': 'remote_social_fail', 'error': err});
-          });
-        }
-      })['catch'](function() {
-        // Facebook login failed. Usually an adblocker.
-        $scope.requestActive = false;
-        $scope.onError({'code': 'fb_blocked', redirect: 'https://www.kifi.com/signup/facebook'});
-        return;
-      });
+      emitTracking('click', 'signup', {action: 'clickedAuthFacebook'});
     };
 
     // 2nd Register modal
     var registerFinalizeModal = function () {
-      if ($scope.userData.libraryId) {
-        $rootScope.$emit('trackLibraryEvent', 'view', { type: 'signup2Library' });
-      }
+      emitTracking('view', 'signup2');
+      $scope.onToSClick = function() {
+        trackEvent('visitor_clicked_page', 'signup2', 'termsOfService');
+      };
 
       $scope.requestActive = false;
       $scope.registerFinalizeSubmitted = false;
       setModalScope(modalService.open({
         template: 'signup/registerFinalizeModal.tpl.html',
         scope: $scope
-      }));
+      }), function onClose() {
+        if (!$scope.registerFinalizeSubmitted) { // did not submit registration & closed modal
+          trackEvent('visitor_clicked_page', 'signup2', 'close');
+        }
+      });
     };
 
     $scope.registerFinalizeSubmit = function (form) {
@@ -238,6 +210,7 @@ angular.module('kifi')
           // todo: do we need to handle the return resp?
           modalService.close();
           thanksForRegisteringModal();
+          trackEvent('visitor_clicked_page', 'signup2', 'signup');
         })['catch'](function (resp) {
           if (resp.data && resp.data.error === 'user_exists_failed_auth') {
             $scope.requestActive = false;
@@ -253,6 +226,7 @@ angular.module('kifi')
     // 3rd confirm modal
     var thanksForRegisteringModal = function () {
       $scope.requestActive = false;
+      $scope.installTriggered = false;
       if (!installService.installedVersion) {
         if (installService.canInstall) {
           if (installService.isValidChrome) {
@@ -260,20 +234,25 @@ angular.module('kifi')
           } else if (installService.isValidFirefox) {
             $scope.platformName = 'Firefox';
           }
-          $scope.installExtension = installService.triggerInstall;
+          $scope.installExtension = function() {
+            trackEvent('visitor_clicked_page', 'install', 'install');
+            $scope.installTriggered = true;
+            installService.triggerInstall();
+          };
           $scope.thanksVersion = 'installExt';
         } else {
           $scope.thanksVersion = 'notSupported';
         }
 
-        if ($scope.userData.libraryId) {
-          $rootScope.$emit('trackLibraryEvent', 'view', { type: 'installLibrary' });
-        }
+        emitTracking('view', 'install');
 
         setModalScope(modalService.open({
           template: 'signup/thanksForRegisteringModal.tpl.html',
           scope: $scope
         }), function onClose() {
+          if (!$scope.installTriggered) {
+            trackEvent('visitor_clicked_page', 'install', 'close');
+          }
           $scope.onSuccess();
         });
       } else {

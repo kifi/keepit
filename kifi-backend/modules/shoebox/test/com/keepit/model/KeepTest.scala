@@ -34,16 +34,16 @@ class KeepTest extends Specification with ShoeboxTestInjector {
       val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
       keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-        uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
+        uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
       keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-        uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50),
+        uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50),
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
       keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-        uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50),
+        uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50),
         visibility = LibraryVisibility.SECRET, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
       keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
-        uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1),
+        uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = t2.plusDays(1),
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
       (user1, user2, uri1, uri2, uri3, url1, url2, lib1)
@@ -241,15 +241,15 @@ class KeepTest extends Specification with ShoeboxTestInjector {
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
           keepRepo.save(Keep(title = Some("k1"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
+            uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
           keepRepo.save(Keep(title = Some("k2"), userId = user.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = hover, createdAt = t1.plusMinutes(9),
+            uriId = uri2.id.get, source = hover, createdAt = t1.plusMinutes(9), keptAt = t1.plusMinutes(9),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
           keepRepo.save(Keep(title = Some("k3"), userId = user.id.get, url = url3.url, urlId = url3.id.get,
-            uriId = uri3.id.get, source = hover, createdAt = t1.plusMinutes(6),
+            uriId = uri3.id.get, source = hover, createdAt = t1.plusMinutes(6), keptAt = t1.plusMinutes(6),
             visibility = LibraryVisibility.SECRET, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
         }

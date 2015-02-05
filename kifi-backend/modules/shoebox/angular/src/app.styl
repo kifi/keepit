@@ -101,14 +101,39 @@ menu, ol, ul
   margin: 10px 0
 
 .kf-logged-out
-  .public-body
-    position: relative
-
+  &.kf-logged-out
     .kf-col
       margin-top: 0
 
 .ng-cloak
   display: none !important
+
+.kf-button
+  display: inline-block
+  vertical-align: top
+  height = 32px
+  height: height
+  border: 1px solid #bbb
+  border-radius: 5px
+  padding: 0 15px
+  background: linear-gradient(to top, #f3f3f3, #fff)
+  font: 13px\/height Lato, Helvetica, Arial, sans-serif
+  color: #666
+  a&
+    font-smoothing: auto
+
+    &:focus
+      outline: none
+
+.kf-button-icon
+  display: inline-block
+  vertical-align: top
+  width: 18px
+  height: inherit
+  background-repeat: no-repeat
+  background-position: center center
+  background-size: contain
+  margin: 0 5px 0 -3px
 
 @font-face
   font-family: 'Lato'

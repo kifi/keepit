@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import com.keepit.common.core._
+
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.db.slick.DBSession.RSession
@@ -8,11 +10,14 @@ import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[LibraryImageRepoImpl])
 trait LibraryImageRepo extends Repo[LibraryImage] {
-  def getForLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryImage]] = Some(LibraryImageStates.INACTIVE))(implicit session: RSession): Seq[LibraryImage]
+  def getActiveForLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[LibraryImage]
+  def getActiveForLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Seq[LibraryImage]]
+  def getAllForLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[LibraryImage]
 }
 
 @Singleton
 class LibraryImageRepoImpl @Inject() (
+    libraryImageCache: LibraryImageCache,
     val db: DataBaseComponent,
     val clock: Clock) extends DbRepo[LibraryImage] with LibraryImageRepo {
 
@@ -45,23 +50,41 @@ class LibraryImageRepoImpl @Inject() (
   def table(tag: Tag) = new LibraryImageTable(tag)
   initTable()
 
-  override def invalidateCache(model: LibraryImage)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: LibraryImage)(implicit session: RSession): Unit = {
+    libraryImageCache.remove(LibraryImageKey(model.libraryId))
+  }
 
-  override def deleteCache(model: LibraryImage)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: LibraryImage)(implicit session: RSession): Unit = {
+    libraryImageCache.remove(LibraryImageKey(model.libraryId))
+  }
 
-  private val getForLibraryIdCompiled = Compiled { libraryId: Column[Id[Library]] =>
+  private val getAllForLibraryIdCompiled = Compiled { libraryId: Column[Id[Library]] =>
     for (r <- rows if r.libraryId === libraryId) yield r
   }
-  private val getForLibraryIdAndStatesCompiled = Compiled { (libraryId: Column[Id[Library]], excludeState: Column[State[LibraryImage]]) =>
-    for (r <- rows if r.libraryId === libraryId && r.state =!= excludeState) yield r
+
+  private val getActiveForLibraryIdAndStatesCompiled = Compiled { (libraryId: Column[Id[Library]]) =>
+    for (r <- rows if r.libraryId === libraryId && r.state =!= LibraryImageStates.INACTIVE) yield r
   }
-  def getForLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryImage]] = Some(LibraryImageStates.INACTIVE))(implicit session: RSession): Seq[LibraryImage] = {
-    excludeState match {
-      case None =>
-        getForLibraryIdCompiled(libraryId).list
-      case Some(excludeState) =>
-        getForLibraryIdAndStatesCompiled(libraryId, excludeState).list
+
+  def getActiveForLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[LibraryImage] = {
+    libraryImageCache.getOrElse(LibraryImageKey(libraryId)) {
+      getActiveForLibraryIdAndStatesCompiled(libraryId).list
     }
+  }
+
+  def getActiveForLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Seq[LibraryImage]] = {
+    val keys = libraryIds.map(LibraryImageKey(_))
+    libraryImageCache.bulkGetOrElse(keys) { missingKeys =>
+      val missingLibraryIds = missingKeys.map(_.libraryId)
+      val missingImages = (for (r <- rows if r.libraryId.inSet(missingLibraryIds) && r.state =!= LibraryImageStates.INACTIVE) yield r).list
+      missingImages.groupBy(_.libraryId).map { case (libraryId, images) => LibraryImageKey(libraryId) -> images }
+    } map {
+      case (key, images) => key.libraryId -> images
+    }
+  }
+
+  def getAllForLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[LibraryImage] = {
+    getAllForLibraryIdCompiled(libraryId).list
   }
 
 }

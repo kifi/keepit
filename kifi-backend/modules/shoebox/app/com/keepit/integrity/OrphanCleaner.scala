@@ -2,6 +2,7 @@ package com.keepit.integrity
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
+import com.keepit.common.net.URI
 import com.keepit.model._
 import com.keepit.commanders.KeepInterner
 import com.keepit.common.zookeeper.{ SequenceNumberCentralConfigKey, LongCentralConfigKey, CentralConfig }
@@ -12,17 +13,17 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.scraper.ScrapeScheduler
 
 class OrphanCleaner @Inject() (
-    db: Database,
+    val db: Database,
     changedURIRepo: ChangedURIRepo,
     renormalizedURLRepo: RenormalizedURLRepo,
-    nuriRepo: NormalizedURIRepo,
-    scrapeInfoRepo: ScrapeInfoRepo,
-    scraper: ScrapeScheduler,
-    keepRepo: KeepRepo,
+    val scrapeInfoRepo: ScrapeInfoRepo,
+    val scraper: ScrapeScheduler,
+    val keepRepo: KeepRepo,
+    val normUriRepo: NormalizedURIRepo,
     libraryRepo: LibraryRepo,
     bookmarkInterner: KeepInterner,
     centralConfig: CentralConfig,
-    airbrake: AirbrakeNotifier) extends Logging {
+    val airbrake: AirbrakeNotifier) extends ScrapeInfoIntegrityChecker {
 
   case class OrphanCleanerSequenceNumberKey[T](seqKey: String) extends SequenceNumberCentralConfigKey[T] {
     val longKey = new LongCentralConfigKey {
@@ -48,51 +49,6 @@ class OrphanCleaner @Inject() (
 
   def fullClean(readOnly: Boolean = true): Unit = lock.synchronized {
     cleanNormalizedURIsByNormalizedURIs(readOnly)
-  }
-
-  private def checkIntegrity(uriId: Id[NormalizedURI], readOnly: Boolean, hasKnownKeep: Boolean = false)(implicit session: RWSession): (Boolean, Boolean) = {
-    val currentUri = nuriRepo.get(uriId)
-    val activeScrapeInfoOption = scrapeInfoRepo.getActiveByUriId(uriId)
-    val isActuallyKept = hasKnownKeep || keepRepo.exists(uriId)
-
-    if (isActuallyKept) {
-      // Make sure the uri is not inactive and has a scrape info
-      val (updatedUri, turnedUriActive) = currentUri match {
-        case uriToBeActive if uriToBeActive.state == NormalizedURIStates.INACTIVE || (activeScrapeInfoOption.isEmpty && !NormalizedURIStates.DO_NOT_SCRAPE.contains(uriToBeActive.state)) =>
-          val update = if (readOnly) uriToBeActive else nuriRepo.save(uriToBeActive.withState(NormalizedURIStates.ACTIVE))
-          (update, true)
-
-        case _ => (currentUri, false)
-      }
-
-      // nuriRepo.save has side-effects on scrape_info && uri.state
-      val createdScrapeInfo = scrapeInfoRepo.getActiveByUriId(updatedUri.id.get) match {
-        case None if (!readOnly && !NormalizedURIStates.DO_NOT_SCRAPE.contains(updatedUri.state)) => {
-          log.info(s"[checkIntegrity($uriId, $readOnly, $hasKnownKeep)] scheduling scrape for uri=${updatedUri.toShortString}")
-          scraper.scheduleScrape(updatedUri)
-          true
-        }
-        case _ => false
-      }
-      (turnedUriActive, createdScrapeInfo)
-
-    } else {
-      // Remove any existing scrape info and make the uri active
-      val (updatedUri, turnedUriActive) = currentUri match {
-        case scrapedUri if scrapedUri.state == NormalizedURIStates.SCRAPED || scrapedUri.state == NormalizedURIStates.SCRAPE_FAILED =>
-          val update = if (readOnly) currentUri else nuriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE))
-          (update, true)
-        case uri => (currentUri, false)
-      }
-
-      scrapeInfoRepo.getActiveByUriId(updatedUri.id.get) match {
-        case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE && !readOnly =>
-          log.warn(s"[checkIntegrity($uriId, $readOnly, $hasKnownKeep)] mark scrapeInfo as INACTIVE: si=$scrapeInfo uri=${updatedUri.toShortString}")
-          scrapeInfoRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
-        case _ => // all good
-      }
-      (turnedUriActive, false)
-    }
   }
 
   private[integrity] def cleanNormalizedURIsByRenormalizedURL(readOnly: Boolean = true): Unit = {
@@ -204,7 +160,7 @@ class OrphanCleaner @Inject() (
 
     log.info("start processing NormalizedURIs")
     while (!done) {
-      val normalizedURIs = db.readOnlyReplica { implicit s => nuriRepo.getChanged(seq, Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED), 10) }
+      val normalizedURIs = db.readOnlyReplica { implicit s => normUriRepo.getChanged(seq, Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED), 10) }
       done = normalizedURIs.isEmpty
 
       def collector(uri: NormalizedURI, result: (Boolean, Boolean)): Unit = {
@@ -232,5 +188,66 @@ class OrphanCleaner @Inject() (
     log.info(s"in progress: seq=${seqValue}, ${numProcessed} NormalizedURIs processed. Would have created ${numScrapeInfoCreated} ScrapeInfos and changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
   } else {
     log.info(s"in progress: seq=${seqValue}, ${numProcessed} NormalizedURIs processed. Created ${numScrapeInfoCreated} ScrapeInfos and changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
+  }
+}
+
+trait ScrapeInfoIntegrityChecker extends Logging {
+  val db: Database
+  val normUriRepo: NormalizedURIRepo
+  val scrapeInfoRepo: ScrapeInfoRepo
+  val keepRepo: KeepRepo
+  val scraper: ScrapeScheduler
+  val airbrake: AirbrakeNotifier
+
+  protected def checkIntegrity(uriId: Id[NormalizedURI], readOnly: Boolean, hasKnownKeep: Boolean = false)(implicit session: RWSession): (Boolean, Boolean) = {
+    val currentUri = normUriRepo.get(uriId)
+    val activeScrapeInfoOption = scrapeInfoRepo.getActiveByUriId(uriId)
+    val isActuallyKept = hasKnownKeep || keepRepo.exists(uriId)
+
+    if (isActuallyKept) {
+      // Make sure the uri is not inactive and has a scrape info
+      val (updatedUri, turnedUriActive) = currentUri match {
+        case uriToBeActive if uriToBeActive.state == NormalizedURIStates.INACTIVE || (activeScrapeInfoOption.isEmpty && !NormalizedURIStates.DO_NOT_SCRAPE.contains(uriToBeActive.state)) =>
+          val update = if (readOnly) uriToBeActive else normUriRepo.save(uriToBeActive.withState(NormalizedURIStates.ACTIVE))
+          (update, true)
+
+        case _ => (currentUri, false)
+      }
+
+      // normUriRepo.save has side-effects on scrape_info && uri.state
+      val createdScrapeInfo = scrapeInfoRepo.getActiveByUriId(updatedUri.id.get) match {
+        case None if (!readOnly && !NormalizedURIStates.DO_NOT_SCRAPE.contains(updatedUri.state)) => {
+          log.info(s"[checkIntegrity($uriId, $readOnly, $hasKnownKeep)] scheduling scrape for uri=${updatedUri.toShortString}")
+          scraper.scheduleScrape(updatedUri)
+          true
+        }
+        case _ => false
+      }
+      (turnedUriActive, createdScrapeInfo)
+
+    } else {
+      // Remove any existing scrape info and make the uri active
+      val (updatedUri, turnedUriActive) = currentUri match {
+        case scrapedUri if scrapedUri.state == NormalizedURIStates.SCRAPED || scrapedUri.state == NormalizedURIStates.SCRAPE_FAILED =>
+          val update = if (readOnly) currentUri else normUriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE))
+          (update, true)
+        case uri => (currentUri, false)
+      }
+
+      scrapeInfoRepo.getActiveByUriId(updatedUri.id.get) match {
+        case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE && !readOnly =>
+          log.warn(s"[checkIntegrity($uriId, $readOnly, $hasKnownKeep)] mark scrapeInfo as INACTIVE: si=$scrapeInfo uri=${updatedUri.toShortString}")
+          scrapeInfoRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+        case Some(scrapeInfo) =>
+          val nuri = normUriRepo.get(scrapeInfo.uriId)
+          if (URI.parse(nuri.url).isFailure) {
+            scrapeInfoRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+            airbrake.notify(s"can't parse $nuri, not passing it to the scraper, marking as unscrapable")
+          }
+        // all good
+        case _ => // all good
+      }
+      (turnedUriActive, false)
+    }
   }
 }

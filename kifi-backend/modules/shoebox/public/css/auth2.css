@@ -96,7 +96,7 @@ footer {
   width: 251px;
   height: 144px;
   margin: 0 auto 84px;
-  padding-top: 70px;
+  padding-top: 40px;
   background: url(../img/auth.png) -2px -148px content-box;
   text-indent: -9999px;
 }
@@ -328,14 +328,14 @@ a.video-frame {
   background: #2379b1;
 }
 .form-network.twitter {
-  background: #00aced;
+  background: #55acee;
   display: none;
 }
 .form-network.twitter:hover {
-  background: #02baff;
+  background: #66b4ef;
 }
 .form-network.twitter:active {
-  background: #1dcaff;
+  background: #55acee;
 }
 .form-network-icon {
   display: table-cell;

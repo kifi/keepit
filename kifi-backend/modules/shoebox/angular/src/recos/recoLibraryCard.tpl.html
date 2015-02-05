@@ -1,0 +1,60 @@
+  <div class="kf-rcl">
+    <div class="kf-rcl-card">
+      <div class="kf-rcl-body">
+        <div class="kf-rcl-name-wrap-2">
+          <div class="kf-rcl-name-wrap-1">
+            <a class="kf-rcl-name" href="{{library.url}}" ng-click="clickLibraryCallback()">{{library.name}}</a>
+          </div>
+        </div>
+        <div class="kf-rcl-color" ng-class="{'kf-above-image': coverImageUrl}" style="background-color:{{library.color}}"></div>
+        <a class="kf-rcl-cover-image" href="{{library.url}}" ng-if="coverImageUrl"
+          style="background-image:url({{coverImageUrl}});background-position:{{library.image.x}}% {{library.image.y}}%"></a>
+        <div class="kf-rcl-info">
+          <div class="kf-rcl-owner">
+            <a href="{{library.owner.profileUrl}}" kf-track-origin origin="recommendationsPage/curator">
+              <img src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
+                class="kf-rcl-owner-image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
+            </a>
+            <div class="kf-rcl-owner-text">
+              <div>Curator:</div>
+              <div class="kf-rcl-owner-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+            </div>
+          </div>
+          <div ng-switch="clippedDescription" class="kf-rcl-desc-wrap">
+            <p ng-switch-when="true" class="kf-rcl-desc">
+              <span ng-bind-html="library.shortDescription" itemtype="description"></span>&hellip;
+              <a href="javascript:" class="kf-rcl-desc-more" ng-click="showLongDescription()">More</a>
+            </p>
+            <p ng-switch-when="false" class="kf-rcl-desc" ng-bind-html="library.formattedDescription"></p>
+          </div>
+          <div class="kf-rcl-stats-line">
+            <div class="kf-rcl-stats">
+              <div class="kf-rcl-stat">
+                <span class="kf-rcl-stat-name">Keeps</span>
+                <span class="kf-rcl-stat-val">{{library.numKeeps}}</span>
+              </div>
+              <a class="kf-rcl-stat" ng-click="showFollowers()" href="javascript:">
+                <span class="kf-rcl-stat-name">Followers</span>
+                <span class="kf-rcl-stat-val">{{library.numFollowers}}</span>
+              </a>
+            </div>
+            <div kf-library-follower-pics num-followers="library.numFollowers" followers="library.followers"
+              show-followers="showFollowers()" current-page-origin="recommendationsPage"></div>
+          </div>
+        </div>
+      </div>
+      <div class="kf-rcl-buttons clearfix">
+        <div style="float:right">
+          <div kf-library-share-search library="library" current-page-origin="libraryPage"></div>
+          <button class="kf-button kf-rcl-unfollow-btn" ng-if="alreadyFollowingLibrary()" ng-click="unfollowLibrary()"></button>
+          <button class="kf-button kf-rcl-follow-btn" ng-if="!alreadyFollowingLibrary()" ng-click="followLibrary()">Follow Library</button>
+        </div>
+        <a class="kf-button kf-button-text-optional" ng-click="shareTwitter()" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}">
+          <span class="kf-button-icon svg-twitter"></span> Tweet
+        </a>
+        <button class="kf-button kf-button-text-optional" ng-click="shareFB()">
+          <span class="kf-button-icon svg-facebook"></span> Post
+        </button>
+      </div>
+    </div>
+  </div>

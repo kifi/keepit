@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream
 import com.keepit.common.store.ImageSize
 import org.joda.time.DateTime
 import play.api.libs.Files.TemporaryFile
+import play.api.libs.json.{ JsString, JsValue, Json, Format }
 
 abstract class BaseImage {
   val createdAt: DateTime
@@ -21,6 +22,7 @@ abstract class BaseImage {
 }
 
 abstract class ImageSource(val name: String)
+
 object ImageSource {
   sealed abstract class UserInitiated(name: String) extends ImageSource(name)
   sealed abstract class SystemInitiated(name: String) extends ImageSource(name)
@@ -35,6 +37,11 @@ object ImageSource {
   private val all: Seq[ImageSource] = Seq(Unknown, Embedly, PagePeeker, EmbedlyOrPagePeeker, UserUpload, UserPicked)
   def apply(name: String) = {
     all.find(_.name == name).getOrElse(throw new Exception(s"Can't find ImageSource for $name"))
+  }
+
+  implicit val format = new Format[ImageSource] {
+    def writes(imageSource: ImageSource) = JsString(imageSource.name)
+    def reads(json: JsValue) = json.validate[String].map(j => ImageSource(j))
   }
 }
 
@@ -70,4 +77,8 @@ object ImageProcessState {
 }
 
 case class ImageHash(hash: String)
+
+object ImageHash {
+  implicit val format = Json.format[ImageHash]
+}
 

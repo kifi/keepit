@@ -10,7 +10,7 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ UserPersona, Persona }
+import com.keepit.model.{ PersonaName, UserPersona, Persona }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
@@ -33,40 +33,28 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
   )
 
   "UserPersonaCommander" should {
-    "retrieve personas" in {
-      withDb(modules: _*) { implicit injector =>
-        val (user1, allPersonas) = setupUserPersona
-        val userPersonaCommander = inject[UserPersonaCommander]
-        val personas = userPersonaCommander.getPersonasForUser(user1.id.get)
-        personas.length === 2
-        personas.map(_.name) === Seq("hero", "adventurer")
-      }
-    }
 
     "add personas" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, allPersonas) = setupUserPersona
         val userPersonaCommander = inject[UserPersonaCommander]
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getUserPersonas(user1.id.get) === Seq(allPersonas("hero"), allPersonas("adventurer"))
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.INVESTOR, PersonaName.TECHIE)
         }
         // add an existing persona
-        val (personas1, libs1) = userPersonaCommander.addPersonasForUser(user1.id.get, Set("hero"))
-        personas1.length === 0
-        libs1.length === 0
+        val mapping1 = userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.INVESTOR))
+        mapping1.size === 0
 
         // add a new persona
-        val (personas2, libs2) = userPersonaCommander.addPersonasForUser(user1.id.get, Set("engineer"))
-        personas2.length === 1
-        libs2.length === 1
+        val mapping2 = userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.FOODIE))
+        mapping2.size === 1
 
         // add a mixed set
-        val (personas3, libs3) = userPersonaCommander.addPersonasForUser(user1.id.get, Set("engineer", "philanthropist", "foodie", "hero"))
-        personas3.length === 2
-        libs3.length === 2
+        val mapping3 = userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.INVESTOR, PersonaName.DEVELOPER, PersonaName.FOODIE))
+        mapping3.size === 1
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getUserPersonas(user1.id.get) === Seq(allPersonas("hero"), allPersonas("adventurer"), allPersonas("engineer"), allPersonas("foodie"), allPersonas("philanthropist"))
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.INVESTOR, PersonaName.TECHIE, PersonaName.FOODIE, PersonaName.DEVELOPER)
         }
       }
     }
@@ -76,29 +64,38 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
         val (user1, allPersonas) = setupUserPersona
         val userPersonaCommander = inject[UserPersonaCommander]
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getUserPersonas(user1.id.get) === Seq(allPersonas("hero"), allPersonas("adventurer"))
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.INVESTOR, PersonaName.TECHIE)
         }
         // remove one existing persona
-        userPersonaCommander.removePersonasForUser(user1.id.get, Set("hero")).length === 1
+        userPersonaCommander.removePersonasForUser(user1.id.get, Set(PersonaName.INVESTOR)).size === 1
 
         // remove a persona that doesn't exist
-        userPersonaCommander.removePersonasForUser(user1.id.get, Set("parent")).length === 0
+        userPersonaCommander.removePersonasForUser(user1.id.get, Set(PersonaName.FOODIE)).size === 0
 
         // remove mixed set
-        userPersonaCommander.removePersonasForUser(user1.id.get, Set("hero", "adventurer", "parent")).length === 1
+        userPersonaCommander.removePersonasForUser(user1.id.get, Set(PersonaName.INVESTOR, PersonaName.TECHIE, PersonaName.FOODIE)).size === 1
 
         db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getUserPersonas(user1.id.get) === Seq()
+          userPersonaRepo.getPersonasForUser(user1.id.get) === Seq()
         }
       }
     }
   }
 
+  // sets up a Map of [String, Persona]
   private def setupPersonas()(implicit injector: Injector) = {
-    val availablePersonas = Seq("foodie", "artist", "engineer", "athlete", "parent", "philanthropist", "hero", "adventurer")
+    val availablePersonas = Set("techie", "investor", "science_buff", "foodie", "developer")
     db.readWrite { implicit s =>
       availablePersonas.map { pName =>
-        (pName -> personaRepo.save(Persona(name = pName)).id.get)
+        val iconPath = "icon/" + pName + ".jpg"
+        val activeIconPath = "icon/active_" + pName + ".jpg"
+        val displayName = pName.replace("_", " ")
+        (pName -> personaRepo.save(Persona(
+          name = PersonaName(pName),
+          displayName = displayName,
+          displayNamePlural = displayName + "s",
+          iconPath = iconPath,
+          activeIconPath = activeIconPath)))
       }
     }.toMap
   }
@@ -107,8 +104,8 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
     val allPersonas = setupPersonas
     val user1 = db.readWrite { implicit s =>
       val user1 = user().withName("Tony", "Stark").withUsername("tonystark").withEmailAddress("tony@stark.com").saved
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("hero")))
-      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("adventurer")))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("investor").id.get))
+      userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("techie").id.get))
       user1
     }
     (user1, allPersonas)

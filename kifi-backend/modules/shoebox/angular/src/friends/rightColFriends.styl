@@ -10,10 +10,15 @@
   .kf-rightcol-header
     text-align: left
 
-  .kf-friends-content
-    margin: 10px 5px
+  .kf-friends-content-title
+    margin-bottom: 15px
     color: #555
     line-height: 1.2
+
+  .kf-friends-content-link
+    margin-top: 15px
+    a
+      color: linkBlueColor
 
   .kf-friends-content-bigger
     font-size: 14px
@@ -28,8 +33,22 @@
   .social-connect-button
     position: relative
     width: 85px
-    padding: 10px 10px 10px 40px
+    border-radius: 5px
+    padding: 10px 35px 10px 65px
     font-size: 14px
+    color: white
+
+    &.facebook
+      background-color: #597AB1
+
+    &.linkedin
+      background-color: #2786C4
+
+    &.gmail
+      background-color: #E36767
+
+    &.twitter
+      background-color: #55acee
 
   .social-connect-button::before
     position: absolute
