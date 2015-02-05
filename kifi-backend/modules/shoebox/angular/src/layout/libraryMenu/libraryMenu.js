@@ -54,13 +54,13 @@ angular.module('kifi')
         }
 
         function setMenuHeight() {
-          var menuHeight = Math.floor(($window.innerHeight - getElement('.kf-lih').outerHeight()) * 0.9);
-          element.css({'height': menuHeight + 'px'});
+          var menuHeight = getElement('.kf-nav-lib-users').outerHeight() + 230;
+          var maxMenuHeight = Math.floor(($window.innerHeight - getElement('.kf-lih').outerHeight()) * 0.9);
+          element.css({'height': Math.min(menuHeight, maxMenuHeight) + 'px'});
         }
 
         function openMenu() {
           positionMenu();
-          setMenuHeight();
           scope.changeList();
         }
 
@@ -92,7 +92,7 @@ angular.module('kifi')
           var libItems = antiscrollLibList.find('.kf-nav-lib-item');
           libItemHeight = libItems.eq(0).outerHeight(true);
 
-          antiscrollLibList.find('.kf-nav-lib-users').css('padding-top', '35px');
+          getElement('.kf-nav-lib-users').css('padding-top', '35px');
 
           // set limits based on number of items in myLibs, userLibs or invitedLibs
           var firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay;
@@ -326,6 +326,12 @@ angular.module('kifi')
         };
 
         scope.changeList = function () {
+          getElement('.kf-nav-lib-users').css({visibility: 'hidden'});
+          $timeout(function () {
+            setMenuHeight();
+            getElement('.kf-nav-lib-users').css({visibility: 'visible'});
+          });
+
           var term = scope.filter.name;
           var newLibs = allUserLibs;
           var newInvited = libraryService.invitedSummaries;
