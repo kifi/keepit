@@ -74,6 +74,7 @@ class UriIntegrityActor @Inject() (
           case None => {
             log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
             keepRepo.deleteCache(oldBm) // NOTE: we touch two different cache keys here and the following line
+            // update title
             keepRepo.save(oldBm.withNormUriId(newUriId))
             (Some(oldBm), None)
           }
