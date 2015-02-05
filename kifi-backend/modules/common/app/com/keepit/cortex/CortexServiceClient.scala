@@ -56,6 +56,7 @@ trait CortexServiceClient extends ServiceClient {
   def generatePersonaFeature(topicIds: Seq[LDATopic])(implicit version: LDAVersion): Future[(Array[Float], Int)] // Int: sample size
   def getExistingPersonaFeature(personaId: Id[Persona])(implicit version: LDAVersion): Future[Option[Array[Float]]]
   def savePersonaFeature(personaId: Id[Persona], feature: Array[Float])(implicit version: LDAVersion): Unit
+  def evaluatePersona(personaId: Id[Persona])(implicit version: LDAVersion): Future[Map[Id[NormalizedURI], Float]]
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -267,6 +268,10 @@ class CortexServiceClientImpl(
   def savePersonaFeature(personaId: Id[Persona], feature: Array[Float])(implicit version: LDAVersion): Unit = {
     val payload = Json.obj("feature" -> feature, "personaId" -> personaId)
     call(Cortex.internal.savePersonaFeature(version), payload)
+  }
+
+  def evaluatePersona(personaId: Id[Persona])(implicit version: LDAVersion): Future[Map[Id[NormalizedURI], Float]] = {
+    call(Cortex.internal.evaluatePersona(personaId)).map { _.json.as[Map[Id[NormalizedURI], Float]] }
   }
 
 }

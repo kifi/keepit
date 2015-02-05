@@ -11,6 +11,7 @@ import com.keepit.common.time.Clock
 @ImplementedBy(classOf[LibraryImageRepoImpl])
 trait LibraryImageRepo extends Repo[LibraryImage] {
   def getActiveForLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[LibraryImage]
+  def getActiveForLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Seq[LibraryImage]]
   def getAllForLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[LibraryImage]
 }
 
@@ -68,6 +69,17 @@ class LibraryImageRepoImpl @Inject() (
   def getActiveForLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[LibraryImage] = {
     libraryImageCache.getOrElse(LibraryImageKey(libraryId)) {
       getActiveForLibraryIdAndStatesCompiled(libraryId).list
+    }
+  }
+
+  def getActiveForLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Seq[LibraryImage]] = {
+    val keys = libraryIds.map(LibraryImageKey(_))
+    libraryImageCache.bulkGetOrElse(keys) { missingKeys =>
+      val missingLibraryIds = missingKeys.map(_.libraryId)
+      val missingImages = (for (r <- rows if r.libraryId.inSet(missingLibraryIds) && r.state =!= LibraryImageStates.INACTIVE) yield r).list
+      missingImages.groupBy(_.libraryId).map { case (libraryId, images) => LibraryImageKey(libraryId) -> images }
+    } map {
+      case (key, images) => key.libraryId -> images
     }
   }
 
