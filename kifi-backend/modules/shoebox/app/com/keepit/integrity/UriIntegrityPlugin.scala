@@ -2,6 +2,7 @@ package com.keepit.integrity
 
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
+import com.keepit.common.net.URI
 import com.keepit.model._
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.time._
@@ -9,12 +10,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.scraper.ScrapeScheduler
+import com.keepit.scraper.{ HttpRedirect, ScrapeScheduler }
 import scala.concurrent.duration._
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import akka.pattern.{ ask, pipe }
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -44,7 +45,8 @@ class UriIntegrityActor @Inject() (
     renormRepo: RenormalizedURLRepo,
     centralConfig: CentralConfig,
     val airbrake: AirbrakeNotifier,
-    keepUriUserCache: KeepUriUserCache) extends FortyTwoActor(airbrake) with UriIntegrityChecker with Logging {
+    keepUriUserCache: KeepUriUserCache,
+    helpers: UriIntegrityHelpers) extends FortyTwoActor(airbrake) with UriIntegrityChecker with Logging {
 
   /** tricky point: make sure (library, uri) pair is unique.  */
   private def handleBookmarks(oldBookmarks: Seq[Keep])(implicit session: RWSession): Unit = {
@@ -78,7 +80,7 @@ class UriIntegrityActor @Inject() (
           case None =>
             log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
             keepUriUserCache.remove(KeepUriUserKey(oldBm.uriId, oldBm.userId)) // NOTE: we touch two different cache keys here and the following line
-            keepRepo.save(oldBm.withNormUriId(newUriId))
+            keepRepo.save(helpers.improveKeepSafely(newUri, oldBm.withNormUriId(newUriId)))
             (Some(oldBm), None)
           case Some(currentPrimary) => {
 
@@ -87,9 +89,7 @@ class UriIntegrityActor @Inject() (
               val deadBm = keepRepo.save(
                 duplicate.copy(uriId = newUriId, isPrimary = false, state = deadState)
               )
-              val liveBm = keepRepo.save(
-                primary.copy(uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)
-              )
+              val liveBm = keepRepo.save(helpers.improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)))
               keepUriUserCache.remove(KeepUriUserKey(deadBm.uriId, deadBm.userId))
               (Some(deadBm), Some(liveBm))
             }
@@ -115,7 +115,6 @@ class UriIntegrityActor @Inject() (
                 // oldBm is already inactive or duplicate, do nothing
                 (None, None)
             }
-
           }
         }
       }
@@ -381,6 +380,25 @@ class UriIntegrityPluginImpl @Inject() (
         uriRepo.save(uri.copy(redirect = None, redirectTime = None, normalization = None, state = NormalizedURIStates.ACTIVE))
       }
       log.info(s"redirect cleared [count=${uris.size}]")
+    }
+  }
+}
+
+@Singleton
+class UriIntegrityHelpers @Inject() (urlRepo: URLRepo, keepRepo: KeepRepo) extends Logging {
+  def improveKeepSafely(uri: NormalizedURI, keep: Keep)(implicit session: RWSession): Keep = {
+    require(keep.uriId == uri.id.get, "URI and Keep don't match.")
+    val keepWithTitle = if (keep.title.isEmpty) keep.withTitle(uri.title) else keep
+    if (HttpRedirect.isShortenedUrl(keepWithTitle.url)) {
+      val urlObj = urlRepo.get(uri.url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+      keepWithTitle.copy(url = urlObj.url, urlId = urlObj.id.get)
+    } else keepWithTitle
+  }
+
+  def improveKeepsSafely(uri: NormalizedURI)(implicit session: RWSession): Unit = {
+    keepRepo.getByUri(uri.id.get).foreach { keep =>
+      val betterKeep = improveKeepSafely(uri, keep)
+      if (betterKeep != keep) { keepRepo.save(betterKeep) }
     }
   }
 }

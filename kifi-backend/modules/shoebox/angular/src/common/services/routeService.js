@@ -57,20 +57,19 @@ angular.module('kifi')
       pageTags: route('/collections/page'),
 
       searchTags: function (query, limit) {
-        return route('/collections/search') + '?query=' + query + '&limit=' + limit;
+        return route('/collections/search') + '?query=' + encodeURIComponent(query) + '&limit=' + limit;
       },
-
       suggestTags: function (libraryId, keepId, query) {
-        return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest?q=' + query;
+        return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest?q=' + encodeURIComponent(query);
       },
       tagKeep: function (libraryId, keepId, tag) {
-        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + tag);
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + encodeURIComponent(tag));
       },
       tagKeeps: function (tag) {
-        return route('/tags/' + tag);
+        return route('/tags/' + encodeURIComponent(tag));
       },
       untagKeep: function (libraryId, keepId, tag) {
-        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + tag);
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + encodeURIComponent(tag));
       },
 
       whoToInvite: route('/user/invite/recommended'),
@@ -82,7 +81,7 @@ angular.module('kifi')
         return env.xhrBase + '/user/' + id + '/friend';
       },
       libraryShareSuggest: function (libId, opt_query) {
-        return route('/libraries/' + libId + '/members/suggest?n=30' + (opt_query ? '&q=' + opt_query : ''));
+        return route('/libraries/' + libId + '/members/suggest?n=30' + (opt_query ? '&q=' + encodeURIComponent(opt_query) : ''));
       },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
@@ -98,7 +97,7 @@ angular.module('kifi')
       searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
       socialSearch: function (name, limit) {
         limit = limit || 6;
-        return route('/user/connections/all/search?query=' + name + '&limit=' + limit + '&pictureUrl=true');
+        return route('/user/connections/all/search?query=' + encodeURIComponent(name) + '&limit=' + limit + '&pictureUrl=true');
       },
       exportKeeps: route('/keeps/export'),
       postDelightedAnswer: route('/user/delighted/answer'),
@@ -207,10 +206,10 @@ angular.module('kifi')
         return route('/users/' + username + '/libraries/' + slug + '/auth?authToken=' + authToken || '');
       },
       copyKeepsFromTagToLibrary: function(libraryId, tagName) {
-        return route('/libraries/' + libraryId + '/importTag?tag=' + tagName);
+        return route('/libraries/' + libraryId + '/importTag?tag=' + encodeURIComponent(tagName));
       },
       moveKeepsFromTagToLibrary: function(libraryId, tagName) {
-        return route('/libraries/' + libraryId + '/moveTag?tag=' + tagName);
+        return route('/libraries/' + libraryId + '/moveTag?tag=' + encodeURIComponent(tagName));
       },
       getMoreLibraryMembers: function(libraryId, pageSize, offset) {
         return route('/libraries/' + libraryId + '/members?limit=' + pageSize + '&offset=' + (offset * pageSize));
