@@ -386,16 +386,12 @@ class UriIntegrityPluginImpl @Inject() (
 
 @Singleton
 class UriIntegrityHelpers @Inject() (urlRepo: URLRepo, keepRepo: KeepRepo) extends Logging {
-  def improveKeepSafely(uri: NormalizedURI, keep: Keep)(implicit session: RSession): Keep = {
+  def improveKeepSafely(uri: NormalizedURI, keep: Keep)(implicit session: RWSession): Keep = {
     require(keep.uriId == uri.id.get, "URI and Keep don't match.")
     val keepWithTitle = if (keep.title.isEmpty) keep.withTitle(uri.title) else keep
     if (HttpRedirect.isShortenedUrl(keepWithTitle.url)) {
-      urlRepo.getByNormUri(uri.id.get).find(_.url.equalsIgnoreCase(uri.url)) match {
-        case None =>
-          log.error(s"Could not find URL for normalized uri $uri")
-          keepWithTitle
-        case Some(url) => keepWithTitle.copy(url = url.url, urlId = url.id.get)
-      }
+      val urlObj = urlRepo.get(uri.url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+      keepWithTitle.copy(url = urlObj.url, urlId = urlObj.id.get)
     } else keepWithTitle
   }
 
