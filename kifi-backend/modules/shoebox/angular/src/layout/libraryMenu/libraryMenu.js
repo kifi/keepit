@@ -92,7 +92,7 @@ angular.module('kifi')
           var libItems = antiscrollLibList.find('.kf-nav-lib-item');
           libItemHeight = libItems.eq(0).outerHeight(true);
 
-          antiscrollLibList.find('.kf-nav-lib-users').css('padding-top', '25px');
+          antiscrollLibList.find('.kf-nav-lib-users').css('padding-top', '35px');
 
           // set limits based on number of items in myLibs, userLibs or invitedLibs
           var firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay;
