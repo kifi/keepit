@@ -60,7 +60,7 @@ class NewKeepsInLibraryCommander @Inject() (
       val layer = keeps.map(_.pop())
       oldKeepsPerLib.append(layer: _*)
     }
-    oldKeepsPerLib.sortBy(_.createdAt).take(max)
+    oldKeepsPerLib.sortBy(k => (k.createdAt, k.id)).take(max)
   }
 
   def getLastEmailViewedKeeps(userId: Id[User], max: Int): Seq[Keep] = {
