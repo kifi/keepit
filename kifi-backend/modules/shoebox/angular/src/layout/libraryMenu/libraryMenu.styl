@@ -13,9 +13,11 @@
   user-select: none
   margin-top: 10px
 
-.kf-nav-link-box
-  display: inline-block
-  cursor: pointer
+.kf-nav-link
+  display: block
+
+  .active &
+    cursor: default
 
 .kf-nav-name
 .kf-nav-count
@@ -47,7 +49,7 @@
 
 .kf-nav-group
   padding-top: 10px
-  height: 100%
+  height: calc(100% - 55px)
 
 .kf-nav-group-name
   margin: 0 40px 0 20px
@@ -64,11 +66,10 @@
   font-size: 13px
 
 .kf-lm-libraries
-  height: calc(100% - 45px)
+  height: calc(100% - 5px)
 
 .kf-nav-lib-system
   border-bottom: 1px solid separatorColor
-  padding-top: 3px
 
 .kf-nav-lib-item
   position: relative
@@ -93,15 +94,16 @@
   margin-top: 5px
   line-height: 30px
   width: 216px
-  border-radius: 4px
-  background-color: #e8e8e8
+  background-color: #fff
   z-index: 3
 
 .kf-nav-lib-separator-title
+  border-radius: 4px
   padding-left: 45px
   font-size: 11px
   text-transform: uppercase
   color: #5d5d5d
+  background-color: #e8e8e8
 
 ////////////////////////////
 ////// Library Icons ///////
@@ -113,24 +115,44 @@
 
 .kf-nav-lib-name
   width: 165px
-  font-size: 12px
+  font-size: 13px
   font-weight: 400
   color: textDarkColor
 
   .active &
     font-weight: bold
 
+.kf-nav-lib-item:hover:not(.active)
+  .kf-nav-lib-name
+    color: #71c885
+
 .kf-nav-lib-text
   font-size: 11px
   font-weight: 200
   color: countGreyColor
 
-.library-icon
+.kf-lm-library-card
+  display: inline-block
+  border-radius: 4px
   width: 27px
   height: 35px
-  display: inline-block
   vertical-align: top
-  background-repeat: no-repeat
+  box-shadow: 0 1px #f5f5f5, 0 3px #c9ccc0
+
+.kf-lm-lock-icon
+.kf-lm-star-icon
+  display: block
+  margin: 8px auto 0
+  background-size: 100%
+  background-repeat: none
+
+.kf-lm-lock-icon
+  width: 14px
+  height: 18px
+
+.kf-lm-star-icon
+  width: 18px
+  height: 18px
 
 .reco-icon
   width: 26px
@@ -154,7 +176,7 @@
 .kf-scrollable-libs
   position: relative
   width: calc(100% + 15px)
-  height: calc(100% - 175px)
+  height: calc(100% - 160px)
 
   // This is a hack to hide the scrollbar
   // (cf. comments in scrollbar.js)
@@ -302,3 +324,15 @@
     background-color: #fff
     cursor: default
 
+.kf-lm-footer
+  border-top: 1px solid #e8e8e8
+  padding-top: 5px
+  font-size: 12px
+
+.kf-lm-footer-link
+  display: inline-block
+  margin: 0 4px
+
+  &:hover
+  &:active
+    text-decoration: underline

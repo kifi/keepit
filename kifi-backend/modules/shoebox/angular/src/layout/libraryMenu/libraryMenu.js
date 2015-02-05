@@ -19,6 +19,7 @@ angular.module('kifi')
         var scrollableLibList = element.find('.kf-scrollable-libs');
         var antiscrollLibList = scrollableLibList.find('.antiscroll-inner');
         var separators = antiscrollLibList.find('.kf-nav-lib-separator');
+        var elementCache = {};
 
         //
         // Scope data.
@@ -39,13 +40,11 @@ angular.module('kifi')
         // Internal methods.
         //
         function getElement(selector) {
-          var cache = {};
-
-          if (!cache[selector] || !cache[selector].length) {
-            cache[selector] = angular.element(selector);
+          if (!elementCache[selector] || !elementCache[selector].length) {
+            elementCache[selector] = angular.element(selector);
           }
 
-          return cache[selector];
+          return elementCache[selector];
         }
 
         function positionMenu() {
@@ -93,7 +92,7 @@ angular.module('kifi')
           var libItems = antiscrollLibList.find('.kf-nav-lib-item');
           libItemHeight = libItems.eq(0).outerHeight(true);
 
-          antiscrollLibList.find('.kf-nav-lib-users').css('padding-top', '25px');
+          antiscrollLibList.find('.kf-nav-lib-users').css('padding-top', '35px');
 
           // set limits based on number of items in myLibs, userLibs or invitedLibs
           var firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay;
@@ -120,7 +119,7 @@ angular.module('kifi')
         }
 
         function fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight) {
-          var stickToMaxTop = 264;
+          var stickToMaxTop = 225;
           // all 3 separators properties need to be set because this function is debounced and a user might scroll too fast
           if (offset <= firstLimit) {
             setPositioning(separators[0], 'fixed', stickToMaxTop);
@@ -177,10 +176,8 @@ angular.module('kifi')
           profileService.savePrefs(save);
         };
 
-        scope.addLibrary = function () {
-          modalService.open({
-            template: 'libraries/manageLibraryModal.tpl.html'
-          });
+        scope.closeMenu = function () {
+          scope.libraryMenu.visible = false;
         };
 
         scope.isActive = function (path) {
