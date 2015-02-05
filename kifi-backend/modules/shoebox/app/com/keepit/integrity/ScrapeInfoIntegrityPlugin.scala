@@ -83,7 +83,7 @@ class ScrapeInfoIntegrityChecker @Inject() (
   val normalizedURISeqKey = NormalizedUriSequenceNumberKey()
 
   private def getSequenceNumber(key: NormalizedUriSequenceNumberKey): SequenceNumber[NormalizedURI] = {
-    centralConfig(key) getOrElse (SequenceNumber.MinValue[NormalizedURI])
+    centralConfig(key) getOrElse (SequenceNumber[NormalizedURI](64935824L)) // starting from a safe known sequence number
   }
 
   def checkIntegrity(): Future[Unit] = SafeFuture {
