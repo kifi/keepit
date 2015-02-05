@@ -77,7 +77,7 @@ angular.module('kifi')
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
           if (url && util.validateUrl(url)) {
-            return keepActionService.keepToLibrary([{ url: url }], scope.selectedLibrary.id).then(function (result) {
+            keepActionService.keepToLibrary([{ url: url }], scope.selectedLibrary.id).then(function (result) {
               if (result.failures && result.failures.length) {
                 scope.resetAndHide();
                 modalService.open({
