@@ -10,7 +10,9 @@
       <ul class="kf-nav-lib-system">
         <li class="kf-nav-lib-item" ng-class="{ active: isActive(mainLib.url) }">
           <a class="kf-nav-link" ng-href="{{mainLib.url}}" ng-click="closeMenu()">
-            <div class="library-icon svg-main-library-icon"></div>
+            <div class="kf-lm-library-card" ng-style="{'background-color': mainLib.color}">
+              <div class="kf-lm-star-icon svg-card-star"></div>
+            </div>
             <div class="kf-nav-lib-info">
               <div class="kf-nav-lib-name">My Main Library</div>
               <div class="kf-nav-lib-text" ng-class="{ empty: !mainLib.numKeeps }">
@@ -25,7 +27,9 @@
         </li>
         <li class="kf-nav-lib-item" ng-class="{ active: isActive(secretLib.url) }">
           <a class="kf-nav-link" ng-href="{{secretLib.url}}" ng-click="closeMenu()">
-            <div class="library-icon svg-secret-library-icon"></div>
+            <div class="kf-lm-library-card" ng-style="{'background-color': secretLib.color}">
+              <div class="kf-lm-lock-icon svg-card-lock"></div>
+            </div>
             <div class="kf-nav-lib-info">
               <div class="kf-nav-lib-name">My Private Library</div>
               <div class="kf-nav-lib-text" ng-class="{ empty: !secretLib.numKeeps }">
@@ -78,9 +82,9 @@
 
           <li ng-show="sortingMenu.myLibsFirst" ng-repeat="library in myLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
             <a class="kf-nav-link" ng-href="{{library.url}}" ng-click="closeMenu()">
-              <div class="library-icon svg-private-library-icon" ng-if="library.visibility=='secret'"></div>
-              <div class="library-icon svg-public-library-icon" ng-if="library.visibility=='published'"></div>
-              <div class="library-icon svg-yellow-card-with-globe" ng-if="library.visibility=='discoverable'"></div> <!-- TODO: remove when discoverable libraries are converted -->
+              <div class="kf-lm-library-card" ng-style="{'background-color': library.color}">
+                <div ng-if="library.visibility === 'secret'" class="kf-lm-lock-icon svg-card-lock"></div>
+              </div>
               <div class="kf-nav-lib-info">
                 <div kf-ellipsis full-text="library.name" max-num-lines=2 class="kf-nav-lib-name"></div>
                 <div class="kf-nav-lib-text">
@@ -106,9 +110,9 @@
           </li>
           <li ng-repeat="library in userLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
             <a class="kf-nav-link" ng-href="{{library.url}}" ng-click="closeMenu()">
-              <div class="library-icon svg-private-library-icon" ng-if="library.visibility=='secret'"></div>
-              <div class="library-icon svg-public-library-icon" ng-if="library.visibility=='published'"></div>
-              <div class="library-icon svg-yellow-card-with-globe" ng-if="library.visibility=='discoverable'"></div> <!-- TODO: remove when discoverable libraries are converted -->
+              <div class="kf-lm-library-card" ng-style="{'background-color': library.color}">
+                <div ng-if="library.visibility === 'secret'" class="kf-lm-lock-icon svg-card-lock"></div>
+              </div>
               <div class="kf-nav-lib-info">
                 <div kf-ellipsis full-text="library.name" max-num-lines=2 class="kf-nav-lib-name"></div>
                 <div class="kf-nav-lib-text">
@@ -132,7 +136,9 @@
           </li>
           <li ng-repeat="library in invitedLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
             <a class="kf-nav-link" ng-href="{{library.url}}" ng-click="closeMenu()">
-              <div class="library-icon svg-library-card"></div>
+              <div class="kf-lm-library-card" ng-style="{'background-color': library.color}">
+                <div ng-if="library.visibility === 'secret'" class="kf-lm-lock-icon svg-card-lock"></div>
+              </div>
               <div class="kf-nav-lib-info">
                 <div kf-ellipsis full-text="library.name" max-num-lines=2 class="kf-nav-lib-name"></div>
                 <div class="kf-nav-lib-text">invitation pending</div>
