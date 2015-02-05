@@ -18,9 +18,11 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
+import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
+import scala.concurrent.Future
 import scala.util.Success
 
 class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
@@ -44,12 +46,8 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
     "get all personas" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, allPersonas) = setupUserPersona
-        val controller = inject[UserPersonaController]
-        inject[FakeUserActionsHelper].setUser(user1)
 
-        val testPath = com.keepit.controllers.website.routes.UserPersonaController.getAllPersonas().url
-        val request1 = FakeRequest("GET", testPath)
-        val result1 = controller.getAllPersonas()(request1)
+        val result1 = getAllPersonas(user1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         contentAsJson(result1) === Json.parse(
@@ -94,18 +92,13 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
     "add persona" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, allPersonas) = setupUserPersona
-        val controller = inject[UserPersonaController]
-        inject[FakeUserActionsHelper].setUser(user1)
 
         db.readOnlyMaster { implicit s =>
           userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ARTIST, PersonaName.STUDENT)
         }
 
-        val testPath = com.keepit.controllers.website.routes.UserPersonaController.addPersona("science_buff").url
-        val request = FakeRequest("POST", testPath)
-
         // add new persona
-        val result1 = controller.addPersona("science_buff")(request)
+        val result1 = addPersona(user1, "science_buff")
         status(result1) must equalTo(NO_CONTENT)
 
         db.readOnlyMaster { implicit s =>
@@ -113,7 +106,7 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
         }
 
         // add existing persona
-        val result2 = controller.addPersona("science_buff")(request)
+        val result2 = addPersona(user1, "science_buff")
         status(result2) must equalTo(BAD_REQUEST)
       }
     }
@@ -121,22 +114,17 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
     "remove persona" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, allPersonas) = setupUserPersona
-        val controller = inject[UserPersonaController]
-        inject[FakeUserActionsHelper].setUser(user1)
 
         db.readOnlyMaster { implicit s =>
           userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ARTIST, PersonaName.STUDENT)
         }
 
-        val testPath = com.keepit.controllers.website.routes.UserPersonaController.removePersona("student").url
-        val request = FakeRequest("DELETE", testPath)
-
         // remove existing persona
-        val result1 = controller.removePersona("student")(request)
+        val result1 = removePersona(user1, "student")
         status(result1) must equalTo(NO_CONTENT)
 
         // remove persona that doesn't exist
-        val result2 = controller.removePersona("student")(request)
+        val result2 = removePersona(user1, "student")
         status(result2) must equalTo(BAD_REQUEST)
 
         db.readOnlyMaster { implicit s =>
@@ -147,22 +135,15 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
 
     "get default keep for persona" in {
       withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, allPersonas) = setupUserPersona
         implicit val config = inject[PublicIdConfiguration]
 
-        val (user1, allPersonas) = setupUserPersona
-        val controller = inject[UserPersonaController]
-        inject[FakeUserActionsHelper].setUser(user1)
-
-        val testPath = com.keepit.controllers.website.routes.UserPersonaController.getDefaultKeepForPersona("science_buff").url
-
         // get for inactive persona
-        val request1 = FakeRequest("GET", testPath)
-        val result1 = controller.getDefaultKeepForPersona("science_buff")(request1)
+        val result1 = getDefaultKeepForPersona(user1, "science_buff")
         status(result1) must equalTo(BAD_REQUEST)
 
         // add persona, and get for now active persona
-        val requestAdd = FakeRequest("POST", com.keepit.controllers.website.routes.UserPersonaController.addPersona("science_buff").url)
-        val resultAdd = controller.addPersona("science_buff")(requestAdd)
+        val resultAdd = addPersona(user1, "science_buff")
         status(resultAdd) must equalTo(NO_CONTENT)
 
         val (_, personaLib) = db.readOnlyMaster { implicit s =>
@@ -170,8 +151,7 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
           libraryRepo.getByUser(user1.id.get).head // created from adding persona
         }
 
-        val request2 = FakeRequest("GET", testPath)
-        val result2 = controller.getDefaultKeepForPersona("science_buff")(request2)
+        val result2 = getDefaultKeepForPersona(user1, "science_buff")
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         val resultJson = contentAsJson(result2)
@@ -180,6 +160,29 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+  }
+
+  private def controller(implicit injector: Injector) = inject[UserPersonaController]
+  private def request(route: Call) = FakeRequest(route.method, route.url)
+
+  private def getAllPersonas(user: User)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.getAllPersonas()(request(routes.UserPersonaController.getAllPersonas()))
+  }
+
+  private def addPersona(user: User, name: String)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.addPersona(name)(request(routes.UserPersonaController.addPersona(name)))
+  }
+
+  private def removePersona(user: User, name: String)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.removePersona(name)(request(routes.UserPersonaController.removePersona(name)))
+  }
+
+  private def getDefaultKeepForPersona(user: User, name: String)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.getDefaultKeepForPersona(name)(request(routes.UserPersonaController.getDefaultKeepForPersona(name)))
   }
 
   // sets up a Map of [String, Persona]
