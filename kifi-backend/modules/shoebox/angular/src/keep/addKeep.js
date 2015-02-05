@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfAddKeep', [
-  '$document', '$rootScope', '$location', 'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'modalService', 'tagService', 'util',
-  function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepActionService, libraryService, modalService, tagService, util) {
+  '$document', '$rootScope', '$location', '$state', 'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'modalService', 'util',
+  function ($document, $rootScope, $location, $state, keyIndices, keepDecoratorService, keepActionService, libraryService, modalService, util) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -83,22 +83,19 @@ angular.module('kifi')
                 modalService.open({
                   template: 'common/modal/genericErrorModal.tpl.html'
                 });
-              } else if (result.alreadyKept.length > 0) {
-                scope.resetAndHide();
-                $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
-                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
-                  var keep = new keepDecoratorService.Keep(fullKeep);
-                  keep.buildKeep(keep);
-                  keep.makeKept();
+                libraryService.fetchLibrarySummaries(true);
+                scope.resetAndHide();
 
-                  libraryService.fetchLibrarySummaries(true);
-                  libraryService.addToLibraryCount(scope.selectedLibrary.id, 1);
-                  tagService.addToKeepCount(1);
-
-                  scope.$emit('keepAdded', libraryService.getSlugById(scope.selectedLibrary.id), [keep]);
-                  scope.resetAndHide();
-                });
+                // If we are on the library page where the keep is being added, add the keep to the top of the list of keeps.
+                if ($state.href($state.current.name) === scope.selectedLibrary.url) {
+                  return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
+                    var keep = new keepDecoratorService.Keep(fullKeep);
+                    keep.buildKeep(keep);
+                    keep.makeKept();
+                    $rootScope.$emit('keepAdded', libraryService.getSlugById(scope.selectedLibrary.id), [keep]);
+                  });
+                }
               }
             })['catch'](modalService.openGenericErrorModal);
           } else {
