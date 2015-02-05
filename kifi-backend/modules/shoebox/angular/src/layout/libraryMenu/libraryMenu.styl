@@ -49,7 +49,7 @@
 
 .kf-nav-group
   padding-top: 10px
-  height: 100%
+  height: calc(100% - 55px)
 
 .kf-nav-group-name
   margin: 0 40px 0 20px
@@ -66,7 +66,7 @@
   font-size: 13px
 
 .kf-lm-libraries
-  height: 100%
+  height: calc(100% - 5px)
 
 .kf-nav-lib-system
   border-bottom: 1px solid separatorColor
@@ -176,7 +176,7 @@
 .kf-scrollable-libs
   position: relative
   width: calc(100% + 15px)
-  height: calc(100% - 175px)
+  height: calc(100% - 160px)
 
   // This is a hack to hide the scrollbar
   // (cf. comments in scrollbar.js)
@@ -324,3 +324,15 @@
     background-color: #fff
     cursor: default
 
+.kf-lm-footer
+  border-top: 1px solid #e8e8e8
+  padding-top: 5px
+  font-size: 12px
+
+.kf-lm-footer-link
+  display: inline-block
+  margin: 0 4px
+
+  &:hover
+  &:active
+    text-decoration: underline
