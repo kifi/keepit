@@ -50,7 +50,7 @@ angular.module('kifi')
 
       var keepIds = _.map(keeps, function (keep) { return keep.id; });
       var deferred = $q.defer();
-      var promise = $http.post(routeService.tagKeeps(tag), { 'keepIds': keepIds });
+      var promise = $http.post(routeService.tagKeeps(encodeURIComponent(tag)), { 'keepIds': keepIds });
 
       if (beOptimistic) {
         addTagToKeeps(keeps);
@@ -71,7 +71,7 @@ angular.module('kifi')
     };
 
     api.untagKeep = function (keep, tag) {
-      var promise = $http['delete'](routeService.untagKeep(keep.libraryId, keep.id, tag));
+      var promise = $http['delete'](routeService.untagKeep(keep.libraryId, keep.id, encodeURIComponent(tag)));
       var deferred = $q.defer();
       promise.then(function (res) {
         suggestTagsCache.expireAll();
