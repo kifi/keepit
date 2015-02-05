@@ -23,6 +23,7 @@ trait LDAPersonaCommander {
   def savePersonaFeature(pid: Id[Persona], feature: UserTopicMean)(implicit version: ModelVersion[DenseLDA]): PersonaLDAFeature
   def getUserPersonaFeatures(userId: Id[User])(implicit version: ModelVersion[DenseLDA]): Future[Seq[PersonaLDAFeature]]
   def evaluatePersonaFeature(pid: Id[Persona], sampleSize: Int = 50)(implicit version: ModelVersion[DenseLDA]): Map[Id[NormalizedURI], Float]
+  def autoLearn(pid: Id[Persona], uriIds: Seq[Id[NormalizedURI]], labels: Seq[Int], rate: Float = 0.1f)(implicit version: ModelVersion[DenseLDA]): Unit
 }
 
 @Singleton
@@ -98,6 +99,28 @@ class LDAPersonaCommanderImpl @Inject() (
     }
 
     uriScores.toArray.sortBy(-_._2).take(500).toMap
+  }
+
+  // from admin page
+  def autoLearn(pid: Id[Persona], uriIds: Seq[Id[NormalizedURI]], labels: Seq[Int], rate: Float = 0.1f)(implicit version: ModelVersion[DenseLDA]): Unit = {
+    require(uriIds.size == labels.size)
+    val (xs, ys) = {
+      (uriIds zip labels).flatMap{ case (uriId, label) =>
+        val featOpt = db.readOnlyReplica{ implicit s => uriLDARepo.getActiveByURI(uriId, version)}
+        featOpt.map{ feat => (feat.feature.get.value, label)}
+      }.unzip
+    }
+
+    val pfeat = db.readOnlyReplica{ implicit s => personaLDARepo.getPersonaFeature(pid, version)}
+
+    if (pfeat.isDefined){
+      val theta = pfeat.get.feature.mean
+      val delta = PersonaFeatureTrainer.mini_batch(xs, ys, theta, rate)
+      val newThetaUnormalized = add(theta, delta).map{ x => x max 0.00001f}       // never go negative
+      val normalizer = newThetaUnormalized.sum
+      val newTheta = newThetaUnormalized.map{_/normalizer}
+      savePersonaFeature(pid, UserTopicMean(newTheta))
+    }
   }
 
 }
