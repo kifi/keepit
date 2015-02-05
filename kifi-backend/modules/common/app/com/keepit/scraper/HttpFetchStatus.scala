@@ -45,7 +45,8 @@ object HttpRedirect {
   def resolve(origin: String, redirects: Seq[HttpRedirect]): Option[String] = {
     var absoluteDestination = origin
     var currentLocation = origin
-    redirects.foreach {
+    val relevantRedirects = redirects.takeWhile(redirect => redirect.isPermanent || redirect.isShortener)
+    relevantRedirects.foreach {
       case redirect =>
         if (redirect.isLocatedAt(currentLocation)) {
           currentLocation = redirect.newDestination
