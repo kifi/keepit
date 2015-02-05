@@ -69,19 +69,21 @@ class UserPersonaController @Inject() (
       case None =>
         BadRequest(Json.obj("error" -> "user does not have this persona active"))
       case Some(_) =>
-        val defaultKeep = PersonaName.personaKeeps.get(personaName).getOrElse(DefaultPersonaKeep.default)
-        val libraryIdOpt = PersonaName.personaLibraryNames.get(personaName).map { libName =>
+        val defaultKeep = PersonaName.personaKeeps.get(personaName).getOrElse(PersonaKeep.default)
+        val libraryObj = PersonaName.personaLibraryNames.get(personaName).map { libName =>
           db.readOnlyMaster { implicit s =>
             libraryRepo.getByNameAndUserId(request.userId, libName)
-          }.map { lib =>
-            Library.publicId(lib.id.get)
           }
-        }.flatten
+        }.flatten.map { lib =>
+          Json.obj("library" -> Json.obj(
+            "id" -> Library.publicId(lib.id.get),
+            "name" -> lib.name,
+            "color" -> lib.color)
+          )
+        }
 
-        Ok(Json.obj(
-          "keep" -> Json.toJson(defaultKeep),
-          "libraryId" -> libraryIdOpt
-        ))
+        val resultObj = Json.obj("keep" -> Json.toJson(defaultKeep)) ++ libraryObj.getOrElse(Json.obj())
+        Ok(resultObj)
     }
   }
 

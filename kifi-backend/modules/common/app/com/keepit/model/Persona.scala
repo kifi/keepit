@@ -114,17 +114,14 @@ object PersonaName {
     DEEP_THINKER -> "Interesting Reads"
   )
 
-  val personaKeeps: Map[PersonaName, DefaultPersonaKeep] = Map() // todo (aaron, ashley): pick out a default keep for each persona
+  val personaKeeps: Map[PersonaName, PersonaKeep] = Map() // todo (aaron, ashley): pick out a default keep for each persona
 
 }
 
 object PersonaStates extends States[Persona]
 
-@json case class DefaultPersonaKeep( // default keep infos for FTUE
+@json case class PersonaKeep( // default keep infos for FTUE
   url: String,
-  name: Seq[String],
-  site: String,
-  thumbnailPath: String,
   imagePath: Option[String] = None,
   imageWidth: Option[Int] = None,
   imageHeight: Option[Int] = None,
@@ -134,12 +131,9 @@ object PersonaStates extends States[Persona]
   matches: JsObject,
   track: String)
 
-object DefaultPersonaKeep { // todo (aaron): once every persona has a default keep, remove this!
-  val default = DefaultPersonaKeep(
+object PersonaKeep { // todo (aaron): once every persona has a default keep, remove this!
+  val default = PersonaKeep(
     url = "http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die",
-    name = Seq("Steve Jobs", "How to Live", "Before You Die"),
-    site = "ted.com",
-    thumbnailPath = "/img/guide/before_you_die.jpg",
     imagePath = Some("/img/guide/ted_jobs.jpg"),
     imageWidth = Some(480),
     imageHeight = Some(425),
@@ -147,6 +141,6 @@ object DefaultPersonaKeep { // todo (aaron): once every persona has a default ke
     query = "steve+jobs",
     title = "Steve Jobs: How to live before you die | Talk Video | TED.com",
     matches = Json.obj("title" -> Json.toJson(Seq(Seq(0, 5), Seq(6, 4))), "url" -> Json.toJson(Seq(Seq(25, 5), Seq(31, 4)))),
-    track = "stevenJobsSpeech"
+    track = "steveJobsSpeech"
   )
 }

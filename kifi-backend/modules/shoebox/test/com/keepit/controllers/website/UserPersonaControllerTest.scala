@@ -154,9 +154,26 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
         val result2 = getDefaultKeepForPersona(user1, "science_buff")
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
-        val resultJson = contentAsJson(result2)
-        (resultJson \ "keep").as[DefaultPersonaKeep].site === "ted.com"
-        Library.decodePublicId((resultJson \ "libraryId").asOpt[PublicId[Library]].get) === Success(personaLib.id.get)
+        Json.parse(contentAsString(result2)) === Json.parse(
+          s"""
+            {
+              "keep":{
+                "url":"http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die",
+                "imagePath":"/img/guide/ted_jobs.jpg",
+                "imageWidth":480,
+                "imageHeight":425,
+                "noun":"video",
+                "query":"steve+jobs",
+                "title":"Steve Jobs: How to live before you die | Talk Video | TED.com",
+                "matches":{"title":[[0,5],[6,4]],"url":[[25,5],[31,4]]},"track":"steveJobsSpeech"
+              },
+              "library":{
+                "id":"${Library.publicId(personaLib.id.get).id}",
+                "name":"Science!!",
+                "color":"${personaLib.color.get.hex}"
+              }
+            }
+           """)
       }
     }
 
