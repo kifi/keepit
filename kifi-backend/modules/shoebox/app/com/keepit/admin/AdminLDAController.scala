@@ -266,4 +266,17 @@ class AdminLDAController @Inject() (
       Ok(Json.obj("uids" -> uids, "titles" -> titles, "scores" -> scores))
     }
   }
+
+  def personaFeatureTraining() = AdminUserPage(parse.tolerantJson) { implicit request =>
+    val js = request.body
+    val uids = (js \ "uids").as[Seq[String]].map { _.trim.toInt }
+    val labels = (js \ "feedbacks").as[Seq[Int]]
+
+    println("uids: " + uids.mkString(", "))
+    println("labels: " + labels.mkString(", "))
+
+    // call cortex client here...
+
+    Ok
+  }
 }

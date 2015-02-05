@@ -749,6 +749,7 @@ GET     /adimin/cortex/lda/persona                         @com.keepit.controlle
 GET     /adimin/cortex/lda/persona/version                 @com.keepit.controllers.admin.AdminLDAController.personaVersioned(version: ModelVersion[DenseLDA])
 POST    /admin/cortex/lda/persona/generate                 @com.keepit.controllers.admin.AdminLDAController.generateLDAPersonaFeature
 POST    /admin/cortex/lda/persona/evaluate                 @com.keepit.controllers.admin.AdminLDAController.evaluatePersona
+POST    /admin/cortex/lda/persona/train                    @com.keepit.controllers.admin.AdminLDAController.personaFeatureTraining
 
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
