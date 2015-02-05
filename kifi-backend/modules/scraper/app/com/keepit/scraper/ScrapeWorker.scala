@@ -104,7 +104,7 @@ class ScrapeWorkerImpl @Inject() (
       case None =>
     }
   }
-  private val shortenedUrls = Set("bit.ly", "goo.gl", "owl.ly", "deck.ly", "su.pr", "lnk.co", "fur.ly", "ow.ly", "owl.ly", "tinyurl.com", "is.gd", "v.gd", "t.co", "linkd.in", "urls.im", "tnw.to", "instagr.am", "spr.ly", "nyp.st", "rww.to", "itun.es", "youtu.be", "spoti.fi", "j.mp", "amzn.to", "lnkd.in", "rww.to", "trib.al", "fb.me", "buff.ly")
+  private val shortenedUrls = Set("bit.ly", "goo.gl", "owl.ly", "deck.ly", "su.pr", "lnk.co", "fur.ly", "ow.ly", "owl.ly", "tinyurl.com", "is.gd", "v.gd", "t.co", "linkd.in", "urls.im", "tnw.to", "instagr.am", "spr.ly", "nyp.st", "rww.to", "itun.es", "youtu.be", "spoti.fi", "j.mp", "amzn.to", "lnkd.in", "trib.al", "fb.me", "buff.ly", "qr.ae", "tcrn.ch", "nzzl.me", "kiss.ly", "wp.me", "nyti.ms", "pocket.co", "onforb.es")
   private def handleSuccessfulScraped(latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo, pageInfoOpt: Option[PageInfo]): Future[Option[Article]] = {
 
     // This is bad. This whole function could likely be replaced with one call to shoebox signaling that a
@@ -132,6 +132,8 @@ class ScrapeWorkerImpl @Inject() (
     val Scraped(article, signature, redirects) = scraped
 
     processRedirects(latestUri, redirects) flatMap { updatedUri =>
+      // article.title
+      // article.destinationUrl
       if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) {
         shoeboxCommander.saveScrapeInfo(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE)) map { _ => None }
       } else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
