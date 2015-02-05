@@ -157,20 +157,6 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
         result2
       }
 
-      "version 1 includes keeps" in {
-        withDb(modules: _*) { implicit injector =>
-          topRecosSetup()
-
-          val call = com.keepit.controllers.mobile.routes.MobileRecommendationsController.topRecosV1(true, 0.75f)
-          call.url === "/m/1/recos/top?more=true&recency=0.75"
-          call.method === "GET"
-
-          val result = runCommonTopRecosTests(call, request => inject[MobileRecommendationsController].topRecosV1(true, 0.75f)(request))
-          val json = Json.parse(contentAsString(result))
-          json === Json.parse("[" + expectedRecoInfosJson + "]")
-        }
-      }
-
       "version 2 includes keeps and libraries" in {
         withDb(modules: _*) { implicit injector =>
           topRecosSetup()

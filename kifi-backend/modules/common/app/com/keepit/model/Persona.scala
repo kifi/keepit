@@ -94,6 +94,25 @@ object PersonaName {
     ANIMAL_LOVER,
     DEEP_THINKER
   )
+
+  val personaLibraries: Map[PersonaName, String] = Map(
+    DEVELOPER -> "Programming",
+    TECHIE -> "Computer and Electronics",
+    ENTREPRENEUR -> "Startups and Entrepreneurship",
+    ARTIST -> "Design, Photography and Visual Arts",
+    FOODIE -> "Food and Cooking",
+    SCIENCE_BUFF -> "Science!!",
+    FASHIONISTA -> "Fashion",
+    HEALTH_NUT -> "Health and Fitness",
+    STUDENT -> "Student Resources",
+    INVESTOR -> "Finance",
+    TRAVELER -> "Traveling Resources",
+    GAMER -> "Gaming",
+    PARENT -> "Parenting",
+    ANIMAL_LOVER -> "Pets and Animals",
+    DEEP_THINKER -> "Interesting Reads"
+  )
+
 }
 
 object PersonaStates extends States[Persona]

@@ -56,7 +56,7 @@ describe('kifi.friends.seeMutualFriends', function () {
       // on the controller in 'kfModal'.
       elem = $compile('<div kf-modal><div kf-see-mutual-friends></div></div>')(scope);
 
-      spyOn(friendService, 'getPictureUrlForUser').andReturn('fake picture URL');
+      spyOn(friendService, 'getPictureUrlForUser').and.returnValue('fake picture URL');
     });
 
     it('should have the correct pymk header', function () {
@@ -82,7 +82,7 @@ describe('kifi.friends.seeMutualFriends', function () {
       scope.modalData.savedPymk = savedPerson1;
       scope.$digest();
 
-      spyOn(inviteService, 'friendRequest').andReturn(promise(null));
+      spyOn(inviteService, 'friendRequest').and.returnValue(promise(null));
       elem.find('.kf-mutual-friends-action').click();
       expect(inviteService.friendRequest).toHaveBeenCalled();
     });
@@ -91,7 +91,7 @@ describe('kifi.friends.seeMutualFriends', function () {
       scope.modalData.savedPymk = savedPerson1;
       scope.$digest();
 
-      spyOn(inviteService, 'friendRequest').andReturn(promise(null));
+      spyOn(inviteService, 'friendRequest').and.returnValue(promise(null));
       expect(elem.find('.kf-mutual-friends-action').text()).toBe('Add Friend');
       elem.find('.kf-mutual-friends-action').click();
       expect(elem.find('.kf-mutual-friends-action').text()).toBe('Sent!');
@@ -101,7 +101,7 @@ describe('kifi.friends.seeMutualFriends', function () {
       scope.modalData.savedPymk = savedPerson1;
       scope.$digest();
 
-      spyOn(inviteService, 'friendRequest').andReturn(rejectedPromise());
+      spyOn(inviteService, 'friendRequest').and.returnValue(rejectedPromise());
       expect(elem.find('.kf-mutual-friends-action').text()).toBe('Add Friend');
       elem.find('.kf-mutual-friends-action').click();
       expect(elem.find('.kf-mutual-friends-action').text()).toBe('Error. Retry?');
@@ -111,7 +111,7 @@ describe('kifi.friends.seeMutualFriends', function () {
       scope.modalData.savedPymk = savedPerson1;
       scope.$digest();
 
-      spyOn(inviteService, 'friendRequest').andReturn(promise(null));
+      spyOn(inviteService, 'friendRequest').and.returnValue(promise(null));
       expect(elem.find('.kf-mutual-friends-action').hasClass('clickable')).toBe(true);
       elem.find('.kf-mutual-friends-action').click();
       expect(elem.find('.kf-mutual-friends-action').hasClass('clickable')).toBe(false);
@@ -124,7 +124,7 @@ describe('kifi.friends.seeMutualFriends', function () {
       expect(elem.find('.kf-mutual-friends-action').hasClass('clickable')).toBe(true);
 
       var deferred = $q.defer();
-      spyOn(inviteService, 'friendRequest').andReturn(deferred.promise);
+      spyOn(inviteService, 'friendRequest').and.returnValue(deferred.promise);
       elem.find('.kf-mutual-friends-action').click();
       expect(elem.find('.kf-mutual-friends-action').hasClass('clickable')).toBe(false);
 

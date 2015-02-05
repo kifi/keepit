@@ -232,4 +232,9 @@ class LDAController @Inject() (
     personaCommander.savePersonaFeature(personaId, UserTopicMean(feature))(version)
     Ok
   }
+
+  def evaluatePersona(personaId: Id[Persona], version: ModelVersion[DenseLDA]) = Action { request =>
+    val scores = personaCommander.evaluatePersonaFeature(personaId, sampleSize = 50)(version)
+    Ok(Json.toJson(scores))
+  }
 }
