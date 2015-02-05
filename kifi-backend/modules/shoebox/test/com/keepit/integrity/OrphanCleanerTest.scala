@@ -148,6 +148,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         val uriRepo = inject[NormalizedURIRepo]
         val keepRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
+        val scrapeInfoIntegrityChecker = inject[ScrapeInfoIntegrityChecker]
 
         @inline def doAssign[T](f: => T): T = {
           f tap { _ => assignSeqNums(db)(uriRepo, keepRepo) }
@@ -311,6 +312,8 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
             )
           }
         }
+        scrapeInfoIntegrityChecker.checkIntegrity() // sync scrape info
+
         doAssign { cleaner.clean(readOnly = false) }
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
