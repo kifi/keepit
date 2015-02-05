@@ -148,8 +148,7 @@ angular.module('kifi')
     };
 
     $scope.onWidgetCopyLibraryClicked = function (clickedLibrary) {
-      var tagName = encodeURIComponent($scope.selectedTag.name);
-      libraryService.copyKeepsFromTagToLibrary(clickedLibrary.id, tagName).then(function () {
+      libraryService.copyKeepsFromTagToLibrary(clickedLibrary.id, $scope.selectedTag.name).then(function () {
         modalService.open({
           template: 'tagManage/tagToLibModal.tpl.html',
           modalData: { library : clickedLibrary, action: 'copy' }
@@ -164,9 +163,7 @@ angular.module('kifi')
     };
 
     $scope.onWidgetMoveLibraryClicked = function (clickedLibrary) {
-      var tagName = encodeURIComponent($scope.selectedTag.name);
-
-      libraryService.moveKeepsFromTagToLibrary(clickedLibrary.id, tagName).then(function () {
+      libraryService.moveKeepsFromTagToLibrary(clickedLibrary.id, $scope.selectedTag.name).then(function () {
         modalService.open({
           template: 'tagManage/tagToLibModal.tpl.html',
           modalData: { library : clickedLibrary, action: 'move' }
