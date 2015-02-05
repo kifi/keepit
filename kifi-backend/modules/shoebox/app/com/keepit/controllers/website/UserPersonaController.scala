@@ -15,7 +15,6 @@ class UserPersonaController @Inject() (
   userPersonaCommander: UserPersonaCommander,
   personaRepo: PersonaRepo,
   userPersonaRepo: UserPersonaRepo,
-  libraryRepo: LibraryRepo,
   val userActionsHelper: UserActionsHelper,
   heimdalContextFactory: HeimdalContextBuilderFactory,
   clock: Clock)
@@ -57,5 +56,4 @@ class UserPersonaController @Inject() (
     else
       NoContent
   }
-
 }

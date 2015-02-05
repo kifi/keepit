@@ -64,7 +64,6 @@ class UserController @Inject() (
     emailSender: EmailSenderProvider,
     libraryCommander: LibraryCommander,
     libraryInviteRepo: LibraryInviteRepo,
-    userPersonaRepo: UserPersonaRepo,
     fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
@@ -632,4 +631,5 @@ class UserController @Inject() (
     userCommander.setSettings(request.userId, newMapping)
     NoContent
   }
+
 }

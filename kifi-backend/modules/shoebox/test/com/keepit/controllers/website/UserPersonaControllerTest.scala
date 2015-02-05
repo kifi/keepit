@@ -21,7 +21,6 @@ import play.api.libs.json.Json
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-
 import scala.concurrent.Future
 
 class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
