@@ -31,7 +31,7 @@ class NewKeepsInLibraryCommander @Inject() (
   private def getOldestLeastViewdKeeps(userId: Id[User], max: Int): Seq[mutable.Stack[Keep]] = {
     db.readOnlyReplica { implicit session =>
       //get only libraries I'm not an owner of
-      val libs = mutable.Stack(libraryMembershipRepo.getWithUserId(userId).filterNot(_.access == OWNER).sortBy(_.lastViewed): _*)
+      val libs = mutable.Stack(libraryMembershipRepo.getWithUserId(userId).filterNot(_.access == OWNER).sortBy(k => (k.lastViewed, k.id)): _*)
       //yes, ugly double mutable code. need to think of a way to make it more functional
       val libraryKeeps = ArrayBuffer[mutable.Stack[Keep]]()
       while (libraryKeeps.size < max && libs.nonEmpty) {
