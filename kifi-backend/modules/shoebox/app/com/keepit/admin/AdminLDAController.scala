@@ -254,4 +254,16 @@ class AdminLDAController @Inject() (
       Ok(Json.obj("feature" -> res._1, "sampleSize" -> res._2))
     }
   }
+
+  def evaluatePersona() = AdminUserPage.async { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val pid = body.get("personaId").get.trim.toInt
+    val version = body.get("version").get.trim.toInt
+    cortex.evaluatePersona(Id[Persona](pid))(version).map { uriScores =>
+      val uids = uriScores.toArray.sortBy(-_._2).map { _._1 }
+      val scores = uids.map { uriScores(_) }
+      val titles = db.readOnlyReplica { implicit s => uids.map { uriRepo.get(_) } }.map { _.title.getOrElse("n/a") }
+      Ok(Json.obj("uids" -> uids, "titles" -> titles, "scores" -> scores))
+    }
+  }
 }

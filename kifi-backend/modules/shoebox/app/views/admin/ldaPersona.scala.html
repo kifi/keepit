@@ -17,6 +17,25 @@
     <p id = "dp_result"></p>
 
 
+    <div>
+      <h3>Test Persona Feature Vector and Gradient Descent Learning</h3>
+      <form id = "test_persona">
+        <input id = "tp_pid" type = "text" value = "persona id">
+        <button type = "submit">submit</button>
+      </form>
+    </div>
+
+    <table id = "persona_test_table" class = "table table-bordered">
+      <thead>
+        <tr>
+          <th> UriId
+          <th> UriTitle
+          <th> Score
+          <th> Feedback
+        <tr/>
+      </thead>
+      <tbody></tbody>
+    </table>
 
 
 
@@ -40,6 +59,41 @@
 
       });
 
+
+      $("#test_persona").submit(function(event){
+        event.preventDefault();
+
+        $.post('@com.keepit.controllers.admin.routes.AdminLDAController.evaluatePersona', {personaId: $('#tp_pid').val(), version: @version}
+        ).done(done).fail(fail);
+
+        function done(data) {
+          $("#persona_test_table > tbody").empty()
+
+          var uids = data.uids
+          var titles = data.titles
+          var scores = data.scores
+          var n = uids.length
+
+          for(var i = 0; i < n; i++){
+            var robj = $("<tr>");
+
+            robj
+            .append("<td class = \"ids\" >" + uids[i] + "</td>")
+            .append("<td>" + titles[i] + "</td>")
+            .append("<td>" + scores[i] + "</td>")
+            .append("<td>" + "fake_feedback_button" + "</td>");
+
+
+            $("#persona_test_table").append(robj);
+          }
+
+        }
+
+        function fail() { alert("bad things happened") }
+
+
+
+      });
 
 
 
