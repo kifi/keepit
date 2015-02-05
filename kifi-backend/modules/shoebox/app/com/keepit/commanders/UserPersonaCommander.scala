@@ -14,6 +14,7 @@ trait UserPersonaCommander {
   def addPersonasForUser(userId: Id[User], personas: Set[PersonaName])(implicit context: HeimdalContext): Map[Persona, Option[Library]]
   def removePersonaForUser(userId: Id[User], persona: PersonaName): Option[Persona]
   def removePersonasForUser(userId: Id[User], personas: Set[PersonaName]): Set[Persona]
+  def getPersonaLibraryAndKeep(userId: Id[User]): (PersonaKeep, Option[Library])
 }
 
 @Singleton
@@ -22,6 +23,7 @@ class UserPersonaCommanderImpl @Inject() (
     userPersonaRepo: UserPersonaRepo,
     personaRepo: PersonaRepo,
     libraryCommander: LibraryCommander,
+    libraryRepo: LibraryRepo,
     clock: Clock) extends UserPersonaCommander with Logging {
 
   def addPersonaForUser(userId: Id[User], persona: PersonaName)(implicit context: HeimdalContext): (Option[Persona], Option[Library]) = {
@@ -37,7 +39,6 @@ class UserPersonaCommanderImpl @Inject() (
       val personaNamesToAdd = personas diff currentPersonas.map(_.name)
       personaRepo.getByNames(personaNamesToAdd)
     }
-
     db.readWrite { implicit s =>
       personasToPersist.map {
         case (_, persona) =>
@@ -85,5 +86,21 @@ class UserPersonaCommanderImpl @Inject() (
       }
     }
     personasToRemove.values.toSet
+  }
+
+  def getPersonaLibraryAndKeep(userId: Id[User]): (PersonaKeep, Option[Library]) = {
+    val personaOpt = db.readOnlyMaster { implicit s =>
+      userPersonaRepo.getPersonasForUser(userId).headOption
+    }
+    personaOpt.map { persona =>
+      val personaLibName = PersonaName.personaLibraryNames(persona.name) // find library with persona name
+      val libOpt = db.readOnlyMaster { implicit s =>
+        libraryRepo.getByNameAndUserId(userId, personaLibName)
+      }
+      val personaKeep = PersonaName.personaKeeps.get(persona.name).getOrElse(PersonaKeep.default) // find keep associated with persona
+      (personaKeep, libOpt)
+    }.getOrElse {
+      (PersonaKeep.default, None)
+    }
   }
 }

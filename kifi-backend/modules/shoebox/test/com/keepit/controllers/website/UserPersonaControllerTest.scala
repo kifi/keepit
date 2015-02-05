@@ -4,7 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId, FakeCryptoModule }
+import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
@@ -23,7 +23,6 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 import scala.concurrent.Future
-import scala.util.Success
 
 class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
 
@@ -132,51 +131,6 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
-
-    "get default keep for persona" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, allPersonas) = setupUserPersona
-        implicit val config = inject[PublicIdConfiguration]
-
-        // get for inactive persona
-        val result1 = getDefaultKeepForPersona(user1, "science_buff")
-        status(result1) must equalTo(BAD_REQUEST)
-
-        // add persona, and get for now active persona
-        val resultAdd = addPersona(user1, "science_buff")
-        status(resultAdd) must equalTo(NO_CONTENT)
-
-        val (_, personaLib) = db.readOnlyMaster { implicit s =>
-          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ARTIST, PersonaName.STUDENT, PersonaName.SCIENCE_BUFF)
-          libraryRepo.getByUser(user1.id.get).head // created from adding persona
-        }
-
-        val result2 = getDefaultKeepForPersona(user1, "science_buff")
-        status(result2) must equalTo(OK)
-        contentType(result2) must beSome("application/json")
-        Json.parse(contentAsString(result2)) === Json.parse(
-          s"""
-            {
-              "keep":{
-                "url":"http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die",
-                "imagePath":"/img/guide/ted_jobs.jpg",
-                "imageWidth":480,
-                "imageHeight":425,
-                "noun":"video",
-                "query":"steve+jobs",
-                "title":"Steve Jobs: How to live before you die | Talk Video | TED.com",
-                "matches":{"title":[[0,5],[6,4]],"url":[[25,5],[31,4]]},"track":"steveJobsSpeech"
-              },
-              "library":{
-                "id":"${Library.publicId(personaLib.id.get).id}",
-                "name":"Science!!",
-                "color":"${personaLib.color.get.hex}"
-              }
-            }
-           """)
-      }
-    }
-
   }
 
   private def controller(implicit injector: Injector) = inject[UserPersonaController]
@@ -195,11 +149,6 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
   private def removePersona(user: User, name: String)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.removePersona(name)(request(routes.UserPersonaController.removePersona(name)))
-  }
-
-  private def getDefaultKeepForPersona(user: User, name: String)(implicit injector: Injector): Future[Result] = {
-    inject[FakeUserActionsHelper].setUser(user)
-    controller.getDefaultKeepForPersona(name)(request(routes.UserPersonaController.getDefaultKeepForPersona(name)))
   }
 
   // sets up a Map of [String, Persona]
