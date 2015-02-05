@@ -204,12 +204,17 @@ class MobileSearchController @Inject() (
 
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
       SafeFuture { userSearchCommander.searchUsers(Some(userId), query, maxUsers, userContext, filter, excludeSelf = true) }.flatMap { userResult =>
-        val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userResult.hits.map(_.id).toSet)
+        val userIds = userResult.hits.map(_.id).toSet
+        val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
+        val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
         val publishedLibrariesCountByUser = {
           val librarySearcher = libraryIndexer.getSearcher
           userResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByMember(librarySearcher, hit.id) }.toMap
         }
-        futureMutualFriendsByUser.map { mutualFriendsByUser =>
+        for {
+          keepCountsByUser <- futureKeepCountsByUser
+          mutualFriendsByUser <- futureMutualFriendsByUser
+        } yield {
           Json.obj(
             "context" -> userResult.context,
             "hits" -> JsArray(userResult.hits.map { hit =>
@@ -221,8 +226,8 @@ class MobileSearchController @Inject() (
                 "pictureName" -> hit.basicUser.pictureName,
                 "isFriend" -> hit.isFriend,
                 "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
-                "libraryCount" -> publishedLibrariesCountByUser(hit.id)
-              // "keepCount" todo(Léo): define valid keep count definition
+                "libraryCount" -> publishedLibrariesCountByUser(hit.id),
+                "keepCount" -> keepCountsByUser(hit.id)
               )
             })
           )

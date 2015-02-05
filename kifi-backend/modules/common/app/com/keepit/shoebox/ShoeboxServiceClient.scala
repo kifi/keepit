@@ -121,6 +121,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]]
+  def getKeepCounts(userIds: Set[Id[User]]): Future[Map[Id[User], Int]]
   def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]]
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
@@ -759,6 +760,15 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getBasicLibraryStatistics, Json.toJson(libraryIds)).map { r =>
         implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], BasicLibraryStatistics]
         r.json.as[Seq[(Id[Library], BasicLibraryStatistics)]].toMap
+      }
+    }
+  }
+
+  def getKeepCounts(userIds: Set[Id[User]]): Future[Map[Id[User], Int]] = {
+    if (userIds.isEmpty) Future.successful(Map.empty[Id[User], Int]) else {
+      call(Shoebox.internal.getKeepCounts, Json.toJson(userIds)).map { r =>
+        implicit val readsFormat = TupleFormat.tuple2Reads[Id[User], Int]
+        r.json.as[Seq[(Id[User], Int)]].toMap
       }
     }
   }
