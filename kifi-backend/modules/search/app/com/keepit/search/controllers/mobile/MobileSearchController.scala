@@ -176,7 +176,7 @@ class MobileSearchController @Inject() (
                 val path = Library.formatLibraryPath(owner.username, library.slug)
                 val statistics = libraryStatisticsById(library.id)
                 val description = library.description.getOrElse("")
-                val imageUrl = libraryImagesById(library.id)
+                val imageUrl = libraryImagesById.get(library.id)
                 Json.obj(
                   "id" -> Library.publicId(hit.id),
                   "score" -> hit.score,
@@ -204,16 +204,20 @@ class MobileSearchController @Inject() (
 
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
       SafeFuture { userSearchCommander.searchUsers(Some(userId), query, maxUsers, userContext, filter, excludeSelf = true) }.flatMap { userResult =>
-        val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userResult.hits.map(_.id).toSet)
+        val userIds = userResult.hits.map(_.id).toSet
+        val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
+        val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
         val publishedLibrariesCountByUser = {
           val librarySearcher = libraryIndexer.getSearcher
           userResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByMember(librarySearcher, hit.id) }.toMap
         }
-        futureMutualFriendsByUser.map { mutualFriendsByUser =>
+        for {
+          keepCountsByUser <- futureKeepCountsByUser
+          mutualFriendsByUser <- futureMutualFriendsByUser
+        } yield {
           Json.obj(
             "context" -> userResult.context,
             "hits" -> JsArray(userResult.hits.map { hit =>
-
               Json.obj(
                 "id" -> hit.basicUser.externalId,
                 "name" -> hit.basicUser.fullName,
@@ -221,8 +225,8 @@ class MobileSearchController @Inject() (
                 "pictureName" -> hit.basicUser.pictureName,
                 "isFriend" -> hit.isFriend,
                 "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
-                "libraryCount" -> publishedLibrariesCountByUser(hit.id)
-              // "keepCount" todo(Léo): define valid keep count definition
+                "libraryCount" -> publishedLibrariesCountByUser(hit.id),
+                "keepCount" -> keepCountsByUser(hit.id)
               )
             })
           )

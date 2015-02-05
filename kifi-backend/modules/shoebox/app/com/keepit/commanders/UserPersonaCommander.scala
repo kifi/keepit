@@ -53,7 +53,9 @@ class UserPersonaCommanderImpl @Inject() (
     // create libraries based on added personas
     personasToPersist.map {
       case (personaName, persona) =>
-        val libraryAddReq = LibraryAddRequest(personaName.value, LibraryVisibility.PUBLISHED, None, personaName.value)
+        val defaultLibraryName = PersonaName.personaLibraries.get(personaName).getOrElse(personaName.value)
+        val defaultLibrarySlug = LibrarySlug.generateFromName(defaultLibraryName)
+        val libraryAddReq = LibraryAddRequest(defaultLibraryName, LibraryVisibility.PUBLISHED, None, defaultLibrarySlug)
         (persona, libraryCommander.addLibrary(libraryAddReq, userId))
     }.collect {
       case (persona, Right(lib)) => (persona, Some(lib)) // library successfully created
