@@ -3,7 +3,7 @@ package com.keepit.controllers.internal
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.net.URI
-import com.keepit.common.time._
+import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.scraper.{ ScraperSchedulerConfig, ScrapeRequest }
 import com.keepit.common.db.Id
@@ -12,6 +12,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.performance.{ timing, timingWithResult }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.core._
 
 import scala.concurrent.Future
 
@@ -24,7 +25,8 @@ class ScraperCallbackHelper @Inject() (
     pageInfoRepo: PageInfoRepo,
     imageInfoRepo: ImageInfoRepo,
     scrapeInfoRepo: ScrapeInfoRepo,
-    implicit val scraperConfig: ScraperSchedulerConfig) extends Logging {
+    implicit val scraperConfig: ScraperSchedulerConfig,
+    integrityHelpers: UriIntegrityHelpers) extends Logging {
 
   private val assignLock = new ReactiveLock(1)
 
@@ -75,7 +77,7 @@ class ScraperCallbackHelper @Inject() (
   def saveNormalizedURI(normalizedUri: NormalizedURI): NormalizedURI = {
     log.info(s"scraper callback: save uri: ${normalizedUri.id.get}")
     db.readWrite(attempts = 1) { implicit s =>
-      normUriRepo.save(normalizedUri)
+      normUriRepo.save(normalizedUri) tap integrityHelpers.improveKeepsSafely
     }
   }
 }

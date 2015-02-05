@@ -45,7 +45,8 @@ class UriIntegrityActor @Inject() (
     renormRepo: RenormalizedURLRepo,
     centralConfig: CentralConfig,
     val airbrake: AirbrakeNotifier,
-    keepUriUserCache: KeepUriUserCache) extends FortyTwoActor(airbrake) with ScrapeInfoIntegrityChecker with Logging {
+    keepUriUserCache: KeepUriUserCache,
+    helpers: UriIntegrityHelpers) extends FortyTwoActor(airbrake) with ScrapeInfoIntegrityChecker with Logging {
 
   /** tricky point: make sure (library, uri) pair is unique.  */
   private def handleBookmarks(oldBookmarks: Seq[Keep])(implicit session: RWSession): Unit = {
@@ -79,7 +80,7 @@ class UriIntegrityActor @Inject() (
           case None =>
             log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
             keepUriUserCache.remove(KeepUriUserKey(oldBm.uriId, oldBm.userId)) // NOTE: we touch two different cache keys here and the following line
-            keepRepo.save(improveKeepSafely(newUri, oldBm.withNormUriId(newUriId)))
+            keepRepo.save(helpers.improveKeepSafely(newUri, oldBm.withNormUriId(newUriId)))
             (Some(oldBm), None)
           case Some(currentPrimary) => {
 
@@ -88,7 +89,7 @@ class UriIntegrityActor @Inject() (
               val deadBm = keepRepo.save(
                 duplicate.copy(uriId = newUriId, isPrimary = false, state = deadState)
               )
-              val liveBm = keepRepo.save(improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)))
+              val liveBm = keepRepo.save(helpers.improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)))
               keepUriUserCache.remove(KeepUriUserKey(deadBm.uriId, deadBm.userId))
               (Some(deadBm), Some(liveBm))
             }
@@ -145,19 +146,6 @@ class UriIntegrityActor @Inject() (
     }.flatten
 
     collectionsToUpdate.foreach(collectionRepo.collectionChanged(_, inactivateIfEmpty = true))
-  }
-
-  private def improveKeepSafely(uri: NormalizedURI, keep: Keep)(implicit session: RSession): Keep = {
-    require(keep.uriId == uri.id.get, "URI and Keep don't match.")
-    val keepWithTitle = if (keep.title.isEmpty) keep.withTitle(uri.title) else keep
-    if (HttpRedirect.isShortenedUrl(keepWithTitle.url)) {
-      urlRepo.getByNormUri(uri.id.get).find(_.url.equalsIgnoreCase(uri.url)) match {
-        case None =>
-          log.error(s"Could not find URL for normalized uri $uri")
-          keepWithTitle
-        case Some(url) => keepWithTitle.copy(url = url.url, urlId = url.id.get)
-      }
-    } else keepWithTitle
   }
 
   /**
@@ -392,6 +380,29 @@ class UriIntegrityPluginImpl @Inject() (
         uriRepo.save(uri.copy(redirect = None, redirectTime = None, normalization = None, state = NormalizedURIStates.ACTIVE))
       }
       log.info(s"redirect cleared [count=${uris.size}]")
+    }
+  }
+}
+
+@Singleton
+class UriIntegrityHelpers @Inject() (urlRepo: URLRepo, keepRepo: KeepRepo) extends Logging {
+  def improveKeepSafely(uri: NormalizedURI, keep: Keep)(implicit session: RSession): Keep = {
+    require(keep.uriId == uri.id.get, "URI and Keep don't match.")
+    val keepWithTitle = if (keep.title.isEmpty) keep.withTitle(uri.title) else keep
+    if (HttpRedirect.isShortenedUrl(keepWithTitle.url)) {
+      urlRepo.getByNormUri(uri.id.get).find(_.url.equalsIgnoreCase(uri.url)) match {
+        case None =>
+          log.error(s"Could not find URL for normalized uri $uri")
+          keepWithTitle
+        case Some(url) => keepWithTitle.copy(url = url.url, urlId = url.id.get)
+      }
+    } else keepWithTitle
+  }
+
+  def improveKeepsSafely(uri: NormalizedURI)(implicit session: RWSession): Unit = {
+    keepRepo.getByUri(uri.id.get).foreach { keep =>
+      val betterKeep = improveKeepSafely(uri, keep)
+      if (betterKeep != keep) { keepRepo.save(betterKeep) }
     }
   }
 }
