@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -95,7 +96,7 @@ object PersonaName {
     DEEP_THINKER
   )
 
-  val personaLibraries: Map[PersonaName, String] = Map(
+  val personaLibraryNames: Map[PersonaName, String] = Map(
     DEVELOPER -> "Programming",
     TECHIE -> "Computer and Electronics",
     ENTREPRENEUR -> "Startups and Entrepreneurship",
@@ -113,6 +114,39 @@ object PersonaName {
     DEEP_THINKER -> "Interesting Reads"
   )
 
+  val personaKeeps: Map[PersonaName, DefaultPersonaKeep] = Map() // todo (aaron, ashley): pick out a default keep for each persona
+
 }
 
 object PersonaStates extends States[Persona]
+
+@json case class DefaultPersonaKeep( // default keep infos for FTUE
+  url: String,
+  name: Seq[String],
+  site: String,
+  thumbnailPath: String,
+  imagePath: Option[String] = None,
+  imageWidth: Option[Int] = None,
+  imageHeight: Option[Int] = None,
+  noun: String,
+  query: String,
+  title: String,
+  matches: JsObject,
+  track: String)
+
+object DefaultPersonaKeep { // todo (aaron): once every persona has a default keep, remove this!
+  val default = DefaultPersonaKeep(
+    url = "http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die",
+    name = Seq("Steve Jobs", "How to Live", "Before You Die"),
+    site = "ted.com",
+    thumbnailPath = "/img/guide/before_you_die.jpg",
+    imagePath = Some("/img/guide/ted_jobs.jpg"),
+    imageWidth = Some(480),
+    imageHeight = Some(425),
+    noun = "video",
+    query = "steve+jobs",
+    title = "Steve Jobs: How to live before you die | Talk Video | TED.com",
+    matches = Json.obj("title" -> Json.toJson(Seq(Seq(0, 5), Seq(6, 4))), "url" -> Json.toJson(Seq(Seq(25, 5), Seq(31, 4)))),
+    track = "stevenJobsSpeech"
+  )
+}

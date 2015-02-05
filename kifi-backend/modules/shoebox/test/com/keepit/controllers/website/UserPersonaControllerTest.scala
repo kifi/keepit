@@ -4,13 +4,13 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId, FakeCryptoModule }
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ PersonaName, UserPersona, Persona }
+import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
@@ -20,6 +20,8 @@ import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+
+import scala.util.Success
 
 class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
 
@@ -140,9 +142,44 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit s =>
           userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ARTIST)
         }
-
       }
     }
+
+    "get default keep for persona" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+
+        val (user1, allPersonas) = setupUserPersona
+        val controller = inject[UserPersonaController]
+        inject[FakeUserActionsHelper].setUser(user1)
+
+        val testPath = com.keepit.controllers.website.routes.UserPersonaController.getDefaultKeepForPersona("science_buff").url
+
+        // get for inactive persona
+        val request1 = FakeRequest("GET", testPath)
+        val result1 = controller.getDefaultKeepForPersona("science_buff")(request1)
+        status(result1) must equalTo(BAD_REQUEST)
+
+        // add persona, and get for now active persona
+        val requestAdd = FakeRequest("POST", com.keepit.controllers.website.routes.UserPersonaController.addPersona("science_buff").url)
+        val resultAdd = controller.addPersona("science_buff")(requestAdd)
+        status(resultAdd) must equalTo(NO_CONTENT)
+
+        val (_, personaLib) = db.readOnlyMaster { implicit s =>
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ARTIST, PersonaName.STUDENT, PersonaName.SCIENCE_BUFF)
+          libraryRepo.getByUser(user1.id.get).head // created from adding persona
+        }
+
+        val request2 = FakeRequest("GET", testPath)
+        val result2 = controller.getDefaultKeepForPersona("science_buff")(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        val resultJson = contentAsJson(result2)
+        (resultJson \ "keep").as[DefaultPersonaKeep].site === "ted.com"
+        Library.decodePublicId((resultJson \ "libraryId").asOpt[PublicId[Library]].get) === Success(personaLib.id.get)
+      }
+    }
+
   }
 
   // sets up a Map of [String, Persona]

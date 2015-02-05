@@ -24,7 +24,7 @@ class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
         }
 
         db.readOnlyReplica { implicit s =>
-          repo.getByUserAndPersona(Id[User](1), Id[Persona](1)).isDefined
+          repo.getByUserAndPersonaId(Id[User](1), Id[Persona](1)).isDefined
           repo.getPersonaIdsForUser(Id[User](1)).sortBy(_.id).map { _.id }.toList === List(1, 2)
           val actives = repo.getUserActivePersonas(Id[User](1))
           (actives.personas zip actives.updatedAt).toMap.get(Id[Persona](2)).get === editTime1
@@ -33,7 +33,7 @@ class UserPersonaRepoTest extends Specification with ShoeboxTestInjector {
         val editTime2 = now.plusHours(4)
 
         db.readWrite { implicit s =>
-          val model = repo.getByUserAndPersona(Id[User](1), Id[Persona](1)).get
+          val model = repo.getByUserAndPersonaId(Id[User](1), Id[Persona](1)).get
           clock.push(editTime2)
           repo.save(model.copy(state = UserPersonaStates.INACTIVE))
           val actives = repo.getUserActivePersonas(Id[User](1))

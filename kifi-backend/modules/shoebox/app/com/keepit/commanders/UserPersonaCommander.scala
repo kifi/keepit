@@ -41,7 +41,7 @@ class UserPersonaCommanderImpl @Inject() (
     db.readWrite { implicit s =>
       personasToPersist.map {
         case (_, persona) =>
-          userPersonaRepo.getByUserAndPersona(userId, persona.id.get) match {
+          userPersonaRepo.getByUserAndPersonaId(userId, persona.id.get) match {
             case None =>
               userPersonaRepo.save(UserPersona(userId = userId, personaId = persona.id.get, state = UserPersonaStates.ACTIVE))
             case Some(up) =>
@@ -53,7 +53,7 @@ class UserPersonaCommanderImpl @Inject() (
     // create libraries based on added personas
     personasToPersist.map {
       case (personaName, persona) =>
-        val defaultLibraryName = PersonaName.personaLibraries.get(personaName).getOrElse(personaName.value)
+        val defaultLibraryName = PersonaName.personaLibraryNames.get(personaName).getOrElse(personaName.value)
         val defaultLibrarySlug = LibrarySlug.generateFromName(defaultLibraryName)
         val libraryAddReq = LibraryAddRequest(defaultLibraryName, LibraryVisibility.PUBLISHED, None, defaultLibrarySlug)
         (persona, libraryCommander.addLibrary(libraryAddReq, userId))
@@ -77,7 +77,7 @@ class UserPersonaCommanderImpl @Inject() (
     db.readWrite { implicit s =>
       personasToRemove.map {
         case (_, persona) =>
-          userPersonaRepo.getByUserAndPersona(userId, persona.id.get) match {
+          userPersonaRepo.getByUserAndPersonaId(userId, persona.id.get) match {
             case Some(up) if up.state == UserPersonaStates.ACTIVE =>
               userPersonaRepo.save(up.copy(state = UserPersonaStates.INACTIVE))
             case _ =>
