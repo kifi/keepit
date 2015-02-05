@@ -64,6 +64,9 @@ angular.module('kifi')
         url: '/find?q&f',
         templateUrl: 'search/search.tpl.html',
         controller: 'SearchCtrl',
+        resolve: {
+          library: angular.noop
+        },
         reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('userProfile', {
@@ -147,7 +150,8 @@ angular.module('kifi')
       .state('library.search', {
         url: '/find?q&f',
         templateUrl: 'search/search.tpl.html',
-        controller: 'SearchCtrl'
+        controller: 'SearchCtrl',
+        reloadOnSearch: false  // controller handles search query changes itself
       });
       // ↑↑↑↑↑ Important: This needs to be last! ↑↑↑↑↑
 }]);

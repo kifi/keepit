@@ -3,16 +3,13 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$rootScope', '$location', '$q', '$state', '$timeout', '$window', 'keepDecoratorService', 'searchActionService', 'libraryService', 'util',
-  function ($scope, $rootScope, $location, $q, $state, $timeout, $window, keepDecoratorService, searchActionService, libraryService, util) {
+  '$scope', '$rootScope', '$location', '$q', '$state', '$timeout', '$window', 'keepDecoratorService', 'searchActionService', 'libraryService', 'util', 'library',
+  function ($scope, $rootScope, $location, $q, $state, $timeout, $window, keepDecoratorService, searchActionService, libraryService, util, library) {
     //
     // Internal data.
     //
     var query;
     var filter;
-    var userName;
-    var librarySlug;
-    var library;
     var lastResult = null;
     var selectedCount = 0;
     var authToken = $location.search().authToken || '';
@@ -59,48 +56,23 @@ angular.module('kifi')
     function init() {
       query = $state.params.q || '';
       filter = $state.params.f || 'a';
-      userName = $state.params.username || '';
-      librarySlug = $state.params.librarySlug || '';
 
-      var libraryPromise = null;
-
-      if (userName && librarySlug) {
-        if (!query) {
-          $state.go('library.keeps');
-          return;
-        }
-
-        libraryPromise = libraryService.getLibraryByUserSlug(userName, librarySlug, authToken, false).then(function (library) {
-          $rootScope.$emit('libraryUrl', library);
-          return library;
-        });
-      } else {
-        if (!query) { // No query or blank query.
-          $state.go('home');
-          return;
-        }
-
-        libraryPromise = $q.when(null);
-        $rootScope.$emit('libraryUrl', {});
+      if (!query) {
+        $state.go(library ? 'library.keeps' : 'home');
+        return;
       }
 
-      libraryPromise.then(function (lib) {
-        library = lib;
+      lastResult = null;
+      selectedCount = 0;
 
-        lastResult = null;
-        selectedCount = 0;
+      $scope.hasMore = true;
+      $scope.scrollDistance = '100%';
+      $scope.loading = false;
 
-        $scope.hasMore = true;
-        $scope.scrollDistance = '100%';
-        $scope.loading = false;
+      setTitle();
 
-        setTitle();
-
-        searchActionService.reset();
-        $scope.getNextKeeps(true);
-      })['catch'](function (/* resp */) {
-        // TODO(yiping): handle (resp.status === 403) somehow
-      });
+      searchActionService.reset();
+      $scope.getNextKeeps(true);
 
       $timeout(function () {
         $window.document.body.scrollTop = 0;
@@ -190,17 +162,6 @@ angular.module('kifi')
           $scope.loading = false;
         });
       }.bind(null, query));
-    };
-
-    $scope.getFilterUrl = function (type) {
-      if ($scope.isEnabled(type)) {
-        var count = getFilterCount(type);
-        if (count) {
-          var userNameSlug = (userName && librarySlug) ? '/' + userName + '/' + librarySlug : '';
-          return userNameSlug + '/find?q=' + query + '&f=' + type;
-        }
-      }
-      return '';
     };
 
     $scope.isFilterSelected = function (type) {
