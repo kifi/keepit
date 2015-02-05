@@ -502,6 +502,16 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
+  def getKeepCounts() = Action(parse.tolerantJson) { request =>
+    val userIds = request.body.as[Set[Id[User]]]
+    val keepCountsByUserId = db.readOnlyMaster { implicit session =>
+      keepRepo.getCountByUsers(userIds)
+    }
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[User], Int]
+    val result = Json.toJson(keepCountsByUserId.toSeq)
+    Ok(result)
+  }
+
   def getLibraryImageUrls() = Action(parse.tolerantJson) { request =>
     val libraryIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
     val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
