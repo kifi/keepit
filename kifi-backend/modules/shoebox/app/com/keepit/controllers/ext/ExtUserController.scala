@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import com.keepit.commanders._
+import com.keepit.commanders.{ UserConnectionsCommander, EmailContactResult, TypeaheadCommander, UserCommander, UserContactResult, UserPersonaCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.model.Library
