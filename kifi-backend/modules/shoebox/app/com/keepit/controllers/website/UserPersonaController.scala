@@ -66,9 +66,9 @@ class UserPersonaController @Inject() (
     db.readOnlyMaster { implicit s =>
       userPersonaRepo.getByUserAndPersonaName(request.userId, personaName)
     } match {
-      case None => // user does not have this persona active
+      case None =>
         BadRequest(Json.obj("error" -> "user does not have this persona active"))
-      case Some(_) => // user does have this persona active
+      case Some(_) =>
         val defaultKeep = PersonaName.personaKeeps.get(personaName).getOrElse(DefaultPersonaKeep.default)
         val libraryIdOpt = PersonaName.personaLibraryNames.get(personaName).map { libName =>
           db.readOnlyMaster { implicit s =>
