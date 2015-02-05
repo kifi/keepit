@@ -98,8 +98,6 @@ angular.module('kifi')
     // Initialize controller.
     //
 
-    $rootScope.$emit('libraryUrl', {});
-
     $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi';
     $scope.currentPageOrigin = getCurrentPageOrigin();
     $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;

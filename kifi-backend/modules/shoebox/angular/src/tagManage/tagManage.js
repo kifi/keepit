@@ -80,8 +80,6 @@ angular.module('kifi')
       }
     });
 
-    $rootScope.$emit('libraryUrl', {});
-
 
     //
     // Filtering Stuff

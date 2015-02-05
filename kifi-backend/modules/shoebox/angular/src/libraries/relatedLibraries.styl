@@ -1,29 +1,12 @@
-relatedLibrariesColumnWidth = 210px
-keepsColumnWidth = appMaxWidth - relatedLibrariesColumnWidth
-desktopBorderRadius = 19px
-mobileBorderRadius = 54px
-
-html:not(.kf-mobile)
-  .kf-library-results-wrapper
-    width: keepsColumnWidth
-    float: left
-
-  .kf-library-body
-    min-width: keepsColumnWidth + relatedLibrariesColumnWidth
-
-  .kf-main-keeps
-    max-width: keepsColumnWidth
-
 .kf-related-libraries
-  margin-top: 20px
-  float: left
-  width: relatedLibrariesColumnWidth
-  box-sizing: border-box
-  padding: 0
+  display: table-cell
+  width: 210px
+  vertical-align: top
+  padding: 20px 0 0
   .kf-mobile &
-    margin-top: 0
-    float: none
-    width: initial
+    display: block
+    width: auto
+    padding: 0
     text-align: center
 
 .kf-related-libraries-see-more
@@ -38,7 +21,7 @@ html:not(.kf-mobile)
 
 .kf-related-libraries-card-your-own-card
   background: #73c785
-  border-radius: desktopBorderRadius
+  border-radius: 19px
   font-size: 20px
   text-align: center
   color: #fff
