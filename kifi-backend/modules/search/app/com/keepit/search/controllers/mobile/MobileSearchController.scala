@@ -176,7 +176,7 @@ class MobileSearchController @Inject() (
                 val path = Library.formatLibraryPath(owner.username, library.slug)
                 val statistics = libraryStatisticsById(library.id)
                 val description = library.description.getOrElse("")
-                val imageUrl = libraryImagesById(library.id)
+                val imageUrl = libraryImagesById.get(library.id)
                 Json.obj(
                   "id" -> Library.publicId(hit.id),
                   "score" -> hit.score,
