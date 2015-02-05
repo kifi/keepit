@@ -374,6 +374,7 @@ object Cortex extends Service {
     def getExistingPersonaFeature(personaId: Id[Persona])(implicit version: ModelVersion[DenseLDA]) = ServiceRoute(GET, "/internal/cortex/lda/getExistingPersonaFeature", Param("personaId", personaId), Param("version", version))
     def generatePersonaFeature(implicit version: ModelVersion[DenseLDA]) = ServiceRoute(POST, "/internal/cortex/lda/generatePersonaFeature", Param("version", version))
     def savePersonaFeature(implicit version: ModelVersion[DenseLDA]) = ServiceRoute(POST, "/internal/cortex/lda/savePersonaFeature", Param("version", version))
+    def evaluatePersona(personaId: Id[Persona])(implicit version: ModelVersion[DenseLDA]) = ServiceRoute(GET, "/internal/cortex/lda/evaluatePersona", Param("personaId", personaId), Param("version", version))
 
     def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
