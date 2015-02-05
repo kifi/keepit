@@ -64,13 +64,13 @@ angular.module('kifi')
         return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest?q=' + query;
       },
       tagKeep: function (libraryId, keepId, tag) {
-        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + tag);
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + encodeURIComponent(tag));
       },
       tagKeeps: function (tag) {
-        return route('/tags/' + tag);
+        return route('/tags/' + encodeURIComponent(tag));
       },
       untagKeep: function (libraryId, keepId, tag) {
-        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + tag);
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + encodeURIComponent(tag));
       },
 
       whoToInvite: route('/user/invite/recommended'),
