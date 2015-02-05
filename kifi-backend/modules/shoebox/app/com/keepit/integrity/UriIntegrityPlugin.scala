@@ -2,6 +2,7 @@ package com.keepit.integrity
 
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
+import com.keepit.common.net.URI
 import com.keepit.model._
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.time._
@@ -9,12 +10,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.scraper.ScrapeScheduler
+import com.keepit.scraper.{ HttpRedirect, ScrapeScheduler }
 import scala.concurrent.duration._
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import akka.pattern.{ ask, pipe }
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -78,7 +79,7 @@ class UriIntegrityActor @Inject() (
           case None =>
             log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
             keepUriUserCache.remove(KeepUriUserKey(oldBm.uriId, oldBm.userId)) // NOTE: we touch two different cache keys here and the following line
-            keepRepo.save(oldBm.withNormUriId(newUriId))
+            keepRepo.save(improveKeepSafely(newUri, oldBm.withNormUriId(newUriId)))
             (Some(oldBm), None)
           case Some(currentPrimary) => {
 
@@ -87,9 +88,7 @@ class UriIntegrityActor @Inject() (
               val deadBm = keepRepo.save(
                 duplicate.copy(uriId = newUriId, isPrimary = false, state = deadState)
               )
-              val liveBm = keepRepo.save(
-                primary.copy(uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)
-              )
+              val liveBm = keepRepo.save(improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)))
               keepUriUserCache.remove(KeepUriUserKey(deadBm.uriId, deadBm.userId))
               (Some(deadBm), Some(liveBm))
             }
@@ -115,7 +114,6 @@ class UriIntegrityActor @Inject() (
                 // oldBm is already inactive or duplicate, do nothing
                 (None, None)
             }
-
           }
         }
       }
@@ -147,6 +145,19 @@ class UriIntegrityActor @Inject() (
     }.flatten
 
     collectionsToUpdate.foreach(collectionRepo.collectionChanged(_, inactivateIfEmpty = true))
+  }
+
+  private def improveKeepSafely(uri: NormalizedURI, keep: Keep)(implicit session: RSession): Keep = {
+    require(keep.uriId == uri.id.get, "URI and Keep don't match.")
+    val keepWithTitle = if (keep.title.isEmpty) keep.withTitle(uri.title) else keep
+    if (HttpRedirect.isShortenedUrl(keepWithTitle.url)) {
+      urlRepo.getByNormUri(uri.id.get).find(_.url.equalsIgnoreCase(uri.url)) match {
+        case None =>
+          log.error(s"Could not find URL for normalized uri $uri")
+          keepWithTitle
+        case Some(url) => keepWithTitle.copy(url = url.url, urlId = url.id.get)
+      }
+    } else keepWithTitle
   }
 
   /**
