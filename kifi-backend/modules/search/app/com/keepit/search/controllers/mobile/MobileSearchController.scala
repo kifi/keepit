@@ -227,7 +227,7 @@ class MobileSearchController @Inject() (
                 "isFriend" -> hit.isFriend,
                 "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
                 "libraryCount" -> publishedLibrariesCountByUser(hit.id),
-                "keepCount" -> keepCountsByUser(hit.id)
+                "keepCount" -> keepCountsByUser.getOrElse(hit.id, 0)
               )
             })
           )
