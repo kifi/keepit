@@ -218,7 +218,6 @@ class MobileSearchController @Inject() (
           Json.obj(
             "context" -> userResult.context,
             "hits" -> JsArray(userResult.hits.map { hit =>
-
               Json.obj(
                 "id" -> hit.basicUser.externalId,
                 "name" -> hit.basicUser.fullName,
@@ -227,7 +226,7 @@ class MobileSearchController @Inject() (
                 "isFriend" -> hit.isFriend,
                 "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
                 "libraryCount" -> publishedLibrariesCountByUser(hit.id),
-                "keepCount" -> keepCountsByUser.getOrElse(hit.id, 0)
+                "keepCount" -> keepCountsByUser(hit.id)
               )
             })
           )

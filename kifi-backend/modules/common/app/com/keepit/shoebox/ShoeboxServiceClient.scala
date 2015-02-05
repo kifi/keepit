@@ -768,7 +768,7 @@ class ShoeboxServiceClientImpl @Inject() (
     if (userIds.isEmpty) Future.successful(Map.empty[Id[User], Int]) else {
       call(Shoebox.internal.getKeepCounts, Json.toJson(userIds)).map { r =>
         implicit val readsFormat = TupleFormat.tuple2Reads[Id[User], Int]
-        r.json.as[Seq[(Id[User], Int)]].toMap
+        r.json.as[Seq[(Id[User], Int)]].toMap.withDefaultValue(0)
       }
     }
   }
