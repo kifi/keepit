@@ -49,7 +49,7 @@ angular.module('kifi')
 
         function positionMenu() {
           if (scope.libraryMenu.visible) {
-            element.css({'left': getElement('.kf-lih-toggle-menu').offset().left + 'px'});
+            element.css({'left': Math.max(getElement('.kf-lih-toggle-menu').offset().left - 13, 0) + 'px'});
           }
         }
 

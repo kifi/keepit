@@ -1,12 +1,22 @@
 .kf-library-menu
   position: fixed
   border: 1px solid #e6e6e6
+  border-radius: 16px
   padding: 0 15px
   width: 250px
   background: #fff
   box-shadow: 0 0 7px rgba(0, 40, 90, 0.2)
   overflow: hidden
   z-index: 1
+  opacity: 1
+  transition: opacity ease 0.2s, transform ease 0.2s
+  transform: none
+  transform-origin: left top
+
+  &.ng-hide
+    opacity: 0
+    transform: scale(0.95)
+    transform-origin: left top
 
 .kf-nav-item
   font-size: 13px
