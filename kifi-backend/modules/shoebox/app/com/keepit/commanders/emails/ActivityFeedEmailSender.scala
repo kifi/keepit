@@ -11,8 +11,8 @@ import com.keepit.common.db.slick.DBSession.ROSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.template.{ EmailToSend, TemplateOptions }
 import com.keepit.common.mail.{ ElectronicMail, SystemEmailAddress }
-import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.common.time._
 import com.keepit.curator.model.{ FullUriRecoInfo, RecommendationSource, RecommendationSubSource }
 import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
@@ -83,7 +83,7 @@ trait ActivityFeedEmailSender {
 class ActivityFeedEmailComponents @Inject() (
   val othersFollowedYourLibraryComponent: OthersFollowedYourLibraryComponent,
   val libraryRecommendations: UserLibraryRecommendationsComponent,
-  val userLibraryFollowers: UserLibraryFollowersComponent,
+  val userLibrariesByRecentFollowers: UserLibrariesByRecentFollowersComponent,
   val unreadMessages: UserUnreadMessagesComponent,
   val requestCountComponent: ConnectionRequestCountComponent,
   val libraryInviteCountComponent: LibraryInviteCountComponent)
@@ -144,15 +144,13 @@ class ActivityFeedEmailSenderImpl @Inject() (
       userConnectionRepo.getConnectedUsers(toUserId)
     }
 
-    val newFollowersOfMyLibrariesF = components.userLibraryFollowers(toUserId, previouslySentEmails, friends)
+    val newFollowersOfMyLibrariesF = components.userLibrariesByRecentFollowers(toUserId, previouslySentEmails, friends)
     val libRecosF = components.libraryRecommendations(toUserId, previouslySentEmails, libRecosToFetch)
-    val unreadMessageThreadsF = components.unreadMessages(toUserId)
     val othersFollowedYourLibraryF = components.othersFollowedYourLibraryComponent(toUserId, previouslySentEmails, friends)
     val connectionRequestsF = components.requestCountComponent(toUserId)
     val libInviteCountF = components.libraryInviteCountComponent(toUserId)
 
     for {
-      unreadThreads <- unreadMessageThreadsF
       newFollowersOfLibraries <- newFollowersOfMyLibrariesF
       libRecos <- libRecosF
       othersFollowedYourLibraryRaw <- othersFollowedYourLibraryF
