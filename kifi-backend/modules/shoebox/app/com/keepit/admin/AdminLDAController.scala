@@ -263,7 +263,11 @@ class AdminLDAController @Inject() (
       val uids = uriScores.toArray.sortBy(-_._2).map { _._1 }
       val scores = uids.map { uriScores(_) }.map { x => "%.3f".format(x) }
       val titles = db.readOnlyReplica { implicit s => uids.map { uriRepo.get(_) } }.map { _.title.getOrElse("n/a") }
-      Ok(Json.obj("uids" -> uids, "titles" -> titles, "scores" -> scores))
+      val shorterTitles = titles.map { t =>
+        val suffix = if (t.size > 80) "..." else ""
+        t.take(80) + suffix
+      }
+      Ok(Json.obj("uids" -> uids, "titles" -> shorterTitles, "scores" -> scores))
     }
   }
 
