@@ -1,17 +1,14 @@
 package com.keepit.common.images
 
-import org.specs2.execute.Result
 import java.awt.image.BufferedImage
-import java.io.{ FileOutputStream, ByteArrayOutputStream, File }
+import java.io.{ ByteArrayOutputStream, File, FileOutputStream }
 import javax.imageio.ImageIO
 
 import com.keepit.model.ImageFormat
 import com.keepit.test.CommonTestInjector
+import org.specs2.execute.Result
 import org.specs2.mutable.Specification
-import play.api.libs.Files.TemporaryFile
-
 import play.api.Mode
-import play.api.Mode._
 
 class Image4javaWrapperTest extends Specification with CommonTestInjector {
 
@@ -63,7 +60,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       val resized = im.resizeImage(image, ImageFormat.PNG, 20).get
       resized.getWidth === 20
       resized.getHeight === 12 // == 38 * 20 / 66
-      range(imageByteSize(resized, "png"), 270)
+      range(imageByteSize(resized, "png"), 329)
       //      persistImage(resized, "png") === 265
     }
 
@@ -88,7 +85,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       val resized = im.resizeImage(image, ImageFormat.GIF, 500).get
       resized.getWidth === 500
       resized.getHeight === 282
-      range(imageByteSize(resized, "png"), 191103, 0.1)
+      range(imageByteSize(resized, "png"), 299348, 0.1)
       //      persistImage(resized, "png") === 175173
     }
 
@@ -118,6 +115,58 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       //      persistImage(resized, "jpg") === 3663
     }
 
+    "box crop png" in {
+      // the perfect crop of this image is to show only the red Xzibit
+      val image = getPngImage("wide_image_3x1")
+      //      imageByteSize(image, "png") === 211103
+      image.getWidth === 1173
+      image.getHeight === 391
+      val im = new Image4javaWrapper(Mode.Test)
+      val cropped = im.cropImage(image, ImageFormat.PNG, 200, 200).get
+      cropped.getWidth === 200
+      cropped.getHeight === 200
+      range(imageByteSize(cropped, "png"), 66507)
+    }
+
+    "box crop jpg" in {
+      // the perfect crop of this image is to show only the red Xzibit
+      val image = getJpgImage("wide_image_3x1")
+      //            imageByteSize(image, "png") === 211103
+      image.getWidth === 1173
+      image.getHeight === 391
+      val im = new Image4javaWrapper(Mode.Test)
+      val cropped = im.cropImage(image, ImageFormat.JPG, 200, 200).get
+      cropped.getWidth === 200
+      cropped.getHeight === 200
+      range(imageByteSize(cropped, "jpg"), 7127)
+    }
+
+    "box crop gif" in {
+      // the perfect crop of this image is to show only the red Xzibit
+      val image = getGifImage("wide_image_3x1")
+      //            imageByteSize(image, "png") === 211103
+      image.getWidth === 1173
+      image.getHeight === 391
+      val im = new Image4javaWrapper(Mode.Test)
+      val cropped = im.cropImage(image, ImageFormat.GIF, 200, 200).get
+      cropped.getWidth === 200
+      cropped.getHeight === 200
+      range(imageByteSize(cropped, "png"), 57164)
+    }
+
+    "non box crop png" in {
+      // the perfect crop of this image is to show 2 Xzibits
+      val image = getPngImage("wide_image_4x1")
+      //      imageByteSize(image, "png") === 211103
+      image.getWidth === 1564
+      image.getHeight === 391
+      val im = new Image4javaWrapper(Mode.Test)
+      val cropped = im.cropImage(image, ImageFormat.PNG, 200, 100).get
+      cropped.getWidth === 200
+      cropped.getHeight === 100
+      range(imageByteSize(cropped, "png"), 23865)
+    }
+
     "optimize jpg" in {
       val image = getJpgImage("unoptimized1")
       imageByteSize(image, "jpg") === 79251
@@ -140,7 +189,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       val resized = im.resizeImage(image, ImageFormat.PNG, 500).get //not really resizing
       resized.getWidth === 500
       resized.getHeight === 333
-      range(imageByteSize(resized, "png"), 225392, 0.2)
+      range(imageByteSize(resized, "png"), 465305, 0.2)
       //      persistImage(resized, "png") === 205864
     }
 

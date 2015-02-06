@@ -90,13 +90,17 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(400, 482), 73259)
         }
-        inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 4
+
+        val keys = inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet
+        keys.size === 6
+        keys.exists(_.contains("_C400x400.png")) must beTrue
+        keys.exists(_.contains("_C150x150.png")) must beTrue
 
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getActiveForLibraryId(lib.id.get)
-          libImages.length === 3
+          libImages.length === 5
           libImages.map(_.position === LibraryImagePosition(None, Some(77)))
-          libraryImageRepo.getAllForLibraryId(lib.id.get).length === 4
+          libraryImageRepo.getAllForLibraryId(lib.id.get).length === 6
         }
 
       }

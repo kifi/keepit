@@ -3,16 +3,14 @@ package com.keepit.commanders
 import java.awt.image.BufferedImage
 import java.io.{ File, FileInputStream }
 
-import com.google.inject.Injector
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.store.{ S3ImageConfig, FakeKeepImageStore, ImageSize, KeepImageStore }
+import com.keepit.common.store.ImageSize
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.codec.binary.Base64
-import org.apache.commons.io.{ IOUtils, FileUtils }
+import org.apache.commons.io.IOUtils
 import org.specs2.mutable.Specification
-import play.api.libs.Files.TemporaryFile
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -36,17 +34,25 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
 
   private def readFile(file: File): Array[Byte] = IOUtils.toByteArray(new FileInputStream(file))
 
+  def scaleRequest(ints: Int*) = ints map ScaleRequest
+  def cropRequest(strs: String*) = strs map { str =>
+    val Array(w, h) = str.split('x').map(_.toInt)
+    CropRequest(ImageSize(w, h))
+  }
+
   "ProcessedImageHelper" should {
+
     "calculate resize sizes for an image" in {
       withInjector(modules: _*) { implicit injector =>
         new FakeProcessedImageHelper {
           calcSizesForImage(dummyImage(100, 100)).toSeq.sorted === Seq()
-          calcSizesForImage(dummyImage(300, 100)).toSeq.sorted === Seq(150)
-          calcSizesForImage(dummyImage(100, 700)).toSeq.sorted === Seq(150, 400)
-          calcSizesForImage(dummyImage(300, 300)).toSeq.sorted === Seq(150)
-          calcSizesForImage(dummyImage(1001, 1001)).toSeq.sorted === Seq(150, 400, 1000)
-          calcSizesForImage(dummyImage(2000, 1500)).toSeq.sorted === Seq(150, 400, 1000, 1500)
-          calcSizesForImage(dummyImage(1500, 1400)).toSeq.sorted === Seq(150, 400, 1000)
+          calcSizesForImage(dummyImage(300, 100)).toSeq.sorted === scaleRequest(150) // no crop, image not wide enough
+          calcSizesForImage(dummyImage(100, 700)).toSeq.sorted === scaleRequest(150, 400) // no crop, image not wide enough
+          calcSizesForImage(dummyImage(300, 300)).toSeq.sorted === scaleRequest(150) // no crop, same aspect ratio
+          calcSizesForImage(dummyImage(300, 310)).toSeq.sorted === scaleRequest(150) ++ cropRequest("150x150")
+          calcSizesForImage(dummyImage(1001, 1001)).toSeq.sorted === scaleRequest(150, 400, 1000) // scales should take care of crops (same aspect ratio)
+          calcSizesForImage(dummyImage(2000, 1500)).toSeq.sorted === scaleRequest(150, 400, 1000, 1500) ++ cropRequest("150x150", "400x400", "1000x1000", "1500x1500")
+          calcSizesForImage(dummyImage(1500, 1400)).toSeq.sorted === scaleRequest(150, 400, 1000) ++ cropRequest("150x150", "400x400", "1000x1000")
         }
         1 === 1
       }
