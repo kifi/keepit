@@ -77,10 +77,13 @@ object ProviderController extends Controller with Logging {
       case Some(p) => {
         try {
           p.authenticate().fold(result => result, {
-            user => completeAuthentication(user, request.session)
+            user =>
+              Logger.info(s"[handleAuth] user [${user.email} ${user.identityId}] found from provider - completing auth")
+              completeAuthentication(user, request.session)
           })
         } catch {
           case ex: AccessDeniedException => {
+            Logger.error("[handleAuth] Access Denied for user logging in")
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
           }
 
