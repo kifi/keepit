@@ -31,6 +31,9 @@
     </div>
   </div>
   <div class="dialog-buttons">
-    <button class="kf-action-button" ng-click="keepToLibrary()" tabindex="0">&#10084; Keep it</button>
+    <button class="kf-action-button kf-ak-button" ng-class="{'kept-public': keptPublic, 'kept-private': keptPrivate, 'in-animation': inAnimation}"
+      ng-click="keepToLibrary()" ng-disabled="keptPublic || keptPrivate" tabindex="0">
+      <span class="kf-ak-button-text">&#10084;&nbsp;&nbsp;</span>
+    </button>
   </div>
 </div>

@@ -45,11 +45,6 @@ angular.module('kifi')
         url: '/invite',
         templateUrl: 'invite/invite.tpl.html'
       })
-      .state('keep', {
-        url: '/keep/:keepId',
-        templateUrl: 'keep/keepView.tpl.html',
-        controller: 'KeepViewCtrl'
-      })
       .state('manageTags', {
         url: '/tags/manage',
         templateUrl: 'tagManage/tagManage.tpl.html',
