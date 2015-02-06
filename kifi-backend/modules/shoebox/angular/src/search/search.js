@@ -3,10 +3,8 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$rootScope', '$location', '$q', '$state', '$timeout', '$window', 'keepDecoratorService', 'searchActionService',
-  'libraryService', 'util', 'library',
-  function ($scope, $rootScope, $location, $q, $state, $timeout, $window, keepDecoratorService, searchActionService,
-    libraryService, util, library) {
+  '$scope', '$rootScope', '$location', '$q', '$state', '$timeout', '$window', 'keepDecoratorService', 'searchActionService', 'libraryService', 'util', 'library',
+  function ($scope, $rootScope, $location, $q, $state, $timeout, $window, keepDecoratorService, searchActionService, libraryService, util, library) {
     //
     // Internal data.
     //
@@ -14,6 +12,7 @@ angular.module('kifi')
     var filter;
     var lastResult = null;
     var selectedCount = 0;
+    var authToken = $location.search().authToken || '';
     var numResults = 0;
 
 
