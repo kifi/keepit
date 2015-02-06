@@ -148,6 +148,8 @@ GET     /ext/libraries/:id/keeps/:k/image/:token @com.keepit.controllers.ext.Ext
 POST    /ext/libraries/:id/keeps/:k/image @com.keepit.controllers.ext.ExtKeepImageController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
 GET     /ext/libraries/:id/tags/search           @com.keepit.controllers.ext.ExtLibraryController.deprecatedSearchTags(id: PublicId[Library], q: String, n: Option[Int] ?= None)
 
+GET     /ext/guide                  @com.keepit.controllers.ext.ExtUserController.getGuideInfo()
+
 ##########################################
 # Mobile
 ##########################################
@@ -419,9 +421,9 @@ GET     /site/user/abooks           @com.keepit.controllers.website.UserControll
 GET     /site/user/settings         @com.keepit.controllers.website.UserController.getSettings()
 POST    /site/user/settings         @com.keepit.controllers.website.UserController.setSettings()
 
-GET     /site/user/personas         @com.keepit.controllers.website.UserPersonaController.getAllPersonas()
-POST    /site/user/persona/:name    @com.keepit.controllers.website.UserPersonaController.addPersona(name: String)
-DELETE  /site/user/persona/:name    @com.keepit.controllers.website.UserPersonaController.removePersona(name: String)
+GET     /site/user/personas             @com.keepit.controllers.website.UserPersonaController.getAllPersonas()
+POST    /site/user/personas/:name        @com.keepit.controllers.website.UserPersonaController.addPersona(name: String)
+DELETE  /site/user/personas/:name        @com.keepit.controllers.website.UserPersonaController.removePersona(name: String)
 
 # regex below prevents route from usurping requests intended for other routes, like /site/user/friends
 GET     /site/user/$id<[0-9a-f-]{36}> @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
