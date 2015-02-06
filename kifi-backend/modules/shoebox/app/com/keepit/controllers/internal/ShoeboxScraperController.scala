@@ -111,15 +111,6 @@ class ShoeboxScraperController @Inject() (
     }
   }
 
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]) = Action { request =>
-    val ts = System.currentTimeMillis
-    val bookmarks = db.readOnlyReplica(2) { implicit session =>
-      keepRepo.getByUriWithoutTitle(uriId)
-    }
-    log.debug(s"[getBookmarksByUriWithoutTitle($uriId)] time-lapsed:${System.currentTimeMillis - ts} bookmarks(len=${bookmarks.length}):${bookmarks.mkString}")
-    Ok(Json.toJson(bookmarks))
-  }
-
   def recordScrapedNormalization() = Action.async(parse.tolerantJson) { request =>
     val candidateUrlString = (request.body \ "url").as[String]
     val candidateUrl = URI.parse(candidateUrlString).get.toString()
