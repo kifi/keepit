@@ -14,7 +14,7 @@ angular.module('kifi')
     };
 
     $scope.library = {};
-    $scope.search = {text: '', focused: false, showName: false};
+    $scope.search = {text: '', focused: false, libraryChip: false};
 
     // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
     var calloutName = 'tag_callout_shown';
@@ -39,9 +39,9 @@ angular.module('kifi')
         $scope.libOwnerProfileUrl = library && routeService.getProfileUrl(library.owner.username);
 
         if (library) {
-          $scope.search.showName = true;
-        } else if ($scope.search.showName) {
-          clearLibraryName();
+          $scope.search.libraryChip = true;
+        } else if ($scope.search.libraryChip) {
+          removeLibraryChip();
         } else if ($state.params && $state.params.q && util.startsWith($state.params.q, 'tag:')) {
           $scope.search.text = $state.params.q;
         }
@@ -62,26 +62,29 @@ angular.module('kifi')
       $scope.search.focused = true;
     };
     $scope.onInputBlur = function ($event) {
-      $scope.search.focused = $window.document.activeElement === $event.target;
+      var focused = $window.document.activeElement === $event.target;
+      $scope.search.focused = focused;
+      if ($scope.library && !$scope.search.libraryChip && !focused && !$scope.search.text) {
+        $scope.search.libraryChip = true;
+      }
     };
 
     $scope.onClickLibX = function () {
-      clearLibraryName();
+      removeLibraryChip();
       $timeout(function () {
         angular.element('.kf-lih-search-input').focus();
       });
     };
 
-    function clearLibraryName() {
-      $scope.search.showName = false;
-      $scope.library = {};
+    function removeLibraryChip() {
+      $scope.search.libraryChip = false;
       reactToQueryChange();
     }
 
     function reactToQueryChange() {
       if ($location.path() === '/find') {
         $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
-      } else if ($scope.library && $scope.library.url) {
+      } else if ($scope.search.libraryChip) {
         if ($scope.search.text) {
           if ($state.params.q) {
             $location.search('q', $scope.search.text).replace();
@@ -117,7 +120,7 @@ angular.module('kifi')
       switch (e.keyCode) {
         case KEY_DEL:
           if ($scope.search.text === '') {
-            clearLibraryName();
+            removeLibraryChip();
           }
           break;
         case KEY_ESC:
