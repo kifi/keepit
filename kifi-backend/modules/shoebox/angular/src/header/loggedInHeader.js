@@ -13,9 +13,8 @@ angular.module('kifi')
       $scope.libraryMenu.visible = !$scope.libraryMenu.visible;
     };
 
-    $scope.isFocused = false;
     $scope.library = {};
-    $scope.search = { text: '', showName: false };
+    $scope.search = {text: '', focused: false, showName: false};
 
     // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
     var calloutName = 'tag_callout_shown';
@@ -49,11 +48,7 @@ angular.module('kifi')
       }),
 
       $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
-        if ((toState.name === 'library.search') || (toState.name === 'search')) {
-          $scope.search.text = toParams.q;
-        } else {
-          $scope.search.text = '';
-        }
+        $scope.search.text = toState.name === 'library.search' || toState.name === 'search' ? toParams.q : '';
       }),
 
       $rootScope.$on('triggerAddKeep', function (e, library) {
@@ -63,11 +58,11 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
-    $scope.focusInput = function () {
-      $scope.isFocused = true;
+    $scope.onInputFocus = function () {
+      $scope.search.focused = true;
     };
-    $scope.blurInput = function () {
-      $scope.isFocused = false;
+    $scope.onInputBlur = function ($event) {
+      $scope.search.focused = $window.document.activeElement === $event.target;
     };
 
     $scope.onClickLibX = function () {

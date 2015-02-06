@@ -14,7 +14,7 @@
           </span>
         </span>
         <span class="kf-loh-search-center">
-          <input class="kf-loh-search-input" type="text" placeholder="Search this library…" ng-model="search.text" ng-focus="focusInput()" ng-blur="blurInput()" ng-change="onQueryChange()" ng-keydown="onKeydown($event)" ng-click="onSearchBarClicked()">
+          <input class="kf-loh-search-input" type="text" placeholder="Search this library…" ng-model="search.text" ng-focus="onInputFocus()" ng-blur="onInputBlur($event)" ng-change="onQueryChange()" ng-keydown="onKeydown($event)" ng-click="onSearchBarClicked()">
         </span>
         <span class="kf-loh-search-right" ng-if="search.text">
           <button class="kf-loh-search-clear" ng-click="clearInput()">Clear</button>
