@@ -13,7 +13,6 @@ angular.module('kifi')
       $scope.libraryMenu.visible = !$scope.libraryMenu.visible;
     };
 
-    $scope.library = {};
     $scope.search = {text: '', focused: false, libraryChip: false};
 
     // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
@@ -103,7 +102,7 @@ angular.module('kifi')
     $scope.onQueryChange = util.$debounce($scope, reactToQueryChange, 250);
 
     $scope.onSearchBarClicked = function () {
-      if ($scope.library && $scope.library.id) {
+      if ($scope.library) {
         $rootScope.$emit('trackLibraryEvent', 'click', {
           action: 'clickedSearchBar'
         });
