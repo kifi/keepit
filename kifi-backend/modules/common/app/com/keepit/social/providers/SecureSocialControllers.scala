@@ -99,6 +99,7 @@ object ProviderController extends Controller with Logging {
     val sess = Events.fire(new LoginEvent(userIdentity)).getOrElse(session)
     Authenticator.create(userIdentity) match {
       case Right(authenticator) => {
+        log.info(s"[completeAuthentication] Authentication [${authenticator.identityId}] completed for [${userIdentity.email}]")
         Redirect(toUrl(sess)).withSession(sess -
           SecureSocial.OriginalUrlKey -
           IdentityProvider.SessionId -
