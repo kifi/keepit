@@ -62,6 +62,7 @@ angular.module('kifi')
 
         scope.backdropStyle.opacity = attrs.kfOpacity || 0.3;
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
+        scope.backdropStyle.top = attrs.kfTopOffset || '0';
 
         scope.$watch(function () {
           return scope.forceClose;

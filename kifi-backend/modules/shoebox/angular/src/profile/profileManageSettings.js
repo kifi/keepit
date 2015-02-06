@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfProfileManageSettings', [
-  'profileService',
-  function (profileService) {
+  'profileService', 'modalService',
+  function (profileService, modalService) {
     return {
       restrict: 'A',
       scope: {},
@@ -19,6 +19,12 @@ angular.module('kifi')
 
         scope.saveSettings = function () {
           profileService.setSettings(scope.userProfileSettings);
+        };
+
+        scope.openPersonaModal = function () {
+          modalService.open({
+            template: 'persona/managePersonaModal.tpl.html'
+          });
         };
 
         profileService.getSettings().then(function (res) {

@@ -41,7 +41,8 @@ angular.module('kifi')
 
         scope.close = function() {
           if (scope.selectedPersonaIds.length > 0) {
-            kfModalCtrl.close(scope.modalData.onClose, true);
+            var closeFunc = scope.modalData ? scope.modalData.onClose : undefined;
+            kfModalCtrl.close(closeFunc, true);
           }
         };
 
