@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('LoggedOutHeaderCtrl', [
-  '$scope', '$rootScope', '$state', '$timeout', '$location',
+  '$scope', '$rootScope', '$state', '$timeout', '$location', '$window',
   'signupService', 'platformService', 'libraryService', 'routeService', 'util',
-  function ($scope, $rootScope, $state, $timeout, $location,
+  function ($scope, $rootScope, $state, $timeout, $location, $window,
             signupService, platformService, libraryService, routeService, util) {
     $scope.library = null;
     $scope.search = {text: '', focused: false};
@@ -39,22 +39,17 @@ angular.module('kifi')
       }),
 
       $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
-        if ((toState.name === 'library.search') || (toState.name === 'search')) {
-          $scope.search.text = toParams.q;
-        } else {
-          $scope.search.text = '';
-        }
+        $scope.search.text = toState.name === 'library.search' ? toParams.q : '';
       })
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);
     });
 
-
-    $scope.focusInput = function () {
+    $scope.onInputFocus = function () {
       $scope.search.focused = true;
     };
-    $scope.blurInput = function () {
-      $scope.search.focused = false;
+    $scope.onInputBlur = function ($event) {
+      $scope.search.focused = $window.document.activeElement === $event.target;
     };
 
     function reactToQueryChange() {
