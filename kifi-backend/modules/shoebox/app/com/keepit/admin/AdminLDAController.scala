@@ -269,13 +269,17 @@ class AdminLDAController @Inject() (
 
   def personaFeatureTraining() = AdminUserPage(parse.tolerantJson) { implicit request =>
     val js = request.body
+
+    val pid = (js \ "personaId").as[String].trim.toInt
+    val version = (js \ "version").as[String].trim.toInt
     val uids = (js \ "uids").as[Seq[String]].map { _.trim.toInt }
     val labels = (js \ "feedbacks").as[Seq[Int]]
 
-    println("uids: " + uids.mkString(", "))
-    println("labels: " + labels.mkString(", "))
+    require(uids.length == labels.length)
 
-    // call cortex client here...
+    // ignore neutral feedbacks
+    val (uids2, labels2) = (uids zip labels).filter { _._2 != 0 }.unzip
+    cortex.trainPersona(Id[Persona](pid), uids2.map { Id[NormalizedURI](_) }, labels2, rate = 0.1f)(version)
 
     Ok
   }

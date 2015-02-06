@@ -142,7 +142,7 @@
         console.log(uriIds)
 
         $.postJson('@com.keepit.controllers.admin.routes.AdminLDAController.personaFeatureTraining',
-        {uids: uriIds, feedbacks: fbs}
+        {uids: uriIds, feedbacks: fbs, personaId: $('#tp_pid').val(), version: @version}
         ).done(done).fail(fail);
 
         function done(data){ $("#feedback_sumbit").empty().append("Thanks! Feedback sumbitted.") }
