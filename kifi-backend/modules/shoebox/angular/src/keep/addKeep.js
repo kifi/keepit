@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .directive('kfAddKeep', [
-  '$document', '$rootScope', '$location', '$state', 'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'modalService', 'util',
-  function ($document, $rootScope, $location, $state, keyIndices, keepDecoratorService, keepActionService, libraryService, modalService, util) {
+  '$document', '$rootScope', '$location', '$state', '$timeout',
+  'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'modalService', 'util',
+  function ($document, $rootScope, $location, $state, $timeout,
+    keyIndices, keepDecoratorService, keepActionService, libraryService, modalService, util) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -19,6 +21,8 @@ angular.module('kifi')
           scope.state.checkedPrivate = false;
           scope.state.invalidUrl = false;
           scope.state.input = '';
+          scope.keptPublic = false;
+          scope.keptPrivate = false;
         };
         reset();
 
@@ -85,10 +89,21 @@ angular.module('kifi')
                 });
               } else {
                 libraryService.fetchLibrarySummaries(true);
-                scope.resetAndHide();
+                if (scope.selectedLibrary.visibility === 'secret') {
+                  scope.keptPrivate = true;
+                } else {
+                  scope.keptPublic = true;
+                }
+                scope.inAnimation = true;
+                $timeout(function () {
+                  scope.inAnimation = false;
+                }, 200);
+
+                $timeout(scope.resetAndHide, 1700);
 
                 // If we are on the library page where the keep is being added, add the keep to the top of the list of keeps.
-                if ($state.href($state.current.name) === scope.selectedLibrary.url) {
+                if ((result.alreadyKept.length === 0) &&
+                    ($state.href($state.current.name) === scope.selectedLibrary.url)) {
                   return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
                     var keep = new keepDecoratorService.Keep(fullKeep);
                     keep.buildKeep(keep);
