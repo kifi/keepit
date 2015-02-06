@@ -3,27 +3,18 @@
 angular.module('kifi')
 
 .controller('LoggedInHeaderCtrl', [
-  '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService',
-    '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state', 'routeService',
-  function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService,
+  '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService',
+  '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state', 'routeService',
+  function ($scope, $window, $rootElement, $rootScope, $document, profileService,
     $location, util, keyIndices, modalService, $timeout, $state, routeService) {
 
     $scope.toggleMenu = function () {
-      $rootElement.find('html').toggleClass('kf-sidebar-inactive');
+      // libraryMenu is inherited from AppCtrl scope.
+      $scope.libraryMenu.visible = !$scope.libraryMenu.visible;
     };
 
-    // reminder: this triggers left sidebar to show in case the default for small windows is to hide left sidebar
-    $window.addEventListener('message', function (event) {
-      if (event.data === 'show_left_column') {  // for guide
-        $scope.$apply(function () {
-          $rootElement.find('html').removeClass('kf-sidebar-inactive');
-        });
-      }
-    });
-
-    $scope.isFocused = false;
     $scope.library = {};
-    $scope.search = { text: '', showName: false };
+    $scope.search = {text: '', focused: false, showName: false};
 
     // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
     var calloutName = 'tag_callout_shown';
@@ -42,30 +33,22 @@ angular.module('kifi')
     // Watchers & Listeners
     //
     [
-      $rootScope.$on('libraryUrl', function (e, library) {
+      $rootScope.$on('libraryOnPage', function (e, library) {
         $scope.library = library;
+        $scope.libOwnerPicUrl = library && routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 100);
+        $scope.libOwnerProfileUrl = library && routeService.getProfileUrl(library.owner.username);
 
-        if ($scope.library.owner && !$scope.library.owner.picUrl) {
-          $scope.library.owner.picUrl = friendService.getPictureUrlForUser($scope.library.owner);
-        }
-
-        if ($scope.library.id) {
+        if (library) {
           $scope.search.showName = true;
         } else if ($scope.search.showName) {
-          $scope.clearLibraryName();
+          clearLibraryName();
         } else if ($state.params && $state.params.q && util.startsWith($state.params.q, 'tag:')) {
           $scope.search.text = $state.params.q;
         }
-
-        $scope.curatorProfileUrl = $scope.library.owner && routeService.getProfileUrl($scope.library.owner.username);
       }),
 
       $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
-        if ((toState.name === 'library.search') || (toState.name === 'search')) {
-          $scope.search.text = toParams.q;
-        } else {
-          $scope.search.text = '';
-        }
+        $scope.search.text = toState.name === 'library.search' || toState.name === 'search' ? toParams.q : '';
       }),
 
       $rootScope.$on('triggerAddKeep', function (e, library) {
@@ -75,39 +58,46 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
-    $scope.focusInput = function () {
-      $scope.isFocused = true;
+    $scope.onInputFocus = function () {
+      $scope.search.focused = true;
     };
-    $scope.blurInput = function () {
-      $scope.isFocused = false;
+    $scope.onInputBlur = function ($event) {
+      $scope.search.focused = $window.document.activeElement === $event.target;
     };
 
-    $scope.clearLibraryName = function () {
+    $scope.onClickLibX = function () {
+      clearLibraryName();
+      $timeout(function () {
+        angular.element('.kf-lih-search-input').focus();
+      });
+    };
+
+    function clearLibraryName() {
       $scope.search.showName = false;
       $scope.library = {};
-      $scope.changeSearchInput();
-    };
+      reactToQueryChange();
+    }
+
+    function reactToQueryChange() {
+      if ($location.path() === '/find') {
+        $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
+      } else if ($scope.library && $scope.library.url) {
+        if ($scope.search.text) {
+          if ($state.params.q) {
+            $location.search('q', $scope.search.text).replace();
+          } else {
+            $location.url($scope.library.url + '/find?q=' + $scope.search.text + '&f=a');
+          }
+        } else {
+          $location.url($scope.library.url);
+        }
+      } else if ($scope.search.text) {
+        $location.url('/find?q=' + $scope.search.text);
+      }
+    }
 
     $scope.search.text = $state.params.q || '';
-    $scope.changeSearchInput = _.debounce(function () {
-      $timeout(function () {
-        if ($location.path() === '/find') {
-          $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
-        } else if ($scope.library && $scope.library.url) {
-          if ($scope.search.text) {
-            if ($state.params.q) {
-              $location.search('q', $scope.search.text).replace();
-            } else {
-              $location.url($scope.library.url + '/find?q=' + $scope.search.text + '&f=a');
-            }
-          } else {
-            $location.url($scope.library.url);
-          }
-        } else if ($scope.search.text) {
-          $location.url('/find?q=' + $scope.search.text);
-        }
-      });
-    }, 250);
+    $scope.onQueryChange = util.$debounce($scope, reactToQueryChange, 250);
 
     $scope.onSearchBarClicked = function () {
       if ($scope.library && $scope.library.id) {
@@ -119,7 +109,7 @@ angular.module('kifi')
 
     $scope.clearInput = function () {
       $scope.search.text = '';
-      $scope.changeSearchInput();
+      reactToQueryChange();
     };
 
     var KEY_ESC = 27, KEY_DEL = 8;
@@ -127,7 +117,7 @@ angular.module('kifi')
       switch (e.keyCode) {
         case KEY_DEL:
           if ($scope.search.text === '') {
-            $scope.clearLibraryName();
+            clearLibraryName();
           }
           break;
         case KEY_ESC:

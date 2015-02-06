@@ -118,6 +118,10 @@ angular.module('kifi', [
           $scope.errorParams = toParams;
         }
       });
+
+      $scope.libraryMenu = {
+        visible: false
+      };
     }
 
     start();

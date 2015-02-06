@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('HelpRankCtrl', [
-  '$scope', 'keepActionService', 'keepDecoratorService', '$stateParams', '$rootScope',
-  function ($scope, keepActionService, keepDecoratorService, $stateParams, $rootScope) {
+  '$scope', 'keepActionService', 'keepDecoratorService', '$stateParams',
+  function ($scope, keepActionService, keepDecoratorService, $stateParams) {
     //
     // Internal data.
     //
@@ -86,6 +86,5 @@ angular.module('kifi')
     // On HelpRankCtrl initialization.
     //
     $scope.getNextKeeps();
-    $rootScope.$emit('libraryUrl', {});
   }
 ]);

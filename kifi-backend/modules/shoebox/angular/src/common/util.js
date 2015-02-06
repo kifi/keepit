@@ -59,13 +59,15 @@ angular.module('util', [])
         var _y = rawDom.getBoundingClientRect().top + scrollY;
         return { left: _x, top: _y };
       },
-      isIE: function () {
-        // Feature detection should be preferred to browser detection, so this function should be avoided.
-        return (
-          (navigator.appName === 'Microsoft Internet Explorer') ||
-          ((navigator.appName === 'Netscape') &&
-           (/Trident/.exec(navigator.userAgent) != null))
-        );
+      $debounce: function (scope, f, ms, opts) {
+        return _.debounce(function () {
+          var phase = scope.$root.$$phase;
+          if (phase === '$apply' || phase === '$digest') {
+            f();
+          } else {
+            scope.$apply(f);
+          }
+        }, ms, opts);
       },
       getYoutubeIdFromUrl: function (url) {
         var match = url.match(youtubeVideoUrlRe);

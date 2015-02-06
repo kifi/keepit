@@ -99,7 +99,7 @@ angular.module('kifi')
 
     /*
     This is intended be called from the console only, for debugging.
-    Specifically, running `$(".recos-view").scope().toggleExplain(); $(".recos-view").scope().$digest();`
+    Specifically, running `$(".kf-recos-view").scope().toggleExplain(); $(".kf-recos-view").scope().$digest();`
     in the bowser console while on the recommendations page will toggle between showing the page description and the score breakdown in the card.
     */
     $scope.toggleExplain = function () {
@@ -109,8 +109,6 @@ angular.module('kifi')
         reco.recoData.explain = temp;
       });
     };
-
-    $rootScope.$emit('libraryUrl', {});
 
     // Load a new set of recommendations only on page refresh.
     // Otherwise, load the recommendations we have previously shown.

@@ -1,8 +1,12 @@
+search-height = 28px
+search-dur = .2s
+
 .kf-loh
   position: fixed
   top: 0
   width: 100%
   height: 62px
+  box-sizing: border-box
   background-color: #f9fafb
   border-bottom: 1px solid #dbdbdb
   z-index: 500
@@ -10,55 +14,162 @@
 
 .kf-loh-inner
   height: 100%
-  width: 745px
+  width: 100%
+  max-width: appMaxWidth
   margin: 0 auto
-  transition: padding 0.5s
-  box-sizing: border-box
+  display: table
+  table-layout: fixed
 
 .kf-loh-left
-  float: left
-  height: 100%
-  width: 240px
-  margin-left: 30px
-  line-height: 62px
-  box-sizing: border-box
+  display: table-cell
+  vertical-align: middle
+  width: 270px
+  font-size: 0
+  white-space: nowrap
+  overflow: hidden
+  transition: width search-dur
 
-.kf-loh-clover-logo
+  .kf-lit>&
+    width: 100px
+
+.kf-loh-logo
   display: inline-block
   vertical-align: middle
-  margin-right: 2px
-  width: 28px
-  height: 28px
+  width: 80px
+  height: 36px
+  background-position: left center
   background-repeat: no-repeat
-
-.kf-loh-kifi-logo
-  display: inline-block
-  vertical-align: middle
-  margin-left: 10px
-  margin-right: 4px
-  width: 40px
-  height: 21px
-  background-repeat: no-repeat
+  background-size: 70px auto
+  outline-color: #fff
 
 .kf-loh-tagline
   display: inline-block
-  vertical-align: -7px
+  vertical-align: middle
   width: 100px
+  line-height: 13px
   font-size: 11px
   color: #7d7d7d
-  line-height: 1.1
+  cursor: default
+  transition: opacity linear search-dur
+
+  .kf-lit &
+    opacity: 0
+
+.kf-loh-center
+  display: table-cell
+  vertical-align: middle
+
+.kf-loh-search
+  display: table
+  width: 70%
+  height: search-height
+  border: 1px solid alpha(defaultBorderColor, .5)
+  border-radius: 3px
+  background-color: transparent
+  transition: width search-dur
+
+  .kf-lit &
+    width: 100%
+    border-color: defaultBorderColor
+    background-color: #fff
+
+.kf-loh-search-left
+  display: table-cell
+  vertical-align: middle
+  padding-left: 5px
+  white-space: nowrap
+  font-size: 0
+
+.kf-loh-search-icon
+  display: inline-block
+  vertical-align: middle
+  transform: scale(.8)
+  margin-right: 4px
+  sprite2x($search-icon-default)
+
+  .kf-lit &
+    sprite2x($search-icon-active)
+
+lib-owner-img-radius = 12px
+
+.kf-loh-search-lib
+  display: inline-block
+  vertical-align: middle
+  box-sizing: border-box
+  max-width: 0
+  padding: 0
+  line-height: search-height
+  font-size: 13px
+  font-weight: 100
+  color: #fff
+  text-align: left
+  overflow: hidden
+  white-space: nowrap
+  text-overflow: ellipsis
+  opacity: 0
+  visibility: hidden
+  transition: max-width search-dur, padding search-dur, opacity search-dur, visibility 0s search-dur
+
+  .kf-lit &
+    max-width: 180px
+    padding: 0 5px 0 0
+    opacity: 1
+    visibility: visible
+    transition-delay: 0s
+
+.kf-loh-search-lib-owner-img
+  display: inline-block
+  vertical-align: top
+  position: relative
+  z-index: 1
+  top: 2px
+  left: 6px
+  width: 2 * lib-owner-img-radius
+  height: 2 * lib-owner-img-radius
+  border-radius: 50%
+  background-size: contain
+  margin-right: 10px
+
+.kf-loh-search-center
+  display: table-cell
+  width: 99%
+  padding-left: 4px
+  transition: padding-left search-dur
+
+  .kf-lit &
+    padding-left: 8px
+
+input.kf-loh-search-input
+  width: 100%
+  line-height: search-height
+  background-color: transparent
+
+.kf-loh-search-right
+  display: table-cell
+  width: 1%
+  white-space: nowrap
+  vertical-align: middle
+
+.kf-loh-search-clear
+  border: none
+  background-color: transparent
+  padding: 0 8px 0 0
+  line-height: search-height
+  font-weight: 200
+  font-size: 16px
+  color: blueColor
+  cursor: pointer
 
 .kf-loh-right
-  overflow: hidden
-  height: 100%
-  margin-right: 60px
-  line-height: 62px
+  display: table-cell
+  width: 144px
+  vertical-align: middle
   text-align: right
   font-size: 14px
-  box-sizing: border-box
+  position: relative  // for follow button
 
-  @media screen and (max-width: 1280px)
-    margin-right: 30px
+.kf-loh-links
+  position: relative  // for follow button
 
 .kf-loh-link
 .kf-loh-dot

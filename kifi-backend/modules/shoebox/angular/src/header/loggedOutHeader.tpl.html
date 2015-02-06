@@ -1,16 +1,32 @@
 <div class="kf-loh" ng-controller="LoggedOutHeaderCtrl">
-  <div class="kf-loh-inner">
+  <div class="kf-loh-inner" ng-class="{'kf-lit': search.focused || search.text}">
     <div class="kf-loh-left">
-      <a href="/" target="_self" ng-click="clickLogo()">
-        <span class="kf-loh-clover-logo svg-kifi-clover-logo"></span>
-        <span class="kf-loh-kifi-logo svg-kifi-name"></span>
-        <span class="kf-loh-tagline">Connecting people with knowledge</span>
-      </a>
+      <a class="kf-loh-logo svg-kifi-clover-dark-text" ui-sref="home" ng-click="clickLogo()"></a>
+      <span class="kf-loh-tagline">Connecting people<br>with knowledge</span>
+    </div>
+    <div class="kf-loh-center" ng-if="library">
+      <label class="kf-loh-search">
+        <span class="kf-loh-search-left">
+          <span class="kf-loh-search-icon"></span>
+          <span class="kf-loh-search-lib" style="background-color:{{library.color}}">
+            <a class="kf-loh-search-lib-owner-img" style="background-image:url({{libOwnerPicUrl || 'https://www.kifi.com/assets/img/ghost.100.png'}})" href="{{libOwnerProfileUrl}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></a>
+            {{library.name}}
+          </span>
+        </span>
+        <span class="kf-loh-search-center">
+          <input class="kf-loh-search-input" type="text" placeholder="Search this library…" ng-model="search.text" ng-focus="onInputFocus()" ng-blur="onInputBlur($event)" ng-change="onQueryChange()" ng-keydown="onKeydown($event)" ng-click="onSearchBarClicked()">
+        </span>
+        <span class="kf-loh-search-right" ng-if="search.text">
+          <button class="kf-loh-search-clear" ng-click="clearInput()">Clear</button>
+        </span>
+      </label>
     </div>
     <div class="kf-loh-right">
-      <a class="kf-loh-link" ng-click="join($event)" href="{{navBase}}/signup" target="_self">Join Kifi</a>
-      <span class="kf-loh-dot">•</span>
-      <a class="kf-loh-link" ng-click="login($event)" href="{{navBase}}/login" target="_self" rel="nofollow">Log in</a>
+      <div class="kf-loh-links">
+        <a class="kf-loh-link" ng-click="join($event)" href="/signup" target="_self">Join Kifi</a>
+        <span class="kf-loh-dot">•</span>
+        <a class="kf-loh-link" ng-click="login($event)" href="/login" target="_self" rel="nofollow">Log in</a>
+      </div>
     </div>
   </div>
 </div>
