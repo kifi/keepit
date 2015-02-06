@@ -398,7 +398,10 @@ class UriIntegrityHelpers @Inject() (urlRepo: URLRepo, keepRepo: KeepRepo) exten
   def improveKeepsSafely(uri: NormalizedURI)(implicit session: RWSession): Unit = {
     keepRepo.getByUri(uri.id.get).foreach { keep =>
       val betterKeep = improveKeepSafely(uri, keep)
-      if (betterKeep != keep) { keepRepo.save(betterKeep) }
+      if (betterKeep != keep) {
+        log.info(s"Saving improved keep $betterKeep over original keep $keep relying on uri $uri")
+        keepRepo.save(betterKeep)
+      }
     }
   }
 }
