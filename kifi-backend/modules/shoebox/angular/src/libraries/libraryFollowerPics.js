@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryFollowerPics', [
-  '$window', 'platformService',
-  function ($window, platformService) {
+  '$window', 'platformService', 'util',
+  function ($window, platformService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -15,70 +15,55 @@ angular.module('kifi')
         showFollowers: '&',
         currentPageOrigin: '@'
       },
-      link: function (scope, element /*, attrs */) {
-        function init() {
-          scope.followersToShow = [];
-          scope.numAdditionalFollowers = 0;
-        }
+      link: function (scope, element) {
+        var isMobile = platformService.isSupportedMobilePlatform();
 
         function adjustFollowerPicsSize() {
-          var parentWidth = element.parent().width();
+          var n = scope.numFollowers;
+          var maxWidth = element[0].offsetWidth;
+          var picWidth = isMobile ? 110 : 50;
+          var addWidth = picWidth * (n < 100 ? 1 : n < 1000 ? 1.1 : 1.2);  // for "+N"
 
-          var siblingsWidth = 0;
-          element.siblings().each(function () {
-            siblingsWidth += this.offsetWidth;
-          });
-
-          var additionalNeededWith = 70; // the additional number of followers, etc.
-          var widthPerFollowerPic = 50;
-
-          if (platformService.isSupportedMobilePlatform()) {
-            siblingsWidth = 0;
-            additionalNeededWith = 120;
-            widthPerFollowerPic = 110;
-          }
-
-          var maxFollowersToShow = Math.floor((parentWidth - siblingsWidth - additionalNeededWith) / widthPerFollowerPic);
+          var numToShow = Math.floor(Math.max(0, maxWidth - addWidth) / picWidth);
           // If we only have one additional follower that we can't fit in, then we can fit that one
           // in if we don't show the additional-number-of-followers circle.
-          if (maxFollowersToShow === scope.numFollowers - 1) {
-            maxFollowersToShow++;
+          if (numToShow === n - 1) {
+            numToShow++;
           }
+          numToShow = Math.min(scope.followers.length, numToShow);
 
-          scope.numAdditionalFollowers = 0;
+          scope.followersToShow = scope.followers.slice(0, numToShow);
+          scope.numAdditionalFollowers = n - numToShow;
 
-          scope.$evalAsync(function () {
-            if (maxFollowersToShow < 1) {
-              scope.followersToShow = [];
-              scope.numAdditionalFollowers = scope.numFollowers;
-            } else if (maxFollowersToShow >= scope.numFollowers) {
-              scope.followersToShow = scope.followers;
-              scope.numAdditionalFollowers = 0;
-            } else {
-              scope.followersToShow = scope.followers.slice(0, maxFollowersToShow);
-              scope.numAdditionalFollowers = scope.numFollowers - maxFollowersToShow;
-            }
-
-            element.find('.kf-lfp-pics')
-              .width(maxFollowersToShow >= 1 ? maxFollowersToShow * widthPerFollowerPic : 0);
-          });
+          element.find('.kf-lfp-pics').width(numToShow * picWidth);
         }
 
 
         //
-        // Watches and listeners.
+        // Watches and listeners
         //
-        scope.$watch('numFollowers', adjustFollowerPicsSize);
+        scope.$watch('numFollowers', function (newVal, oldVal) {
+          if (newVal === oldVal) {
+            // on the first call, wait for counts to be inserted into DOM to get correct width measurement
+            scope.$evalAsync(adjustFollowerPicsSize);
+          } else {
+            adjustFollowerPicsSize();
+          }
+        });
 
         // Update how many follower pics are shown when the window is resized.
-        var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);
-        $window.addEventListener('resize', adjustFollowerPicsSizeOnResize);
+        var onWinResize = util.$debounce(scope, adjustFollowerPicsSize, 200);
+        $window.addEventListener('resize', onWinResize);
         scope.$on('$destroy', function () {
-          $window.removeEventListener('resize', adjustFollowerPicsSizeOnResize);
+          $window.removeEventListener('resize', onWinResize);
         });
 
 
-        init();
+        //
+        // Initialization
+        //
+        scope.followersToShow = [];
+        scope.numAdditionalFollowers = 0;
       }
     };
   }
