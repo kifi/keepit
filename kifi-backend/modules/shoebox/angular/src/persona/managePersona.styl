@@ -13,40 +13,52 @@
     padding: 0
 
   .persona-table
-    margin: 0 auto
-    padding-left: 13px
+    text-align: center
 
   .persona-icon
+    position: relative
     display: inline-block
-    width: 75px
-    height: 55px
-    margin: 5px
-    padding: 10px
+    width: 100px
+    height: 90px
+    padding-top: 5px
+    margin: 8px
     border-radius: 3px
     border: 1px solid libraryGreen
     background-color: #fff
     cursor: pointer
-    color: libraryGreen
+    vertical-align: top
     text-align: center
-    line-height: 13px
-    font-size: 10px
-    font-weight: 100
+    color: libraryGreen
 
     &.active
       background-color: libraryGreen
       color: white
+
     &.active:hover
       background-color: #81cd91
 
     &:hover
       background-color: #f1f9f3
 
+  .persona-icon-image-wrapper
+    width: calc(100% - 20px)
+    height: calc(100% - 20px)
+    margin: 0 auto
+
   .persona-icon-image
-    width: 40px
-    height: 40px
+    position: relative
+    top: 50%
+    transform: translateY(-50%)
+    max-width: 60%
+    max-height: 70%
 
   .persona-icon-display-name
-    margin-top: 8px
+    position: absolute
+    top: calc(100% - 23px)
+    width: 100%
+    line-height: 13px
+    font-size: 10px
+    font-weight: 100
 
   .dialog-button
     margin-top: 20px

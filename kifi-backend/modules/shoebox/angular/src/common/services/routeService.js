@@ -247,10 +247,10 @@ angular.module('kifi')
         return route('/user/personas');
       },
       addPersona: function(personaName) {
-        return route('/user/persona/' + personaName);
+        return route('/user/personas/' + personaName);
       },
       removePersona: function(personaName) {
-        return route('/user/persona/' + personaName);
+        return route('/user/personas/' + personaName);
       }
     };
   }
