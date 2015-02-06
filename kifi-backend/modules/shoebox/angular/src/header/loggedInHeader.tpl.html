@@ -9,12 +9,12 @@
       <label class="kf-lih-search" ng-class="{'kf-lit': isFocused || search.text}">
         <span class="kf-lih-search-left">
           <span class="kf-lih-search-icon"></span>
-          <a class="kf-lih-search-lib-owner-img" ng-if="search.showName" style="background-image:url({{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.100.png'}})" href="{{library.owner.profileUrl}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></a>
+          <a class="kf-lih-search-lib-owner-img" ng-if="search.showName" style="background-image:url({{libOwnerPicUrl || 'https://www.kifi.com/assets/img/ghost.100.png'}})" href="{{libOwnerProfileUrl}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></a>
           <span class="kf-lih-search-lib-name" ng-if="search.showName" style="background-color:{{library.color}}">{{library.name}}</span>
-          <a class="kf-lih-search-lib-x" ng-if="search.showName" style="background-color:{{library.color}}" ng-click="clearLibraryName()" href="javascript:">&times;</a>
+          <a class="kf-lih-search-lib-x" ng-if="search.showName" style="background-color:{{library.color}}" ng-click="onClickLibX()" href="javascript:">&times;</a>
         </span>
         <span class="kf-lih-search-center">
-          <input class="kf-lih-search-input" type="text" placeholder="Search Kifi…" ng-model="search.text" ng-focus="focusInput()" ng-blur="blurInput()" ng-change="changeSearchInput()" ng-keydown="onKeydown($event)" ng-click="onSearchBarClicked()">
+          <input class="kf-lih-search-input" type="text" placeholder="Search Kifi…" ng-model="search.text" ng-focus="focusInput()" ng-blur="blurInput()" ng-change="onQueryChange()" ng-keydown="onKeydown($event)" ng-click="onSearchBarClicked()">
         </span>
         <span class="kf-lih-search-right" ng-if="search.text">
           <button class="kf-lih-search-clear" ng-click="clearInput()">Clear</button>

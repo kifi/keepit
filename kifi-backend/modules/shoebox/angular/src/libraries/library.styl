@@ -1,18 +1,29 @@
-.kf-main-library-keeps
+rel-libs-width = 210px
+
+.kf-lib-cols
+  display: table
   margin: 0 auto
   max-width: appMaxWidth
+  width: 100%
+  min-height: 100vh  // for auto-scrolling down to search results
+  table-layout: fixed
+  border-top: 10px solid transparent
 
-.kf-lib-info-footer
+.kf-lib-col
+  display: table-cell
+  vertical-align: top
+
+.kf-lib-footer
   margin-bottom: 30px
   text-align: center
   font-size: 13px
 
-  .first-line
-    display: inline-block
+.kf-lib-footer-1
+  display: inline-block
 
-  .second-line
-    display: inline-block
+.kf-lib-footer-2
+  display: inline-block
 
-  a
-    color: linkBlueColor
-    margin: 0 10px
+.kf-lib-footer-a
+  color: linkBlueColor
+  margin: 0 10px

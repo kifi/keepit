@@ -41,7 +41,5 @@ angular.module('kifi')
       $scope.keeps = [keep];
       $scope.loading = false;
     });
-
-    $rootScope.$emit('libraryUrl', {});
   }
 ]);

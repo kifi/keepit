@@ -23,7 +23,7 @@ left-logo-width = 92px
 .kf-lih-left
   display: table-cell
   vertical-align: middle
-  width: left-burger-width + left-sep-width + left-logo-width + 6px
+  width: left-burger-width + left-sep-width + left-logo-width + 14px
 
 .kf-lih-toggle-menu
   display: inline-block
@@ -79,17 +79,14 @@ search-height = 28px
   display: table
   width: 100%
   height: search-height
-  border: 1px solid alpha(defaultBorderColor, .2)
   border-radius: 3px
-  background-color: alpha(#fff, .2)
+  background-color: alpha(#fff, .1)
 
   &.kf-lit
-    border-color: defaultBorderColor
-    background-color: #fff
+    background-color: alpha(#fff, .15)
 
 .kf-lih-search-left
   display: table-cell
-  max-width: 40%
   vertical-align: middle
   padding: 0 5px
   white-space: nowrap
@@ -126,6 +123,7 @@ lib-owner-img-radius = 12px
   font-size: 13px
   font-weight: 100
   color: #fff
+  max-width: 170px
   overflow: hidden
   white-space: nowrap
   text-overflow: ellipsis
@@ -161,8 +159,9 @@ input.kf-lih-search-input
   width: 100%
   line-height: search-height
   background-color: transparent
+  color: #fff
 
-.kf-lib-search-right
+.kf-lih-search-right
   display: table-cell
   width: 1%
   white-space: nowrap
@@ -183,7 +182,7 @@ btn-space = 10px
 
 .kf-lih-right
   display: table-cell
-  width: btn-diam * 4 + btn-space * 4 + 6px
+  width: btn-diam * 4 + btn-space * 4 + 12px
   vertical-align: middle
   text-align: right
   font-size: 0

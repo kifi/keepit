@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$rootScope', '$location', '$q', '$state', '$timeout', '$window', 'keepDecoratorService', 'searchActionService', 'libraryService', 'util', 'library',
-  function ($scope, $rootScope, $location, $q, $state, $timeout, $window, keepDecoratorService, searchActionService, libraryService, util, library) {
+  '$scope', '$rootScope', '$location', '$q', '$state', '$timeout', '$window', '$$rAF',
+  'keepDecoratorService', 'searchActionService', 'libraryService', 'util', 'library',
+  function ($scope, $rootScope, $location, $q, $state, $timeout, $window, $$rAF,
+            keepDecoratorService, searchActionService, libraryService, util, library) {
     //
     // Internal data.
     //
@@ -12,7 +14,6 @@ angular.module('kifi')
     var filter;
     var lastResult = null;
     var selectedCount = 0;
-    var authToken = $location.search().authToken || '';
     var numResults = 0;
 
 
@@ -75,10 +76,50 @@ angular.module('kifi')
       $scope.getNextKeeps(true);
 
       $timeout(function () {
-        $window.document.body.scrollTop = 0;
+        if (library) {
+          var pxToScroll = angular.element('.kf-lib-cols')[0].getBoundingClientRect().top - angular.element('.kf-lih,.kf-loh')[0].offsetHeight;
+          if (pxToScroll > 0) {
+            scrollDown(pxToScroll);
+          }
+        } else {
+          $window.document.body.scrollTop = 0;
+        }
       });
     }
 
+    function scrollDown(px) {
+      var doc = $window.document;
+      var win = doc.defaultView;
+      var newWheelEvent = typeof WheelEvent === 'function' ?
+        function (deltaY) {
+          return new win.WheelEvent('wheel', {deltaY: deltaY});
+        } :
+        function (deltaY) {
+          var e = doc.createEvent('WheelEvent');
+          e.initWheelEvent('wheel', false, false, win, 0, 0, 0, 0, 0, 0, null, '', 0, deltaY, 0, 0);
+          return e;
+        };
+
+      var t0, pxScrolled = 0;
+      var ms_1 = 1 / Math.max(400, Math.min(800, 100 * Math.log(px)));
+      $$rAF(function step(t) {
+        if (!t0) {
+          t0 = t;
+        }
+        var pxTarget = Math.round(px * easeInOutQuart(Math.min(1, (t - t0) * ms_1)));
+        var pxDelta = pxTarget - pxScrolled;
+        win.dispatchEvent(newWheelEvent(pxDelta));
+        win.scrollBy(0, pxDelta);
+        pxScrolled = pxTarget;
+        if (pxScrolled < px) {
+          $$rAF(step);
+        }
+      });
+    }
+
+    function easeInOutQuart(t) {
+      return t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t;
+    }
 
     //
     // Scope methods.

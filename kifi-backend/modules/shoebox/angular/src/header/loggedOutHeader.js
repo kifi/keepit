@@ -3,9 +3,12 @@
 angular.module('kifi')
 
 .controller('LoggedOutHeaderCtrl', [
-  '$scope', '$rootScope', '$state', 'env', 'signupService', 'platformService', 'libraryService', 'util',
-  function ($scope, $rootScope, $state, env, signupService, platformService, libraryService, util) {
-    $scope.navBase = env.navBase;
+  '$scope', '$rootScope', '$state', '$timeout', '$location',
+  'signupService', 'platformService', 'libraryService', 'routeService', 'util',
+  function ($scope, $rootScope, $state, $timeout, $location,
+            signupService, platformService, libraryService, routeService, util) {
+    $scope.library = null;
+    $scope.search = {text: '', focused: false};
 
     $scope.clickLogo = function () {
       if (util.startsWith($state.current.name, 'library')) {
@@ -21,6 +24,80 @@ angular.module('kifi')
         $rootScope.$emit('trackUserProfileEvent', 'click', {
           action: 'clickedLogo'
         });
+      }
+    };
+
+    [
+      $rootScope.$on('libraryOnPage', function (e, library) {
+        $scope.library = library;
+        $scope.libOwnerPicUrl = library && routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 100);
+        $scope.libOwnerProfileUrl = library && routeService.getProfileUrl(library.owner.username);
+
+        if ($state.params && $state.params.q && util.startsWith($state.params.q, 'tag:')) {
+          $scope.search.text = $state.params.q;
+        }
+      }),
+
+      $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
+        if ((toState.name === 'library.search') || (toState.name === 'search')) {
+          $scope.search.text = toParams.q;
+        } else {
+          $scope.search.text = '';
+        }
+      })
+    ].forEach(function (deregister) {
+      $scope.$on('$destroy', deregister);
+    });
+
+
+    $scope.focusInput = function () {
+      $scope.search.focused = true;
+    };
+    $scope.blurInput = function () {
+      $scope.search.focused = false;
+    };
+
+    function reactToQueryChange() {
+      var q = $scope.search.text;
+      if (q) {
+        if ($state.params.q) {
+          $location.search('q', q).replace();
+        } else {
+          $location.url($scope.library.url + '/find?q=' + q + '&f=a');
+        }
+      } else {
+        $location.url($scope.library.url);
+      }
+    }
+
+    $scope.search.text = $state.params.q || '';
+    $scope.onQueryChange = _.debounce(function () {
+      var phase = $rootScope.$$phase;
+      if (phase === '$apply' || phase === '$digest') {
+        reactToQueryChange();
+      } else {
+        $scope.$apply(reactToQueryChange);
+      }
+    }, 250);
+
+    $scope.onSearchBarClicked = function () {
+      if ($scope.library && $scope.library.id) {
+        $rootScope.$emit('trackLibraryEvent', 'click', {
+          action: 'clickedSearchBar'
+        });
+      }
+    };
+
+    $scope.clearInput = function () {
+      $scope.search.text = '';
+      reactToQueryChange();
+    };
+
+    $scope.onKeydown = function (e) {
+      switch (e.keyCode) {
+        case 27:  // esc
+          $scope.clearInput();
+          break;
       }
     };
 
