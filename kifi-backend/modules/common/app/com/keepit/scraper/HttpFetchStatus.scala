@@ -58,6 +58,5 @@ object HttpRedirect {
     if (origin != absoluteDestination) Some(absoluteDestination) else None
   }
 
-  private val shortenedUrls = Set("bit.ly", "goo.gl", "owl.ly", "deck.ly", "su.pr", "lnk.co", "fur.ly", "ow.ly", "owl.ly", "tinyurl.com", "is.gd", "v.gd", "t.co", "linkd.in", "urls.im", "tnw.to", "instagr.am", "spr.ly", "nyp.st", "rww.to", "itun.es", "youtu.be", "spoti.fi", "j.mp", "amzn.to", "lnkd.in", "trib.al", "fb.me", "buff.ly", "qr.ae", "tcrn.ch", "nzzl.me", "kiss.ly", "wp.me", "nyti.ms", "pocket.co", "onforb.es")
-  def isShortenedUrl(url: String) = URI.parse(url).toOption.flatMap(_.host.map(_.name)).exists(shortenedUrls.contains)
+  def isShortenedUrl(url: String) = URI.parse(url).toOption.flatMap(_.host.map(_.name)).exists(ShortenedUrls.domains.contains)
 }
