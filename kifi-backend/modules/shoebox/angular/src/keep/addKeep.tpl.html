@@ -14,15 +14,10 @@
           kf-keep-to-library-widget widget-action-text="Add keep" library-select-action="onLibrarySelected(selectedLibrary)"
           lib-select-down-offset="0" lib-select-max-up-offset="110" lib-select-left-offset="0">
           <span ng-switch="selectedLibrary.kind" class="keep-to-library-lib-icon-container">
-            <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>
-            <span ng-switch-when="system_secret" class="keep-to-library-lib-icon svg-secret-library-icon"></span>
-            <span ng-switch-default ng-switch="selectedLibrary.visibility">
-              <span ng-switch-when="published" class="keep-to-library-lib-icon svg-public-library-icon"></span>
-              <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
-
-              <!-- TODO: remove this when we've converted all discoverable libraries to public libraries in the db. -->
-              <span ng-switch-when="discoverable" class="keep-to-library-lib-icon svg-yellow-card-with-globe"></span>
-            </span>
+            <div class="kf-klw-library-card" ng-style="{'background-color': selectedLibrary.color}">
+              <div ng-if="selectedLibrary.kind === 'system_main'" class="kf-klw-star-icon svg-card-star"></div>
+              <div ng-if="selectedLibrary.visibility === 'secret'" class="kf-klw-lock-icon svg-card-lock"></div>
+            </div>
           </span>
           {{selectedLibrary.name}}
           <span class="add-keep-to-library-dropdown-arrow"></span>
