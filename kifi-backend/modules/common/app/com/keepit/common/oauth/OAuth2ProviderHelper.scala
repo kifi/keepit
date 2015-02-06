@@ -43,10 +43,8 @@ trait OAuth2ProviderHelper extends OAuth2Support with Logging {
 
   // Next: factor out Result
   def doOAuth2[A]()(implicit request: Request[A]): Future[Either[Result, OAuth2TokenInfo]] = {
-    Try {
-      val userIdOpt = request.session.getUserId()
-      log.info(s"[OAuth doOAuth2] [userIdOpt=$userIdOpt] request=$request; headers=${request.headers}; session=${request.session.data}")
-    }
+    val userIdOpt = request.session.getUserId()
+    log.info(s"[OAuth doOAuth2] [userIdOpt=$userIdOpt] request=$request; headers=${request.headers}; session=${request.session.data}")
     request.queryString.get(OAuth2Constants.Error).flatMap(_.headOption).map(error => {
       error match {
         case OAuth2Constants.AccessDenied => throw new AuthException(s"access denied")
@@ -89,13 +87,16 @@ trait OAuth2ProviderHelper extends OAuth2Support with Logging {
           (OAuth2Constants.RedirectUri, BetterRoutesHelper.authenticate(providerConfig.name).absoluteURL(IdentityProvider.sslEnabled)),
           (OAuth2Constants.ResponseType, OAuth2Constants.Code),
           (OAuth2Constants.State, state))
-        params = (OAuth2Constants.Scope, providerConfig.scope) :: params
+        val scope = userIdOpt match {
+          case Some(userId) if userId.id < 100L => //hard to get an experiment here since we're in common (not in shoebox), faking it for a limited amount of time, this code may have to move down to shoebox
+            "email,publish_actions"
+          case _ =>
+            providerConfig.scope
+        }
+        params = (OAuth2Constants.Scope, scope) :: params
         val url = providerConfig.authUrl +
           params.map(p => URLEncoder.encode(p._1, "UTF-8") + "=" + URLEncoder.encode(p._2, "UTF-8")).mkString("?", "&", "")
-        Try {
-          val userIdOpt = request.session.getUserId()
-          log.info(s"[OAuth doOAuth2.1] [userIdOpt=$userIdOpt scope=${providerConfig.scope}] authorizationUrl=${providerConfig.authUrl}; redirect to $url")
-        }
+        log.info(s"[OAuth doOAuth2.1] [userIdOpt=$userIdOpt scope=${providerConfig.scope}] authorizationUrl=${providerConfig.authUrl}; redirect to $url")
         Future.successful(Left(Results.Redirect(url).withSession(request.session + (IdentityProvider.SessionId, sessionId))))
     }
   }
