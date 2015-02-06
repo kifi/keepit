@@ -122,9 +122,9 @@ object PersonaStates extends States[Persona]
 
 @json case class PersonaKeep( // default keep infos for FTUE
   url: String,
-  imagePath: Option[String] = None,
-  imageWidth: Option[Int] = None,
-  imageHeight: Option[Int] = None,
+  imagePath: String,
+  imageWidth: Int,
+  imageHeight: Int,
   noun: String,
   query: String,
   title: String,
@@ -134,9 +134,9 @@ object PersonaStates extends States[Persona]
 object PersonaKeep { // todo (aaron): once every persona has a default keep, remove this!
   val default = PersonaKeep(
     url = "http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die",
-    imagePath = Some("/img/guide/ted_jobs.jpg"),
-    imageWidth = Some(480),
-    imageHeight = Some(425),
+    imagePath = "/img/guide/ted_jobs.jpg",
+    imageWidth = 480,
+    imageHeight = 425,
     noun = "video",
     query = "steve+jobs",
     title = "Steve Jobs: How to live before you die | Talk Video | TED.com",
