@@ -43,19 +43,25 @@ trait OAuth2ProviderHelper extends OAuth2Support with Logging {
 
   // Next: factor out Result
   def doOAuth2[A]()(implicit request: Request[A]): Future[Either[Result, OAuth2TokenInfo]] = {
-    log.info(s"[doOAuth2] request=$request; headers=${request.headers}; session=${request.session.data}")
+    Try {
+      val userIdOpt = request.session.getUserId()
+      log.info(s"[OAuth doOAuth2] [userIdOpt=$userIdOpt] request=$request; headers=${request.headers}; session=${request.session.data}")
+    }
     request.queryString.get(OAuth2Constants.Error).flatMap(_.headOption).map(error => {
       error match {
         case OAuth2Constants.AccessDenied => throw new AuthException(s"access denied")
         case _ =>
-          throw new AuthException(s"[doOAuth2] error $error returned by the authorization server. Provider type is ${providerConfig.name}")
+          throw new AuthException(s"[OAuth doOAuth2] error $error returned by the authorization server. Provider type is ${providerConfig.name}")
       }
-      throw new AuthException(s"[doOAuth2] error=$error")
+      throw new AuthException(s"[OAuth doOAuth2] error=$error")
     })
 
     request.queryString.get(OAuth2Constants.Code).flatMap(_.headOption) match {
       case Some(code) =>
-        log.info(s"[doOAuth2.2] code=$code")
+        Try {
+          val userIdOpt = request.session.getUserId()
+          log.info(s"[OAuth doOAuth2.2] [userIdOpt=$userIdOpt] code=$code")
+        }
         // we're being redirected back from the authorization server with the access code.
         val currentStateOpt = for {
           // check if the state we sent is equal to the one we're receiving now before continuing the flow.
@@ -67,7 +73,7 @@ trait OAuth2ProviderHelper extends OAuth2Support with Logging {
           currentState
         }
         currentStateOpt match {
-          case None => throw new IllegalStateException(s"[doOAuth2.2] Failed to validate state")
+          case None => throw new IllegalStateException(s"[OAuth doOAuth2.2] Failed to validate state")
           case Some(_) =>
             getAccessToken(code) map { accessToken =>
               Right(accessToken)
@@ -88,8 +94,7 @@ trait OAuth2ProviderHelper extends OAuth2Support with Logging {
           params.map(p => URLEncoder.encode(p._1, "UTF-8") + "=" + URLEncoder.encode(p._2, "UTF-8")).mkString("?", "&", "")
         Try {
           val userIdOpt = request.session.getUserId()
-          log.info(s"[doOAuth2.1] [userIdOpt=$userIdOpt scope=${providerConfig.scope}] authorizationUrl=${providerConfig.authUrl}; redirect to $url")
-
+          log.info(s"[OAuth doOAuth2.1] [userIdOpt=$userIdOpt scope=${providerConfig.scope}] authorizationUrl=${providerConfig.authUrl}; redirect to $url")
         }
         Future.successful(Left(Results.Redirect(url).withSession(request.session + (IdentityProvider.SessionId, sessionId))))
     }
