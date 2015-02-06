@@ -8,8 +8,8 @@
     <div>
       <h3>Define Persona Feature Vector</h3>
       <form id = "define_persona">
-        <input id = "dp_pid" type = "text" value = "persona id">
-        <input id = "dp_tids" type = "text" value = "topic ids, seperated by comma">
+        <input id = "dp_pid" type = "text" value = "">&nbsp persona Id<br>
+        <input id = "dp_tids" type = "text" value = "">&nbsp topic ids, seperated by comma<br>
         <button type = "submit">submit</button>
       </form>
     </div>
@@ -20,7 +20,7 @@
     <div>
       <h3>Test Persona Feature Vector and Gradient Descent Learning</h3>
       <form id = "test_persona">
-        <input id = "tp_pid" type = "text" value = "persona id">
+        persona Id <input id = "tp_pid" type = "text" value = "">
         <button type = "submit">submit</button>
       </form>
 
@@ -89,7 +89,7 @@
 
         function done(data) {
           $("#tp_wait").empty()
-
+          $("#feedback_sumbit").empty()
           $("#persona_test_table > tbody").empty()
 
           var uids = data.uids
@@ -101,7 +101,7 @@
             var robj = $("<tr>");
             var link = '<a href = "/admin/scraped/-1">'.replace(-1, uids[i]) +  titles[i] + '</a>'
 
-            var buttons = '<td> <form class = "fb_forms" action="">' + '<input type="radio" name = "feedback" value="good"> good' + '<input type="radio" name = "feedback" value="bad" > bad ' + '<input type="radio" name = "feedback" value="whatever" checked> whatever' + '</form></td>';
+            var buttons = '<td> <form class = "fb_forms" action="">' + '<input type="radio" name = "feedback" value="good"> good &nbsp' + '<input type="radio" name = "feedback" value="bad" > bad &nbsp' + '<input type="radio" name = "feedback" value="whatever" checked> neutral' + '</form></td>';
 
             robj
             .append("<td class = \"ids\" >" + uids[i] + "</td>")
@@ -114,7 +114,7 @@
           }
 
           $("#feedback_sumbit").empty().append(
-            '<form id = "test_persona_feedback"><button type = "submit">submit feedback</button></form>');
+            '<form id = "test_persona_feedback">Learning Rate<input id = "rate" value = "0.05"/><button type = "submit">submit feedback</button></form>');
 
         }
 
@@ -151,10 +151,13 @@
         console.log(uriIds)
 
         $.postJson('@com.keepit.controllers.admin.routes.AdminLDAController.personaFeatureTraining',
-        {uids: uriIds, feedbacks: fbs, personaId: $('#tp_pid').val(), version: @version}
+        {uids: uriIds, feedbacks: fbs, personaId: $('#tp_pid').val(), version: @version, rate: $('#rate').val()}
         ).done(done).fail(fail);
 
-        function done(data){ $("#feedback_sumbit").empty().append("Thanks! Feedback sumbitted.") }
+        function done(data){
+          $("#persona_test_table > tbody").empty()
+          $("#feedback_sumbit").empty().append("Thanks! Feedback sumbitted.")
+        }
         function fail() { alert("bad things happened") }
 
 

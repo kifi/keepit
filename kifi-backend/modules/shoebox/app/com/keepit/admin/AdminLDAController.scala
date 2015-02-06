@@ -278,12 +278,13 @@ class AdminLDAController @Inject() (
     val version = (js \ "version").as[JsNumber].value.toInt
     val uids = (js \ "uids").as[Seq[String]].map { _.trim.toInt }
     val labels = (js \ "feedbacks").as[Seq[Int]]
+    val rate = ((js \ "rate").as[String].trim.toFloat min 0.1f) max 0.001f
 
     require(uids.length == labels.length)
 
     // ignore neutral feedbacks
     val (uids2, labels2) = (uids zip labels).filter { _._2 != 0 }.unzip
-    cortex.trainPersona(Id[Persona](pid), uids2.map { Id[NormalizedURI](_) }, labels2, rate = 0.1f)(version)
+    cortex.trainPersona(Id[Persona](pid), uids2.map { Id[NormalizedURI](_) }, labels2, rate)(version)
 
     Ok
   }
