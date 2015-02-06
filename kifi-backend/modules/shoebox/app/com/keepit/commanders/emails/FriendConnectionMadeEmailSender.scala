@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.EmailToSend
-import com.keepit.common.mail.template.helpers.{ fullName, firstName }
+import com.keepit.common.mail.template.helpers.{ fullName, firstName, profileUrl }
 import com.keepit.model.{ NotificationCategory, User }
 import com.keepit.social.SocialNetworkType
 import com.keepit.social.SocialNetworks.{ FACEBOOK, LINKEDIN }
@@ -30,19 +30,19 @@ class FriendConnectionMadeEmailSender @Inject() (
       case NotificationCategory.User.FRIEND_ACCEPTED =>
         val emailText = ConnectionMadeEmailValues(
           line1 = None,
-          line2 = s"${fullName(friendUserId)} accepted your Kifi friend request")
+          line2 = s"""<a href="${profileUrl(friendUserId, "friendRequestAccepted")}">${fullName(friendUserId)}</a> accepted your Kifi friend request""")
         val subject = s"${fullName(friendUserId)} accepted your Kifi friend request"
         (emailText, subject, Some("friendRequestAccepted"))
       case NotificationCategory.User.SOCIAL_FRIEND_JOINED if networkTypeOpt.isDefined =>
         val emailText = ConnectionMadeEmailValues(
-          line1 = Some(s"Your $friendSourceName, ${fullName(friendUserId)}, joined Kifi"),
-          line2 = s"You and ${firstName(friendUserId)} are now connected on Kifi")
+          line1 = Some(s"""Your $friendSourceName, <a href="${profileUrl(friendUserId, "friendRequestAccepted")}">${fullName(friendUserId)}</a>, joined Kifi"""),
+          line2 = s"""You and <a href="${profileUrl(friendUserId, "friendRequestAccepted")}">${fullName(friendUserId)}</a> are now connected on Kifi""")
         val subject = s"Your $friendSourceName ${firstName(friendUserId)} just joined Kifi"
         (emailText, subject, Some("socialFriendJoined"))
       case NotificationCategory.User.CONNECTION_MADE =>
         val emailText = ConnectionMadeEmailValues(
           line1 = Some("You have a new connection on Kifi"),
-          line2 = s"Your $friendSourceName, ${fullName(friendUserId)}, is now connected to you on Kifi")
+          line2 = s"""Your $friendSourceName, <a href="${profileUrl(friendUserId, "friendRequestAccepted")}">${fullName(friendUserId)}</a>, is now connected to you on Kifi""")
         val subject = s"You are now friends with ${fullName(friendUserId)} on Kifi!"
         (emailText, subject, Some("connectionMade"))
     }
