@@ -66,14 +66,7 @@ angular.module('kifi')
     }
 
     $scope.search.text = $state.params.q || '';
-    $scope.onQueryChange = _.debounce(function () {
-      var phase = $rootScope.$$phase;
-      if (phase === '$apply' || phase === '$digest') {
-        reactToQueryChange();
-      } else {
-        $scope.$apply(reactToQueryChange);
-      }
-    }, 250);
+    $scope.onQueryChange = util.$debounce($scope, reactToQueryChange, 250);
 
     $scope.onSearchBarClicked = function () {
       if ($scope.library && $scope.library.id) {
