@@ -17,6 +17,11 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 
+object LibraryImageSizes {
+  val scaleSizes = ScaledImageSize.allSizes
+  val cropSizes = Seq.empty
+}
+
 @ImplementedBy(classOf[LibraryImageCommanderImpl])
 trait LibraryImageCommander {
 
@@ -122,7 +127,7 @@ class LibraryImageCommanderImpl @Inject() (
     fetcher.flatMap {
       case Right(loadedImage) =>
         updateRequestState(LibraryImageRequestStates.PROCESSING)
-        buildPersistSet(loadedImage, "library")(photoshop) match {
+        buildPersistSet(loadedImage, "library", LibraryImageSizes.scaleSizes, LibraryImageSizes.cropSizes)(photoshop) match {
           case Right(toPersist) =>
             updateRequestState(LibraryImageRequestStates.PERSISTING)
             uploadAndPersistImages(loadedImage, toPersist, libraryId, position, source)
@@ -137,7 +142,7 @@ class LibraryImageCommanderImpl @Inject() (
     val uploads = toPersist.map { image =>
       log.info(s"[lic] Persisting ${image.key} (${image.bytes} B)")
       libraryImageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
-        ImageProcessState.UploadedImage(image.key, image.format, image.image)
+        ImageProcessState.UploadedImage(image.key, image.format, image.image, image.processOperation)
       }
     }
 

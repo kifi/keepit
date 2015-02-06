@@ -19,7 +19,8 @@ case class KeepImage(
     source: ImageSource,
     sourceFileHash: ImageHash,
     sourceImageUrl: Option[String],
-    isOriginal: Boolean) extends BaseImage with Model[KeepImage] {
+    isOriginal: Boolean,
+    kind: ProcessImageOperation) extends BaseImage with Model[KeepImage] {
 
   def dimensions = ImageSize(width, height)
   def withId(id: Id[KeepImage]) = copy(id = Some(id))

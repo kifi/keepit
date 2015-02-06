@@ -92,15 +92,13 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
         }
 
         val keys = inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet
-        keys.size === 6
-        keys.exists(_.contains("_C400x400.png")) must beTrue
-        keys.exists(_.contains("_C150x150.png")) must beTrue
+        keys.size === 4
 
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getActiveForLibraryId(lib.id.get)
-          libImages.length === 5
+          libImages.length === 3
           libImages.map(_.position === LibraryImagePosition(None, Some(77)))
-          libraryImageRepo.getAllForLibraryId(lib.id.get).length === 6
+          libraryImageRepo.getAllForLibraryId(lib.id.get).length === 4
         }
 
       }

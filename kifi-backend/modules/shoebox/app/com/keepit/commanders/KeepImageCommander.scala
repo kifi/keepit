@@ -1,7 +1,5 @@
 package com.keepit.commanders
 
-import java.awt.image.BufferedImage
-import java.io.ByteArrayInputStream
 import java.sql.SQLException
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
@@ -21,7 +19,12 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import scala.util.{ Failure, Success, Try }
+import scala.util.Try
+
+object KeepImageSizes {
+  val scaleSizes = ScaledImageSize.allSizes
+  val cropSizes = CroppedImageSize.allSizes
+}
 
 @ImplementedBy(classOf[KeepImageCommanderImpl])
 trait KeepImageCommander {
@@ -222,7 +225,7 @@ class KeepImageCommanderImpl @Inject() (
           }
           if (existingSameHash.isEmpty || overwriteExistingImage) {
             // never seen this image, or we're reprocessing an image
-            buildPersistSet(loadedImage, "keep")(photoshop) match {
+            buildPersistSet(loadedImage, "keep", KeepImageSizes.scaleSizes, KeepImageSizes.cropSizes)(photoshop) match {
               case Right(toPersist) =>
                 updateRequestState(KeepImageRequestStates.PERSISTING)
                 uploadAndPersistImages(loadedImage, toPersist, keepId, source, overwriteExistingImage)
@@ -272,7 +275,9 @@ class KeepImageCommanderImpl @Inject() (
             Some(prev.copy(state = KeepImageStates.ACTIVE, source = source))
           }
         } else {
-          val image = KeepImage(state = KeepImageStates.ACTIVE, keepId = keepId, imagePath = prev.imagePath, format = prev.format, width = prev.width, height = prev.height, source = source, sourceFileHash = prev.sourceFileHash, sourceImageUrl = prev.sourceImageUrl, isOriginal = prev.isOriginal)
+          val image = KeepImage(state = KeepImageStates.ACTIVE, keepId = keepId, imagePath = prev.imagePath, format = prev.format,
+            width = prev.width, height = prev.height, source = source, sourceFileHash = prev.sourceFileHash,
+            sourceImageUrl = prev.sourceImageUrl, isOriginal = prev.isOriginal, kind = prev.kind)
           log.info(s"saving new image [$image] derived from [$prev]")
           Some(image)
         }
@@ -297,7 +302,7 @@ class KeepImageCommanderImpl @Inject() (
     val uploads = toPersist.map { image =>
       log.info(s"[kic] Persisting ${image.key} (${image.bytes} B)")
       keepImageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
-        ImageProcessState.UploadedImage(image.key, image.format, image.image)
+        ImageProcessState.UploadedImage(image.key, image.format, image.image, image.processOperation)
       }
     }
 
@@ -305,7 +310,7 @@ class KeepImageCommanderImpl @Inject() (
       val keepImages = results.map {
         case uploadedImage =>
           val isOriginal = uploadedImage.key.takeRight(7).indexOf(originalLabel) != -1
-          val ki = KeepImage(keepId = keepId, imagePath = uploadedImage.key, format = uploadedImage.format, width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight, source = source, sourceImageUrl = originalImage.sourceImageUrl, sourceFileHash = originalImage.hash, isOriginal = isOriginal)
+          val ki = KeepImage(keepId = keepId, imagePath = uploadedImage.key, format = uploadedImage.format, width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight, source = source, sourceImageUrl = originalImage.sourceImageUrl, sourceFileHash = originalImage.hash, isOriginal = isOriginal, kind = uploadedImage.processOperation)
           uploadedImage.image.flush()
           ki
       }

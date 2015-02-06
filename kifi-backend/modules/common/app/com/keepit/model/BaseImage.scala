@@ -58,9 +58,9 @@ sealed abstract class ImageStoreFailureWithException(ex: Throwable, reason: Stri
 object ImageProcessState {
   // In-progress
   case class ImageLoadedAndHashed(file: TemporaryFile, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends ImageStoreInProgress
-  case class ImageValid(image: BufferedImage, format: ImageFormat, hash: ImageHash) extends ImageStoreInProgress
-  case class ReadyToPersist(key: String, format: ImageFormat, is: ByteArrayInputStream, image: BufferedImage, bytes: Int) extends ImageStoreInProgress
-  case class UploadedImage(key: String, format: ImageFormat, image: BufferedImage) extends ImageStoreInProgress
+  case class ImageValid(image: BufferedImage, format: ImageFormat, hash: ImageHash, processOperation: ProcessImageOperation) extends ImageStoreInProgress
+  case class ReadyToPersist(key: String, format: ImageFormat, is: ByteArrayInputStream, image: BufferedImage, bytes: Int, processOperation: ProcessImageOperation) extends ImageStoreInProgress
+  case class UploadedImage(key: String, format: ImageFormat, image: BufferedImage, processOperation: ProcessImageOperation) extends ImageStoreInProgress
 
   // Failures
   case class UpstreamProviderFailed(ex: Throwable) extends ImageStoreFailureWithException(ex, "upstream_provider_failed")
@@ -80,5 +80,20 @@ case class ImageHash(hash: String)
 
 object ImageHash {
   implicit val format = Json.format[ImageHash]
+}
+
+sealed abstract class ProcessImageOperation(val kind: String, val fileNamePrefix: String)
+object ProcessImageOperation {
+  // None and Scale have the same fileNamePrefix for backwards compatibility
+  object None extends ProcessImageOperation("none", "")
+  case object Scale extends ProcessImageOperation("scale", "")
+  case object Crop extends ProcessImageOperation("crop", "C")
+
+  val all = Scale :: Crop :: None :: Nil
+
+  def apply(kind: String): ProcessImageOperation = {
+    all.find(_.kind == kind) getOrElse None
+  }
+
 }
 
