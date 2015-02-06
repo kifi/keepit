@@ -234,7 +234,7 @@ class LDAController @Inject() (
   }
 
   def evaluatePersona(personaId: Id[Persona], version: ModelVersion[DenseLDA]) = Action { request =>
-    val scores = personaCommander.evaluatePersonaFeature(personaId, sampleSize = 10)(version)
+    val scores = personaCommander.evaluatePersonaFeature(personaId, sampleSize = 20)(version)
     Ok(Json.toJson(scores))
   }
 
