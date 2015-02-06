@@ -302,9 +302,7 @@ angular.module('kifi')
         //
         // Scrolling.
         //
-        antiscrollLibList.bind('scroll', _.debounce(function () {
-          setStickySeparator();
-        }, 10));
+        antiscrollLibList.bind('scroll', _.debounce(setStickySeparator, 10));
 
         //
         // Filtering.
