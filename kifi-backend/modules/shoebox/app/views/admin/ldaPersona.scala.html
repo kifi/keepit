@@ -24,6 +24,7 @@
         <button type = "submit">submit</button>
       </form>
 
+      <p id = "tp_wait"></p>
       <p id = "feedback_sumbit"></p>
 
     </div>
@@ -63,6 +64,8 @@
       $("#define_persona").submit(function(event){
         event.preventDefault();
 
+        $("#dp_result").empty().prepend('generating feature vectors ... be patient')
+
         $.post('@com.keepit.controllers.admin.routes.AdminLDAController.generateLDAPersonaFeature',
           {personaId: $('#dp_pid').val(), topicIds: $('#dp_tids').val(), version: @version}
         ).done(done).fail(fail);
@@ -79,10 +82,14 @@
       $("#test_persona").submit(function(event){
         event.preventDefault();
 
+        $("#tp_wait").empty().prepend('sampling uris across all topics to score and rank. please wait...')
+
         $.post('@com.keepit.controllers.admin.routes.AdminLDAController.evaluatePersona', {personaId: $('#tp_pid').val(), version: @version}
         ).done(done).fail(fail);
 
         function done(data) {
+          $("#tp_wait").empty()
+
           $("#persona_test_table > tbody").empty()
 
           var uids = data.uids
@@ -92,11 +99,13 @@
 
           for(var i = 0; i < n; i++){
             var robj = $("<tr>");
+            var link = '<a href = "/admin/scraped/-1">'.replace(-1, uids[i]) +  titles[i] + '</a>'
+
             var buttons = '<td> <form class = "fb_forms" action="">' + '<input type="radio" name = "feedback" value="good"> good' + '<input type="radio" name = "feedback" value="bad" > bad ' + '<input type="radio" name = "feedback" value="whatever" checked> whatever' + '</form></td>';
 
             robj
             .append("<td class = \"ids\" >" + uids[i] + "</td>")
-            .append("<td>" + titles[i] + "</td>")
+            .append("<td>" + link + "</td>")
             .append("<td>" + scores[i] + "</td>")
             .append(buttons);
 
