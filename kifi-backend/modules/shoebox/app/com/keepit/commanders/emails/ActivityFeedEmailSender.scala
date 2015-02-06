@@ -68,13 +68,10 @@ case class ActivityEmailData(
   userId: Id[User],
   activityComponents: Seq[Html],
   mostFollowedLibraries: Seq[LibraryInfoFollowersView],
-  newKeepsInLibraries: Seq[(LibraryInfoView, Seq[KeepInfoView])],
   libraryRecos: Seq[LibraryInfoView],
   connectionRequests: Int,
   libraryInviteCount: Int,
   unreadMessageCount: Int = 0, /* todo(josh) */
-  friendCreatedLibraries: Map[Id[User], Seq[LibraryInfoView]],
-  friendFollowedLibraries: Seq[(Id[Library], LibraryInfoView, Seq[Id[User]])],
   newFollowersOfLibraries: Seq[LibraryInfoFollowersView])
 
 @ImplementedBy(classOf[ActivityFeedEmailSenderImpl])
@@ -154,18 +151,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
     val connectionRequestsF = components.requestCountComponent(toUserId)
     val libInviteCountF = components.libraryInviteCountComponent(toUserId)
 
-    val newKeepsInLibrariesF = feed.getNewKeepsFromFollowedLibraries()
-    val friendsWhoFollowedF = feed.getFriendsWhoFollowedLibraries(friends)
-    val friendsWhoCreatedF = feed.getFriendsWhoCreatedLibraries(friends)
-    val uriRecosF = feed.getUriRecommendations()
-
     for {
-      newKeepsInLibraries <- newKeepsInLibrariesF
       unreadThreads <- unreadMessageThreadsF
-      friendsWhoFollowed <- friendsWhoFollowedF
-      friendsWhoCreated <- friendsWhoCreatedF
       newFollowersOfLibraries <- newFollowersOfMyLibrariesF
-      uriRecos <- uriRecosF
       libRecos <- libRecosF
       othersFollowedYourLibraryRaw <- othersFollowedYourLibraryF
       connectionRequests <- connectionRequestsF
@@ -211,12 +199,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
         userId = toUserId,
         activityComponents = activityComponents,
         mostFollowedLibraries = mostFollowedLibrariesRecentlyToRecommend,
-        newKeepsInLibraries = newKeepsInLibraries,
         libraryRecos = libRecosAtBottom,
         connectionRequests = connectionRequests,
         libraryInviteCount = libraryInviteCount,
-        friendCreatedLibraries = friendsWhoCreated,
-        friendFollowedLibraries = friendsWhoFollowed,
         newFollowersOfLibraries = newFollowersOfLibraries
       )
 
