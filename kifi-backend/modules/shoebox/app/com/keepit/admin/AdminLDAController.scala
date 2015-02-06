@@ -261,7 +261,7 @@ class AdminLDAController @Inject() (
     val version = body.get("version").get.trim.toInt
     cortex.evaluatePersona(Id[Persona](pid))(version).map { uriScores =>
       val uids = uriScores.toArray.sortBy(-_._2).map { _._1 }
-      val scores = uids.map { uriScores(_) }
+      val scores = uids.map { uriScores(_) }.map { x => "%.3f".format(x) }
       val titles = db.readOnlyReplica { implicit s => uids.map { uriRepo.get(_) } }.map { _.title.getOrElse("n/a") }
       Ok(Json.obj("uids" -> uids, "titles" -> titles, "scores" -> scores))
     }
@@ -271,7 +271,7 @@ class AdminLDAController @Inject() (
     val js = request.body
 
     val pid = (js \ "personaId").as[String].trim.toInt
-    val version = (js \ "version").as[String].trim.toInt
+    val version = (js \ "version").as[JsNumber].value.toInt
     val uids = (js \ "uids").as[Seq[String]].map { _.trim.toInt }
     val labels = (js \ "feedbacks").as[Seq[Int]]
 
