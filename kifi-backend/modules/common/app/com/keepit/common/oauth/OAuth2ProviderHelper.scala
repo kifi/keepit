@@ -1,5 +1,6 @@
 package com.keepit.common.oauth
 
+import com.keepit.common.controller.KifiSession._
 import java.net.URLEncoder
 import java.util.UUID
 
@@ -15,6 +16,7 @@ import play.api.mvc.{ Request, Result, Results }
 import securesocial.core.IdentityProvider
 
 import scala.concurrent.Future
+import scala.util.Try
 
 /**
  * Adapted from UserIdentityProvider -- less coupled with SS, async vs sync, etc.
@@ -84,7 +86,11 @@ trait OAuth2ProviderHelper extends OAuth2Support with Logging {
         params = (OAuth2Constants.Scope, providerConfig.scope) :: params
         val url = providerConfig.authUrl +
           params.map(p => URLEncoder.encode(p._1, "UTF-8") + "=" + URLEncoder.encode(p._2, "UTF-8")).mkString("?", "&", "")
-        log.info(s"[doOAuth2.1] authorizationUrl=${providerConfig.authUrl}; redirect to $url")
+        Try {
+          val userIdOpt = request.session.getUserId()
+          log.info(s"[doOAuth2.1] [userIdOpt=$userIdOpt scope=${providerConfig.scope}] authorizationUrl=${providerConfig.authUrl}; redirect to $url")
+
+        }
         Future.successful(Left(Results.Redirect(url).withSession(request.session + (IdentityProvider.SessionId, sessionId))))
     }
   }
