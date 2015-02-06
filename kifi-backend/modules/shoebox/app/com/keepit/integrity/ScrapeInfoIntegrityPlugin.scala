@@ -49,7 +49,7 @@ trait ScrapeInfoIntegrityPlugin extends SchedulerPlugin {
 }
 
 class ScrapeInfoIntegrityPluginImpl @Inject() (
-    actor: ActorInstance[UriIntegrityActor],
+    actor: ActorInstance[ScrapeInfoIntegrityActor],
     db: Database,
     uriRepo: NormalizedURIRepo,
     centralConfig: CentralConfig,
