@@ -78,17 +78,17 @@ object ProviderController extends Controller with Logging {
         try {
           p.authenticate().fold(result => result, {
             user =>
-              Logger.info(s"[handleAuth] user [${user.email} ${user.identityId}] found from provider - completing auth")
+              log.info(s"[handleAuth] user [${user.email} ${user.identityId}] found from provider - completing auth")
               completeAuthentication(user, request.session)
           })
         } catch {
           case ex: AccessDeniedException => {
-            Logger.error("[handleAuth] Access Denied for user logging in")
+            log.error("[handleAuth] Access Denied for user logging in")
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
           }
 
           case other: Throwable => {
-            Logger.error("Unable to log user in. An exception was thrown", other)
+            log.error("Unable to log user in. An exception was thrown", other)
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.errorLoggingIn"))
           }
         }
