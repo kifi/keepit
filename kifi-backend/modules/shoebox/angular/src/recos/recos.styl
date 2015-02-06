@@ -168,14 +168,18 @@
 .kf-reco-top
   position: relative
   border-top: 1px solid #dadae2
-  border-top-left-radius: 3px
-  border-top-right-radius: 3px
+  border-radius: 10px 10px 0 0
   background-color: #fff
   font-size: 13px
   font-weight: 400
   color: #9d9d9d
+
   span
     display: inline-block
+
+  &+.kf-keep
+    border-top-left-radius: 0
+    border-top-right-radius: 0
 
 .kf-reco-bottom
   position:relative
