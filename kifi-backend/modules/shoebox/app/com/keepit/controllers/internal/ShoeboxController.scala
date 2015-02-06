@@ -207,15 +207,6 @@ class ShoeboxController @Inject() (
     Ok(bookmark)
   }
 
-  def saveBookmark() = Action(parse.tolerantJson) { request =>
-    val bookmark = request.body.as[Keep]
-    val saved = db.readWrite(attempts = 3) { implicit session =>
-      keepRepo.save(bookmark)
-    }
-    log.debug(s"[saveBookmark] saved=$saved")
-    Ok(Json.toJson(saved))
-  }
-
   def getUsers(ids: String) = Action { request =>
     val userIds = ids.split(',').map(id => Id[User](id.toLong))
     val users = db.readOnlyMaster { implicit s => userIds map userRepo.get } //using cache

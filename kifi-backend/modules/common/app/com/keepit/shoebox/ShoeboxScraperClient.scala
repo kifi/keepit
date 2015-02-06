@@ -32,7 +32,6 @@ trait ShoeboxScraperClient extends ServiceClient {
   def getProxy(url: String): Future[Option[HttpProxy]]
   def getProxyP(url: String): Future[Option[HttpProxy]]
   def getLatestKeep(url: String): Future[Option[Keep]]
-  def saveBookmark(bookmark: Keep): Future[Keep]
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
 }
 
@@ -152,12 +151,6 @@ class ShoeboxScraperClientImpl @Inject() (
   def getLatestKeep(url: String): Future[Option[Keep]] = {
     call(Shoebox.internal.getLatestKeep(), callTimeouts = longTimeout, body = JsString(url)).map { r =>
       Json.fromJson[Option[Keep]](r.json).get
-    }
-  }
-
-  def saveBookmark(bookmark: Keep): Future[Keep] = {
-    call(Shoebox.internal.saveBookmark(), Json.toJson(bookmark), callTimeouts = longTimeout).map { r =>
-      Json.fromJson[Keep](r.json).get
     }
   }
 

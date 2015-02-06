@@ -72,8 +72,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getLatestKeep(url: String): Future[Option[Keep]] = ???
 
-  def saveBookmark(bookmark: Keep): Future[Keep] = ???
-
 }
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, implicit val publicIdConfig: PublicIdConfiguration) extends ShoeboxServiceClient {
