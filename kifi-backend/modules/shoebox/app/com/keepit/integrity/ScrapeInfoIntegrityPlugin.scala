@@ -86,6 +86,8 @@ class ScrapeInfoIntegrityChecker @Inject() (
     centralConfig(key) getOrElse (SequenceNumber[NormalizedURI](64935824L)) // starting from a safe known sequence number
   }
 
+  def forceSeqNum(seq: SequenceNumber[NormalizedURI]): Unit = centralConfig.update(normalizedURISeqKey, seq)
+
   def checkIntegrity(): Future[Unit] = SafeFuture {
     var numProcessed = 0
     var numScrapeInfoCreated = 0
