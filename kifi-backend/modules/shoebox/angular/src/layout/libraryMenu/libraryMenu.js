@@ -60,6 +60,7 @@ angular.module('kifi')
         }
 
         function openMenu() {
+          resetSeparators();
           positionMenu();
           scope.changeList();
         }
@@ -76,14 +77,11 @@ angular.module('kifi')
           }
         }
 
-        function setStickySeparator(refetchSeparators) {
+        function setStickySeparator() {
           var offset = antiscrollLibList.scrollTop();
           var libItemHeight = 0;
           var separatorHeight = 0;
 
-          if (refetchSeparators) {
-            separators = antiscrollLibList.find('.kf-nav-lib-separator');
-          }
           if (separators.length === 0) {
             return;
           }
@@ -91,8 +89,6 @@ angular.module('kifi')
 
           var libItems = antiscrollLibList.find('.kf-nav-lib-item');
           libItemHeight = libItems.eq(0).outerHeight(true);
-
-          getElement('.kf-nav-lib-users').css('padding-top', '35px');
 
           // set limits based on number of items in myLibs, userLibs or invitedLibs
           var firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay;
@@ -115,11 +111,21 @@ angular.module('kifi')
             firstLimitOverlay = firstLimit + separatorHeight;
             // no more limits needed
           }
-          fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight);
+
+          // If offset is 0, that means that there is no scroll effectively, and we don't want to set any
+          // fixed positions yet. This is needed because on menu open after a previous scroll, antiscroll's
+          // scroll is automatically triggered, and without this check the first separator will change from
+          // position:relative to position:fixed, which results in a visual "pop" of the separator
+          // (which itself is due to the fact that a transform that is anything but "none" does not handle
+          // position:fixed correctly, and we are using a transform transition during menu open).
+          if (offset !== 0) {
+            getElement('.kf-nav-lib-users').css('padding-top', '35px');
+            fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight);
+          }
         }
 
         function fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight) {
-          var stickToMaxTop = 225;
+          var stickToMaxTop = 230;
           // all 3 separators properties need to be set because this function is debounced and a user might scroll too fast
           if (offset <= firstLimit) {
             setPositioning(separators[0], 'fixed', stickToMaxTop);
@@ -147,6 +153,13 @@ angular.module('kifi')
             setPositioning(separators[2], 'fixed', stickToMaxTop);
 
           }
+        }
+
+        function resetSeparators() {
+          getElement('.kf-nav-lib-users').css('padding-top', '0px');
+          setPositioning(separators[0], 'relative', 0);
+          setPositioning(separators[1], 'relative', 0);
+          setPositioning(separators[2], 'relative', 0);
         }
 
         function setPositioning(dom, position, top) {
@@ -289,7 +302,9 @@ angular.module('kifi')
         //
         // Scrolling.
         //
-        antiscrollLibList.bind('scroll', _.debounce(setStickySeparator, 10));
+        antiscrollLibList.bind('scroll', _.debounce(function () {
+          setStickySeparator();
+        }, 10));
 
         //
         // Filtering.
@@ -347,7 +362,7 @@ angular.module('kifi')
           scope.$broadcast('refreshScroll');
           $timeout(function() {
             antiscrollLibList.scrollTop(0);
-            setStickySeparator(true);
+            separators = antiscrollLibList.find('.kf-nav-lib-separator');
           });
           return scope.userLibsToShow.concat(scope.invitedLibsToShow).concat(scope.myLibsToShow);
         };
