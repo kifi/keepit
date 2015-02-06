@@ -7,7 +7,7 @@ import com.keepit.cortex.core.ModelVersion
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json._
 import scala.concurrent.{ Await, Future }
-import com.keepit.cortex.models.lda.{ DenseLDA, LDATopicDetail, LDATopicConfiguration }
+import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA, LDATopicDetail, LDATopicConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.common.db.Id
@@ -233,5 +233,54 @@ class AdminLDAController @Inject() (
       }
       Ok(html.admin.ldaSimilarURIs(ver.version, uris))
     }
+  }
+
+  def persona() = personaVersioned(defaultVersion)
+
+  def personaVersioned(version: ModelVersion[DenseLDA]) = AdminUserPage.async { implicit request =>
+    cortex.ldaNumOfTopics(Some(version)).map { n =>
+      Ok(html.admin.ldaPersona(n, version.version))
+    }
+  }
+
+  def generateLDAPersonaFeature() = AdminUserPage.async { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val pid = body.get("personaId").get.trim.toInt
+    val tids = body.get("topicIds").get.split(", ").map { x => LDATopic(x.trim.toInt) }
+    val version = body.get("version").get.trim.toInt
+    cortex.generatePersonaFeature(tids)(version).map { res =>
+      // save immediately
+      cortex.savePersonaFeature(Id[Persona](pid), res._1)(version)
+      Ok(Json.obj("feature" -> res._1, "sampleSize" -> res._2))
+    }
+  }
+
+  def evaluatePersona() = AdminUserPage.async { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val pid = body.get("personaId").get.trim.toInt
+    val version = body.get("version").get.trim.toInt
+    cortex.evaluatePersona(Id[Persona](pid))(version).map { uriScores =>
+      val uids = uriScores.toArray.sortBy(-_._2).map { _._1 }
+      val scores = uids.map { uriScores(_) }
+      val titles = db.readOnlyReplica { implicit s => uids.map { uriRepo.get(_) } }.map { _.title.getOrElse("n/a") }
+      Ok(Json.obj("uids" -> uids, "titles" -> titles, "scores" -> scores))
+    }
+  }
+
+  def personaFeatureTraining() = AdminUserPage(parse.tolerantJson) { implicit request =>
+    val js = request.body
+
+    val pid = (js \ "personaId").as[String].trim.toInt
+    val version = (js \ "version").as[String].trim.toInt
+    val uids = (js \ "uids").as[Seq[String]].map { _.trim.toInt }
+    val labels = (js \ "feedbacks").as[Seq[Int]]
+
+    require(uids.length == labels.length)
+
+    // ignore neutral feedbacks
+    val (uids2, labels2) = (uids zip labels).filter { _._2 != 0 }.unzip
+    cortex.trainPersona(Id[Persona](pid), uids2.map { Id[NormalizedURI](_) }, labels2, rate = 0.1f)(version)
+
+    Ok
   }
 }

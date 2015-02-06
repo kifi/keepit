@@ -14,6 +14,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
+import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
 import com.keepit.scraper.ScrapeScheduler
@@ -47,6 +48,7 @@ class KeepInterner @Inject() (
   elizaClient: ElizaServiceClient,
   heimdalClient: HeimdalServiceClient,
   libraryCommander: LibraryCommander,
+  integrityHelpers: UriIntegrityHelpers,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
@@ -238,7 +240,8 @@ class KeepInterner @Inject() (
           libraryId = Some(library.id.get),
           inDisjointLib = library.isDisjoint,
           keptAt = keptAt)
-        (true, false, keepRepo.save(keep))
+        val improvedKeep = integrityHelpers.improveKeepSafely(uri, keep)
+        (true, false, keepRepo.save(improvedKeep))
     }
     if (wasInactiveKeep) {
       // A inactive keep may have had tags already. Index them if any.

@@ -92,9 +92,7 @@ object Shoebox extends Service {
     def getBookmarks(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/bookmark", Param("userId", userId))
     def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedBookmark", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/bookmarkByUriUser", Param("uriId", uriId), Param("userId", userId))
-    def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getBookmarksByUriWithoutTitle", Param("uriId", uriId))
     def getLatestKeep() = ServiceRoute(POST, "/internal/shoebox/database/getLatestKeep")
-    def saveBookmark() = ServiceRoute(POST, "/internal/shoebox/database/saveBookmark")
     def persistServerSearchEvent() = ServiceRoute(POST, "/internal/shoebox/persistServerSearchEvent")
     def sendMail() = ServiceRoute(POST, "/internal/shoebox/database/sendMail")
     def sendMailToUser() = ServiceRoute(POST, "/internal/shoebox/database/sendMailToUser")
@@ -165,6 +163,8 @@ object Shoebox extends Service {
     def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = ServiceRoute(GET, "/internal/shoebox/database/newKeepsInLibraryForEmail", Param("userId", userId), Param("max", max))
     def getBasicKeeps(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeeps", Param("userId", userId))
     def getBasicLibraryStatistics() = ServiceRoute(POST, "/internal/shoebox/database/getBasicLibraryStatistics")
+    def getKeepCounts() = ServiceRoute(POST, "/internal/shoebox/database/getKeepCounts")
+    def getLibraryImageUrls() = ServiceRoute(POST, "/internal/shoebox/database/getLibraryImageUrls")
     def getLibrariesWithWriteAccess(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesWithWriteAccess", Param("userId", userId))
     def getUserActivePersonas(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/user/activePersonas", Param("userId", userId))
   }
@@ -369,9 +369,11 @@ object Cortex extends Service {
     def similarURIs(uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/similarURIs", Param("uriId", uriId), Param("version", version))
     def similarLibraries(libId: Id[Library], limit: Int)(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/similarLibraries", Param("libId", libId), Param("limit", limit), Param("version", version))
 
-    def getExistingPersonaFeature(personaId: Id[Persona])(implicit version: ModelVersion[DenseLDA]) = ServiceRoute(GET, "/internal/cortex/lda/getExistingPersonaFeature", Param("personaId", personaId), Param("version", version))
-    def generatePersonaFeature(implicit version: ModelVersion[DenseLDA]) = ServiceRoute(POST, "/internal/cortex/lda/generatePersonaFeature", Param("version", version))
-    def savePersonaFeature(implicit version: ModelVersion[DenseLDA]) = ServiceRoute(POST, "/internal/cortex/lda/savePersonaFeature", Param("version", version))
+    def getExistingPersonaFeature(personaId: Id[Persona])(implicit version: LDAVersion) = ServiceRoute(GET, "/internal/cortex/lda/getExistingPersonaFeature", Param("personaId", personaId), Param("version", version))
+    def generatePersonaFeature(implicit version: LDAVersion) = ServiceRoute(POST, "/internal/cortex/lda/generatePersonaFeature", Param("version", version))
+    def savePersonaFeature(implicit version: LDAVersion) = ServiceRoute(POST, "/internal/cortex/lda/savePersonaFeature", Param("version", version))
+    def evaluatePersona(personaId: Id[Persona])(implicit version: LDAVersion) = ServiceRoute(GET, "/internal/cortex/lda/evaluatePersona", Param("personaId", personaId), Param("version", version))
+    def trainPersonaFeature(personaId: Id[Persona])(implicit version: LDAVersion) = ServiceRoute(POST, "/internal/cortex/lda/trainPersonaFeature", Param("personaId", personaId), Param("version", version))
 
     def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }

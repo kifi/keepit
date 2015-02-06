@@ -2,7 +2,7 @@ package com.keepit.integrity
 
 import com.google.inject.Module
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.db.{ ModelWithSeqNumber, Model }
+import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick._
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model._
@@ -11,6 +11,8 @@ import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import com.keepit.common.core._
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
@@ -148,6 +150,9 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         val uriRepo = inject[NormalizedURIRepo]
         val keepRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
+        val scrapeInfoIntegrityChecker = inject[ScrapeInfoIntegrityChecker]
+
+        scrapeInfoIntegrityChecker.forceSeqNum(SequenceNumber[NormalizedURI](0L))
 
         @inline def doAssign[T](f: => T): T = {
           f tap { _ => assignSeqNums(db)(uriRepo, keepRepo) }
@@ -311,6 +316,8 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
             )
           }
         }
+        Await.result(scrapeInfoIntegrityChecker.checkIntegrity(), Duration("10 seconds")) // sync scrape info
+
         doAssign { cleaner.clean(readOnly = false) }
         db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED

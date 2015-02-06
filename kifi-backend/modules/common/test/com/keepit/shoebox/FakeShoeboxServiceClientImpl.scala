@@ -10,6 +10,7 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
 import com.keepit.common.net.URI
 import com.keepit.common.service.ServiceType
+import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
@@ -61,10 +62,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     redirect: => Option[Id[NormalizedURI]],
     redirectTime: => Option[DateTime]): Future[Unit] = Future.successful(Unit)
 
-  def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
-
-  def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
-
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = ???
 
   def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = ???
@@ -75,9 +72,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getLatestKeep(url: String): Future[Option[Keep]] = ???
 
-  def saveBookmark(bookmark: Keep): Future[Keep] = ???
-
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]] = ???
 }
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, implicit val publicIdConfig: PublicIdConfiguration) extends ShoeboxServiceClient {
@@ -757,6 +751,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]] = ???
+
+  def getKeepCounts(userId: Set[Id[User]]): Future[Map[Id[User], Int]] = ???
+
+  def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]] = ???
 
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]] = Future.successful {
     allLibraryMemberships.values.collect { case membership if membership.userId == userId && membership.canWrite => membership.libraryId }.toSet

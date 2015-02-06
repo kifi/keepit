@@ -1,6 +1,6 @@
 package com.keepit.cortex.commanders
 
-import com.keepit.common.commanders.{ LDAPersonaCommanderImpl, LDAInfoCommander, LDAPersonaCommander }
+import com.keepit.common.commanders.{ PersonaFeatureTrainer, LDAPersonaCommanderImpl, LDAInfoCommander, LDAPersonaCommander }
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexTestInjector
 import com.keepit.cortex.core.ModelVersion
@@ -8,6 +8,7 @@ import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA }
 import com.keepit.model.{ Persona, User }
 import org.specs2.mutable.Specification
+import com.keepit.cortex.utils.MatrixUtils._
 
 class LDAPersonaCommanderTest extends Specification with CortexTestInjector {
 
@@ -16,7 +17,7 @@ class LDAPersonaCommanderTest extends Specification with CortexTestInjector {
       withDb() { implicit injector =>
         val personaRepo = inject[PersonaLDAFeatureRepo]
         val ldaUserRepo = inject[UserLDAStatsRepo]
-        val commander = new LDAPersonaCommanderImpl(db, null, null, personaRepo, ldaUserRepo) {
+        val commander = new LDAPersonaCommanderImpl(db, null, null, inject[URILDATopicRepo], personaRepo, ldaUserRepo) {
           override def getLDADimension(implicit version: ModelVersion[DenseLDA]): Int = 4
         }
 
@@ -53,7 +54,7 @@ class LDAPersonaCommanderTest extends Specification with CortexTestInjector {
       withDb() { implicit injector =>
         val personaRepo = inject[PersonaLDAFeatureRepo]
         val ldaUserRepo = inject[UserLDAStatsRepo]
-        val commander = new LDAPersonaCommanderImpl(db, null, null, personaRepo, ldaUserRepo) {
+        val commander = new LDAPersonaCommanderImpl(db, null, null, inject[URILDATopicRepo], personaRepo, ldaUserRepo) {
           override def getLDADimension(implicit version: ModelVersion[DenseLDA]): Int = 4
         }
 
@@ -76,6 +77,42 @@ class LDAPersonaCommanderTest extends Specification with CortexTestInjector {
 
         1 === 1
       }
+    }
+  }
+
+  "PersonaFeatureTrainer" should {
+
+    "compute negative gradient of Hinge Loss" in {
+      val x = Array(0.45f, 0.35f, 0.1f, 0.1f)
+      val theta = Array(.25f, .25f, .25f, .25f)
+      val grad1 = PersonaFeatureTrainer.negativeGradient(x, -1, theta) // make it less similar
+      val expect = Array(-0.68100522, -0.34050261, 0.51075392, 0.51075392) // python output
+      (grad1 zip expect).map { case (a, b) => math.abs(a - b) }.forall(_ < 1e-6) === true
+
+      val newt = add(theta, grad1.map { _ * 0.01 })
+      (cosineDistance(x, newt) < cosineDistance(x, theta)) === true // less now
+
+      val grad2 = PersonaFeatureTrainer.negativeGradient(x, 1, theta) // make it more similar
+      val expect2 = expect.map { -1 * _ }
+      (grad2 zip expect2).map { case (a, b) => math.abs(a - b) }.forall(_ < 1e-6) === true
+
+      val newt2 = add(theta, grad2.map { _ * 0.01 })
+      (cosineDistance(x, newt2) > cosineDistance(x, theta)) === true // more now
+
+    }
+
+    "mini batch update" in {
+      val xs = Array(Array(0.45f, 0.35f, 0.1f, 0.1f), Array(0.05f, 0.05f, 0.4f, 0.5f))
+      val ys = Array(-1, 1)
+      val theta = Array(.25f, .25f, .25f, .25f)
+      val delta = PersonaFeatureTrainer.mini_batch(xs, ys, theta, 0.1f)
+      val expected = PersonaFeatureTrainer.negativeGradient(xs(0), -1, theta).map { _ * 0.1f } // only the first x contribute to this
+
+      (delta zip expected).map { case (a, b) => math.abs(a - b) }.forall(_ < 1e-6) == true
+      val newTheta = add(theta, delta)
+
+      (cosineDistance(xs(0), newTheta) < cosineDistance(xs(0), theta)) === true
+      (cosineDistance(xs(1), newTheta) > cosineDistance(xs(1), theta)) === true
     }
   }
 

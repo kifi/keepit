@@ -97,7 +97,7 @@ class RelatedLibraryCommanderImpl @Inject() (
       val libs = topicRelated ++
         ownerLibs.sortBy(-_.library.memberCount).take(SUB_RETURN_SIZE) ++
         util.Random.shuffle(popular.filter(_.library.id.get != libId)).take(SUB_RETURN_SIZE)
-      
+
       // dedup
       val libIds = mutable.Set.empty[Id[Library]]
       libs.flatMap { lib =>

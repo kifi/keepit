@@ -21,7 +21,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getPrimaryInDisjointByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def countPublicActiveByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Int
-  def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Keep]
   def getByUser(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def getNonPrivate(ownerId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[Keep]
@@ -29,6 +28,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def bulkGetByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Keep]
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int
+  def getCountByUsers(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
@@ -208,9 +208,6 @@ class KeepRepoImpl @Inject() (
     sql"select count(*) from bookmark where uri_id = $uriId and is_private = false and state = 'active'".as[Int].first
   }
 
-  def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Keep] =
-    (for (b <- rows if b.uriId === uriId && b.state === KeepStates.ACTIVE && b.title.isNull) yield b).list
-
   def getByUser(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] =
     (for (b <- rows if b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.keptAt).list
 
@@ -317,6 +314,16 @@ class KeepRepoImpl @Inject() (
     val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
     sql.as[Int].first
   }
+
+  def getCountByUsers(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
+    countCache.bulkGetOrElse(userIds.map(KeepCountKey(_))) { missingKeys =>
+      val missingUserIds = missingKeys.map(_.userId)
+      val missingCounts = (for (r <- rows if r.userId.inSet(missingUserIds) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.userId).map {
+        case (userId, keeps) => (userId, keeps.length)
+      }.run
+      missingCounts.map { case (userId, count) => KeepCountKey(userId) -> count }.toMap
+    }
+  }.map { case (key, count) => key.userId -> count }
 
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
     import StaticQuery.interpolation

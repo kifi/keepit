@@ -31,9 +31,7 @@ trait ShoeboxScraperClient extends ServiceClient {
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
   def getProxy(url: String): Future[Option[HttpProxy]]
   def getProxyP(url: String): Future[Option[HttpProxy]]
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]]
   def getLatestKeep(url: String): Future[Option[Keep]]
-  def saveBookmark(bookmark: Keep): Future[Keep]
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
 }
 
@@ -150,21 +148,9 @@ class ShoeboxScraperClientImpl @Inject() (
     }
   }
 
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]] = {
-    call(Shoebox.internal.getBookmarksByUriWithoutTitle(uriId), callTimeouts = longTimeout).map { r =>
-      r.json.as[JsArray].value.map(js => Json.fromJson[Keep](js).get)
-    }
-  }
-
   def getLatestKeep(url: String): Future[Option[Keep]] = {
     call(Shoebox.internal.getLatestKeep(), callTimeouts = longTimeout, body = JsString(url)).map { r =>
       Json.fromJson[Option[Keep]](r.json).get
-    }
-  }
-
-  def saveBookmark(bookmark: Keep): Future[Keep] = {
-    call(Shoebox.internal.saveBookmark(), Json.toJson(bookmark), callTimeouts = longTimeout).map { r =>
-      Json.fromJson[Keep](r.json).get
     }
   }
 
