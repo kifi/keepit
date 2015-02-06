@@ -23,7 +23,7 @@ class OrphanCleaner @Inject() (
     libraryRepo: LibraryRepo,
     bookmarkInterner: KeepInterner,
     centralConfig: CentralConfig,
-    val airbrake: AirbrakeNotifier) extends ScrapeInfoIntegrityChecker {
+    val airbrake: AirbrakeNotifier) extends UriIntegrityChecker {
 
   case class OrphanCleanerSequenceNumberKey[T](seqKey: String) extends SequenceNumberCentralConfigKey[T] {
     val longKey = new LongCentralConfigKey {
@@ -191,7 +191,7 @@ class OrphanCleaner @Inject() (
   }
 }
 
-trait ScrapeInfoIntegrityChecker extends Logging {
+trait UriIntegrityChecker extends Logging {
   val db: Database
   val normUriRepo: NormalizedURIRepo
   val scrapeInfoRepo: ScrapeInfoRepo

@@ -46,7 +46,7 @@ class UriIntegrityActor @Inject() (
     centralConfig: CentralConfig,
     val airbrake: AirbrakeNotifier,
     keepUriUserCache: KeepUriUserCache,
-    helpers: UriIntegrityHelpers) extends FortyTwoActor(airbrake) with ScrapeInfoIntegrityChecker with Logging {
+    helpers: UriIntegrityHelpers) extends FortyTwoActor(airbrake) with UriIntegrityChecker with Logging {
 
   /** tricky point: make sure (library, uri) pair is unique.  */
   private def handleBookmarks(oldBookmarks: Seq[Keep])(implicit session: RWSession): Unit = {
