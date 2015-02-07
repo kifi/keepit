@@ -1,16 +1,8 @@
 <div class="kf-recos-view" ng-controller="RecosCtrl">
-  <header class="kf-recos-view-header">
-    <div class="kf-recos-title">
-      <h1 class="kf-main-title">Recommendations</h1>
-      <div class="kf-subtitle">
-        <div class="kf-subtitle-text" ng-show="loading">Loading...</div>
-      </div>
-    </div>
-  </header>
+  <h1 class="kf-recos-title kf-main-title">Recommendations</h1>
 
   <div class="kf-reco-cols">
     <div class="kf-reco-col-1">
-
       <div class="kf-reco kf-reco-info kf-reco-cta" ng-if="recosState === 'noRecos'" ng-hide="initialCardClosed">
         <span class="kf-reco-cta-text">To get started, simply click the follow button on some of the libraries below</span>
         <img class="kf-reco-cta-image" src="/img/webapp-ftui-follow-button-image.png">
@@ -23,7 +15,7 @@
         <a href="javascript:" ng-click="showPopular()">See Popular Keeps on Kifi</a>
       </div>
 
-      <div class="kf-recos" ng-hide="loading">
+      <div class="kf-recos" ng-if="!loading">
         <div class="kf-reco kf-reco-recommended" ng-repeat="reco in recos" reco="reco" ng-controller="RecoCtrl" ng-class="{'kf-reco-with-invite':!!reco.recoLib.invite}">
           <header class="kf-reco-top">
             <span class="kf-reco-icon kf-reco-close-x" ng-click="trash(reco)" ng-if="reco.recoData.type === 'recommended'"></span>
