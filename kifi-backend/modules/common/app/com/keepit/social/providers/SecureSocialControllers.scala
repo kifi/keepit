@@ -77,15 +77,18 @@ object ProviderController extends Controller with Logging {
       case Some(p) => {
         try {
           p.authenticate().fold(result => result, {
-            user => completeAuthentication(user, request.session)
+            user =>
+              log.info(s"[handleAuth] user [${user.email} ${user.identityId}] found from provider - completing auth")
+              completeAuthentication(user, request.session)
           })
         } catch {
           case ex: AccessDeniedException => {
+            log.error("[handleAuth] Access Denied for user logging in")
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
           }
 
           case other: Throwable => {
-            Logger.error("Unable to log user in. An exception was thrown", other)
+            log.error("Unable to log user in. An exception was thrown", other)
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.errorLoggingIn"))
           }
         }
@@ -99,6 +102,7 @@ object ProviderController extends Controller with Logging {
     val sess = Events.fire(new LoginEvent(userIdentity)).getOrElse(session)
     Authenticator.create(userIdentity) match {
       case Right(authenticator) => {
+        log.info(s"[completeAuthentication] Authentication [${authenticator.identityId}] completed for [${userIdentity.email}]")
         Redirect(toUrl(sess)).withSession(sess -
           SecureSocial.OriginalUrlKey -
           IdentityProvider.SessionId -
