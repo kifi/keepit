@@ -5,66 +5,20 @@ angular.module('kifi')
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
   'initParams', '$rootScope', '$analytics', 'installService', 'profileService', '$q', 'routeService',
-  'modalService', 'libraryService',
+  'modalService', 'libraryService', 'tagService',
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
     initParams, $rootScope, $analytics, installService, profileService, $q, routeService,
-    modalService, libraryService) {
+    modalService, libraryService, tagService) {
 
     var tooltipMessages = {
       0: 'Welcome back!',
       2: 'Bookmark import in progress. Reload the page to update.'
     };
 
-    $scope.search = {};
-    $scope.searchEnabled = false;
     $scope.data = $scope.data || {};
     $scope.editMode = {
       enabled: false
     };
-
-    $scope.enableSearch = function () {
-      $scope.searchEnabled = true;
-      // add event handler on the inheriting scope
-      this.$on('$destroy', function () {
-        $scope.searchEnabled = false;
-      });
-    };
-
-    $scope.onKeydown = function (e) {
-      if (e.keyCode === keyIndices.KEY_ESC) {
-        $scope.clear();
-      } else if (e.keyCode === keyIndices.KEY_ENTER) {
-        performSearch();
-      }
-    };
-
-    $scope.clear = function () {
-      $scope.search.text = '';
-      performSearch();
-    };
-
-    $scope.clearable = function () {
-      return !!$scope.search.text;
-    };
-
-    function performSearch() {
-      var text = $scope.search.text || '';
-      text = _.str.trim(text);
-
-      if (text) {
-        $location.path('/find').search('q', text);
-      }
-      else {
-        $location.path('/').search('');
-      }
-
-      // hacky solution to url event not getting fired
-      $timeout(function () {
-        $scope.$apply();
-      });
-    }
-
-    $scope.onChange = _.debounce(performSearch, 350);
 
     $scope.undo = undoService;
 
@@ -309,6 +263,29 @@ angular.module('kifi')
       $rootElement.find('body').addClass('mac');
     }
 
+    var refreshTimeout;
+    $window.addEventListener('message', function (event) {
+      $scope.$apply(function () {
+        var data = event.data || '';
+        switch (data.type || data) {
+          case 'get_guide':
+            // $scope.triggerGuide();  TODO: make this work again
+            break;
+          case 'import_bookmarks':
+            if (data.count > 0) {
+              $rootScope.$emit('showGlobalModal', 'importBookmarks', data.count, event);
+            }
+            break;
+          case 'update_keeps':
+          case 'update_tags':
+            $timeout.cancel(refreshTimeout);
+            refreshTimeout = $timeout(function () {
+              tagService.fetchAll(true);
+            }, 1000); // Giving enough time for the services to be updated
+            break;
+        }
+      });
+    });
 
     var deregisterPrefsChangedListener = $rootScope.$on('prefsChanged', function () {
       $scope.showDelightedSurvey = profileService.prefs && profileService.prefs.show_delighted_question;

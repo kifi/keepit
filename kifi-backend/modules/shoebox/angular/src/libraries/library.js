@@ -186,8 +186,12 @@ angular.module('kifi')
     $scope.callImportBookmarkFile = function () {
       $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
     };
-    $scope.callTriggerInstall = function () {
-      $rootScope.$emit('triggerExtensionInstall');
+    $scope.triggerInstall = function () {
+      installService.triggerInstall(function () {
+        modalService.open({
+          template: 'common/modal/installExtensionErrorModal.tpl.html'
+        });
+      });
     };
 
 
