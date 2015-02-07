@@ -34,8 +34,8 @@ class TwitterPublishingCommander @Inject() (
 
   def publishLibraryMembership(userId: Id[User], library: Library): Unit = {
     if (library.visibility == LibraryVisibility.PUBLISHED && hasTwitterExperiment(userId)) {
-      db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.FACEBOOK) } match {
-        case None => log.info(s"user $userId is not connected to facebook!")
+      db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.TWITTER) } match {
+        case None => log.info(s"user $userId is not connected to twitter!")
         case Some(sui) =>
           val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
           val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
@@ -46,7 +46,7 @@ class TwitterPublishingCommander @Inject() (
   }
 
   private def hasTwitterExperiment(userId: Id[User]) = {
-    db.readOnlyMaster { implicit session => experimentCommander.userHasExperiment(userId, ExperimentType.FACEBOOK_POST) }
+    db.readOnlyMaster { implicit session => experimentCommander.userHasExperiment(userId, ExperimentType.TWEET_ALL) }
   }
 
 }
