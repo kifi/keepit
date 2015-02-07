@@ -1,0 +1,194 @@
+.kf-pymk
+  border: defaultBorder
+  border-radius: 10px
+  background: #fff
+  padding: 10px 16px
+
+.kf-pymk-title
+  font-size: 15px
+  margin-bottom: 10px
+
+.kf-pymk-person
+  height: 32px
+  position: relative
+  margin-bottom: 4px
+  line-height: 12px
+  font-size: 12px
+  padding: 5px 0
+
+.kf-pymk-image-a
+  float: left
+  width: 32px
+  height: 32px
+  border-radius: 50%
+  position: relative
+  margin-right: 8px
+
+  &::after
+    content: ''
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    border-radius: '%s' % inherit
+    box-shadow: 0 0 2px rgba(0,0,0,.3) inset
+
+.kf-pymk-image
+  width: inherit
+  height: inherit
+  border-radius: '%s' % inherit
+
+.kf-pymk-name
+  width: 120px
+  padding-top: 3px
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.kf-pymk-via
+  display: block
+  margin-top: 3px
+  font-size: 11px
+  text-overflow: ellipsis
+  max-width: 120px
+  overflow: hidden
+  white-space: nowrap
+
+.kf-pymk-mutual
+  border: none
+  padding: 0
+  background: transparent
+  color: linkBlueColor
+
+  &:hover
+    text-decoration: underline
+
+.kf-pymk-action
+  bg-color = #3e4954
+  position: absolute
+  top: 10px
+  right: 0
+  border: none
+  border-radius: 4px
+  padding: 0 6px
+  background-color: bg-color
+  color: #fff
+  line-height: 22px
+  font-size: 10px
+
+  &:hover
+    background-color: lighten(bg-color, 10%)
+
+  &:hover:active
+    background-color: darken(bg-color, 10%)
+
+.kf-pymk-x
+  radius = 6px
+  bg-color = #c00
+  position: absolute
+  top: 5px
+  right: -5px
+  height: 2 * radius
+  width: 2 * radius
+  border: none
+  border-radius: 50%
+  padding: 0
+  background-color: bg-color
+  cursor: pointer
+
+  :not(:hover)>&
+    display: none
+
+  &:hover
+    background-color: lighten(bg-color, 10%)
+
+  &:hover:active
+    background-color: darken(bg-color, 10%)
+
+  &::before
+  &::after
+    content: ''
+    position: absolute
+    top: 3px
+    bottom: 3px
+    left: -1px
+    width: 2px
+    background-color: #fff
+
+  &::before
+    transform: translate(radius) rotate(45deg) scale(.5, 1)
+
+  &::after
+    transform: translate(radius) rotate(-45deg) scale(.5, 1)
+
+.kf-pymk-invite-link
+  float: right
+  margin: 5px 6px 0 0
+  color: linkBlueColor
+
+
+
+
+
+
+
+
+
+.kf-pmyk-connect
+  margin-bottom: 15px
+  color: #555
+  line-height: 1.2
+
+.kf-pmyk-connect-other
+  margin-top: 15px
+  a
+    color: linkBlueColor
+
+a.social-connect-button:hover,
+a.social-connect-button:active
+  text-decoration: none
+
+.social-connect-button
+  position: relative
+  width: 85px
+  border-radius: 5px
+  padding: 10px 35px 10px 65px
+  font-size: 14px
+  color: white
+
+  &.facebook
+    background-color: #597AB1
+
+  &.linkedin
+    background-color: #2786C4
+
+  &.gmail
+    background-color: #E36767
+
+  &.twitter
+    background-color: #55acee
+
+.social-connect-button::before
+  position: absolute
+  top: 0
+  left: 0
+  width: 35px
+  height: 100%
+  background-image: url(/img/networks2.png)
+  background-size: auto 35px;
+  background-color: rgba(0, 0, 0, 0.1)
+  display: inline-block
+  content: ''
+
+.social-connect-button.twitter::before
+  background-image: url(/img/svg/twitter-icon.svg) // more ideal if was in networks2.png
+  background-size: 20px
+  background-repeat: no-repeat
+  background-position: 8px 11px
+
+.social-connect-button.linkedin::before
+  background-position: -35px 0px
+
+.social-connect-button.gmail::before
+  background-position: -140px 0px
