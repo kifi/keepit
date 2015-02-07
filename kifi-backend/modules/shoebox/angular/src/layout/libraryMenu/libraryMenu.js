@@ -270,6 +270,7 @@ angular.module('kifi')
         scope.$watch('libraryMenu.visible', function (visible) {
           if (visible) {
             openMenu();
+            scope.libraryMenuHelp.visible = false;
           }
         });
 
