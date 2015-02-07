@@ -3,22 +3,11 @@
   margin: 0 auto
 
 .kf-recos-view-header
-  padding: 25px 25px 10px 30px
+  padding: 25px 0 10px
   min-height: 50px
-
-  .kf-recos-clover-icon
-    float: left
-    margin-right: 8px
-    width: 35px
-    height: 34px
 
   .kf-main-title
     position: relative
-
-  &::after
-    content: ''
-    display: block
-    clear: both
 
   &::after
     content: ''
@@ -88,12 +77,26 @@
     background-color: #fff
     cursor: pointer
 
+.kf-reco-cols
+  display: table
+  width: 100%
+  table-layout: fixed
+
+.kf-reco-col-1
+  display: table-cell
+  vertical-align: top
+
+.kf-reco-col-2
+  display: table-cell
+  vertical-align: top
+  width: 240px
+  padding-left: 20px
+
 .kf-recos
-  padding: 0 25px 20px 30px
+  padding-bottom: 20px
 
 .kf-reco
-  box-sizing: border-box
-  margin: 0 auto 20px
+  margin-bottom: 20px
 
 .kf-reco.ng-leave
   opacity: 1

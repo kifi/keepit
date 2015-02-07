@@ -1,0 +1,28 @@
+<div class="kf-">
+  <h2 class="kf-">Goodies</h2>
+  <ul class="kf-">
+    <li kf-min-version="3.3.0" class="kf-">
+      <a class="kf-" href="javascript:" ng-click="triggerGuide(true)">
+        <span class="sprite sprite-guide-icon"></span>Kifi Step-by-step guide
+      </a>
+    </li>
+    <li class="kf-">
+      <a class="kf-" href="javascript:" ng-click="triggerInstall()">
+        <span class="sprite sprite-install-extension-icon"></span><!--
+     --><span ng-show="!installInProgress() && !installed()">Install the extension</span><!--
+     --><span ng-show="installInProgress() && !installed()">Installing...</span><!--
+     --><span ng-show="installed()">Installed!</span>
+      </a>
+    </li>
+    <li class="kf-">
+      <a class="kf-" href="javascript:" ng-click="importBookmarks()">
+        <span class="sprite sprite-import-bookmarks-icon"></span>Import your bookmarks
+      </a>
+    </li>
+    <li class="kf-">
+      <a class="kf-" href="javascript:" ng-click="importBookmarkFile()">
+        <span class="sprite sprite-import-from-other-services-icon"></span>Import Delicious/Kippt/Pocket/...
+      </a>
+    </li>
+  </ul>
+</div>
