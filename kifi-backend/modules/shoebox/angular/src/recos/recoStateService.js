@@ -10,6 +10,14 @@ angular.module('kifi')
       recosList: savedRecos,
 
       populate: function (recos) {
+        _.remove(recos, function (reco) {
+          return _.some(savedRecos, function (savedReco) {
+            return (
+              reco.recoLib && savedReco.recoLib && (reco.recoLib.url === savedReco.recoLib.url) ||
+              reco.recoKeep && savedReco.recoKeep && (reco.recoKeep.url === savedReco.recoKeep.url)
+            );
+          });
+        });
         savedRecos.push.apply(savedRecos, recos);
       },
 
