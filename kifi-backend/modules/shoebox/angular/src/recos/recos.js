@@ -12,6 +12,7 @@ angular.module('kifi')
     $scope.recos = recoStateService.recosList;
     $scope.recosState = 'loading';
     $scope.initialCardClosed = false;
+    $scope.noMoreRecos = false;
 
     $scope.getMore = function (opt_recency) {
       $scope.loading = true;
@@ -32,6 +33,24 @@ angular.module('kifi')
 
         $scope.loading = false;
       });
+    };
+
+    $scope.addMore = function () {
+      $scope.moreLoading = true;
+      recoActionService.getMore().then(function (rawRecos) {
+        if (rawRecos.length > 0) {
+          var recos = [];
+          rawRecos.forEach(function (rawReco) {
+            recos.push(recoDecoratorService.newUserRecommendation(rawReco));
+          });
+          recoStateService.populate(recos);
+        } else {
+          $scope.noMoreRecos = true;
+        }
+
+        $scope.moreLoading = false;
+      });
+
     };
 
     $scope.trash = function (reco) {
@@ -266,22 +285,4 @@ angular.module('kifi')
       }
     };
   }
-])
-
-.directive('kfRecoRecencySlider', [
-  function () {
-    return {
-      restrict: 'A',
-      replace: true,
-      scope: {
-        getMore: '&'
-      },
-      templateUrl: 'recos/recoRecencySlider.tpl.html',
-      link: function (scope/*, element, attrs*/) {
-        scope.recency = { value: 0.75 };
-      }
-    };
-  }
 ]);
-
-
