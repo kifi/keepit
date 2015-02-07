@@ -27,7 +27,7 @@ class TwitterPublishingCommander @Inject() (
         case Some(sui) =>
           val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
           val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
-          val message = s"${keep.title} ${keep.url} kept to ${library.name} $libraryUrl"
+          val message = s"${keep.title.getOrElse("interesting link")} ${keep.url} kept to ${library.name} $libraryUrl"
           twitterSocialGraph.sendTweet(sui, message)
       }
     }
