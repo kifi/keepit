@@ -123,11 +123,13 @@ angular.module('kifi', [
         visible: false
       };
 
+      $scope.libraryMenuHelp = {
+        visible: false
+      };
+
       if (false) {  // Needs condition from backend.
         $timeout(function () {
-          $scope.libraryMenuHelp = {
-            visible: true
-          };
+          $scope.libraryMenuHelp.visible = true;
         }, 2000);
       }
 
