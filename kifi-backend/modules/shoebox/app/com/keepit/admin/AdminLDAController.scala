@@ -22,6 +22,7 @@ class AdminLDAController @Inject() (
     db: Database,
     userRepo: UserRepo,
     uriRepo: NormalizedURIRepo,
+    personaRepo: PersonaRepo,
     keepRepo: KeepRepo) extends AdminUserActions {
 
   val MAX_WIDTH = 15
@@ -258,6 +259,7 @@ class AdminLDAController @Inject() (
   def evaluatePersona() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val pid = body.get("personaId").get.trim.toInt
+    val pname = db.readOnlyReplica { implicit s => personaRepo.get(Id[Persona](pid)).name.value }
     val version = body.get("version").get.trim.toInt
     cortex.evaluatePersona(Id[Persona](pid))(version).map { uriScores =>
       val uids = uriScores.toArray.sortBy(-_._2).map { _._1 }
@@ -267,7 +269,7 @@ class AdminLDAController @Inject() (
         val suffix = if (t.size > 80) "..." else ""
         t.take(80) + suffix
       }
-      Ok(Json.obj("uids" -> uids, "titles" -> shorterTitles, "scores" -> scores))
+      Ok(Json.obj("persona" -> pname, "uids" -> uids, "titles" -> shorterTitles, "scores" -> scores))
     }
   }
 

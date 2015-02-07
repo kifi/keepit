@@ -88,7 +88,7 @@
         ).done(done).fail(fail);
 
         function done(data) {
-          $("#tp_wait").empty()
+          $("#tp_wait").empty().prepend('showing results for persona: ' + data.persona)
           $("#feedback_sumbit").empty()
           $("#persona_test_table > tbody").empty()
 
