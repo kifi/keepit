@@ -3,17 +3,10 @@
 angular.module('kifi')
 
 .controller('RecosCtrl', [
-  '$scope',
-  '$rootScope',
-  '$analytics',
-  '$window',
-  'modalService',
-  'recoActionService',
-  'recoDecoratorService',
-  'recoStateService',
-  'undoService',
+  '$scope', '$rootScope', '$analytics', '$window',
+  'modalService', 'recoActionService', 'recoDecoratorService', 'recoStateService', 'undoService', 'socialService', 'friendService',
   function ($scope, $rootScope, $analytics, $window,
-    modalService, recoActionService, recoDecoratorService, recoStateService, undoService) {
+    modalService, recoActionService, recoDecoratorService, recoStateService, undoService, socialService, friendService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = recoStateService.recosList;
@@ -142,9 +135,12 @@ angular.module('kifi')
             $scope.loading = false;
           });
         }
-
       });
     }
+
+    socialService.refresh().then(function () {
+      $scope.hasFriendsOrConnections = friendService.totalFriends() > 0 || socialService.networks.length > 0;
+    });
   }
 ])
 
