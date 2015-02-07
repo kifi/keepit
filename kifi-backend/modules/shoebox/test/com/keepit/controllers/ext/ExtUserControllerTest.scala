@@ -90,7 +90,7 @@ class ExtUserControllerTest extends Specification with ShoeboxTestInjector with 
               },
               "library":{
                 "id":"${Library.publicId(personaLibOpt.get.id.get).id}",
-                "name":"Computer and Electronics",
+                "name":"Techie Picks",
                 "color":"${personaLibOpt.get.color.get.hex}"
               }
             }
