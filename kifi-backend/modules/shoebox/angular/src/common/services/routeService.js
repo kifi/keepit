@@ -5,6 +5,10 @@ angular.module('kifi')
 .factory('routeService', [
   '$location', 'env', '$window',
   function ($location, env, $window) {
+
+    var cdnImageBase = 'https://djty7jcqog9qu.cloudfront.net/'; // for dynamic images (keeps, library images, user profile pics, etc.)
+    var cdnAssetBase = 'https://d1dwdv9wd966qu.cloudfront.net/'; // for static assets (icons)
+
     function route(url) {
       return env.xhrBase + url;
     }
@@ -18,6 +22,8 @@ angular.module('kifi')
     }
 
     return {
+      cdnImageBase : cdnImageBase,
+      cdnAssetBase : cdnAssetBase,
       disconnectNetwork: function (network) {
         return env.navBase + '/disconnect/' + network;
       },
@@ -232,6 +238,19 @@ angular.module('kifi')
           (!_.isUndefined(opt_page) ? '&page=' + opt_page : '') +
           (!_.isUndefined(opt_size) ? '&size=' + opt_size : '')
         );
+      },
+
+      /////////////////////////////
+      // User Personas           //
+      /////////////////////////////
+      getAllPersonas: function() {
+        return route('/user/personas');
+      },
+      addPersona: function(personaName) {
+        return route('/user/personas/' + personaName);
+      },
+      removePersona: function(personaName) {
+        return route('/user/personas/' + personaName);
       }
     };
   }

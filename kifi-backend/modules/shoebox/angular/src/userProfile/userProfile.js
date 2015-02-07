@@ -29,6 +29,20 @@ angular.module('kifi')
       });
     }
 
+    function showPersonaModal() {
+      modalService.open({
+        template: 'persona/managePersonaUnescapableModal.tpl.html',
+        modalData: {
+          onClose: function() {
+            if (!installService.installedVersion) {
+              showInstallModal();
+            }
+          },
+          finishText: 'Done'
+        }
+      });
+    }
+
     function getCurrentPageOrigin() {
       var originContext = $scope.libraryTypesToNames[$state.current.data.libraryType];
       return 'profilePage' +  (originContext ? '.' + originContext : '');
@@ -109,8 +123,12 @@ angular.module('kifi')
 
     trackPageView();
 
-    if (initParams.install === '1' && !installService.installedVersion) {
-      showInstallModal();
+    //if (initParams.install === '1' && !installService.installedVersion) {
+      //showInstallModal();
+    //}
+    if (initParams.install === '1') {
+      showPersonaModal();
+      initParams.install = undefined;
     }
   }
 ])

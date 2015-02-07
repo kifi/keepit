@@ -21,6 +21,16 @@
     display: block
     clear: both
 
+  .kf-recos-update-personas
+    float: right
+    padding-top: 10px
+    color: libraryGreen
+    font-size: 15px
+    cursor: pointer
+
+    &:hover
+      color: #81cd91
+
 .kf-recos-title
   float: left
   margin-bottom: 20px
@@ -28,8 +38,9 @@
 
 .kf-reco-recency
   position: relative
-  float: left
-  margin-left: 60px
+  left: 50%
+  transform: translateX(-50%)
+  margin-bottom: 20px
   width: calc(100% - 330px)
   min-width: 240px
 
@@ -85,7 +96,7 @@
     cursor: pointer
 
 .kf-recos
-  padding: 0 25px 20px 30px
+  padding: 0 25px 0px 30px
 
 .kf-reco
   box-sizing: border-box

@@ -10,7 +10,8 @@ angular.module('kifi')
       replace: true,
       scope: {
         forceClose: '=',
-        disableScroll: '='
+        disableScroll: '=',
+        escapable: '='
       },
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
@@ -31,7 +32,10 @@ angular.module('kifi')
           $document.find('body').removeClass('modal-open');
         }
 
-        $scope.close = this.close = function (closeAction) {
+        $scope.close = this.close = function (closeAction, forceEscape) {
+          if (_.isBoolean($scope.escapable) && !$scope.escapable && !forceEscape) {
+            return;
+          }
           onCloseOrDestroy();
           modalService.close();
 
@@ -58,6 +62,7 @@ angular.module('kifi')
 
         scope.backdropStyle.opacity = attrs.kfOpacity || 0.3;
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
+        scope.backdropStyle.top = attrs.kfTopOffset || '0';
 
         scope.$watch(function () {
           return scope.forceClose;

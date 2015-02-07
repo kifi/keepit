@@ -92,6 +92,12 @@ angular.module('kifi')
       });
     };
 
+    $scope.showPersonaModal = function() {
+      modalService.open({
+        template: 'persona/managePersonaModal.tpl.html'
+      });
+    };
+
     $scope.closeInitialCard = function () {
       $scope.initialCardClosed = true;
     };

@@ -95,6 +95,12 @@ angular.module('kifi')
       profileService.setNewPrimaryEmail(emailToBeSaved);
     };
 
+    $scope.showPersonaModal = function() {
+      modalService.open({
+        template: 'persona/managePersonaModal.tpl.html'
+      });
+    };
+
     function showVerificationAlert(email) {
       $scope.emailForVerification = email;
       modalService.open({
