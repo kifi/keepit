@@ -8,7 +8,8 @@
     <div class="kf-lih-center">
       <label class="kf-lih-search" ng-class="{'kf-lit': search.focused || search.text}">
         <span class="kf-lih-search-left">
-          <span class="kf-lih-search-icon"></span>
+          <span class="kf-lih-search-icon svg-search-icon-gray"></span>
+          <span class="kf-lih-search-icon-lit svg-search-icon-blue"></span>
           <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" style="background-image:url({{libOwnerPicUrl || 'https://www.kifi.com/assets/img/ghost.100.png'}})" href="{{libOwnerProfileUrl}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></a>
           <span class="kf-lih-search-lib-name" ng-if="search.libraryChip" style="background-color:{{library.color}}">{{library.name}}</span>
           <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" style="background-color:{{library.color}}" ng-click="onClickLibX()" href="javascript:">&times;</a>

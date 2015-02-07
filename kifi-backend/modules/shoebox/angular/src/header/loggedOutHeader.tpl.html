@@ -6,9 +6,10 @@
     </div>
     <div class="kf-loh-center" ng-if="library">
       <label class="kf-loh-search">
-        <span class="kf-loh-search-left">
-          <span class="kf-loh-search-icon"></span>
-          <span class="kf-loh-search-lib" style="background-color:{{library.color}}">
+        <span class="kf-loh-search-left" style="background-color:{{library.color}}">
+          <span class="kf-loh-search-icon svg-search-icon-gray"></span>
+          <span class="kf-loh-search-lib-icon svg-search-icon-white"></span>
+          <span class="kf-loh-search-lib">
             <a class="kf-loh-search-lib-owner-img" style="background-image:url({{libOwnerPicUrl || 'https://www.kifi.com/assets/img/ghost.100.png'}})" href="{{libOwnerProfileUrl}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></a>
             {{library.name}}
           </span>
