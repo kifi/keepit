@@ -13,6 +13,7 @@ angular.module('kifi')
         // Scope data.
         //
         scope.selectedPersonaIds = [];
+        scope.finishText = scope.modalData && scope.modalData.finishText ? scope.modalData.finishText : 'Update interests';
 
         //
         // Scope methods.

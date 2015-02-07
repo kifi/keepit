@@ -31,13 +31,14 @@ angular.module('kifi')
 
     function showPersonaModal() {
       modalService.open({
-        template: 'persona/managePersonaModal.tpl.html',
+        template: 'persona/managePersonaUnescapableModal.tpl.html',
         modalData: {
           onClose: function() {
             if (!installService.installedVersion) {
               showInstallModal();
             }
-          }
+          },
+          finishText: 'Done'
         }
       });
     }
