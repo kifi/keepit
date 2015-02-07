@@ -26,25 +26,34 @@ class FriendConnectionMadeEmailSender @Inject() (
       case LINKEDIN => LINKEDIN.displayName + " connection"
     } getOrElse "friend"
 
-    val (emailText, subject, campaign) = category match {
+    val (emailPlainText, emailHtmlText, subject, campaign) = category match {
       case NotificationCategory.User.FRIEND_ACCEPTED =>
-        val emailText = ConnectionMadeEmailValues(
+        val emailHtmlText = ConnectionMadeEmailValues(
           line1 = None,
           line2 = s"""<a href="${profileUrl(friendUserId, "friendRequestAccepted")}">${fullName(friendUserId)}</a> accepted your Kifi friend request""")
+        val emailPlainText = ConnectionMadeEmailValues(
+          line1 = None,
+          line2 = s"""${fullName(friendUserId)} accepted your Kifi friend request""")
         val subject = s"${fullName(friendUserId)} accepted your Kifi friend request"
-        (emailText, subject, Some("friendRequestAccepted"))
+        (emailPlainText, emailHtmlText, subject, Some("friendRequestAccepted"))
       case NotificationCategory.User.SOCIAL_FRIEND_JOINED if networkTypeOpt.isDefined =>
-        val emailText = ConnectionMadeEmailValues(
+        val emailHtmlText = ConnectionMadeEmailValues(
           line1 = Some(s"""Your $friendSourceName, <a href="${profileUrl(friendUserId, "friendRequestAccepted")}">${fullName(friendUserId)}</a>, joined Kifi"""),
           line2 = s"""You and <a href="${profileUrl(friendUserId, "friendRequestAccepted")}">${fullName(friendUserId)}</a> are now connected on Kifi""")
+        val emailPlainText = ConnectionMadeEmailValues(
+          line1 = Some(s"""Your $friendSourceName, ${fullName(friendUserId)}, joined Kifi"""),
+          line2 = s"""You and ${fullName(friendUserId)} are now connected on Kifi""")
         val subject = s"Your $friendSourceName ${firstName(friendUserId)} just joined Kifi"
-        (emailText, subject, Some("socialFriendJoined"))
+        (emailPlainText, emailHtmlText, subject, Some("socialFriendJoined"))
       case NotificationCategory.User.CONNECTION_MADE =>
-        val emailText = ConnectionMadeEmailValues(
+        val emailHtmlText = ConnectionMadeEmailValues(
           line1 = Some("You have a new connection on Kifi"),
           line2 = s"""Your $friendSourceName, <a href="${profileUrl(friendUserId, "friendRequestAccepted")}">${fullName(friendUserId)}</a>, is now connected to you on Kifi""")
+        val emailPlainText = ConnectionMadeEmailValues(
+          line1 = Some("You have a new connection on Kifi"),
+          line2 = s"""Your $friendSourceName, ${fullName(friendUserId)}, is now connected to you on Kifi""")
         val subject = s"You are now friends with ${fullName(friendUserId)} on Kifi!"
-        (emailText, subject, Some("connectionMade"))
+        (emailPlainText, emailHtmlText, subject, Some("connectionMade"))
     }
 
     val emailToSend = EmailToSend(
@@ -53,8 +62,8 @@ class FriendConnectionMadeEmailSender @Inject() (
       subject = subject,
       to = Left(toUserId),
       category = category,
-      htmlTemplate = views.html.email.black.friendConnectionMade(toUserId, friendUserId, emailText),
-      textTemplate = Some(views.html.email.black.friendConnectionMadeText(toUserId, friendUserId, emailText)),
+      htmlTemplate = views.html.email.black.friendConnectionMade(toUserId, friendUserId, emailHtmlText),
+      textTemplate = Some(views.html.email.black.friendConnectionMadeText(toUserId, friendUserId, emailPlainText)),
       campaign = campaign,
       tips = Seq()
     )

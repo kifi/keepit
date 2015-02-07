@@ -8,7 +8,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.mail.template.{ EmailTip, EmailTrackingParam }
-import com.keepit.common.mail.{ ElectronicMailCategory, PostOffice, SystemEmailAddress, EmailAddress, FakeOutbox }
+import com.keepit.common.mail.{ PostOffice, SystemEmailAddress, EmailAddress, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -140,10 +140,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           email.subject === "Billy Madison accepted your Kifi friend request"
           html must contain("""<a href="http://dev.ezkeep.com:9000/billy?""")
           html must contain("""Billy Madison</a> accepted your Kifi friend request""")
+          html must contain("""<a href="http://dev.ezkeep.com:9000/billy?utm_source=fromFriends&amp;utm_medium=email&amp;utm_campaign=friendRequestAccepted&amp;utm_content=friendRequestAccepted&amp;kcid=friendRequestAccepted-email-fromFriends&amp;dat=eyJsIjoiZnJpZW5kUmVxdWVzdEFjY2VwdGVkIiwiYyI6W10sInQiOltdfQ==&amp;kma=1"><img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Billy Madison" width="73" height="73" style="display:block;" border="0" /></a>""")
 
           val text = email.textBody.get.value
-          text must contain("""<a href="http://dev.ezkeep.com:9000/billy?""")
-          text must contain("""Billy Madison</a> accepted your Kifi friend request""")
+          text must contain("""Billy Madison accepted your Kifi friend request""")
         }
       }
     }
@@ -174,8 +174,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
             html must contain("You and <a href=\"http://dev.ezkeep.com:9000/billy?")
             html must contain("Billy Madison</a> are now connected on Kifi")
 
-            text must contain(s"Billy Madison</a>, joined Kifi")
-            text must contain("Billy Madison</a> are now connected on Kifi")
+            text must contain(s"Billy Madison, joined Kifi")
+            text must contain("Billy Madison are now connected on Kifi")
           }
         }
     }
@@ -202,7 +202,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           html must contain("""Your Facebook friend, <a href="http://dev.ezkeep.com:9000/billy?""")
 
           text must contain("You have a new connection on Kifi")
-          text must contain("""Your Facebook friend, <a href="http://dev.ezkeep.com:9000/billy?""")
+          text must contain("""Your Facebook friend, Billy""")
         }
       }
     }
