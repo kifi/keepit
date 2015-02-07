@@ -234,7 +234,16 @@ class LDAController @Inject() (
   }
 
   def evaluatePersona(personaId: Id[Persona], version: ModelVersion[DenseLDA]) = Action { request =>
-    val scores = personaCommander.evaluatePersonaFeature(personaId, sampleSize = 50)(version)
+    val scores = personaCommander.evaluatePersonaFeature(personaId, sampleSize = 20)(version)
     Ok(Json.toJson(scores))
+  }
+
+  def trainPersonaFeature(personaId: Id[Persona], version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
+    val labels = (js \ "labels").as[Seq[Int]]
+    val rate = (js \ "rate").as[Float]
+    personaCommander.autoLearn(personaId, uriIds, labels, rate)(version)
+    Ok
   }
 }

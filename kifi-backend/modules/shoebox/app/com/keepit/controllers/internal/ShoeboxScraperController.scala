@@ -111,15 +111,6 @@ class ShoeboxScraperController @Inject() (
     }
   }
 
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]) = Action { request =>
-    val ts = System.currentTimeMillis
-    val bookmarks = db.readOnlyReplica(2) { implicit session =>
-      keepRepo.getByUriWithoutTitle(uriId)
-    }
-    log.debug(s"[getBookmarksByUriWithoutTitle($uriId)] time-lapsed:${System.currentTimeMillis - ts} bookmarks(len=${bookmarks.length}):${bookmarks.mkString}")
-    Ok(Json.toJson(bookmarks))
-  }
-
   def recordScrapedNormalization() = Action.async(parse.tolerantJson) { request =>
     val candidateUrlString = (request.body \ "url").as[String]
     val candidateUrl = URI.parse(candidateUrlString).get.toString()
@@ -167,8 +158,8 @@ class ShoeboxScraperController @Inject() (
     require(!args.isEmpty && args.length == 2, "Both uri and redirect need to be supplied")
     val uri = args(0).as[NormalizedURI]
     val redirect = args(1).as[HttpRedirect]
-    require(redirect.isPermanent, "HTTP redirect is not permanent.")
     require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
+    require(redirect.isPermanent || redirect.isShortener, "HTTP redirect is neither permanent nor from a shortener.")
     val verifiedCandidateOption = normalizationServiceProvider.get.prenormalize(redirect.newDestination).toOption.flatMap { prenormalizedDestination =>
       db.readWrite { implicit session =>
         val (candidateUrl, candidateNormalizationOption) = normUriRepo.getByNormalizedUrl(prenormalizedDestination) match {

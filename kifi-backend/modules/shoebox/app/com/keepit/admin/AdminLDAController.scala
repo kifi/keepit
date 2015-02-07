@@ -22,6 +22,7 @@ class AdminLDAController @Inject() (
     db: Database,
     userRepo: UserRepo,
     uriRepo: NormalizedURIRepo,
+    personaRepo: PersonaRepo,
     keepRepo: KeepRepo) extends AdminUserActions {
 
   val MAX_WIDTH = 15
@@ -258,12 +259,35 @@ class AdminLDAController @Inject() (
   def evaluatePersona() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val pid = body.get("personaId").get.trim.toInt
+    val pname = db.readOnlyReplica { implicit s => personaRepo.get(Id[Persona](pid)).name.value }
     val version = body.get("version").get.trim.toInt
     cortex.evaluatePersona(Id[Persona](pid))(version).map { uriScores =>
       val uids = uriScores.toArray.sortBy(-_._2).map { _._1 }
-      val scores = uids.map { uriScores(_) }
+      val scores = uids.map { uriScores(_) }.map { x => "%.3f".format(x) }
       val titles = db.readOnlyReplica { implicit s => uids.map { uriRepo.get(_) } }.map { _.title.getOrElse("n/a") }
-      Ok(Json.obj("uids" -> uids, "titles" -> titles, "scores" -> scores))
+      val shorterTitles = titles.map { t =>
+        val suffix = if (t.size > 80) "..." else ""
+        t.take(80) + suffix
+      }
+      Ok(Json.obj("persona" -> pname, "uids" -> uids, "titles" -> shorterTitles, "scores" -> scores))
     }
+  }
+
+  def personaFeatureTraining() = AdminUserPage(parse.tolerantJson) { implicit request =>
+    val js = request.body
+
+    val pid = (js \ "personaId").as[String].trim.toInt
+    val version = (js \ "version").as[JsNumber].value.toInt
+    val uids = (js \ "uids").as[Seq[String]].map { _.trim.toInt }
+    val labels = (js \ "feedbacks").as[Seq[Int]]
+    val rate = ((js \ "rate").as[String].trim.toFloat min 0.1f) max 0.001f
+
+    require(uids.length == labels.length)
+
+    // ignore neutral feedbacks
+    val (uids2, labels2) = (uids zip labels).filter { _._2 != 0 }.unzip
+    cortex.trainPersona(Id[Persona](pid), uids2.map { Id[NormalizedURI](_) }, labels2, rate)(version)
+
+    Ok
   }
 }

@@ -22,16 +22,16 @@ class HttpRedirectTest extends Specification {
     }
 
     "Find the correct permanent destination url after multiple redirects" in {
-      resolvePermanentRedirects("http://www.lemonde.fr", Seq.empty) === None
-      resolvePermanentRedirects("http://www.bbc.co.uk", Seq(HttpRedirect(MOVED, "http://www.bbc.co.uk", "http://www.bbc.com"))) === Some("http://www.bbc.com")
+      resolve("http://www.lemonde.fr", Seq.empty) === None
+      resolve("http://www.bbc.co.uk", Seq(HttpRedirect(MOVED, "http://www.bbc.co.uk", "http://www.bbc.com"))) === Some("http://www.bbc.com")
 
       val threePermanentRedirects = Seq(
         HttpRedirect(MOVED, "http://www.oracle.com/technology/index.html", "https://www.oracle.com/technology/index.html"),
         HttpRedirect(MOVED, "https://www.oracle.com/technology/index.html", "https://www.oracle.com/technetwork/index.html"),
         HttpRedirect(MOVED, "https://www.oracle.com/technetwork/index.html", "http://www.oracle.com/technetwork/index.html")
       )
-      resolvePermanentRedirects("http://www.oracle.com/technology/index.html", threePermanentRedirects) === Some("http://www.oracle.com/technetwork/index.html")
-      resolvePermanentRedirects("http://www.oracle.com", threePermanentRedirects) === None
+      resolve("http://www.oracle.com/technology/index.html", threePermanentRedirects) === Some("http://www.oracle.com/technetwork/index.html")
+      resolve("http://www.oracle.com", threePermanentRedirects) === None
 
       val withOneTemporaryRedirect = Seq(
         HttpRedirect(MOVED, "http://www.oracle.com/technology/index.html", "https://www.oracle.com/technology/index.html"),
@@ -39,14 +39,14 @@ class HttpRedirectTest extends Specification {
         HttpRedirect(MOVED, "https://www.oracle.com/technetwork/index.html", "http://www.oracle.com/technetwork/index.html")
       )
 
-      resolvePermanentRedirects("http://www.oracle.com/technology/index.html", withOneTemporaryRedirect) === Some("https://www.oracle.com/technology/index.html")
+      resolve("http://www.oracle.com/technology/index.html", withOneTemporaryRedirect) === Some("https://www.oracle.com/technology/index.html")
 
       val withOneRelativeRedirect = Seq(
         HttpRedirect(MOVED, "http://www.oracle.com/technology/index.html", "https://www.oracle.com/technology/index.html"),
         HttpRedirect(MOVED, "https://www.oracle.com/technology/index.html", "/technetwork/index.html")
       )
 
-      resolvePermanentRedirects("http://www.oracle.com/technology/index.html", withOneRelativeRedirect) === Some("https://www.oracle.com/technology/index.html")
+      resolve("http://www.oracle.com/technology/index.html", withOneRelativeRedirect) === Some("https://www.oracle.com/technology/index.html")
 
       val withOneRecoverableRelativeRedirect = Seq(
         HttpRedirect(MOVED, "http://www.oracle.com/technology/index.html", "https://www.oracle.com/technology/index.html"),
@@ -54,7 +54,7 @@ class HttpRedirectTest extends Specification {
         HttpRedirect(MOVED, "/technetwork/index.html", "http://www.oracle.com/technetwork/index.html")
       )
 
-      resolvePermanentRedirects("http://www.oracle.com/technology/index.html", withOneRecoverableRelativeRedirect) === Some("http://www.oracle.com/technetwork/index.html")
+      resolve("http://www.oracle.com/technology/index.html", withOneRecoverableRelativeRedirect) === Some("http://www.oracle.com/technetwork/index.html")
     }
   }
 }

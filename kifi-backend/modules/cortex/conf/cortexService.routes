@@ -46,5 +46,6 @@ GET     /internal/cortex/lda/getExistingPersonaFeature                          
 POST    /internal/cortex/lda/generatePersonaFeature                                 @com.keepit.controllers.cortex.LDAController.generatePersonaFeature(version: ModelVersion[DenseLDA])
 POST    /internal/cortex/lda/savePersonaFeature                                     @com.keepit.controllers.cortex.LDAController.savePersonaFeature(version: ModelVersion[DenseLDA])
 GET     /internal/cortex/lda/evaluatePersona                                        @com.keepit.controllers.cortex.LDAController.evaluatePersona(personaId: Id[Persona], version: ModelVersion[DenseLDA])
+POST    /internal/cortex/lda/trainPersonaFeature                                    @com.keepit.controllers.cortex.LDAController.trainPersonaFeature(personaId: Id[Persona], version: ModelVersion[DenseLDA])
 
 GET     /internal/cortex/data/sparseLDAFeaturesChanged                              @com.keepit.controllers.cortex.CortexDataPipeController.getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)

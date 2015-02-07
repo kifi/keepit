@@ -149,7 +149,7 @@ class MobileSearchController @Inject() (
               "friendsTotal" -> uriSearchResult.friendsTotal,
               "othersTotal" -> uriSearchResult.othersTotal,
               "hits" -> jsHits,
-              "users" -> users
+              "keepers" -> users
             )
         }
       }

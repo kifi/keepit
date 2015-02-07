@@ -12,7 +12,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[UserPersonaRepoImpl])
 trait UserPersonaRepo extends DbRepo[UserPersona] {
-  def getByUserAndPersona(userId: Id[User], personaId: Id[Persona])(implicit session: RSession): Option[UserPersona]
+  def getByUserAndPersonaId(userId: Id[User], personaId: Id[Persona])(implicit session: RSession): Option[UserPersona]
   def getPersonasForUser(userId: Id[User])(implicit session: RSession): Seq[Persona]
   def getPersonaIdsForUser(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]]
   def getUserActivePersonas(userId: Id[User])(implicit session: RSession): UserActivePersonas
@@ -29,6 +29,8 @@ class UserPersonaRepoImpl @Inject() (
   import db.Driver.simple._
 
   type RepoImpl = UserPersonaRepoTable
+
+  implicit val personaNameMapper = MappedColumnType.base[PersonaName, String](_.value, PersonaName.apply)
 
   class UserPersonaRepoTable(tag: Tag) extends RepoTable[UserPersona](db, tag, "user_persona") {
     def userId = column[Id[User]]("user_id")
@@ -62,7 +64,7 @@ class UserPersonaRepoImpl @Inject() (
   private val getByUserAndPersonaCompiled = Compiled { (userId: Column[Id[User]], personaId: Column[Id[Persona]]) =>
     (for (r <- rows if r.userId === userId && r.personaId === personaId) yield r)
   }
-  def getByUserAndPersona(userId: Id[User], personaId: Id[Persona])(implicit session: RSession): Option[UserPersona] = {
+  def getByUserAndPersonaId(userId: Id[User], personaId: Id[Persona])(implicit session: RSession): Option[UserPersona] = {
     getByUserAndPersonaCompiled(userId, personaId).firstOption
   }
 
