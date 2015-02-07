@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 import com.keepit.common.db.Id
+import com.keepit.common.strings._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.TwitterSocialGraph
@@ -30,6 +31,28 @@ class TwitterPublishingCommander @Inject() (
           twitterSocialGraph.sendTweet(sui, message)
       }
     }
+  }
+
+  /**
+   * todo(eishay): before openning it out, should be heavily tested.
+   * 140 is twitter max msg length
+   * 20 is the urls after shortning
+   * 11 is the message overhead " kept to "...
+   * 140 - 2 * 20 - 11 = 89
+   */
+  private def keepMessage(title: String, keepUrl: String, libName: String, libUrl: String): String = {
+    val contentLength = title.length + libName.length
+    val totalLength = 20 * 2 + 11 + title.length + libName.length
+    if (20 * 2 + 11 + title.length + libName.length <= 140) {
+      s"$title $keepUrl kept to $libName $libUrl"
+    } else {
+      val overtext = 89 - (2 * 3) - contentLength //the 3 stands for the "..."
+      val maxLibName = (libName.size - overtext / 3).min(20)
+      val shortLibName = libName.abbreviate(maxLibName)
+      val shortTitle = if (title.size > 89 - shortLibName.size) title.abbreviate(89 - 3 - shortLibName.size) else title
+      s"$shortTitle $keepUrl kept to $shortLibName $libUrl"
+    }
+
   }
 
   def publishLibraryMembership(userId: Id[User], library: Library): Unit = {
