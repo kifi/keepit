@@ -74,6 +74,8 @@ left-logo-width = 92px
   vertical-align: middle
 
 search-height = 28px
+search-on-dur = .3s
+search-off-dur = .7s
 
 .kf-lih-search
   display: table
@@ -81,27 +83,45 @@ search-height = 28px
   height: search-height
   border-radius: 3px
   background-color: alpha(#fff, .1)
-  transition: background-color .7s
+  transition: background-color search-off-dur
 
   &.kf-lit
     background-color: #fff
-    transition-duration: .4s
+    transition-duration: search-on-dur
+
+search-icon-width = 15px
+search-icon-left-pad = 7px
 
 .kf-lih-search-left
   display: table-cell
   vertical-align: middle
-  padding: 0 5px
+  padding: 0 5px 0 search-icon-left-pad
+  position: relative  // for kf-lih-search-icon
   white-space: nowrap
   font-size: 0
 
 .kf-lih-search-icon
+  position: absolute
+  top: 0
+  left: search-icon-left-pad
+  width: search-icon-width
+  height: search-height
+  background-size: contain
+  background-position: center
+  background-repeat: no-repeat
+
+.kf-lih-search-icon-lit
   display: inline-block
   vertical-align: middle
-  transform: scale(.8)
-  sprite2x($search-icon-default)
+  width: search-icon-width
+  height: search-icon-width
+  background-repeat: no-repeat
+  position: relative  // to cover kf-lih-search-icon
+  transition: opacity search-on-dur
 
-  .kf-lit &
-    sprite2x($search-icon-active)
+.kf-lih-search:not(.kf-lit) .kf-lih-search-icon-lit
+  opacity: 0
+  transition-duration: search-off-dur
 
 lib-owner-img-radius = 12px
 

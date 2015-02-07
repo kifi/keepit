@@ -58,12 +58,15 @@ search-dur = .2s
 .kf-loh-center
   display: table-cell
   vertical-align: middle
+  text-align: right
 
 .kf-loh-search
-  display: table
-  width: 70%
-  height: search-height
-  border: 1px solid alpha(defaultBorderColor, .5)
+  border-width = 1px
+  display: inline-table
+  box-sizing: border-box
+  width: 220px
+  height: search-height + 2 * border-width
+  border: border-width solid alpha(defaultBorderColor, .5)
   border-radius: 3px
   background-color: transparent
   transition: width search-dur
@@ -73,22 +76,47 @@ search-dur = .2s
     border-color: defaultBorderColor
     background-color: #fff
 
+search-icon-width = 15px
+search-icon-left-pad = 7px
+
 .kf-loh-search-left
   display: table-cell
   vertical-align: middle
-  padding-left: 5px
+  padding-left: search-icon-left-pad
   white-space: nowrap
   font-size: 0
+  position: relative  // for svg-search-icon-gray
+  transition: background-color search-dur, padding-left 0s
+
+  .kf-loh-inner:not(.kf-lit) &
+    padding-left: search-icon-left-pad + search-icon-width + 1px
+    background-color: alpha(#fff, 0) !important  // overrides inline library color
+    transition-delay: 0s, search-dur
 
 .kf-loh-search-icon
+  position: absolute
+  top: 0
+  left: search-icon-left-pad
+  width: search-icon-width
+  height: search-height
+  background-position: center
+  background-repeat: no-repeat
+  background-size: contain
+
+.kf-loh-search-lib-icon
   display: inline-block
   vertical-align: middle
-  transform: scale(.8)
-  margin-right: 4px
-  sprite2x($search-icon-default)
+  width: search-icon-width
+  height: search-icon-width
+  background-repeat: no-repeat
+  background-size: contain
+  position: relative  // to overlap svg-search-icon-gray
+  transition: width 0s, opacity search-dur
 
-  .kf-lit &
-    sprite2x($search-icon-active)
+  .kf-loh-inner:not(.kf-lit) &
+    width: 0
+    opacity: 0
+    transition-delay: search-dur, 0s
 
 lib-owner-img-radius = 12px
 

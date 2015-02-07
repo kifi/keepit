@@ -1,6 +1,3 @@
-.kf-logged-in .kf-main
-  margin-top: 15px
-
 .kf-main-keeps
   padding-top: 20px
 
@@ -77,67 +74,13 @@
     background: url(/img/multi-check.png) 99px/12px 8px no-repeat #fff
     background-position: 2px 4px
 
-.kf-query-wrap
-  padding: 0 25px 12px 30px
-
-.kf-query-wrap
-  position: relative
-  white-space: nowrap
-  z-index: 1
-
-.kf-query.kf-query
-  width: 100%
-  padding: 9px 48px 9px 35px
-  border: defaultBorder
-  border-radius: 3px
-  font-size: 17px
-  font-family: inherit
-  font-weight: 300
-  font-smoothing: antialiased
-  box-sizing: border-box
-
-  &::-webkit-input-placeholder
-    color: #99a3b3
-
-  &::-moz-placeholder
-    color: #99a3b3
-
-  &:-moz-placeholder
-    color: #99a3b3
-
-  &::-ms-input-placeholder
-    color: #99a3b3
-
 input::-ms-clear
   display: none
-
-.kf-query + .kf-query-icon
-  position: absolute
-  left: 40px
-  top: 9px
-  sprite2x($search-icon-default)
-
-.kf-query:focus + .kf-query-icon
-  sprite2x($search-icon-active)
 
 .kf-search-clear-wrapper
   position: relative
   right: 50px
   font-size: 14px
-
-.kf-query-mag
-  cursor: text
-
-  &:before
-    width: 26px
-
-    .focus &
-      background-position: -26px
-
-
-.kf-query-wrap:not(.empty) .kf-query-mag
-  left: 100%
-  transition-delay: 0
 
 .kf-small-tooltip
   position: fixed
