@@ -1,0 +1,29 @@
+<div class="kf-pymk">
+  <h2 class="kf-pymk-title">People you might find interesting</h2>
+  <div class="kf-pymk-person" ng-repeat="person in people | limitTo: 3">
+    <a class="kf-pymk-image-a" href="{{person.profileUrl}}" kf-track-origin origin="pymk/pymk">
+      <img class="kf-pymk-image" ng-src="{{person.pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
+    </a>
+    <div class="kf-pymk-name">{{person.fullName}}</div>
+    <div class="kf-pymk-via">
+      {{person.via}}
+      <button class="kf-pymk-mutual" ng-if="person.numMutualFriends > 0" ng-click="showMutualFriends(person)">
+        <ng-pluralize count="person.numMutualFriends" when="{'one': '1 mutual friend', 'other': '{} mutual friends'}"></ng-pluralize>
+      </button>
+    </div>
+    <button class="kf-pymk-action" ng-click="action(person)" ng-class="{clickable: person.clickable}">{{person.actionText}}</button>
+    <button class="kf-pymk-x" ng-click="remove(person)"></button>
+  </div>
+  <a href="/invite" class="kf-pymk-invite-link">See more &#0187;</a>
+
+
+  <h2 class="kf-">Find friends on Kifi</h2>
+  <div class="kf-pmyk-connect">Connect your {{network}} account to find friends already on Kifi!</div>
+  <div>
+    <a ng-show="network === 'Facebook'" href="javascript:" class="social-connect-button facebook" ng-click="connectFacebook()">Connect</a>
+    <a ng-show="network === 'Twitter'" href="javascript:" class="social-connect-button twitter" ng-click="connectTwitter()">Connect</a>
+    <a ng-show="network === 'LinkedIn'" href="javascript:" class="social-connect-button linkedin" ng-click="connectLinkedIn()">Connect</a>
+    <a ng-show="network === 'Gmail'" href="javascript:" class="social-connect-button gmail" ng-click="importGmail()">Connect</a>
+  </div>
+  <div class="kf-pmyk-connect-other"><a href="/invite">Connect with a different service</a></div>
+</div>
