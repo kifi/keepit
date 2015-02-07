@@ -76,7 +76,7 @@ class LibraryCommander @Inject() (
     friendStatusCommander: FriendStatusCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
-    facebookPublishingCommander: FacebookPublishingCommander,
+    socialPublishingCommander: AllSocialPublishingCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -889,7 +889,7 @@ class LibraryCommander @Inject() (
             libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(currentDateTime)))
             SafeFuture {
               notifyOwnerOfNewFollower(userId, lib)
-              facebookPublishingCommander.publishLibraryMembership(userId, lib)
+              socialPublishingCommander.publishLibraryMembership(userId, lib)
             }
           case Some(mem) =>
             val maxWithExisting = (maxAccess :: mem.access :: Nil).sorted.last

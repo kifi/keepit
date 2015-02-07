@@ -15,7 +15,7 @@ import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model._
 import com.keepit.social._
 import com.ning.http.client.providers.netty.NettyResponse
-import play.api.http.Status
+import play.api.http.Status._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Play.current
 import play.api.libs.json.JsValue
@@ -63,6 +63,7 @@ trait TwitterSocialGraph extends SocialGraph {
   val networkType: SocialNetworkType = SocialNetworks.TWITTER
 
   def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse]
+  def sendTweet(socialUserInfo: SocialUserInfo, msg: String): Future[WSResponse]
 
 }
 
@@ -73,7 +74,7 @@ class TwitterSocialGraphImpl @Inject() (
     oauth1Config: OAuth1Configuration,
     twtrOAuthProvider: TwitterOAuthProvider,
     userValueRepo: UserValueRepo,
-    socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with Status with Logging {
+    socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with Logging {
 
   val providerConfig = oauth1Config.getProviderConfig(ProviderIds.Twitter.id).get
 
@@ -260,6 +261,16 @@ class TwitterSocialGraphImpl @Inject() (
       .withQueryString("user_id" -> receiverUserId.toString, "text" -> msg)
       .post(Map.empty[String, Seq[String]])
     call onComplete { tr => log.info(s"[sendDM] receiverUserId=$receiverUserId msg=$msg res=$tr") }
+    call
+  }
+
+  def sendTweet(socialUserInfo: SocialUserInfo, msg: String): Future[WSResponse] = {
+    val endpoint = "https://api.twitter.com/1.1/statuses/update.json"
+    val call = WS.url(endpoint)
+      .sign(OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo)))
+      .withQueryString("status" -> msg)
+      .post(Map.empty[String, Seq[String]])
+    call onComplete { tr => log.info(s"[sendTweet] msg=$msg res=$tr") }
     call
   }
 
