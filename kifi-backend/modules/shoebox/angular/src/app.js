@@ -122,6 +122,17 @@ angular.module('kifi', [
       $scope.libraryMenu = {
         visible: false
       };
+
+      $scope.libraryMenuHelp = {
+        visible: false
+      };
+
+      if (false) {  // Needs condition from backend.
+        $timeout(function () {
+          $scope.libraryMenuHelp.visible = true;
+        }, 2000);
+      }
+
     }
 
     start();
