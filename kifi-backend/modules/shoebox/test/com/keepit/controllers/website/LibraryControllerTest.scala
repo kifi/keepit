@@ -513,6 +513,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   "id":"${pubId3.id}",
                   "name":"lib3",
                   "slug":"lib3",
+                  "visibility":"secret",
                   "owner":{
                     "id":"${basicUser2.externalId.id}",
                     "firstName":"second",

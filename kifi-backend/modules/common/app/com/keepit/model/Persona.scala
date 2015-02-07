@@ -97,21 +97,21 @@ object PersonaName {
   )
 
   val personaLibraryNames: Map[PersonaName, String] = Map(
-    DEVELOPER -> "Programming",
-    TECHIE -> "Computer and Electronics",
-    ENTREPRENEUR -> "Startups and Entrepreneurship",
-    ARTIST -> "Design, Photography and Visual Arts",
-    FOODIE -> "Food and Cooking",
-    SCIENCE_BUFF -> "Science!!",
-    FASHIONISTA -> "Fashion",
-    HEALTH_NUT -> "Health and Fitness",
+    DEVELOPER -> "Developer Resources",
+    TECHIE -> "Techie Picks",
+    ENTREPRENEUR -> "Entrepreneurial Articles",
+    ARTIST -> "Artistic Ideas",
+    FOODIE -> "Favorite Foods",
+    SCIENCE_BUFF -> "Scientific Picks",
+    FASHIONISTA -> "Fabulous Fashion",
+    HEALTH_NUT -> "Healthy Habits",
     STUDENT -> "Student Resources",
-    INVESTOR -> "Finance",
-    TRAVELER -> "Traveling Resources",
-    GAMER -> "Gaming",
-    PARENT -> "Parenting",
-    ANIMAL_LOVER -> "Pets and Animals",
-    DEEP_THINKER -> "Interesting Reads"
+    INVESTOR -> "Investing Ideas",
+    TRAVELER -> "Travel Tips",
+    GAMER -> "Gaming News",
+    PARENT -> "Parenting Gems",
+    ANIMAL_LOVER -> "Animal Antics",
+    DEEP_THINKER -> "Deep Thoughts"
   )
 
   val personaKeeps: Map[PersonaName, PersonaKeep] = Map() // todo (aaron, ashley): pick out a default keep for each persona
