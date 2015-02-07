@@ -242,7 +242,7 @@ class WebsiteSearchController @Inject() (
               "othersTotal" -> uriSearchResult.othersTotal,
               "hits" -> hits,
               "libraries" -> librariesJson,
-              "users" -> users
+              "keepers" -> users
             )
         }
       }

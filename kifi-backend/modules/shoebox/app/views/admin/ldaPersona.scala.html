@@ -8,8 +8,8 @@
     <div>
       <h3>Define Persona Feature Vector</h3>
       <form id = "define_persona">
-        <input id = "dp_pid" type = "text" value = "persona id">
-        <input id = "dp_tids" type = "text" value = "topic ids, seperated by comma">
+        <input id = "dp_pid" type = "text" value = "">&nbsp persona Id<br>
+        <input id = "dp_tids" type = "text" value = "">&nbsp topic ids, seperated by comma<br>
         <button type = "submit">submit</button>
       </form>
     </div>
@@ -20,9 +20,13 @@
     <div>
       <h3>Test Persona Feature Vector and Gradient Descent Learning</h3>
       <form id = "test_persona">
-        <input id = "tp_pid" type = "text" value = "persona id">
+        persona Id <input id = "tp_pid" type = "text" value = "">
         <button type = "submit">submit</button>
       </form>
+
+      <p id = "tp_wait"></p>
+      <p id = "feedback_sumbit"></p>
+
     </div>
 
     <table id = "persona_test_table" class = "table table-bordered">
@@ -43,9 +47,24 @@
 
     $(document).ready(function(){
 
+      $.postJson = function (uri, data, done) {
+        return $.ajax({
+          url: uri,
+          type: 'POST',
+          dataType: 'json',
+          data: JSON.stringify(data),
+          contentType: 'application/json',
+          success: done || $.noop
+        });
+      };
+
+
+
 
       $("#define_persona").submit(function(event){
         event.preventDefault();
+
+        $("#dp_result").empty().prepend('generating feature vectors ... be patient')
 
         $.post('@com.keepit.controllers.admin.routes.AdminLDAController.generateLDAPersonaFeature',
           {personaId: $('#dp_pid').val(), topicIds: $('#dp_tids').val(), version: @version}
@@ -63,10 +82,14 @@
       $("#test_persona").submit(function(event){
         event.preventDefault();
 
+        $("#tp_wait").empty().prepend('sampling uris across all topics to score and rank. please wait...')
+
         $.post('@com.keepit.controllers.admin.routes.AdminLDAController.evaluatePersona', {personaId: $('#tp_pid').val(), version: @version}
         ).done(done).fail(fail);
 
         function done(data) {
+          $("#tp_wait").empty().prepend('showing results for persona: ' + data.persona)
+          $("#feedback_sumbit").empty()
           $("#persona_test_table > tbody").empty()
 
           var uids = data.uids
@@ -76,16 +99,22 @@
 
           for(var i = 0; i < n; i++){
             var robj = $("<tr>");
+            var link = '<a href = "/admin/scraped/-1">'.replace(-1, uids[i]) +  titles[i] + '</a>'
+
+            var buttons = '<td> <form class = "fb_forms" action="">' + '<input type="radio" name = "feedback" value="good"> good &nbsp' + '<input type="radio" name = "feedback" value="bad" > bad &nbsp' + '<input type="radio" name = "feedback" value="whatever" checked> neutral' + '</form></td>';
 
             robj
             .append("<td class = \"ids\" >" + uids[i] + "</td>")
-            .append("<td>" + titles[i] + "</td>")
+            .append("<td>" + link + "</td>")
             .append("<td>" + scores[i] + "</td>")
-            .append("<td>" + "fake_feedback_button" + "</td>");
+            .append(buttons);
 
 
             $("#persona_test_table").append(robj);
           }
+
+          $("#feedback_sumbit").empty().append(
+            '<form id = "test_persona_feedback">Learning Rate<input id = "rate" value = "0.05"/><button type = "submit">submit feedback</button></form>');
 
         }
 
@@ -95,6 +124,45 @@
 
       });
 
+
+
+      $("#feedback_sumbit").submit(function(event){
+        event.preventDefault();
+
+        var forms = $(".fb_forms")
+        var ids = $(".ids")
+        var n = forms.length
+        var fbs = []
+        var uriIds = []
+
+        for(i = 0 ; i < n; i++){
+          uriIds[i] = $(ids[i]).text()
+          var radios = forms[i].elements
+          if (radios[0].checked){
+            fbs.push(1);
+          } else if (radios[1].checked){
+            fbs.push(-1);
+          } else{
+            fbs.push(0);
+          }
+        }
+
+        console.log(fbs)
+        console.log(uriIds)
+
+        $.postJson('@com.keepit.controllers.admin.routes.AdminLDAController.personaFeatureTraining',
+        {uids: uriIds, feedbacks: fbs, personaId: $('#tp_pid').val(), version: @version, rate: $('#rate').val()}
+        ).done(done).fail(fail);
+
+        function done(data){
+          $("#persona_test_table > tbody").empty()
+          $("#feedback_sumbit").empty().append("Thanks! Feedback sumbitted.")
+        }
+        function fail() { alert("bad things happened") }
+
+
+
+      });
 
 
 

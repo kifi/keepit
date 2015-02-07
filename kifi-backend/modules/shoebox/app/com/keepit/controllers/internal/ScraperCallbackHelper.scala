@@ -3,7 +3,7 @@ package com.keepit.controllers.internal
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.net.URI
-import com.keepit.common.time._
+import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.scraper.{ ScraperSchedulerConfig, ScrapeRequest }
 import com.keepit.common.db.Id
@@ -12,6 +12,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.performance.{ timing, timingWithResult }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.core._
 
 import scala.concurrent.Future
 
@@ -24,21 +25,27 @@ class ScraperCallbackHelper @Inject() (
     pageInfoRepo: PageInfoRepo,
     imageInfoRepo: ImageInfoRepo,
     scrapeInfoRepo: ScrapeInfoRepo,
-    implicit val scraperConfig: ScraperSchedulerConfig) extends Logging {
+    implicit val scraperConfig: ScraperSchedulerConfig,
+    integrityHelpers: UriIntegrityHelpers) extends Logging {
 
-  private val assignLock = new ReactiveLock(1)
+  private[this] val assignLock = new ReactiveLock(1)
+
+  private[this] var averageNumberOfTasks = 0.0 // an exponential moving average of the number of tasks assigned to a scraper instance
+  private[this] val alpha = 0.3
+  private[this] val growth = 2
 
   def assignTasks(zkId: Id[ScraperWorker], max: Int): Future[Seq[ScrapeRequest]] = timing(s"assignTasks($zkId,$max)") {
+    val targetNumOfTasks = math.min(max, averageNumberOfTasks.toInt + growth)
     val rules = db.readOnlyMaster { implicit s => urlPatternRules.rules() }
     val requests: Future[Seq[ScrapeRequest]] = assignLock.withLock {
       val res = db.readWrite(attempts = 1) { implicit rw =>
         val builder = Seq.newBuilder[ScrapeRequest]
-        val limit = if (max < 10) max * 2 else max
+        val limit = if (targetNumOfTasks < 10) targetNumOfTasks * 2 else targetNumOfTasks
         val overdues = timingWithResult[Seq[ScrapeInfo]](s"assignTasks($zkId,$max) getOverdueList($limit)", { r: Seq[ScrapeInfo] => s"${r.length} overdues: ${r.map(_.toShortString).mkString(",")}" }) {
           scrapeInfoRepo.getOverdueList(limit)
         }
         var count = 0
-        for (info <- overdues if count < max) {
+        for (info <- overdues if count < targetNumOfTasks) {
           val nuri = normUriRepo.get(info.uriId)
           if (URI.parse(nuri.url).isFailure) {
             scrapeInfoRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
@@ -67,6 +74,7 @@ class ScraperCallbackHelper @Inject() (
       }
       val limit = res.take(max)
       statsd.gauge("scraper.assign", limit.length)
+      synchronized { averageNumberOfTasks = (alpha * limit.length.toDouble) + ((1 - alpha) * averageNumberOfTasks) }
       limit
     }
     requests
@@ -75,7 +83,7 @@ class ScraperCallbackHelper @Inject() (
   def saveNormalizedURI(normalizedUri: NormalizedURI): NormalizedURI = {
     log.info(s"scraper callback: save uri: ${normalizedUri.id.get}")
     db.readWrite(attempts = 1) { implicit s =>
-      normUriRepo.save(normalizedUri)
+      normUriRepo.save(normalizedUri) tap integrityHelpers.improveKeepsSafely
     }
   }
 }

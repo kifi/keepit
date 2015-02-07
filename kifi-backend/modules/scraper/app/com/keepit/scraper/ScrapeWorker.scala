@@ -104,34 +104,23 @@ class ScrapeWorkerImpl @Inject() (
       case None =>
     }
   }
-  private val shortenedUrls = Set("bit.ly", "goo.gl", "owl.ly", "deck.ly", "su.pr", "lnk.co", "fur.ly", "ow.ly", "owl.ly", "tinyurl.com", "is.gd", "v.gd", "t.co", "linkd.in", "urls.im", "tnw.to", "instagr.am", "spr.ly", "nyp.st", "rww.to", "itun.es", "youtu.be", "spoti.fi", "j.mp", "amzn.to", "lnkd.in", "rww.to", "trib.al", "fb.me", "buff.ly")
+
   private def handleSuccessfulScraped(latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo, pageInfoOpt: Option[PageInfo]): Future[Option[Article]] = {
 
     // This is bad. This whole function could likely be replaced with one call to shoebox signaling that a
     // scrape has happened. Excellent cleanup task for anyone learning scraper architecture.
 
     @inline def postProcess(scrapedURI: NormalizedURI, article: Article, signature: Signature): Future[Option[String]] = {
-      shoeboxCommander.getBookmarksByUriWithoutTitle(scrapedURI.id.get) flatMap { bookmarks =>
-        // Update bookmarks that have an empty title. For links that are clearly shortened URLs, fix them.
-        val updatedBookmarks = bookmarks.map { bookmark =>
-          val isShortenedUrl = URI.parse(bookmark.url).toOption.flatMap(_.host.map(_.name)).exists(shortenedUrls.contains)
-          val updatedBookmark = if (isShortenedUrl) {
-            bookmark.copy(title = scrapedURI.title, url = scrapedURI.url)
-          } else {
-            bookmark.copy(title = scrapedURI.title)
-          }
-          shoeboxCommander.saveBookmark(updatedBookmark)
-        }
-        Future.sequence(updatedBookmarks) flatMap { updatedBookmarks =>
-          article.canonicalUrl.fold(Future.successful())(recordScrapedNormalization(latestUri, signature, _, article.alternateUrls)) flatMap { _ =>
-            scrapedURI.id.fold(Future.successful[Option[String]](None))(id => shoeboxScraperClient.getUriImage(id))
-          }
-        }
+      article.canonicalUrl.fold(Future.successful())(recordScrapedNormalization(latestUri, signature, _, article.alternateUrls)) flatMap { _ =>
+        scrapedURI.id.fold(Future.successful[Option[String]](None))(id => shoeboxScraperClient.getUriImage(id))
       }
     }
+
     val Scraped(article, signature, redirects) = scraped
 
     processRedirects(latestUri, redirects) flatMap { updatedUri =>
+      // article.title
+      // article.destinationUrl
       if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) {
         shoeboxCommander.saveScrapeInfo(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE)) map { _ => None }
       } else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
@@ -345,28 +334,32 @@ class ScrapeWorkerImpl @Inject() (
 
   // Watch out: the NormalizedURI may come back as REDIRECTED
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
-    @inline def resolve(permanentsRedirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
-      HttpRedirect.resolvePermanentRedirects(uri.url, permanentsRedirects).map { absoluteDestination =>
-        val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, uri.url, absoluteDestination)
+    @inline def resolveAndRecord(redirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
+      val unrestrictedUri = removeRedirectRestriction(uri)
+      HttpRedirect.resolve(uri.url, redirects).map { absoluteDestination =>
+        val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, unrestrictedUri.url, absoluteDestination)
         log.debug(s"Found permanent $validRedirect for $uri")
-        shoeboxCommander.recordPermanentRedirect(removeRedirectRestriction(uri), validRedirect)
+        shoeboxCommander.recordPermanentRedirect(unrestrictedUri, validRedirect)
       } getOrElse {
-        permanentsRedirects.headOption.foreach(relative301 => log.warn(s"Ignoring relative permanent $relative301 for $uri"))
-        Future.successful(removeRedirectRestriction(uri))
+        redirects.headOption.foreach(relativeRedirect => log.warn(s"Ignoring relative redirect $relativeRedirect for $uri"))
+        Future.successful(unrestrictedUri)
       }
     }
 
-    val filtered = redirects.dropWhile(!_.isLocatedAt(uri.url))
+    val relevantRedirects = redirects.dropWhile(!_.isLocatedAt(uri.url))
 
-    filtered.headOption match {
-      case Some(redirect) if !redirect.isPermanent =>
-        Future.successful(updateRedirectRestriction(uri, redirect))
-      case Some(redirect) =>
+    relevantRedirects.headOption match {
+      case Some(redirect) if redirect.isShortener => resolveAndRecord(relevantRedirects)
+      case Some(redirect) if redirect.isPermanent =>
         hasFishy301(uri) flatMap { isFishy =>
           if (isFishy) {
             Future.successful(updateRedirectRestriction(uri, redirect))
-          } else resolve(filtered)
+          } else resolveAndRecord(relevantRedirects)
         }
+
+      case Some(temporaryRedirect) =>
+        Future.successful(updateRedirectRestriction(uri, temporaryRedirect))
+
       case None => // no redirects
         Future.successful(uri)
     }

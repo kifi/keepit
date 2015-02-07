@@ -34,7 +34,7 @@ import com.keepit.social.providers.ProviderController
 import securesocial.core.providers.utils.RoutesHelper
 
 import scala.concurrent.Future
-import scala.util.Random
+import scala.util.{ Try, Random }
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -130,6 +130,10 @@ class AuthController @Inject() (
   // Logout is still handled by SecureSocial directly.
 
   def loginSocial(provider: String, close: Boolean) = MaybeUserAction { implicit request =>
+    Try { //making sure no way it will hurt login
+      val userOpt = request.userIdOpt
+      log.info(s"[login social] with $provider, (c=$close) user $userOpt")
+    }
     var res = handleAuth(provider)
     if (close && res.header.status == 303) {
       authHelper.transformResult(res) { (_, session: Session) =>

@@ -8,5 +8,6 @@ case class DataIntegrityModule() extends ScalaModule {
   def configure {
     bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
     bind[UriIntegrityPlugin].to[UriIntegrityPluginImpl].in[AppScoped]
+    bind[ScrapeInfoIntegrityPlugin].to[ScrapeInfoIntegrityPluginImpl].in[AppScoped]
   }
 }

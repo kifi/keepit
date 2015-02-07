@@ -17,6 +17,7 @@ case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination
   def isPermanent: Boolean = (statusCode == MOVED_PERMANENTLY)
   def isAbsolute: Boolean = URI.isAbsolute(currentLocation) && URI.isAbsolute(newDestination)
   def isLocatedAt(url: String): Boolean = (currentLocation == url)
+  def isShortener: Boolean = HttpRedirect.isShortenedUrl(currentLocation)
 }
 
 object HttpRedirect {
@@ -41,13 +42,14 @@ object HttpRedirect {
     (__ \ 'newDestination).format[String]
   )(HttpRedirect.apply _, unlift(HttpRedirect.unapply))
 
-  def resolvePermanentRedirects(origin: String, redirects: Seq[HttpRedirect]): Option[String] = {
+  def resolve(origin: String, redirects: Seq[HttpRedirect]): Option[String] = {
     var absoluteDestination = origin
     var currentLocation = origin
-    redirects.takeWhile(_.isPermanent).foreach {
-      case permanentRedirect =>
-        if (permanentRedirect.isLocatedAt(currentLocation)) {
-          currentLocation = permanentRedirect.newDestination
+    val relevantRedirects = redirects.takeWhile(redirect => redirect.isPermanent || redirect.isShortener)
+    relevantRedirects.foreach {
+      case redirect =>
+        if (redirect.isLocatedAt(currentLocation)) {
+          currentLocation = redirect.newDestination
           if (URI.isAbsolute(currentLocation)) {
             absoluteDestination = currentLocation
           }
@@ -55,4 +57,6 @@ object HttpRedirect {
     }
     if (origin != absoluteDestination) Some(absoluteDestination) else None
   }
+
+  def isShortenedUrl(url: String) = URI.parse(url).toOption.flatMap(_.host.map(_.name)).exists(ShortenedUrls.domains.contains)
 }

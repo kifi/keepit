@@ -10,7 +10,7 @@ import com.keepit.scraper._
 import play.api.Mode._
 import play.api._
 import com.keepit.social.SocialGraphPlugin
-import com.keepit.integrity.{ UriIntegrityPlugin, DataIntegrityPlugin }
+import com.keepit.integrity.{ ScrapeInfoIntegrityPlugin, UriIntegrityPlugin, DataIntegrityPlugin }
 import com.keepit.common.integration.AutogenReaperPlugin
 import com.keepit.normalizer.NormalizationUpdaterPlugin
 import com.keepit.common.concurrent.ForkJoinExecContextPlugin
@@ -46,6 +46,7 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[GeckoboardReporterPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[UriIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[ScrapeInfoIntegrityPlugin] != null) //make sure its not lazy loaded
 
     // DB sequencing plugins
     require(injector.instance[ImageInfoSequencingPlugin] != null) //make sure its not lazy loaded
