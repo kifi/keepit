@@ -21,7 +21,7 @@ class FacebookPublishingCommander @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
     httpClient: HttpClient,
-    airbrake: AirbrakeNotifier) extends Logging {
+    airbrake: AirbrakeNotifier) extends SocialPublishingCommander with Logging {
 
   private val facebookNameSpace = PublicPageMetaTags.facebookNameSpace
   private val facebookJoinAction = "join"
