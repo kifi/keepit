@@ -47,7 +47,7 @@ class TwitterPublishingCommander @Inject() (
     val contentLength = title.length + libName.length
     val totalLength = 20 * 2 + 20 + title.length + libName.length
     if (20 * 2 + 20 + title.length + libName.length <= 140) {
-      s"$title $keepUrl kept to $libName $libUrl"
+      s"$title $keepUrl kept to $libName $libUrl via @kifi"
     } else {
       val overtext = 79 - (2 * 3) - contentLength //the 3 stands for the "..."
       val maxLibName = (libName.size - overtext / 3).min(20)
