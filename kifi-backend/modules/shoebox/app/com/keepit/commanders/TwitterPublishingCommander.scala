@@ -40,20 +40,20 @@ class TwitterPublishingCommander @Inject() (
    * todo(eishay): before openning it out, should be heavily tested.
    * 140 is twitter max msg length
    * 20 is the urls after shortning
-   * 19 is the message overhead " kept to by @kifi"...
-   * 140 - 2 * 20 - 19 = 80
+   * 20 is the message overhead " kept to via @kifi"...
+   * 140 - 2 * 20 - 20 = 79
    */
   private def keepMessage(title: String, keepUrl: String, libName: String, libUrl: String): String = {
     val contentLength = title.length + libName.length
-    val totalLength = 20 * 2 + 19 + title.length + libName.length
-    if (20 * 2 + 19 + title.length + libName.length <= 140) {
+    val totalLength = 20 * 2 + 20 + title.length + libName.length
+    if (20 * 2 + 20 + title.length + libName.length <= 140) {
       s"$title $keepUrl kept to $libName $libUrl"
     } else {
-      val overtext = 80 - (2 * 3) - contentLength //the 3 stands for the "..."
+      val overtext = 79 - (2 * 3) - contentLength //the 3 stands for the "..."
       val maxLibName = (libName.size - overtext / 3).min(20)
       val shortLibName = libName.abbreviate(maxLibName)
-      val shortTitle = if (title.size > 80 - shortLibName.size) title.abbreviate(80 - 3 - shortLibName.size) else title
-      s"$shortTitle $keepUrl kept to $shortLibName $libUrl"
+      val shortTitle = if (title.size > 79 - shortLibName.size) title.abbreviate(79 - 3 - shortLibName.size) else title
+      s"$shortTitle $keepUrl kept to $shortLibName $libUrl via @kifi"
     }
 
   }
