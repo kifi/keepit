@@ -271,7 +271,9 @@ class KeepsCommander @Inject() (
     }
     val (keep, isNewKeep) = keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId).get
     SafeFuture {
-      if (isNewKeep) socialPublishingCommander.publishKeep(userId, keep, library)
+      if (isNewKeep) {
+        socialPublishingCommander.publishKeep(userId, keep, library)
+      }
       searchClient.updateKeepIndex()
       curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
     }

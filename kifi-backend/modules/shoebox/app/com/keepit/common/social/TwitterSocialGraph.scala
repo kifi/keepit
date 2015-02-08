@@ -270,7 +270,8 @@ class TwitterSocialGraphImpl @Inject() (
       .sign(OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo)))
       .withQueryString("status" -> msg)
       .post(Map.empty[String, Seq[String]])
-    call onComplete { tr => log.info(s"[sendTweet] msg=$msg res=$tr") }
+    call.onSuccess { case tr => log.info(s"[sendTweet] sent msg=$msg res=$tr") }
+    call.onFailure { case ex => airbrake.notify(s"[sendTweet] fail msg=$msg", ex) }
     call
   }
 
