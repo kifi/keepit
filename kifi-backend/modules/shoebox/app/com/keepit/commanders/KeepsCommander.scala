@@ -270,13 +270,7 @@ class KeepsCommander @Inject() (
       libraryRepo.get(libraryId)
     }
     val (keep, isNewKeep) = keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId).get
-    SafeFuture {
-      if (isNewKeep) {
-        socialPublishingCommander.publishKeep(userId, keep, library)
-      }
-      searchClient.updateKeepIndex()
-      curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
-    }
+    postSingleKeepReporting(keep, isNewKeep, library)
     (keep, isNewKeep)
   }
 
@@ -595,7 +589,7 @@ class KeepsCommander @Inject() (
     }
     keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId = None) match {
       case Failure(e) => Left(e.getMessage)
-      case Success((keep, _)) =>
+      case Success((keep, isNewKeep)) =>
         val tags = db.readWrite { implicit s =>
           val selectedTagIds = selectedTagNames.map { getOrCreateTag(userId, _).id.get }
           val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
@@ -617,8 +611,17 @@ class KeepsCommander @Inject() (
           curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
           keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
         }
+        postSingleKeepReporting(keep, isNewKeep, library)
         Right((keep, tags))
     }
+  }
+
+  private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library): Unit = SafeFuture {
+    if (isNewKeep) {
+      socialPublishingCommander.publishKeep(keep.userId, keep, library)
+    }
+    searchClient.updateKeepIndex()
+    curator.updateUriRecommendationFeedback(keep.userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
   }
 
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
