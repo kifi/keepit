@@ -1,20 +1,29 @@
+section-padding = 10px 16px
+section-border = defaultBorder
+section-border-radius = 10px
+
 .kf-pymk
-  border: defaultBorder
-  border-radius: 10px
+  line-height: 14px
+  font-size: 12px
+
+.kf-pymk-top
+  border-radius: section-border-radius section-border-radius 0 0
+  border: section-border
+  padding: section-padding
   background: #fff
-  padding: 10px 16px
 
 .kf-pymk-title
   font-size: 15px
-  margin-bottom: 10px
+  padding: 6px 0 16px
 
 .kf-pymk-person
   height: 32px
   position: relative
-  margin-bottom: 4px
-  line-height: 12px
-  font-size: 12px
+  margin-bottom: 12px
   padding: 5px 0
+
+  &:last-child
+    margin-bottom: 0
 
 .kf-pymk-image-a
   float: left
@@ -22,7 +31,7 @@
   height: 32px
   border-radius: 50%
   position: relative
-  margin-right: 8px
+  margin-right: 10px
 
   &::after
     content: ''
@@ -41,14 +50,14 @@
 
 .kf-pymk-name
   width: 120px
-  padding-top: 3px
+  padding-top: 2px
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
 
 .kf-pymk-via
   display: block
-  margin-top: 3px
+  margin-top: 1px
   font-size: 11px
   text-overflow: ellipsis
   max-width: 120px
@@ -60,6 +69,7 @@
   padding: 0
   background: transparent
   color: linkBlueColor
+  font-smoothing: antialiased
 
   &:hover
     text-decoration: underline
@@ -87,8 +97,8 @@
   radius = 6px
   bg-color = #c00
   position: absolute
-  top: 5px
-  right: -5px
+  top: 6px
+  right: -(radius)
   height: 2 * radius
   width: 2 * radius
   border: none
@@ -101,6 +111,7 @@
     display: none
 
   &:hover
+    transform: scale(1.2)
     background-color: lighten(bg-color, 10%)
 
   &:hover:active
@@ -122,73 +133,93 @@
   &::after
     transform: translate(radius) rotate(-45deg) scale(.5, 1)
 
-.kf-pymk-invite-link
-  float: right
-  margin: 5px 6px 0 0
-  color: linkBlueColor
+// .kf-pymk-invite-link
+//   float: right
+//   margin-top: -4px
+//   color: linkBlueColor
+//   font-size: 11px
 
+.kf-pymk-bottom
+  clear: both
+  border-radius: 0 0 section-border-radius section-border-radius
+  border: defaultBorder
+  border-top: none
+  padding: section-padding
+  background-color: #f3fAf2
 
-
-
-
-
-
-
-
-.kf-pmyk-connect
+.kf-pymk-connect
   margin-bottom: 15px
   color: #555
   line-height: 1.2
 
-.kf-pmyk-connect-other
-  margin-top: 15px
-  a
-    color: linkBlueColor
+.kf-pymk-network-btn
+  width: 100%
+  border: none
+  padding: 0
+  background-color: transparent
+  text-align: left
 
-a.social-connect-button:hover,
-a.social-connect-button:active
-  text-decoration: none
+.kf-pymk-network-icon
+  float: left
+  width: 32px
+  height: 32px
+  border-radius: 50%
+  margin-right: 10px
 
-.social-connect-button
-  position: relative
-  width: 85px
-  border-radius: 5px
-  padding: 10px 35px 10px 65px
-  font-size: 14px
-  color: white
+  &.svg-facebook-white
+    background-color: #597ab1
 
-  &.facebook
-    background-color: #597AB1
+  &.svg-twitter-white
+    background-color: #55acee
 
   &.linkedin
     background-color: #2786C4
 
   &.gmail
-    background-color: #E36767
+    background-color: #e36767
 
-  &.twitter
-    background-color: #55acee
+.kf-pymk-network-1
+  display: block
+  padding-top: 2px  // like kf-pymk-name
 
-.social-connect-button::before
-  position: absolute
-  top: 0
-  left: 0
-  width: 35px
-  height: 100%
-  background-image: url(/img/networks2.png)
-  background-size: auto 35px;
-  background-color: rgba(0, 0, 0, 0.1)
-  display: inline-block
-  content: ''
+.kf-pymk-network-2
+  display: block
+  margin-top: 1px  // like kf-pymk-via
+  color: #858e92
+  font-size: 11px
+  font-smoothing: antialiased
 
-.social-connect-button.twitter::before
-  background-image: url(/img/svg/twitter-icon.svg) // more ideal if was in networks2.png
-  background-size: 20px
-  background-repeat: no-repeat
-  background-position: 8px 11px
+  :hover>&
+    color: linkBlueColor
+    text-decoration: underline
 
-.social-connect-button.linkedin::before
-  background-position: -35px 0px
+// .social-connect-button::before
+//   position: absolute
+//   top: 0
+//   left: 0
+//   width: 35px
+//   height: 100%
+//   background-image: url(/img/networks2.png)
+//   background-size: auto 35px;
+//   background-color: rgba(0, 0, 0, 0.1)
+//   display: inline-block
+//   content: ''
 
-.social-connect-button.gmail::before
-  background-position: -140px 0px
+// .social-connect-button.twitter::before
+//   background-image: url(/img/svg/twitter-icon.svg) // more ideal if was in networks2.png
+//   background-size: 20px
+//   background-repeat: no-repeat
+//   background-position: 8px 11px
+
+.kf-pymk-network-other
+  margin-top: 10px
+  border-top: 1px solid #dfe0e5
+  padding-top: 10px
+
+.kf-pymk-network-other-a
+  color: #858e92
+  font-size: 11px
+
+  &:hover
+    color: linkBlueColor
+    text-decoration: underline

@@ -111,30 +111,30 @@ angular.module('kifi')
         };
 
 
+        //
+        // Address Books / Networks
+        //
+
+        scope.connect = function (network) {
+          socialService[{fb: 'connectFacebook', tw: 'connectTwitter', li: 'connectLinkedIn', gm: 'importGmail'}[network]]();
+        };
+
         function getEligibleNetworksCsv() {
           var onTwitterExperiment = _.indexOf(profileService.me.experiments, 'twitter_beta') > -1;
           return _.compact([
-            socialService.facebook && socialService.facebook.profileUrl ? null : 'Facebook',
-            !onTwitterExperiment || (socialService.twitter && socialService.twitter.profileUrl) ? null : 'Twitter',
-            socialService.linkedin && socialService.linkedin.profileUrl ? null : 'LinkedIn',
-            socialService.gmail && socialService.gmail.length ? null : 'Gmail'
+            socialService.facebook && socialService.facebook.profileUrl ? null : 'fb',
+            !onTwitterExperiment || (socialService.twitter && socialService.twitter.profileUrl) ? null : 'tw',
+            socialService.linkedin && socialService.linkedin.profileUrl ? null : 'li',
+            socialService.gmail && socialService.gmail.length ? null : 'gm'
           ]).join(',');
         }
-
-        function chooseNetwork(csv) {
-          scope.network = csv ? _.sample(csv.split(',')) : null;
-        }
-
-        scope.connectFacebook = socialService.connectFacebook;
-        scope.connectTwitter = socialService.connectTwitter;
-        scope.connectLinkedIn = socialService.connectLinkedIn;
-        scope.importGmail = socialService.importGmail;
-
 
         //
         // Watches and listeners
         //
-        scope.$watch(getEligibleNetworksCsv, chooseNetwork);
+        scope.$watch(getEligibleNetworksCsv, function (csv) {
+          scope.network = csv ? _.sample(csv.split(',')) : null;
+        });
 
         //
         // Initialization
