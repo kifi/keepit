@@ -7,6 +7,7 @@ angular.module('kifi')
   function ($http, $q, routeService, Clutch) {
     var rawRecos = [];
     var rawPopularRecos = [];
+    var uriContext, libContext;
 
     var clutchParamsRecos = {
       cacheDuration: 2000
@@ -15,15 +16,20 @@ angular.module('kifi')
     var kifiRecommendationService = new Clutch(function (opts) {
       var recoOpts = {
         more: (!opts || opts.more === undefined) ? false : opts.more,
-        recency: opts && angular.isNumber(opts.recency) ? opts.recency : 0.75
+        recency: opts && angular.isNumber(opts.recency) ? opts.recency : 0.75,
+        uriContext: uriContext,
+        libContext: libContext
       };
 
-      return $http.get(routeService.recos(recoOpts)).then(function (res) {
+      return $http.get(routeService.recos2(recoOpts)).then(function (res) {
+      //return $http.get(routeService.recos(recoOpts)).then(function (res) { //old recos endpoint
         if (res && res.data) {
           // Save recommendation data from the backend so we don't have to
           // fetch them again on Angular route reload of recommendations.
-          rawRecos = res.data;
-          return res.data;
+          rawRecos = res.data.recos;
+          uriContext = res.data.uctx;
+          libContext = res.data.lctx;
+          return res.data.recos;
         }
       });
     }, clutchParamsRecos);

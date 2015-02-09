@@ -115,6 +115,12 @@ angular.module('kifi')
       recos: function (opts) {
         return route('/recos/top?more=' + opts.more + '&recency=' + opts.recency);
       },
+      recos2: function (opts) {
+        var recosRoute = '/recos/topV2?more=' + opts.more + '&recency=' + opts.recency;
+        recosRoute += opts.uriContext ? '&uriContext=' + opts.uriContext : '';
+        recosRoute += opts.libContext ? '&libContext=' + opts.libContext : '';
+        return route(recosRoute);
+      },
       recosPublic: function () {
         return route('/recos/public');
       },
