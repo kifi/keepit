@@ -1,29 +1,24 @@
+.kf-lh-wrapper
+  background: #fff
+
 .kf-lh
-  margin-bottom: 10px
+  margin: 0 auto
+  max-width: appMaxWidth
 
-  .kf-logged-out &
-    margin-bottom: 0
-    background-color: #fff
-
-lh-side-pad = 30px
 lh-cover-image-dur = .6s
 
 .kf-lh-color
   height: 3px
-  margin-top: -10px
 
   .kf-loaded &
-    transition: transform, margin
+    transition: height
     transition-duration: lh-cover-image-dur
 
   &.kf-above-image
-    transform: scale(1,2)
-    transform-origin: center bottom
-    margin: 0 (-(lh-side-pad))
+    height: 6px
 
 .kf-lh-cover-image
   height: 210px
-  margin: 0 (-(lh-side-pad))
   background-color: #eee
   background-size: cover
   position: relative
@@ -300,158 +295,12 @@ cover-image-adjust-right = 24px
   width: 0
   overflow: hidden
 
-// For library cards that are displayed when there
-// is no logged in user.
-.kf-logged-out .kf-lh-card
-  border: none
-  margin: 0 auto
-  padding-bottom: 20px
-  width: 745px
-  max-height: 5000px
-  transition: max-height 0.3s ease
-  box-shadow: none
-  box-sizing: border-box
-
-  .kf-lh-body
-  .kf-lh-name-wrap-2
-    max-height: 5000px
-    transition: max-height 0.3s ease
-
-  .kf-lh-name-wrap-1
-    width: 100%
-    height: auto
-    max-height: 5000px
-    padding-top: 20px
-    transition: opacity 0.3s ease, max-height 0.3s ease
-
-  .kf-lh-name
-    text-align: center
-    display: inline-block
-    width: calc(100% - 30px)
-    font-size: 42px
-    line-height: 1.23em
-    font-weight: bold
-    vertical-align: middle
-    font-family: Merriweather, Lato, Helvetica, Arial, sans-serif
-
-  .kf-lh-info
-    margin: 30px 40px 0
-
-    .kf-loaded &
-      transition: margin-top 0.3s ease
-
-  .kf-lh-owner
-    white-space: nowrap
-    position: relative
-    left: 0
-    transition: left 0.3s ease
-
-  .kf-lh-search
-    transition: right 0.3s ease
-
-  .kf-lh-search-input
-    padding-left: 30px
-    transition: width 0.3s ease
-
-  .kf-lh-search-icon
-    position: absolute
-    top: 7px
-    left: 8px
-    width: 20px
-    display: block
-
-  .dialog-x
-    display: none
-
-  .kf-lh-desc-wrap
-  .kf-lh-stats-line
-  .kf-lh-buttons
-    max-height: 5000px
-    transition: opacity 0.3s ease, max-height 0.3s ease, visibility 0.3s ease
-
-  .kf-lh-follow-btn-searching
-    position: fixed
-    top: -100px
-    float: right
-    min-width: 82px
-    z-index: 501
-
-
-//
-// For logged-out library search.
-//
-html:not(.kf-mobile) .library-search
-html:not(.kf-mobile) .library-search-in-progress
-  &.kf-lh-wrapper
-    height: 56px
-
-  .kf-lh
-    position: fixed
-    top: 62px
-    width: 100%
-    z-index: 500
-
-    &.pageScrolled
-      box-shadow: 0px 5px 5px #ddd
-
-  .kf-lh-card
-    max-height: 56px
-
-    .kf-lh-body
-      max-height: 56px
-
-    .kf-lh-name-wrap-2
-      max-height: 0
-      padding: 0
-
-    .kf-lh-name-wrap-1
-    .kf-lh-desc-wrap
-    .kf-lh-stats-line
-    .kf-lh-buttons
-      opacity: 0
-      max-height: 0
-      visibility: hidden
-
-    .kf-lh-info
-      margin-top: 0
-
-    .kf-lh-owner
-      left: -55px
-
-    .kf-lh-search
-      right: -100px
-
-    .kf-lh-search-input
-      width: 430px
-
-    .dialog-x
-      display: block
-      top: -10px
-      right: -10px
-
-    .kf-lh-color
-    .kf-lh-cover-image
-      display: none
-
-
 .kf-lh-card
-  border: defaultBorder
-  border-radius: 3px
-  background-color: #fff
-  box-shadow: defaultBoxShadow
-
   invite-banner-orange = #ff7c3c
 
-  // Do not display text on buttons when the card is very narrow
-  @media screen and (max-width: 1250px)
-    .kf-button-text-optional
-      padding: 0 7px 0 14px
-      font-size: 0
-
-    .library-share-menu
-      left: -44px
-
   .kf-lh-invite-banner
+    border-bottom-right-radius: 10px
+    border-bottom-left-radius: 10px
     padding: 10px 32px
     max-height: 200px
     background-color: invite-banner-orange
@@ -483,33 +332,15 @@ html:not(.kf-mobile) .library-search-in-progress
       background: invite-banner-orange
       color: #fff
 
-  .kf-lh-body
-    padding: 0 lh-side-pad 5px
-
-  .kf-lh-name-wrap-2
-    padding-top: 20px
-    padding-bottom: 10px
-
-  .kf-lh-name-wrap-1
-    display: inline-block
-    width: 100%
-    margin-top: 8px
-    margin-bottom: 9px
-    vertical-align: top
-    overflow: hidden
-    font: keepTitleFont
-    font-smoothing: antialiased
+  .kf-lh-name
+    padding-top: 28px
+    padding-bottom: 19px
+    font: bold 42px/1.23em Merriweather, Lato, Helvetica, Arial, sans-serif
+    text-align: center
     word-break: break-word
 
-  .kf-lh-name
-    display: inline-block
-    width: calc(100% - 30px)
-    font-size: 26px
-    font-weight: bold
-    vertical-align: middle
-
   .kf-lh-info
-    margin: 16px 0 10px
+    margin-top: 16px
     color: kifiBlack
     vertical-align: top
 
@@ -537,18 +368,6 @@ html:not(.kf-mobile) .library-search-in-progress
   .kf-lh-owner-name
     color: #939393
 
-  .kf-lh-search
-    position: absolute
-    top: 10px
-    right: 0
-
-  .kf-lh-search-input
-    border: 1px solid #ccc
-    border-radius: 10px
-    font-size: 14px
-    padding: 8px 8px
-    width: 140px
-
   .kf-lh-desc-wrap
     padding-bottom: 5px
 
@@ -559,18 +378,21 @@ html:not(.kf-mobile) .library-search-in-progress
     line-height: 23px
 
   .kf-lh-stats-line
+    display: table
+    width: 100%
+    height: 72px
     border-top: 1px solid #dadae2
-    padding-top: 15px
-    height: 42px
-    overflow: hidden
 
   .kf-lh-stats
-    display: inline-block
-    height: 42px
+    display: table-cell
+    vertical-align: top
+    padding-top: 15px
+    width: 1%
+    white-space: nowrap
 
   .kf-lh-stat
     display: inline-block
-    margin: 0 20px 0 5px
+    padding: 0 20px 0 5px
     font-size: 12px
 
   a.kf-lh-stat
@@ -596,38 +418,13 @@ html:not(.kf-mobile) .library-search-in-progress
     text-align: center
 
   .kf-lfp
-    display: inline
-
-  .kf-lfp-pics
-    display: inline-block
-    height: 42px
-    vertical-align: top
-
-    .kf-lfp-pic
-      display: inline-block
-      margin-right: 8px
-      border-radius: 50%
-      width: 42px
-      height: 42px
-
-  .kf-lfp-more
-    display: inline-block
-    border-radius: 50%
-    padding: 0 6px 0 5px
-    height: 42px
-    background-color: kifiBlack
-    color: #fff
-    vertical-align: top
-    cursor: pointer
-    min-width: 31px
-
-  .kf-lfp-more-text
-    line-height: 42px
-    text-align: center
+    display: table-cell
+    width: 99%
+    vertical-align: middle
 
   .kf-lh-buttons
     border-top: 2px solid #f5f5f5
-    padding: 15px 20px
+    padding: 15px 0
     line-height: 37px
     font-size: 0
 
@@ -652,37 +449,41 @@ html:not(.kf-mobile) .library-search-in-progress
   .kf-library-share-search
     vertical-align: top
 
-  follow-unfollow-width = 112px
+follow-unfollow-width = 112px
 
-  .kf-lh-follow-btn
-    border-color: transparent
-    width: follow-unfollow-width
-    padding: 0
-    background: #008aee
-    color: white
+.kf-lh-follow-btn
+  border-color: transparent
+  width: follow-unfollow-width
+  padding: 0
+  background: #008aee
+  color: white
 
-    &.stickable
-      position: relative
-      z-index: 501
-      transform: translateZ(1px)
+  &.kf-stickable
+    position: relative
+    z-index: 501
 
-    &::before  // moves the text slightly right
-      content: ''
-      padding-left: 2px
+  .kf-loh-right>&
+    position: absolute
+    top: 15px
+    right: 0
 
-  .kf-lh-unfollow-btn
-    border-color: #20a1f1
-    width: follow-unfollow-width
-    padding: 0
-    background: #fff
-    color: #20a1f1
+  &::before  // moves the text slightly right
+    content: ''
+    padding-left: 2px
 
-    &:hover
-      border-color: redColor
+.kf-lh-unfollow-btn
+  border-color: #20a1f1
+  width: follow-unfollow-width
+  padding: 0
+  background: #fff
+  color: #20a1f1
 
-    &::after
-      content: 'Following'
+  &:hover
+    border-color: redColor
 
-    &:hover::after
-      content: 'Unfollow'
-      color: redColor
+  &::after
+    content: 'Following'
+
+  &:hover::after
+    content: 'Unfollow'
+    color: redColor

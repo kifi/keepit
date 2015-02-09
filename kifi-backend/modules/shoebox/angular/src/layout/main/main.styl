@@ -1,37 +1,9 @@
-.kf-logged-in .kf-main
-  min-width: 454px
-  width: calc(100% - 310px)
-  margin-top: 15px
+.kf-main-keeps
+  padding-top: 20px
 
-  @media screen and (max-width: 1280px)
-    width: calc(100% - 270px)
-
-  &>.kf-col-inner
-    //border-left: 1px solid #dbdee3
-    //border-right: 1px solid #dbdee3
-    box-sizing: border-box
-
-.kf-logged-out .kf-main
-  width: 100%
-
-  .kf-main-keeps
-    padding-top: 42px
-
-.kf-logged-out .kf-main .library-search
-  .kf-main-head
-    padding-top: 0
-
-  .kf-main-keeps
-    padding-top: 0
-
-@media only screen and (max-width: 1024px)
-  .kf-main
-    -webkit-transition: width sidebarTransitionDuration;
-    transition: width sidebarTransitionDuration;
-
-  .kf-sidebar-inactive .kf-main
-    width: calc(100% - 270px)
-
+.kf-main-search
+  max-width: appMaxWidth
+  margin: 0 auto
 
 .kf-main-head
   position: relative
@@ -102,67 +74,13 @@
     background: url(/img/multi-check.png) 99px/12px 8px no-repeat #fff
     background-position: 2px 4px
 
-.kf-query-wrap
-  padding: 0 25px 12px 30px
-
-.kf-query-wrap
-  position: relative
-  white-space: nowrap
-  z-index: 1
-
-.kf-query.kf-query
-  width: 100%
-  padding: 9px 48px 9px 35px
-  border: defaultBorder
-  border-radius: 3px
-  font-size: 17px
-  font-family: inherit
-  font-weight: 300
-  font-smoothing: antialiased
-  box-sizing: border-box
-
-  &::-webkit-input-placeholder
-    color: #99a3b3
-
-  &::-moz-placeholder
-    color: #99a3b3
-
-  &:-moz-placeholder
-    color: #99a3b3
-
-  &::-ms-input-placeholder
-    color: #99a3b3
-
 input::-ms-clear
   display: none
-
-.kf-query + .kf-query-icon
-  position: absolute
-  left: 40px
-  top: 9px
-  sprite2x($search-icon-default)
-
-.kf-query:focus + .kf-query-icon
-  sprite2x($search-icon-active)
 
 .kf-search-clear-wrapper
   position: relative
   right: 50px
   font-size: 14px
-
-.kf-query-mag
-  cursor: text
-
-  &:before
-    width: 26px
-
-    .focus &
-      background-position: -26px
-
-
-.kf-query-wrap:not(.empty) .kf-query-mag
-  left: 100%
-  transition-delay: 0
 
 .kf-small-tooltip
   position: fixed

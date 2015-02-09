@@ -2,24 +2,24 @@
 
 angular.module('kifi')
 
-.directive('kfNav', [
+.directive('kfLibraryMenu', [
   '$document', '$interval', '$location', '$rootScope', '$window', '$timeout',
   'friendService', 'libraryService', 'modalService', 'profileService', 'routeService', 'tagService', 'util',
   function ($document, $interval, $location, $rootScope, $window, $timeout,
   friendService, libraryService, modalService, profileService, routeService, tagService, util) {
     return {
-      //replace: true,
       restrict: 'A',
-      templateUrl: 'layout/nav/nav.tpl.html',
+      replace: true,
+      templateUrl: 'layout/libraryMenu/libraryMenu.tpl.html',
       link: function (scope , element /*, attrs*/) {
         //
         // Internal data.
         //
         var allUserLibs = [];
-        var w = angular.element($window);
         var scrollableLibList = element.find('.kf-scrollable-libs');
         var antiscrollLibList = scrollableLibList.find('.antiscroll-inner');
         var separators = antiscrollLibList.find('.kf-nav-lib-separator');
+        var elementCache = {};
 
         //
         // Scope data.
@@ -36,15 +36,33 @@ angular.module('kifi')
           friendsNotifCount: friendService.requests.length
         };
 
-
         //
         // Internal methods.
         //
-        function setLibListHeight() {
-          if (scrollableLibList.offset()) {
-            scrollableLibList.height(w.height() - (scrollableLibList.offset().top - w[0].pageYOffset));
+        function getElement(selector) {
+          if (!elementCache[selector] || !elementCache[selector].length) {
+            elementCache[selector] = angular.element(selector);
           }
-          scope.$broadcast('refreshScroll');
+
+          return elementCache[selector];
+        }
+
+        function positionMenu() {
+          if (scope.libraryMenu.visible) {
+            element.css({'left': Math.max(getElement('.kf-lih-toggle-menu').offset().left - 13, 0) + 'px'});
+          }
+        }
+
+        function setMenuHeight() {
+          var menuHeight = getElement('.kf-nav-lib-users').outerHeight() + 230;
+          var maxMenuHeight = Math.floor(($window.innerHeight - getElement('.kf-lih').outerHeight()) * 0.9);
+          element.css({'height': Math.min(menuHeight, maxMenuHeight) + 'px'});
+        }
+
+        function openMenu() {
+          resetSeparators();
+          positionMenu();
+          scope.changeList();
         }
 
         function updateNavLibs() {
@@ -54,17 +72,16 @@ angular.module('kifi')
           librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
           invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
 
-          scope.changeList();
+          if (scope.libraryMenu.visible) {
+            scope.changeList();
+          }
         }
 
-        function setStickySeparator(refetchSeparators) {
+        function setStickySeparator() {
           var offset = antiscrollLibList.scrollTop();
           var libItemHeight = 0;
           var separatorHeight = 0;
 
-          if (refetchSeparators) {
-            separators = antiscrollLibList.find('.kf-nav-lib-separator');
-          }
           if (separators.length === 0) {
             return;
           }
@@ -72,8 +89,6 @@ angular.module('kifi')
 
           var libItems = antiscrollLibList.find('.kf-nav-lib-item');
           libItemHeight = libItems.eq(0).outerHeight(true);
-
-          antiscrollLibList.find('.kf-nav-lib-users').css('padding-top', '25px');
 
           // set limits based on number of items in myLibs, userLibs or invitedLibs
           var firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay;
@@ -96,11 +111,21 @@ angular.module('kifi')
             firstLimitOverlay = firstLimit + separatorHeight;
             // no more limits needed
           }
-          fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight);
+
+          // If offset is 0, that means that there is no scroll effectively, and we don't want to set any
+          // fixed positions yet. This is needed because on menu open after a previous scroll, antiscroll's
+          // scroll is automatically triggered, and without this check the first separator will change from
+          // position:relative to position:fixed, which results in a visual "pop" of the separator
+          // (which itself is due to the fact that a transform that is anything but "none" does not handle
+          // position:fixed correctly, and we are using a transform transition during menu open).
+          if (offset !== 0) {
+            getElement('.kf-nav-lib-users').css('padding-top', '35px');
+            fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight);
+          }
         }
 
         function fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight) {
-          var stickToMaxTop = 320;
+          var stickToMaxTop = 230;
           // all 3 separators properties need to be set because this function is debounced and a user might scroll too fast
           if (offset <= firstLimit) {
             setPositioning(separators[0], 'fixed', stickToMaxTop);
@@ -130,10 +155,22 @@ angular.module('kifi')
           }
         }
 
+        function resetSeparators() {
+          getElement('.kf-nav-lib-users').css('padding-top', '0px');
+          setPositioning(separators[0], 'relative', 0);
+          setPositioning(separators[1], 'relative', 0);
+          setPositioning(separators[2], 'relative', 0);
+        }
+
         function setPositioning(dom, position, top) {
           if (dom) {
             dom.style.position = position;
             dom.style.top = top + 'px';
+            if (position === 'fixed') {
+              dom.style.left = angular.element(dom).parent().offset().left + 'px';
+            } else {
+              dom.style.left = '0px';
+            }
           }
         }
 
@@ -152,10 +189,8 @@ angular.module('kifi')
           profileService.savePrefs(save);
         };
 
-        scope.addLibrary = function () {
-          modalService.open({
-            template: 'libraries/manageLibraryModal.tpl.html'
-          });
+        scope.closeMenu = function () {
+          scope.libraryMenu.visible = false;
         };
 
         scope.isActive = function (path) {
@@ -232,37 +267,43 @@ angular.module('kifi')
           scope.changeList();
         });
 
-        // on resizing window -> trigger new turn -> reset library list height
-        w.bind('resize', function () {
-          scope.$apply(function () {
-            setLibListHeight();
-          });
+        scope.$watch('libraryMenu.visible', function (visible) {
+          if (visible) {
+            openMenu();
+            scope.libraryMenuHelp.visible = false;
+          }
         });
 
+        // On window resize, if the library menu is open, close it during the
+        // resize and reopen after resizing has completed.
+        var closedOnResize = false;
+        var reopenOnResizeComplete = _.debounce(function () {
+          if (closedOnResize) {
+            $timeout(function () {
+              scope.libraryMenu.visible = true;
+              closedOnResize = false;
+            });
+          }
+        }, 500);
+        var hideAndReopenOnResize = function () {
+          $timeout(function () {
+            if (scope.libraryMenu.visible) {
+              scope.libraryMenu.visible = false;
+              closedOnResize = true;
+            }
+
+            $timeout(reopenOnResizeComplete);
+          });
+        };
+        $window.addEventListener('resize', hideAndReopenOnResize);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener(hideAndReopenOnResize);
+        });
 
         //
         // Scrolling.
         //
-
-        // we thought about putting this check into the watch function above,
-        // but even when libraries are enabled, the element is found but the offset is 0
-        // in setLibListHeight(), if the offset is 0, the height of scrollableLibList == window height
-        // and thus no scrolly-bar =[
-        // once the offset is not 0, we know it's in the correct position and we can cancel this interval
-        var lastHeight = 0;
-        var promiseLibList = $interval(function() {
-          scrollableLibList = element.find('.kf-scrollable-libs');
-          if (scrollableLibList.offset() && scrollableLibList.offset().top > 0) {
-            setLibListHeight();
-            if (lastHeight === scrollableLibList.height()) {
-              $interval.cancel(promiseLibList);
-            }
-            lastHeight = scrollableLibList.height(); // probably a better way to do this - sometimes scrollbar is buggy but this secures the height
-          }
-        }, 100);
-
         antiscrollLibList.bind('scroll', _.debounce(setStickySeparator, 10));
-
 
         //
         // Filtering.
@@ -298,8 +339,13 @@ angular.module('kifi')
           return scope.changeList();
         };
 
-
         scope.changeList = function () {
+          getElement('.kf-nav-lib-users').css({visibility: 'hidden'});
+          $timeout(function () {
+            setMenuHeight();
+            getElement('.kf-nav-lib-users').css({visibility: 'visible'});
+          });
+
           var term = scope.filter.name;
           var newLibs = allUserLibs;
           var newInvited = libraryService.invitedSummaries;
@@ -315,7 +361,7 @@ angular.module('kifi')
           scope.$broadcast('refreshScroll');
           $timeout(function() {
             antiscrollLibList.scrollTop(0);
-            setStickySeparator(true);
+            separators = antiscrollLibList.find('.kf-nav-lib-separator');
           });
           return scope.userLibsToShow.concat(scope.invitedLibsToShow).concat(scope.myLibsToShow);
         };
@@ -401,6 +447,12 @@ angular.module('kifi')
         };
 
         function onClick(event) {
+          // On a click outside the menu, close the menu.
+          if (scope.libraryMenu.visible && !element[0].contains(event.target) &&
+              !getElement('.kf-lih-toggle-menu')[0].contains(event.target)) {
+            scope.libraryMenu.visible = false;
+          }
+
           if (angular.element(event.target).closest('.kf-sort-libs-button').length) {
             scope.$apply( function() {
               scope.toggleDropdown();
@@ -422,7 +474,6 @@ angular.module('kifi')
         scope.$on('$destroy', function() {
           $document.off('mousedown', onClick);
         });
-
       }
     };
   }

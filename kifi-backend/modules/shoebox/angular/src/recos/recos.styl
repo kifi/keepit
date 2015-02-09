@@ -1,95 +1,30 @@
-.kf-recos-view-header
-  padding: 25px 25px 10px 30px
-  min-height: 50px
-
-  .kf-recos-clover-icon
-    float: left
-    margin-right: 8px
-    width: 35px
-    height: 34px
-
-  .kf-main-title
-    position: relative
-
-  &::after
-    content: ''
-    display: block
-    clear: both
-
-  &::after
-    content: ''
-    display: block
-    clear: both
+.kf-recos-view
+  max-width: appMaxWidth
+  margin: 0 auto
 
 .kf-recos-title
-  float: left
-  margin-bottom: 20px
-  min-width: 260px
+  padding: 16px 0
 
-.kf-reco-recency
-  position: relative
-  float: left
-  margin-left: 60px
-  width: calc(100% - 330px)
-  min-width: 240px
-
-.kf-reco-refresh-btn
-  position: absolute
-  top: 8px
-  right: 0
-  padding: 3px 12px
-  border: 1px solid #c7c7c7
-  border-radius: 5px
-  height: 26px
-  background-color: #fff
-
-.kf-reco-refresh-btn
-.kf-reco-recency-all-time
-.kf-reco-recency-recent
-  font-size: 14px
-  color: #9b9b9b
-
-.kf-reco-recency-slider
-  position: relative
-  width: calc(100% - 95px)
-  height: 50px
-
-.kf-reco-recency-all-time
-.kf-reco-recency-recent
-  position: absolute
-  top: 2px
-
-.kf-reco-recency-all-time
-  left: 0
-
-.kf-reco-recency-recent
-  right: 0
-
-.kf-reco-slider-container
-  position: absolute
-  left: 0
-  bottom: 20px
-  display: inline-block
+.kf-reco-cols
+  display: table
   width: 100%
+  table-layout: fixed
 
-  .ui-slider-horizontal
-    border: none
-    height: 6px
-    background-color: #e4e4e4
+.kf-reco-col-1
+  display: table-cell
+  vertical-align: top
 
-  .ui-slider-handle
-    top: -8px
-    border: 1px solid #bbb
-    border-radius: 12px
-    background-color: #fff
-    cursor: pointer
+.kf-reco-col-2
+  display: table-cell
+  vertical-align: top
+  width: 256px
+  padding-left: 20px
 
 .kf-recos
-  padding: 0 25px 20px 30px
+  padding-bottom: 20px
 
 .kf-reco
-  box-sizing: border-box
-  margin: 0 auto 20px
+  margin-bottom: 20px
 
 .kf-reco.ng-leave
   opacity: 1
@@ -111,7 +46,6 @@
   border-radius: 3px
   padding: 25px 20px
   background-color: #fafafa
-  box-shadow: defaultBoxShadow
   font-size: 18px
 
   h4
@@ -165,14 +99,18 @@
 .kf-reco-top
   position: relative
   border-top: 1px solid #dadae2
-  border-top-left-radius: 3px
-  border-top-right-radius: 3px
+  border-radius: 10px 10px 0 0
   background-color: #fff
   font-size: 13px
   font-weight: 400
   color: #9d9d9d
+
   span
     display: inline-block
+
+  &+.kf-keep
+    border-top-left-radius: 0
+    border-top-right-radius: 0
 
 .kf-reco-bottom
   position:relative
@@ -182,7 +120,6 @@
   border-bottom-right-radius: 3px
   padding: 15px 0 15px
   width: 90%
-  box-shadow: defaultBoxShadow
   font-size: 13px
   text-align: center
 
@@ -356,11 +293,26 @@
   label
     margin-left: 5px
 
+.kf-reco-get-more-container
+  margin-bottom: 400px
+  border: 1px solid #dadae2
+  border-radius: 10px
+  padding: 12px 0
+  text-align: center
+  background: #fff
+
+.kf-reco-get-more
+.kf-reco-get-more-loading
+  color: #006bb2
+
+.kf-reco-get-more:hover
+  text-decoration: underline
+  cursor: pointer
 
 .kf-reco-loading-logo
   width: 50px
   height: 50px
-  margin: 20px auto
+  margin: 40px auto 0
   opacity: 0.5
   animation: jump-spin 2s linear infinite
   transform: translate(-50%, -50%) rotate(0deg)

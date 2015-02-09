@@ -1,11 +1,12 @@
-keepBorderRadius = 3px
+keepBorderWidth = 1px
+keepBorderRadius = 10px
+keepEditToolsWidth = 28px
 tagOutlineColor = #bdc4c9
 kifiGreen = #73c583
 
 .kf-keep
 .kf-keep-selection-tools
   box-sizing: border-box
-  box-shadow: defaultBoxShadow
   margin-bottom: 10px
   border: defaultBorder
   background-color: white
@@ -36,7 +37,7 @@ kifiGreen = #73c583
   line-height: 33px
 
 .kf-keep-selection-tools
-  margin-left: 3px
+  margin-left: keepBorderWidth - keepEditToolsWidth
   margin-right: 25px
 
 .kf-keep-selected-count
@@ -146,6 +147,8 @@ kifiGreen = #73c583
   color: #5983bd
   padding: 0 20px
   line-height: 37px
+  border-bottom-left-radius: inherit
+  border-bottom-right-radius: inherit
 
   a:active
     color: #92add3
@@ -206,8 +209,8 @@ kifiGreen = #73c583
   position: absolute
   top: -1px
   bottom: 0
-  left: -28px
-  width: 28px
+  left: -(keepEditToolsWidth)
+  width: keepEditToolsWidth
   height: 110px
   background-color: #fff
   border: defaultBorder

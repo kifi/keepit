@@ -1,4 +1,4 @@
-<div class="kf-lh-wrapper" ng-class="{'library-search-in-progress': librarySearchInProgress, 'library-search': librarySearch}">
+<div class="kf-lh-wrapper">
   <div class="kf-lh" ng-class="{'pageScrolled': pageScrolled}" itemscope itemtype="http://schema.org/CollectionPage">
     <meta itemtype="url" content="{{library.shareUrl}}" />
     <div class="kf-lh-card">
@@ -7,13 +7,8 @@
         <button class="kf-lh-invite-banner-button kf-lh-invite-banner-ignore" ng-click="ignoreInvitation()">Ignore</button>
         <span class="kf-lh-invite-banner-info">{{library.invite.inviterName}} has invited you to follow this library</span>
       </div>
-      <button class="kf-button kf-lh-follow-btn kf-lh-follow-btn-searching" ng-if="isUserLoggedOut" ng-click="followLibrary()">Follow Library</button>
       <div class="kf-lh-body">
-        <div class="kf-lh-name-wrap-2">
-          <div class="kf-lh-name-wrap-1">
-            <span class="kf-lh-name" itemtype="name">{{library.name}}</span>
-          </div>
-        </div>
+        <h1 class="kf-lh-name" itemtype="name">{{library.name}}</h1>
 
         <div class="kf-lh-color" ng-class="{'kf-above-image': coverImageUrl || coverImagePreview}" style="background-color:{{library.color}}"></div>
         <div ng-if="coverImageUrl || coverImagePreview" class="kf-lh-cover-image" ng-style="{'background-image':'{{coverImageUrl ? 'url(' + coverImageUrl + ')' : ''}}','background-position':'{{coverImagePos}}'}" itemtype="image">
@@ -47,11 +42,6 @@
               <div class="kf-lh-owner-label">Curator:</div>
               <div class="kf-lh-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
             </div>
-            <div class="kf-lh-search" ng-if="isUserLoggedOut">
-              <span class="kf-lh-search-icon sprite-search-icon"></span>
-              <input class="kf-lh-search-input" type="search" placeholder="Search this library" ng-model="search.text" ng-focus="onSearchInputFocus()" ng-change="onSearchInputChange(search.text)">
-              <a class="dialog-x" href="javascript:" ng-click="onSearchExit()"></a>
-            </div>
           </div>
 
           <div ng-switch="clippedDescription" class="kf-lh-desc-wrap">
@@ -81,9 +71,9 @@
       <div class="kf-lh-buttons clearfix">
         <div style="float:right">
           <div kf-library-share-search ng-if="canBeShared()" library="library" current-page-origin="libraryPage"></div>
-          <button class="kf-button kf-lh-follow-btn" ng-click="followLibrary()" ng-if="canFollowLibrary() && !librarySearchInProgress"
-            ng-class="{stickable: isUserLoggedOut}"
-            kf-sticky sticky-if="isUserLoggedOut" max-top="followButtonMaxTop" sticky-width-mode="ignored" on-stick="followStick"
+          <button class="kf-button kf-lh-follow-btn" ng-click="followLibrary()" ng-if="canFollowLibrary()"
+            ng-class="{'kf-stickable': isUserLoggedOut}"
+            kf-sticky sticky-if="isUserLoggedOut" sticky-top="followButtonMaxTop" sticky-toggle="followButtonToggleStuck" sticky-near="followButtonNearlyStuck" sticky-near-px="40"
             kf-library-header-follow-button-cta
           >{{ library.followButtonText }}</button>
           <button class="kf-button kf-lh-unfollow-btn" ng-click="unfollowLibrary()" ng-if="alreadyFollowingLibrary()"></button>

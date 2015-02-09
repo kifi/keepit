@@ -9,7 +9,7 @@ body
   min-height: calc(100% - 62px)
   width: 100%
   padding: 0
-  margin: 62px 0 0;
+  margin: 0;
   background: appBackgroundColor
   font-family: Lato, Helvetica, Arial, sans-serif
   min-width: 800px
@@ -66,44 +66,18 @@ menu, ol, ul
   outline: none
 
 .clearfix
+  zoom: 1
+
   &::before
   &::after
-    content: ""
+    content: ''
     display: table
 
   &::after
     clear: both
 
-  zoom: 1
-
-.kf-cols
-  text-align: start
-
-.kf-logged-in .kf-col-island
-  max-width: userAppMaxWidth
-  margin: 0 auto
-
-.kf-col
-  display: inline-block
-  vertical-align: top
-  background: appBackgroundColor
-  box-sizing: border-box
-  z-index: 1
-
-.kf-col-inner
-  height: 100%
-  width: 100%
-
-.kf-horizontal-separator
-  width: 100%
-  padding: 2px 0 0
-  border-bottom: separatorBorder
-  margin: 10px 0
-
-.kf-logged-out
-  &.kf-logged-out
-    .kf-col
-      margin-top: 0
+.kf-app
+  padding-top: appHeaderHeight
 
 .ng-cloak
   display: none !important

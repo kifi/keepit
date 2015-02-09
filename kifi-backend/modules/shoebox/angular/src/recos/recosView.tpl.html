@@ -1,74 +1,79 @@
-<div class="recos-view" ng-controller="RecosCtrl">
-  <header class="kf-recos-view-header">
-    <div class="kf-recos-title">
-      <span class="reco-icon-big svg-reco-icon kf-recos-clover-icon"></span>
-      <h1 class="kf-main-title">Recommendations</h1>
-      <div class="kf-subtitle">
-        <div class="kf-subtitle-text" ng-show="loading">Loading...</div>
+<div class="kf-recos-view" ng-controller="RecosCtrl">
+  <h1 class="kf-recos-title kf-main-title">Recommendations</h1>
+
+  <div class="kf-reco-cols">
+    <div class="kf-reco-col-1">
+      <div class="kf-reco kf-reco-info kf-reco-cta" ng-if="recosState === 'noRecos'" ng-hide="initialCardClosed">
+        <span class="kf-reco-cta-text">To get started, simply click the follow button on some of the libraries below</span>
+        <img class="kf-reco-cta-image" src="/img/webapp-ftui-follow-button-image.png">
       </div>
-    </div>
-    <div kf-reco-recency-slider ng-if="recosState === 'hasRecos'" get-more="getMore(recency)"></div>
-  </header>
 
-  <div class="kf-reco kf-reco-info kf-reco-cta" ng-if="recosState === 'noRecos'" ng-hide="initialCardClosed">
-    <span class="kf-reco-cta-text">To get started, simply click the follow button on some of the libraries below</span>
-    <img class="kf-reco-cta-image" src="/img/webapp-ftui-follow-button-image.png">
-  </div>
+      <div class="kf-reco kf-reco-info" ng-if="recosState === 'noMoreRecos'">
+        <h4>No more recommendations for now :)</h4>
+        <p>Kifi works by recommending things based on what you've kept. We'll cater to your interests over time and we can recommend more relevant and timely things if you <a href="/invite">connect with more friends</a>. Think about your most inspiring, interesing and knowledgeable friends and invite them to Kifi! Keep on keeping things that matter to you too!</p>
+        <p>In the meantime, you can enjoy popular things being kept on Kifi.</p>
+        <a href="javascript:" ng-click="showPopular()">See Popular Keeps on Kifi</a>
+      </div>
 
-  <div class="kf-reco kf-reco-info" ng-if="recosState === 'noMoreRecos'">
-    <h4>No more recommendations for now :)</h4>
-    <p>Kifi works by recommending things based on what you've kept. We'll cater to your interests over time and we can recommend more relevant and timely things if you <a href="/invite">connect with more friends</a>. Think about your most inspiring, interesing and knowledgeable friends and invite them to Kifi! Keep on keeping things that matter to you too!</p>
-    <p>In the meantime, you can enjoy popular things being kept on Kifi.</p>
-    <a href="javascript:" ng-click="showPopular()">See Popular Keeps on Kifi</a>
-  </div>
+      <div class="kf-recos" ng-if="!loading">
+        <div class="kf-reco kf-reco-recommended" ng-repeat="reco in recos" reco="reco" ng-controller="RecoCtrl" ng-class="{'kf-reco-with-invite':!!reco.recoLib.invite}">
+          <header class="kf-reco-top">
+            <span class="kf-reco-icon kf-reco-close-x" ng-click="trash(reco)" ng-if="reco.recoData.type === 'recommended'"></span>
+            <div ng-if="reco.recoData.type === 'recommended'" kf-reco-dropdown-menu reco="reco" show-improvement-modal="showImprovementModal()"></div>
+            <span ng-if="reco.recoData.kind === 'keep'" class="kf-reco-top-title">
+              {{reco.recoData.type | titlecase}}
+            </span>
+            <span ng-switch on="reco.recoData.type" ng-if="reco.recoData.kind === 'library'">
+              <span ng-switch-when="popular">Featured</span>
+              <span ng-switch-default>Recommended Library</span>
+            </span>
+          </header>
 
-  <div class="kf-recos" ng-hide="loading">
-    <div class="kf-reco kf-reco-recommended" ng-repeat="reco in recos" reco="reco" ng-controller="RecoCtrl" ng-class="{'kf-reco-with-invite':!!reco.recoLib.invite}">
-      <header class="kf-reco-top">
-        <span class="kf-reco-icon kf-reco-close-x" ng-click="trash(reco)" ng-if="reco.recoData.type === 'recommended'"></span>
-        <div ng-if="reco.recoData.type === 'recommended'" kf-reco-dropdown-menu reco="reco" show-improvement-modal="showImprovementModal()"></div>
-        <span ng-if="reco.recoData.kind === 'keep'" class="kf-reco-top-title">
-          {{reco.recoData.type | titlecase}}
-        </span>
-        <span ng-switch on="reco.recoData.type" ng-if="reco.recoData.kind === 'library'">
-          <span ng-switch-when="popular">Featured</span>
-          <span ng-switch-default>Recommended Library</span>
-        </span>
-      </header>
+          <div ng-if="reco.recoData.kind === 'keep'" kf-keep-card keep="reco.recoKeep" keep-callback="trackRecoKeep(keep)"
+            click-callback="trackRecoClick(reco)" libraries="libraries" current-page-origin="recommendationsPage"></div>
+          <div ng-if="reco.recoData.kind === 'library'" kf-reco-library-card library="reco.recoLib"
+            follow-callback="trackLibraryFollow(reco.recoLib)" click-library-callback="trackRecoClick(reco)"></div>
 
-      <div ng-if="reco.recoData.kind === 'keep'" kf-keep-card keep="reco.recoKeep" keep-callback="trackRecoKeep(keep)"
-        click-callback="trackRecoClick(reco)" libraries="libraries" current-page-origin="recommendationsPage"></div>
-      <div ng-if="reco.recoData.kind === 'library'" kf-reco-library-card library="reco.recoLib"
-        follow-callback="trackLibraryFollow(reco.recoLib)" click-library-callback="trackRecoClick(reco)"></div>
-
-      <footer class="kf-reco-bottom" ng-if="hasReason()" ng-class="{ 'kf-reco-multiple-reasons': hasTwoOrMoreReasons() }">
-        <span ng-if="hasTwoOrMoreReasons()">
-          <span class="kf-reco-icon kf-reco-reasons-right" ng-click="gotoNextReason()"></span>
-          <span class="kf-reco-icon kf-reco-reasons-left" ng-click="gotoPrevReason()"></span>
-        </span>
-        <div class="kf-reco-reason" ng-repeat="reason in reasons" ng-if="$index === reasonIndex">
-          <div ng-if="reason.kind === 'keep'">
-            Because you kept <a ng-href="{{reason.url}}" target="_blank" ng-attr-title="{{reason.name}}">{{reason.name}}</a>&nbsp;
-            <time am-time-ago="reason.when"></time>
-          </div>
-          <div ng-if="reason.kind === 'topic'">
-            <div>Because it's about a topic you're interested in:
-            <span class="kf-reco-reason-topic">{{reason.name}}</span></div>
-          </div>
-          <div ng-if="reason.kind === 'users'">
-            Because lots of users kept it
-          </div>
-          <div ng-if="reason.kind === 'library'">
-            Because it's in a Library you follow: <a ng-href="{{reason.url}}" ng-attr-title="{{reason.name}}">{{reason.name}}</a>
-          </div>
+          <footer class="kf-reco-bottom" ng-if="hasReason()" ng-class="{ 'kf-reco-multiple-reasons': hasTwoOrMoreReasons() }">
+            <span ng-if="hasTwoOrMoreReasons()">
+              <span class="kf-reco-icon kf-reco-reasons-right" ng-click="gotoNextReason()"></span>
+              <span class="kf-reco-icon kf-reco-reasons-left" ng-click="gotoPrevReason()"></span>
+            </span>
+            <div class="kf-reco-reason" ng-repeat="reason in reasons" ng-if="$index === reasonIndex">
+              <div ng-if="reason.kind === 'keep'">
+                Because you kept <a ng-href="{{reason.url}}" target="_blank" ng-attr-title="{{reason.name}}">{{reason.name}}</a>&nbsp;
+                <time am-time-ago="reason.when"></time>
+              </div>
+              <div ng-if="reason.kind === 'topic'">
+                <div>Because it's about a topic you're interested in:
+                <span class="kf-reco-reason-topic">{{reason.name}}</span></div>
+              </div>
+              <div ng-if="reason.kind === 'users'">
+                Because lots of users kept it
+              </div>
+              <div ng-if="reason.kind === 'library'">
+                Because it's in a Library you follow: <a ng-href="{{reason.url}}" ng-attr-title="{{reason.name}}">{{reason.name}}</a>
+              </div>
+            </div>
+            <div class="kf-reason-bullet-container" ng-if="hasTwoOrMoreReasons()">
+              <span ng-repeat="reason in reasons" class="kf-reason-bullet" ng-class="{'kf-dark-reason-bullet': $index === reasonIndex}">&bull;</span>
+            </div>
+          </footer>
         </div>
-        <div class="kf-reason-bullet-container" ng-if="hasTwoOrMoreReasons()">
-          <span ng-repeat="reason in reasons" class="kf-reason-bullet" ng-class="{'kf-dark-reason-bullet': $index === reasonIndex}">&bull;</span>
-        </div>
-      </footer>
+        <div class="kf-keep-description-sizer kf-keep-description"></div>
+      </div>
+
+      <div ng-if="!noMoreRecos && !loading" class="kf-reco-get-more-container" ng-click="addMore()">
+        <span ng-if="!moreLoading" class="kf-reco-get-more">See more</span>
+        <span ng-if="moreLoading" class="kf-reco-get-more-loading">Loading...</span>
+      </div>
+
+      <div class="kf-reco-loading-logo kf-logo-pulse svg-small-new-logo" ng-if="loading"></div>
     </div>
-    <div class="kf-keep-description-sizer kf-keep-description"></div>
+    <div class="kf-reco-col-2">
+      <div ng-if="hasFriendsOrConnections === false" kf-no-friends-or-connections-view></div>
+      <div ng-if="hasFriendsOrConnections === true" kf-people-you-may-know></div>
+      <div ng-if="hasFriendsOrConnections != null" kf-goodies></div>
+    </div>
   </div>
-
-<div class="kf-reco-loading-logo kf-logo-pulse svg-small-new-logo" ng-if="loading"></div>
-
+</div>

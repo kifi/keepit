@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .directive('kfAddKeep', [
-  '$document', '$rootScope', '$location', 'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'modalService', 'tagService', 'util',
-  function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepActionService, libraryService, modalService, tagService, util) {
+  '$document', '$rootScope', '$location', '$state', '$timeout',
+  'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'modalService', 'util',
+  function ($document, $rootScope, $location, $state, $timeout,
+    keyIndices, keepDecoratorService, keepActionService, libraryService, modalService, util) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -19,6 +21,8 @@ angular.module('kifi')
           scope.state.checkedPrivate = false;
           scope.state.invalidUrl = false;
           scope.state.input = '';
+          scope.keptPublic = false;
+          scope.keptPrivate = false;
         };
         reset();
 
@@ -77,28 +81,36 @@ angular.module('kifi')
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
           if (url && util.validateUrl(url)) {
-            return keepActionService.keepToLibrary([{ url: url }], scope.selectedLibrary.id).then(function (result) {
+            keepActionService.keepToLibrary([{ url: url }], scope.selectedLibrary.id).then(function (result) {
               if (result.failures && result.failures.length) {
                 scope.resetAndHide();
                 modalService.open({
                   template: 'common/modal/genericErrorModal.tpl.html'
                 });
-              } else if (result.alreadyKept.length > 0) {
-                scope.resetAndHide();
-                $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
-                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
-                  var keep = new keepDecoratorService.Keep(fullKeep);
-                  keep.buildKeep(keep);
-                  keep.makeKept();
+                libraryService.fetchLibrarySummaries(true);
+                if (scope.selectedLibrary.visibility === 'secret') {
+                  scope.keptPrivate = true;
+                } else {
+                  scope.keptPublic = true;
+                }
+                scope.inAnimation = true;
+                $timeout(function () {
+                  scope.inAnimation = false;
+                }, 200);
 
-                  libraryService.fetchLibrarySummaries(true);
-                  libraryService.addToLibraryCount(scope.selectedLibrary.id, 1);
-                  tagService.addToKeepCount(1);
+                $timeout(scope.resetAndHide, 1700);
 
-                  scope.$emit('keepAdded', libraryService.getSlugById(scope.selectedLibrary.id), [keep]);
-                  scope.resetAndHide();
-                });
+                // If we are on the library page where the keep is being added, add the keep to the top of the list of keeps.
+                if ((result.alreadyKept.length === 0) &&
+                    ($state.href($state.current.name) === scope.selectedLibrary.url)) {
+                  return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
+                    var keep = new keepDecoratorService.Keep(fullKeep);
+                    keep.buildKeep(keep);
+                    keep.makeKept();
+                    $rootScope.$emit('keepAdded', libraryService.getSlugById(scope.selectedLibrary.id), [keep]);
+                  });
+                }
               }
             })['catch'](modalService.openGenericErrorModal);
           } else {
