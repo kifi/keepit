@@ -9,6 +9,10 @@ angular.module('kifi')
     $location, util, keyIndices, modalService, $timeout, $state, routeService) {
 
     $scope.toggleMenu = function () {
+      if ($scope.showCallout()) {
+        $scope.closeCallout();
+      }
+
       // libraryMenu is inherited from AppCtrl scope.
       $scope.libraryMenu.visible = !$scope.libraryMenu.visible;
     };
@@ -20,7 +24,7 @@ angular.module('kifi')
     $scope.showCallout = angular.noop;
     $timeout(function () {
       $scope.showCallout = function () {
-        return profileService.prefs.site_introduce_library_menu;
+        return profileService.prefs.site_introduce_library_menu && !$scope.libraryMenu.visible;
       };
     }, 2400);
 
