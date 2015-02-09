@@ -1,16 +1,13 @@
-.delighted-survey
-  max-width: appMaxWidth
+.kf-delighted-wrap
   max-height: 200px
-  margin: 0 auto
-  opacity: 1
+  overflow: hidden
 
-  &.ng-hide
-    transition: opacity .4s, max-height .4s .4s
+  &.ng-leave
+    transition: opacity .4s, max-height .4s
+
+  &.ng-leave-active
     max-height: 0
     opacity: 0
-
-.kf-delighted-wrap
-  overflow: hidden
 
 .kf-delighted-title
   padding: 8px 28px // make sure the title doesn't underlap the cancel button
@@ -20,9 +17,9 @@
 
 .kf-delighted-body
   background-color: #fff
-  border-radius: 2px
-  box-shadow: 0 1px 1px 0 #dadae2
-  border: 1px solid #dadae2
+  border-radius: 0 0 10px 10px
+  border: defaultBorder
+  border-top: none
   text-align: center
   position: relative
 

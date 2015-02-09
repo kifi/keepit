@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('RecosCtrl', [
-  '$scope', '$rootScope', '$analytics', '$window',
+  '$scope', '$rootScope', '$analytics', '$window', 'profileService',
   'modalService', 'recoActionService', 'recoDecoratorService', 'recoStateService', 'undoService', 'socialService', 'friendService',
-  function ($scope, $rootScope, $analytics, $window,
+  function ($scope, $rootScope, $analytics, $window, profileService,
     modalService, recoActionService, recoDecoratorService, recoStateService, undoService, socialService, friendService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
@@ -161,6 +161,15 @@ angular.module('kifi')
     socialService.refresh().then(function () {
       $scope.hasFriendsOrConnections = friendService.totalFriends() > 0 || socialService.networks.length > 0;
     });
+
+    $scope.showDelightedSurvey = profileService.prefs.show_delighted_question;
+    $scope.$on('$destroy', $rootScope.$on('prefsChanged', function () {
+      $scope.showDelightedSurvey = profileService.prefs.show_delighted_question;
+    }));
+
+    $scope.hideDelightedSurvey = function () {
+      $scope.showDelightedSurvey = false;
+    };
   }
 ])
 
