@@ -2,7 +2,6 @@
   <div kf-library-pass-phrase ng-if="errorStatus === 403 && errorParams.authToken" class="kf-lpp" error-params="errorParams"></div>
   <div kf-error-not-found ng-if="(errorStatus === 403 && !errorParams.authToken) || errorStatus === 404"></div>
   <div ng-if="errorStatus !== 403 && errorStatus !== 404">
-    <div kf-delighted-survey ng-show="showDelightedSurvey" class="delighted-survey" ng-class="{'delighted-visible': showDelightedSurvey}" show-survey="showDelightedSurvey"></div>
     <div ui-view></div>
     <div class="kf-small-tooltip" ng-if="undo.isSet() || tooltipMessage">
       <span class="kf-small-tooltip-box">

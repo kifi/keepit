@@ -286,10 +286,5 @@ angular.module('kifi')
         }
       });
     });
-
-    var deregisterPrefsChangedListener = $rootScope.$on('prefsChanged', function () {
-      $scope.showDelightedSurvey = profileService.prefs && profileService.prefs.show_delighted_question;
-    });
-    $scope.$on('$destroy', deregisterPrefsChangedListener);
   }
 ]);

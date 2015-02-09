@@ -7,8 +7,9 @@ angular.module('kifi')
   function ($timeout, $analytics, profileService) {
     return {
       restrict: 'A',
+      replace: true,
       scope: {
-        showSurvey: '='
+        hide: '='
       },
       templateUrl: 'delighted/delightedSurvey.tpl.html',
       link: function (scope, element) {
@@ -52,9 +53,7 @@ angular.module('kifi')
             'source': 'site',
             'type': analyticsStageName()
           });
-          $timeout(function () {
-            hideSurvey();
-          }, 3000);
+          $timeout(hideSurvey, 3000);
         };
 
         scope.cancelSurvey = function () {
@@ -68,7 +67,7 @@ angular.module('kifi')
         };
 
         function hideSurvey() {
-          scope.showSurvey = false;
+          scope.hide();
         }
 
         function submitAnswer() {
