@@ -35,7 +35,7 @@ class ExtUserController @Inject() (
   }
 
   def getGuideInfo() = UserAction { request =>
-    val (personaKeep, libOpt) = userPersonaCommander.getPersonaLibraryAndKeep(request.userId)
+    val (personaKeep, libOpt) = userPersonaCommander.getPersonaKeepAndLibrary(request.userId)
     val libObj = libOpt.map { lib =>
       Json.obj("library" ->
         Json.obj("id" -> Library.publicId(lib.id.get), "name" -> lib.name, "color" -> lib.color)
