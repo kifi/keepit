@@ -177,17 +177,6 @@ angular.module('kifi')
         //
         // Scope methods.
         //
-        // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
-        var calloutName = 'library_callout_shown';
-        scope.showCallout = function () {
-          return profileService.prefs.site_intial_show_library_intro && !profileService.prefs[calloutName];
-        };
-        scope.closeCallout = function () {
-          var save = { 'site_show_library_intro': false };
-          save[calloutName] = true;
-          profileService.prefs[calloutName] = true;
-          profileService.savePrefs(save);
-        };
 
         scope.closeMenu = function () {
           scope.libraryMenu.visible = false;

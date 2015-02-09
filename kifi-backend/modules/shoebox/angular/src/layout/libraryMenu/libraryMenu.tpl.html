@@ -1,12 +1,6 @@
 <div class="kf-library-menu">
   <div class="kf-nav-group">
     <div class="kf-lm-libraries">
-      <div kf-callout class="kf-callout-bubble-right" ng-if="showCallout()">
-          <div>Your main and private libraries hold all of your existing keeps. You can create additional libraries if you wish.</div>
-          <div class="kf-callout-bubble-action">
-            <div class="kf-callout-bubble-button" ng-click="closeCallout()">Got it</div>
-          </div>
-      </div>
       <ul class="kf-nav-lib-system">
         <li class="kf-nav-lib-item" ng-class="{ active: isActive(mainLib.url) }">
           <a class="kf-nav-link" ng-href="{{mainLib.url}}" ng-click="closeMenu()">

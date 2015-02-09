@@ -24,13 +24,7 @@
     </div>
     <div class="kf-lih-right">
       <button class="kf-lih-add-link sprite sprite-add-link" ng-click="addKeeps(library)">Add a link</button>
-      <div kf-callout class="kf-callout-bubble-bottom kf-callout-tags" ng-if="showCallout()">
-        <div>Your tags are safe. Creating a new library from a tag is a snap.</div>
-        <div class="kf-callout-bubble-action">
-          <div class="kf-callout-bubble-button" ng-click="closeCallout()">Got it</div>
-        </div>
-      </div>
-      <a href="/tags/manage" class="kf-lih-manage-tags sprite svg-tag-black" ng-class="{'svg-tag-hover': hover, 'kf-callout-tags-button': showCallout()}" ng-mouseenter="hover = true" ng-mouseleave="hover = false">Manage your tags</a>
+      <a href="/tags/manage" class="kf-lih-manage-tags sprite svg-tag-black" ng-class="{'svg-tag-hover': hover}" ng-mouseenter="hover = true" ng-mouseleave="hover = false">Manage your tags</a>
       <span class="kf-lih-dropdown-parent">
         <a href="/friends" class="kf-lih-friends sprite sprite-friends">Friends</a>
         <menu class="kf-dropdown-menu">
