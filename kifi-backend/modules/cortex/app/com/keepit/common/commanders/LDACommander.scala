@@ -218,30 +218,11 @@ class LDACommanderImpl @Inject() (
       val libsFeats = libFeats.map { _.value }
       val divs = libsFeats.map { v => KL_divergence(v, uriFeat) }
       val scores = divs.map { div => (1f - div) max 0f }.sortBy(x => -x)
-      val score = if (scores.size <= 2) {
-        scores(0)
-      } else {
-        // ensemble of the scores
-        require(scores.size >= 2, "scores size should be >= 2")
-        val r = (scores.size - 1).toFloat / scores.size
-        val weight = bumpFunction(r) // weight of the max score, decays as r increases.
-        val max = scores(0)
-        val remains = scores.drop(1).take(5)
-        val avg = remains.sum / remains.size
-        weight * max + (1 - weight) * avg
-      }
+      val idx = (0.2 * scores.size).toInt // just take about 1-sigma above the mean. avoid outliers.
+      val score = scores(idx)
       val confidence = computeURIConfidence(numWords, numTopicChanges)
       Some(LDAUserURIInterestScore(score, confidence))
     } else None
-  }
-
-  // max value normalized to 1
-  private def bumpFunction(x: Float): Float = {
-    if (math.abs(x) >= 1f) 0f
-    else {
-      val exponent = 1.0 / (1 - x * x)
-      exp(1 - exponent)
-    }
   }
 
   private def computeGaussianInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAStats])(implicit version: ModelVersion[DenseLDA]): LDAUserURIInterestScores = {
