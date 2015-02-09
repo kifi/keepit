@@ -13,6 +13,7 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[UserPersonaRepoImpl])
 trait UserPersonaRepo extends DbRepo[UserPersona] {
   def getByUserAndPersonaId(userId: Id[User], personaId: Id[Persona])(implicit session: RSession): Option[UserPersona]
+  def getFirstPersonaForUser(userId: Id[User])(implicit session: RSession): Option[Persona]
   def getPersonasForUser(userId: Id[User])(implicit session: RSession): Seq[Persona]
   def getPersonaIdsForUser(userId: Id[User])(implicit session: RSession): Seq[Id[Persona]]
   def getUserActivePersonas(userId: Id[User])(implicit session: RSession): UserActivePersonas
@@ -75,12 +76,19 @@ class UserPersonaRepoImpl @Inject() (
     getPersonaIdsForUserCompiled(userId).list
   }
 
-  def getPersonasForUser(userId: Id[User])(implicit session: RSession): Seq[Persona] = {
-    val q = for {
+  private def personasForUser(userId: Id[User]) = {
+    for {
       up <- rows if up.userId === userId && up.state === UserPersonaStates.ACTIVE
       p <- personaRepo.get.rows if p.id === up.personaId && p.state === PersonaStates.ACTIVE
     } yield (p)
-    q.list
+  }
+
+  def getFirstPersonaForUser(userId: Id[User])(implicit session: RSession): Option[Persona] = {
+    personasForUser(userId).firstOption
+  }
+
+  def getPersonasForUser(userId: Id[User])(implicit session: RSession): Seq[Persona] = {
+    personasForUser(userId).list
   }
 
   private val getUserPersonaIdAndUpdatedAtCompiled = Compiled { (userId: Column[Id[User]]) =>

@@ -49,7 +49,7 @@ trait ScrapeInfoIntegrityPlugin extends SchedulerPlugin {
 }
 
 class ScrapeInfoIntegrityPluginImpl @Inject() (
-    actor: ActorInstance[UriIntegrityActor],
+    actor: ActorInstance[ScrapeInfoIntegrityActor],
     db: Database,
     uriRepo: NormalizedURIRepo,
     centralConfig: CentralConfig,
@@ -118,7 +118,7 @@ class ScrapeInfoIntegrityChecker @Inject() (
         scrapeInfoRepo.getByUriId(uri.id.get) match {
           case Some(scrapeInfo) if scrapeInfo.state != ScrapeInfoStates.INACTIVE =>
             val savedSI = scrapeInfoRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
-            log.info(s"[save(${uri.toShortString})] mark scrapeInfo as INACTIVE; si=$savedSI")
+            log.info(s"mark scrapeInfo as INACTIVE; si=$savedSI")
             true
           case _ => false // do nothing
         }
@@ -126,7 +126,7 @@ class ScrapeInfoIntegrityChecker @Inject() (
         scrapeInfoRepo.getByUriId(uri.id.get) match { // do NOT use saveStateAndNextScrape
           case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
             val savedSI = scrapeInfoRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
-            log.info(s"[save(${uri.toShortString})] mark scrapeInfo as ACTIVE; si=$savedSI")
+            log.info(s"mark scrapeInfo as ACTIVE; si=$savedSI")
             true
           case _ => false // do nothing
         }

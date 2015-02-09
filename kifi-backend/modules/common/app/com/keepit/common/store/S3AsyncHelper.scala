@@ -41,7 +41,8 @@ trait S3AsyncHelper {
 
   def asyncDownload(bucketName: String, key: String)(implicit tm: TransferManager): Future[TemporaryFile] = {
     val p = Promise[TemporaryFile]()
-    val tf = TemporaryFile()
+    //from javadoc, the prefix "must be at least three characters long"
+    val tf = TemporaryFile(prefix = "s3downloads", suffix = ".tmp")
     tf.file.deleteOnExit()
     val transfer = Try {
       val download = tm.download(bucketName, key, tf.file)

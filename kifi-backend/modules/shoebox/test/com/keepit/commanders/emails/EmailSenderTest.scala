@@ -8,7 +8,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.mail.template.{ EmailTip, EmailTrackingParam }
-import com.keepit.common.mail.{ ElectronicMailCategory, PostOffice, SystemEmailAddress, EmailAddress, FakeOutbox }
+import com.keepit.common.mail.{ PostOffice, SystemEmailAddress, EmailAddress, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -26,6 +26,8 @@ import org.specs2.mutable.Specification
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.Await
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory._
 
 class EmailSenderTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
@@ -104,7 +106,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       val friendUser = db.readWrite { implicit rw =>
         inject[UserRepo].save(
           User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")),
-            username = Username("test"), normalizedUsername = "test"))
+            username = Username("billy"), normalizedUsername = "billy"))
       }
 
       val email = Await.result(sender.sendToUser(toUser.id.get, friendUser.id.get, category, network), Duration(5, "seconds"))
@@ -136,11 +138,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
           val html = email.htmlBody.value
           email.subject === "Billy Madison accepted your Kifi friend request"
-          html must contain("Billy Madison accepted your Kifi")
-          html must contain("utm_campaign=friendRequestAccepted")
+          html must contain("""<a href="http://dev.ezkeep.com:9000/billy?""")
+          html must contain("""Billy Madison</a> accepted your Kifi friend request""")
+          html must contain("""<a href="http://dev.ezkeep.com:9000/billy?utm_source=fromFriends&amp;utm_medium=email&amp;utm_campaign=friendRequestAccepted&amp;utm_content=friendRequestAccepted&amp;kcid=friendRequestAccepted-email-fromFriends&amp;dat=eyJsIjoiZnJpZW5kUmVxdWVzdEFjY2VwdGVkIiwiYyI6W10sInQiOltdfQ==&amp;kma=1"><img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Billy Madison" width="73" height="73" style="display:block;" border="0" /></a>""")
 
           val text = email.textBody.get.value
-          text must contain("Billy Madison accepted your Kifi")
+          text must contain("""Billy Madison accepted your Kifi friend request""")
         }
       }
     }
@@ -167,11 +170,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
             val text = email.textBody.get.value
             email.subject === s"Your $networkName Billy just joined Kifi"
             html must contain("utm_campaign=socialFriendJoined")
-            html must contain(s"Your $networkName, Billy Madison, joined Kifi")
-            html must contain(s"You and Billy are now")
+            html must contain(s"""Your $networkName, <a href="http://dev.ezkeep.com:9000/billy""")
+            html must contain("You and <a href=\"http://dev.ezkeep.com:9000/billy?")
+            html must contain("Billy Madison</a> are now connected on Kifi")
 
-            text must contain(s"Your $networkName, Billy Madison, joined Kifi")
-            text must contain(s"You and Billy are now")
+            text must contain(s"Billy Madison, joined Kifi")
+            text must contain("Billy Madison are now connected on Kifi")
           }
         }
     }
@@ -182,11 +186,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         withDb(modules: _*) { implicit injector =>
           val (toUser, friends) = db.readWrite { implicit rw =>
             (
-              inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")), username = Username("test"), normalizedUsername = "test")),
+              user().withName("Johnny", "Manziel").withEmailAddress("johnny@gmail.com").withUsername("johnny").saved,
               inject[ShoeboxTestFactory].createUsers()
             )
           }
-
           val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
           abook.addFriendRecommendationsExpectations(toUser.id.get,
             Seq(friends._1, friends._2, friends._3, friends._4).map(_.id.get))
@@ -196,10 +199,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           email.subject === "You are now friends with Billy Madison on Kifi!"
           html must contain("utm_campaign=connectionMade")
           html must contain("You have a new connection on Kifi")
-          html must contain("Your Facebook friend, Billy Madison, is now connected to you on Kifi")
+          html must contain("""Your Facebook friend, <a href="http://dev.ezkeep.com:9000/billy?""")
 
           text must contain("You have a new connection on Kifi")
-          text must contain("Your Facebook friend, Billy Madison, is now connected to you on Kifi")
+          text must contain("""Your Facebook friend, Billy""")
         }
       }
     }
@@ -213,8 +216,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val (toUser, fromUser) = db.readWrite { implicit rw =>
           val saveUser = inject[UserRepo].save _
           (
-            saveUser(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("test"), normalizedUsername = "test")),
-            saveUser(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")), username = Username("test"), normalizedUsername = "test"))
+            saveUser(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("billy"), normalizedUsername = "billy")),
+            saveUser(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")), username = Username("johnny"), normalizedUsername = "johnny"))
           )
         }
         val email = Await.result(sender.sendToUser(toUser.id.get, fromUser.id.get), Duration(5, "seconds"))
@@ -246,7 +249,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val sender = inject[ContactJoinedEmailSender]
         val (toUser, fromUser) = db.readWrite { implicit rw =>
           (
-            inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("test"), normalizedUsername = "test")),
+            inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("billy"), normalizedUsername = "billy")),
             inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")), username = Username("test"), normalizedUsername = "test"))
           )
         }
@@ -281,7 +284,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val passwordResetRepo = inject[PasswordResetRepo]
         val resetSender = inject[ResetPasswordEmailSender]
         val user = db.readWrite { implicit rw =>
-          inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("test"), normalizedUsername = "test"))
+          inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("billy"), normalizedUsername = "billy"))
         }
         val email = Await.result(resetSender.sendToUser(user.id.get, user.primaryEmail.get), Duration(5, "seconds"))
         outbox.size === 1

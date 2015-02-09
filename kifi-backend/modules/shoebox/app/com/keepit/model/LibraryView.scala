@@ -175,6 +175,7 @@ case class LibraryCardInfo(
   color: Option[LibraryColor],
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
+  visibility: LibraryVisibility,
   owner: BasicUserWithFriendStatus,
   numKeeps: Int,
   numFollowers: Int,

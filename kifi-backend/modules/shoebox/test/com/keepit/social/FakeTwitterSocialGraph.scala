@@ -1,5 +1,7 @@
 package com.keepit.social
 
+import java.io.File
+
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -64,6 +66,14 @@ class FakeTwitterSocialGraph @Inject() (
         """.stripMargin
       new FakeWSResponse()
     }
+
+    override def sendTweet(socialUserInfo: SocialUserInfo, msg: String): Future[WSResponse] = Future.successful {
+      new FakeWSResponse()
+    }
+
+    override def sendImage(socialUserInfo: SocialUserInfo, image: File, message: String): Unit = Future.successful {
+      new FakeWSResponse()
+    }
   }
 
   def extractEmails(parentJson: JsValue): Seq[EmailAddress] = twtrGraph.extractEmails(parentJson)
@@ -74,4 +84,6 @@ class FakeTwitterSocialGraph @Inject() (
   def extractUserValues(json: JsValue): Map[UserValueName, String] = twtrGraph.extractUserValues(json)
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = twtrGraph.fetchSocialUserRawInfo(socialUserInfo)
   def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse] = twtrGraph.sendDM(socialUserInfo, receiverUserId, msg)
+  def sendTweet(socialUserInfo: SocialUserInfo, msg: String): Future[WSResponse] = twtrGraph.sendTweet(socialUserInfo, msg)
+  def sendImage(socialUserInfo: SocialUserInfo, image: File, message: String): Unit = twtrGraph.sendImage(socialUserInfo, image, message)
 }

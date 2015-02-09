@@ -4,6 +4,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.time._
+import com.keepit.scraper.{ ScrapeScheduler, HttpRedirect }
 import scala.concurrent.duration._
 import views.html
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
@@ -14,10 +15,12 @@ import com.keepit.model.DuplicateDocument
 import com.keepit.common.healthcheck.{ SystemAdminMailSender, BabysitterTimeout, AirbrakeNotifier }
 import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.common.zookeeper.CentralConfig
-import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
+
+import scala.util.Random
 
 class UrlController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -39,7 +42,9 @@ class UrlController @Inject() (
     httpProxyRepo: HttpProxyRepo,
     monitoredAwait: MonitoredAwait,
     normalizedURIInterner: NormalizedURIInterner,
-    airbrake: AirbrakeNotifier) extends AdminUserActions {
+    airbrake: AirbrakeNotifier,
+    uriIntegrityHelpers: UriIntegrityHelpers,
+    scrapeScheduler: ScrapeScheduler) extends AdminUserActions {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -309,6 +314,34 @@ class UrlController @Inject() (
   def clearRestriction(uriId: Id[NormalizedURI]) = AdminUserPage { implicit request =>
     db.readWrite { implicit session => uriRepo.updateURIRestriction(uriId, None) }
     Redirect(routes.ScraperAdminController.getScraped(uriId))
+  }
+
+  def cleanKeepsByUri(firstPage: Int, pageSize: Int) = AdminUserAction { implicit request =>
+    SafeFuture {
+      var page = firstPage
+      var done = false
+      val excludeStates = Set(NormalizedURIStates.REDIRECTED, NormalizedURIStates.INACTIVE)
+      while (!done) {
+        db.readWrite { implicit session =>
+          val uris = uriRepo.page(page, pageSize, excludeStates)
+          uris.foreach { uri =>
+            if (HttpRedirect.isShortenedUrl(uri.url)) {
+              uriRepo.updateURIRestriction(uri.id.get, None)
+              val updatedUri = uriRepo.get(uri.id.get)
+              scrapeScheduler.scheduleScrape(updatedUri, currentDateTime.plusMinutes((Random.nextInt(10))))
+              log.info(s"[CleaningKeeps] Removed restriction and scheduled scrape for shortened url: $uri")
+            } else {
+              uriIntegrityHelpers.improveKeepsSafely(uri)
+            }
+          }
+          done = uris.isEmpty
+          page = page + 1
+        }
+        log.info(s"[CleaningKeeps] Successfully processed page $page")
+      }
+      log.info("[CleaningKeeps] All Done!")
+    }
+    Ok(s"Starting at page $firstPage of size $pageSize, it's on!")
   }
 }
 
