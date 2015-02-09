@@ -439,7 +439,6 @@ class KeepsCommander @Inject() (
       collectionRepo.getByUserAndExternalId(userId, collectionId)
     } map { collection =>
       val keeps = getKeepsInBulkSelection(selection, userId)
-      (keeps, collection)
       assert(collection.id.nonEmpty, s"Collection id is undefined: $collection")
       if (isAdd) addToCollection(collection.id.get, keeps) else removeFromCollection(collection, keeps)
       keeps.length
