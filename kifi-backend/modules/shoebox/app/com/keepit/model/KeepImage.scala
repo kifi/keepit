@@ -5,7 +5,6 @@ import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import org.joda.time.DateTime
 
-// TODO(josh) persist if image is from a scale or crop
 case class KeepImage(
     id: Option[Id[KeepImage]] = None,
     createdAt: DateTime = currentDateTime,

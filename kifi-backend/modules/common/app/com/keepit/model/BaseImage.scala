@@ -82,17 +82,16 @@ object ImageHash {
   implicit val format = Json.format[ImageHash]
 }
 
-sealed abstract class ProcessImageOperation(val kind: String, val fileNamePrefix: String)
+sealed abstract class ProcessImageOperation(val kind: String, val fileNameSuffix: String)
 object ProcessImageOperation {
-  // None and Scale have the same fileNamePrefix for backwards compatibility
-  object None extends ProcessImageOperation("none", "")
-  case object Scale extends ProcessImageOperation("scale", "")
-  case object Crop extends ProcessImageOperation("crop", "C")
+  object Original extends ProcessImageOperation("original", "_o")
+  case object Scale extends ProcessImageOperation("scale", "_s")
+  case object Crop extends ProcessImageOperation("crop", "_c")
 
-  val all = Scale :: Crop :: None :: Nil
+  val all = Scale :: Crop :: Original :: Nil
 
   def apply(kind: String): ProcessImageOperation = {
-    all.find(_.kind == kind) getOrElse None
+    all.find(_.kind == kind) getOrElse Original
   }
 
 }

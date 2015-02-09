@@ -34,10 +34,10 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
 
   private def readFile(file: File): Array[Byte] = IOUtils.toByteArray(new FileInputStream(file))
 
-  def scaleRequest(ints: Int*) = ints map ScaleRequest
+  def scaleRequest(ints: Int*) = ints map { s => ScaleImageRequest.apply(s) }
   def cropRequest(strs: String*) = strs map { str =>
     val Array(w, h) = str.split('x').map(_.toInt)
-    CropRequest(ImageSize(w, h))
+    CropImageRequest(ImageSize(w, h))
   }
 
   "ProcessedImageHelper" should {
@@ -205,8 +205,8 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
         height <- 10 to 150 by 17
       } yield genKeepImage(width * 9, height * 9)
 
-      ProcessedImageSize.pickBestImage(ImageSize(201, 399), keepImages).get.imageSize === ImageSize(189, 396)
-      ProcessedImageSize.pickBestImage(ImageSize(800, 840), keepImages).get.imageSize === ImageSize(783, 855)
+      ProcessedImageSize.pickBestImage(ImageSize(201, 399), keepImages, false).get.imageSize === ImageSize(189, 396)
+      ProcessedImageSize.pickBestImage(ImageSize(800, 840), keepImages, false).get.imageSize === ImageSize(783, 855)
     }
   }
 

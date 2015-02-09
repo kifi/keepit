@@ -13,6 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store._
+import com.keepit.model.ProcessImageOperation.Original
 import com.keepit.model._
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -30,8 +31,8 @@ object KeepImageSizes {
 trait KeepImageCommander {
 
   def getUrl(keepImage: KeepImage): String
-  def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[Option[KeepImage]]
-  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], idealSize: ImageSize): Map[Id[Keep], Option[KeepImage]]
+  def getBestImageForKeep(keepId: Id[Keep], imageRequest: ProcessImageRequest): Option[Option[KeepImage]]
+  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]]
   def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String]
 
   def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean = true, overwriteExistingChoice: Boolean = false): Future[ImageProcessDone]
@@ -61,7 +62,7 @@ class KeepImageCommanderImpl @Inject() (
     s3ImageConfig.cdnBase + "/" + keepImage.imagePath
   }
 
-  def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[Option[KeepImage]] = {
+  def getBestImageForKeep(keepId: Id[Keep], imageRequest: ProcessImageRequest): Option[Option[KeepImage]] = {
     val keepImages = db.readOnlyReplica { implicit session =>
       keepImageRepo.getAllForKeepId(keepId)
     }
@@ -69,12 +70,14 @@ class KeepImageCommanderImpl @Inject() (
       SafeFuture { autoSetKeepImage(keepId, localOnly = false, overwriteExistingChoice = false) }
       None
     } else Some {
-      val validKeepImages = keepImages.filter(_.state == KeepImageStates.ACTIVE)
-      ProcessedImageSize.pickBestImage(idealSize, validKeepImages)
+      val size = imageRequest.size
+      val validKeepImages = keepImages.filter(ki => ki.state == KeepImageStates.ACTIVE)
+      val strictAspectRatio = imageRequest.operation == ProcessImageOperation.Crop
+      ProcessedImageSize.pickBestImage(size, validKeepImages, strictAspectRatio)
     }
   }
 
-  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], idealSize: ImageSize): Map[Id[Keep], Option[KeepImage]] = {
+  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]] = {
     if (keepIds.isEmpty) {
       Map.empty[Id[Keep], Option[KeepImage]]
     } else {
@@ -82,9 +85,10 @@ class KeepImageCommanderImpl @Inject() (
       (keepIds -- allImagesByKeepId.keys).foreach { missingKeepId =>
         SafeFuture { autoSetKeepImage(missingKeepId, localOnly = false, overwriteExistingChoice = false) }
       }
+      val strictAspectRatio = imageRequest.operation == ProcessImageOperation.Crop
       allImagesByKeepId.mapValues { keepImages =>
         val validKeepImages = keepImages.filter(_.state == KeepImageStates.ACTIVE)
-        ProcessedImageSize.pickBestImage(idealSize, validKeepImages)
+        ProcessedImageSize.pickBestImage(imageRequest.size, validKeepImages, strictAspectRatio)
       }
     }
   }
@@ -309,7 +313,12 @@ class KeepImageCommanderImpl @Inject() (
     Future.sequence(uploads).map { results =>
       val keepImages = results.map {
         case uploadedImage =>
-          val isOriginal = uploadedImage.key.takeRight(7).indexOf(originalLabel) != -1
+
+          val isOriginal = uploadedImage.processOperation match {
+            case Original => true
+            case _ => false
+          }
+
           val ki = KeepImage(keepId = keepId, imagePath = uploadedImage.key, format = uploadedImage.format, width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight, source = source, sourceImageUrl = originalImage.sourceImageUrl, sourceFileHash = originalImage.hash, isOriginal = isOriginal, kind = uploadedImage.processOperation)
           uploadedImage.image.flush()
           ki

@@ -55,7 +55,7 @@ class PageMetaTagsCommander @Inject() (
       case Some(image) =>
         Seq(imageUrl(image))
       case None =>
-        val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, ProcessedImageSize.XLarge.idealSize).values.flatten.toSeq
+        val images: Seq[KeepImage] = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, ScaleImageRequest(ProcessedImageSize.XLarge.idealSize)).values.flatten.toSeq
         val sorted: Seq[KeepImage] = images.sortWith {
           case (image1, image2) =>
             (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)

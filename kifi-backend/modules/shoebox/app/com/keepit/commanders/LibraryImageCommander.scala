@@ -11,6 +11,7 @@ import com.keepit.common.images.Photoshop
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
 import com.keepit.common.store.{ ImageSize, LibraryImageStore, S3ImageConfig }
+import com.keepit.model.ProcessImageOperation.Original
 import com.keepit.model._
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -55,14 +56,16 @@ class LibraryImageCommanderImpl @Inject() (
     val targetLibraryImages = db.readOnlyMaster { implicit s =>
       libraryImageRepo.getActiveForLibraryId(libraryId)
     }
-    ProcessedImageSize.pickBestImage(idealSize, targetLibraryImages)
+    ProcessedImageSize.pickBestImage(idealSize, targetLibraryImages, strictAspectRatio = false)
   }
 
   def getBestImageForLibraries(libraryIds: Set[Id[Library]], idealSize: ImageSize): Map[Id[Library], LibraryImage] = {
     val availableLibraryImages = db.readOnlyMaster { implicit s =>
       libraryImageRepo.getActiveForLibraryIds(libraryIds)
     }
-    availableLibraryImages.mapValues(ProcessedImageSize.pickBestImage(idealSize, _)).collect { case (libraryId, Some(image)) => libraryId -> image }
+    availableLibraryImages.mapValues(ProcessedImageSize.pickBestImage(idealSize, _, strictAspectRatio = false)).collect {
+      case (libraryId, Some(image)) => libraryId -> image
+    }
   }
 
   def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, userId: Id[User], requestId: Option[Id[LibraryImageRequest]])(implicit context: HeimdalContext): Future[ImageProcessDone] = {
@@ -149,7 +152,10 @@ class LibraryImageCommanderImpl @Inject() (
     Future.sequence(uploads).map { results =>
       val libraryImages = results.map {
         case uploadedImage =>
-          val isOriginal = uploadedImage.key.takeRight(7).indexOf(originalLabel) != -1
+          val isOriginal = uploadedImage.processOperation match {
+            case Original => true
+            case _ => false
+          }
 
           val libImg = LibraryImage(libraryId = libraryId, imagePath = uploadedImage.key, format = uploadedImage.format,
             width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight, positionX = position.x, positionY = position.y,
