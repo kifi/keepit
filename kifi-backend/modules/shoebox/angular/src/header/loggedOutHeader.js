@@ -9,6 +9,7 @@ angular.module('kifi')
             signupService, platformService, libraryService, routeService, util) {
     $scope.library = null;
     $scope.search = {text: '', focused: false};
+    $scope.isMobile = platformService.isSupportedMobilePlatform();
 
     $scope.clickLogo = function () {
       if (util.startsWith($state.current.name, 'library')) {
