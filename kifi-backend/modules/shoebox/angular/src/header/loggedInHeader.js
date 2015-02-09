@@ -15,6 +15,21 @@ angular.module('kifi')
 
     $scope.search = {text: '', focused: false, libraryChip: false};
 
+
+    // TODO: Remove callout when most users know about library menu (Feb 9 2014)
+    $scope.showCallout = angular.noop;
+    $timeout(function () {
+      $scope.showCallout = function () {
+        return profileService.prefs.site_introduce_library_menu;
+      };
+    }, 2400);
+
+    $scope.closeCallout = function () {
+      profileService.prefs.site_introduce_library_menu = false;
+      profileService.savePrefs({site_introduce_library_menu: false});
+    };
+
+
     //
     // Watchers & Listeners
     //

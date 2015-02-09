@@ -1,48 +1,55 @@
+bg-color = #4dAf7c
+
 .kf-callout-bubble
   position: absolute
-  background-color: #4DAF7C
+  background-color: bg-color
   border-radius: 15px
   padding: 35px 55px 27px
   color: #fff
   width: 266px
   box-shadow: 2.5px 4.3px 24.8px 2.2px rgba(0, 0, 0, 0.43)
-  line-height: 17px
+  line-height: 20px
   text-align: left
   z-index: 100
   font-size: 15px
   -webkit-font-smoothing: antialiased
 
-  .kf-callout-bubble-body
-    margin-bottom: 22px
+.kf-callout-bubble-body
+  margin-bottom: 22px
 
-  .kf-callout-bubble-action
-    font-size: 13px
-    display: block
-    margin: 30px auto 0
-    text-align: center
+.kf-callout-bubble-action
+  font-size: 13px
+  display: block
+  margin: 30px auto 0
+  text-align: center
 
-  .kf-callout-decline
-    display: inline-block
-    font-size: 11px
-    text-decoration: underline
-    cursor: pointer
-    margin-right: 30px
+.kf-callout-decline
+  display: inline-block
+  font-size: 11px
+  text-decoration: underline
+  cursor: pointer
+  margin-right: 30px
 
-  .kf-callout-bubble-button
-    user-select: none
-    padding: 10px 20px
-    border: 1px solid #FFF
-    border-radius: 19px
-    font-size: 13px
-    display: inline-block
-    text-align: center
-    width: 140px
-    cursor: pointer
+.kf-callout-bubble-button
+  display: inline-block
+  width: 140px
+  padding: 10px 20px
+  border: 1px solid #fff
+  border-radius: 19px
+  background-color: transparent
+  color: inherit
+  font-size: 13px
+  text-align: center
+  cursor: pointer
+  user-select: none
 
-    &:hover
-      background-color: lighten(#4DAF7C, 10%)
+  &:hover
+    background-color: alpha(#fff, .08)
 
-.kf-callout-bubble.kf-callout-bubble-right
+  &:hover:active
+    background-color: alpha(#000, .04)
+
+.kf-callout-bubble-right
   left: 90%
 
   &::before
@@ -50,14 +57,14 @@
     position: absolute
     border-style: solid
     border-width: 10px 15px 10px 0
-    border-color: transparent #4DAF7C
+    border-color: 'transparent %s' % bg-color
     display: block
     width: 0
     z-index: 1
     left: -15px
     top: 27px
 
-.kf-callout-bubble.kf-callout-bubble-left
+.kf-callout-bubble-left
   right: 110%
 
   &::before
@@ -65,15 +72,14 @@
     position: absolute
     border-style: solid
     border-width: 10px 0 10px 15px
-    border-color: transparent #4DAF7C
+    border-color: 'transparent %s' % bg-color
     display: block
     width: 0
     z-index: 1
     right: -15px
     top: 27px
 
-
-.kf-callout-bubble.kf-callout-bubble-bottom
+.kf-callout-bubble-bottom
   top: 110%
 
   &::before
@@ -81,7 +87,7 @@
     position: absolute
     border-style: solid
     border-width: 0 10px 15px
-    border-color: #4DAF7C transparent
+    border-color: '%s transparent' % bg-color
     display: block
     width: 0
     z-index: 1
@@ -89,3 +95,29 @@
     left: 100px
 
 // Specific callout styles
+
+.kf-callout-lib-menu
+  width: auto
+  margin-left: -28px
+  padding: 24px 30px
+  transform-origin: 20% top
+
+  &.ng-enter
+    transition: opacity .3s linear, transform .3s
+
+  &.ng-leave
+    transition: opacity .2s, transform .2s
+
+  &.ng-enter:not(.ng-enter-active)
+  &.ng-leave.ng-leave-active
+    opacity: 0
+    transform: translate(0,-20px) scale(.6)
+
+  &::before
+    left: 33px
+
+  .kf-callout-bubble-button
+    width: 100px
+
+  .kf-callout-bubble-action
+    margin-top: 20px
