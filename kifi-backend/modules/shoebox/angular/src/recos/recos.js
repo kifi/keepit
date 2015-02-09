@@ -47,10 +47,11 @@ angular.module('kifi')
         } else {
           $scope.noMoreRecos = true;
         }
-
+      })['catch'](function () {
+        $scope.noMoreRecos = true;
+      })['finally'](function () {
         $scope.moreLoading = false;
       });
-
     };
 
     $scope.trash = function (reco) {

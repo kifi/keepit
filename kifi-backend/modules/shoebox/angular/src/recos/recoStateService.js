@@ -5,20 +5,20 @@ angular.module('kifi')
 .factory('recoStateService', [
   function () {
     var savedRecos = [];
+    var recoUrls = {};
 
     var api = {
       recosList: savedRecos,
 
       populate: function (recos) {
-        _.remove(recos, function (reco) {
-          return _.some(savedRecos, function (savedReco) {
-            return (
-              reco.recoLib && savedReco.recoLib && (reco.recoLib.url === savedReco.recoLib.url) ||
-              reco.recoKeep && savedReco.recoKeep && (reco.recoKeep.url === savedReco.recoKeep.url)
-            );
-          });
-        });
-        savedRecos.push.apply(savedRecos, recos);
+        for (var i = 0; i < recos.length; i++) {
+          var reco = recos[i];
+          var url = (reco.recoLib || reco.recoKeep).url;
+          if (!recoUrls[url]) {
+            recoUrls[url] = true;
+            savedRecos.push(reco);
+          }
+        }
       },
 
       empty: function () {
