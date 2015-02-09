@@ -133,12 +133,6 @@ section-border-radius = 10px
   &::after
     transform: translate(radius) rotate(-45deg) scale(.5, 1)
 
-// .kf-pymk-invite-link
-//   float: right
-//   margin-top: -4px
-//   color: linkBlueColor
-//   font-size: 11px
-
 .kf-pymk-bottom
   clear: both
   border-radius: 0 0 section-border-radius section-border-radius
@@ -164,19 +158,29 @@ section-border-radius = 10px
   width: 32px
   height: 32px
   border-radius: 50%
+  background-repeat: no-repeat
   margin-right: 10px
 
-  &.svg-facebook-white
+  &.svg-facebook-f
     background-color: #597ab1
+    background-position: center
+    background-size: auto 16px
 
   &.svg-twitter-white
     background-color: #55acee
+    background-position: center
+    background-size: auto 13px
 
-  &.linkedin
+  &.svg-linkedin-in
     background-color: #2786C4
+    background-position: 9px 7px
+    background-size: auto 16px
 
   &.gmail
     background-color: #e36767
+    background-position: center
+    background-size: 18px auto
+    box-shadow: 0 0 1px rgba(0,0,0,.5) inset
 
 .kf-pymk-network-1
   display: block
@@ -193,25 +197,7 @@ section-border-radius = 10px
     color: linkBlueColor
     text-decoration: underline
 
-// .social-connect-button::before
-//   position: absolute
-//   top: 0
-//   left: 0
-//   width: 35px
-//   height: 100%
-//   background-image: url(/img/networks2.png)
-//   background-size: auto 35px;
-//   background-color: rgba(0, 0, 0, 0.1)
-//   display: inline-block
-//   content: ''
-
-// .social-connect-button.twitter::before
-//   background-image: url(/img/svg/twitter-icon.svg) // more ideal if was in networks2.png
-//   background-size: 20px
-//   background-repeat: no-repeat
-//   background-position: 8px 11px
-
-.kf-pymk-network-other
+.kf-pymk-network-other:not(:first-child)
   margin-top: 10px
   border-top: 1px solid #dfe0e5
   padding-top: 10px
