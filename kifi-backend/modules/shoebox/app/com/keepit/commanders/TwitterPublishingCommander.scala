@@ -93,7 +93,6 @@ class TwitterPublishingCommander @Inject() (
             case None => twitterSocialGraph.sendTweet(sui, message)
             case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendImage(sui, imageFile.file, message) }
           }
-          twitterSocialGraph.sendTweet(sui, message)
       }
     }
   }
