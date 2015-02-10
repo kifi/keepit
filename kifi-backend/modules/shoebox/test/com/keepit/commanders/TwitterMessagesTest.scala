@@ -6,6 +6,11 @@ class TwitterMessagesTest extends Specification {
 
   "TwitterMessages" should {
 
+    "parseHandleFromUrl" in {
+      val messages = new TwitterMessages()
+      messages.parseHandleFromUrl("https://www.twitter.com/eishay") === "@eishay"
+    }
+
     "keepMessage short" in {
       val messages = new TwitterMessages()
       messages.keepMessage("short keep", "http://keep.com/1234", "short lib", "http://lib.com/12345") === "short keep http://keep.com/1234 kept to short lib http://lib.com/12345 via @kifi"
