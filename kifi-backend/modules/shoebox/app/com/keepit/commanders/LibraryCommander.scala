@@ -1387,7 +1387,7 @@ class LibraryCommander @Inject() (
     }
 
     libs.par map { lib => // may want to optimize queries below into bulk queries
-      val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get))
+      val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), false)
       val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
       val (numFollowers, followersSample) = if (lib.memberCount > 1) {
         val count = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)

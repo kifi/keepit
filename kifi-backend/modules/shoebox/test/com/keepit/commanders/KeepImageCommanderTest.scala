@@ -1,12 +1,12 @@
 package com.keepit.commanders
 
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryFactoryHelper._
 import java.io.File
+
 import com.google.inject.Injector
 import com.keepit.common.logging.Logging
-import com.keepit.common.store.{ S3ImageConfig, FakeKeepImageStore, ImageSize, KeepImageStore }
+import com.keepit.common.store.{ FakeKeepImageStore, ImageSize, KeepImageStore, S3ImageConfig }
 import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
@@ -73,7 +73,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         // If this complains about not having an `all`, then it's not using FakeKeepImageStore
         inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet.size === 1
 
-        val keepImage1 = commander.getBestImageForKeep(keep1.id.get, ImageSize(200, 200)).flatten
+        val keepImage1 = commander.getBestImageForKeep(keep1.id.get, ScaleImageRequest(200, 200)).flatten
         keepImage1.nonEmpty === true
         keepImage1.get.sourceImageUrl === None
         keepImage1.get.isOriginal === true
@@ -81,14 +81,14 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         keepImage1.get.format === ImageFormat.PNG
         keepImage1.get.imageSize === ImageSize(66, 38)
 
-        val keepImage2 = commander.getBestImageForKeep(keep2.id.get, ImageSize(100, 100)).flatten
+        val keepImage2 = commander.getBestImageForKeep(keep2.id.get, ScaleImageRequest(100, 100)).flatten
         keepImage1.get.id !== keepImage2.get.id
         keepImage1.get.sourceFileHash === keepImage2.get.sourceFileHash
 
-        val bulk1 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ImageSize(200, 200))
+        val bulk1 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ScaleImageRequest(200, 200))
         bulk1.mapValues(_.map(_.id)) === Map(keep1.id.get -> Some(keepImage1.get.id), keep2.id.get -> Some(keepImage2.get.id))
 
-        val bulk2 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ImageSize(100, 100))
+        val bulk2 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ScaleImageRequest(100, 100))
         bulk2.mapValues(_.map(_.id)) === Map(keep1.id.get -> Some(keepImage1.get.id), keep2.id.get -> Some(keepImage2.get.id))
 
         {
@@ -97,15 +97,18 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(400, 482), 73259)
         }
 
-        inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet.size === 4
+        val keys = inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet
+        keys.size === 5
+        keys.exists(_.contains("150x150_c")) must beTrue
+
         // Dependant on image1.png — if changed, this needs to change too.
         inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.find(_._1 == "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png").nonEmpty === true
 
-        val keepImage3 = commander.getBestImageForKeep(keep2.id.get, ImageSize(100, 100)).flatten
+        val keepImage3 = commander.getBestImageForKeep(keep2.id.get, ScaleImageRequest(100, 100)).flatten
         keepImage2.get.id !== keepImage3.get.id
         keepImage1.get.sourceFileHash !== keepImage3.get.sourceFileHash
 
-        val bulk3 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ImageSize(100, 100))
+        val bulk3 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ScaleImageRequest(100, 100))
         bulk3.mapValues(_.map(_.id)) === Map(keep1.id.get -> Some(keepImage1.get.id), keep2.id.get -> Some(keepImage3.get.id))
 
         {
@@ -114,22 +117,22 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
         }
 
-        val keepImage4 = commander.getBestImageForKeep(keep2.id.get, ImageSize(100, 100)).flatten
+        val keepImage4 = commander.getBestImageForKeep(keep2.id.get, ScaleImageRequest(100, 100)).flatten
         keepImage2.get.id === keepImage4.get.id
 
-        val bulk4 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ImageSize(100, 100))
+        val bulk4 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ScaleImageRequest(100, 100))
         bulk4.mapValues(_.map(_.id)) === Map(keep1.id.get -> Some(keepImage1.get.id), keep2.id.get -> Some(keepImage2.get.id))
 
         commander.removeKeepImageForKeep(keep2.id.get)
-        commander.getBestImageForKeep(keep2.id.get, ImageSize(100, 100)) === Some(None)
+        commander.getBestImageForKeep(keep2.id.get, ScaleImageRequest(100, 100)) === Some(None)
 
-        val bulk5 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ImageSize(100, 100))
+        val bulk5 = commander.getBestImagesForKeeps(Set(keep1.id.get, keep2.id.get), ScaleImageRequest(100, 100))
         bulk5.mapValues(_.map(_.id)) === Map(keep1.id.get -> Some(keepImage1.get.id), keep2.id.get -> None)
 
         db.readOnlyMaster { implicit session =>
           // Dependant on what sizes we do
           val all = keepImageRepo.all()
-          all.length === 5
+          all.length === 6
           keepImageRepo.getForKeepId(keep1.id.get).length === 1
           keepImageRepo.getForKeepId(keep2.id.get).length === 0
           keepImageRepo.getBySourceHash(keepImage4.get.sourceFileHash).length === 2

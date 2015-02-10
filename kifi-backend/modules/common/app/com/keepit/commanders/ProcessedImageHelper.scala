@@ -22,11 +22,42 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success, Try }
 
+object ProcessImageRequest {
+  implicit val ordering = new Ordering[ProcessImageRequest] {
+    override def compare(x: ProcessImageRequest, y: ProcessImageRequest): Int = {
+      (x, y) match {
+        case (c1: CropImageRequest, c2: CropImageRequest) => c1.size.width - c2.size.width
+        case (s1: ScaleImageRequest, s2: ScaleImageRequest) => s1.size.width - s2.size.width
+        case (_: CropImageRequest, _: ScaleImageRequest) => 1
+        case (_: ScaleImageRequest, _: CropImageRequest) => -1
+      }
+    }
+  }
+}
+
+sealed trait ProcessImageRequest {
+  def operation: ProcessImageOperation
+  def size: ImageSize
+}
+
+trait ScaleImageRequest extends ProcessImageRequest {
+  val operation = ProcessImageOperation.Scale
+}
+
+object ScaleImageRequest {
+  private case class ScaleImageRequestImpl(size: ImageSize) extends ScaleImageRequest
+
+  def apply(boundingBox: Int): ScaleImageRequest = ScaleImageRequestImpl(ImageSize(boundingBox, boundingBox))
+  def apply(imageSize: ImageSize): ScaleImageRequest = ScaleImageRequestImpl(imageSize)
+  def apply(width: Int, height: Int): ScaleImageRequest = ScaleImageRequestImpl(ImageSize(width, height))
+}
+
+case class CropImageRequest(size: ImageSize) extends ProcessImageRequest { val operation = ProcessImageOperation.Crop }
+
 trait ProcessedImageHelper {
+
   val log: Logger
   val webService: WebService
-
-  val originalLabel: String = "_o"
 
   def fetchAndHashLocalImage(file: TemporaryFile): Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
     log.info(s"[pih] Fetching ${file.file.getAbsolutePath}")
@@ -66,20 +97,32 @@ trait ProcessedImageHelper {
     }
   }
 
-  def buildPersistSet(sourceImage: ImageProcessState.ImageLoadedAndHashed, baseLabel: String)(implicit photoshop: Photoshop): Either[ImageStoreFailure, Set[ImageProcessState.ReadyToPersist]] = {
+  def buildPersistSet(sourceImage: ImageProcessState.ImageLoadedAndHashed, baseLabel: String, scaleCandidates: Seq[ScaledImageSize],
+    cropCandidates: Seq[CroppedImageSize])(implicit photoshop: Photoshop): Either[ImageStoreFailure, Set[ImageProcessState.ReadyToPersist]] = {
+
     val outFormat = inputFormatToOutputFormat(sourceImage.format)
-    def keygen(width: Int, height: Int, label: String = "") = {
-      baseLabel + "/" + sourceImage.hash.hash + "_" + width + "x" + height + label + "." + outFormat.value
+    def keygen(width: Int, height: Int, operation: ProcessImageOperation) = {
+      baseLabel + "/" + sourceImage.hash.hash + "_" + width + "x" + height + operation.fileNameSuffix + "." + outFormat.value
     }
+
     validateAndLoadImageFile(sourceImage.file.file) match {
       case Success(image) =>
-        val resizedImages = calcSizesForImage(image).map { boundingBox =>
-          log.info(s"[pih] Using bounding box $boundingBox px")
-          photoshop.resizeImage(image, sourceImage.format, boundingBox).map { resizedImage =>
+        val imageSize = ImageSize(image.getWidth, image.getHeight)
+        val sizes = calcSizesForImage(imageSize, scaleCandidates, cropCandidates)
+
+        val resizedImages = sizes.map { processImageSize =>
+          log.info(s"[pih] resizing image baseLabel=$baseLabel format=${sourceImage.format} imageWidth=${imageSize.width} imageHeight=${imageSize.height} to $processImageSize")
+
+          def process(): Try[BufferedImage] = processImageSize match {
+            case s: ScaleImageRequest => photoshop.resizeImage(image, sourceImage.format, s.size.width, s.size.height)
+            case c: CropImageRequest => photoshop.cropImage(image, sourceImage.format, c.size.width, c.size.height)
+          }
+
+          process().map { resizedImage =>
             bufferedImageToInputStream(resizedImage, outFormat).map {
               case (is, bytes) =>
-                val key = keygen(resizedImage.getWidth, resizedImage.getHeight)
-                ImageProcessState.ReadyToPersist(key, outFormat, is, resizedImage, bytes)
+                val key = keygen(resizedImage.getWidth, resizedImage.getHeight, operation = processImageSize.operation)
+                ImageProcessState.ReadyToPersist(key, outFormat, is, resizedImage, bytes, processImageSize.operation)
             }
           }.flatten match {
             case Success(img) => Right(img)
@@ -89,12 +132,13 @@ trait ProcessedImageHelper {
 
         resizedImages.find(_.isLeft) match {
           case Some(error) => // failure of at least one of the images
+            log.error("s[pih] resizedImages failure $error")
             Left(error.left.get)
           case None =>
             val original = bufferedImageToInputStream(image, inputFormatToOutputFormat(sourceImage.format)).map {
               case (is, bytes) =>
-                val key = keygen(image.getWidth, image.getHeight, originalLabel)
-                ImageProcessState.ReadyToPersist(key, outFormat, is, image, bytes)
+                val key = keygen(image.getWidth, image.getHeight, operation = ProcessImageOperation.Original)
+                ImageProcessState.ReadyToPersist(key, outFormat, is, image, bytes, ProcessImageOperation.Original)
             }
             original match {
               case Success(o) =>
@@ -104,29 +148,59 @@ trait ProcessedImageHelper {
             }
         }
       case Failure(ex) =>
+        log.error(s"s[pih] validateAndLoadImageFile failure", ex)
         Left(ImageProcessState.InvalidImage(ex))
     }
   }
 
   // Returns Set of bounding box sizes
-  protected def calcSizesForImage(image: BufferedImage): Set[Int] = {
-    val sizes = ProcessedImageSize.allSizes.map { size =>
-      calcResizeBoundingBox(image, size.idealSize)
+  protected def calcSizesForImage(imageSize: ImageSize, scaleCandidates: Seq[ScaledImageSize], cropCandidates: Seq[CroppedImageSize]): Set[ProcessImageRequest] = {
+    val scaleSizes = scaleCandidates.map { size =>
+      calcResizeBoundingBox(imageSize, size.idealSize)
     }.flatten
 
-    var t = 0
-    sizes.sorted.flatMap { x =>
-      if (x - t > 100) {
-        t = x
-        Some(x)
-      } else None
-    }.filterNot(i => i == Math.max(image.getWidth, image.getHeight)).toSet
+    val scaleImageRequests = {
+      var t = 0
+      scaleSizes.sorted.flatMap { x =>
+        if (x - t > 100) {
+          t = x
+          Some(x)
+        } else None
+      }.filterNot { i => i == Math.max(imageSize.width, imageSize.height) }.
+        map { x => ScaleImageRequest(x) }
+    }
+
+    val imgHeight = imageSize.height
+    val imgWidth = imageSize.width
+
+    log.info(s"[csfi] imageSize=${imageSize.width}x${imageSize.height} cropCandidates=$cropCandidates")
+    val cropImageRequests = cropCandidates.filterNot { cropSize =>
+      val size = cropSize.idealSize
+      def isAlmostSameAspectRatio = Math.abs(imgWidth.toFloat / imgHeight - cropSize.aspectRatio) < 0.01
+
+      // 1) if either the width or height of the actual image is smaller than our crop, abort
+      // 2) or, if the aspect ratio of the image and crop size are the same and there exists
+      //    a scale bounding box close to enough to our crop candidate, we can skip the crop
+      imgWidth < size.width || imgHeight < size.height ||
+        (isAlmostSameAspectRatio && scaleImageRequests.exists { scaleSize =>
+          val candidateCropWidth = cropSize.idealSize.width
+          val candidateCropHeight = cropSize.idealSize.height
+          val scaleWidth = scaleSize.size.width
+          val scaleHeight = scaleSize.size.height
+
+          scaleWidth >= candidateCropWidth && scaleHeight >= candidateCropHeight &&
+            scaleWidth - candidateCropWidth < 100 && scaleHeight - candidateCropHeight < 100
+        })
+    }.map { c => CropImageRequest(c.idealSize) }
+
+    log.info(s"[csfi] imageSize=${imageSize.width}x${imageSize.height} cropRequests=$cropImageRequests")
+    (scaleImageRequests ++ cropImageRequests).toSet
   }
 
   // Returns None if image can not be reasonably boxed to near the desired dimensions
-  protected def calcResizeBoundingBox(image: BufferedImage, size: ImageSize): Option[Int] = {
-    val imgHeight = image.getHeight
-    val imgWidth = image.getWidth
+  protected def calcResizeBoundingBox(imageSize: ImageSize, size: ImageSize): Option[Int] = {
+    val imgHeight = imageSize.height
+    val imgWidth = imageSize.width
 
     val fudgeFactor = 0.50
 
@@ -276,27 +350,52 @@ trait ProcessedImageHelper {
   }
 }
 
-sealed abstract class ProcessedImageSize(val name: String, val idealSize: ImageSize)
+sealed abstract class ProcessedImageSize(val name: String, val idealSize: ImageSize, val operation: ProcessImageOperation) {
+  val aspectRatio = idealSize.width.toFloat / idealSize.height
+}
+
+sealed abstract class ScaledImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name, idealSize, ProcessImageOperation.Scale)
+sealed abstract class CroppedImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name + "-crop", idealSize, ProcessImageOperation.Crop)
+
+object ScaledImageSize {
+  case object Small extends ScaledImageSize("small", ImageSize(150, 150))
+  case object Medium extends ScaledImageSize("medium", ImageSize(400, 400))
+  case object Large extends ScaledImageSize("large", ImageSize(1000, 1000))
+  case object XLarge extends ScaledImageSize("xlarge", ImageSize(1500, 1500))
+
+  val allSizes: Seq[ScaledImageSize] = Seq(Small, Medium, Large, XLarge)
+}
+
+object CroppedImageSize {
+  case object Small extends CroppedImageSize("small", ImageSize(150, 150))
+
+  val allSizes: Seq[CroppedImageSize] = Seq(Small)
+}
+
 object ProcessedImageSize {
-  case object Small extends ProcessedImageSize("small", ImageSize(150, 150))
-  case object Medium extends ProcessedImageSize("medium", ImageSize(400, 400))
-  case object Large extends ProcessedImageSize("large", ImageSize(1000, 1000))
-  case object XLarge extends ProcessedImageSize("xlarge", ImageSize(1500, 1500))
+  val Small = ScaledImageSize.Small
+  val Medium = ScaledImageSize.Medium
+  val Large = ScaledImageSize.Large
+  val XLarge = ScaledImageSize.XLarge
 
   val allSizes: Seq[ProcessedImageSize] = Seq(Small, Medium, Large, XLarge)
 
   def apply(size: ImageSize): ProcessedImageSize = {
     // Minimize the maximum dimension divergence from the ProcessedImageSizes
-    allSizes.map(s => s -> maxDivergence(s.idealSize, size)).sortBy(_._2).head._1
+    allSizes.map(s => s -> maxDivergence(s.idealSize, size)).
+      sortBy(_._2).head._1
   }
 
-  def pickBestImage[T <: BaseImage](idealSize: ImageSize, images: Seq[T]): Option[T] = {
-    images.map(s => s -> maxDivergence(idealSize, s.imageSize)).sortBy(_._2).headOption.map(_._1)
+  def pickBestImage[T <: BaseImage](idealSize: ImageSize, images: Seq[T], strictAspectRatio: Boolean): Option[T] = {
+    images.
+      filter(s => if (strictAspectRatio) isAlmostTheSameAspectRatio(idealSize, ImageSize(s.width, s.height)) else true).
+      map(s => s -> maxDivergence(idealSize, s.imageSize)).
+      sortBy(_._2).headOption.map(_._1)
   }
 
   def imageSizeFromString(sizeStr: String): Option[ImageSize] = {
     val lower = sizeStr.toLowerCase
-    ProcessedImageSize.allSizes.find { size =>
+    allSizes.find { size =>
       size.name == lower
     }.map(_.idealSize).orElse {
       lower.split("x").toList match {
@@ -305,6 +404,13 @@ object ProcessedImageSize {
         case _ => None
       }
     }
+  }
+
+  @inline
+  private def isAlmostTheSameAspectRatio(size1: ImageSize, size2: ImageSize): Boolean = {
+    val ratio1 = size1.width.toFloat / size1.height
+    val ratio2 = size2.width.toFloat / size2.height
+    Math.abs(ratio1 - ratio2) < 0.01
   }
 
   @inline

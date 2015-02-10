@@ -11,7 +11,7 @@ import org.joda.time.DateTime
 
 import scala.concurrent.Future
 
-class UserLibraryFollowersComponent @Inject() (val libraryCommander: LibraryCommander,
+class UserLibrariesByRecentFollowersComponent @Inject() (val libraryCommander: LibraryCommander,
     val clock: Clock,
     val membershipRepo: LibraryMembershipRepo,
     db: Database,
