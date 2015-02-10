@@ -288,6 +288,18 @@ angular.module('kifi')
           $window.removeEventListener(hideAndReopenOnResize);
         });
 
+        var preventBodyScrollInMenu = function (event) {
+          if (element[0].contains(event.target)) {
+            document.body.style.overflow = 'hidden';
+          } else {
+            document.body.style.overflow = 'visible';
+          }
+        };
+        $window.addEventListener('wheel', preventBodyScrollInMenu);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener(preventBodyScrollInMenu);
+        });
+
         //
         // Scrolling.
         //
