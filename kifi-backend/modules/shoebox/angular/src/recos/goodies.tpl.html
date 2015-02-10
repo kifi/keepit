@@ -1,12 +1,12 @@
 <div class="kf-gd clearfix">
   <div class="kf-gd-top clearfix">
     <h2 class="kf-gd-title">Goodies</h2>
-    <button class="kf-gd-btn" ng-click="triggerGuide(true)" kf-min-version="3.3.0">
+    <button class="kf-gd-btn kf-gd-trigger-guide" ng-click="triggerGuide(true)" kf-min-version="3.3.0">
       <span class="sprite sprite-guide-icon"></span>
       <span class="kf-gd-line-1">Learn the ropes</span>
       <span class="kf-gd-line-2">Start our step-by-step guide</span>
     </button>
-    <button class="kf-gd-btn" ng-click="triggerInstall()">
+    <button class="kf-gd-btn kf-gd-trigger-install" ng-click="triggerInstall()">
       <span class="sprite sprite-install-extension-icon"></span>
       <span class="kf-gd-line-1">Get the full browser experience</span>
       <span class="kf-gd-line-2" ng-if="!installed() && !installInProgress()">Install the Kifi extension</span>
