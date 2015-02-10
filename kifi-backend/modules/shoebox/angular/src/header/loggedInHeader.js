@@ -47,13 +47,12 @@ angular.module('kifi')
           $scope.search.libraryChip = true;
         } else if ($scope.search.libraryChip) {
           removeLibraryChip();
-        } else if ($state.params && $state.params.q && util.startsWith($state.params.q, 'tag:')) {
-          $scope.search.text = $state.params.q;
         }
       }),
 
       $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
         $scope.search.text = toState.name === 'library.search' || toState.name === 'search' ? toParams.q : '';
+        reactToQueryChange();
       }),
 
       $rootScope.$on('triggerAddKeep', function (e, library) {
