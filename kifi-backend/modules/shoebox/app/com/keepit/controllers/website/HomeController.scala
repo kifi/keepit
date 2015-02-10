@@ -70,6 +70,15 @@ class HomeController @Inject() (
     Ok(fortyTwoServices.currentVersion.toString)
   }
 
+  def get() = Action { request =>
+    val redir = request.userAgentOpt match {
+      case Some(ua) if ua.isIphone => "https://itunes.apple.com/us/app/kifi/id740232575"
+      case Some(ua) if ua.isAndroid => "https://play.google.com/store/apps/details?id=com.kifi"
+      case _ => "/"
+    }
+    Redirect(redir)
+  }
+
   def robots = Action {
     Ok(
       """
