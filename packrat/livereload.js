@@ -1,14 +1,14 @@
 /**
  * Changes from the original livereload script:
- *   line 514: using this.window.chrome.runtime.reload() instead of 
+ *   line 514: using this.window.chrome.runtime.reload() instead of
  *             this.window.document.location.reload()
  *
- *   line 866: overriding the host option since we cannot pass it as 
- *             an argument to the script
+ *   line 866: overriding the host and port options since we cannot pass
+ *             them as arguments to the script
  *
  * Inspired from https://github.com/bestander/chrome-app-livereload
  */
- 
+
 (function() {
 var __customevents = {}, __protocol = {}, __connector = {}, __timer = {}, __options = {}, __reloader = {}, __livereload = {}, __less = {}, __startup = {};
 
@@ -866,6 +866,7 @@ __livereload.LiveReload = LiveReload = (function() {
      * Kifi-specific code - we manually set the 'host' option, since we can't pass it directly to the script
      */
     this.options.host = 'dev.ezkeep.com';
+    this.options.port = 35719;
 
     this.reloader = new Reloader(this.window, this.console, Timer);
     this.connector = new Connector(this.options, this.WebSocket, Timer, {
