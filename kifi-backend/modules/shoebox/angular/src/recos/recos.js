@@ -43,7 +43,9 @@ angular.module('kifi')
           rawRecos.forEach(function (rawReco) {
             recos.push(recoDecoratorService.newUserRecommendation(rawReco));
           });
-          recoStateService.populate(recos);
+          if (!recoStateService.populate(recos)) {
+            $scope.noMoreRecos = true;
+          }
         } else {
           $scope.noMoreRecos = true;
         }
