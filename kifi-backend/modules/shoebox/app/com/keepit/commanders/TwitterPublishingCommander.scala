@@ -39,7 +39,7 @@ class TwitterPublishingCommander @Inject() (
           }
           val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
           val title = keep.title.getOrElse("interesting link")
-          val msg = twitterMessages.keepMessage(title, keep.url, library.name, libraryUrl)
+          val msg = twitterMessages.keepMessage(title.trim, keep.url.trim, library.name.trim, libraryUrl.trim)
           log.info(s"twitting about user $userId keeping $title with msg = $msg of size ${msg.size}")
           val imageOpt: Option[Future[TemporaryFile]] = keepImageCommander.getBestImageForKeep(keep.id.get, ImageSize(1024, 512)).flatten.map { keepImage =>
             keepImageStore.get(keepImage.imagePath)
@@ -64,7 +64,7 @@ class TwitterPublishingCommander @Inject() (
           val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
           val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
           val libName = library.name.abbreviate(140 - 28 - 20 - libOwner.fullName.size) //140 - text overhead - url len - lib owner size
-          val message = s"following @kifi library $libName $libraryUrl by ${libOwner.fullName}"
+          val message = s"following @kifi library ${libName.trim} $libraryUrl by ${libOwner.fullName.trim}"
           val imageOpt: Option[Future[TemporaryFile]] = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)) map { libImage =>
             libraryImageStore.get(libImage.imagePath)
           }
