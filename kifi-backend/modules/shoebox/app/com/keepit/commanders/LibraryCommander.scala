@@ -931,7 +931,7 @@ class LibraryCommander @Inject() (
             val keepCount = keepRepo.getCountByLibrary(libraryId)
             libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
             searchClient.updateLibraryIndex()
-          }
+          } // todo(andrew)!
           Right()
         }
       }

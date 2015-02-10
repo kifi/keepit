@@ -10,7 +10,7 @@ import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{ SocialId, SecureSocialClientIds, SocialNetworkType }
+import com.keepit.social.{ UserIdentity, SocialId, SecureSocialClientIds, SocialNetworkType }
 import com.kifi.macros.json
 import com.keepit.common.controller.KifiSession._
 
@@ -147,10 +147,23 @@ class AuthController @Inject() (
     handleAuth("userpass") match {
       case res: Result if res.header.status == 303 =>
         authHelper.transformResult(res) { (cookies: Seq[Cookie], sess: Session) =>
-          val newSession = if (link != "") {
-            sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
-          } else sess
-          Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(newSession)
+          if (link != "") {
+            // Manually link accounts. Annoying...
+            log.info(s"[logInWithUserPass] Attempting to $link")
+            val linkAttempt = for {
+              identity <- request.identityOpt
+              userId <- sess.getUserId
+            } yield {
+              log.info(s"[logInWithUserPass] Linking $userId to $link, social data from $identity")
+              val userIdentity = UserIdentity(userId = Some(userId), socialUser = SocialUser(identity), allowSignup = false)
+              UserService.save(userIdentity)
+              log.info(s"[logInWithUserPass] Done. Hope it worked? for $userId / $link, $userIdentity")
+            }
+            if (linkAttempt.isEmpty) {
+              log.info(s"[logInWithUserPass] No identity/userId found, ${request.identityOpt}, ${sess.getUserId}")
+            }
+          }
+          Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(sess)
         }
       case res => res
     }

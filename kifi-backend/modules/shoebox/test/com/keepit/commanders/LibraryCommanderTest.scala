@@ -4,6 +4,8 @@ import com.keepit.common.util.Paginator
 import com.keepit.model.UserFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryFactory._
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.KeepFactory._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.LibraryInviteFactory._
@@ -1287,6 +1289,14 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraries(2).map(_.secret().withUser(other)).saved
           val ownerLibs2 = libraries(10).map(_.published().withUser(owner)).saved
           libraries(10).map(_.published().withUser(other)).saved
+
+          libraryRepo.all.map { lib =>
+            println("++++++++ Adding jekeps" + lib.toString)
+            keeps(2).map(_.withLibrary(lib)).saved
+          }
+
+          println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n\n\n\n" + keepRepo.all.mkString("\n\t"))
+
           (owner, other, friend, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
         }
 
