@@ -90,7 +90,7 @@ class SiteMapCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlugin
   extends StringCacheImpl[SiteMapKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SiteMapKey(modelType: String) extends Key[String] {
-  override val version = 2
+  override val version = 3
   val namespace = "sitemap"
   def toKey(): String = modelType
 }
