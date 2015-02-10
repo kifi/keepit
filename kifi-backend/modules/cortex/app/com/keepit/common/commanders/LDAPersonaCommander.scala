@@ -8,6 +8,7 @@ import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.models.lda.{ DenseLDA, LDATopic }
 import com.keepit.model.{ NormalizedURI, User, Persona }
 import com.keepit.shoebox.ShoeboxServiceClient
+import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.collection.mutable
 import scala.math.sqrt
@@ -21,7 +22,7 @@ trait LDAPersonaCommander {
   def getExistingPersonaFeature(personaId: Id[Persona])(implicit version: ModelVersion[DenseLDA]): Option[PersonaLDAFeature]
   def generatePersonaFeature(topicIds: Seq[LDATopic])(implicit version: ModelVersion[DenseLDA]): (UserTopicMean, Int)
   def savePersonaFeature(pid: Id[Persona], feature: UserTopicMean)(implicit version: ModelVersion[DenseLDA]): PersonaLDAFeature
-  def getUserPersonaFeatures(userId: Id[User])(implicit version: ModelVersion[DenseLDA]): Future[Seq[PersonaLDAFeature]]
+  def getUserPersonaFeatures(userId: Id[User])(implicit version: ModelVersion[DenseLDA]): Future[(Seq[PersonaLDAFeature], Seq[DateTime])]
   def evaluatePersonaFeature(pid: Id[Persona], sampleSize: Int = 50)(implicit version: ModelVersion[DenseLDA]): Map[Id[NormalizedURI], Float]
   def autoLearn(pid: Id[Persona], uriIds: Seq[Id[NormalizedURI]], labels: Seq[Int], rate: Float = 0.1f)(implicit version: ModelVersion[DenseLDA]): Unit
 }
@@ -72,9 +73,10 @@ class LDAPersonaCommanderImpl @Inject() (
     }
   }
 
-  def getUserPersonaFeatures(userId: Id[User])(implicit version: ModelVersion[DenseLDA]): Future[Seq[PersonaLDAFeature]] = {
-    shoebox.getUserActivePersonas(userId).map { peronsas =>
-      peronsas.personas.map { pid => getExistingPersonaFeature(pid).get }
+  def getUserPersonaFeatures(userId: Id[User])(implicit version: ModelVersion[DenseLDA]): Future[(Seq[PersonaLDAFeature], Seq[DateTime])] = {
+    shoebox.getUserActivePersonas(userId).map { active =>
+      val feats = active.personas.map { pid => getExistingPersonaFeature(pid).get }
+      (feats, active.updatedAt)
     }
   }
 

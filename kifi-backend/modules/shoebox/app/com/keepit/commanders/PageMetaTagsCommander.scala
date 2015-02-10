@@ -29,6 +29,7 @@ class PageMetaTagsCommander @Inject() (
     applicationConfig: FortyTwoConfig,
     socialUserInfoRepo: SocialUserInfoRepo,
     libraryRepo: LibraryRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   private def imageUrl(image: LibraryImage): String = addProtocol(libraryImageCommander.getUrl(image))
@@ -150,13 +151,15 @@ class PageMetaTagsCommander @Inject() (
     val url = getUserProfileUrl(user.username)
     val metaInfoF = db.readOnlyMasterAsync { implicit s =>
       val facebookId: Option[String] = socialUserInfoRepo.getByUser(user.id.get).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
-
       val imageUrl = getProfileImageUrl(user)
-
       (imageUrl, facebookId)
+    }
+    val countLibrariesF = db.readOnlyMasterAsync { implicit s =>
+      libraryMembershipRepo.countWithUserIdAndAccess(user.id.get, LibraryAccess.OWNER) + libraryMembershipRepo.countWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY)
     }
     for {
       (imageUrl, facebookId) <- metaInfoF
+      countLibraries <- countLibrariesF
     } yield {
       PublicPageMetaFullTags(
         unsafeTitle = s"${user.firstName} ${user.lastName}",
@@ -170,7 +173,7 @@ class PageMetaTagsCommander @Inject() (
         unsafeFirstName = user.firstName,
         unsafeLastName = user.lastName,
         profileUrl = url,
-        noIndex = false,
+        noIndex = countLibraries <= 2, //means at least one library they follow or own, ignoring the main and private libs
         related = Seq.empty)
     }
   }

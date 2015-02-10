@@ -29,7 +29,6 @@ class NormalizedURIInterner @Inject() (
     urlHashCache: NormalizedURIUrlHashCache,
     updateQueue: SQSQueue[NormalizationUpdateTask],
     urlRepo: URLRepo,
-    scrapeRepo: ScrapeInfoRepo,
     normalizationService: NormalizationService,
     airbrake: AirbrakeNotifier) extends Logging {
 
@@ -113,13 +112,6 @@ class NormalizedURIInterner @Inject() (
               statsd.timing("normalizedURIRepo.internByUri.fail.not_found", timer, ONE_IN_THOUSAND)
               throw new UriInternException(s"could not parse or find url in db: $url", ex)
             case Some(fromDb) =>
-              scrapeRepo.getByUriId(fromDb.id.get) match {
-                case Some(scrapeInfo) =>
-                  statsd.timing("normalizedURIRepo.internByUri.fail.found.scraped", timer, ONE_IN_THOUSAND)
-                case None =>
-                  statsd.timing("normalizedURIRepo.internByUri.fail.found.not_scraped", timer, ONE_IN_THOUSAND)
-                //fine...
-              }
               throw new UriInternException(s"Uri was in the db despite a normalization failure: $fromDb", ex)
           }
       }
