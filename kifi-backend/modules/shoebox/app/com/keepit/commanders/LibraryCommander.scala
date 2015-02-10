@@ -1336,7 +1336,6 @@ class LibraryCommander @Inject() (
   }
 
   def getOwnProfileLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
-    println(s"@@@@@@@@@@@ getOwnProfileLibraries $user, $viewer, $page")
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
@@ -1390,7 +1389,7 @@ class LibraryCommander @Inject() (
     }
 
     libs.par map { lib => // may want to optimize queries below into bulk queries
-      val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get))
+      val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), false)
       val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
       val (numFollowers, followersSample) = if (lib.memberCount > 1) {
         val count = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)

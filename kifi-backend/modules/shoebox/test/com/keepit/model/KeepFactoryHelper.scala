@@ -23,10 +23,17 @@ object KeepFactoryHelper {
       }
 
       def fixLibraryReferences(candidate: Keep): Keep = {
-        // todo! create lib!
-        if (candidate.libraryId.isDefined) {
-          val libRepo = injector.getInstance(classOf[LibraryRepo])
-          libRepo.save(libRepo.get(candidate.libraryId.get).copy(lastKept = Some(candidate.createdAt)))
+        val libRepo = injector.getInstance(classOf[LibraryRepo])
+        candidate.libraryId match {
+          case Some(libraryId) =>
+            libRepo.save(libRepo.get(candidate.libraryId.get).copy(lastKept = Some(candidate.createdAt)))
+          case None =>
+          // This would be great. However, we have tests that test the number of libraries.
+          // When keep.libraryId is not optional, this can be uncommented safely.
+          //            val lib = libRepo.getAllByOwner(candidate.userId, Some(LibraryStates.INACTIVE)).headOption.getOrElse {
+          //              library().withUser(candidate.userId).withVisibility(candidate.visibility).saved
+          //            }
+          //            libRepo.save(lib.copy(lastKept = Some(candidate.createdAt)))
         }
         candidate
       }
@@ -42,8 +49,7 @@ object KeepFactoryHelper {
 
   implicit class KeepsPersister(partialKeeps: Seq[PartialKeep]) {
     def saved(implicit injector: Injector, session: RWSession): Seq[Keep] = {
-      val repo = injector.getInstance(classOf[KeepRepo])
-      partialKeeps.map(u => repo.save(u.get.copy(id = None)))
+      partialKeeps.map(u => u.saved)
     }
   }
 }

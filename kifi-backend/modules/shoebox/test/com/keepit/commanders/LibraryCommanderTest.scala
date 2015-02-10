@@ -1293,7 +1293,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryRepo.all.map { lib =>
             keeps(2).map(_.withLibrary(lib)).saved
           }
-
           (owner, other, friend, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
         }
 
@@ -1321,17 +1320,22 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraries(2).map(_.secret().withUser(other)).saved
           val ownerLibs2 = libraries(10).map(_.published().withUser(owner)).saved
           libraries(10).map(_.published().withUser(other)).saved
+
+          libraryRepo.all.take(4).map { lib =>
+            keeps(2).map(_.withLibrary(lib)).saved
+          }
+
           (owner, other, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
         }
 
-        libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 12
+        libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 2
 
         val libsForOther = libraryCommander.getOwnProfileLibraries(owner, Some(other), Paginator(0, 1000), ImageSize("100x100"))
         libsForOther.size === 12
 
         val libsForFriend = libraryCommander.getOwnProfileLibraries(owner, Some(owner), Paginator(0, 1000), ImageSize("100x100"))
         libsForFriend.size === 13
-        libsForFriend.map(_.id) === allLibs.reverse.map(_.id.get).map(Library.publicId)
+        libsForFriend.map(_.id).toSet === allLibs.reverse.map(_.id.get).map(Library.publicId).toSet
       }
     }
 
@@ -1349,6 +1353,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraries(10).map(_.published().withUser(other).withMemberCount(6)).saved
           val ownerLibs3 = libraries(3).map(_.published().withUser(owner)).saved
           libraries(3).map(_.published().withUser(other)).saved
+
+          libraryRepo.all.map { lib =>
+            keeps(2).map(_.withLibrary(lib)).saved
+          }
+
           (owner, ownerLibs1 ++ ownerLibs2 ++ ownerLibs3)
         }
 
