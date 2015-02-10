@@ -2,7 +2,6 @@ package com.keepit.integrity
 
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.net.URI
 import com.keepit.model._
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.time._
@@ -10,12 +9,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.scraper.{ HttpRedirect, ScrapeScheduler }
+import com.keepit.scraper.HttpRedirect
 import scala.concurrent.duration._
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick.DBSession.RWSession
 import akka.pattern.{ ask, pipe }
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -32,8 +31,6 @@ case class FixDuplicateKeeps()
 
 class UriIntegrityActor @Inject() (
     val db: Database,
-    val scrapeInfoRepo: ScrapeInfoRepo,
-    val scraper: ScrapeScheduler,
     clock: Clock,
     val normUriRepo: NormalizedURIRepo,
     normalizedURIInterner: NormalizedURIInterner,
