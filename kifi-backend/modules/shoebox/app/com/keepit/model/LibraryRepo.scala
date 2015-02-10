@@ -221,11 +221,15 @@ class LibraryRepoImpl @Inject() (
   }
 
   def getLibrariesOfUserFromAnonymous(ownerId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+    println(s"@@@@@@@@@@@ getLibrariesOfUserFromAnonymous $ownerId $page")
     val q = (for {
       lib <- rows if lib.ownerId === ownerId && lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && lib.state === LibraryStates.ACTIVE && lib.lastKept.isNotNull
       lm <- libraryMembershipRepo.get.rows if lm.libraryId === lib.id && lm.userId === ownerId && lm.listed && lm.state === LibraryMembershipStates.ACTIVE
     } yield lib).sortBy(x => (x.memberCount.desc, x.lastKept.desc, x.id.desc)).drop(page.itemsToDrop).take(page.size)
-    q.list
+    val res = q.list
+    println(s"@@@@@@@@@@@ getOwnProfileLibraries $res\n\t${q.selectStatement}")
+
+    res
   }
 
   //logged in user viewing another’s profile: Everything in countLibrariesOfUserFromAnonymos + libraries user has access to (even if private)

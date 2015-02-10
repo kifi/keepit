@@ -1291,11 +1291,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraries(10).map(_.published().withUser(other)).saved
 
           libraryRepo.all.map { lib =>
-            println("++++++++ Adding jekeps" + lib.toString)
             keeps(2).map(_.withLibrary(lib)).saved
           }
-
-          println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n\n\n\n" + keepRepo.all.mkString("\n\t"))
 
           (owner, other, friend, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
         }

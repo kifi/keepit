@@ -149,18 +149,18 @@ class AuthController @Inject() (
         authHelper.transformResult(res) { (cookies: Seq[Cookie], sess: Session) =>
           if (link != "") {
             // Manually link accounts. Annoying...
-            log.info(s"[logInWithUserPass] Attempting to $link")
+            log.info(s"[logInWithUserPass] Attempting to link $link to newly logged in user ${sess.getUserId}")
             val linkAttempt = for {
               identity <- request.identityOpt
               userId <- sess.getUserId
             } yield {
-              log.info(s"[logInWithUserPass] Linking $userId to $link, social data from $identity")
+              log.info(s"[logInWithUserPass] Linking userId $userId to $link, social data from $identity")
               val userIdentity = UserIdentity(userId = Some(userId), socialUser = SocialUser(identity), allowSignup = false)
               UserService.save(userIdentity)
-              log.info(s"[logInWithUserPass] Done. Hope it worked? for $userId / $link, $userIdentity")
+              log.info(s"[logInWithUserPass] Done. Hope it worked? for userId $userId / $link, $userIdentity")
             }
             if (linkAttempt.isEmpty) {
-              log.info(s"[logInWithUserPass] No identity/userId found, ${request.identityOpt}, ${sess.getUserId}")
+              log.info(s"[logInWithUserPass] No identity/userId found, ${request.identityOpt}, userId ${sess.getUserId}")
             }
           }
           Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(sess)
