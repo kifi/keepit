@@ -65,8 +65,19 @@
         <div class="kf-keep-description-sizer kf-keep-description"></div>
       </div>
 
-      <div ng-if="!noMoreRecos && !loading" class="kf-reco-get-more-container" ng-click="addMore()">
-        <span ng-if="!moreLoading" class="kf-reco-get-more">See more</span>
+      <div ng-if="!loading" class="kf-reco-get-more-container" ng-click="addMore()">
+        <div class="kf-reco-loading-card">
+          <div class="kf-reco-loading-card-heading"></div>
+          <div class="kf-reco-loading-card-picture"></div>
+          <div class="kf-reco-loading-card-body">
+            <div class="kf-reco-loading-card-body-line"></div>
+            <div class="kf-reco-loading-card-body-line"></div>
+            <div class="kf-reco-loading-card-body-line"></div>
+          </div>
+        </div>
+
+        <span ng-if="!moreLoading && !noMoreRecos" class="kf-reco-get-more">See more</span>
+        <span ng-if="!moreLoading && noMoreRecos" class="kf-reco-no-more">No more recommendations right now.</span>
         <span ng-if="moreLoading" class="kf-reco-get-more-loading">Loading...</span>
       </div>
 
