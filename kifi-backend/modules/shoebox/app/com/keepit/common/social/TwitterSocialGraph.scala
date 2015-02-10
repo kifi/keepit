@@ -2,6 +2,7 @@ package com.keepit.common.social
 
 import com.google.inject.Inject
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.store.LibraryImageStore
 import com.keepit.common.time._
 import com.keepit.common.core._
 import com.keepit.common.db.slick.Database
@@ -15,13 +16,17 @@ import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model._
 import com.keepit.social._
 import com.ning.http.client.providers.netty.NettyResponse
-import play.api.http.Status
+import play.api.http.Status._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.libs.oauth.OAuthCalculator
 import play.api.libs.ws.{ WSResponse, WS }
 import securesocial.core.{ IdentityId, OAuth2Settings }
+import twitter4j.auth.OAuthAuthorization
+import twitter4j.{ TwitterFactory, Twitter }
+import twitter4j.media.{ ImageUpload, MediaProvider, ImageUploadFactory }
+import twitter4j.conf.ConfigurationBuilder
 
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
@@ -63,7 +68,8 @@ trait TwitterSocialGraph extends SocialGraph {
   val networkType: SocialNetworkType = SocialNetworks.TWITTER
 
   def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse]
-
+  def sendTweet(socialUserInfo: SocialUserInfo, msg: String): Future[WSResponse]
+  def sendImage(socialUserInfo: SocialUserInfo, image: File, message: String): Unit
 }
 
 class TwitterSocialGraphImpl @Inject() (
@@ -73,9 +79,29 @@ class TwitterSocialGraphImpl @Inject() (
     oauth1Config: OAuth1Configuration,
     twtrOAuthProvider: TwitterOAuthProvider,
     userValueRepo: UserValueRepo,
-    socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with Status with Logging {
+    socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with Logging {
 
   val providerConfig = oauth1Config.getProviderConfig(ProviderIds.Twitter.id).get
+
+  private def twitterClient(socialUserInfo: SocialUserInfo): Twitter = {
+    new TwitterFactory(twitterConfig(socialUserInfo)).getInstance()
+  }
+
+  private def twitterImageUploadClient(socialUserInfo: SocialUserInfo): ImageUpload = {
+    val conf = twitterConfig(socialUserInfo)
+    new ImageUploadFactory(conf).getInstance(MediaProvider.TWITTER)
+  }
+
+  private def twitterConfig(socialUserInfo: SocialUserInfo) = {
+    val accessToken = getOAuth1Info(socialUserInfo)
+    val consumerKey = providerConfig.key
+    val cb = new ConfigurationBuilder()
+    cb.setDebugEnabled(true)
+      .setOAuthConsumerKey(consumerKey.key)
+      .setOAuthConsumerSecret(consumerKey.secret)
+      .setOAuthAccessToken(accessToken.token)
+      .setOAuthAccessTokenSecret(accessToken.secret).build()
+  }
 
   def extractEmails(parentJson: JsValue): Seq[EmailAddress] = Seq.empty // no email for Twitter
 
@@ -261,6 +287,23 @@ class TwitterSocialGraphImpl @Inject() (
       .post(Map.empty[String, Seq[String]])
     call onComplete { tr => log.info(s"[sendDM] receiverUserId=$receiverUserId msg=$msg res=$tr") }
     call
+  }
+
+  def sendTweet(socialUserInfo: SocialUserInfo, msg: String): Future[WSResponse] = {
+    val endpoint = "https://api.twitter.com/1.1/statuses/update.json"
+    val call = WS.url(endpoint)
+      .sign(OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo)))
+      .withQueryString("status" -> msg)
+      .post(Map.empty[String, Seq[String]])
+    call.onSuccess { case tr => log.info(s"[sendTweet] sent msg=$msg res=$tr") }
+    call.onFailure { case ex => airbrake.notify(s"[sendTweet] fail msg=$msg", ex) }
+    call
+  }
+
+  def sendImage(socialUserInfo: SocialUserInfo, image: File, message: String): Unit = {
+    val client = twitterImageUploadClient(socialUserInfo)
+    log.info(s"[sendImage] user ${socialUserInfo.userId} ${socialUserInfo.fullName} sending image with message $message")
+    client.upload(image, message)
   }
 
 }

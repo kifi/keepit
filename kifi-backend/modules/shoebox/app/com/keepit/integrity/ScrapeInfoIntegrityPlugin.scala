@@ -65,13 +65,13 @@ class ScrapeInfoIntegrityPluginImpl @Inject() (
 }
 
 class ScrapeInfoIntegrityChecker @Inject() (
-    val db: Database,
-    val scrapeInfoRepo: ScrapeInfoRepo,
-    val scraper: ScrapeScheduler,
+    db: Database,
+    scrapeInfoRepo: ScrapeInfoRepo,
+    scraper: ScrapeScheduler,
     clock: Clock,
-    val normUriRepo: NormalizedURIRepo,
-    val centralConfig: CentralConfig,
-    val airbrake: AirbrakeNotifier) extends Logging {
+    normUriRepo: NormalizedURIRepo,
+    keepRepo: KeepRepo,
+    centralConfig: CentralConfig) extends Logging {
 
   case class NormalizedUriSequenceNumberKey() extends SequenceNumberCentralConfigKey[NormalizedURI] {
     val longKey = new LongCentralConfigKey {
@@ -113,9 +113,10 @@ class ScrapeInfoIntegrityChecker @Inject() (
   }
 
   private def checkIntegrity(uri: NormalizedURI)(implicit session: RWSession): Boolean = {
+    val scrapeInfoOpt = scrapeInfoRepo.getByUriId(uri.id.get)
     uri.state match {
       case e: State[NormalizedURI] if DO_NOT_SCRAPE.contains(e) => // ensure no ACTIVE scrapeInfo records
-        scrapeInfoRepo.getByUriId(uri.id.get) match {
+        scrapeInfoOpt match {
           case Some(scrapeInfo) if scrapeInfo.state != ScrapeInfoStates.INACTIVE =>
             val savedSI = scrapeInfoRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
             log.info(s"mark scrapeInfo as INACTIVE; si=$savedSI")
@@ -123,14 +124,33 @@ class ScrapeInfoIntegrityChecker @Inject() (
           case _ => false // do nothing
         }
       case SCRAPE_FAILED | SCRAPED =>
-        scrapeInfoRepo.getByUriId(uri.id.get) match { // do NOT use saveStateAndNextScrape
+        scrapeInfoOpt match { // do NOT use saveStateAndNextScrape
           case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
             val savedSI = scrapeInfoRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
             log.info(s"mark scrapeInfo as ACTIVE; si=$savedSI")
             true
+          case None =>
+            scraper.scheduleScrape(uri)
+            true
+        }
+      case ACTIVE if keepRepo.exists(uri.id.get) =>
+        scrapeInfoOpt match {
+          case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
+            scraper.scheduleScrape(uri)
+            true
+          case None =>
+            scraper.scheduleScrape(uri)
+            true
+          case _ => false
+        }
+      case ACTIVE => // no keeps
+        scrapeInfoOpt match { // do NOT use saveStateAndNextScrape
+          case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
+            val savedSI = scrapeInfoRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+            log.info(s"mark scrapeInfo as INACTIVE; si=$savedSI")
+            true
           case _ => false // do nothing
         }
-      case ACTIVE => false // do nothing
       case _ =>
         throw new IllegalStateException(s"Unhandled state=${uri.state}; uri=$uri")
     }
