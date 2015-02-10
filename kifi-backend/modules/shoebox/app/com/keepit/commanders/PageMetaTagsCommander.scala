@@ -173,7 +173,7 @@ class PageMetaTagsCommander @Inject() (
         unsafeFirstName = user.firstName,
         unsafeLastName = user.lastName,
         profileUrl = url,
-        noIndex = countLibraries > 2, //means at least one library they follow or own, ignoring the main and private libs
+        noIndex = countLibraries <= 2, //means at least one library they follow or own, ignoring the main and private libs
         related = Seq.empty)
     }
   }
