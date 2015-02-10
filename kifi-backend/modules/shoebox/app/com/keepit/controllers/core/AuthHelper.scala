@@ -83,7 +83,7 @@ class AuthHelper @Inject() (
     )
   }
 
-  def transformResult(res: Result)(f: => (Seq[Cookie], Session) => Result) = {
+  def transformResult(res: Result)(f: => (Seq[Cookie], Session) => Future[Result]) = {
     val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
     val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
     f(resCookies, resSession)

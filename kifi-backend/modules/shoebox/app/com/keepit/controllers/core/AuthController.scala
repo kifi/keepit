@@ -37,8 +37,6 @@ import scala.concurrent.Future
 import scala.util.{ Try, Random }
 
 object AuthController {
-  val LinkWithKey = "linkWith"
-
   private lazy val obscureRegex = """^(?:[^@]|([^@])[^@]+)@""".r
   def obscureEmailAddress(address: String) = obscureRegex.replaceFirstIn(address, """$1...@""")
 }
@@ -129,7 +127,7 @@ class AuthController @Inject() (
   // Note: some of the below code is taken from ProviderController in SecureSocial
   // Logout is still handled by SecureSocial directly.
 
-  def loginSocial(provider: String, close: Boolean) = MaybeUserAction { implicit request =>
+  def loginSocial(provider: String, close: Boolean) = MaybeUserAction.async { implicit request =>
     Try { //making sure no way it will hurt login
       val userOpt = request.userIdOpt
       log.info(s"[login social] with $provider, (c=$close) user $userOpt")
@@ -137,22 +135,27 @@ class AuthController @Inject() (
     var res = handleAuth(provider)
     if (close && res.header.status == 303) {
       authHelper.transformResult(res) { (_, session: Session) =>
-        res.withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.afterLoginClosePopup.url))
+        Future.successful(res.withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.afterLoginClosePopup.url)))
       }
     } else {
-      res
+      Future.successful(res)
     }
   }
-  def logInWithUserPass(link: String) = MaybeUserAction { implicit request =>
+  def logInWithUserPass(link: String) = MaybeUserAction.async { implicit request =>
     handleAuth("userpass") match {
       case res: Result if res.header.status == 303 =>
         authHelper.transformResult(res) { (cookies: Seq[Cookie], sess: Session) =>
-          val newSession = if (link != "") {
-            sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
-          } else sess
-          Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(newSession)
+          if (link != "") {
+            ProviderController.authenticate(link)(request).recover {
+              case _ =>
+                log.info(s"[logInWithUserPass] recover from authenticated link for user [${request.userIdOpt} ${request.identityOpt}] through ${link}")
+                Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(sess)
+            }
+          } else {
+            Future.successful(Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(sess))
+          }
         }
-      case res => res
+      case res => Future.successful(res)
     }
   }
 
@@ -330,7 +333,7 @@ class AuthController @Inject() (
 
   def signup(provider: String, redirect: Option[String] = None, intent: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
-    authRes(request).map { result =>
+    authRes(request).flatMap { result =>
       authHelper.transformResult(result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
         val res = result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
@@ -339,7 +342,7 @@ class AuthController @Inject() (
           redirect.map(path => Cookie("redirect", path)),
           intent.map(action => Cookie("intent", action))
         ).flatten
-        res.withCookies(cookies: _*)
+        Future.successful(res.withCookies(cookies: _*))
       }
     }
   }

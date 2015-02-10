@@ -166,15 +166,21 @@ class MobileAuthController @Inject() (
   }
 
   def loginWithUserPass(link: String) = MaybeUserAction.async(parse.anyContent) { implicit request =>
-    ProviderController.authenticate("userpass")(request).map {
+    ProviderController.authenticate("userpass")(request).flatMap {
       case res: Result if res.header.status == 303 =>
         authHelper.transformResult(res) { (cookies: Seq[Cookie], sess: Session) =>
-          val newSession = if (link != "") {
-            sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
-          } else sess
-          Ok(Json.obj("code" -> "auth_success")).withCookies(cookies: _*).withSession(newSession)
+          if (link != "") {
+            ProviderController.authenticate(link)(request).recover {
+              case _ =>
+                log.info(s"[logInWithUserPassMobile] recover from authenticated link for user [${request.userIdOpt} ${request.identityOpt}] through ${link}")
+                Ok(Json.obj("code" -> "auth_success")).withCookies(cookies: _*).withSession(sess)
+            }
+          } else {
+            Future.successful(Ok(Json.obj("code" -> "auth_success")).withCookies(cookies: _*).withSession(sess))
+          }
         }
-      case res => res
+      case res =>
+        Future.successful(res)
     }
   }
 
