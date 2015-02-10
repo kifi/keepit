@@ -123,8 +123,9 @@ class SearchFactory @Inject() (
 
   def getSearchFriends(userId: Id[User]): Future[Set[Long]] = userGraphsSearcherFactory(userId).getSearchFriendsFuture()
 
+  def getFriends(userId: Id[User]): Future[Set[Long]] = userGraphsSearcherFactory(userId).getConnectedUsersFuture()
+
   def getMutualFriends(userId: Id[User], otherUserIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[User]]]] = {
-    def getFriends(userId: Id[User]): Future[Set[Long]] = userGraphsSearcherFactory(userId).getConnectedUsersFuture()
     getFriends(userId).flatMap { userFriends =>
       val futureMutualFriendsByUserId = otherUserIds.map { otherUserId =>
         getFriends(otherUserId).imap { otherUserFriends =>
