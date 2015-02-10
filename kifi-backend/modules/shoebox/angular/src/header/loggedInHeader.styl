@@ -240,7 +240,7 @@ btn-space = 10px
     transform-origin: 80% top
     transition: visibility 0s, opacity linear dur, transform dur
 
-  &:not(:hover)>.kf-dropdown-menu:not(:hover)
+  &:not(.kf-open)>.kf-dropdown-menu
     dur = .05s
     visibility: hidden
     opacity: 0
@@ -248,7 +248,7 @@ btn-space = 10px
     transition-duration: 0s, dur, dur
     transition-delay: dur, 0s, 0s
 
-  &:hover::before
+  &.kf-open::before
     content: ''
     position: absolute
     top: 100%

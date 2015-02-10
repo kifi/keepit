@@ -30,15 +30,15 @@
     </div>
     <div class="kf-lih-right">
       <button class="kf-lih-add-link sprite sprite-add-link" ng-click="addKeeps(library)">Add a link</button>
-      <a href="/tags/manage" class="kf-lih-manage-tags sprite svg-tag-black" ng-class="{'svg-tag-hover': hover}" ng-mouseenter="hover = true" ng-mouseleave="hover = false">Manage your tags</a>
-      <span class="kf-lih-dropdown-parent">
+      <a href="/tags/manage" class="kf-lih-manage-tags sprite svg-tag-black" ng-class="{'svg-tag-hover': tagHover}" ng-mouseenter="tagHover = true" ng-mouseleave="tagHover = false">Manage your tags</a>
+      <span class="kf-lih-dropdown-parent" ng-class="{'kf-open': friendsMenuOpen}" ng-mouseenter="friendsMenuOpen = true" ng-mouseleave="friendsMenuOpen = false"  ng-click="friendsMenuOpen = false">
         <a href="/friends" class="kf-lih-friends sprite sprite-friends">Friends</a>
         <menu class="kf-dropdown-menu">
           <a href="/friends">Your Kifi Friends</a>
           <a href="/invite">Invite a friend to Kifi</a>
         </menu>
       </span>
-      <span class="kf-lih-dropdown-parent">
+      <span class="kf-lih-dropdown-parent" ng-class="{'kf-open': settingsMenuOpen}" ng-mouseenter="settingsMenuOpen = true" ng-mouseleave="settingsMenuOpen = false" ng-click="settingsMenuOpen = false">
         <a href="{{userProfileUrl}}" class="kf-lih-profile" style="background-image:url({{me.picUrl}})"></a>
         <menu class="kf-dropdown-menu">
           <a href="{{userProfileUrl}}">Your Profile</a>
