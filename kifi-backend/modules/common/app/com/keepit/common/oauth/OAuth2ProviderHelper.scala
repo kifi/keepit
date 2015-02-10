@@ -88,7 +88,7 @@ trait OAuth2ProviderHelper extends OAuth2Support with Logging {
           (OAuth2Constants.ResponseType, OAuth2Constants.Code),
           (OAuth2Constants.State, state))
         val scope = userIdOpt match {
-          case Some(userId) if userId.id < 100L => //hard to get an experiment here since we're in common (not in shoebox), faking it for a limited amount of time, this code may have to move down to shoebox
+          case Some(userId) if userId.id < 100L && providerConfig.name == OAuth2Providers.FB => //hard to get an experiment here since we're in common (not in shoebox), faking it for a limited amount of time, this code may have to move down to shoebox
             "email,publish_actions"
           case _ =>
             providerConfig.scope
