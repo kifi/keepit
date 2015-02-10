@@ -12,4 +12,5 @@ trait Photoshop {
   def checkToolsAvailable(): Unit
   def resizeImage(image: BufferedImage, format: ImageFormat, boundingBox: Int): Try[BufferedImage]
   def resizeImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): Try[BufferedImage]
+  def cropImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): Try[BufferedImage]
 }

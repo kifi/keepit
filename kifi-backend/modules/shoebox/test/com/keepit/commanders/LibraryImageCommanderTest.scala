@@ -90,7 +90,9 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(400, 482), 73259)
         }
-        inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 4
+
+        val keys = inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet
+        keys.size === 4
 
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getActiveForLibraryId(lib.id.get)
