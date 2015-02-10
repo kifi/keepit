@@ -1,22 +1,21 @@
 package com.keepit.common.images
 
-import java.io.{ PrintWriter, ByteArrayOutputStream }
+import java.awt.image.BufferedImage
+import java.io.{ ByteArrayOutputStream, PrintWriter }
 import java.util
 import javax.imageio.ImageIO
-import com.keepit.common.logging.Logging
-import com.keepit.common.strings.UTF8
-import play.api.Mode
-import play.api.Mode._
-
-import java.awt.image.BufferedImage
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.logging.Logging
+import com.keepit.common.strings.UTF8
 import com.keepit.model.ImageFormat
 import org.im4java.core._
-import org.im4java.process.{ ErrorConsumer, ArrayListOutputConsumer }
+import org.im4java.process.ArrayListOutputConsumer
+import play.api.Mode
+import play.api.Mode._
 import play.api.libs.Files.TemporaryFile
-import scala.collection.JavaConversions._
 
+import scala.collection.JavaConversions._
 import scala.util.Try
 
 /**
@@ -48,7 +47,7 @@ class Image4javaWrapper @Inject() (
   private def addOptions(format: ImageFormat, operation: IMOperation): IMOps = format match {
     //                -quality 100 -define webp:lossless=true -define webp:method=6
     // optionally use -quality 80  -define webp:auto-filter=true -define webp:method=6
-    case ImageFormat.PNG => operation.strip().quality(95d).colors(2048).define("webp:auto-filter=true").define("webp:method=6")
+    case ImageFormat.PNG => operation.strip().quality(95d).define("webp:auto-filter=true").define("webp:method=6")
     // -strip -gaussian-blur 0.05 -quality 75% source.jpg result.jpg
     case ImageFormat.JPG => operation.strip().gaussianBlur(0.05).quality(75d)
     case _ => throw new UnsupportedOperationException(s"Can't resize format $format")
@@ -73,6 +72,15 @@ class Image4javaWrapper @Inject() (
       safeResizeImage(gifToPng(image), ImageFormat.PNG, width, height)
     } else {
       safeResizeImage(image, format, width, height)
+    }
+  }
+
+  def cropImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): Try[BufferedImage] = Try {
+    if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't resize format $format")
+    if (format == ImageFormat.GIF) {
+      safeCropImage(gifToPng(image), ImageFormat.PNG, width, height)
+    } else {
+      safeCropImage(image, format, width, height)
     }
   }
 
@@ -116,6 +124,37 @@ class Image4javaWrapper @Inject() (
     val resized = ImageIO.read(outputFile)
     log.info(s"resize image from ${imageByteSize(image, format)} bytes (${image.getWidth}w/${image.getWidth}h) to ${imageByteSize(resized, format)} bytes (${resized.getWidth}w/${resized.getWidth}h) using file $filePath")
     resized
+  }
+
+  private def safeCropImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): BufferedImage = {
+    log.info(s"[safeCropImage] START format=$format cropWidth=$width cropHeight=$height imageWidth=${image.getWidth} imageHeight=${image.getHeight}")
+    val operation = new IMOperation
+
+    val outputFile = TemporaryFile(prefix = "ImageMagicCropImage", suffix = s".${format.value}").file
+    val filePath = outputFile.getAbsolutePath
+    outputFile.deleteOnExit()
+
+    operation.addImage()
+
+    // minimum resize while preserving aspect ratio
+    operation.resize(width, height, '^')
+
+    // crop from the center of the image
+    operation.gravity("center")
+    operation.crop(width, height, 0, 0)
+
+    // resize the canvas to the size of the crop
+    operation.p_repage()
+
+    addOptions(format, operation)
+    operation.addImage(filePath)
+
+    val convert = command()
+    handleExceptions(convert, operation, Some(image))
+
+    val cropped = ImageIO.read(outputFile)
+    log.info(s"[safeCropImage] from ${imageByteSize(image, format)} bytes (${image.getWidth}w/${image.getWidth}h) to ${imageByteSize(cropped, format)} bytes (${cropped.getWidth}w/${cropped.getWidth}h) using file $filePath")
+    cropped
   }
 
   private def getScript(convert: ConvertCmd, operation: IMOperation): String = {

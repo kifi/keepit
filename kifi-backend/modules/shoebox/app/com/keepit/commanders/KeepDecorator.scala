@@ -143,7 +143,7 @@ class KeepDecorator @Inject() (
 
   private def getKeepSummary(keep: Keep, idealImageSize: ImageSize, waiting: Boolean = false): Future[URISummary] = {
     val futureSummary = uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting)
-    val keepImageOpt = keepImageCommander.getBestImageForKeep(keep.id.get, idealImageSize)
+    val keepImageOpt = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(idealImageSize))
     futureSummary.map { summary =>
       keepImageOpt match {
         case None => summary

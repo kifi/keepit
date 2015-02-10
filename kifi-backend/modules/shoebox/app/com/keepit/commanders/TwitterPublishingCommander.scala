@@ -2,18 +2,17 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 import com.keepit.common.db.Id
-import com.keepit.common.store.{ KeepImageStore, LibraryImageStore, ImageSize }
-import com.keepit.common.strings._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.TwitterSocialGraph
+import com.keepit.common.store.{ ImageSize, KeepImageStore, LibraryImageStore }
+import com.keepit.common.strings._
 import com.keepit.model._
 import com.keepit.social.SocialNetworks
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
-import scala.util.{ Failure, Success }
 
 class TwitterPublishingCommander @Inject() (
     experimentCommander: LocalUserExperimentCommander,
@@ -41,7 +40,7 @@ class TwitterPublishingCommander @Inject() (
           val title = keep.title.getOrElse("interesting link")
           val msg = twitterMessages.keepMessage(title.trim, keep.url.trim, library.name.trim, libraryUrl.trim)
           log.info(s"twitting about user $userId keeping $title with msg = $msg of size ${msg.size}")
-          val imageOpt: Option[Future[TemporaryFile]] = keepImageCommander.getBestImageForKeep(keep.id.get, ImageSize(1024, 512)).flatten.map { keepImage =>
+          val imageOpt: Option[Future[TemporaryFile]] = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(1024, 512)).flatten.map { keepImage =>
             keepImageStore.get(keepImage.imagePath)
           } orElse {
             libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)) map { libImage =>

@@ -151,7 +151,7 @@ class MobileLibraryController @Inject() (
         val completeKeepData = db.readOnlyMaster { implicit s =>
           keepDataList.map { keepData =>
             val keep = keepRepo.get(keepData.id)
-            val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, MobileLibraryController.defaultKeepImageSize).flatten.map(keepImageCommander.getUrl)
+            val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
             val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getTagsByKeepId(keep.id.get)))
             Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
           }
