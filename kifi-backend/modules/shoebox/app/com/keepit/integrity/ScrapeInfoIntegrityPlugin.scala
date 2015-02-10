@@ -132,6 +132,7 @@ class ScrapeInfoIntegrityChecker @Inject() (
           case None =>
             scraper.scheduleScrape(uri)
             true
+          case _ => false
         }
       case ACTIVE if keepRepo.exists(uri.id.get) =>
         scrapeInfoOpt match {
