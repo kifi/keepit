@@ -127,11 +127,12 @@ class Image4javaWrapper @Inject() (
   }
 
   private def safeCropImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): BufferedImage = {
+    log.info(s"[safeCropImage] START format=$format cropWidth=$width cropHeight=$height imageWidth=${image.getWidth} imageHeight=${image.getHeight}")
     val operation = new IMOperation
 
     val outputFile = TemporaryFile(prefix = "ImageMagicCropImage", suffix = s".${format.value}").file
     val filePath = outputFile.getAbsolutePath
-    //    outputFile.deleteOnExit()
+    outputFile.deleteOnExit()
 
     operation.addImage()
 
@@ -152,7 +153,7 @@ class Image4javaWrapper @Inject() (
     handleExceptions(convert, operation, Some(image))
 
     val cropped = ImageIO.read(outputFile)
-    log.info(s"crop image from ${imageByteSize(image, format)} bytes (${image.getWidth}w/${image.getWidth}h) to ${imageByteSize(cropped, format)} bytes (${cropped.getWidth}w/${cropped.getWidth}h) using file $filePath")
+    log.info(s"[safeCropImage] from ${imageByteSize(image, format)} bytes (${image.getWidth}w/${image.getWidth}h) to ${imageByteSize(cropped, format)} bytes (${cropped.getWidth}w/${cropped.getWidth}h) using file $filePath")
     cropped
   }
 

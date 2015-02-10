@@ -45,15 +45,15 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
     "calculate resize sizes for an image" in {
       withInjector(modules: _*) { implicit injector =>
         new FakeProcessedImageHelper {
-          def calcSizes(w: Int, h: Int) = calcSizesForImage(dummyImage(w, h), ScaledImageSize.allSizes, CroppedImageSize.allSizes)
+          def calcSizes(w: Int, h: Int) = calcSizesForImage(ImageSize(w, h), ScaledImageSize.allSizes, CroppedImageSize.allSizes)
           calcSizes(100, 100).toSeq.sorted === Seq()
           calcSizes(300, 100).toSeq.sorted === scaleRequest(150) // no crop, image not wide enough
           calcSizes(100, 700).toSeq.sorted === scaleRequest(150, 400) // no crop, image not wide enough
           calcSizes(300, 300).toSeq.sorted === scaleRequest(150) // no crop, same aspect ratio
           calcSizes(300, 310).toSeq.sorted === scaleRequest(150) ++ cropRequest("150x150")
           calcSizes(1001, 1001).toSeq.sorted === scaleRequest(150, 400, 1000) // scales should take care of crops (same aspect ratio)
-          calcSizes(2000, 1500).toSeq.sorted === scaleRequest(150, 400, 1000, 1500) ++ cropRequest("150x150", "400x400", "1000x1000", "1500x1500")
-          calcSizes(1500, 1400).toSeq.sorted === scaleRequest(150, 400, 1000) ++ cropRequest("150x150", "400x400", "1000x1000")
+          calcSizes(2000, 1500).toSeq.sorted === scaleRequest(150, 400, 1000, 1500) ++ cropRequest("150x150")
+          calcSizes(1500, 1400).toSeq.sorted === scaleRequest(150, 400, 1000) ++ cropRequest("150x150")
         }
         1 === 1
       }

@@ -260,7 +260,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
         keepsF flatMap { keeps =>
           val keepIds = keeps.map(_.id.get).toSet
-          val urls = keepImageCommander.getBestImagesForKeeps(keepIds, CropImageRequest(CroppedImageSize.Medium.idealSize)).collect {
+          val urls = keepImageCommander.getBestImagesForKeeps(keepIds, CropImageRequest(CroppedImageSize.Small.idealSize)).collect {
             case (_, Some(img)) => img.imagePath
           }.toSeq
 

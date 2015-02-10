@@ -98,9 +98,8 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         }
 
         val keys = inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet
-        keys.size === 6
+        keys.size === 5
         keys.exists(_.contains("150x150_c")) must beTrue
-        keys.exists(_.contains("400x400_c")) must beTrue
 
         // Dependant on image1.png — if changed, this needs to change too.
         inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.find(_._1 == "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png").nonEmpty === true
@@ -133,7 +132,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         db.readOnlyMaster { implicit session =>
           // Dependant on what sizes we do
           val all = keepImageRepo.all()
-          all.length === 7
+          all.length === 6
           keepImageRepo.getForKeepId(keep1.id.get).length === 1
           keepImageRepo.getForKeepId(keep2.id.get).length === 0
           keepImageRepo.getBySourceHash(keepImage4.get.sourceFileHash).length === 2
