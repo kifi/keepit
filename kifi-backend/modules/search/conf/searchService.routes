@@ -59,9 +59,11 @@ POST        /internal/search/dist/langFreqs       @com.keepit.search.controllers
 POST        /internal/search/dist/augmentation    @com.keepit.search.controllers.search.SearchController.distAugmentation()
 POST        /internal/search/dist/search/uri         @com.keepit.search.controllers.search.SearchController.distSearchUris()
 POST        /internal/search/dist/search/library   @com.keepit.search.controllers.search.SearchController.distSearchLibraries()
+POST        /internal/search/dist/search/user   @com.keepit.search.controllers.search.SearchController.distSearchUsers()
 
 GET         /internal/search/search/uri/explain        @com.keepit.search.controllers.search.SearchController.explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], debug: Option[String])
 GET         /internal/search/search/library/explain        @com.keepit.search.controllers.search.SearchController.explainLibraryResult(query: String, doPrefixSearch: Boolean, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String])
+GET         /internal/search/search/user/explain        @com.keepit.search.controllers.search.SearchController.explainUserResult(query: String, doPrefixSearch: Boolean, userId: Id[User], resultUserId: Id[User], acceptLangs: String, debug: Option[String])
 
 GET         /internal/search/warmUp/:userId        @com.keepit.search.controllers.search.SearchController.warmUpUser(userId: Id[User])
 
