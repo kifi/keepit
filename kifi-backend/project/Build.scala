@@ -35,6 +35,8 @@ object ApplicationBuild extends Build {
   )
 
   lazy val shoeboxDependencies = Seq(
+    "org.twitter4j" % "twitter4j-core" % "4.0.2",
+    "org.twitter4j" % "twitter4j-media-support" % "4.0.2",
     "javax.mail" % "mail" % "1.4.5",
     "com.typesafe.slick" %% "slick-testkit" % slickVersion exclude("play", "*"),
     "org.apache.poi" % "poi" % "3.8",

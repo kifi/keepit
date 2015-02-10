@@ -14,7 +14,7 @@ angular.module('kifi')
         selected,
         lastSearch;
 
-    var friendlyNetworks = {'facebook': 'Facebook', 'linkedin': 'LinkedIn'};
+    var friendlyNetworks = {'facebook': 'Facebook', 'linkedin': 'LinkedIn', 'twitter': 'Twitter'};
     var socialSearchService = new Clutch(function (name) {
       if (!name || !name.trim()) {
         return $q.when([]);

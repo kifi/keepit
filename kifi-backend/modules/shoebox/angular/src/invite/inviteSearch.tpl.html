@@ -6,7 +6,7 @@
       <div ng-if="!result.custom">
         <div ng-if="result.networkType !== 'email'">
           <a href="{{result.userProfileUrl}}">
-            <img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="social-invite-image">
+            <img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.200.png'" class="social-invite-image">
           </a>
         </div>
 

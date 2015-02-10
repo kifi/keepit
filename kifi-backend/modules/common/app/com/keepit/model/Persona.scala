@@ -97,21 +97,21 @@ object PersonaName {
   )
 
   val personaLibraryNames: Map[PersonaName, String] = Map(
-    DEVELOPER -> "Programming",
-    TECHIE -> "Computer and Electronics",
-    ENTREPRENEUR -> "Startups and Entrepreneurship",
-    ARTIST -> "Design, Photography and Visual Arts",
-    FOODIE -> "Food and Cooking",
-    SCIENCE_BUFF -> "Science!!",
-    FASHIONISTA -> "Fashion",
-    HEALTH_NUT -> "Health and Fitness",
+    DEVELOPER -> "Developer Resources",
+    TECHIE -> "Techie Picks",
+    ENTREPRENEUR -> "Entrepreneurial Articles",
+    ARTIST -> "Artistic Ideas",
+    FOODIE -> "Favorite Foods",
+    SCIENCE_BUFF -> "Scientific Picks",
+    FASHIONISTA -> "Fabulous Fashion",
+    HEALTH_NUT -> "Healthy Habits",
     STUDENT -> "Student Resources",
-    INVESTOR -> "Finance",
-    TRAVELER -> "Traveling Resources",
-    GAMER -> "Gaming",
-    PARENT -> "Parenting",
-    ANIMAL_LOVER -> "Pets and Animals",
-    DEEP_THINKER -> "Interesting Reads"
+    INVESTOR -> "Investing Ideas",
+    TRAVELER -> "Travel Tips",
+    GAMER -> "Gaming News",
+    PARENT -> "Parenting Gems",
+    ANIMAL_LOVER -> "Animal Antics",
+    DEEP_THINKER -> "Deep Thoughts"
   )
 
   val personaKeeps: Map[PersonaName, PersonaKeep] = Map() // todo (aaron, ashley): pick out a default keep for each persona
@@ -122,9 +122,9 @@ object PersonaStates extends States[Persona]
 
 @json case class PersonaKeep( // default keep infos for FTUE
   url: String,
-  imagePath: Option[String] = None,
-  imageWidth: Option[Int] = None,
-  imageHeight: Option[Int] = None,
+  imagePath: String,
+  imageWidth: Int,
+  imageHeight: Int,
   noun: String,
   query: String,
   title: String,
@@ -134,9 +134,9 @@ object PersonaStates extends States[Persona]
 object PersonaKeep { // todo (aaron): once every persona has a default keep, remove this!
   val default = PersonaKeep(
     url = "http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die",
-    imagePath = Some("/img/guide/ted_jobs.jpg"),
-    imageWidth = Some(480),
-    imageHeight = Some(425),
+    imagePath = "/img/guide/ted_jobs.jpg",
+    imageWidth = 480,
+    imageHeight = 425,
     noun = "video",
     query = "steve+jobs",
     title = "Steve Jobs: How to live before you die | Talk Video | TED.com",
