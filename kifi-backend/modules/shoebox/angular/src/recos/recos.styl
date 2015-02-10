@@ -1,5 +1,11 @@
+col-1-min-width = 590px
+col-1-max-width = 690px
+col-2-width = 256px
+col-gap = 20px
+
 .kf-recos-view
-  max-width: appMaxWidth
+  min-width: col-1-min-width + col-gap + col-2-width
+  max-width: col-1-max-width + col-gap + col-2-width
   margin: 0 auto
 
 .kf-recos-title
@@ -17,8 +23,8 @@
 .kf-reco-col-2
   display: table-cell
   vertical-align: top
-  width: 256px
-  padding-left: 20px
+  width: col-2-width
+  padding-left: col-gap
 
 .kf-recos
   padding-bottom: 20px

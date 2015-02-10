@@ -1,19 +1,17 @@
 .kf-friend-card
-  @media screen and (min-width: 1365px)
-    width: calc(50% - 28px)
-
-  @media screen and (max-width: 1365px)
-    width: calc(100% - 25px)
-
-  border: defaultBorder
-  border-radius: 3px
   display: inline-block
-  height: 90px
-  margin: 5px 6px
-  margin-left: 10px
+  width: calc(50% - 5px)
+  box-sizing: border-box
+  border: defaultBorder
+  border-radius: 10px
+  height: 102px
+  margin: 5px 0
   padding: 5px
   position: relative
   background-color: #FFFFFF
+
+  &:nth-child(2n+1)
+    margin-left: 10px
 
   .kf-friend-card-image
     float: left
