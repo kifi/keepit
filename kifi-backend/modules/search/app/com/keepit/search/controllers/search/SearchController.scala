@@ -199,6 +199,14 @@ class SearchController @Inject() (
     }
   }
 
+  def explainUserResult(query: String, doPrefixSearch: Boolean, userId: Id[User], resultUserId: Id[User], acceptLangs: String, debug: Option[String]) = Action.async { request =>
+    val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
+    val langs = acceptLangs.split(",").filter(_.nonEmpty)
+    userSearchCommander.searchUsers(userId, langs, userExperiments, query, None, None, 1, doPrefixSearch, None, debug, Some(resultUserId)).map { result =>
+      Ok(html.admin.explainUserResult(userId, resultUserId, result.explanation))
+    }
+  }
+
   def augmentation() = Action.async(parse.json) { implicit request =>
     augmentationCommander.augmentation(request.body.as[ItemAugmentationRequest]).map { augmentationResponse =>
       val json = Json.toJson(augmentationResponse)

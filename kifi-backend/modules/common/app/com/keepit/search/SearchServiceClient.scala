@@ -51,6 +51,7 @@ trait SearchServiceClient extends ServiceClient {
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]]
   def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html]
   def explainLibraryResult(query: String, doPrefixSearch: Boolean, userId: Id[User], libraryId: Id[Library], acceptLangs: Seq[String], debug: Option[String]): Future[Html]
+  def explainUserResult(query: String, doPrefixSearch: Boolean, userId: Id[User], resultUserId: Id[User], acceptLangs: Seq[String], debug: Option[String]): Future[Html]
   def showUserConfig(id: Id[User]): Future[SearchConfig]
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
   def resetUserConfig(id: Id[User]): Unit
@@ -195,6 +196,10 @@ class SearchServiceClientImpl(
 
   def explainLibraryResult(query: String, doPrefixSearch: Boolean, userId: Id[User], libraryId: Id[Library], acceptLangs: Seq[String], debug: Option[String]): Future[Html] = {
     call(Search.internal.explainLibraryResult(query, doPrefixSearch, userId, libraryId, acceptLangs, debug)).map(r => Html(r.body))
+  }
+
+  def explainUserResult(query: String, doPrefixSearch: Boolean, userId: Id[User], resultUserId: Id[User], acceptLangs: Seq[String], debug: Option[String]): Future[Html] = {
+    call(Search.internal.explainUserResult(query, doPrefixSearch, userId, resultUserId, acceptLangs, debug)).map(r => Html(r.body))
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = {
