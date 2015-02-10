@@ -158,7 +158,7 @@ class PageMetaTagsCommander @Inject() (
       libraryMembershipRepo.countWithUserIdAndAccess(user.id.get, LibraryAccess.OWNER) + libraryMembershipRepo.countWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY)
     }
     for {
-      (imageUrl, facebookId, countLibraries) <- metaInfoF
+      (imageUrl, facebookId) <- metaInfoF
       countLibraries <- countLibrariesF
     } yield {
       PublicPageMetaFullTags(
