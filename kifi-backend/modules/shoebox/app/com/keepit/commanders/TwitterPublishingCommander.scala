@@ -56,6 +56,13 @@ class TwitterPublishingCommander @Inject() (
     }
   }
 
+  private def twitterHandle(libOwner: Id[User]): Option[String] = {
+    val suiOpt = db.readOnlyMaster { implicit s =>
+      socialUserInfoRepo.getByUser(libOwner).find(_.networkType == SocialNetworks.TWITTER)
+    }
+    suiOpt.flatMap(_.profileUrl).map(twitterMessages.parseHandleFromUrl)
+  }
+
   def publishLibraryMembership(userId: Id[User], library: Library): Unit = {
     if (library.visibility == LibraryVisibility.PUBLISHED && hasTwitterExperiment(userId)) {
       db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.TWITTER) } match {
@@ -64,7 +71,8 @@ class TwitterPublishingCommander @Inject() (
           val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
           val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
           val libName = library.name.abbreviate(140 - 28 - 20 - libOwner.fullName.size) //140 - text overhead - url len - lib owner size
-          val message = s"following @kifi library ${libName.trim} $libraryUrl by ${libOwner.fullName.trim}"
+          val name = twitterHandle(libOwner.id.get).getOrElse(libOwner.fullName.trim)
+          val message = s"following @kifi library ${libName.trim} $libraryUrl by $name"
           val imageOpt: Option[Future[TemporaryFile]] = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)) map { libImage =>
             libraryImageStore.get(libImage.imagePath)
           }
