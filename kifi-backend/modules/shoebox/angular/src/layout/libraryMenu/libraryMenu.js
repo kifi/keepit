@@ -288,22 +288,20 @@ angular.module('kifi')
           $window.removeEventListener(hideAndReopenOnResize);
         });
 
-        var preventBodyScrollInMenu = function (event) {
-          if (element[0].contains(event.target)) {
-            document.body.style.overflow = 'hidden';
-          } else {
-            document.body.style.overflow = 'visible';
-          }
-        };
-        $window.addEventListener('wheel', preventBodyScrollInMenu);
-        scope.$on('$destroy', function () {
-          $window.removeEventListener(preventBodyScrollInMenu);
-        });
-
         //
         // Scrolling.
         //
         antiscrollLibList.bind('scroll', _.debounce(setStickySeparator, 10));
+
+        antiscrollLibList.on('wheel', function (event) {
+          event.originalEvent.kfAllow = this.scrollHeight > this.clientHeight;
+        });
+
+        element.on('wheel', function (event) {
+          if (!event.originalEvent.kfAllow) {
+            event.preventDefault();
+          }
+        });
 
         //
         // Filtering.
