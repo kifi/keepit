@@ -137,6 +137,16 @@ class SearchController @Inject() (
     }
   }
 
+  def distSearchUsers() = Action.async(parse.tolerantJson) { request =>
+    val json = request.body
+    val shardSpec = (json \ "shards").as[String]
+    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
+    val userSearchRequest = (json \ "request").as[UserSearchRequest]
+    userSearchCommander.distSearchUsers(shards, userSearchRequest).map { userShardResults =>
+      Ok(Json.toJson(userShardResults))
+    }
+  }
+
   //internal (from eliza/shoebox)
   def warmUpUser(userId: Id[User]) = Action { request =>
     uriSearchCommander.warmUp(userId)

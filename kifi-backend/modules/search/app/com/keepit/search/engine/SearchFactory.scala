@@ -12,8 +12,9 @@ import com.keepit.search._
 import com.keepit.search.engine.library.LibrarySearch
 import com.keepit.search.engine.parser.KQueryParser
 import com.keepit.search.engine.uri.{ UriSearch, UriSearchImpl, UriSearchNonUserImpl }
+import com.keepit.search.engine.user.UserSearch
 import com.keepit.search.index.graph.keep.{ KeepFields, ShardedKeepIndexer }
-import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryFields, LibraryIndexer }
+import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.phrase.PhraseDetector
 import com.keepit.search.index.user.UserIndexer
@@ -267,6 +268,66 @@ class SearchFactory @Inject() (
           timeLogs.queryParsing(parseDoneAt)
 
           new LibrarySearch(
+            userId,
+            numHitsToReturn,
+            filter,
+            config,
+            engBuilder,
+            librarySearcher,
+            keepSearcher,
+            userSearcher,
+            libraryQualityEvaluator,
+            friendIdsFuture,
+            libraryIdsFuture,
+            monitoredAwait,
+            timeLogs,
+            explain.map((_, lang1, lang2))
+          )
+        }
+      case None => Seq.empty
+    }
+  }
+
+  def getUserSearches(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    queryString: String,
+    lang1: Lang,
+    lang2: Option[Lang],
+    numHitsToReturn: Int,
+    doPrefixSearch: Boolean,
+    filter: SearchFilter,
+    config: SearchConfig,
+    explain: Option[Id[User]]): Seq[UserSearch] = {
+
+    val currentTime = System.currentTimeMillis()
+
+    val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryContext)
+    val friendIdsFuture = getSearchFriends(userId)
+
+    val parser = new KQueryParser(
+      DefaultAnalyzer.getAnalyzer(lang1),
+      DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
+      lang2.map(DefaultAnalyzer.getAnalyzer),
+      lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
+      doPrefixSearch,
+      config,
+      phraseDetector,
+      phraseDetectionReqConsolidator
+    )
+
+    parser.parse(queryString) match {
+      case Some(engBuilder) =>
+        val parseDoneAt = System.currentTimeMillis()
+        val librarySearcher = libraryIndexer.getSearcher
+        val userSearcher = userIndexer.getSearcher
+        shards.toSeq.map { shard =>
+          val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
+
+          val timeLogs = new SearchTimeLogs(currentTime)
+          timeLogs.queryParsing(parseDoneAt)
+
+          new UserSearch(
             userId,
             numHitsToReturn,
             filter,
