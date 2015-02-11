@@ -313,7 +313,7 @@
                                               </td>
                                             </tr>
                                           </table>
-                                          <table width="204" border="0" cellspacing="0" cellpadding="0" align="right" class="hide">
+                                          <table width="204" border="0" cellspacing="0" cellpadding="0" align="right">
                                             @trSpacer(32)
                                             <tr>
                                               <td align="center" valign="top" style="background-color:#dcdcdc;border-radius:4px;">
@@ -323,26 +323,21 @@
                                                       <table width="202" border="0" cellspacing="0" cellpadding="0" align="center">
                                                         <tr>
                                                           <td width="2"></td>
-                                                          <td align="left" valign="top" width="55">
+                                                          <td align="left" valign="middle">
                                                             <img src="@assetV3Url("left.png")" width="49" height="64" alt="" style="display:block;" border="0"/>
                                                           </td>
-                                                          <td align="left" valign="top" width="141">
+                                                          <td align="left" valign="middle" width="141">
                                                             <table width="141" border="0" cellspacing="0" cellpadding="0">
                                                               <tr>
-                                                                <td align="center" valign="middle" height="33" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:15px;line-height:17px;color:#3e4854;font-weight:bold;">Go mobile with Kifi</td>
+                                                                <td align="center" valign="middle" height="25" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:15px;line-height:17px;color:#3e4854;font-weight:bold;">Go mobile with Kifi</td>
                                                               </tr>
                                                               <tr>
                                                                 <td align="center" valign="top">
-                                                                  <table width="90" align="center" border="0" cellspacing="0" cellpadding="0">
-                                                                    <tr>
-                                                                      <td align="center" valign="middle" class="txt2" bgcolor="#56b163" height="20" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:12px;line-height:14px;color:#ffffff;border-radius:5px;background-color:#56b163;">
-                                                                        <a href="#" target="_blank" style="text-decoration:none;color:#ffffff;">Get the apps</a>
-                                                                      </td>
-                                                                    </tr>
-                                                                  </table>
+                                                                  <a href="@iOsAppStoreUrl" target="_blank" style="text-decoration:none;color:#62BE73;">iOS</a>
+                                                                  &middot;
+                                                                  <a href="@androidAppStoreUrl" target="_blank" style="text-decoration:none;color:#62BE73;">Android</a>
                                                                 </td>
                                                               </tr>
-                                                              @trSpacer(11)
                                                             </table>
                                                           </td>
                                                           <td width="3">&nbsp;</td>
@@ -363,20 +358,26 @@
                                 <tr>
                                   <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                 </tr>
-                                @if(activityData.activityComponents.nonEmpty) {
+                                @if(activityData.libraryRecos.size > 0) {
                                 <tr>
                                   <td align="left" valign="top">
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-                                      @trSpacer(28)
                                       <tr>
-                                        <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Activity by people who share your interest</td>
-                                      </tr>
-                                      @activityData.activityComponents.map { html =>
-                                      @html
-                                      }
-                                      @trSpacer(30)
-                                      <tr>
-                                        <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
+                                        <td align="center" valign="top">
+                                          <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                            @trSpacer(28)
+                                            <tr>
+                                              <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Relevant libraries to follow</td>
+                                            </tr>
+                                            @activityData.libraryRecos.map { lib =>
+                                            @activityFeedLibRecoPartial(lib)
+                                            }
+                                            @trSpacer(35)
+                                            <tr>
+                                              <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
+                                            </tr>
+                                          </table>
+                                        </td>
                                       </tr>
                                     </table>
                                   </td>
@@ -438,26 +439,20 @@
                                   </td>
                                 </tr>
                                 }
-                                @if(activityData.libraryRecos.size > 0) {
+                                @if(activityData.activityComponents.nonEmpty) {
                                 <tr>
                                   <td align="left" valign="top">
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+                                      @trSpacer(28)
                                       <tr>
-                                        <td align="center" valign="top">
-                                          <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                            @trSpacer(28)
-                                            <tr>
-                                              <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Relevant libraries to follow</td>
-                                            </tr>
-                                            @activityData.libraryRecos.map { lib =>
-                                            @activityFeedLibRecoPartial(lib)
-                                            }
-                                            @trSpacer(35)
-                                            <tr>
-                                              <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
-                                          </table>
-                                        </td>
+                                        <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Activity by people who share your interest</td>
+                                      </tr>
+                                      @activityData.activityComponents.map { html =>
+                                      @html
+                                      }
+                                      @trSpacer(30)
+                                      <tr>
+                                        <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                       </tr>
                                     </table>
                                   </td>
