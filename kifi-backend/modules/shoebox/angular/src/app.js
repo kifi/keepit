@@ -77,9 +77,9 @@ angular.module('kifi', [
 
 .controller('AppCtrl', [
   '$scope', 'profileService', '$rootScope', 'libraryService', '$timeout', '$log',
-  'platformService', '$rootElement', '$analytics', '$location', 'util',
+  'platformService', '$rootElement', '$analytics', '$location', 'util', '$element',
   function ($scope, profileService, $rootScope, libraryService, $timeout, $log,
-      platformService, $rootElement, $analytics, $location, util) {
+      platformService, $rootElement, $analytics, $location, util, $element) {
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
 
     function start() {
@@ -110,6 +110,14 @@ angular.module('kifi', [
           }
         });
       }
+
+      $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState) {
+        var fromWidth = fromState && fromState.data && fromState.data.width || '';
+        var toWidth = toState && toState.data && toState.data.width || '';
+        if (fromWidth !== toWidth) {
+          $element.removeClass(fromWidth).addClass(toWidth);
+        }
+      });
 
       $rootScope.$on('$stateChangeError', function (event, toState, toParams, fromState, fromParams, error) {
         if (error && _.contains([403, 404], error.status)) {

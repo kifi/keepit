@@ -12,7 +12,6 @@ body
   margin: 0;
   background: appBackgroundColor
   font-family: Lato, Helvetica, Arial, sans-serif
-  min-width: 800px
 
   &.modal-open
     overflow: hidden
@@ -81,6 +80,22 @@ menu, ol, ul
 
 .ng-cloak
   display: none !important
+
+.kf-width-bounded
+  margin: 0 auto
+  min-width: appMinWidth
+  max-width: appMinWidth
+  padding: 0 appSidePad
+
+  .kf-866-966 &
+    min-width: 866px
+    max-width: 966px
+
+.kf-min-width-bounded
+  min-width: appMinWidth + 2 * appSidePad
+
+  .kf-866-966 &
+    min-width: 866px + 2 * appSidePad
 
 .kf-button
   display: inline-block

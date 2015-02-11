@@ -1,4 +1,4 @@
-<div class="kf-main-search">
+<div class="kf-main-search" ng-class="{'kf-width-bounded': !isLibrarySearch}">
   <div class="kf-main-head">
     <div ng-if="$root.userLoggedIn" class="kf-search-filters">
       <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('a'), enabled: isEnabled('a') }" ui-sref=".({f:'a'})" ng-click="onClickSearchFilter('a')">All keeps</a>

@@ -15,10 +15,7 @@
 
 .kf-lih-inner
   height: 100%
-  width: 100%
-  min-width: appMinWidth
-  max-width: appMaxWidth
-  margin: 0 auto
+  width: 'calc(100% - %s)' % (2 * appSidePad)
   display: table
   table-layout: fixed
 
