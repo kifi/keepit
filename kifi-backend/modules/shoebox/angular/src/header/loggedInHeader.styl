@@ -22,56 +22,62 @@
   display: table
   table-layout: fixed
 
-left-height = 37px
-left-burger-width = 32px
-left-sep-width = 2px
-left-logo-width = 92px
+btn-diam = 32px
+btn-space = 10px
+btn-color = alpha(#fff, .1)
+btn-color-hover = #6fa5ee
+btn-opacity-active = .9
+
+left-logo-space = 16px
+left-logo-width = 76px
 
 .kf-lih-left
   display: table-cell
   vertical-align: middle
-  width: left-burger-width + left-sep-width + left-logo-width + 14px
+  width: btn-diam + left-logo-space + left-logo-width + 14px
+  font-size: 0
 
 .kf-lih-toggle-menu
   display: inline-block
-  margin-right: 3px
-  height: left-height
-  width: left-burger-width
   vertical-align: middle
-  text-align: left
-  cursor: pointer
+  height: btn-diam
+  width: btn-diam
+  margin-right: left-logo-space
+  border-radius: 50%
   border: none
-  background-color: transparent
   padding: 0
-  outline-color: #fff
+  background-color: btn-color
+  position: relative
+  cursor: pointer
 
-  &:hover:not(.active)
-    .sprite-burger
-      sprite2x($burger-hover)
+  &:focus
+    outline-color: alpha(#fff, .2)
 
-  .sprite-burger
-    border: 5px solid pageHeaderColor
+  &:hover
+  &.kf-menu-visible
+    background-color: btn-color-hover
 
-.kf-lih-toggle-menu-visible
-  .sprite-burger
-    background-color: #555
-    border-color: #555
-    border-radius: 15%
-    sprite2x($burger-hover)
+  &:hover:active
+  &.kf-menu-visible
+    opacity: btn-opacity-active
 
-.kf-lih-left-separator
-  display: inline-block
-  vertical-align: middle
-  height: left-height
-  width: left-sep-width
-  background-color: #7d7d7d
+.kf-lih-burger
+  color = #fff
+  position: absolute
+  top: 15px
+  left: 8px
+  height: 3px
+  width: 16px
+  border-radius: 1px
+  background-color: color
+  box-shadow: 0 -5px color, 0 5px color
 
 .kf-lih-logo
   display: inline-block
   vertical-align: middle
   width: left-logo-width
-  height: left-height
-  background-position: center
+  height: btn-diam
+  background-position: left center
   background-repeat: no-repeat
   background-size: 70px auto
   outline-color: #fff
@@ -207,9 +213,6 @@ input.kf-lih-search-input
   color: blueColor
   cursor: pointer
 
-btn-diam = 32px
-btn-space = 10px
-
 .kf-lih-right
   display: table-cell
   width: btn-diam * 4 + btn-space * 4 + 12px
@@ -270,14 +273,14 @@ btn-space = 10px
   border-radius: 50%
 
   &:active
-    opacity: .9
+    opacity: btn-opacity-active
 
 .kf-lih-tags
 .kf-lih-friends
-  background-color: alpha(#fff, .1)
+  background-color: btn-color
 
   &:hover
-    background-color: #6fa5ee
+    background-color: btn-color-hover
 
 .kf-lih-tags
   margin-left: btn-space

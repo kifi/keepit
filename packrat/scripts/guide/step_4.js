@@ -11,12 +11,12 @@ k.guide.step4 = k.guide.step4 || function () {
   'use strict';
   var $stage, cutScreen, $feats, arrows, $steps, timeout;
   var holes = [
-    {sel: '.kifi-guide-target-1', pad: [0, 2, 0, 4]},
+    {sel: '.kifi-guide-target-1', pad: [7]},
     {sel: '.kifi-guide-target-2', pad: [8]},
     {sel: '.kifi-guide-target-3', pad: [-9, 10, -9, -14]}
   ];
   var arcs = [
-    {dx: 0, dy: -48, from: {angle: 90, gap: 12, along: [.2, 0], spacing: 7}, to: {angle: 90, gap: 16, along: [.5, 1]}},
+    {dx: 0, dy: -48, from: {angle: 90, gap: 12, along: [.2, 0], spacing: 7}, to: {angle: 90, gap: 12, along: [.5, 1]}},
     {dx: 0, dy: -48, from: {angle: 90, gap: 12, along: [.4, 0], spacing: 7}, to: {angle: 90, gap: 12, along: [.4, 1]}},
     {dx: 0, dy: -48, from: {angle: 90, gap: 12, along: [.4, 0], spacing: 7}, to: {angle: 90, gap: 12, along: [.37, 1]}}
   ];
