@@ -13,7 +13,7 @@ import com.keepit.curator.commanders.email.{ RecentInterestRankStrategy, Engagem
 import com.keepit.curator.commanders._
 import com.keepit.curator.commanders.persona.PersonaRecommendationIngestor
 import com.keepit.curator.model.{ RecommendationSubSource, LibraryRecoSelectionParams, LibraryRecoInfo, RecommendationSource, LibraryRecommendation }
-import com.keepit.model.{ LibraryRecommendationFeedback, Library, UserValueName, UriRecommendationFeedback, NormalizedURI, ExperimentType, User, UriRecommendationScores }
+import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsBoolean, JsValue, JsString, Json }
@@ -201,6 +201,13 @@ class CuratorController @Inject() (
 
   def publicFeedStartInitialLoading = Action { request =>
     publicFeedGenCommander.startInitialLoading()
+    Ok
+  }
+
+  def ingestPersonaRecos(userId: Id[User]) = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val pids = (js \ "personaIds").as[Seq[Id[Persona]]]
+    pids.foreach { pid => personaRecoIngestor.ingestUserRecosByPersona(userId, pid) }
     Ok
   }
 }
