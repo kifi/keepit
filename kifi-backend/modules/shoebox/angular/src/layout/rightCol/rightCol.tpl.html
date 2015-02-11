@@ -52,11 +52,11 @@
         </a>
       </li>
       <li class="install-kifi">
-        <a class="kf-footer-item-link" href="javascript:" ng-click="triggerInstall()">
+        <a class="kf-footer-item-link" href="javascript:" ng-click="triggerInstall()" ng-switch="installState()">
           <span class="sprite sprite-install-extension-icon"></span><!--
-       --><span ng-show="!installInProgress() && !installed()">Install the extension</span><!--
-       --><span ng-show="installInProgress() && !installed()">Installing...</span><!--
-       --><span ng-show="installed()">Installed!</span>
+       --><span ng-switch-default>Install the extension</span><!--
+       --><span ng-switch-when="installing">Installing...</span><!--
+       --><span ng-switch-when="done">Installed!</span>
         </a>
       </li>
       <li class="import-bookmarks">

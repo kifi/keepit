@@ -28,8 +28,8 @@ class LibraryFromUserScoreVectorSource(
     val monitoredAwait: MonitoredAwait,
     explanation: Option[LibrarySearchExplanationBuilder]) extends ScoreVectorSource with Logging with DebugOption with VisibilityEvaluator {
 
-  private[this] val userNameBoost = config.asFloat("userNameBoost")
-  private[this] val userSource: UserSource = new UserSource(userSearcher, userNameBoost)
+  private[this] val libraryOwnerBoost = config.asFloat("libraryOwnerBoost")
+  private[this] val userSource: UserSource = new UserSource(userSearcher, libraryOwnerBoost)
 
   override def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit = {
     userSource.prepare(query, matchWeightNormalizer)
@@ -42,7 +42,7 @@ class LibraryFromUserScoreVectorSource(
   private def execute(coreSize: Int, output: DataBuffer): Unit = {
     val writer: DataBufferWriter = new DataBufferWriter
 
-    if (userNameBoost > 0.0f) {
+    if (libraryOwnerBoost > 0.0f) {
       val taggedScores = userSource.createScoreArray()
 
       if (taggedScores.length > 0) {
@@ -97,7 +97,7 @@ class LibraryFromUserScoreVectorSource(
     }
   }
 
-  private class UserSource(protected val searcher: Searcher, userNameBoost: Float) extends ScoreVectorSourceLike {
+  private class UserSource(protected val searcher: Searcher, libraryOwnerBoost: Float) extends ScoreVectorSourceLike {
 
     override protected def preprocess(query: Query): Query = QueryProjector.project(query, UserFields.nameSearchFields) // trim down to name fields
 
@@ -118,7 +118,7 @@ class LibraryFromUserScoreVectorSource(
         val userId = idMapper.getId(docId)
 
         // get all scores
-        val size = pq.getTaggedScores(taggedScores, userNameBoost)
+        val size = pq.getTaggedScores(taggedScores, libraryOwnerBoost)
 
         // write to the buffer
         output.alloc(writer, 0, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)

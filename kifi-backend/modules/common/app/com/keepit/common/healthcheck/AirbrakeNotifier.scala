@@ -39,7 +39,9 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
         if (!error.aggregateOnly) {
           val xml = formatter.format(error)
           airbrakeSender.sendError(xml)
-          println(xml)
+          val toLog = error.message.getOrElse(error.exception.toString)
+          println(s"[airbrake] $toLog")
+          log.error(s"[airbrake] $toLog")
         }
       } catch {
         case e: Throwable =>

@@ -46,7 +46,11 @@ object SearchConfig {
       "proximityPowerFactor" -> "1.0",
       "messageHalfLifeHours" -> "24",
       "minMyLibraries" -> "1",
-      "myLibraryBoost" -> "1.5"
+      "myLibraryBoost" -> "1.5",
+      "librarySourceBoost" -> "1.5",
+      "myFriendBoost" -> "1.5",
+      "userSourceBoost" -> "1.5",
+      "libraryOwnerBoost" -> "0.5"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -77,7 +81,11 @@ object SearchConfig {
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
       "messageHalfLifeHours" -> "exponential time decay constant used in message search",
       "minMyLibraries" -> "the minimum number of my libraries in a library search result",
-      "myLibraryBoost" -> "boost value for my own libraries in library search"
+      "myLibraryBoost" -> "boost value for my own libraries in library search",
+      "librarySourceBoost" -> "boost value for library source in library search",
+      "myFriendBoost" -> "boost value for my friends in user search",
+      "libraryOwnerBoost" -> "boost value for library owner in user search and a user's libraries in library search",
+      "userSourceBoost" -> "boost value for user source in user search"
     )
 
   val empty = new SearchConfig(Map.empty)

@@ -1,15 +1,19 @@
 package com.keepit.model
 
-import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
+import com.google.inject.{ Singleton, ImplementedBy }
 import com.google.inject.Inject
 import com.keepit.common.time.Clock
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
-import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
+
+object PageInfoRepo {
+  val authorsColumnLength = 4096
+  val titleColumnLength = 2048
+}
 
 @ImplementedBy(classOf[PageInfoRepoImpl])
 trait PageInfoRepo extends Repo[PageInfo] with SeqNumberFunction[PageInfo] {
@@ -59,7 +63,12 @@ class PageInfoRepoImpl @Inject() (
   }
 
   override def save(model: PageInfo)(implicit session: RWSession): PageInfo = {
-    val toSave = model.copy(seq = deferredSeqNum(), title = model.title.map(_.take(2000)))
+    import PageInfoRepo._
+    val toSave = model.copy(
+      seq = deferredSeqNum(),
+      title = model.title.map(_.take(titleColumnLength)),
+      authors = PageAuthor.trimAsJson(model.authors, authorsColumnLength)
+    )
     log.info(s"[PageInfoRepo.save] $toSave")
     super.save(toSave)
   }

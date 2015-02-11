@@ -3,6 +3,7 @@ package com.keepit.search
 import com.keepit.common.service.{ ServiceUri, ServiceType, ServiceClient }
 import com.keepit.common.zookeeper.{ ServiceCluster, ServiceInstance }
 import com.keepit.search.engine.library.LibraryShardResult
+import com.keepit.search.engine.user.UserShardResult
 import com.keepit.search.index.sharding.{ DistributedSearchRouter, Shard }
 import com.keepit.model.{ User, NormalizedURI }
 import scala.concurrent.Future
@@ -49,6 +50,8 @@ trait DistributedSearchServiceClient extends ServiceClient {
     debug: Option[String]): Seq[Future[JsValue]]
 
   def distSearchLibraries(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: LibrarySearchRequest): Seq[Future[Seq[LibraryShardResult]]]
+
+  def distSearchUsers(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: UserSearchRequest): Seq[Future[Seq[UserShardResult]]]
 
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User], libraryContext: LibraryContext): Seq[Future[Map[Lang, Int]]]
 
@@ -165,6 +168,12 @@ class DistributedSearchServiceClientImpl @Inject() (
   def distSearchLibraries(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: LibrarySearchRequest): Seq[Future[Seq[LibraryShardResult]]] = {
     if (plan.isEmpty) Seq.empty else distRouter.dispatch(plan, Search.internal.distSearchLibraries(), Json.toJson(request)).map { futureClientResponse =>
       futureClientResponse.map { r => r.json.as[JsArray].value.map(_.as[LibraryShardResult]) }
+    }
+  }
+
+  def distSearchUsers(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: UserSearchRequest): Seq[Future[Seq[UserShardResult]]] = {
+    if (plan.isEmpty) Seq.empty else distRouter.dispatch(plan, Search.internal.distSearchUsers(), Json.toJson(request)).map { futureClientResponse =>
+      futureClientResponse.map { r => r.json.as[JsArray].value.map(_.as[UserShardResult]) }
     }
   }
 

@@ -21,6 +21,7 @@ object UserFields {
   val experimentsField = "exp"
 
   val nameSearchFields = Set(nameField, nameStemmedField)
+  val textSearchFields = Set(nameField, nameStemmedField, namePrefixField)
 
   val decoders: Map[String, FieldDecoder] = Map.empty
 }

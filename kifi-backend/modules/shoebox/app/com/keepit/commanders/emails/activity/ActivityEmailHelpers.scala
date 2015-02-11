@@ -46,16 +46,11 @@ trait ActivityEmailLibraryMembershipHelpers extends ActivityEmailLibraryHelpers 
     libInfosF map { libInfos =>
       libInfos map {
         case (libId, libInfo) =>
-          val members = librariesToMembersMap(libId) map (_.userId) sortBy friendsFirstSorter(friends)
+          val (friendFollowers, others) = librariesToMembersMap(libId) map (_.userId) partition { id => friends.contains(id) }
+          val followers = util.Random.shuffle(friendFollowers) ++ util.Random.shuffle(others)
           val libInfoView = BaseLibraryInfoView(libId, libInfo)
-          LibraryInfoFollowersView(libInfoView, members)
+          LibraryInfoFollowersView(libInfoView, followers)
       }
     }
-  }
-
-  // sorts users by friend status, randomly shuffling the friends and others while ensuring all friends are first
-  def friendsFirstSorter(friends: Set[Id[User]]) = (userId: Id[User]) => {
-    val rand = Math.abs(util.Random.nextInt())
-    if (friends.contains(userId)) -rand else rand
   }
 }

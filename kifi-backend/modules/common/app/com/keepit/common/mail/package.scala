@@ -127,6 +127,8 @@ package object template {
     def inviteFriendUrl(id: Id[User], index: Int, subtype: String) =
       htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=$subtype&", "pymk" + index, openInAppIfMobile = true)
 
+    def invitedLibrariesUrl(id: Id[User], content: String) = htmlUrl(Tag1(tags.profileUrl, id) + s"/libraries/invited?", content, openInAppIfMobile = true)
+
     // wrap a url (String) in HTML (so tags aren't escaped)
     def htmlUrl(url: String, content: String, openInAppIfMobile: Boolean): Html =
       Html(appendTrackingParams(url = url, content = content, openInAppIfMobile = openInAppIfMobile))

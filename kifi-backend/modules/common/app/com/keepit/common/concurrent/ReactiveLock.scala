@@ -41,23 +41,17 @@ class ReactiveLock(numConcurrent: Int = 1) {
   }
 
   def withLock[T](f: => T)(implicit ec: EC): Future[T] = {
-    val p = Promise[T]
-    val wrapper = () => Future { f }
-    taskQueue.add(QueuedItem[T](wrapper, p, ec))
-    waitingCount.incrementAndGet()
-    dispatch()
-    p.future
+    withLock0 { () => Future { f } }
   }
 
   def withLockFuture[T](f: => Future[T])(implicit ec: EC): Future[T] = {
-    val p = Promise[T]
     //making sure the runner just starts a future and does nothing else (in case f does some other work, keeping dispatch very light)
-    val wrapper = () => {
-      val innerPromise = Promise[T]
-      innerPromise.completeWith(Future(f).flatMap(future => future))
-      innerPromise.future
-    }
-    taskQueue.add(QueuedItem[T](wrapper, p, ec))
+    withLock0 { () => Future { f } flatMap { future => future } }
+  }
+
+  private def withLock0[T](runner: () => Future[T])(implicit ec: EC): Future[T] = {
+    val p = Promise[T]
+    taskQueue.add(QueuedItem[T](runner, p, ec))
     waitingCount.incrementAndGet()
     dispatch()
     p.future

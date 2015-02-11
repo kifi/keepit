@@ -33,6 +33,7 @@ angular.module('kifi')
       scope.facebook = network === 'facebook';
       scope.linkedin = network === 'linkedin';
       scope.email    = network === 'email';
+      scope.twitter  = network === 'twitter';
 
       scope.reconnectLinkedIn = function () {
         modalService.open({
