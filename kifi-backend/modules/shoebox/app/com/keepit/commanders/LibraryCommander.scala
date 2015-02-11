@@ -711,7 +711,7 @@ class LibraryCommander @Inject() (
   }
 
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library) = {
-    db.readWrite { implicit session =>
+    db.readWrite(attempts = 3) { implicit session =>
       val libMem = libraryMembershipRepo.getWithUserId(userId, None)
       val allLibs = libraryRepo.getByUser(userId, None)
 
