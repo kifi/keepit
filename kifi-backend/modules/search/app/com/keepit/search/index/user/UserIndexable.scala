@@ -14,6 +14,7 @@ import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
 object UserFields {
   val PREFIX_MAX_LEN = 8 // do not change this number unless you do reindexing immediately
   val nameField = "t"
+  val nameValueField = "tv"
   val nameStemmedField = "ts"
   val namePrefixField = "tp"
   val emailsField = "e"
@@ -46,6 +47,8 @@ class UserIndexable(user: User, emails: Set[EmailAddress], experiments: Set[Expe
     doc.add(buildTextField(nameStemmedField, user.fullName, DefaultAnalyzer.defaultAnalyserWithStemmer))
 
     doc.add(buildPrefixField(namePrefixField, user.fullName, PREFIX_MAX_LEN))
+
+    doc.add(buildStringDocValuesField(nameValueField, user.fullName))
 
     doc.add(buildIteratorField[String](emailsField, emails.map { _.address.toLowerCase }.toIterator)(x => x))
 
