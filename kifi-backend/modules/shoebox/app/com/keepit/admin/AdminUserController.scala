@@ -875,6 +875,12 @@ class AdminUserController @Inject() (
     Ok(html.admin.userLibraries(owner, accessToLibs))
   }
 
+  // TODO(josh) remove when this goes live
+  def sendActivityEmailToAll() = AdminUserPage { implicit request =>
+    activityEmailSender()
+    NoContent
+  }
+
   def sendEmail(toUserId: Id[User], code: String) = AdminUserPage { implicit request =>
     code match {
       case "activity" => activityEmailSender(Set(toUserId))

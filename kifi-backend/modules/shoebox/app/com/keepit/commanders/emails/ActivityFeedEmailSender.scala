@@ -13,6 +13,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailToSend, TemplateOptions }
 import com.keepit.common.mail.{ ElectronicMail, SystemEmailAddress }
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
 import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
 import com.keepit.eliza.ElizaServiceClient
@@ -112,6 +113,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     activityEmailRepo: ActivityEmailRepo,
     keepCommander: KeepsCommander,
     keepImageCommander: KeepImageCommander,
+    s3Config: S3ImageConfig,
     protected val airbrake: AirbrakeNotifier,
     private implicit val publicIdConfig: PublicIdConfiguration) extends ActivityFeedEmailSender with ActivityEmailHelpers with Logging {
 
@@ -276,6 +278,12 @@ class ActivityFeedEmailSenderImpl @Inject() (
   val maxKeepImagesPerLibraryReco: Int = 4
 
   private def isEnoughKeepImagesForLibRecos(s: LibraryInfoViewWithKeepImages) = s.keepImages.size >= maxKeepImagesPerLibraryReco
+  private val keepImageCropRequest = CropImageRequest(CroppedImageSize.Small.idealSize)
+  private val keepImageUrlPrefix = {
+    // "urls" are paths relative to the root of the CDN
+    val cdn = s3Config.cdnBase
+    (if (cdn.startsWith("http")) cdn else s"http:$cdn") + "/"
+  }
 
   // gets cropped keep images for a library
   private def fetchLibToKeepImages(libInfoView: LibraryInfoView): Future[LibraryInfoViewWithKeepImages] = {
@@ -285,10 +293,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
         keepsF flatMap { keeps =>
           val keepIds = keeps.map(_.id.get).toSet
-          val urlsF = keepImageCommander.getBestImagesForKeepsPatiently(keepIds,
-            CropImageRequest(CroppedImageSize.Small.idealSize)).map { keepIdsToImages =>
-              keepIdsToImages.collect { case (_, Some(img)) => img.imagePath }.toSeq
-            }
+          val urlsF = keepImageCommander.getBestImagesForKeepsPatiently(keepIds, keepImageCropRequest).map { keepIdsToImages =>
+            keepIdsToImages.collect { case (_, Some(img)) => img.imagePath }.toSeq
+          }
 
           urlsF flatMap { urls =>
             // if keeps.size < limit, we assume we're out of keeps in this library
@@ -299,7 +306,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
       } else Future.successful(Seq.empty)
     }
 
-    recur(maxKeepImagesPerLibraryReco, 0, 20) map { urls => LibraryInfoViewWithKeepImages(libInfoView, urls) }
+    recur(maxKeepImagesPerLibraryReco, 0, 20) map { urls =>
+      LibraryInfoViewWithKeepImages(libInfoView, urls map (keepImageUrlPrefix + _))
+    }
   }
 
   class UserActivityFeedHelper(val toUserId: Id[User], val previouslySent: Seq[ActivityEmail]) extends ActivityEmailLibraryHelpers {
