@@ -1,9 +1,9 @@
 <div class="kf-main-search">
   <div class="kf-main-head">
     <div ng-if="$root.userLoggedIn" class="kf-search-filters">
-      <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('a'), enabled: isEnabled('a') }" ui-sref=".({f:'a'})">All keeps</a>
-      <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('m'), enabled: isEnabled('m') }" ui-sref=".({f:'m'})">Your keeps ({{resultTotals.myTotal}})</a>
-      <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('f'), enabled: isEnabled('f') }" ui-sref=".({f:'f'})">Friends keeps ({{resultTotals.friendsTotal}})</a>
+      <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('a'), enabled: isEnabled('a') }" ui-sref=".({f:'a'})" ng-click="onClickSearchFilter('a')">All keeps</a>
+      <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('m'), enabled: isEnabled('m') }" ui-sref=".({f:'m'})" ng-click="onClickSearchFilter('m')">Your keeps ({{resultTotals.myTotal}})</a>
+      <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('f'), enabled: isEnabled('f') }" ui-sref=".({f:'f'})" ng-click="onClickSearchFilter('f')">Friends keeps ({{resultTotals.friendsTotal}})</a>
     </div>
     <div class="kf-subtitle">
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>

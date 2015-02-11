@@ -42,14 +42,7 @@ angular.module('kifi')
         $scope.library = library;
         $scope.libOwnerPicUrl = library && routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 100);
         $scope.libOwnerProfileUrl = library && routeService.getProfileUrl(library.owner.username);
-
-        if (library) {
-          $scope.search.libraryChip = true;
-        } else if ($scope.search.libraryChip) {
-          removeLibraryChip();
-        } else if ($state.params && $state.params.q && util.startsWith($state.params.q, 'tag:')) {
-          $scope.search.text = $state.params.q;
-        }
+        $scope.search.libraryChip = !!library;
       }),
 
       $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
@@ -87,25 +80,19 @@ angular.module('kifi')
     }
 
     function reactToQueryChange() {
-      if ($location.path() === '/find') {
-        $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
-      } else if ($scope.search.libraryChip) {
-        if ($scope.search.text) {
-          if ($state.params.q) {
-            $location.search('q', $scope.search.text).replace();
-          } else {
-            $location.url($scope.library.url + '/find?q=' + $scope.search.text + '&f=a');
-          }
-        } else {
-          $location.url($scope.library.url);
-        }
-      } else if ($scope.search.text) {
-        $location.url('/find?q=' + $scope.search.text);
+      if ($state.is('search') || $state.is('library.search')) {
+        $rootScope.$emit('searchTextUpdated', $scope.search.text, !!$scope.search.libraryChip && $scope.library.url);
+      } else {
+        $state.go($scope.search.libraryChip ? 'library.search' : 'search', {q: $scope.search.text});
       }
     }
 
     $scope.search.text = $state.params.q || '';
     $scope.onQueryChange = util.$debounce($scope, reactToQueryChange, 250);
+
+    $scope.$on('$destroy', $rootScope.$on('newQueryFromLocation', function (e, query) {
+      $scope.search.text = query;
+    }));
 
     $scope.onSearchBarClicked = function () {
       if ($scope.library) {

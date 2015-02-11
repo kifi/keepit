@@ -252,26 +252,52 @@ angular.module('kifi')
       }
     };
 
+    $scope.onClickSearchFilter = function (newSearchFilter) {
+      $location.search({f: newSearchFilter});
+    };
+
 
     //
     // Watches and event listeners.
     //
-    var newSearch = _.debounce(function () {
+    function newSearch() {
       // Use $state.params instead of $stateParams because changes to $stateParams
       // does not propagate to HeaderCtrl when it is injected there.
       // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
       _.assign($state.params, $location.search());
       init();
-    }, 250);
+    }
+
+    $scope.$on('$destroy', $rootScope.$on('searchTextUpdated', function (e, newSearchText, libraryUrl) {
+      if ($location.path() === '/find') {
+        $location.search('q', newSearchText).replace(); // this keeps any existing URL params
+      } else if (libraryUrl) {
+        if (newSearchText) {
+          if ($state.params.q) {
+            $location.search('q', newSearchText).replace();
+          } else {
+            $location.url(libraryUrl + '/find?q=' + newSearchText + '&f=a');
+          }
+        } else {
+          $location.url(libraryUrl);
+        }
+      } else if (newSearchText) {
+        $location.url('/find?q=' + newSearchText);
+      }
+
+      newSearch();
+    }));
+
     $scope.$on('$locationChangeSuccess', function (event, newState, oldState) {
       var newPath = newState.slice(0, newState.indexOf('?'));
       var oldPath = oldState.slice(0, oldState.indexOf('?'));
 
+      // If we are going from one search to another, update the search.
       if (newPath === oldPath) {
         newSearch();
+        $rootScope.$emit('newQueryFromLocation', $state.params.q);
       }
     });
-
 
     // Report search analytics on unload.
     var onUnload = function () {
