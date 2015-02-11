@@ -23,6 +23,8 @@ class UserScoreVectorSource(
     protected val monitoredAwait: MonitoredAwait,
     explanation: Option[UserSearchExplanationBuilder]) extends ScoreVectorSourceLike with VisibilityEvaluator {
 
+  private[this] val userSourceBoost = config.asFloat("userSourceBoost")
+
   override protected def preprocess(query: Query): Query = QueryProjector.project(query, UserFields.textSearchFields)
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
@@ -49,7 +51,7 @@ class UserScoreVectorSource(
 
         if (visibility != Visibility.RESTRICTED) {
           // get all scores
-          val size = pq.getTaggedScores(taggedScores)
+          val size = pq.getTaggedScores(taggedScores, userSourceBoost)
 
           // write to the buffer
           output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
