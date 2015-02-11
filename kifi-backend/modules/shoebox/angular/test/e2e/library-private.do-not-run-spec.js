@@ -14,7 +14,7 @@ describe('kifi angular library test suite', function () {
     });
 
     it('should have the correct title', function () {
-      util.checkForCorrectTitle('My Private Library by Integrator AA • Kifi');
+      util.checkForCorrectTitle('My Private Library by Integrator AA | Kifi');
     });
 
     it('should display the library card header', function () {

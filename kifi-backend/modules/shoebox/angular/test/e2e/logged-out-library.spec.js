@@ -14,7 +14,7 @@ describe('kifi angular logged-out library test suite', function () {
     });
 
     it('should have the correct title', function () {
-      expect(browser.getTitle()).toEqual('Halloween! by Lydia Laurenson • Kifi');
+      expect(browser.getTitle()).toEqual('Halloween! by Lydia Laurenson | Kifi');
     });
 
     it('should display the library card header', function () {

@@ -14,7 +14,7 @@ describe('kifi angular library test suite', function () {
     });
 
     it('should have the correct title', function () {
-      util.checkForCorrectTitle('Halloween! by Lydia Laurenson • Kifi');
+      util.checkForCorrectTitle('Halloween! by Lydia Laurenson | Kifi');
     });
 
     it('should display the library card header', function () {

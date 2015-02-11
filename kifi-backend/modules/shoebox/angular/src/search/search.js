@@ -52,8 +52,8 @@ angular.module('kifi')
         return query;
       }
 
-      var libraryPart = library && library.name ? library.name + ' • ' : '';
-      $window.document.title = libraryPart + getNormalizedQuery() + ' • Kifi';
+      var libraryPart = library && library.name ? library.name + ' | ' : '';
+      $window.document.title = libraryPart + getNormalizedQuery() + ' | Kifi';
     }
 
     function init() {

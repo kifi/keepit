@@ -100,7 +100,7 @@ angular.module('kifi')
 
     $rootScope.$emit('libraryUrl', {});
 
-    $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi';
+    $window.document.title = profile.firstName + ' ' + profile.lastName + ' | Kifi';
     $scope.currentPageOrigin = getCurrentPageOrigin();
     $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
     $scope.profile = _.cloneDeep(profile);

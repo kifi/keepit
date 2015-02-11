@@ -14,7 +14,7 @@ describe('kifi angular manage-tags test suite', function () {
     });
 
     it('should have the correct title', function () {
-      expect(browser.getTitle()).toEqual('Kifi • Manage Your Tags');
+      expect(browser.getTitle()).toEqual('Kifi | Manage Your Tags');
     });
 
     it('should display the correct manage-tags header', function () {

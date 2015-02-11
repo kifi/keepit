@@ -8,7 +8,7 @@ angular.module('kifi')
 
     // $analytics.eventTrack('test_event', { category: 'test', label: 'controller' });
 
-    $window.document.title = 'Kifi • Your Profile';
+    $window.document.title = 'Kifi | Your Profile';
     socialService.refresh();
 
     $scope.me = profileService.me;

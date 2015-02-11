@@ -14,7 +14,7 @@ describe('kifi angular profile test suite', function () {
     });
 
     it('should have the correct title', function () {
-      expect(browser.getTitle()).toEqual('Kifi • Your Profile');
+      expect(browser.getTitle()).toEqual('Kifi | Your Profile');
     });
 
     it('should display the correct Settings header', function () {
