@@ -56,6 +56,7 @@ trait UserSearchCommander {
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None,
     explain: Option[Id[User]]): Future[UserSearchResult]
+
   def distSearchUsers(shards: Set[Shard[NormalizedURI]], request: UserSearchRequest): Future[Seq[UserShardResult]]
 }
 
