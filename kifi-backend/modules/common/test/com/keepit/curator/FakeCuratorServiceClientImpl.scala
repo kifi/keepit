@@ -58,7 +58,7 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful()
   }
 
-  def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]]): Unit = ???
+  def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]]): Unit = {}
 
   // test helpers
   val updatedUriRecommendationFeedback = ListBuffer[(Id[User], Id[NormalizedURI], UriRecommendationFeedback)]()
