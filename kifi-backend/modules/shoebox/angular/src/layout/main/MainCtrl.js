@@ -3,13 +3,14 @@
 angular.module('kifi')
 
 .controller('MainCtrl', [
-  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
-  'initParams', '$rootScope', '$analytics', 'installService', 'profileService', '$q', 'routeService',
-  'modalService', 'libraryService', 'tagService',
-  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    initParams, $rootScope, $analytics, installService, profileService, $q, routeService,
-    modalService, libraryService, tagService) {
+  '$scope', '$rootScope', '$window', '$timeout', '$rootElement', '$q',
+  'initParams', 'undoService', 'installService', 'profileService', 'routeService',
+  'modalService', 'libraryService', 'extensionLiaison',
+  function ($scope, $rootScope, $window, $timeout, $rootElement, $q,
+    initParams, undoService, installService, profileService, routeService,
+    modalService, libraryService, extensionLiaison) {
 
+    var importBookmarksMessageEvent;
     var tooltipMessages = {
       0: 'Welcome back!',
       2: 'Bookmark import in progress. Reload the page to update.'
@@ -48,7 +49,7 @@ angular.module('kifi')
         scope: $scope
       });
 
-      $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
+      importBookmarksMessageEvent = msgEvent;
     }
 
     function initBookmarkFileUpload() {
@@ -100,17 +101,8 @@ angular.module('kifi')
         //   'action': '???'
         // });
 
-        var event = $scope.msgEvent;
-        var message = {
-          type: 'import_bookmarks',
-          libraryId: library.id
-        };
-
-        if (event) {
-          event.source.postMessage(message, event.origin);
-        } else {
-          $window.postMessage(message, '*');
-        }
+        extensionLiaison.importBookmarksTo(library.id, importBookmarksMessageEvent);
+        importBookmarksMessageEvent = null;
 
         modalService.open({
           template: 'common/modal/importBookmarksInProgressModal.tpl.html'
@@ -119,7 +111,8 @@ angular.module('kifi')
     };
 
     $scope.cancelImport = function () {
-      $window.postMessage('import_bookmarks_declined', '*');
+      extensionLiaison.declineBookmarkImport(importBookmarksMessageEvent);
+      importBookmarksMessageEvent = null;
     };
 
     $scope.disableBookmarkImport = true;
@@ -263,28 +256,13 @@ angular.module('kifi')
       $rootElement.find('body').addClass('mac');
     }
 
-    var refreshTimeout;
-    $window.addEventListener('message', function (event) {
-      $scope.$apply(function () {
-        var data = event.data || '';
-        switch (data.type || data) {
-          case 'get_guide':
-            // $scope.triggerGuide();  TODO: make this work again
-            break;
-          case 'import_bookmarks':
-            if (data.count > 0) {
-              $rootScope.$emit('showGlobalModal', 'importBookmarks', data.count, event);
-            }
-            break;
-          case 'update_keeps':
-          case 'update_tags':
-            $timeout.cancel(refreshTimeout);
-            refreshTimeout = $timeout(function () {
-              tagService.fetchAll(true);
-            }, 1000); // Giving enough time for the services to be updated
-            break;
-        }
-      });
+    $rootScope.$watch(function () {
+      return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide);
+    }, function (show) {
+      if (show) {
+        extensionLiaison.triggerGuide();
+        profileService.savePrefs({auto_show_guide: null});
+      }
     });
   }
 ]);
