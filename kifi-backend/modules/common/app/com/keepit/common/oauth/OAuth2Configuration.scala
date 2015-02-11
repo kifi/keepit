@@ -9,11 +9,12 @@ case class OAuth1ProviderConfiguration(
   requestTokenUrl: URL,
   accessTokenUrl: URL,
   authorizationUrl: URL,
-  key: ConsumerKey)
+  key: ConsumerKey,
+  accessToken: ConsumerKey)
 
 object OAuth1ProviderConfiguration {
-  def build(name: String, requestTokenUrl: URL, accessTokenUrl: URL, authorizationUrl: URL) = (key: ConsumerKey) => {
-    OAuth1ProviderConfiguration(name, requestTokenUrl, accessTokenUrl, authorizationUrl, key)
+  def build(name: String, requestTokenUrl: URL, accessTokenUrl: URL, authorizationUrl: URL) = (key: ConsumerKey, accessToken: ConsumerKey) => {
+    OAuth1ProviderConfiguration(name, requestTokenUrl, accessTokenUrl, authorizationUrl, key, null)
   }
 }
 
