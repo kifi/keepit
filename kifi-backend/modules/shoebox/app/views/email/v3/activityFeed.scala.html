@@ -376,6 +376,7 @@
                                 <tr>
                                   <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                 </tr>
+                                @if(activityData.activityComponents.nonEmpty) {
                                 <tr>
                                   <td align="left" valign="top">
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
@@ -389,58 +390,12 @@
                                       @html
                                       }
                                       <tr>
-                                        <td align="left" valign="top">
-                                          <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-                                            <tr>
-                                              <td height="30" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
-                                            <tr>
-                                              <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">Your Blah Blah Blah library was recommended<br class="br"/>
-                                                by Kifi to 1234 people
-                                              </td>
-                                            </tr>
-                                            <tr>
-                                              <td height="15" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
-                                            <tr>
-                                              <td align="left" valign="top">
-                                                <table width="201" border="0" cellspacing="0" cellpadding="0" align="left">
-                                                  <tr>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img1.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img2.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img3.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img4.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                    <td width="9"></td>
-                                                    <td width="33" align="left" valign="top">
-                                                      <a href="#" target="_blank"><img src="@assetV3Url("img5.png")" width="33" height="32" alt="" style="display:block;border-radius:17px;" border="0"/></a>
-                                                    </td>
-                                                  </tr>
-                                                </table>
-                                              </td>
-                                            </tr>
-                                            <tr>
-                                              <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
-                                          </table>
-                                        </td>
-                                      </tr>
-                                      <tr>
                                         <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                       </tr>
                                     </table>
                                   </td>
                                 </tr>
+                                }
                                 @if(activityData.connectionRequests + activityData.libraryInviteCount + activityData.unreadMessageCount > 0) {
                                 <tr>
                                   <td align="left" valign="top">
@@ -548,16 +503,15 @@
                                 </tr>
                                 <tr>
                                   <td align="center" class="txt11" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:13px;line-height:22px;color:#a7adb3;">
-                                    <a href="#" target="_blank" style="text-decoration:none;color:#a7adb3;">Your Kifi</a> |
-                                    <a href="#" target="_blank" style="text-decoration:none;color:#a7adb3;">Privacy policy</a> |
-                                    <a href="#" target="_blank" style="text-decoration:none;color:#a7adb3;">Help Center</a>
+                                    <a href="@kifiFooterUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Your Kifi</a> |
+                                    <a href="@privacyUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Privacy policy</a> |
+                                    <a href="@kifiSupportUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Help Center</a>
                                     <span class="hide">|</span>
-                                    <span class="br1"></span><a href="#" target="_blank" style="text-decoration:none;color:#a7adb3;">Facebook</a> |
-                                    <a href="#" target="_blank" style="text-decoration:none;color:#a7adb3;">Twitter</a><br/>
-                                    <a href="#" target="_blank" style="text-decoration:none;color:#a7adb3;">Unsubscribe</a> from updates like this.<br/>
+                                    <span class="br1"></span><a href="@kifiFacebookUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Facebook</a> |
+                                    <a href="@kifiTwitterUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Twitter</a><br/>
+                                    <a href="@unsubscribeUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Unsubscribe</a> from updates like this<br/>
                                     Kifi 709 N Shoreline Blvd,<span class="br1"></span> Mountain View, CA 94043, USA.
-                                    <br/>
-                                    &copy; 2014 FortyTwo
+                                    <br/>&copy; 2015 FortyTwo
                                   </td>
                                 </tr>
                                 <tr>

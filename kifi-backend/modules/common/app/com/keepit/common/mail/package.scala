@@ -150,6 +150,7 @@ package object template {
     val privacyUrl = htmlUrl(s"$baseUrl/privacy?", "footerPrivacy", openInAppIfMobile = false)
     val kifiTwitterUrl = htmlUrl("https://twitter.com/kifi?", "footerTwitter", openInAppIfMobile = false)
     val kifiFacebookUrl = htmlUrl("https://www.facebook.com/kifi42?", "footerFacebook", openInAppIfMobile = false)
+    val kifiSupportUrl = htmlUrl("http://support.kifi.com/?", "footerSupport", openInAppIfMobile = false)
 
     val kifiChromeExtensionUrl =
       "https://chrome.google.com/webstore/detail/kifi/fpjooibalklfinmkiodaamcckfbcjhin"
