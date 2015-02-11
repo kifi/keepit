@@ -5,6 +5,7 @@ import com.keepit.commanders.RecommendationsCommander
 import com.keepit.commanders.emails.{ BaseLibraryInfoView, LibraryInfoView }
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.curator.model.{ RecommendationSource, RecommendationSubSource }
 import com.keepit.model.{ ActivityEmail, User }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -12,7 +13,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
 @Singleton
-class UserLibraryRecommendationsComponent @Inject() (recoCommander: RecommendationsCommander, private val airbrake: AirbrakeNotifier) {
+class UserLibraryRecommendationsComponent @Inject() (recoCommander: RecommendationsCommander, private val airbrake: AirbrakeNotifier) extends Logging {
 
   val recoSource = RecommendationSource.Email
   val recoSubSource = RecommendationSubSource.Unknown
@@ -20,6 +21,7 @@ class UserLibraryRecommendationsComponent @Inject() (recoCommander: Recommendati
   def apply(toUserId: Id[User], previouslySent: Seq[ActivityEmail], limit: Int): Future[Seq[LibraryInfoView]] = {
     // does not track deliveries since some of the results may not be included in the email
     recoCommander.topPublicLibraryRecos(toUserId, limit, recoSource, recoSubSource, trackDelivery = false, context = None) map { libRecoResults =>
+      log.info(s"[activityEmail] userId=$toUserId libRecos $libRecoResults")
       libRecoResults.recos.map { case (id, info) => BaseLibraryInfoView(id, info.itemInfo) }
     }
   }

@@ -200,8 +200,8 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         val html1: String = email1.htmlBody
         val html2: String = email2.htmlBody
 
-        email1.to === Seq(EmailAddress("u1@kifi.com"))
-        email2.to === Seq(EmailAddress("u2@kifi.com"))
+        //        email1.to === Seq(EmailAddress("u1@kifi.com"))
+        //        email2.to === Seq(EmailAddress("u2@kifi.com"))
 
         html1 must contain("/u1/lib1-reco")
 

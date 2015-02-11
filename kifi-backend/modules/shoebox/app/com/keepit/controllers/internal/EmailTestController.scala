@@ -77,7 +77,7 @@ class EmailTestController @Inject() (
         testEmailTip(Left(userId), emailTip)
       case "activity" =>
         val emailsF = emailSenderProvider.activityFeed(Set(userId))
-        emailsF map (_.head)
+        emailsF.map(_.head.get)
     }
 
     emailOptF.map(_.map(email => Ok(email.htmlBody.value))).
