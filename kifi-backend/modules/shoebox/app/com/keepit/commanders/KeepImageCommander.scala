@@ -116,6 +116,7 @@ class KeepImageCommanderImpl @Inject() (
             val missingVersions = expectedVersions -- existingVersions
 
             if (missingVersions.nonEmpty) {
+              log.info(s"[getBestImagesForKeepsPatiently] keepId=$keepId has missing versions: $missingVersions; existing: $existingVersions; expected $expectedVersions")
               processMissingImagesForKeep(keepId, originalImage, missingVersions)
             } else Future.successful(())
           }.getOrElse(Future.successful(()))
@@ -199,21 +200,23 @@ class KeepImageCommanderImpl @Inject() (
             buildSet match {
               case Right(toPersist) =>
                 persistImageSet(keepId, originalImage.source, orig, originalSize, toPersist, overwriteExistingImage = true, amendExistingImages = true)(None) map {
-                  case success: ImageProcessSuccess => success
+                  case success: ImageProcessSuccess =>
+                    log.info(s"[processMissingImagesForKeep] processed missing images for keepId=$keepId")
+                    success
                   case err: ImageStoreFailure =>
-                    airbrake.notify(s"[getBestImagesForKeepsPatiently] error in persistImageSet keepId=$keepId : ${err.reason}")
+                    airbrake.notify(s"[processMissingImagesForKeep] error in persistImageSet keepId=$keepId : ${err.reason}")
                     err
                 }
               case Left(invalidImage) =>
-                airbrake.notify(s"[getBestImagesForKeepsPatiently] error from processAndPersistImages keepId=$keepId", invalidImage.ex)
+                airbrake.notify(s"[processMissingImagesForKeep] error from processAndPersistImages keepId=$keepId", invalidImage.ex)
                 Future.successful(invalidImage)
             }
           case Failure(e) =>
-            airbrake.notify(s"[getBestImagesForKeepsPatiently] error validating original image keepId=$keepId", e)
+            airbrake.notify(s"[processMissingImagesForKeep] error validating original image keepId=$keepId", e)
             Future.successful(ImageProcessState.InvalidImage(e))
         }
       case Left(isf) =>
-        airbrake.notify("[getBestImagesForKeepsPatiently] could not load original image: " + isf.reason)
+        airbrake.notify("[processMissingImagesForKeep] could not load original image: " + isf.reason)
         Future.successful(isf)
     }
   }
