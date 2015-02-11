@@ -54,20 +54,19 @@ angular.module('kifi')
     };
 
     function reactToQueryChange() {
-      var q = $scope.search.text;
-      if (q) {
-        if ($state.params.q) {
-          $location.search('q', q).replace();
-        } else {
-          $location.url($scope.library.url + '/find?q=' + q + '&f=a');
-        }
+      if ($state.is('library.search')) {
+        $rootScope.$emit('searchTextUpdated', $scope.search.text, $scope.library.url);
       } else {
-        $location.url($scope.library.url);
+        $state.go('library.search', {q: $scope.search.text});
       }
     }
 
     $scope.search.text = $state.params.q || '';
     $scope.onQueryChange = util.$debounce($scope, reactToQueryChange, 250);
+
+    $scope.$on('$destroy', $rootScope.$on('newQueryFromLocation', function (e, query) {
+      $scope.search.text = query;
+    }));
 
     $scope.onSearchBarClicked = function () {
       if ($scope.library && $scope.library.id) {
