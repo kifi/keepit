@@ -919,21 +919,23 @@ class LibraryCommander @Inject() (
   }
 
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit] = {
-    db.readWrite { implicit s =>
-      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
-        case None => Right()
-        case Some(mem) if mem.access == LibraryAccess.OWNER => Left(LibraryFail(BAD_REQUEST, "cannot_leave_own_library"))
-        case Some(mem) => {
+    db.readOnlyMaster { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None)
+    } match {
+      case None => Right()
+      case Some(mem) if mem.access == LibraryAccess.OWNER => Left(LibraryFail(BAD_REQUEST, "cannot_leave_own_library"))
+      case Some(mem) => {
+        val (keepCount, lib) = db.readWrite { implicit s =>
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           val lib = libraryRepo.get(libraryId)
           libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
-          SafeFuture {
-            val keepCount = keepRepo.getCountByLibrary(libraryId)
-            libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
-            searchClient.updateLibraryIndex()
-          }
-          Right()
+          (keepRepo.getCountByLibrary(libraryId), lib)
         }
+        SafeFuture {
+          libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
+          searchClient.updateLibraryIndex()
+        }
+        Right()
       }
     }
   }
