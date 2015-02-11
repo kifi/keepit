@@ -46,7 +46,6 @@ var styleDeps = {};
 var scriptDeps = {};
 var asap = {};
 
-livereload.options.silent = true;
 livereload.options.port = 35719;
 var reload = function (file) {
   var match = file.path.match(/\/(.*)$/);
