@@ -1,4 +1,5 @@
 @(activityData: com.keepit.commanders.emails.ActivityEmailData)
+@import views.html.email.tags._
 @import com.keepit.common.db.Id
 @import com.keepit.common.mail.template.helpers._
 
@@ -255,9 +256,7 @@
             <img src="@assetV3Url("spacer.gif")" alt="" height="1" width="600" style="max-height:1px; min-height:1px; display:block; width:600px; min-width:600px;" border="0"/>
           </td>
         </tr>
-        <tr>
-          <td height="35" class="top_height" style="font-size:1px; line-height:1px;">&nbsp;</td>
-        </tr>
+        <tr><td height="35" class="top_height">&nbsp;</td></tr>
         <tr>
           <td>
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
@@ -272,23 +271,17 @@
                             <td width="65" class="aside"></td>
                             <td align="center" valign="top">
                               <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                <tr>
-                                  <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                </tr>
+                                @trSpacer(20)
                                 <tr>
                                   <td align="center" valign="top">
                                     <a href="@kifiUrl("header")" target="_blank"><img src="@assetV3Url("kifi.png")" width="81" height="35" alt="Kifi" style="display:block;" border="0"/></a>
                                   </td>
                                 </tr>
-                                <tr>
-                                  <td height="12" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                </tr>
+                                @trSpacer(12)
                                 <tr>
                                   <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:18px;line-height:20px;color:#ffffff;">Your Kifi updates</td>
                                 </tr>
-                                <tr>
-                                  <td height="25" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                </tr>
+                                @trSpacer(25)
                               </table>
                             </td>
                             <td width="65" class="aside"></td>
@@ -321,9 +314,7 @@
                                             </tr>
                                           </table>
                                           <table width="204" border="0" cellspacing="0" cellpadding="0" align="right" class="hide">
-                                            <tr>
-                                              <td height="32" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
+                                            @trSpacer(32)
                                             <tr>
                                               <td align="center" valign="top" style="background-color:#dcdcdc;border-radius:4px;">
                                                 <table width="204" border="0" cellspacing="0" cellpadding="0" align="center">
@@ -351,9 +342,7 @@
                                                                   </table>
                                                                 </td>
                                                               </tr>
-                                                              <tr>
-                                                                <td height="11" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                              </tr>
+                                                              @trSpacer(11)
                                                             </table>
                                                           </td>
                                                           <td width="3">&nbsp;</td>
@@ -370,9 +359,7 @@
                                     </table>
                                   </td>
                                 </tr>
-                                <tr>
-                                  <td height="28" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                </tr>
+                                @trSpacer(28)
                                 <tr>
                                   <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                 </tr>
@@ -380,15 +367,14 @@
                                 <tr>
                                   <td align="left" valign="top">
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-                                      <tr>
-                                        <td height="28" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                      </tr>
+                                      @trSpacer(28)
                                       <tr>
                                         <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Activity by people who share your interest</td>
                                       </tr>
                                       @activityData.activityComponents.map { html =>
                                       @html
                                       }
+                                      @trSpacer(30)
                                       <tr>
                                         <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                       </tr>
@@ -400,18 +386,14 @@
                                 <tr>
                                   <td align="left" valign="top">
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                      <tr>
-                                        <td height="28" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                      </tr>
+                                      @trSpacer(28)
                                       <tr>
                                         <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Things to take care of</td>
                                       </tr>
                                       <tr>
                                         <td align="left" valign="top">
                                           <table width="100%" border="0" cellspacing="0" cellpadding="0" align="left">
-                                            <tr>
-                                              <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
+                                            @trSpacer(20)
                                             @if(activityData.connectionRequests > 0) {
                                             <tr>
                                               <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">
@@ -425,9 +407,7 @@
                                             </tr>
                                             }
                                             @if(activityData.libraryInviteCount > 0) {
-                                            <tr>
-                                              <td height="10" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
+                                            @trSpacer(10)
                                             <tr>
                                               <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">
                                                 <a href="@invitedLibrariesUrl(activityData.userId, "libraryInviteCount")" target="_blank" style="text-decoration:none;color:#62BE73;">
@@ -437,9 +417,7 @@
                                               </td>
                                             </tr>
                                             }
-                                            <tr>
-                                              <td height="10" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
+                                            @trSpacer(10)
                                             @if(activityData.unreadMessageCount > 0) {
                                             <tr>
                                               <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">
@@ -452,9 +430,7 @@
                                           </table>
                                         </td>
                                       </tr>
-                                      <tr>
-                                        <td height="30" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                      </tr>
+                                      @trSpacer(30)
                                       <tr>
                                         <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                       </tr>
@@ -469,18 +445,14 @@
                                       <tr>
                                         <td align="center" valign="top">
                                           <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                            <tr>
-                                              <td height="28" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
+                                            @trSpacer(28)
                                             <tr>
                                               <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Relevant libraries to follow</td>
                                             </tr>
                                             @activityData.libraryRecos.map { lib =>
                                             @activityFeedLibRecoPartial(lib)
                                             }
-                                            <tr>
-                                              <td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                            </tr>
+                                            @trSpacer(35)
                                             <tr>
                                               <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                             </tr>
@@ -498,9 +470,7 @@
                                 @activityFeedKifiContributorStatusPartial()
                                 *********************************************************************************@
 
-                                <tr>
-                                  <td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                </tr>
+                                @trSpacer(35)
                                 <tr>
                                   <td align="center" class="txt11" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:13px;line-height:22px;color:#a7adb3;">
                                     <a href="@kifiFooterUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Your Kifi</a> |
