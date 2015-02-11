@@ -7,12 +7,12 @@
           <button class="kf-callout-bubble-button" ng-click="closeCallout()">Got it</button>
         </div>
       </div>
-      <button class="kf-lih-toggle-menu" ng-class="{'kf-lih-toggle-menu-visible': libraryMenu.visible}" ng-click="toggleMenu()"><span class="sprite sprite-burger"></span></button>
+      <button class="kf-lih-toggle-menu kifi-guide-target-1" ng-class="{'kf-lih-toggle-menu-visible': libraryMenu.visible}" ng-click="toggleMenu()"><span class="sprite sprite-burger"></span></button>
       <div class="kf-lih-left-separator"></div>
       <a class="kf-lih-logo svg-kifi-clover-white-text" ui-sref="home"></a>
     </div>
     <div class="kf-lih-center">
-      <label class="kf-lih-search" ng-class="{'kf-lit': search.focused || search.text}">
+      <label class="kf-lih-search kifi-guide-target-2" ng-class="{'kf-lit': search.focused || search.text}">
         <span class="kf-lih-search-left">
           <span class="kf-lih-search-icon svg-search-icon-gray"></span>
           <span class="kf-lih-search-icon-lit svg-search-icon-blue"></span>
@@ -28,7 +28,7 @@
         </span>
       </label>
     </div>
-    <div class="kf-lih-right">
+    <div class="kf-lih-right kifi-guide-target-3">
       <button class="kf-lih-add-link sprite sprite-add-link" ng-click="addKeeps(library)">Add a link</button>
       <a href="/tags/manage" class="kf-lih-tags"><span class="svg-tag-white"></span>Manage tags</a>
       <span class="kf-lih-dropdown-parent" ng-class="{'kf-open': friendsMenuOpen}" ng-mouseenter="friendsMenuOpen = true" ng-mouseleave="friendsMenuOpen = false"  ng-click="friendsMenuOpen = false">

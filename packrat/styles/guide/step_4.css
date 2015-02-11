@@ -19,6 +19,7 @@
 .kifi-guide-feature {
   position: absolute;
   display: none;
+  list-style: none;
   opacity: 0;
   transition: opacity .26s linear;
 }
@@ -32,45 +33,44 @@
   -webkit-font-smoothing: antialiased;
   color: #fff;
 }
-.kifi-guide-feature>.kifi-guide-4-h1 {
-  margin: 0;
-}
-.kifi-guide-ul {
-  margin: 3px 0 0 4px;
-  list-style: disc;
-  font: 16px/24px 'Helvetica Neue',Arial,sans-serif !important;
-  -webkit-font-smoothing: antialiased;
-  color: #fff;
-}
 .kifi-guide-li {
-  display: list-item;
-  text-indent: -2px;
-  color: #f99;
-}
-.kifi-guide-li-text {
+  font: 300 16px/24px 'Helvetica Neue',Arial,sans-serif !important;
   color: #fff;
-  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }
 .kifi-guide-em {
   color: #f38283;
 }
 
-.kifi-guide-drum-roll {
+.kifi-guide-4-welcome {
   display: none;
   position: fixed;
-  width: 18%;
-  bottom: 45%;
-  right: 45%;
-  margin: 0 -270px -120px 0;
+  bottom: 36%;
+  left: 50%;
+  -webkit-transform: translate(-50%);
+  -moz-transform: translate(-50%);
+  transform: translate(-50%);
   text-align: center;
+  white-space: nowrap;
   opacity: 0;
   transition: opacity .26s linear;
 }
-.kifi-guide-drum-roll.kifi-opaque {
+.kifi-guide-4-welcome.kifi-opaque {
   opacity: 1;
 }
-.kifi-guide-drum-roll>.kifi-guide-4-next {
+.kifi-guide-4-welcome>.kifi-guide-4-next {
+  margin: 40px auto 0;
   min-width: 40px;
+  max-width: 120px;
+  visibility: hidden;
+  opacity: 0;
+}
+.kifi-guide-4-welcome>.kifi-guide-4-next.kifi-opaque {
+  transition: visibility 0s, opacity .26s linear;
+  visibility: visible;
+  opacity: 1;
 }
 .kifi-guide-4-next {
   display: block;
