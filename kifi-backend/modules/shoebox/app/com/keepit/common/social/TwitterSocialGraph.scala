@@ -322,7 +322,7 @@ class TwitterSocialGraphImpl @Inject() (
       } else if (response.status == 420) { //rate limit
         Seq.empty
       } else {
-        airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${repsonse.json.toString}")
+        airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}")
         Seq.empty
       }
     }
