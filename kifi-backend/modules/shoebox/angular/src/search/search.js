@@ -20,6 +20,7 @@ angular.module('kifi')
     //
     // Scope data.
     //
+    $scope.isLibrarySearch = !!library;
     $scope.resultKeeps = [];
     $scope.resultTotals = {
       myTotal: 0,
