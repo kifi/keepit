@@ -315,7 +315,11 @@ class TwitterSocialGraphImpl @Inject() (
     } getOrElse {
       OAuthCalculator(providerConfig.key, OAuth1TokenInfo(providerConfig.accessToken.key, providerConfig.accessToken.secret))
     }
-    val call = WS.url(endpoint).sign(sig).withQueryString("screen_name" -> handle, "since_id" -> sinceId.toString, "count" -> "200")
+    val call = if (sinceId > 0) {
+      WS.url(endpoint).sign(sig).withQueryString("screen_name" -> handle, "since_id" -> sinceId.toString, "count" -> "200")
+    } else {
+      WS.url(endpoint).sign(sig).withQueryString("screen_name" -> handle, "count" -> "200")
+    }
     call.get().map { response =>
       if (response.status == 200) {
         response.json.as[JsArray].value.map(_.as[JsObject])
