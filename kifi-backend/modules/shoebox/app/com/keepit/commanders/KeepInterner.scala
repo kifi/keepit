@@ -173,7 +173,7 @@ class KeepInterner @Inject() (
       }
       if (uri.state == ACTIVE || uri.state == INACTIVE) {
         val date = source match {
-          case KeepSource.bookmarkImport | KeepSource.twitterFileImport => currentDateTime.plus(Random.nextInt(MAX_RANDOM_SCHEDULE_DELAY))
+          case s if KeepSource.imports.contains(s) => currentDateTime.plus(Random.nextInt(MAX_RANDOM_SCHEDULE_DELAY))
           case KeepSource.keeper => START_OF_TIME
           case _ => currentDateTime
         }
