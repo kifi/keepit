@@ -25,6 +25,7 @@ class LDAController @Inject() (
   versionCommander: CortexVersionCommander,
   representer: LDARepresenterCommander,
   infoCommander: LDAInfoCommander,
+  relatedLibCommander: LDARelatedLibraryCommander,
   personaCommander: LDAPersonaCommander)
     extends CortexServiceController with Logging {
 
@@ -204,6 +205,11 @@ class LDAController @Inject() (
     implicit val ver = toVersion(version)
     val libs = statsd.time("ldaController.getSimilarLibraries", 1.0) { _ => lda.getSimilarLibraries(libId, limit)(ver) }
     Ok(Json.toJson(libs))
+  }
+
+  def cleanRelatedLibraries(version: Int, readOnly: Boolean) = Action { request =>
+    relatedLibCommander.cleanFewKeepsLibraries(ModelVersion[DenseLDA](version), readOnly)
+    Ok
   }
 
   def uploadPMIScores(version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
