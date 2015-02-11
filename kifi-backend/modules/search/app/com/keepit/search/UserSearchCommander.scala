@@ -141,7 +141,7 @@ class UserSearchCommanderImpl @Inject() (
     val uniqueHits = userShardResults.flatMap(_.hits).groupBy(_.id).mapValues(_.maxBy(_.score)).values.toSeq
     val bestExplanation = userShardResults.flatMap(_.explanation).sortBy(_.score).lastOption
     val (myHits, othersHits) = UserSearch.partition(uniqueHits)
-    val UserShardResult(hits, explanation) = UserSearch.merge(myHits, othersHits, maxHits, filter, config, bestExplanation, None)
+    val UserShardResult(hits, explanation) = UserSearch.merge(myHits, othersHits, maxHits, filter, config, bestExplanation)
     val idFilter = filter.idFilter.toSet ++ hits.map(_.id.id)
     UserSearchResult(hits, idFilter, searchExperimentId, explanation)
   }
