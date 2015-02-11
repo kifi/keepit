@@ -57,7 +57,7 @@ class UserResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, max
           }
         }
 
-        // todo(Léo): use friend in common to boost users (=> UserQualityEvaluator)
+        // todo(Léo): use friends in common to boost users (=> UserQualityEvaluator)
 
         relevantQueue.insert(id, score, visibility, ctx.secondaryId)
       }

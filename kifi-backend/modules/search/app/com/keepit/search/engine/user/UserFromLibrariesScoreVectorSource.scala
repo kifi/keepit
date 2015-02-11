@@ -65,7 +65,7 @@ class UserFromLibrariesScoreVectorSource(
           // write to the buffer
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // ownerId (8 bytes), libId (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(ownerId, libId).putTaggedFloatBits(taggedScores, size)
-          explanation.foreach(_.collectBufferScoreContribution(userId, libId, visibility, taggedScores, size, weights.length))
+          explanation.foreach(_.collectBufferScoreContribution(ownerId, libId, visibility, taggedScores, size, weights.length))
 
           docId = pq.top.doc // next doc
         } else {
