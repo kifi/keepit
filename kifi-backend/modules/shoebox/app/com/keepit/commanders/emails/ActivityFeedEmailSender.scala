@@ -250,7 +250,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
   }
 
-  private def isEnoughKeepImagesForLibRecos(s: LibraryInfoViewWithKeepImages) = s.keepImages.size >= 4
+  val maxKeepImagesPerLibraryReco: Int = 4
+
+  private def isEnoughKeepImagesForLibRecos(s: LibraryInfoViewWithKeepImages) = s.keepImages.size >= maxKeepImagesPerLibraryReco
 
   // gets cropped keep images for a library
   private def fetchLibToKeepImages(libInfoView: LibraryInfoView): Future[LibraryInfoViewWithKeepImages] = {
@@ -260,18 +262,21 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
         keepsF flatMap { keeps =>
           val keepIds = keeps.map(_.id.get).toSet
-          val urls = keepImageCommander.getBestImagesForKeeps(keepIds, CropImageRequest(CroppedImageSize.Small.idealSize)).collect {
-            case (_, Some(img)) => img.imagePath
-          }.toSeq
+          val urlsF = keepImageCommander.getBestImagesForKeepsPatiently(keepIds,
+            CropImageRequest(CroppedImageSize.Small.idealSize)).map { keepIdsToImages =>
+              keepIdsToImages.collect { case (_, Some(img)) => img.imagePath }.toSeq
+            }
 
-          // if keeps.size < limit, we assume we're out of keeps in this library
-          if (keeps.size == limit) recur(target - urls.size, offset + limit, limit) map { moreUrls => urls ++ moreUrls }
-          else Future.successful(urls)
+          urlsF flatMap { urls =>
+            // if keeps.size < limit, we assume we're out of keeps in this library
+            if (keeps.size == limit) recur(target - urls.size, offset + limit, limit) map { moreUrls => urls ++ moreUrls }
+            else Future.successful(urls)
+          }
         }
       } else Future.successful(Seq.empty)
     }
 
-    recur(4, 0, 20) map { urls => LibraryInfoViewWithKeepImages(libInfoView, urls) }
+    recur(maxKeepImagesPerLibraryReco, 0, 20) map { urls => LibraryInfoViewWithKeepImages(libInfoView, urls) }
   }
 
   class UserActivityFeedHelper(val toUserId: Id[User], val previouslySent: Seq[ActivityEmail]) extends ActivityEmailLibraryHelpers {

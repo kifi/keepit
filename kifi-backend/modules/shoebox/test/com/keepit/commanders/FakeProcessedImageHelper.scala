@@ -1,12 +1,15 @@
 package com.keepit.commanders
 
-import java.io.InputStream
-
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.FakeWebService
-
+import com.keepit.common.net.{ WebService, FakeWebService }
+import com.keepit.model.ImageFormat
+import net.codingwell.scalaguice.ScalaModule
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.ws.WSResponseHeaders
+
+import scala.collection.mutable
+import scala.concurrent.Future
 
 class FakeProcessedImageHelper extends ProcessedImageHelper with Logging {
   val webService = new FakeWebService()
@@ -24,4 +27,10 @@ class FakeProcessedImageHelper extends ProcessedImageHelper with Logging {
       (headers, Enumerator(content))
     }
   }
+
+  val fakeRemoteImages = mutable.Map[String, (ImageFormat, TemporaryFile)]()
+  protected override def fetchRemoteImage(imageUrl: String, timeoutMs: Int = 20000): Future[(ImageFormat, TemporaryFile)] = {
+    fakeRemoteImages.get(imageUrl).map(Future.successful).getOrElse { super.fetchRemoteImage(imageUrl, timeoutMs) }
+  }
 }
+
