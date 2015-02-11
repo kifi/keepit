@@ -36,11 +36,6 @@ angular.module('kifi')
         url: '/friends',
         templateUrl: 'friends/friends.tpl.html'
       })
-      .state('helpRank', {
-        url: '/helprank/:helprank',
-        templateUrl: 'helprank/helprank.tpl.html',
-        controller: 'HelpRankCtrl'
-      })
       .state('invite', {
         url: '/invite',
         templateUrl: 'invite/invite.tpl.html'
