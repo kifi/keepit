@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$rootScope', '$location', '$q', '$state', '$timeout', '$window', '$$rAF',
+  '$scope', '$rootScope', '$location', '$q', '$state', '$stateParams', '$timeout', '$window', '$$rAF',
   'keepDecoratorService', 'searchActionService', 'libraryService', 'util', 'library',
-  function ($scope, $rootScope, $location, $q, $state, $timeout, $window, $$rAF,
+  function ($scope, $rootScope, $location, $q, $state, $stateParams, $timeout, $window, $$rAF,
             keepDecoratorService, searchActionService, libraryService, util, library) {
     //
     // Internal data.
@@ -55,8 +55,8 @@ angular.module('kifi')
     }
 
     function init() {
-      query = $state.params.q || '';
-      filter = $state.params.f || 'a';
+      query = $stateParams.q || '';
+      filter = $stateParams.f || 'a';
 
       if (!query) {
         $state.go(library ? 'library.keeps' : 'home');
@@ -261,10 +261,7 @@ angular.module('kifi')
     // Watches and event listeners.
     //
     function newSearch() {
-      // Use $state.params instead of $stateParams because changes to $stateParams
-      // does not propagate to HeaderCtrl when it is injected there.
-      // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
-      _.assign($state.params, $location.search());
+      _.assign($stateParams, _.pick($location.search(), 'q', 'f'));
       init();
     }
 
@@ -273,7 +270,7 @@ angular.module('kifi')
         $location.search('q', newSearchText).replace(); // this keeps any existing URL params
       } else if (libraryUrl) {
         if (newSearchText) {
-          if ($state.params.q) {
+          if ($stateParams.q) {
             $location.search('q', newSearchText).replace();
           } else {
             $location.url(libraryUrl + '/find?q=' + newSearchText + '&f=a');
@@ -295,7 +292,7 @@ angular.module('kifi')
       // If we are going from one search to another, update the search.
       if (newPath === oldPath) {
         newSearch();
-        $rootScope.$emit('newQueryFromLocation', $state.params.q);
+        $rootScope.$emit('newQueryFromLocation', $stateParams.q);
       }
     });
 
