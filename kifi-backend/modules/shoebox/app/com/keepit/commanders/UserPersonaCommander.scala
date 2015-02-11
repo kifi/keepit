@@ -53,7 +53,7 @@ class UserPersonaCommanderImpl @Inject() (
       }
     }
 
-    curator.ingestPersonaRecos(userId, personasToPersist.values.map{_.id.get}.toSeq.distinct)
+    curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct)
 
     // create libraries based on added personas
     personasToPersist.map {
