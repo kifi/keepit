@@ -86,9 +86,6 @@ object UserSearch extends Logging {
 
     val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
     val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-    val minMyLibraries = config.asInt("minMyFriends")
-
-    val isInitialSearch = filter.idFilter.isEmpty
 
     val hits = UriSearch.createQueue(maxHits)
 
