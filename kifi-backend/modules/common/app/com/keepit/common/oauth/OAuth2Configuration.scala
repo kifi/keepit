@@ -14,7 +14,7 @@ case class OAuth1ProviderConfiguration(
 
 object OAuth1ProviderConfiguration {
   def build(name: String, requestTokenUrl: URL, accessTokenUrl: URL, authorizationUrl: URL) = (key: ConsumerKey, accessToken: ConsumerKey) => {
-    OAuth1ProviderConfiguration(name, requestTokenUrl, accessTokenUrl, authorizationUrl, key, null)
+    OAuth1ProviderConfiguration(name, requestTokenUrl, accessTokenUrl, authorizationUrl, key, accessToken)
   }
 }
 
