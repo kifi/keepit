@@ -46,9 +46,10 @@ class UserFromKeepsScoreVectorSource(
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
-      val libId = libraryIdDocValues.get(docId)
+      val keeperId = userIdDocValues.get(docId)
 
-      if (idFilter.findIndex(libId) < 0) { // use findIndex to avoid boxing
+      if (idFilter.findIndex(keeperId) < 0) { // use findIndex to avoid boxing
+        val libId = libraryIdDocValues.get(docId)
         val visibility = keepVisibilityEvaluator(docId, libId)
 
         if (visibility != Visibility.RESTRICTED) {
@@ -61,7 +62,6 @@ class UserFromKeepsScoreVectorSource(
 
           // get all scores
           val size = pq.getTaggedScores(taggedScores, boost)
-          val keeperId = userIdDocValues.get(docId)
 
           // write to the buffer
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // keeperId (8 bytes), libId (8 bytes) and taggedFloats (size * 4 bytes)
