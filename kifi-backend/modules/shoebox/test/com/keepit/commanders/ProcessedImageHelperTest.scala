@@ -3,16 +3,14 @@ package com.keepit.commanders
 import java.awt.image.BufferedImage
 import java.io.{ File, FileInputStream }
 
-import com.google.inject.Injector
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.store.{ S3ImageConfig, FakeKeepImageStore, ImageSize, KeepImageStore }
+import com.keepit.common.store.ImageSize
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.codec.binary.Base64
-import org.apache.commons.io.{ IOUtils, FileUtils }
+import org.apache.commons.io.IOUtils
 import org.specs2.mutable.Specification
-import play.api.libs.Files.TemporaryFile
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -36,17 +34,26 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
 
   private def readFile(file: File): Array[Byte] = IOUtils.toByteArray(new FileInputStream(file))
 
+  def scaleRequest(ints: Int*) = ints map { s => ScaleImageRequest.apply(s) }
+  def cropRequest(strs: String*) = strs map { str =>
+    val Array(w, h) = str.split('x').map(_.toInt)
+    CropImageRequest(ImageSize(w, h))
+  }
+
   "ProcessedImageHelper" should {
+
     "calculate resize sizes for an image" in {
       withInjector(modules: _*) { implicit injector =>
         new FakeProcessedImageHelper {
-          calcSizesForImage(dummyImage(100, 100)).toSeq.sorted === Seq()
-          calcSizesForImage(dummyImage(300, 100)).toSeq.sorted === Seq(150)
-          calcSizesForImage(dummyImage(100, 700)).toSeq.sorted === Seq(150, 400)
-          calcSizesForImage(dummyImage(300, 300)).toSeq.sorted === Seq(150)
-          calcSizesForImage(dummyImage(1001, 1001)).toSeq.sorted === Seq(150, 400, 1000)
-          calcSizesForImage(dummyImage(2000, 1500)).toSeq.sorted === Seq(150, 400, 1000, 1500)
-          calcSizesForImage(dummyImage(1500, 1400)).toSeq.sorted === Seq(150, 400, 1000)
+          def calcSizes(w: Int, h: Int) = calcSizesForImage(ImageSize(w, h), ScaledImageSize.allSizes, CroppedImageSize.allSizes)
+          calcSizes(100, 100).toSeq.sorted === Seq()
+          calcSizes(300, 100).toSeq.sorted === scaleRequest(150) // no crop, image not wide enough
+          calcSizes(100, 700).toSeq.sorted === scaleRequest(150, 400) // no crop, image not wide enough
+          calcSizes(300, 300).toSeq.sorted === scaleRequest(150) // no crop, same aspect ratio
+          calcSizes(300, 310).toSeq.sorted === scaleRequest(150) ++ cropRequest("150x150")
+          calcSizes(1001, 1001).toSeq.sorted === scaleRequest(150, 400, 1000) // scales should take care of crops (same aspect ratio)
+          calcSizes(2000, 1500).toSeq.sorted === scaleRequest(150, 400, 1000, 1500) ++ cropRequest("150x150")
+          calcSizes(1500, 1400).toSeq.sorted === scaleRequest(150, 400, 1000) ++ cropRequest("150x150")
         }
         1 === 1
       }
@@ -191,15 +198,15 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
 
     "pick the best KeepImage for a target size" in {
       def genKeepImage(width: Int, height: Int) = {
-        KeepImage(keepId = Id[Keep](0), imagePath = "", format = ImageFormat.PNG, width = width, height = height, source = ImageSource.UserPicked, sourceFileHash = ImageHash("000"), sourceImageUrl = None, isOriginal = false)
+        KeepImage(keepId = Id[Keep](0), imagePath = "", format = ImageFormat.PNG, width = width, height = height, source = ImageSource.UserPicked, sourceFileHash = ImageHash("000"), sourceImageUrl = None, isOriginal = false, kind = ProcessImageOperation.Scale)
       }
       val keepImages = for {
         width <- 10 to 140 by 11
         height <- 10 to 150 by 17
       } yield genKeepImage(width * 9, height * 9)
 
-      ProcessedImageSize.pickBestImage(ImageSize(201, 399), keepImages).get.imageSize === ImageSize(189, 396)
-      ProcessedImageSize.pickBestImage(ImageSize(800, 840), keepImages).get.imageSize === ImageSize(783, 855)
+      ProcessedImageSize.pickBestImage(ImageSize(201, 399), keepImages, false).get.imageSize === ImageSize(189, 396)
+      ProcessedImageSize.pickBestImage(ImageSize(800, 840), keepImages, false).get.imageSize === ImageSize(783, 855)
     }
   }
 

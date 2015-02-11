@@ -81,16 +81,8 @@ angular.module('kifi')
       });
     };
 
-    $scope.installInProgress = function () {
-      return installService.installInProgress;
-    };
-
-    $scope.installed = function () {
-      return installService.installed;
-    };
-
-    $scope.installError = function () {
-      return installService.error;
+    $scope.installState = function () {
+      return installService.installState;
     };
 
     $scope.triggerInstall = function () {

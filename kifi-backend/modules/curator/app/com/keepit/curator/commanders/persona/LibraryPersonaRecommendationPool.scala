@@ -22,6 +22,10 @@ object FixedSetLibraryReco {
   private def fakeMasterScore = 100f
   private def fakeLibraryScores: LibraryScores = LibraryScores(socialScore = 1f, interestScore = 1f, recencyScore = 1f, popularityScore = 1f, sizeScore = 1f, contentScore = None)
 
+  import PersonaName2Id.name2Id
+
+  private def toLibraryList(ids: Seq[Int]): Seq[Id[Library]] = ids.map { Id[Library](_) }
+
   def apply(userId: Id[User], libId: Id[Library]): LibraryRecommendation = {
     LibraryRecommendation(
       userId = userId,
@@ -31,5 +35,26 @@ object FixedSetLibraryReco {
     )
   }
 
-  val recos = Map.empty[Id[Persona], Seq[Id[Library]]]
+  val dev = Seq()
+  val stu = Seq(47494, 50359, 26172, 47211)
+  val techie = Seq(47284)
+  val entre = Seq(46821, 27657, 27238)
+  val art = Seq(24542, 49090, 28598, 30661)
+  val foodie = Seq(47915, 49135, 26342, 46919)
+  val science = Seq(26342, 25368)
+  val fashion = Seq(49084, 27545)
+  val health = Seq(47438, 47889, 47915, 49088)
+  val investor = Seq(24203, 27569)
+  val travel = Seq(46862, 49078, 48718, 47498, 46821, 27551, 26116, 50359, 49135)
+  val gamer = Seq()
+  val parent = Seq(46862, 46860, 46861, 47438, 40380, 36680)
+  val animal = Seq(27548, 49078, 49020, 49009)
+  val thinker = Seq(47191, 49088, 25116, 28010)
+
+  val recos: Map[Id[Persona], Seq[Id[Library]]] =
+    Map(
+      "dev" -> dev, "stu" -> stu, "techie" -> techie, "entre" -> entre, "art" -> art,
+      "foodie" -> foodie, "science" -> science, "fashion" -> fashion, "health" -> health, "investor" -> investor,
+      "travel" -> travel, "gamer" -> gamer, "animal" -> animal, "thinker" -> thinker
+    ).map { case (a, b) => (name2Id(a), toLibraryList(b)) }
 }

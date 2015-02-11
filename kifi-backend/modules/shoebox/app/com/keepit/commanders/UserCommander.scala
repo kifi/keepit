@@ -561,8 +561,8 @@ class UserCommander @Inject() (
     }
   }
 
-  val DELIGHTED_MIN_INTERVAL = 30 // days
-  val DELIGHTED_INITIAL_DELAY = 7 // days
+  val DELIGHTED_MIN_INTERVAL = 60 // days
+  val DELIGHTED_INITIAL_DELAY = 14 // days
 
   def setLastUserActive(userId: Id[User]): Unit = {
     val time = clock.now

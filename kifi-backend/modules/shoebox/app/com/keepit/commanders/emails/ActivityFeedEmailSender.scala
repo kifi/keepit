@@ -2,19 +2,18 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.emails.activity._
-import com.keepit.commanders.{ LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.commanders.{ CropImageRequest, CroppedImageSize, KeepImageCommander, KeepsCommander, LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.ROSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.template.{ EmailToSend, TemplateOptions }
 import com.keepit.common.mail.{ ElectronicMail, SystemEmailAddress }
-import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.common.time._
-import com.keepit.curator.model.{ FullUriRecoInfo, RecommendationSource, RecommendationSubSource }
 import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -52,6 +51,11 @@ case class LibraryInfoFollowersView(view: LibraryInfoView, followers: Seq[Id[Use
 
 case class BaseLibraryInfoView(libraryId: Id[Library], libInfo: FullLibraryInfo) extends LibraryInfoView
 
+case class LibraryInfoViewWithKeepImages(view: LibraryInfoView, keepImages: Seq[String]) extends LibraryInfoView {
+  val libInfo = view.libInfo
+  val libraryId = view.libraryId
+}
+
 case class LibraryInviteInfoView(invitedByUsers: Seq[Id[User]], libraryId: Id[Library], libInfo: FullLibraryInfo) extends LibraryInfoView
 
 case class KeepInfoView(private val keepInfo: KeepInfo) {
@@ -68,13 +72,10 @@ case class ActivityEmailData(
   userId: Id[User],
   activityComponents: Seq[Html],
   mostFollowedLibraries: Seq[LibraryInfoFollowersView],
-  newKeepsInLibraries: Seq[(LibraryInfoView, Seq[KeepInfoView])],
-  libraryRecos: Seq[LibraryInfoView],
+  libraryRecos: Seq[LibraryInfoViewWithKeepImages],
   connectionRequests: Int,
   libraryInviteCount: Int,
   unreadMessageCount: Int = 0, /* todo(josh) */
-  friendCreatedLibraries: Map[Id[User], Seq[LibraryInfoView]],
-  friendFollowedLibraries: Seq[(Id[Library], LibraryInfoView, Seq[Id[User]])],
   newFollowersOfLibraries: Seq[LibraryInfoFollowersView])
 
 @ImplementedBy(classOf[ActivityFeedEmailSenderImpl])
@@ -86,7 +87,7 @@ trait ActivityFeedEmailSender {
 class ActivityFeedEmailComponents @Inject() (
   val othersFollowedYourLibraryComponent: OthersFollowedYourLibraryComponent,
   val libraryRecommendations: UserLibraryRecommendationsComponent,
-  val userLibraryFollowers: UserLibraryFollowersComponent,
+  val userLibrariesByRecentFollowers: UserLibrariesByRecentFollowersComponent,
   val unreadMessages: UserUnreadMessagesComponent,
   val requestCountComponent: ConnectionRequestCountComponent,
   val libraryInviteCountComponent: LibraryInviteCountComponent)
@@ -109,6 +110,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
     friendRequestRepo: FriendRequestRepo,
     userConnectionRepo: UserConnectionRepo,
     activityEmailRepo: ActivityEmailRepo,
+    keepCommander: KeepsCommander,
+    keepImageCommander: KeepImageCommander,
     protected val airbrake: AirbrakeNotifier,
     private implicit val publicIdConfig: PublicIdConfiguration) extends ActivityFeedEmailSender with ActivityEmailHelpers with Logging {
 
@@ -141,31 +144,19 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
   def prepareEmailForUser(toUserId: Id[User]): Future[EmailToSend] = new SafeFuture(reactiveLock.withLockFuture {
     val previouslySentEmails = db.readOnlyReplica { implicit s => activityEmailRepo.getLatestToUser(toUserId) }
-    val feed = new UserActivityFeedHelper(toUserId, previouslySentEmails)
 
     val friends = db.readOnlyReplica { implicit session =>
       userConnectionRepo.getConnectedUsers(toUserId)
     }
 
-    val newFollowersOfMyLibrariesF = components.userLibraryFollowers(toUserId, previouslySentEmails, friends)
+    val newFollowersOfMyLibrariesF = components.userLibrariesByRecentFollowers(toUserId, previouslySentEmails, friends)
     val libRecosF = components.libraryRecommendations(toUserId, previouslySentEmails, libRecosToFetch)
-    val unreadMessageThreadsF = components.unreadMessages(toUserId)
     val othersFollowedYourLibraryF = components.othersFollowedYourLibraryComponent(toUserId, previouslySentEmails, friends)
     val connectionRequestsF = components.requestCountComponent(toUserId)
     val libInviteCountF = components.libraryInviteCountComponent(toUserId)
 
-    val newKeepsInLibrariesF = feed.getNewKeepsFromFollowedLibraries()
-    val friendsWhoFollowedF = feed.getFriendsWhoFollowedLibraries(friends)
-    val friendsWhoCreatedF = feed.getFriendsWhoCreatedLibraries(friends)
-    val uriRecosF = feed.getUriRecommendations()
-
-    for {
-      newKeepsInLibraries <- newKeepsInLibrariesF
-      unreadThreads <- unreadMessageThreadsF
-      friendsWhoFollowed <- friendsWhoFollowedF
-      friendsWhoCreated <- friendsWhoCreatedF
+    val emailToSendFF = for {
       newFollowersOfLibraries <- newFollowersOfMyLibrariesF
-      uriRecos <- uriRecosF
       libRecos <- libRecosF
       othersFollowedYourLibraryRaw <- othersFollowedYourLibraryF
       connectionRequests <- connectionRequestsF
@@ -182,24 +173,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
       val othersFollowedYourLibrary = othersFollowedYourLibraryRaw filter (_.followers.size > 0) take maxOthersFollowedYourLibrary
 
-      // sorts the library recommendations by the most growth since the last sent email for this user
-      // these will be mentioned in the activity feed along with the # of followers
-      val mostFollowedLibrariesRecentlyToRecommend = {
-        val libIdToLibView = libRecosUnseen.map(l => l.libraryId -> l).toMap
-        val libRecoIds = libRecosUnseen.map(_.libraryId)
-        val libRecoMemberCountLookup = (id: Id[Library]) => libIdToLibView(id).numFollowers
-        val since = lastEmailSentAt(previouslySentEmails)
-        libraryCommander.sortAndSelectLibrariesWithTopGrowthSince(libRecoIds.toSet, since, libRecoMemberCountLookup).map {
-          case (id, members) =>
-            val memberIds = members.map(_.userId)
-            LibraryInfoFollowersView(libIdToLibView(id), memberIds)
-        }.take(maxActivityComponents - othersFollowedYourLibrary.size)
-      }
+      val mostFollowedLibrariesRecentlyToRecommend = libraryRecosForActivityFeed(previouslySentEmails, libRecosUnseen, othersFollowedYourLibrary)
 
-      val libRecosAtBottom = {
-        val excludeIds = mostFollowedLibrariesRecentlyToRecommend.map(_.libraryId).toSet
-        libRecosUnseen filterNot { l => excludeIds.contains(l.libraryId) } take maxLibraryRecosInFeed
-      }
+      val libRecosAtBottomF = libraryRecommendationFeed(libRecosUnseen, mostFollowedLibrariesRecentlyToRecommend)
 
       val activityComponents: Seq[Html] = {
         val mostFollowedHtmls = mostFollowedLibrariesRecentlyToRecommend map { view => views.html.email.v3.activityFeedOtherLibFollowersPartial(view) }
@@ -207,38 +183,96 @@ class ActivityFeedEmailSenderImpl @Inject() (
         mostFollowedHtmls ++ othersFollowedYourLibraryHtml
       }
 
-      val activityData = ActivityEmailData(
-        userId = toUserId,
-        activityComponents = activityComponents,
-        mostFollowedLibraries = mostFollowedLibrariesRecentlyToRecommend,
-        newKeepsInLibraries = newKeepsInLibraries,
-        libraryRecos = libRecosAtBottom,
-        connectionRequests = connectionRequests,
-        libraryInviteCount = libraryInviteCount,
-        friendCreatedLibraries = friendsWhoCreated,
-        friendFollowedLibraries = friendsWhoFollowed,
-        newFollowersOfLibraries = newFollowersOfLibraries
-      )
+      libRecosAtBottomF.map { libRecosAtBottom =>
+        val activityData = ActivityEmailData(
+          userId = toUserId,
+          activityComponents = activityComponents,
+          mostFollowedLibraries = mostFollowedLibrariesRecentlyToRecommend,
+          libraryRecos = libRecosAtBottom,
+          connectionRequests = connectionRequests,
+          libraryInviteCount = libraryInviteCount,
+          newFollowersOfLibraries = newFollowersOfLibraries
+        )
 
-      db.readWrite { implicit rw =>
-        activityEmailRepo.save(ActivityEmail(
-          userId = activityData.userId,
-          libraryRecommendations = Some(activityData.libraryRecos.map(_.libraryId)),
-          otherFollowedLibraries = Some(activityData.mostFollowedLibraries.map(_.libraryId)),
-          userFollowedLibraries = Some(othersFollowedYourLibrary.map(_.libraryId))
-        ))
+        db.readWrite { implicit rw =>
+          activityEmailRepo.save(ActivityEmail(
+            userId = activityData.userId,
+            libraryRecommendations = Some(activityData.libraryRecos.map(_.libraryId)),
+            otherFollowedLibraries = Some(activityData.mostFollowedLibraries.map(_.libraryId)),
+            userFollowedLibraries = Some(othersFollowedYourLibrary.map(_.libraryId))
+          ))
+        }
+
+        EmailToSend(
+          from = SystemEmailAddress.NOTIFICATIONS,
+          to = Left(toUserId),
+          subject = "Kifi Activity",
+          htmlTemplate = views.html.email.v3.activityFeed(activityData),
+          category = NotificationCategory.User.ACTIVITY,
+          templateOptions = Seq(TemplateOptions.CustomLayout).toMap
+        )
       }
-
-      EmailToSend(
-        from = SystemEmailAddress.NOTIFICATIONS,
-        to = Left(toUserId),
-        subject = "Kifi Activity",
-        htmlTemplate = views.html.email.v3.activityFeed(activityData),
-        category = NotificationCategory.User.ACTIVITY,
-        templateOptions = Seq(TemplateOptions.CustomLayout).toMap
-      )
     }
+
+    emailToSendFF flatMap identity // flatten nested futures
   })
+
+  private def libraryRecommendationFeed(libRecosUnseen: Seq[LibraryInfoView], mostFollowedLibrariesRecentlyToRecommend: Seq[LibraryInfoFollowersView]): Future[Seq[LibraryInfoViewWithKeepImages]] = {
+    val excludeIds = mostFollowedLibrariesRecentlyToRecommend.map(_.libraryId).toSet
+    val libRecosUniqToEmail = libRecosUnseen filterNot { l => excludeIds.contains(l.libraryId) }
+
+    FutureHelpers.findMatching(libRecosUniqToEmail, maxLibraryRecosInFeed, isEnoughKeepImagesForLibRecos, fetchLibToKeepImages) map { libRecosWithImages =>
+      // checks if we have enough libraries with keep images; if not, use libraries w/o any
+      if (libRecosWithImages.size >= maxLibraryRecosInFeed) libRecosWithImages.take(maxLibraryRecosInFeed)
+      else {
+        val libRecosWithImagesLibraryIds = libRecosWithImages.map(_.libraryId).toSet
+        libRecosWithImages ++ libRecosUniqToEmail.filterNot(l => libRecosWithImagesLibraryIds.contains(l.libraryId)).
+          take(maxLibraryRecosInFeed - libRecosWithImagesLibraryIds.size).map { libInfo =>
+            LibraryInfoViewWithKeepImages(libInfo, Seq.empty)
+          }
+      }
+    }
+  }
+
+  // sorts the library recommendations by the most growth since the last sent email for this user
+  // these will be mentioned in the activity feed along with the # of followers
+  private def libraryRecosForActivityFeed(previouslySentEmails: Seq[ActivityEmail], libRecosUnseen: Seq[LibraryInfoView], othersFollowedYourLibrary: Seq[LibraryInfoFollowersView]): Seq[LibraryInfoFollowersView] = {
+
+    val libIdToLibView = libRecosUnseen.map(l => l.libraryId -> l).toMap
+    val libRecoIds = libRecosUnseen.map(_.libraryId)
+    val libRecoMemberCountLookup = (id: Id[Library]) => libIdToLibView(id).numFollowers
+    val since = lastEmailSentAt(previouslySentEmails)
+    libraryCommander.sortAndSelectLibrariesWithTopGrowthSince(libRecoIds.toSet, since, libRecoMemberCountLookup).map {
+      case (id, members) =>
+        val memberIds = members.map(_.userId)
+        LibraryInfoFollowersView(libIdToLibView(id), memberIds)
+    }.take(maxActivityComponents - othersFollowedYourLibrary.size)
+
+  }
+
+  private def isEnoughKeepImagesForLibRecos(s: LibraryInfoViewWithKeepImages) = s.keepImages.size >= 4
+
+  // gets cropped keep images for a library
+  private def fetchLibToKeepImages(libInfoView: LibraryInfoView): Future[LibraryInfoViewWithKeepImages] = {
+    def recur(target: Int, offset: Int, limit: Int): Future[Seq[String]] = {
+      if (target > 0) {
+        val keepsF = libraryCommander.getKeeps(libInfoView.libraryId, offset, limit)
+
+        keepsF flatMap { keeps =>
+          val keepIds = keeps.map(_.id.get).toSet
+          val urls = keepImageCommander.getBestImagesForKeeps(keepIds, CropImageRequest(CroppedImageSize.Small.idealSize)).collect {
+            case (_, Some(img)) => img.imagePath
+          }.toSeq
+
+          // if keeps.size < limit, we assume we're out of keeps in this library
+          if (keeps.size == limit) recur(target - urls.size, offset + limit, limit) map { moreUrls => urls ++ moreUrls }
+          else Future.successful(urls)
+        }
+      } else Future.successful(Seq.empty)
+    }
+
+    recur(4, 0, 20) map { urls => LibraryInfoViewWithKeepImages(libInfoView, urls) }
+  }
 
   class UserActivityFeedHelper(val toUserId: Id[User], val previouslySent: Seq[ActivityEmail]) extends ActivityEmailLibraryHelpers {
     val clock = ActivityFeedEmailSenderImpl.this.clock
@@ -349,19 +383,6 @@ class ActivityFeedEmailSenderImpl @Inject() (
           case (ownerId, libInfoViews) => ownerId -> libInfoViews.map(_._1)
         }
       }
-    }
-
-    def getUriRecommendations(): Future[Seq[FullUriRecoInfo]] = {
-      val recoSource = RecommendationSource.Email
-      val recoSubSource = RecommendationSubSource.Unknown
-      recoCommander.topRecos(toUserId, recoSource, recoSubSource, more = false, uriRecoRecencyWeight, None) map { recosInfo =>
-        // TODO(josh) maybe additional filtering
-        recosInfo.recos take (maxUriRecosToDeliver)
-      }
-    } recover {
-      case e: Exception =>
-        airbrake.notify(s"ActivityFeedEmail Failed to load uri recommendations for userId=$toUserId", e)
-        Seq.empty
     }
 
     /*

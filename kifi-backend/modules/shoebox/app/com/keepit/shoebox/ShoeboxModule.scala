@@ -4,6 +4,7 @@ import com.keepit.common.controller.UserActionsModule
 import com.keepit.common.seo.SiteMapGeneratorModule
 import com.keepit.reports._
 import com.keepit.common.cache.ShoeboxCacheModule
+import com.keepit.shoebox.cron.ActivityEmailCronModule
 import com.keepit.social.SecureSocialModule
 import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
@@ -77,4 +78,6 @@ abstract class ShoeboxModule(
   val dbSequencingModule = ShoeboxDbSequencingModule()
 
   val mailerModule = PlayMailerModule()
+
+  val activityEmailCronModule = ActivityEmailCronModule()
 }

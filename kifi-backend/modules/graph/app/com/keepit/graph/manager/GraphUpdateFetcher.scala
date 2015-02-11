@@ -54,8 +54,14 @@ class GraphUpdateFetcherImpl @Inject() (
       case LDAOldVersionCleanupGraphUpdate => if (ldaCleanMsgSent) {
         Future.successful(Seq())
       } else {
-        ldaCleanMsgSent = true
-        Future.successful(Seq(LDAOldVersionCleanupGraphUpdate(ModelVersion[DenseLDA](2), 512)))
+        val update = LDAOldVersionCleanupGraphUpdate(ModelVersion[DenseLDA](2), 512)
+        if (seq.value < update.modelVersion.version) {
+          ldaCleanMsgSent = true
+          Future.successful(Seq(update))
+        } else {
+          ldaCleanMsgSent = true
+          Future.successful(Seq())
+        }
       }
 
       case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))

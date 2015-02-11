@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.factory('installService', ['$window', '$log', '$rootScope', '$timeout',
-  function ($window, $log, $rootScope, $timeout) {
+.factory('installService', ['$window', '$log', '$rootScope',
+  function ($window, $log, $rootScope) {
     var isChrome = $window.chrome && $window.chrome.webstore && $window.chrome.webstore.install;
     var isFirefox = !isChrome && ('MozBoxSizing' in $window.document.documentElement.style) || ($window.navigator.userAgent.indexOf('Firefox') > -1);
     var majorVersion = +($window.navigator.userAgent.match(/(?:Chrome|Firefox)\/(\d+)/) || [null, 999])[1];
@@ -27,25 +27,19 @@ angular.module('kifi')
     var api = {
       triggerInstall: function (onError) {
         if (isChrome && supported) {
-          api.installInProgress = true;
+          api.installState = 'installing';
           $window.chrome.webstore.install('https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin', function () {
-            api.installed = true;
-            api.installInProgress = false;
-            api.error = false;
-            $rootScope.$digest();
+            $rootScope.$apply(function () {
+              api.installState = 'done';
+            });
           }, function (e) {
-            $log.log(e);
-            api.installed = false;
-            api.installInProgress = false;
-            api.error = true;
-            if (onError) {
-              onError();
-            }
-            $rootScope.$digest();
-            $timeout(function () {
-              api.error = false;
-              $rootScope.$digest();
-            }, 10000);
+            $rootScope.$apply(function () {
+              $log.log(e);
+              api.installState = null;
+              if (onError) {
+                onError();
+              }
+            });
           });
         } else if (isFirefox && supported) {
           $window.InstallTrigger.install({
@@ -59,9 +53,7 @@ angular.module('kifi')
         }
       },
       canInstall: supported,
-      installInProgress: false,
-      installed: false,
-      error: false,
+      installState: null,
       installedVersion: angular.element(document.documentElement).attr('data-kifi-ext'),
       hasMinimumVersion: function (minVersion, minCanaryVersion) {
         var version = api.installedVersion;
