@@ -38,7 +38,7 @@ class UserSearch(
     debugLog(s"myHits: ${myHits.size()}/${myHits.totalHits}")
     debugLog(s"othersHits: ${othersHits.size()}/${othersHits.totalHits}")
 
-    val userShardResult = UserSearch.merge(myHits, othersHits, numHitsToReturn, filter, config, explanation, Some(this))
+    val userShardResult = UserSearch.merge(myHits, othersHits, numHitsToReturn, filter, config, explanation)
     debugLog(s"userShardResult: ${userShardResult.hits.map(_.id).mkString(",")}")
     timeLogs.processHits()
     timeLogs.done()
@@ -84,7 +84,7 @@ class UserSearch(
 }
 
 object UserSearch extends Logging {
-  def merge(myHits: HitQueue, othersHits: HitQueue, maxHits: Int, filter: SearchFilter, config: SearchConfig, explanation: Option[UserSearchExplanation], debug: Option[DebugOption]): UserShardResult = {
+  def merge(myHits: HitQueue, othersHits: HitQueue, maxHits: Int, filter: SearchFilter, config: SearchConfig, explanation: Option[UserSearchExplanation]): UserShardResult = {
     val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
     val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
 
@@ -100,7 +100,6 @@ object UserSearch extends Logging {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
           hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayMine)
-          debug.foreach(_.debugLog(s"inserting my hit: $hit"))
           hits.insert(hit)
       }
     }
@@ -110,7 +109,6 @@ object UserSearch extends Logging {
         case (hit, rank) =>
           val othersNorm = max(highScore, hit.score) * 1.1f // discount others hit
           hit.normalizedScore = (hit.score / othersNorm) * UriSearch.dampFunc(rank, dampingHalfDecayOthers)
-          debug.foreach(_.debugLog(s"inserting others hit: $hit"))
           hits.insert(hit)
       }
     }
