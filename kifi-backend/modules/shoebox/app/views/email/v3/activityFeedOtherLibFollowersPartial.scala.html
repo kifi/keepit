@@ -5,25 +5,21 @@
 <tr>
   <td align="left" valign="top">
     <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-      <tr>
-        <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
-      </tr>
+      <tr><td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
       <tr>
         <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:25px;color:#7f7f7f;">
           @followerNames.zipWithIndex.map { case (value, idx) =>
             @if(idx > 0 && idx == followerNames.size - 1){and}
             @value match {
               case Left(num) => {@num others}
-              case Right(userId) => {<a href="@profileUrl(userId, "otherLibFollowers")" target="_blank">@fullName(userId)</a>}
+              case Right(userId) => {<a href="@profileUrl(userId, "otherLibFollowers")" target="_blank" style="text-decoration:none;color:#62BE73;">@fullName(userId)</a>}
             }@if(idx < followerNames.size - 1 && followerNames.size > 2){,}
           }
           followed
           <a href="@libraryUrl(libInfoView.url, "otherLibFollowers")" target="_blank" style="text-decoration:none;color:#62BE73;">@libInfoView.name</a>
         </td>
       </tr>
-      <tr>
-        <td height="15" style="font-size:1px; line-height:1px;">&nbsp;</td>
-      </tr>
+      <tr><td height="15" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
       <tr>
         <td align="left" valign="top">
           <table border="0" cellspacing="0" cellpadding="0" align="left">

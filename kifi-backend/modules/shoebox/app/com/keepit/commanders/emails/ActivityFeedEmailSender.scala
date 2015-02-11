@@ -124,7 +124,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
   val maxActivityComponents = 5
 
-  val maxFollowerImagesToShow = 9
+  val maxFollowerImagesToShow = 8
 
   val maxOthersFollowedYourLibrary = 1
 
@@ -223,12 +223,15 @@ class ActivityFeedEmailSenderImpl @Inject() (
               ))
             }
 
+            val htmlBody = views.html.email.v3.activityFeed(activityData)
+            // trim whitespace at the beginning of each line
+            val trimmedHtml = Html(htmlBody.body.trim().replaceAll("(?m)^\\s+", ""))
             Some(EmailToSend(
               from = SystemEmailAddress.NOTIFICATIONS,
               //              to = Left(toUserId),
               to = Right(SystemEmailAddress.FEED_QA),
               subject = "Kifi Activity",
-              htmlTemplate = views.html.email.v3.activityFeed(activityData),
+              htmlTemplate = trimmedHtml,
               category = NotificationCategory.User.ACTIVITY,
               templateOptions = Seq(TemplateOptions.CustomLayout).toMap
             ))
