@@ -121,25 +121,20 @@ angular.module('kifi')
 
         function getEligibleNetworksCsv() {
           var onTwitterExperiment = _.indexOf(profileService.me.experiments, 'twitter_beta') > -1;
-          return _.compact([
+          var csv = _.compact([
             socialService.facebook && socialService.facebook.profileUrl ? null : 'fb',
             !onTwitterExperiment || (socialService.twitter && socialService.twitter.profileUrl) ? null : 'tw',
             socialService.linkedin && socialService.linkedin.profileUrl ? null : 'li',
             socialService.gmail && socialService.gmail.length ? null : 'gm'
           ]).join(',');
-        }
 
-        //
-        // Watches and listeners
-        //
-        scope.$watch(getEligibleNetworksCsv, function (csv) {
           scope.network = csv ? _.sample(csv.split(',')) : null;
-        });
+        }
 
         //
         // Initialization
         //
-        socialService.refresh();
+        socialService.refresh().then(getEligibleNetworksCsv);
       }
     };
   }
