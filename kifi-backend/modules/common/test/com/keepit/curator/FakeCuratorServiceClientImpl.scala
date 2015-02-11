@@ -1,6 +1,6 @@
 package com.keepit.curator
 
-import com.keepit.model.{ LibraryRecommendationFeedback, Library, UriRecommendationFeedback, NormalizedURI, UriRecommendationScores, User }
+import com.keepit.model._
 
 import scala.concurrent.Future
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -57,6 +57,8 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def notifyLibraryRecosDelivered(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource): Future[Unit] = {
     Future.successful()
   }
+
+  def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]]): Unit = ???
 
   // test helpers
   val updatedUriRecommendationFeedback = ListBuffer[(Id[User], Id[NormalizedURI], UriRecommendationFeedback)]()
