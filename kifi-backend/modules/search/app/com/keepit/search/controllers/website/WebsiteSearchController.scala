@@ -292,24 +292,43 @@ class WebsiteSearchController @Inject() (
     // User Search
 
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
-      SafeFuture { userSearchCommander.searchUsers(Some(userId), query, maxUsers, userContext, filter, excludeSelf = true) }.flatMap { userResult =>
-        val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userResult.hits.map(_.id).toSet)
-        val publishedLibrariesCountByUser = {
-          val librarySearcher = libraryIndexer.getSearcher
-          userResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByMember(librarySearcher, hit.id) }.toMap
-        }
-        futureMutualFriendsByUser.map { mutualFriendsByUser =>
+      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, libraryContext, maxUsers, doPrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
+        val userIds = userSearchResult.hits.map(_.id).toSet
+        val futureUsers = shoeboxClient.getBasicUsers(userIds.toSeq)
+        val futureFriends = searchFactory.getFriends(userId)
+        val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
+        val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
+        val librarySearcher = libraryIndexer.getSearcher
+        val publishedLibrariesCountByUser = userSearchResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByMember(librarySearcher, hit.id) }.toMap
+        val relevantLibraryRecordsAndVisibity = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
+        for {
+          keepCountsByUser <- futureKeepCountsByUser
+          mutualFriendsByUser <- futureMutualFriendsByUser
+          friends <- futureFriends
+          users <- futureUsers
+        } yield {
           Json.obj(
-            "context" -> userResult.context,
-            "hits" -> JsArray(userResult.hits.map { hit =>
+            "context" -> IdFilterCompressor.fromSetToBase64(userSearchResult.idFilter),
+            "hits" -> JsArray(userSearchResult.hits.map { hit =>
+              val user = users(hit.id)
+              val relevantLibrary = hit.library.flatMap { libraryId =>
+                relevantLibraryRecordsAndVisibity.get(libraryId).map {
+                  case (record, visibility) =>
+                    require(record.ownerId == hit.id, "Relevant library owner doesn't match returned user.")
+                    val library = makeBasicLibrary(record, visibility, user)
+                    Json.obj("id" -> library.id, "name" -> library.name, "description" -> record.description, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
+                }
+              }
               Json.obj(
-                "id" -> hit.basicUser.externalId,
-                "name" -> hit.basicUser.fullName,
-                "username" -> hit.basicUser.username.value,
-                "pictureName" -> hit.basicUser.pictureName,
+                "id" -> user.externalId,
+                "name" -> user.fullName,
+                "username" -> user.username.value,
+                "pictureName" -> user.pictureName,
+                "isFriend" -> friends.contains(hit.id.id),
                 "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
-                "libraryCount" -> publishedLibrariesCountByUser(hit.id)
-              //"keepCount" todo(Léo): define valid keep count definition
+                "libraryCount" -> publishedLibrariesCountByUser(hit.id),
+                "keepCount" -> keepCountsByUser(hit.id),
+                "relevantLibrary" -> relevantLibrary
               )
             })
           )
