@@ -38,18 +38,27 @@ class UserResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, max
         } else {
           othersHits
         }
-        val popularityBoost = { // todo(Léo): user total follower count instead of best library member count (=> UserQualityEvaluator)
-          val libId = ctx.secondaryId
+
+        // todo(Léo): user total follower count instead of best library member count (=> UserQualityEvaluator)
+        val libId = ctx.secondaryId
+
+        if (libId > 0) {
           val memberCount = LibraryIndexable.getMemberCount(librarySearcher, libId) getOrElse 1L
-          libraryQualityEvaluator.getPopularityBoost(memberCount)
+          val popularityBoost = libraryQualityEvaluator.getPopularityBoost(memberCount)
+          score = score * popularityBoost
         }
-        score = score * popularityBoost
+
         if ((visibility & (Visibility.OWNER | Visibility.MEMBER | Visibility.NETWORK)) != 0) { score = score * myFriendBoost }
         else { // todo(Léo): user total keep count instead of best library keep count (=> UserQualityEvaluator)
-          val keepCount = libraryQualityEvaluator.estimateKeepCount(keepSearcher, id)
-          val publishedLibraryBoost = libraryQualityEvaluator.getPublishedLibraryBoost(keepCount)
-          score = score * publishedLibraryBoost
+          if (libId > 0) {
+            val keepCount = libraryQualityEvaluator.estimateKeepCount(keepSearcher, id)
+            val publishedLibraryBoost = libraryQualityEvaluator.getPublishedLibraryBoost(keepCount)
+            score = score * publishedLibraryBoost
+          }
         }
+
+        // todo(Léo): use friends in common to boost users (=> UserQualityEvaluator)
+
         relevantQueue.insert(id, score, visibility, ctx.secondaryId)
       }
 

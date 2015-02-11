@@ -42,10 +42,10 @@ class UserScoreVectorSource(
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
-      val userId = idMapper.getId(docId)
+      val ownerId = idMapper.getId(docId)
 
-      if (idFilter.findIndex(userId) < 0) { // use findIndex to avoid boxing
-        val visibility = userVisibilityEvaluator(docId, userId)
+      if (idFilter.findIndex(ownerId) < 0) { // use findIndex to avoid boxing
+        val visibility = userVisibilityEvaluator(ownerId)
 
         if (visibility != Visibility.RESTRICTED) {
           // get all scores
@@ -53,8 +53,8 @@ class UserScoreVectorSource(
 
           // write to the buffer
           output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
-          writer.putLong(userId).putTaggedFloatBits(taggedScores, size)
-          explanation.foreach(_.collectBufferScoreContribution(userId, -1, visibility, taggedScores, size, weights.length))
+          writer.putLong(ownerId).putTaggedFloatBits(taggedScores, size)
+          explanation.foreach(_.collectBufferScoreContribution(ownerId, -1, visibility, taggedScores, size, weights.length))
 
           docId = pq.top.doc // next doc
         } else {

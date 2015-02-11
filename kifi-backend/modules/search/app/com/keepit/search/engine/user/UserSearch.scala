@@ -35,10 +35,10 @@ class UserSearch(
   def execute(): UserShardResult = {
 
     val ((myHits, othersHits), explanation) = executeTextSearch()
-    debugLog(s"myHits: ${myHits.totalHits}")
-    debugLog(s"othersHits: ${othersHits.totalHits}")
+    debugLog(s"myHits: ${myHits.size()}/${myHits.totalHits}")
+    debugLog(s"othersHits: ${othersHits.size()}/${othersHits.totalHits}")
 
-    val userShardResult = UserSearch.merge(myHits, othersHits, numHitsToReturn, filter, config, explanation)
+    val userShardResult = UserSearch.merge(myHits, othersHits, numHitsToReturn, filter, config, explanation, Some(this))
     debugLog(s"userShardResult: ${userShardResult.hits.map(_.id).mkString(",")}")
     timeLogs.processHits()
     timeLogs.done()
@@ -52,7 +52,7 @@ class UserSearch(
   private def executeTextSearch(): ((HitQueue, HitQueue), Option[UserSearchExplanation]) = {
 
     val engine = engineBuilder.build()
-    debugLog("library search engine created")
+    debugLog("user search engine created")
 
     val explanation = explain.map {
       case (libraryId, firstLang, secondLang) =>
@@ -69,7 +69,9 @@ class UserSearch(
 
     if (debugFlags != 0) {
       engine.debug(this)
+      userScoreSource.debug(this)
       keepScoreSource.debug(this)
+      libraryScoreSource.debug(this)
     }
 
     engine.execute(collector, userScoreSource, keepScoreSource, libraryScoreSource)
@@ -82,13 +84,9 @@ class UserSearch(
 }
 
 object UserSearch extends Logging {
-  def merge(myHits: HitQueue, othersHits: HitQueue, maxHits: Int, filter: SearchFilter, config: SearchConfig, explanation: Option[UserSearchExplanation]): UserShardResult = {
-
+  def merge(myHits: HitQueue, othersHits: HitQueue, maxHits: Int, filter: SearchFilter, config: SearchConfig, explanation: Option[UserSearchExplanation], debug: Option[DebugOption]): UserShardResult = {
     val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
     val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-    val minMyLibraries = config.asInt("minMyFriends")
-
-    val isInitialSearch = filter.idFilter.isEmpty
 
     val hits = UriSearch.createQueue(maxHits)
 
@@ -102,6 +100,7 @@ object UserSearch extends Logging {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
           hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayMine)
+          debug.foreach(_.debugLog(s"inserting my hit: $hit"))
           hits.insert(hit)
       }
     }
@@ -111,6 +110,7 @@ object UserSearch extends Logging {
         case (hit, rank) =>
           val othersNorm = max(highScore, hit.score) * 1.1f // discount others hit
           hit.normalizedScore = (hit.score / othersNorm) * UriSearch.dampFunc(rank, dampingHalfDecayOthers)
+          debug.foreach(_.debugLog(s"inserting others hit: $hit"))
           hits.insert(hit)
       }
     }

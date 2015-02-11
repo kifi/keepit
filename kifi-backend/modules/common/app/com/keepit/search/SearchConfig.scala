@@ -47,7 +47,6 @@ object SearchConfig {
       "messageHalfLifeHours" -> "24",
       "minMyLibraries" -> "1",
       "myLibraryBoost" -> "1.5",
-      "minMyFriends" -> "1",
       "myFriendBoost" -> "1.5",
       "libraryOwnerBoost" -> "0.5"
     )
@@ -81,7 +80,6 @@ object SearchConfig {
       "messageHalfLifeHours" -> "exponential time decay constant used in message search",
       "minMyLibraries" -> "the minimum number of my libraries in a library search result",
       "myLibraryBoost" -> "boost value for my own libraries in library search",
-      "minMyFriends" -> "the minimum number of my friends in a user search result",
       "myFriendBoost" -> "boost value for my friends in user search",
       "libraryOwnerBoost" -> "boost value for library name and description in user search"
     )
