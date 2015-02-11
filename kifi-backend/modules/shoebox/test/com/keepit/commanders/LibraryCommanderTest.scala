@@ -1328,6 +1328,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (owner, other, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
         }
 
+        // 4 libs with keeps. First two are private, next two should be seen by anonymous.
         libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 2
 
         val libsForOther = libraryCommander.getOwnProfileLibraries(owner, Some(other), Paginator(0, 1000), ImageSize("100x100"))

@@ -934,7 +934,7 @@ class LibraryCommander @Inject() (
         SafeFuture {
           libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
           searchClient.updateLibraryIndex()
-        } // todo(andrew)!
+        }
         Right()
       }
     }
