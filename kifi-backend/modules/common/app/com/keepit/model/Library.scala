@@ -187,6 +187,7 @@ sealed abstract class LibraryKind(val value: String)
 object LibraryKind {
   case object SYSTEM_MAIN extends LibraryKind("system_main")
   case object SYSTEM_SECRET extends LibraryKind("system_secret")
+  case object SYSTEM_PERSONA extends LibraryKind("system_persona")
   case object USER_CREATED extends LibraryKind("user_created")
 
   implicit def format[T]: Format[LibraryKind] =
@@ -196,6 +197,7 @@ object LibraryKind {
     str match {
       case SYSTEM_MAIN.value => SYSTEM_MAIN
       case SYSTEM_SECRET.value => SYSTEM_SECRET
+      case SYSTEM_PERSONA.value => SYSTEM_PERSONA
       case USER_CREATED.value => USER_CREATED
     }
   }
