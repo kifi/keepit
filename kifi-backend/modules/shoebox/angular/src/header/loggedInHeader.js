@@ -87,8 +87,8 @@ angular.module('kifi')
       }
     }
 
-    // Use $state.params instead of $stateParams because this controller is not listed with ui-router
-    // and has no meaningful $stateParams.
+    // Use $state.params instead of $stateParams because this controller has no access
+    // to the search parameters on the search controller via $stateParams.
     // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
     $scope.search.text = $state.params.q || '';
     $scope.onQueryChange = util.$debounce($scope, reactToQueryChange, 250);
