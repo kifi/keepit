@@ -58,12 +58,6 @@ angular.module('kifi')
       return getKeeps(lastKeepId, params);
     }
 
-    function getKeepsByHelpRank(helprank, lastKeepId, params) {
-      params = params || {};
-      params.helprank = helprank;
-      return getKeeps(lastKeepId, params);
-    }
-
     function keepToLibrary(keepInfos, libraryId) {
       $analytics.eventTrack('user_clicked_page', {
         // TODO(yiping): should we have a different action
@@ -178,7 +172,6 @@ angular.module('kifi')
     var api = {
       getKeeps: getKeeps,
       getKeepsByTagId: getKeepsByTagId,
-      getKeepsByHelpRank: getKeepsByHelpRank,
       keepToLibrary: keepToLibrary,
       copyToLibrary: copyToLibrary,
       moveToLibrary: moveToLibrary,
