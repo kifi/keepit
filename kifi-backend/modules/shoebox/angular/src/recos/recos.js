@@ -14,7 +14,7 @@ angular.module('kifi')
   'undoService',
   function ($scope, $rootScope, $analytics, $window,
     modalService, recoActionService, recoDecoratorService, recoStateService, undoService) {
-    $window.document.title = 'Kifi • Your Recommendation List';
+    $window.document.title = 'Kifi | Your Recommendation List';
 
     $scope.recos = recoStateService.recosList;
     $scope.recosState = 'loading';

@@ -14,7 +14,7 @@ describe('kifi angular invite test suite', function () {
     });
 
     it('should have the correct title', function () {
-      expect(browser.getTitle()).toEqual('Kifi • Invite your friends');
+      expect(browser.getTitle()).toEqual('Kifi | Invite your friends');
     });
 
     it('should display the correct Invite header', function () {

@@ -6,7 +6,7 @@ angular.module('kifi')
             'routeService', '$http', '$location', 'modalService', '$timeout', '$rootScope',
   function (tagService, $scope, $window, manageTagService, libraryService,
               routeService, $http, $location, modalService, $timeout, $rootScope) {
-    $window.document.title = 'Kifi • Manage Your Tags';
+    $window.document.title = 'Kifi | Manage Your Tags';
 
     $scope.selected = {};
     $scope.selectedSort = 'name';

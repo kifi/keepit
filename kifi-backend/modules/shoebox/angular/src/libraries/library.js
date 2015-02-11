@@ -88,7 +88,7 @@ angular.module('kifi')
     }
 
     function setTitle(lib) {
-      $window.document.title = lib.name + ' by ' + lib.owner.firstName + ' ' + lib.owner.lastName + ' • Kifi' ;
+      $window.document.title = lib.name + ' by ' + lib.owner.firstName + ' ' + lib.owner.lastName + ' | Kifi' ;
     }
 
     function reloadThisLibrary() {

@@ -14,7 +14,7 @@ describe('kifi angular search test suite', function () {
     });
 
     it('should have the correct title', function () {
-      expect(browser.getTitle()).toEqual('Kifi • tea');
+      expect(browser.getTitle()).toEqual('Kifi | tea');
     });
 
     it('should display all search results', function () {
