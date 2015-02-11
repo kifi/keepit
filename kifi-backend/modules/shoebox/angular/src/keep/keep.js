@@ -519,8 +519,8 @@ angular.module('kifi')
 ])
 
 .directive('kfKeepShareButton', [
-  '$window', 'installService',
-  function ($window, installService) {
+  'extensionLiaison', 'installService',
+  function (extensionLiaison, installService) {
     return {
       restrict: 'A',
       scope: {
@@ -532,11 +532,7 @@ angular.module('kifi')
       link: function (scope) {
         scope.shareAction = function () {
           if (installService.hasMinimumVersion('3.0.7')) {
-            $window.postMessage({
-              'type': 'open_deep_link',
-              'locator': '/messages:all#compose',
-              'url': scope.keep.url
-            }, '*');
+            extensionLiaison.openDeepLink(scope.keep.url, '/messages:all#compose');
           } else {
             scope.showInstallExtensionModal();
           }
