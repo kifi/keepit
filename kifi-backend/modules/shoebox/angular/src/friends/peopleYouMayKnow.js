@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfPeopleYouMayKnow', [
   '$log', '$q', '$rootScope', '$timeout',
-  'friendService', 'socialService', 'inviteService', 'modalService', 'routeService', 'wtiService', 'profileService',
+  'friendService', 'socialService', 'inviteService', 'modalService', 'routeService', 'wtiService',
   function ($log, $q, $rootScope, $timeout,
-            friendService, socialService, inviteService, modalService, routeService, wtiService, profileService) {
+            friendService, socialService, inviteService, modalService, routeService, wtiService) {
     return {
       replace: true,
       restrict: 'A',
