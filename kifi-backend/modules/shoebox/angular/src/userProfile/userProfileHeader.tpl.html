@@ -1,15 +1,14 @@
-<div class="kf-user-profile-friend-request-header" ng-if="connectionWithUser==='request_received'">
-  <span class="kf-user-profile-friend-respond accept" ng-click="acceptFriendRequest()">
-    Accept
-  </span>
-  <span class="kf-user-profile-friend-respond decline" ng-click="ignoreFriendRequest()">
-    Decline
-  </span>
-  <span class="kf-user-profile-friend-request-msg">{{profile.firstName}} has sent you a friend request</span>
-</div>
-
 <div class="kf-user-profile-header">
   <div class="kf-width-bounded">
+    <div class="kf-user-profile-friend-request-header" ng-if="connectionWithUser==='request_received'">
+      <span class="kf-user-profile-friend-respond accept" ng-click="acceptFriendRequest()">
+        Accept
+      </span>
+      <span class="kf-user-profile-friend-respond decline" ng-click="ignoreFriendRequest()">
+        Decline
+      </span>
+      <span class="kf-user-profile-friend-request-msg">{{profile.firstName}} has sent you a friend request</span>
+    </div>
     <div class="kf-up-basic-info-main-content" itemscope itemtype="http://schema.org/Person">
       <a href="{{userProfileRootUrl}}" itemprop="url">
         <img class="kf-user-profile-picture" ng-src="{{profile.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" alt="{{profile.firstName}} {{profile.lastName}}" itemprop="image">

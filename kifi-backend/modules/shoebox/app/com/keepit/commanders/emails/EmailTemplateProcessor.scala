@@ -39,7 +39,8 @@ class EmailTemplateHtmlDecorator @Inject() () {
       onError(EmailHtmlMissingImgAlt(imgEle))
     }
 
-    doc.outerHtml
+    // does not return the html-escaped code b/c URLs with certain HTML entities aren't redirected correctly by Sendgrid
+    html
   }
 }
 

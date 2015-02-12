@@ -263,7 +263,11 @@ trait UserActions extends Logging { self: Controller =>
       val result = userActionsHelper.getUserIdOptWithFallback flatMap { userIdOpt =>
         userIdOpt match {
           case Some(userId) => buildUserAction(userId, block)
-          case None => block(userActionsHelper.buildNonUserRequest).map(maybeAugmentKcid(_))
+          case None => block(userActionsHelper.buildNonUserRequest).map { resp =>
+            if (resp.header.status == 200 && resp.header.headers.get("Content-Type").exists(_.contains("text/html"))) {
+              maybeAugmentKcid(resp)
+            } else resp
+          }
         }
       }
       result.map(maybeAugmentCORS(_))

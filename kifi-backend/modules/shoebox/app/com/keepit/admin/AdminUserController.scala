@@ -876,9 +876,18 @@ class AdminUserController @Inject() (
   }
 
   // TODO(josh) remove when this goes live
-  def sendActivityEmailToAll() = AdminUserPage { implicit request =>
-    activityEmailSender()
-    NoContent
+  def sendActivityEmailToAll() = AdminUserPage(parse.tolerantJson) { implicit request =>
+    val forceSendToAll = (request.request.body \ "force").asOpt[Boolean]
+    val toEmail = (request.request.body \ "overrideToEmail").asOpt[EmailAddress]
+    if (toEmail.isDefined) {
+      activityEmailSender(toEmail)
+      NoContent
+    } else if (forceSendToAll.exists(true ==)) {
+      activityEmailSender(None)
+      NoContent
+    } else {
+      BadRequest("JSON body with force:true is required to send to every user")
+    }
   }
 
   def sendEmail(toUserId: Id[User], code: String) = AdminUserPage { implicit request =>

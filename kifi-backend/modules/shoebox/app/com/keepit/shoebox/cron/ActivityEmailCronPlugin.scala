@@ -22,7 +22,7 @@ class ActivityEmailActor @Inject() (
   def receive() = {
     case SendActivityEmail =>
       log.info("ActivityEmailActor sending...")
-      val doneF = activityEmailSender.apply()
+      val doneF = activityEmailSender.apply(None)
       doneF.onComplete {
         case Success(x) => log.info("ActivityEmailActor success")
         case Failure(e) => log.error("ActivityEmailActor failed", e)

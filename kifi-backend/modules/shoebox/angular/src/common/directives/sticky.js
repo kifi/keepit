@@ -30,10 +30,10 @@ angular.module('kifi')
         var momentumInterval;  // used to detect when touch-based momentum scrolling has stopped
         var stickyNearToldPx;  // last px value passed to stickyNear, to ensure we call it a final time
 
-        function measurePxFromDocTop() {
+        function measurePxFromDocTop(scrollTop) {
           if (!stuck) {
             var pxFromViewportTop = element[0].getBoundingClientRect().top;
-            pxFromDocTop = pxFromViewportTop + $win.scrollTop();
+            pxFromDocTop = pxFromViewportTop + scrollTop;
           }
         }
 
@@ -61,13 +61,20 @@ angular.module('kifi')
           }
         }
 
-        function onWheel(e) {
-          handleNewScrollTop($win.scrollTop() + e.originalEvent.deltaY);
+        var throttledMeasurePxFromDocTop = _.throttle(measurePxFromDocTop, 200, {leading: true});
+
+        function onScroll() {
+          var scrollTop = $win.scrollTop();
+
+          // changes to the page may change the element's position, so measure it periodically
+          throttledMeasurePxFromDocTop(scrollTop);
+
+          handleNewScrollTop(scrollTop);
         }
 
-        function onTouchMove(e) {
+        function onTouchMove() {
           clearInterval(momentumInterval);
-          handleNewScrollTop($win.scrollTop() + e.originalEvent.deltaY);
+          handleNewScrollTop($win.scrollTop());
         }
 
         function onTouchEnd() {
@@ -84,6 +91,7 @@ angular.module('kifi')
             } else {
               handleNewScrollTop(scrollTop);
               prevScrollTop = scrollTop;
+              noChangeCount = 0;
             }
           }, 1000 / 60);
         }
@@ -92,20 +100,13 @@ angular.module('kifi')
         // Initialization
         //
 
-        measurePxFromDocTop();
-
         $timeout(function () {  // timeout needed for mobile Safari
-          var onScroll = _.debounce(measurePxFromDocTop, 100);
-
-          // changes to the page may change the element's position, so measure it periodically
           $win.on('scroll', onScroll);
-          $win.on('wheel', onWheel);
           $win.on('touchmove', onTouchMove);
           $win.on('touchend', onTouchEnd);
 
           scope.$on('$destroy', function () {
             $win.off('scroll', onScroll);
-            $win.off('wheel', onWheel);
             $win.off('touchmove', onTouchMove);
             $win.off('touchend', onTouchEnd);
           });

@@ -3,7 +3,7 @@ package com.keepit.commanders.emails
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.mail.{ ElectronicMailRepo, EmailAddress, FakeMailModule }
+import com.keepit.common.mail.{ ElectronicMailRepo, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -184,7 +184,7 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
           }
         }
 
-        val senderF = sender()
+        val senderF = sender(None)
         Await.ready(senderF, Duration(5, "seconds"))
 
         val email1 :: email2 :: Nil = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)
@@ -202,9 +202,10 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
 
         //        email1.to === Seq(EmailAddress("u1@kifi.com"))
         //        email2.to === Seq(EmailAddress("u2@kifi.com"))
+        //
         //        html1 must contain("/u1/lib1-reco")
-
         1 === 1
+
       }
     }
   }

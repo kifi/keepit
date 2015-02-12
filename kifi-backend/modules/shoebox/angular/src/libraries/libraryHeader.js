@@ -40,7 +40,7 @@ angular.module('kifi')
         scope.editKeepsText = 'Edit Keeps';
         scope.search = { 'text': $stateParams.q || '' };
         scope.pageScrolled = false;
-
+        scope.isMobile = platformService.isSupportedMobilePlatform();
 
         //
         // Internal methods.
@@ -636,7 +636,7 @@ angular.module('kifi')
           scope.followCallback();
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedFollowButton' });
 
-          if (platformService.isSupportedMobilePlatform()) {
+          if (scope.isMobile) {
             var url = $location.absUrl();
             platformService.goToAppOrStore(url + (url.indexOf('?') > 0 ? '&' : '?') + 'follow=true');
             return;
@@ -657,8 +657,6 @@ angular.module('kifi')
 
         var elemLohRight = angular.element('.kf-loh-right');
         var elemLohLinks = elemLohRight.find('.kf-loh-links');
-
-        scope.followButtonMaxTop = platformService.isSupportedMobilePlatform() ? 25 : 15;
 
         scope.followButtonNearlyStuck = function (elem, px, maxNearPx) {
           elemLohLinks.css({bottom: maxNearPx - px, opacity: Math.max(0, 2 * px / maxNearPx - 1)});
@@ -721,7 +719,7 @@ angular.module('kifi')
               }
             });
           } else {
-            if (platformService.isSupportedMobilePlatform()) {
+            if (scope.isMobile) {
               return;
             }
 
