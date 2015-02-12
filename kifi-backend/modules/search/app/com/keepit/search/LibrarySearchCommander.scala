@@ -29,6 +29,7 @@ case class LibrarySearchRequest(
 
 object LibrarySearchRequest {
   implicit val format = Json.format[LibrarySearchRequest]
+}
 
 case class LibrarySearchResult(hits: Seq[LibraryShardHit], show: Boolean, idFilter: Set[Long], searchExperimentId: Option[Id[SearchConfigExperiment]], explanation: Option[LibrarySearchExplanation])
 
