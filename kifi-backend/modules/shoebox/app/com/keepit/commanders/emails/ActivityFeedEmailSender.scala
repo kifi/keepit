@@ -14,6 +14,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailToSend, TemplateOptions }
 import com.keepit.common.mail.{ ElectronicMail, SystemEmailAddress }
 import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.time._
 import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
 import com.keepit.eliza.ElizaServiceClient
@@ -28,7 +29,7 @@ trait LibraryInfoView {
   def libInfo: FullLibraryInfo
   def libraryId: Id[Library]
   def name: String = libInfo.name
-  def description: Option[String] = libInfo.description
+  def description: Option[String] = libInfo.description.map(_.abbreviate(250))
   def ownerName: String = libInfo.owner.fullName
   def owner: BasicUser = libInfo.owner
   def keeps: Seq[KeepInfoView] = libInfo.keeps map KeepInfoView
@@ -124,7 +125,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
   val maxActivityComponents = 5
 
-  val maxFollowerImagesToShow = 8
+  val maxFollowerImagesToShow = 6
 
   val maxOthersFollowedYourLibrary = 1
 
