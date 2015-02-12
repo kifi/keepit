@@ -1,0 +1,93 @@
+section-padding = 10px 16px
+section-border = defaultBorder
+section-border-radius = 10px
+
+.kf-gd
+  margin-top: 20px
+  line-height: 14px
+  font-size: 12px
+
+.kf-gd-top
+  border-radius: section-border-radius section-border-radius 0 0
+  border: section-border
+  padding: section-padding
+  background: #fff
+
+.kf-gd-title
+  font-size: 15px
+  padding: 6px 0 16px
+
+goodie-text-pad = 8px
+
+.kf-gd-btn
+  width: 100%
+  margin-bottom: 12px
+  border: none
+  padding: 0
+  background: transparent
+  text-align: left
+  white-space: nowrap
+
+  &:last-child
+    margin-bottom: 5px
+
+  .sprite
+    float: left
+    margin-right: goodie-text-pad
+
+  .sprite-import-bookmarks-icon
+  .sprite-import-from-other-services-icon
+    x-adj = -3px
+    height: 35px
+    position: relative
+    left: x-adj
+    margin-right: goodie-text-pad + x-adj
+
+.kf-gd-line-1
+  display: block
+  padding-top: 2px
+
+.kf-gd-line-2
+  display: block
+  margin-top: 1px
+  color: #858e92
+  font-size: 11px
+  font-smoothing: antialiased
+
+  :hover>&
+    color: linkBlueColor
+    text-decoration: underline
+
+.kf-gd-bottom
+  clear: both
+  border-radius: 0 0 section-border-radius section-border-radius
+  border: defaultBorder
+  border-top: none
+  padding: section-padding
+  background-color: #f3fAf2
+
+.kf-gd-help
+  display: block
+  margin-bottom: 3px
+  color: inherit
+
+.kf-gd-help-qn-mark
+  diam = 33px
+  color = #db2023
+  float: left
+  height: diam
+  width: diam
+  margin-right: goodie-text-pad
+  box-sizing: border-box
+  border-radius: 50%
+  border: 1px solid color
+  background: #fff
+  color: color
+  font: bold 18px/diam 'Helvetica Neue',Helvetica,Arial,sans-serif
+  text-align: center
+
+html[data-kifi-ext] .kf-gd-trigger-install
+  display: none
+
+html:not([data-kifi-ext]) .kf-gd-trigger-guide
+  display: none

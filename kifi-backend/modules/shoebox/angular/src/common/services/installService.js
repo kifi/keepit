@@ -19,6 +19,7 @@ angular.module('kifi')
         if (data.type === 'kifi_ext_listening') {
           $rootScope.$apply(function () {
             api.installedVersion = data.version;
+            $rootScope.$emit('kifiExt');
           });
         }
       });

@@ -3,22 +3,16 @@
 angular.module('kifi')
 
 .controller('RecosCtrl', [
-  '$scope',
-  '$rootScope',
-  '$analytics',
-  '$window',
-  'modalService',
-  'recoActionService',
-  'recoDecoratorService',
-  'recoStateService',
-  'undoService',
-  function ($scope, $rootScope, $analytics, $window,
+  '$scope', '$rootScope', '$analytics', '$window', 'profileService',
+  'modalService', 'recoActionService', 'recoDecoratorService', 'recoStateService', 'undoService',
+  function ($scope, $rootScope, $analytics, $window, profileService,
     modalService, recoActionService, recoDecoratorService, recoStateService, undoService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = recoStateService.recosList;
     $scope.recosState = 'loading';
     $scope.initialCardClosed = false;
+    $scope.noMoreRecos = false;
 
     $scope.getMore = function (opt_recency) {
       $scope.loading = true;
@@ -38,6 +32,27 @@ angular.module('kifi')
         }
 
         $scope.loading = false;
+      });
+    };
+
+    $scope.addMore = function () {
+      $scope.moreLoading = true;
+      recoActionService.getMore().then(function (rawRecos) {
+        if (rawRecos.length > 0) {
+          var recos = [];
+          rawRecos.forEach(function (rawReco) {
+            recos.push(recoDecoratorService.newUserRecommendation(rawReco));
+          });
+          if (!recoStateService.populate(recos)) {
+            $scope.noMoreRecos = true;
+          }
+        } else {
+          $scope.noMoreRecos = true;
+        }
+      })['catch'](function () {
+        $scope.noMoreRecos = true;
+      })['finally'](function () {
+        $scope.moreLoading = false;
       });
     };
 
@@ -99,7 +114,7 @@ angular.module('kifi')
 
     /*
     This is intended be called from the console only, for debugging.
-    Specifically, running `$(".recos-view").scope().toggleExplain(); $(".recos-view").scope().$digest();`
+    Specifically, running `$(".kf-recos-view").scope().toggleExplain(); $(".kf-recos-view").scope().$digest();`
     in the bowser console while on the recommendations page will toggle between showing the page description and the score breakdown in the card.
     */
     $scope.toggleExplain = function () {
@@ -109,8 +124,6 @@ angular.module('kifi')
         reco.recoData.explain = temp;
       });
     };
-
-    $rootScope.$emit('libraryUrl', {});
 
     // Load a new set of recommendations only on page refresh.
     // Otherwise, load the recommendations we have previously shown.
@@ -144,9 +157,17 @@ angular.module('kifi')
             $scope.loading = false;
           });
         }
-
       });
     }
+
+    $scope.showDelightedSurvey = profileService.prefs.show_delighted_question;
+    $scope.$on('$destroy', $rootScope.$on('prefsChanged', function () {
+      $scope.showDelightedSurvey = profileService.prefs.show_delighted_question;
+    }));
+
+    $scope.hideDelightedSurvey = function () {
+      $scope.showDelightedSurvey = false;
+    };
   }
 ])
 
@@ -272,22 +293,4 @@ angular.module('kifi')
       }
     };
   }
-])
-
-.directive('kfRecoRecencySlider', [
-  function () {
-    return {
-      restrict: 'A',
-      replace: true,
-      scope: {
-        getMore: '&'
-      },
-      templateUrl: 'recos/recoRecencySlider.tpl.html',
-      link: function (scope/*, element, attrs*/) {
-        scope.recency = { value: 0.75 };
-      }
-    };
-  }
 ]);
-
-

@@ -6,7 +6,7 @@
         <li><a href="javascript:" ng-click="callAddKeep()"><span class="sprite sprite-add-link"></span>Add any page by pasting the URL here</a></li>
         <li><a href="javascript:" ng-click="callImportBookmarks()"><span class="sprite sprite-import-bookmarks-icon"></span>Import your bookmarks from your browser</a></li>
         <li><a href="javascript:" ng-click="callImportBookmarkFile()"><span class="sprite sprite-import-from-other-services-icon"></span>Import links from sites like Delicious, Pocket, Pinboard</a></li>
-        <li kf-max-version><a href="javascript:" ng-click="callTriggerInstall()"><span class="sprite sprite-install-extension-icon"></span>Install our browser extension on Chrome and Firefox</a></li>
+        <li class="kf-library-results-empty-install"><a href="javascript:" ng-click="triggerInstall()"><span class="sprite sprite-install-extension-icon"></span>Install our browser extension on Chrome and Firefox</a></li>
       </ul>
     </div>
     <div ng-if="!userIsOwner">
