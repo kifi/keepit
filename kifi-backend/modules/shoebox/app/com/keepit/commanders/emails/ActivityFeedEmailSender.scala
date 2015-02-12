@@ -160,14 +160,12 @@ class ActivityFeedEmailSenderImpl @Inject() (
     val libRecosF = components.libraryRecommendations(toUserId, previouslySentEmails, libRecosToFetch)
     val othersFollowedYourLibraryF = components.othersFollowedYourLibraryComponent(toUserId, previouslySentEmails, friends)
     val connectionRequestsF = components.requestCountComponent(toUserId)
-    val libInviteCountF = components.libraryInviteCountComponent(toUserId)
 
     val emailToSendFF = for {
       newFollowersOfLibraries <- newFollowersOfMyLibrariesF
       allLibRecos <- libRecosF
       othersFollowedYourLibraryRaw <- othersFollowedYourLibraryF
       connectionRequests <- connectionRequestsF
-      libraryInviteCount <- libInviteCountF
     } yield {
       log.info(s"[activityEmail] userId=$toUserId newFollowers $newFollowersOfLibraries")
       log.info(s"[activityEmail] userId=$toUserId allLibRecos $allLibRecos")
@@ -209,7 +207,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
               activityComponents = activityComponents,
               libraryRecos = libRecos,
               connectionRequests = connectionRequests,
-              libraryInviteCount = libraryInviteCount,
+              libraryInviteCount = 0, // temporarily disabled until mobile supports library invite link
               newFollowersOfLibraries = newFollowersOfLibraries
             )
 
