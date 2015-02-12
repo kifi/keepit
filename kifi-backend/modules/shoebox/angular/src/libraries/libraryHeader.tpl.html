@@ -73,7 +73,7 @@
           <div kf-library-share-search ng-if="canBeShared()" library="library" current-page-origin="libraryPage"></div>
           <button class="kf-button kf-lh-follow-btn" ng-click="followLibrary()" ng-if="canFollowLibrary()"
             ng-class="{'kf-stickable': isUserLoggedOut}"
-            kf-sticky sticky-if="isUserLoggedOut" sticky-top="followButtonMaxTop" sticky-toggle="followButtonToggleStuck" sticky-near="followButtonNearlyStuck" sticky-near-px="40"
+            kf-sticky sticky-if="isUserLoggedOut" sticky-top="isMobile ? 25 : 14" sticky-toggle="followButtonToggleStuck" sticky-near="followButtonNearlyStuck" sticky-near-px="isMobile ? 90 : 40"
             kf-library-header-follow-button-cta
           >{{ library.followButtonText }}</button>
           <button class="kf-button kf-lh-unfollow-btn" ng-click="unfollowLibrary()" ng-if="alreadyFollowingLibrary()"></button>

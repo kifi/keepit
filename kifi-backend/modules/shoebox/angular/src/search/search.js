@@ -91,13 +91,13 @@ angular.module('kifi')
     function scrollDown(px) {
       var doc = $window.document;
       var win = doc.defaultView;
-      var newWheelEvent = typeof WheelEvent === 'function' ?
-        function (deltaY) {
-          return new win.WheelEvent('wheel', {deltaY: deltaY});
+      var newScrollEvent = typeof UIEvent === 'function' ?
+        function () {
+          return new win.UIEvent('scroll');
         } :
-        function (deltaY) {
-          var e = doc.createEvent('WheelEvent');
-          e.initWheelEvent('wheel', false, false, win, 0, 0, 0, 0, 0, 0, null, '', 0, deltaY, 0, 0);
+        function () {
+          var e = doc.createEvent('UIEvent');
+          e.initUIEvent('scroll', false, false, win, 0);
           return e;
         };
 
@@ -108,9 +108,8 @@ angular.module('kifi')
           t0 = t;
         }
         var pxTarget = Math.round(px * easeInOutQuart(Math.min(1, (t - t0) * ms_1)));
-        var pxDelta = pxTarget - pxScrolled;
-        win.dispatchEvent(newWheelEvent(pxDelta));
-        win.scrollBy(0, pxDelta);
+        win.scrollBy(0, pxTarget - pxScrolled);
+        win.dispatchEvent(newScrollEvent());
         pxScrolled = pxTarget;
         if (pxScrolled < px) {
           $$rAF(step);
