@@ -245,7 +245,12 @@
     }
     }
     @@media only screen and (max-device-width: 667px) {
-      .go_mobile_with_kifi {
+      .go_mobile_with_kifi_outer {
+        text-align: center;
+        display: block;
+        width: 100% !important;
+      }
+      .go_mobile_with_kifi_inner {
         text-align: center;
         display: block;
       }
@@ -319,11 +324,11 @@
                                               </td>
                                             </tr>
                                           </table>
-                                          <table width="204" border="0" cellspacing="0" cellpadding="0" align="right" class="go_mobile_with_kifi">
+                                          <table width="204" border="0" cellspacing="0" cellpadding="0" align="right" class="go_mobile_with_kifi_outer">
                                             @trSpacer(32)
                                             <tr>
                                               <td align="center" valign="top" style="background-color:#dcdcdc;border-radius:4px;">
-                                                <table width="204" border="0" cellspacing="0" cellpadding="0" align="center">
+                                                <table width="204" border="0" cellspacing="0" cellpadding="0" align="center" class="go_mobile_with_kifi_inner">
                                                   <tr>
                                                     <td align="center" valign="middle" style="background-color:#FFFFFF; border: 1px solid #dcdcdc;border-radius:4px;">
                                                       <table width="202" height="66" border="0" cellspacing="0" cellpadding="0" align="center">
