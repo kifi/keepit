@@ -72,7 +72,7 @@
           <div ng-if="$error.general" class="manage-lib-error">{{$error.general}}</div>
         </div>
 
-        <div class="manage-lib-members-content" smart-scroll scroll-distance="memberScrollDistance" scroll-disabled="isMemberScrollDisabled()" scroll-next="memberScrollNext()">
+        <div class="manage-lib-members-content" kf-wheel-allow smart-scroll scroll-distance="memberScrollDistance" scroll-disabled="isMemberScrollDisabled()" scroll-next="memberScrollNext()">
           <ul class="manage-lib-members">
             <a href="{{library.owner.profileUrl}}" class="manage-lib-member manage-lib-owner" ng-click="close()" kf-track-origin origin="{{currentPageOrigin}}/curator">
               <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">

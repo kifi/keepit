@@ -1,4 +1,4 @@
-<div class="kf-library-menu">
+<div class="kf-library-menu" kf-wheel-stop>
   <div class="kf-nav-group">
     <div class="kf-lm-libraries">
       <ul class="kf-nav-lib-system">
@@ -67,8 +67,8 @@
         </div>
       </div>
 
-      <div class="kf-scrollable-libs" antiscroll="{ autoHide: false }">
-        <ul class="kf-nav-lib-users">
+      <div class="kf-scrollable-libs">
+        <ul class="kf-nav-lib-users antiscroll-inner" kf-wheel-allow>
 
           <li class="kf-nav-lib-separator" ng-if="sortingMenu.myLibsFirst && myLibsToShow.length > 0">
             <div class="kf-nav-lib-separator-title">YOUR LIBRARIES</div>

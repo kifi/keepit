@@ -1,4 +1,4 @@
-<div class="keep-to-library-widget">
+<div class="keep-to-library-widget" kf-wheel-stop>
   <div ng-hide="showCreate">
     <header ng-if="widgetActionText" class="keep-to-library-default-header">{{widgetActionText}} to a library</header>
 
@@ -7,7 +7,7 @@
       <input class="keep-to-library-search-input" ng-model="search.name" ng-change="onSearchInputChange(search.name)" placeholder="Search your libraries" ng-keydown="processKeyEvent($event)">
     </div>
 
-    <div class="library-select-list">
+    <div class="library-select-list" kf-wheel-allow>
       <div ng-if="widgetKeptInLibraries.length" class="library-group-header kept-to-libraries-group-header">Kept In</div>
       <ul ng-if="widgetKeptInLibraries.length" >
         <li ng-repeat="library in widgetKeptInLibraries" class="library-select-option"

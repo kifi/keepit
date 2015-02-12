@@ -13,7 +13,7 @@
       </div>
 
       <div class="lib-followers-content">
-        <div class="lib-followers-content-list" smart-scroll scroll-distance="followerScrollDistance" scroll-disabled="isFollowerScrollDisabled()" scroll-next="followerScrollNext()">
+        <div class="lib-followers-content-list" kf-wheel-allow smart-scroll scroll-distance="followerScrollDistance" scroll-disabled="isFollowerScrollDisabled()" scroll-next="followerScrollNext()">
           <ul class="lib-followers-list">
             <a href="{{library.owner.profileUrl}}" class="lib-follower lib-owner" ng-click="close()"
                kf-track-origin origin="{{currentPageOrigin}}/curator">
