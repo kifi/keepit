@@ -137,8 +137,8 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]
     val doc = super.buildDocument
 
     library.kind match {
-      case LibraryKind.SYSTEM_MAIN | LibraryKind.SYSTEM_SECRET => // do not index the name of main/private libraries
-      case LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA =>
+      case LibraryKind.SYSTEM_MAIN | LibraryKind.SYSTEM_SECRET | LibraryKind.SYSTEM_PERSONA => // do not index the name of main/private libraries
+      case LibraryKind.USER_CREATED =>
         val nameLang = LangDetector.detect(library.name)
         doc.add(buildTextField(nameField, library.name, DefaultAnalyzer.getAnalyzer(nameLang)))
         doc.add(buildTextField(nameStemmedField, library.name, DefaultAnalyzer.getAnalyzerWithStemmer(nameLang)))
