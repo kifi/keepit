@@ -5,7 +5,7 @@
   </button>
   <div class="kf-upl-card kf-upl-lib-card" ng-repeat="lib in libraries" ng-style="{'background-color': lib.color}"
        ng-class="{'justAddedBelow': lib.justAddedBelow, 'justAddedBelowAcross': lib.justAddedBelowAcross}">
-    <a class="kf-upl-card-setting svg-settings-gear" ng-if="lib.owner.id === profile.id && lib.kind==='user_created'" href="javascript:" ng-click="openModifyLibrary(lib)"></a>
+    <a class="kf-upl-card-setting svg-settings-gear" ng-if="lib.owner.id === profile.id && lib.kind !== 'system_main' && lib.kind !== 'system_secret'" href="javascript:" ng-click="openModifyLibrary(lib)"></a>
     <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib, 'clickedLibraryTitle')">
       <div class="kf-upl-card-icon" ng-class="{system_main: 'kf-sys svg-card-star', system_secret: 'kf-sys svg-card-lock'}[lib.kind] || 'kf-user svg-card-lock'" ng-if="(lib.visibility === 'secret' && lib.owner.id === me.id) || lib.kind === 'system_main'"></div>
       <div class="kf-upl-card-cover">

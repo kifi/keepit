@@ -60,7 +60,7 @@ class UserPersonaCommanderImpl @Inject() (
       case (personaName, persona) =>
         val defaultLibraryName = PersonaName.personaLibraryNames.get(personaName).getOrElse(personaName.value)
         val defaultLibrarySlug = LibrarySlug.generateFromName(defaultLibraryName)
-        val libraryAddReq = LibraryAddRequest(defaultLibraryName, LibraryVisibility.PUBLISHED, None, defaultLibrarySlug)
+        val libraryAddReq = LibraryAddRequest(name = defaultLibraryName, visibility = LibraryVisibility.PUBLISHED, slug = defaultLibrarySlug, kind = Some(LibraryKind.SYSTEM_PERSONA))
         (persona, libraryCommander.addLibrary(libraryAddReq, userId))
     }.collect {
       case (persona, Right(lib)) => (persona, Some(lib)) // library successfully created

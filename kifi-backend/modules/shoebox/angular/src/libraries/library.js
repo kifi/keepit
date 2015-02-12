@@ -274,7 +274,7 @@ angular.module('kifi')
 
     $rootScope.$emit('libraryOnPage', library);
 
-    if (library.kind === 'user_created' && library.access !== 'none') {
+    if (!libraryService.isSystemLibrary(library) && library.access !== 'none') {
       $rootScope.$emit('lastViewedLib', library);
     }
 

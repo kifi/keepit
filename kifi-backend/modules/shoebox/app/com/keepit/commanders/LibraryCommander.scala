@@ -158,7 +158,7 @@ class LibraryCommander @Inject() (
 
   def countFollowerInfosByLibraryId(libraries: Seq[Library], maxMembersShown: Int, viewerUserIdOpt: Option[Id[User]]): Map[Id[Library], (Seq[Id[User]], Map[LibraryAccess, Int])] = libraries.map { library =>
     val info: (Seq[Id[User]], Map[LibraryAccess, Int]) = library.kind match {
-      case LibraryKind.USER_CREATED =>
+      case LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA =>
         val (collaborators, followers, _, counts) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
         val inviters: Seq[LibraryMembership] = viewerUserIdOpt.map { userId =>
           db.readOnlyReplica { implicit session =>
@@ -185,7 +185,7 @@ class LibraryCommander @Inject() (
         if (maxKeepsShown > 0) {
           val keeps = db.readOnlyMaster { implicit session =>
             library.kind match {
-              case LibraryKind.USER_CREATED => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
+              case LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
               case LibraryKind.SYSTEM_MAIN =>
                 assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
                 if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.ALL_KEEPS_VIEW)) { //cached
@@ -436,12 +436,13 @@ class LibraryCommander @Inject() (
           case None =>
             val newColor = libAddReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor))
             val newListed = libAddReq.listed.getOrElse(true)
+            val newKind = libAddReq.kind.getOrElse(LibraryKind.USER_CREATED)
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = LibraryKind.USER_CREATED, memberCount = 1))
+                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
                   lib
                 case Some(lib) =>
