@@ -37,7 +37,10 @@ class TwitterSyncCommander @Inject() (
 
   private def syncOne(socialUserInfo: Option[SocialUserInfo], state: TwitterSyncState, libraryOwner: Id[User]): Unit = throttle.withLockFuture {
     twitter.fetchTweets(socialUserInfo, state.twitterHandle, state.maxTweetIdSeen.getOrElse(0)).map { tweets =>
+      log.info(s"[TweetSync] Got ${tweets.length} tweets from ${state.twitterHandle}")
       if (!tweets.isEmpty) {
+        val urls = tweets.map(_ \\ "expanded_url").map(_.toString)
+        log.info(s"[TweetSync] Got urls: $urls")
         val newMaxTweetId = tweets.map(tweet => (tweet \ "id").as[Long]).max
         storeTweets(libraryOwner, state.libraryId, tweets)
         val newState = state.copy(lastFetchedAt = Some(currentDateTime), maxTweetIdSeen = Some(newMaxTweetId))

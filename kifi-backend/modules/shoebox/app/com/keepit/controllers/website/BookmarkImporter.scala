@@ -102,6 +102,7 @@ class BookmarkImporter @Inject() (
   def processDirectTwitterData(userId: Id[User], libraryId: Id[Library], tweets: Seq[JsObject]): Unit = {
     implicit val context = heimdalContextBuilderFactoryBean().build
     val (sourceOpt, parsed) = parseTwitterJson(tweets)
+    log.info(s"[TweetSync] Got ${parsed.length} Bookmarks out of ${tweets.length} tweets")
     val tagSet = scala.collection.mutable.Set.empty[String]
     parsed.foreach { bm =>
       bm.tags.map { tagName =>
