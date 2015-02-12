@@ -7,6 +7,7 @@ import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
 import com.keepit.common.oauth.adaptor.SecureSocialAdaptor
 import com.keepit.common.oauth.{ OAuth1ProviderRegistry, OAuth2AccessToken, ProviderIds, OAuth2ProviderRegistry }
+import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.oauth.RequestToken
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
@@ -241,8 +242,8 @@ class AuthHelper @Inject() (
         userCredRepo.findByEmailOpt(email.address).isEmpty
       }),
       "firstName" -> text, // todo(ray/andrew): revisit non-empty requirement for twitter
-      "lastName" -> text,
-      "password" -> text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray)),
+      "lastName" -> optional(text),
+      "password" -> optional(text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray))),
       "picToken" -> optional(text),
       "picHeight" -> optional(number),
       "picWidth" -> optional(number),
@@ -250,8 +251,8 @@ class AuthHelper @Inject() (
       "cropY" -> optional(number),
       "cropSize" -> optional(number)
     )((email, fName, lName, pwd, picToken, picH, picW, cX, cY, cS) =>
-        SocialFinalizeInfo(email = email, firstName = fName, lastName = lName, password = pwd.toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS))((sfi: SocialFinalizeInfo) =>
-        Some(sfi.email, sfi.firstName, sfi.lastName, new String(sfi.password), sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize))
+        SocialFinalizeInfo(email = email, firstName = fName, lastName = lName.getOrElse(""), password = pwd.getOrElse(RandomStringUtils.random(20)).toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS))((sfi: SocialFinalizeInfo) =>
+        Some((sfi.email, sfi.firstName, Option(sfi.lastName), Option(new String(sfi.password)), sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize)))
   )
   def doSocialFinalizeAccountAction(implicit request: MaybeUserRequest[JsValue]): Result = {
     socialFinalizeAccountForm.bindFromRequest.fold(
