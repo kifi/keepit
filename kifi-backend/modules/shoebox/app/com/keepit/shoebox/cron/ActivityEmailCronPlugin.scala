@@ -47,12 +47,8 @@ class ActivityEmailCronPluginImpl @Inject() (
     val offsetHoursToUtc = offsetMillisToUtc / 1000 / 60 / 60
     val utcHourFor9amEasternTime = 9 + -offsetHoursToUtc
 
-    // ************************************************************************************
-    // NOTE: the cron time below is for INTERNAL TESTING ONLY, change it before going live!
-    // ************************************************************************************
-
     // <sec> <min> <hr> <day of mo> <mo> <day of wk> <yr>
-    val cronTime = s"0 0 $utcHourFor9amEasternTime ? * *" // 1pm UTC - send every day at 9am ET / 6am PT
+    val cronTime = s"0 0 $utcHourFor9amEasternTime ? * 5" // 1pm UTC - send Thursday at 9am ET / 6am PT
     cronTaskOnLeader(quartz, actor.ref, cronTime, SendActivityEmail)
   }
 }
