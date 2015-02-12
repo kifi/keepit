@@ -92,10 +92,8 @@ angular.module('kifi')
         // Initialization
         //
 
-        measurePxFromDocTop();
-
         $timeout(function () {  // timeout needed for mobile Safari
-          var onScroll = _.debounce(measurePxFromDocTop, 100);
+          var onScroll = _.throttle(measurePxFromDocTop, 200, {leading: true});
 
           // changes to the page may change the element's position, so measure it periodically
           $win.on('scroll', onScroll);
