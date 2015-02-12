@@ -154,7 +154,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     val friends = db.readOnlyReplica { implicit session =>
       userConnectionRepo.getConnectedUsers(toUserId)
     }
-    log.info(s"[activityEmail] userId=$toUserId friends=${friends.size}")
+    log.info(s"[activityEmail] preparing userId=$toUserId friends=${friends.size}")
 
     val newFollowersOfMyLibrariesF = components.userLibrariesByRecentFollowers(toUserId, previouslySentEmails, friends)
     val libRecosF = components.libraryRecommendations(toUserId, previouslySentEmails, libRecosToFetch)
@@ -167,10 +167,6 @@ class ActivityFeedEmailSenderImpl @Inject() (
       othersFollowedYourLibraryRaw <- othersFollowedYourLibraryF
       connectionRequests <- connectionRequestsF
     } yield {
-      log.info(s"[activityEmail] userId=$toUserId newFollowers $newFollowersOfLibraries")
-      log.info(s"[activityEmail] userId=$toUserId allLibRecos $allLibRecos")
-      log.info(s"[activityEmail] userId=$toUserId othersFollowedYourLibraryRaw $othersFollowedYourLibraryRaw")
-
       // get all libraries that were included in previous emails
       val librariesToExclude = previouslySentEmails.filter(_.createdAt > minRecordAge).flatMap { activityEmail =>
         activityEmail.libraryRecommendations.getOrElse(Seq.empty) ++ activityEmail.otherFollowedLibraries.getOrElse(Seq.empty)
@@ -185,7 +181,10 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
       val libRecos = libraryRecommendationFeed(libRecosUnseen, mostFollowedLibrariesRecentlyToRecommend)
 
-      log.info(s"[activityEmail] userId=$toUserId mostFollowedLibrariesRecentlyToRecommend $mostFollowedLibrariesRecentlyToRecommend")
+      log.info(s"[activityEmail] userId=$toUserId newFollowers=${newFollowersOfLibraries.size} " +
+        s"allLibRecos=${allLibRecos.size} othersFollowedYourLibraryRaw=${othersFollowedYourLibraryRaw.size} " +
+        s"mostFollowedLibrariesRecentlyToRecommend=${mostFollowedLibrariesRecentlyToRecommend.size}"
+      )
 
       val activityComponents: Seq[Html] = {
         val mostFollowedHtmls = mostFollowedLibrariesRecentlyToRecommend map { view => views.html.email.v3.activityFeedOtherLibFollowersPartial(view) }
@@ -197,7 +196,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
         Future.successful(None)
       } else {
         libRecos.map { libRecos =>
-          log.info(s"[activityEmail] userId=$toUserId libRecos $libRecos")
+          log.info(s"[activityEmail] userId=$toUserId libRecos=${libRecos.size}")
 
           // do not send email without at least 2 activities and 2 lib recos (might look too empty)
           if (libRecos.size < 2 || activityComponents.size < 2) None
@@ -220,6 +219,11 @@ class ActivityFeedEmailSenderImpl @Inject() (
               ))
             }
 
+            val subjectLine = {
+              if (toUserId.id % 2 == 0) "Things you should know on Kifi"
+              else "What's happening right now on Kifi"
+            }
+
             val toDest: Either[Id[User], EmailAddress] = overrideToEmail.map(Right.apply).getOrElse(Left(toUserId))
             val htmlBody = views.html.email.v3.activityFeed(activityData)
             // trim whitespace at the beginning of each line
@@ -227,7 +231,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
             Some(EmailToSend(
               from = SystemEmailAddress.NOTIFICATIONS,
               to = toDest,
-              subject = "Activity on Kifi that you might be interested in",
+              subject = subjectLine,
               htmlTemplate = trimmedHtml,
               category = NotificationCategory.User.ACTIVITY,
               templateOptions = Seq(TemplateOptions.CustomLayout).toMap
