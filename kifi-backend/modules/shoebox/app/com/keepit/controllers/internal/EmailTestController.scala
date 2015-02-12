@@ -8,7 +8,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
+import com.keepit.common.mail.{ ElectronicMailRepo, ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
 import com.keepit.model.{ Invitation, LibraryAccess, LibraryInvite, UserEmailAddress, Library, NotificationCategory, User }
 import com.keepit.social.SocialNetworks.FACEBOOK
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -20,6 +20,7 @@ import scala.concurrent.Future
 class EmailTestController @Inject() (
     postOffice: LocalPostOffice,
     db: Database,
+    emailRepo: ElectronicMailRepo,
     emailSenderProvider: EmailSenderProvider,
     emailTemplateSender: EmailTemplateSender) extends ShoeboxServiceController {
 
@@ -77,7 +78,12 @@ class EmailTestController @Inject() (
         testEmailTip(Left(userId), emailTip)
       case "activity" =>
         val emailsF = emailSenderProvider.activityFeed(Set(userId))
-        emailsF.map(_.head.get)
+        val emailIdF = emailsF.map(_.head.get)
+        emailIdF map { emailId =>
+          db.readOnlyMaster { implicit session =>
+            emailRepo.get(emailId)
+          }
+        }
     }
 
     emailOptF.map(_.map(email => Ok(email.htmlBody.value))).

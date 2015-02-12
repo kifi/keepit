@@ -188,7 +188,8 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         val senderF = sender(None)
         Await.ready(senderF, Duration(5, "seconds"))
 
-        val email1 :: email2 :: Nil = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)
+        val emails = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)
+        val email1 :: email2 :: Nil = emails.filter(_.category == NotificationCategory.toElectronicMailCategory(NotificationCategory.User.ACTIVITY))
 
         val activityEmails = db.readOnlyMaster { implicit s => inject[ActivityEmailRepo].all }
         activityEmails.size === 2

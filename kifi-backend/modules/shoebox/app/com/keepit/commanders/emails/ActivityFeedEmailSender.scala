@@ -6,16 +6,17 @@ import com.keepit.commanders.{ CropImageRequest, CroppedImageSize, KeepImageComm
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.db.slick.DBSession.ROSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailToSend, TemplateOptions }
-import com.keepit.common.mail.{ EmailAddress, ElectronicMail, SystemEmailAddress }
+import com.keepit.common.mail.{ LocalPostOffice, EmailAddress, ElectronicMail, SystemEmailAddress }
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.time._
+import com.keepit.common.performance._
 import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource }
 import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
 import com.keepit.eliza.ElizaServiceClient
@@ -25,6 +26,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.twirl.api.Html
 
 import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 trait LibraryInfoView {
   def libInfo: FullLibraryInfo
@@ -82,7 +84,7 @@ case class ActivityEmailData(
 
 @ImplementedBy(classOf[ActivityFeedEmailSenderImpl])
 trait ActivityFeedEmailSender {
-  def apply(sendTo: Set[Id[User]], overrideToEmail: Option[EmailAddress] = None): Future[Seq[Option[ElectronicMail]]]
+  def apply(sendTo: Set[Id[User]], overrideToEmail: Option[EmailAddress] = None): Future[Seq[Option[Id[ElectronicMail]]]]
   def apply(overrideToEmail: Option[EmailAddress]): Future[Unit]
 }
 
@@ -114,6 +116,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     activityEmailRepo: ActivityEmailRepo,
     keepCommander: KeepsCommander,
     keepImageCommander: KeepImageCommander,
+    postOffice: LocalPostOffice,
     s3Config: S3ImageConfig,
     protected val airbrake: AirbrakeNotifier,
     private implicit val publicIdConfig: PublicIdConfiguration) extends ActivityFeedEmailSender with ActivityEmailHelpers with Logging {
@@ -132,14 +135,33 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
   val maxKeepImagesPerLibraryReco: Int = 4
 
-  def apply(sendTo: Set[Id[User]], overrideToEmail: Option[EmailAddress] = None): Future[Seq[Option[ElectronicMail]]] = {
+  def apply(sendTo: Set[Id[User]], overrideToEmail: Option[EmailAddress] = None): Future[Seq[Option[Id[ElectronicMail]]]] = {
+    val sw = Stopwatch("ActivityEmail")
     val orderedUserIds = sendTo.toSeq.sortBy(_.id)
     val emailsF = orderedUserIds.map(id => prepareEmailForUser(id, overrideToEmail)).map { f =>
       // transforms Future[Option[Future[_]]] into Future[Option[_]]
-      val f2 = f map { _.map(emailTemplateSender.send) } map { _.map(_.map(Some.apply)).getOrElse(Future.successful(None)) }
+      val f2 = f map { _.map(e => emailTemplateSender.send(e).map(_.id.get)) } map { _.map(_.map(Some.apply)).getOrElse(Future.successful(None)) }
       f2 flatMap identity
     }
-    Future.sequence(emailsF)
+
+    val doneF = new SafeFuture(Future.sequence(emailsF))
+    doneF.onComplete {
+      case Success(emailOpts) =>
+        val sentCount = emailOpts.count(_.isDefined)
+        val subject = s"Activity email sent to $sentCount/${emailOpts.size} candidates"
+        val body = subject + ". Took " + sw.logTime() / 1e9 + "s"
+        val mail = ElectronicMail(
+          to = Seq(SystemEmailAddress.ENG),
+          from = SystemEmailAddress.ENG,
+          subject = subject,
+          category = NotificationCategory.System.ADMIN,
+          htmlBody = LargeString(body))
+        db.readWrite { implicit rw => postOffice.sendMail(mail) }
+      case Failure(e) =>
+        log.error(s"ActivityEmail.apply failed userIds=${sendTo}", e)
+    }
+
+    doneF
   }
 
   def apply(overrideToEmail: Option[EmailAddress]): Future[Unit] = {
