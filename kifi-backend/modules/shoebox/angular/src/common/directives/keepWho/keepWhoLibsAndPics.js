@@ -52,7 +52,7 @@ angular.module('kifi')
         var deregisterKeepRemovedListener = $rootScope.$on('keepRemoved', function (e, removedKeep, library) {
           if (!scope.keep.id &&                        // No scope.keep.id if the keep is not on a library page.
               (scope.keep.url === removedKeep.url) &&
-              (library.kind === 'user_created')) {     // Do not hide system libraries as attributions.
+              (!libraryService.isSystemLibrary(library))) {     // Do not hide system libraries as attributions.
             _.remove(scope.visibleKeepLibraries, { id: library.id });
           }
         });

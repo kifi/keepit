@@ -300,7 +300,7 @@ angular.module('kifi')
     var onUnload = function () {
       var resultsWithLibs = 0;
       $scope.resultKeeps.forEach( function (keep) {
-        if (_.some(keep.libraries, function (lib) { return !libraryService.isSystemLibrary(lib); })) {
+        if (_.some(keep.libraries, function (libId) { return !libraryService.isSystemLibraryById(libId); })) {
           resultsWithLibs++;
         }
       });
