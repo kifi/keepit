@@ -14,7 +14,7 @@
             @if(idx > 0 && idx == followerNames.size - 1){and}
             @value match {
               case Left(num) => {@num others}
-              case Right(userId) => {<a href="@profileUrl(userId, "othersFollowedMyLibrary")" target="_blank" style="text-decoration:none;color:#62BE73;">@fullName(userId)</a>}
+              case Right(userId) => {@fullName(userId)}
             }@if(idx < followerNames.size - 1 && followerNames.size > 2){,}
           }
           followed your library
@@ -30,7 +30,7 @@
             <tr>
               @for(i <- 0 until libInfoView.followerImagesToShow.size; userId = libInfoView.followerImagesToShow(i)) {
               <td width="33" align="left" valign="top">
-                <a href="@profileUrl(userId, "othersFollowedMyLibrary")" target="_blank"><img src="@avatarUrl(userId)" width="33" height="32" alt="@fullName(userId)" style="display:block;border-radius:17px;" border="0"/></a>
+                <img src="@avatarUrl(userId)" width="33" height="32" alt="@fullName(userId)" style="display:block;border-radius:17px;" border="0"/>
               </td>
               @if(i != libInfoView.followerImagesToShow.size - 1){<td width="9"></td>}
               }
