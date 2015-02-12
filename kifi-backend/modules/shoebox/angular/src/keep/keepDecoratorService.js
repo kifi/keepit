@@ -78,7 +78,7 @@ angular.module('kifi')
 
       // Add new properties to the keep.
       this.titleAttr = this.title || this.url;
-      this.titleHtml = this.title || util.formatTitleFromUrl(this.url);
+      this.titleHtml = this.title || (this.summary && this.summary.title) || util.formatTitleFromUrl(this.url);
       if (this.summary && hasSaneAspectRatio(this.summary)) {
         this[shouldShowSmallImage(this.summary) ? 'hasSmallImage' : 'hasBigImage'] = true;
       }
