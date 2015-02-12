@@ -82,6 +82,9 @@ object RawTweet {
     val pattern = "yyyy-MM-dd HH:mm:ss Z"
     val df = org.joda.time.format.DateTimeFormat.forPattern(pattern).withLocale(locale)
 
+    val pattern_fu = "EEE MMM dd HH:mm:ss Z yyyy"
+    val df_fu = org.joda.time.format.DateTimeFormat.forPattern(pattern_fu).withLocale(locale)
+
     def reads(json: JsValue): JsResult[DateTime] = json match {
       case JsNumber(d) => JsSuccess(new DateTime(d.toLong))
       case JsString(s) => parseDate(corrector(s)) match {
@@ -92,7 +95,9 @@ object RawTweet {
     }
 
     private def parseDate(input: String): Option[DateTime] =
-      scala.util.control.Exception.allCatch[DateTime] opt DateTime.parse(input, df)
+      scala.util.control.Exception.allCatch[DateTime].opt(DateTime.parse(input, df)).orElse {
+        scala.util.control.Exception.allCatch[DateTime].opt(DateTime.parse(input, df_fu))
+      }
   }
 
   case class TweetIndices(start: Int, end: Int)
@@ -115,7 +120,7 @@ object RawTweet {
   object Entities {
     implicit def format: Reads[Entities] = (
       (__ \ 'user_mentions).read[Seq[UserMentionsEntity]] and
-      (__ \ 'media).read[Seq[MediaEntity]] and
+      ((__ \ 'media).read[Seq[MediaEntity]].orElse(Reads.pure(Seq.empty))) and
       (__ \ 'hashtags).read[Seq[HashtagEntity]] and
       (__ \ 'urls).read[Seq[UrlEntity]]
     )(Entities.apply _)
