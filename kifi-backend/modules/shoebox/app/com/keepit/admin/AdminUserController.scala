@@ -875,11 +875,18 @@ class AdminUserController @Inject() (
     Ok(html.admin.userLibraries(owner, accessToLibs))
   }
 
-  // TODO(josh) remove when this goes live
   def sendActivityEmailToAll() = AdminUserPage(parse.tolerantJson) { implicit request =>
+    // Usage example:
+    // $.ajax({url:"/admin/sendActivityEmailToAll", type: 'POST', data: JSON.stringify({overrideToEmail:"YOUR_EMAIL_FOR_TESTING@kifi.com"}), contentType: 'application/json', dataType: 'json'});
+
     val forceSendToAll = (request.request.body \ "force").asOpt[Boolean]
     val toEmail = (request.request.body \ "overrideToEmail").asOpt[EmailAddress]
-    if (toEmail.isDefined) {
+    val toUser = (request.request.body \ "userId").asOpt[Id[User]]
+
+    if (toUser.isDefined) {
+      activityEmailSender(Set(toUser.get), toEmail)
+      NoContent
+    } else if (toEmail.isDefined) {
       activityEmailSender(toEmail)
       NoContent
     } else if (forceSendToAll.exists(true ==)) {

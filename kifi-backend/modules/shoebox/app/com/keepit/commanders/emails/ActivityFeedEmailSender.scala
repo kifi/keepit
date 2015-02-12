@@ -229,7 +229,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
             Some(EmailToSend(
               from = SystemEmailAddress.NOTIFICATIONS,
               to = toDest,
-              subject = "Kifi Activity",
+              subject = "Activity on Kifi that you might be interested in",
               htmlTemplate = trimmedHtml,
               category = NotificationCategory.User.ACTIVITY,
               templateOptions = Seq(TemplateOptions.CustomLayout).toMap
