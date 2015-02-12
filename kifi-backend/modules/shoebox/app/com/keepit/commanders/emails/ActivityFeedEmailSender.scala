@@ -186,7 +186,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
       val mostFollowedLibrariesRecentlyToRecommend = libraryRecosForActivityFeed(previouslySentEmails, libRecosUnseen, maxActivityComponents - othersFollowedYourLibrary.size)
 
-      val libRecos = libraryRecommendationFeed(libRecosUnseen, mostFollowedLibrariesRecentlyToRecommend)
+      val libRecosF = libraryRecommendationFeed(libRecosUnseen, mostFollowedLibrariesRecentlyToRecommend)
 
       log.info(s"[activityEmail] userId=$toUserId newFollowers=${newFollowersOfLibraries.size} " +
         s"allLibRecos=${allLibRecos.size} othersFollowedYourLibraryRaw=${othersFollowedYourLibraryRaw.size} " +
@@ -202,7 +202,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
       val emailToSendOptF: Future[Option[EmailToSend]] = if (activityComponents.size < 2) {
         Future.successful(None)
       } else {
-        libRecos.map { libRecos =>
+        libRecosF.map { libRecos =>
           log.info(s"[activityEmail] userId=$toUserId libRecos=${libRecos.size}")
 
           // do not send email without at least 2 activities and 2 lib recos (might look too empty)
