@@ -247,7 +247,7 @@ class BookmarkImporter @Inject() (
     val links = twitterJsonToRawTweets(jsons).collect {
       case tweet if tweet.entities.urls.nonEmpty => rawTweetToBookmarks(tweet)
     }.flatten
-    (Option(KeepSource.twitterFileImport), links.toList)
+    (Option(KeepSource.twitterSync), links.toList)
   }
 
   // Parses Twitter archives, from https://twitter.com/settings/account (click “Request your archive”)
