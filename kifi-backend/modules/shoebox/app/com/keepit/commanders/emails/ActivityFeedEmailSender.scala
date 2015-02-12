@@ -16,6 +16,7 @@ import com.keepit.common.mail.{ EmailAddress, ElectronicMail, SystemEmailAddress
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.time._
+import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource }
 import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -224,6 +225,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
                 userFollowedLibraries = Some(othersFollowedYourLibrary.map(_.libraryId))
               ))
             }
+
+            curator.notifyLibraryRecosDelivered(toUserId, libRecos.map(_.libraryId).toSet,
+              RecommendationSource.Email, RecommendationSubSource.ActivityFeed)
 
             val subjectLine = {
               if (toUserId.id % 2 == 0) "Things you should know on Kifi"
