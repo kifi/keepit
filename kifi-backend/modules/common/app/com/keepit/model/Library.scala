@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import java.net.URLEncoder
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
@@ -127,7 +128,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
   }
 
   def formatLibraryPath(ownerUsername: Username, slug: LibrarySlug): String = {
-    s"/${ownerUsername.value}/${slug.value}"
+    "/" + URLEncoder.encode(ownerUsername.value, "UTF-8") + "/" + URLEncoder.encode(slug.value, "UTF-8")
   }
 
   def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
