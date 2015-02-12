@@ -2,11 +2,9 @@
 // Mobile styles, logged out
 //
 
-mobileAppSidePad = 20px
-
 .kf-mobile
   &>body
-    min-width: 800px
+    width: 800px
 
   .kf-app
     padding-top: 120px
@@ -14,7 +12,7 @@ mobileAppSidePad = 20px
   .kf-width-bounded
     min-width: initial !important
     max-width: initial !important
-    padding: 0 mobileAppSidePad
+    padding: 0
 
   .kf-min-width-bounded
     min-width: initial !important
@@ -23,6 +21,7 @@ mobileAppSidePad = 20px
 
   .kf-loh
     height: 120px
+    width: 800px
 
   .kf-loh-inner
     width: 85%
@@ -63,8 +62,10 @@ mobileAppSidePad = 20px
 
   .kf-lh-card
     overflow: hidden
+    padding: 0 60px 20px
 
   .kf-lh-name
+    padding-top: 48px
     font-size: 55px
 
   div.kf-lh-color
@@ -101,13 +102,16 @@ mobileAppSidePad = 20px
     line-height 40px
 
   .kf-lh-stats-line
-    padding-top: 6px
+    display: block
     height: 230px
+    padding-top: 6px
 
   .kf-lh-stats
     display block
-    margin: 30px auto
+    width: auto
     height: auto
+    margin: 30px auto
+    padding-top: 0
     font-size: 30px
     line-height 30px
     text-align: center
@@ -120,32 +124,34 @@ mobileAppSidePad = 20px
     font-size: 35px
     line-height: 42px
 
-  .kf-lfp-pic
-    margin-right: 30px
-    width: 80px
-    height: 80px
+  .kf-lh-stats-line
+    &>.kf-lfp
+      display: block
+      width: auto
+      margin: 0 0 30px
+      text-align: center
 
-  .kf-lfp-more
-    width: 80px
-    height: 80px
+    .kf-lfp-pic
+      margin-right: 30px
+      width: 80px
+      height: 80px
 
-  .kf-lfp-more-text
-    font-size: 1.5em
-    line-height: 80px
+    .kf-lfp-more
+      width: 80px
+      height: 80px
 
-  .kf-lfp
-    text-align: center
-    margin: 0 auto
-    display block
-    margin: 0 0 30px
+    .kf-lfp-more-text
+      line-height: 80px
+      font-size: 24px
+
+  button-height = 68px
 
   .kf-lh-buttons
     padding-top: 34px
 
     .kf-button
-      height = 68px
-      height: height
-      line-height: height
+      height: button-height
+      line-height: button-height
 
     .kf-button-text-optional
       width: 96px
@@ -158,11 +164,31 @@ mobileAppSidePad = 20px
       margin: 0
 
   .kf-lh-follow-btn
+    width: 260px
+    height: button-height
+    line-height: button-height
     font-size: 28px
     border-radius: 7px
-    width: 280px
+
+  .kf-loh-right>.kf-lh-follow-btn
+    top: 25px
+
+  // library columns
+
+  .kf-lib-cols
+    display: block
+    min-width: initial
+    padding-left: 0
+    padding-right: 0
+
+  .kf-lib-col
+    display: block
 
   // library keeps
+
+  .kf-my-keeps
+    padding-left: 30px
+    padding-right: 30px
 
   .kf-keep-description
     font-size 30px
