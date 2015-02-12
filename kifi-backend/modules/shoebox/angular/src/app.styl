@@ -6,8 +6,6 @@ html
 body
   position: relative
   overflow: visible
-  min-height: calc(100% - 62px)
-  width: 100%
   padding: 0
   margin: 0;
   background: appBackgroundColor
@@ -76,6 +74,10 @@ menu, ol, ul
     clear: both
 
 .kf-app
+  // min-height keeps vertical scrollbars present to avoid horizontal shift
+  // during page transitions when content is removed or inserted
+  min-height: 101vh
+  box-sizing: border-box
   padding-top: appHeaderHeight
 
 .ng-cloak
