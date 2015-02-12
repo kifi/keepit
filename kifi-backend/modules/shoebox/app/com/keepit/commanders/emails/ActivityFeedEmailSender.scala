@@ -16,6 +16,7 @@ import com.keepit.common.mail.{ EmailAddress, ElectronicMail, SystemEmailAddress
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.time._
+import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource }
 import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -132,7 +133,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
   val maxKeepImagesPerLibraryReco: Int = 4
 
   def apply(sendTo: Set[Id[User]], overrideToEmail: Option[EmailAddress] = None): Future[Seq[Option[ElectronicMail]]] = {
-    val emailsF = sendTo.toSeq.map(id => prepareEmailForUser(id, overrideToEmail)).map { f =>
+    val orderedUserIds = sendTo.toSeq.sortBy(_.id)
+    val emailsF = orderedUserIds.map(id => prepareEmailForUser(id, overrideToEmail)).map { f =>
       // transforms Future[Option[Future[_]]] into Future[Option[_]]
       val f2 = f map { _.map(emailTemplateSender.send) } map { _.map(_.map(Some.apply)).getOrElse(Future.successful(None)) }
       f2 flatMap identity
@@ -144,8 +146,13 @@ class ActivityFeedEmailSenderImpl @Inject() (
     apply(usersToSendEmailTo(), overrideToEmail) map (_ => Unit)
   }
 
-  def usersToSendEmailTo(): Set[Id[User]] = {
-    experimentCommander.getUserIdsByExperiment(ExperimentType.ACTIVITY_EMAIL)
+  def usersToSendEmailTo(): Set[Id[User]] = db.readOnlyReplica { implicit session =>
+    // TODO paginate instead of grabbing all user IDs at once
+    val userIds = userRepo.getAllIds()
+
+    // TODO remove this filter when we have library recos for users w/o keeps
+    // 5 is the min number of keeps required in curator for a user to get precomputed lib recos
+    keepRepo.getCountByUsers(userIds).filter(_._2 >= 5).keySet
   }
 
   def prepareEmailForUser(toUserId: Id[User], overrideToEmail: Option[EmailAddress] = None): Future[Option[EmailToSend]] = new SafeFuture(reactiveLock.withLockFuture {
@@ -179,7 +186,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
       val mostFollowedLibrariesRecentlyToRecommend = libraryRecosForActivityFeed(previouslySentEmails, libRecosUnseen, maxActivityComponents - othersFollowedYourLibrary.size)
 
-      val libRecos = libraryRecommendationFeed(libRecosUnseen, mostFollowedLibrariesRecentlyToRecommend)
+      val libRecosF = libraryRecommendationFeed(libRecosUnseen, mostFollowedLibrariesRecentlyToRecommend)
 
       log.info(s"[activityEmail] userId=$toUserId newFollowers=${newFollowersOfLibraries.size} " +
         s"allLibRecos=${allLibRecos.size} othersFollowedYourLibraryRaw=${othersFollowedYourLibraryRaw.size} " +
@@ -195,7 +202,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
       val emailToSendOptF: Future[Option[EmailToSend]] = if (activityComponents.size < 2) {
         Future.successful(None)
       } else {
-        libRecos.map { libRecos =>
+        libRecosF.map { libRecos =>
           log.info(s"[activityEmail] userId=$toUserId libRecos=${libRecos.size}")
 
           // do not send email without at least 2 activities and 2 lib recos (might look too empty)
@@ -218,6 +225,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
                 userFollowedLibraries = Some(othersFollowedYourLibrary.map(_.libraryId))
               ))
             }
+
+            curator.notifyLibraryRecosDelivered(toUserId, libRecos.map(_.libraryId).toSet,
+              RecommendationSource.Email, RecommendationSubSource.ActivityFeed)
 
             val subjectLine = {
               if (toUserId.id % 2 == 0) "Things you should know on Kifi"

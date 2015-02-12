@@ -40,6 +40,7 @@ class EmailTemplateHtmlDecorator @Inject() () {
     }
 
     // does not return the html-escaped code b/c URLs with certain HTML entities aren't redirected correctly by Sendgrid
+    // TODO run html compression here
     html
   }
 }
