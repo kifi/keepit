@@ -15,7 +15,7 @@
       @trSpacer(5)
       <tr>
         <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:14px;line-height:20px;color:#7f7f7f;">By
-          <a href="@profileUrl(lib.owner, "libRecoOwnerName")" target="_blank" style="text-decoration:none;color:#62BE73;">@lib.ownerName</a>&nbsp;
+          @lib.ownerName&nbsp;
           @if(lib.numFollowers > 0) {
           @lib.numFollowers follower@if(lib.numFollowers != 1){s}
           }
