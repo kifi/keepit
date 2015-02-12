@@ -66,22 +66,12 @@
       </div>
 
       <div ng-if="!loading" class="kf-reco-get-more-container" ng-click="addMore()">
-        <div class="kf-reco-loading-card">
-          <div class="kf-reco-loading-card-heading"></div>
-          <div class="kf-reco-loading-card-picture"></div>
-          <div class="kf-reco-loading-card-body">
-            <div class="kf-reco-loading-card-body-line"></div>
-            <div class="kf-reco-loading-card-body-line"></div>
-            <div class="kf-reco-loading-card-body-line"></div>
-          </div>
-        </div>
-
         <span ng-if="!moreLoading && !noMoreRecos" class="kf-reco-get-more">See more</span>
         <span ng-if="!moreLoading && noMoreRecos" class="kf-reco-no-more">No more recommendations right now.</span>
         <span ng-if="moreLoading" class="kf-reco-get-more-loading">Loading...</span>
       </div>
 
-      <div class="kf-reco-loading-logo kf-logo-pulse svg-small-new-logo" ng-if="loading"></div>
+      <div class="kf-reco-loading-logo svg-small-new-logo" ng-if="loading"></div>
     </div>
     <div class="kf-reco-col-2">
       <div kf-people-you-may-know></div>
