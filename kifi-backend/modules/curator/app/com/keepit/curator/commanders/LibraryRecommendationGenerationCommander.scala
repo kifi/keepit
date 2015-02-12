@@ -73,6 +73,11 @@ class LibraryRecommendationGenerationCommander @Inject() (
     }
 
     val recosInfo = recos.map { case LibraryRecoScore(s, r) => LibraryRecommendation.toLibraryRecoInfo(r) }
+
+    if (recos.size < howManyMax) {
+      log.info(s"[lrgc] not enough lib recos userId=$userId actual=${recos.size} max=$howManyMax top 2 => ${recosInfo.take(2)}")
+    }
+
     LibraryRecoResults(recosInfo, newContext)
   }
 

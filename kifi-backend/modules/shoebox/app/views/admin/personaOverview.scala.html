@@ -36,7 +36,98 @@
     }
   }
 
+  function onEdit(personaName) {
+    var targetModal = $('#edit' + personaName);
+    if (targetModal) {
+      targetModal.removeClass('hide');
+    }
+    return;
+  }
+
+  function saveEdits(personaId, personaName) {
+    var targetModal = $('#edit' + personaName);
+    var newDisplayName = targetModal.find('#editDisplayName')[0].value;
+    var newDisplayNamePlural = targetModal.find('#editDisplayNamePlural')[0].value;
+    var newState = targetModal.find('#editState')[0].value;
+    var newIconPath = targetModal.find('#editIconPath')[0].value;
+    var newActiveIconPath = targetModal.find('#editActiveIconPath')[0].value;
+
+    if (newDisplayName && newDisplayNamePlural && newState && newIconPath && newActiveIconPath) {
+      var postUrl = "/admin/personas/" + personaId;
+      var json = JSON.stringify({
+        displayName: newDisplayName,
+        displayNamePlural: newDisplayNamePlural,
+        iconPath: newIconPath,
+        activeIconPath: newActiveIconPath,
+        state: newState,
+      });
+
+      $.ajax({
+        contentType: "application/json", // data sending to server
+        data: json,
+        dataType: "json", // data expecting back from server
+        error: function(jqXHR, status, errorThrown) { alert("Error! Failed to create Persona... (" + status + ":" + errorThrown + ")"); },
+        success: function(data, status, jqXHR) {
+          alert("Persona edited!");
+          var targetRow = $('#row' + data.name.toUpperCase());
+          targetRow.find('.persona-display-name')[0].innerHTML = data.displayName;
+          targetRow.find('.persona-display-name-plural')[0].innerHTML = data.displayNamePlural;
+          targetRow.find('.persona-state')[0].innerHTML = data.state;
+          targetRow.find('.persona-icon-path')[0].innerHTML = data.iconPath;
+          targetRow.find('.persona-active-icon-path')[0].innerHTML = data.activeIconPath;
+        },
+        url: postUrl,
+        type: "POST"
+      });
+    } else {
+      alert("all fields must be filled!");
+    }
+    closeModal(personaName);
+  }
+
+  function closeModal(personaName) {
+    var targetModal = $('#edit' + personaName);
+    if (targetModal) {
+      targetModal.addClass('hide');
+    }
+    return;
+  }
+
 </script>
+
+<div class="persona-modals">
+  @for(persona <- personas) {
+    <div id="@{"edit" + persona.name}" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="blahblah" aria-hidden="true">
+      <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true" onClick="closeModal('@persona.name')">×</button>
+          <h3 id="blahblah">Edit Persona (@persona.id) @persona.name</h3>
+      </div>
+      <div class="modal-body">
+        <table class="table table-condensed table-striped">
+          <thead>
+            <th>displayName</th>
+            <th>displayNamePlural</th>
+            <th>state</th>
+            <th>iconPath</th>
+            <th>activeIconPath</th>
+          </thead>
+          <tbody>
+            <tr>
+              <td><input type="text" name="editDisplayName" id="editDisplayName" value="@persona.displayName"></td>
+              <td><input type="text" name="editDisplayNamePlural" id="editDisplayNamePlural" value="@persona.displayNamePlural"></td>
+              <td><input type="text" name="editState" id="editState" value="@persona.state"></td>
+              <td><input type="text" name="editIconPath" id="editIconPath" value="@persona.iconPath"></td>
+              <td><input type="text" name="editActiveIconPath" id="editActiveIconPath" value="@persona.activeIconPath"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" type="button" onClick="saveEdits('@persona.id','@persona.name')">Save Changes</button>
+      </div>
+    </div>
+  }
+</div>
 
 @admin("All Personas"){
 
@@ -64,15 +155,15 @@
     </thead>
     <tbody>
       @for(persona <- personas) {
-          <tr>
-            <td>@persona.id.get</td>
-            <td>@persona.name</td>
-            <td>@persona.displayName</td>
-            <td>@{persona.displayName + 's'}</td>
-            <td>@persona.state</td>
-            <td>@persona.iconPath</td>
-            <td>@persona.activeIconPath</td>
-            <td><button>Edit</button></td>
+          <tr id="@{"row" + persona.name}">
+            <td class="persona-id">@persona.id.get</td>
+            <td class="persona-name">@persona.name</td>
+            <td class="persona-display-name">@persona.displayName</td>
+            <td class="persona-display-name-plural">@persona.displayNamePlural</td>
+            <td class="persona-state">@persona.state</td>
+            <td class="persona-icon-path">@persona.iconPath</td>
+            <td class="persona-active-icon-path">@persona.activeIconPath</td>
+            <td><button onClick="onEdit('@persona.name')">Edit</button></td>
           </tr>
       }
     </tbody>

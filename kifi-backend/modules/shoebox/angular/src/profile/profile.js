@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'modalService', 'profileService', 'routeService', '$window', 'socialService', '$rootScope',
-  function ($scope, $http, modalService, profileService, routeService, $window, socialService, $rootScope) {
+  '$scope', '$http', 'modalService', 'profileService', 'routeService', '$window', 'socialService',
+  function ($scope, $http, modalService, profileService, routeService, $window, socialService) {
 
     // $analytics.eventTrack('test_event', { category: 'test', label: 'controller' });
 
@@ -143,8 +143,6 @@ angular.module('kifi')
         );
       }
     }
-
-    $rootScope.$emit('libraryUrl', {});
   }
 ])
 

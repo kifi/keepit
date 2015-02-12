@@ -158,7 +158,7 @@ class MobileSearchController @Inject() (
     // Library Search
 
     val futureLibrarySearchResultJson = if (maxLibraries <= 0) Future.successful(JsNull) else {
-      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, filter, libraryContext, maxLibraries, !disablePrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
+      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, filter, libraryContext, maxLibraries, disablePrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
         val librarySearcher = libraryIndexer.getSearcher
         val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
@@ -205,7 +205,7 @@ class MobileSearchController @Inject() (
     val futureUserSearchResultJson = if (maxUsers <= 0) {
       Future.successful(JsNull)
     } else if (experiments.contains(ADMIN) && experiments.contains(USER_SEARCH_ENGINE)) {
-      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, libraryContext, maxUsers, !disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
+      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, libraryContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
         val userIds = userSearchResult.hits.map(_.id).toSet
         val futureUsers = shoeboxClient.getBasicUsers(userIds.toSeq)
         val futureFriends = searchFactory.getFriends(userId)

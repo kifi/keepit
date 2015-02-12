@@ -191,18 +191,18 @@ class SearchController @Inject() (
     }
   }
 
-  def explainLibraryResult(query: String, doPrefixSearch: Boolean, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String]) = Action.async { request =>
+  def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     val langs = acceptLangs.split(",").filter(_.nonEmpty)
-    librarySearchCommander.searchLibraries(userId, langs, userExperiments, query, None, None, 1, doPrefixSearch, None, debug, Some(libraryId)).map { result =>
+    librarySearchCommander.searchLibraries(userId, langs, userExperiments, query, None, None, 1, disablePrefixSearch, None, debug, Some(libraryId)).map { result =>
       Ok(html.admin.explainLibraryResult(userId, libraryId, result.explanation))
     }
   }
 
-  def explainUserResult(query: String, doPrefixSearch: Boolean, userId: Id[User], resultUserId: Id[User], acceptLangs: String, debug: Option[String]) = Action.async { request =>
+  def explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     val langs = acceptLangs.split(",").filter(_.nonEmpty)
-    userSearchCommander.searchUsers(userId, langs, userExperiments, query, None, None, 1, doPrefixSearch, None, debug, Some(resultUserId)).map { result =>
+    userSearchCommander.searchUsers(userId, langs, userExperiments, query, None, None, 1, disablePrefixSearch, None, debug, Some(resultUserId)).map { result =>
       Ok(html.admin.explainUserResult(userId, resultUserId, result.explanation))
     }
   }

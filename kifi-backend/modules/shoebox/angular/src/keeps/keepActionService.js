@@ -58,23 +58,6 @@ angular.module('kifi')
       return getKeeps(lastKeepId, params);
     }
 
-    function getKeepsByHelpRank(helprank, lastKeepId, params) {
-      params = params || {};
-      params.helprank = helprank;
-      return getKeeps(lastKeepId, params);
-    }
-
-    function getSingleKeep(keepId) {
-      var url = routeService.getKeep(keepId);
-      var config = {
-        params: { withFullInfo: true }
-      };
-
-      return $http.get(url, config).then(function (result) {
-        return result && result.data;
-      });
-    }
-
     function keepToLibrary(keepInfos, libraryId) {
       $analytics.eventTrack('user_clicked_page', {
         // TODO(yiping): should we have a different action
@@ -189,8 +172,6 @@ angular.module('kifi')
     var api = {
       getKeeps: getKeeps,
       getKeepsByTagId: getKeepsByTagId,
-      getKeepsByHelpRank: getKeepsByHelpRank,
-      getSingleKeep: getSingleKeep,
       keepToLibrary: keepToLibrary,
       copyToLibrary: copyToLibrary,
       moveToLibrary: moveToLibrary,

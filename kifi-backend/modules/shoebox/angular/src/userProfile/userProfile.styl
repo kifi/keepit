@@ -6,23 +6,14 @@
   margin: 0 auto
   text-align: center
 
-  // The following styles are hacky and can be removed when we move to
-  // a two-column layout.
-  margin-top: -15px  // So that the background will extend to the top
-  margin-left: 1px   // Otherwise there is a small area jutting out on the top left
-
-.delighted-visible ~ div .kf-user-profile
-  margin-top: 15px  // Push down profile if we're showing the delighted survey.
-
 .kf-user-profile-header
-  position: relative
-  padding: 50px 0 25px
+  padding-bottom: 25px
+  background: pageHeaderColor
   color: #fff
-  background: #3e4954
 
 .kf-up-basic-info-main-content
-  margin: 0 auto
-  width: 500px
+  position: relative
+  padding-top: 40px
 
 .kf-user-profile-available-action
   position: absolute
@@ -192,8 +183,7 @@
   text-align: center
 
 .kf-upl-card-list
-  max-width: 800px
-  margin: 0 auto 40px
+  margin-bottom: 40px
 
 .kf-upl-nav
   display: table
@@ -208,7 +198,7 @@
   width: 33%
   height: 38px
   line-height: 38px
-  border-radius: 6px  // should be inherit, see github.com/tj/nib/issues/271
+  border-radius: '%s' % inherit  // github.com/tj/nib/issues/271
   font-size: 0.8em
   color: #333539
   font-weight: bold
@@ -551,15 +541,14 @@ follower-pic-diameter = 23px
   color: rgba(255,255,255,.6)
   text-shadow: 0 0 6px rgba(0,0,0,.2)
 
-//
-// Mobile styles.
-//
-.kf-logged-out.kf-mobile
+// Mobile styles
+
+.kf-mobile
   .kf-user-profile
     font-size: 1.5em
 
   .kf-user-profile-header
-    padding: 65px 0 40px
+    padding: 10px 0 40px
 
   .kf-user-profile-picture
     width: 150px

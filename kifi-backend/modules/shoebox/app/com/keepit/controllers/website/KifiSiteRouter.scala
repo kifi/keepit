@@ -148,8 +148,7 @@ class AngularRouter @Inject() (
   private val ngPrefixRoutes: Map[String, Seq[MaybeUserRequest[_] => Future[String]]] = Map(
     "friends" -> Seq(),
     "keep" -> Seq(),
-    "tag" -> Seq(),
-    "helprank" -> Seq()
+    "tag" -> Seq()
   )
 
   //private val dataOnEveryAngularPage = Seq(injectUser _) // todo: Have fun with this!

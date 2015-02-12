@@ -99,6 +99,33 @@ class BookmarkImporter @Inject() (
     }
   }
 
+  def processDirectTwitterData(userId: Id[User], libraryId: Id[Library], tweets: Seq[JsObject]): Unit = {
+    implicit val context = heimdalContextBuilderFactoryBean().build
+    val (sourceOpt, parsed) = parseTwitterJson(tweets)
+    log.info(s"[TweetSync] Got ${parsed.length} Bookmarks out of ${tweets.length} tweets")
+    val tagSet = scala.collection.mutable.Set.empty[String]
+    parsed.foreach { bm =>
+      bm.tags.map { tagName =>
+        tagSet.add(tagName)
+      }
+    }
+
+    val importTag = keepsCommander.getOrCreateTag(userId, "Imported links")(context)
+
+    val tags = tagSet.map { tagStr =>
+      tagStr.trim -> keepsCommander.getOrCreateTag(userId, tagStr.trim)(context)
+    }.toMap
+    val taggedKeeps = parsed.map {
+      case Bookmark(t, h, tagNames, createdDate, originalJson) =>
+        val keepTags = tagNames.map(tags.get).flatten.map(_.id.get) :+ importTag.id.get
+        BookmarkWithTagIds(t, h, keepTags, createdDate, originalJson)
+    }
+
+    val (importId, rawKeeps) = createRawKeeps(userId, sourceOpt, taggedKeeps, libraryId)
+
+    keepInterner.persistRawKeeps(rawKeeps, Some(importId))
+  }
+
   // Internal
 
   private def isLikelyTwitterImport(file: File) = {
@@ -209,6 +236,20 @@ class BookmarkImporter @Inject() (
     (source, extracted)
   }
 
+  private def rawTweetToBookmarks(tweet: RawTweet): Seq[Bookmark] = {
+    val tags = tweet.entities.hashtags.map(_.text).toList
+    tweet.entities.urls.map { url =>
+      Bookmark(title = None, href = url.expandedUrl, tags = tags, createdDate = Some(tweet.createdAt), originalJson = Some(tweet.originalJson))
+    }
+  }
+
+  private def parseTwitterJson(jsons: Seq[JsObject]): (Option[KeepSource], List[Bookmark]) = {
+    val links = twitterJsonToRawTweets(jsons).collect {
+      case tweet if tweet.entities.urls.nonEmpty => rawTweetToBookmarks(tweet)
+    }.flatten
+    (Option(KeepSource.twitterFileImport), links.toList)
+  }
+
   // Parses Twitter archives, from https://twitter.com/settings/account (click “Request your archive”)
   private def parseTwitterArchive(archive: File): Try[(Option[KeepSource], List[Bookmark])] = Try {
     val zip = new ZipFile(archive)
@@ -216,15 +257,22 @@ class BookmarkImporter @Inject() (
 
     val links = filesInArchive.filter(_.getName.startsWith("data/js/tweets/")).map { ze =>
       twitterEntryToJson(zip, ze).collect {
-        case tweet if tweet.entities.urls.nonEmpty =>
-          val tags = tweet.entities.hashtags.map(_.text).toList
-          tweet.entities.urls.map { url =>
-            Bookmark(title = None, href = url.expandedUrl, tags = tags, createdDate = Some(tweet.createdAt), originalJson = Some(tweet.originalJson))
-          }
+        case tweet if tweet.entities.urls.nonEmpty => rawTweetToBookmarks(tweet)
       }.flatten
     }.flatten
 
     (Option(KeepSource.twitterFileImport), links)
+  }
+
+  private def twitterJsonToRawTweets(jsons: Seq[JsValue]): Seq[RawTweet] = {
+    jsons.map { rawTweetJson =>
+      Json.fromJson[RawTweet](rawTweetJson) match {
+        case JsError(fail) =>
+          log.warn(s"Couldn't parse a raw tweet: $fail\n$rawTweetJson")
+          None
+        case JsSuccess(rt, _) => Some(rt)
+      }
+    }.flatten
   }
 
   private def twitterEntryToJson(zip: ZipFile, entry: ZipEntry): Seq[RawTweet] = {
@@ -232,15 +280,7 @@ class BookmarkImporter @Inject() (
     val str = IOUtils.toString(is, Charsets.UTF_8)
     is.close()
     Try(Json.parse(str.substring(str.indexOf("=") + 1)).as[JsArray]) match {
-      case Success(rawTweetsJson) =>
-        rawTweetsJson.value.map { rawTweetJson =>
-          Json.fromJson[RawTweet](rawTweetJson) match {
-            case JsError(fail) =>
-              log.warn(s"Couldn't parse a raw tweet: $fail\n$rawTweetJson")
-              None
-            case JsSuccess(rt, _) => Some(rt)
-          }
-        }.flatten
+      case Success(rawTweetsJson) => twitterJsonToRawTweets(rawTweetsJson.value)
       case Failure(ex) => Seq()
     }
   }

@@ -628,6 +628,9 @@ GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.Admin
 POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
 POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserController.refreshRecos(id: Id[User])
 
+# TEMPORARY ROUTE - remove when activity email is live
+POST    /admin/sendActivityEmailToAll    @com.keepit.controllers.admin.AdminUserController.sendActivityEmailToAll()
+
 GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
 
@@ -655,8 +658,8 @@ POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSe
 POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
 
 GET     /admin/explainUriResult        @com.keepit.controllers.admin.AdminSearchController.explainUriResult(query: String, uriId: Id[NormalizedURI], lang: String, debug: Option[String])
-GET     /admin/explainLibraryResult        @com.keepit.controllers.admin.AdminSearchController.explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], doPrefixSearch: Boolean ?= true)
-GET     /admin/explainUserResult        @com.keepit.controllers.admin.AdminSearchController.explainUserResult(query: String, userId: Id[User], debug: Option[String], doPrefixSearch: Boolean ?= true)
+GET     /admin/explainLibraryResult        @com.keepit.controllers.admin.AdminSearchController.explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], disablePrefixSearch: Boolean ?= false)
+GET     /admin/explainUserResult        @com.keepit.controllers.admin.AdminSearchController.explainUserResult(query: String, userId: Id[User], debug: Option[String], disablePrefixSearch: Boolean ?= false)
 
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
 

@@ -118,7 +118,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
           "iconPath" -> "icon/asdf.jpg"
         ))
         val result1 = route(request1).get
-        status(result1) must equalTo(NO_CONTENT)
+        status(result1) must equalTo(OK)
 
         db.readOnlyMaster { implicit s =>
           personaRepo.getByState(PersonaStates.ACTIVE).length === 4
@@ -134,7 +134,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
           "state" -> "inactive"
         ))
         val result2 = route(request2).get
-        status(result2) must equalTo(NO_CONTENT)
+        status(result2) must equalTo(OK)
 
         db.readOnlyMaster { implicit s =>
           personaRepo.getByState(PersonaStates.ACTIVE).length === 3
@@ -147,7 +147,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
           "state" -> "active"
         ))
         val result3 = route(request3).get
-        status(result3) must equalTo(NO_CONTENT)
+        status(result3) must equalTo(OK)
 
         db.readOnlyMaster { implicit s =>
           personaRepo.getByState(PersonaStates.ACTIVE).length === 4
