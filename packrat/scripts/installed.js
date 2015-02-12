@@ -37,7 +37,9 @@
         api.port.emit('import_bookmarks_declined');
         break;
       case 'import_bookmarks':
-        api.port.emit('import_bookmarks', data.libraryId);
+        if (data.libraryId) {
+          api.port.emit('import_bookmarks', data.libraryId);
+        }
         break;
       case 'open_deep_link':
         api.port.emit('open_deep_link', {nUri: data.url, locator: data.locator});
