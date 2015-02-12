@@ -44,8 +44,8 @@ class EmailInviteRecommendationRepoImpl @Inject() (
   def table(tag: Tag) = new EmailInviteRecommendationTable(tag)
   initTable()
 
-  override def deleteCache(emailAccount: EmailInviteRecommendation)(implicit session: RSession): Unit = {}
-  override def invalidateCache(emailAccount: EmailInviteRecommendation)(implicit session: RSession): Unit = {}
+  override def deleteCache(recommendation: EmailInviteRecommendation)(implicit session: RSession): Unit = {}
+  override def invalidateCache(recommendation: EmailInviteRecommendation)(implicit session: RSession): Unit = {}
 
   private val compiledGetByUserAndEmailAccount = Compiled { (userId: Column[Id[User]], emailAccountId: Column[Id[EmailAccount]]) =>
     for (row <- rows if row.userId === userId && row.emailAccountId === emailAccountId) yield row

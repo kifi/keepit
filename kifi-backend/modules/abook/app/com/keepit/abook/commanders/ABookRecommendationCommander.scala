@@ -10,10 +10,9 @@ import scala.concurrent.Future
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.social.{ SocialNetworks, SocialNetworkType }
-import SocialNetworks.{ FACEBOOK, LINKEDIN, EMAIL }
+import SocialNetworks.{ FACEBOOK, LINKEDIN, TWITTER, EMAIL }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
-import scala.inline
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.logging.Logging
 import java.text.Normalizer
@@ -30,6 +29,7 @@ class ABookRecommendationCommander @Inject() (
     friendRecommendationRepo: FriendRecommendationRepo,
     facebookInviteRecommendationRepo: FacebookInviteRecommendationRepo,
     linkedInInviteRecommendationRepo: LinkedInInviteRecommendationRepo,
+    twitterInviteRecommendationRepo: TwitterInviteRecommendationRepo,
     emailInviteRecommendationRepo: EmailInviteRecommendationRepo,
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient,
@@ -57,6 +57,7 @@ class ABookRecommendationCommander @Inject() (
       (irrelevantFriendId, network) match {
         case (Right(socialUserId), FACEBOOK) => facebookInviteRecommendationRepo.recordIrrelevantRecommendation(userId, socialUserId)
         case (Right(socialUserId), LINKEDIN) => linkedInInviteRecommendationRepo.recordIrrelevantRecommendation(userId, socialUserId)
+        case (Right(socialUserId), TWITTER) => twitterInviteRecommendationRepo.recordIrrelevantRecommendation(userId, socialUserId)
         case (Left(emailAddress), EMAIL) =>
           val emailAccount = emailAccountRepo.internByAddress(emailAddress)
           emailInviteRecommendationRepo.recordIrrelevantRecommendation(userId, emailAccount.id.get)
