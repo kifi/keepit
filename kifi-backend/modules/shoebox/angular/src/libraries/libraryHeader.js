@@ -658,7 +658,7 @@ angular.module('kifi')
         var elemLohRight = angular.element('.kf-loh-right');
         var elemLohLinks = elemLohRight.find('.kf-loh-links');
 
-        scope.followButtonMaxTop = platformService.isSupportedMobilePlatform() ? 25 : 15;
+        scope.followButtonMaxTop = platformService.isSupportedMobilePlatform() ? 25 : 14;
 
         scope.followButtonNearlyStuck = function (elem, px, maxNearPx) {
           elemLohLinks.css({bottom: maxNearPx - px, opacity: Math.max(0, 2 * px / maxNearPx - 1)});
