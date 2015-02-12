@@ -184,7 +184,7 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
           }
         }
 
-        val senderF = sender()
+        val senderF = sender(None)
         Await.ready(senderF, Duration(5, "seconds"))
 
         val email1 :: email2 :: Nil = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)

@@ -876,9 +876,14 @@ class AdminUserController @Inject() (
   }
 
   // TODO(josh) remove when this goes live
-  def sendActivityEmailToAll() = AdminUserPage { implicit request =>
-    activityEmailSender()
-    NoContent
+  def sendActivityEmailToAll() = AdminUserPage(parse.tolerantJson) { implicit request =>
+    val toEmail = (request.request.body \ "overrideToEmail").asOpt[EmailAddress]
+    if (toEmail.isDefined) {
+      activityEmailSender(toEmail)
+      NoContent
+    } else {
+      BadRequest("json body with 'overrideToEmail' field required")
+    }
   }
 
   def sendEmail(toUserId: Id[User], code: String) = AdminUserPage { implicit request =>
