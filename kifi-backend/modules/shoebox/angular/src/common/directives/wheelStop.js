@@ -32,14 +32,12 @@ angular.module('kifi')
             } else {
               event.originalEvent.kfAllow = true;
             }
-          } else {
-            if (scrollTop + delta < 0) {
-              if (scrollTop > 0) {
-                this.scrollTop = 0;
-              }
-            } else {
-              event.originalEvent.kfAllow = true;
+          } else if (scrollTop + delta < 0) {
+            if (scrollTop > 0) {
+              this.scrollTop = 0;
             }
+          } else {
+            event.originalEvent.kfAllow = true;
           }
         }
       });
