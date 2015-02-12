@@ -321,7 +321,7 @@ kifi.form = (function () {
     $('.form-error').remove();
     var $email = $form.find('.social-email');
     var email = kifi.form.validateEmailAddress($email);
-    var password = Math.random().toString(36).substring(8);
+    var password = Math.random().toString(36).substring(2);
 
     if (email) {
       Tracker.trackClick($form.find('button')[0]);
