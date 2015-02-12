@@ -132,7 +132,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
   val maxKeepImagesPerLibraryReco: Int = 4
 
   def apply(sendTo: Set[Id[User]], overrideToEmail: Option[EmailAddress] = None): Future[Seq[Option[ElectronicMail]]] = {
-    val emailsF = sendTo.toSeq.map(id => prepareEmailForUser(id, overrideToEmail)).map { f =>
+    val orderedUserIds = sendTo.toSeq.sortBy(_.id)
+    val emailsF = orderedUserIds.map(id => prepareEmailForUser(id, overrideToEmail)).map { f =>
       // transforms Future[Option[Future[_]]] into Future[Option[_]]
       val f2 = f map { _.map(emailTemplateSender.send) } map { _.map(_.map(Some.apply)).getOrElse(Future.successful(None)) }
       f2 flatMap identity
@@ -144,8 +145,13 @@ class ActivityFeedEmailSenderImpl @Inject() (
     apply(usersToSendEmailTo(), overrideToEmail) map (_ => Unit)
   }
 
-  def usersToSendEmailTo(): Set[Id[User]] = {
-    experimentCommander.getUserIdsByExperiment(ExperimentType.ACTIVITY_EMAIL)
+  def usersToSendEmailTo(): Set[Id[User]] = db.readOnlyReplica { implicit session =>
+    // TODO paginate instead of grabbing all user IDs at once
+    val userIds = userRepo.getAllIds()
+
+    // TODO remove this filter when we have library recos for users w/o keeps
+    // 5 is the min number of keeps required in curator for a user to get precomputed lib recos
+    keepRepo.getCountByUsers(userIds).filter(_._2 >= 5).keySet
   }
 
   def prepareEmailForUser(toUserId: Id[User], overrideToEmail: Option[EmailAddress] = None): Future[Option[EmailToSend]] = new SafeFuture(reactiveLock.withLockFuture {
