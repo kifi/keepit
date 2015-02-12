@@ -54,7 +54,7 @@ class LoggingFilter() extends EssentialFilter {
     val remoteIsLeader = rh.headers.get(CommonHeaders.IsLeader).getOrElse(null)
     val remoteServiceType = rh.headers.get(CommonHeaders.LocalServiceType).getOrElse(null)
     //report headers and query string only if there was an error (4xx or 5xx)
-    val duration: Long = if (result.header.status / 100 >= 3) {
+    val duration: Long = if (result.header.status / 100 >= 4) {
       val requestBody = rh match {
         case r: Request[_] => r.body.toString.abbreviate(512)
         case _ => null
