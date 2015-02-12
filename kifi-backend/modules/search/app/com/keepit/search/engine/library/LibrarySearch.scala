@@ -35,9 +35,9 @@ class LibrarySearch(
   def execute(): LibraryShardResult = {
 
     val ((myHits, friendsHits, othersHits), explanation) = executeTextSearch()
-    debugLog(s"myHits: ${myHits.totalHits}")
-    debugLog(s"friendsHits: ${friendsHits.totalHits}")
-    debugLog(s"othersHits: ${othersHits.totalHits}")
+    debugLog(s"myHits: ${myHits.size()}/${myHits.totalHits}")
+    debugLog(s"friendsHits: ${friendsHits.size()}/${friendsHits.totalHits}")
+    debugLog(s"othersHits: ${othersHits.size()}/${othersHits.totalHits}")
 
     val libraryShardResult = LibrarySearch.merge(myHits, friendsHits, othersHits, numHitsToReturn, filter, config, explanation)(keepId => KeepRecord.retrieve(keepSearcher, keepId).get)
     debugLog(s"libraryShardResult: ${libraryShardResult.hits.map(_.id).mkString(",")}")
@@ -70,7 +70,9 @@ class LibrarySearch(
 
     if (debugFlags != 0) {
       engine.debug(this)
+      userScoreSource.debug(this)
       keepScoreSource.debug(this)
+      libraryScoreSource.debug(this)
     }
 
     engine.execute(collector, userScoreSource, keepScoreSource, libraryScoreSource)

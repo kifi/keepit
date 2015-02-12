@@ -5,6 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
+import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 
@@ -24,6 +25,7 @@ class UserPersonaCommanderImpl @Inject() (
     personaRepo: PersonaRepo,
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
+    curator: CuratorServiceClient,
     clock: Clock) extends UserPersonaCommander with Logging {
 
   def addPersonaForUser(userId: Id[User], persona: PersonaName)(implicit context: HeimdalContext): (Option[Persona], Option[Library]) = {
@@ -50,6 +52,8 @@ class UserPersonaCommanderImpl @Inject() (
           }
       }
     }
+
+    curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct)
 
     // create libraries based on added personas
     personasToPersist.map {

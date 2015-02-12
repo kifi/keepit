@@ -136,10 +136,10 @@ final class UserVisibilityEvaluator(
     myUserId: Long,
     myFriendIds: LongArraySet) {
 
-  def apply(docId: Int, userId: Long): Int = {
-    if (userId == myUserId) {
+  def apply(profileOwnerId: Long): Int = {
+    if (profileOwnerId == myUserId) {
       Visibility.OWNER // myself
-    } else if (myFriendIds.findIndex(userId) >= 0) {
+    } else if (myFriendIds.findIndex(profileOwnerId) >= 0) {
       Visibility.NETWORK // a friend
     } else
       Visibility.OTHERS // someone else

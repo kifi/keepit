@@ -34,7 +34,7 @@ case class DevOAuth1ConfigurationModule() extends OAuth1ConfigurationModule {
   @Provides
   @Singleton
   def getOAuth1Configuration(): OAuth1Configuration = {
-    val providerMap = Map(TWTR -> twtrConfigBuilder(ConsumerKey("cwXfTNd8iiKbWtXtszz9ADNmQ", "sO2GthBWUMhNG7WYp0gyBq4yLpSzVlJkdVPjfaxhTEe92ZfPS1")))
+    val providerMap = Map(TWTR -> twtrConfigBuilder(ConsumerKey("cwXfTNd8iiKbWtXtszz9ADNmQ", "sO2GthBWUMhNG7WYp0gyBq4yLpSzVlJkdVPjfaxhTEe92ZfPS1"), ConsumerKey("17148682-0x4Qq6BU5GcX8NNmdDgpEPgbUORz0aRIwqPnynlTA", "8C3NU8zmy0FgHy9Ga7X8Xay2Yp1uB1EhQnpGsZ9ODa8vq")))
     OAuth1Configuration(providerMap)
   }
 }
@@ -48,7 +48,7 @@ case class ProdOAuth1ConfigurationModule() extends OAuth1ConfigurationModule {
   @Provides
   @Singleton
   def getOAuth1Configuration(): OAuth1Configuration = {
-    val providerMap = Map(TWTR -> twtrConfigBuilder(ConsumerKey("9H4GYkjvd2nOsw2MqE8soWlQa", "cJN6wXEp7DAsTJXyS3LaWQcWOKLNlNIhFK2ajMcke7OOGe9njR")))
+    val providerMap = Map(TWTR -> twtrConfigBuilder(ConsumerKey("9H4GYkjvd2nOsw2MqE8soWlQa", "cJN6wXEp7DAsTJXyS3LaWQcWOKLNlNIhFK2ajMcke7OOGe9njR"), ConsumerKey("17148682-kfWlx2yOgfFyQW0dvClWeNjdq806aJOW3cDH5FGyz", "tDPV7HnprgtZpQM8NnA2zTMrIJuJ6dJhwniY4XJetGp2X")))
     OAuth1Configuration(providerMap)
   }
 }

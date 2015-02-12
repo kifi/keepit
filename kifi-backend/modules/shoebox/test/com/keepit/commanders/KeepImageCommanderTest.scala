@@ -3,15 +3,19 @@ package com.keepit.commanders
 import java.io.File
 
 import com.google.inject.Injector
+import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.store.{ FakeKeepImageStore, ImageSize, KeepImageStore, S3ImageConfig }
+import com.keepit.common.net.{ FakeWebService, WebService }
+import com.keepit.common.store.{ FakeKeepImageStore, FakeShoeboxStoreModule, ImageSize, KeepImageStore, S3ImageConfig }
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model._
-import com.keepit.test.ShoeboxTestInjector
+import com.keepit.test.{ FakeWebServiceModule, ShoeboxTestInjector }
 import org.apache.commons.io.FileUtils
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.ws.WSResponseHeaders
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -20,7 +24,10 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
   val logger = log
 
-  def modules = Seq()
+  def modules = Seq(
+    FakeShoeboxStoreModule(),
+    FakeWebServiceModule()
+  )
 
   def fakeFile1 = {
     val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
@@ -166,6 +173,68 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         }
 
         true === true
+      }
+    }
+
+    "patiently create missing image sizes" in {
+      withDb(modules: _*) { implicit injector =>
+        val kiRepo = inject[KeepImageRepo]
+
+        val ws = inject[WebService].asInstanceOf[FakeWebService]
+        ws.setGlobalStreamResponse { url =>
+          val headers = new WSResponseHeaders {
+            override def status: Int = 200
+            override def headers: Map[String, Seq[String]] = Map("Content-Type" -> Seq("image/png"))
+          }
+          val content: Array[Byte] = FileUtils.readFileToByteArray(fakeFile2.file)
+          (headers, Enumerator(content))
+        }
+
+        val commander = inject[KeepImageCommander]
+        val (user, lib, uri, keep1, _) = setup()
+        val keepId = keep1.id.get
+
+        {
+          val savedF = commander.setKeepImageFromFile(fakeFile2, keepId, ImageSource.UserUpload)
+          val saved = Await.result(savedF, Duration("10 seconds"))
+          saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(400, 482), 73259)
+
+          db.readWrite { implicit rw =>
+            val images = kiRepo.getForKeepId(keepId)
+            images.size === 4
+
+            val croppedKeepImage = images.find(_.kind == ProcessImageOperation.Crop).get
+            // pretend like this keep image was never created
+            kiRepo.save(croppedKeepImage.copy(state = KeepImageStates.INACTIVE, keepId = Id[Keep](424242)))
+          }
+        }
+
+        {
+          val keepImagesF = commander.getBestImagesForKeepsPatiently(Set(keepId), CropImageRequest(150, 150))
+          val keepImages = Await.result(keepImagesF, Duration("10 seconds"))
+
+          val keepImage = keepImages(keepId).get
+          keepImage.width === 150
+          keepImage.height === 150
+          keepImage.kind === ProcessImageOperation.Crop
+        }
+
+        // 2 scaled, 1 cropped, 1 original
+        db.readOnlyMaster { implicit s => kiRepo.getForKeepId(keepId).size === 4 }
+
+        // let's make sure this still works for the original image versions
+        {
+          val keepImagesF = commander.getBestImagesForKeepsPatiently(Set(keepId), ScaleImageRequest(300, 300))
+          val keepImage = Await.result(keepImagesF, Duration("10 seconds"))(keepId).get
+          keepImage.width === 332
+          keepImage.height === 400
+          keepImage.kind === ProcessImageOperation.Scale
+        }
+        {
+          val keepImagesF = commander.getBestImagesForKeepsPatiently(Set(keepId), ScaleImageRequest(500, 500))
+          val keepImages = Await.result(keepImagesF, Duration("10 seconds"))
+          keepImages(keepId).get.isOriginal must beTrue
+        }
       }
     }
   }

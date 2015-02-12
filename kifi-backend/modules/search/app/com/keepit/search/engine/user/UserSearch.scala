@@ -35,8 +35,8 @@ class UserSearch(
   def execute(): UserShardResult = {
 
     val ((myHits, othersHits), explanation) = executeTextSearch()
-    debugLog(s"myHits: ${myHits.totalHits}")
-    debugLog(s"othersHits: ${othersHits.totalHits}")
+    debugLog(s"myHits: ${myHits.size()}/${myHits.totalHits}")
+    debugLog(s"othersHits: ${othersHits.size()}/${othersHits.totalHits}")
 
     val userShardResult = UserSearch.merge(myHits, othersHits, numHitsToReturn, filter, config, explanation)
     debugLog(s"userShardResult: ${userShardResult.hits.map(_.id).mkString(",")}")
@@ -52,7 +52,7 @@ class UserSearch(
   private def executeTextSearch(): ((HitQueue, HitQueue), Option[UserSearchExplanation]) = {
 
     val engine = engineBuilder.build()
-    debugLog("library search engine created")
+    debugLog("user search engine created")
 
     val explanation = explain.map {
       case (libraryId, firstLang, secondLang) =>
@@ -69,7 +69,9 @@ class UserSearch(
 
     if (debugFlags != 0) {
       engine.debug(this)
+      userScoreSource.debug(this)
       keepScoreSource.debug(this)
+      libraryScoreSource.debug(this)
     }
 
     engine.execute(collector, userScoreSource, keepScoreSource, libraryScoreSource)
@@ -83,12 +85,8 @@ class UserSearch(
 
 object UserSearch extends Logging {
   def merge(myHits: HitQueue, othersHits: HitQueue, maxHits: Int, filter: SearchFilter, config: SearchConfig, explanation: Option[UserSearchExplanation]): UserShardResult = {
-
     val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
     val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-    val minMyLibraries = config.asInt("minMyFriends")
-
-    val isInitialSearch = filter.idFilter.isEmpty
 
     val hits = UriSearch.createQueue(maxHits)
 

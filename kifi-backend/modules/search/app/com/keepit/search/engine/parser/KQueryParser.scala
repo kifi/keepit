@@ -17,7 +17,7 @@ class KQueryParser(
     stemmingAnalyzer: Analyzer,
     altAnalyzer: Option[Analyzer],
     altStemmingAnalyzer: Option[Analyzer],
-    doPrefixSearch: Boolean,
+    disablePrefixSearch: Boolean,
     config: SearchConfig,
     phraseDetector: PhraseDetector,
     phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]]) { qp =>
@@ -27,7 +27,7 @@ class KQueryParser(
     override val altStemmingAnalyzer = qp.altStemmingAnalyzer
     override val siteBoost = config.asFloat("siteBoost")
     override val concatBoost = config.asFloat("concatBoost")
-    override val prefixBoost = if (doPrefixSearch) config.asFloat("prefixBoost") else 0.0f
+    override val prefixBoost = if (disablePrefixSearch) 0.0f else config.asFloat("prefixBoost")
     override val lang: Lang = qp.analyzer.lang
   }
 

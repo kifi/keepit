@@ -20,6 +20,7 @@ trait LDARelatedLibraryCommander {
   type AdjacencyList = Seq[(Id[Library], Float)]
 
   def update(version: ModelVersion[DenseLDA]): Unit
+  def cleanFewKeepsLibraries(version: ModelVersion[DenseLDA], readOnly: Boolean): Unit
   protected def computeEdgeWeight(source: LibraryLDATopic, dest: LibraryLDATopic): Float
   protected def computeFullAdjacencyList(source: LibraryLDATopic, libs: Seq[LibraryLDATopic]): AdjacencyList
   protected def sparsify(adjacencyList: AdjacencyList, topK: Int, minWeight: Float): AdjacencyList
@@ -51,6 +52,25 @@ class LDARelatedLibraryCommanderImpl @Inject() (
     }
 
     log.info(s"finished updating LDA related library graph for version ${version.version}. total edges number = ${edgeCnt}")
+  }
+
+  def cleanFewKeepsLibraries(version: ModelVersion[DenseLDA], readOnly: Boolean): Unit = {
+    val thresh = 2
+    val libs = db.readOnlyReplica { implicit s => libTopicRepo.all() }
+      .filter(x => x.numOfEvidence < thresh && x.version == version && x.state == LDARelatedLibraryStates.ACTIVE)
+      .map { _.libraryId } // admin operation. not optimized for performance.
+
+    log.info(s"found ${libs.size} small libraries to clean, threshold is $thresh. A few examples: ${libs.take(10).mkString(", ")}")
+    if (!readOnly) {
+      log.info("relate library graph clean up in progress ...")
+      libs.foreach { lib =>
+        db.readWrite { implicit s =>
+          val edges = relatedLibRepo.getRelatedLibraries(lib, version, excludeState = Some(LDARelatedLibraryStates.INACTIVE))
+          edges.foreach { e => relatedLibRepo.save(e.copy(state = LDARelatedLibraryStates.INACTIVE)) }
+        }
+      }
+      log.info("relate library graph clean up is done.")
+    }
   }
 
   def computeEdgeWeight(source: LibraryLDATopic, dest: LibraryLDATopic): Float = {

@@ -596,7 +596,7 @@ class UserController @Inject() (
       case Some(profile) =>
         val (numLibraries, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
 
-        val json = Json.toJson(profile.basicUserWithFriendStatus).asInstanceOf[JsObject] ++ Json.obj(
+        val json = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject] ++ Json.obj(
           "numLibraries" -> numLibraries,
           "numKeeps" -> profile.numKeeps
         )
