@@ -294,135 +294,135 @@ cover-image-adjust-right = 24px
 .kf-lh-card
   invite-banner-orange = #ff7c3c
 
-  .kf-lh-invite-banner
-    border-bottom-right-radius: 10px
-    border-bottom-left-radius: 10px
-    padding: 10px 32px
-    max-height: 200px
-    background-color: invite-banner-orange
-    opacity: 1
+.kf-lh-invite-banner
+  border-bottom-right-radius: 10px
+  border-bottom-left-radius: 10px
+  padding: 10px 32px
+  max-height: 200px
+  background-color: invite-banner-orange
+  opacity: 1
 
-    &.ng-hide
-      transition: opacity .4s, max-height .4s .4s
-      max-height: 0
-      opacity: 0
+  &.ng-hide
+    transition: opacity .4s, max-height .4s .4s
+    max-height: 0
+    opacity: 0
 
-  .kf-lh-invite-banner-info
-    font-size: 13px
+.kf-lh-invite-banner-info
+  font-size: 13px
+  color: #fff
+  line-height: 25px
+
+.kf-lh-invite-banner-button
+  float: right
+  margin-left: 10px
+  border: 1px solid #fff
+  border-radius: 5px
+  padding: 5px 15px
+  font-size: 11px
+
+  &.kf-lh-invite-banner-accept
+    background: #fff
+    color: invite-banner-orange
+
+  &.kf-lh-invite-banner-ignore
+    background: invite-banner-orange
     color: #fff
-    line-height: 25px
 
-  .kf-lh-invite-banner-button
-    float: right
-    margin-left: 10px
-    border: 1px solid #fff
-    border-radius: 5px
-    padding: 5px 15px
+.kf-lh-name
+  padding-top: 28px
+  padding-bottom: 19px
+  font: bold 42px/1.23em Merriweather, Lato, Helvetica, Arial, sans-serif
+  text-align: center
+  word-break: break-word
+
+.kf-lh-info
+  margin-top: 16px
+  color: kifiBlack
+  vertical-align: top
+
+.kf-lh-owner
+  position: relative
+  padding-bottom: 10px
+  padding-top: 5px
+
+.kf-lh-owner-image
+  display: inline-block
+  margin-right: 10px
+  border-radius: 50%
+  width: 42px
+  height: 42px
+
+.kf-lh-owner-text
+  display: inline-block
+  font-size: 14px
+  line-height: 1.3em
+  vertical-align: middle
+
+.kf-lh-owner-name
+  color: #939393
+
+.kf-lh-desc-wrap
+  padding-bottom: 5px
+
+  .kf-lh-desc-more
     font-size: 11px
 
-    &.kf-lh-invite-banner-accept
-      background: #fff
-      color: invite-banner-orange
+.kf-lh-desc
+  line-height: 23px
 
-    &.kf-lh-invite-banner-ignore
-      background: invite-banner-orange
-      color: #fff
+.kf-lh-stats-line
+  display: table
+  width: 100%
+  height: 72px
+  border-top: 1px solid #dadae2
 
-  .kf-lh-name
-    padding-top: 28px
-    padding-bottom: 19px
-    font: bold 42px/1.23em Merriweather, Lato, Helvetica, Arial, sans-serif
-    text-align: center
-    word-break: break-word
+.kf-lh-stats
+  display: table-cell
+  vertical-align: top
+  padding-top: 15px
+  width: 1%
+  white-space: nowrap
 
-  .kf-lh-info
-    margin-top: 16px
-    color: kifiBlack
-    vertical-align: top
+.kf-lh-stat
+  display: inline-block
+  padding: 0 20px 0 5px
+  font-size: 12px
 
-  .kf-lh-owner
-    position: relative
-    padding-bottom: 10px
-    padding-top: 5px
+a.kf-lh-stat
+  color: inherit
+  font-smoothing: inherit
 
-  .kf-lh-owner-image
-    display: inline-block
-    margin-right: 10px
-    border-radius: 50%
-    width: 42px
-    height: 42px
+  &:hover
+    .kf-lh-stat-val
+      text-decoration: underline
 
-  .kf-lh-owner-text
-    display: inline-block
-    font-size: 14px
-    line-height: 1.3em
-    vertical-align: middle
+.kf-lh-stat-name
+.kf-lh-stat-val
+  display: block
 
-  .kf-lh-owner-name
-    color: #939393
+.kf-lh-stat-name
+  color: textDarkGrey
+  text-transform: uppercase
 
-  .kf-lh-desc-wrap
-    padding-bottom: 5px
+.kf-lh-stat-val
+  padding-top: 3px
+  font-size: 16px
+  font-weight: bold
+  text-align: center
 
-    .kf-lh-desc-more
-      font-size: 11px
+.kf-lh-stats-line>.kf-lfp
+  display: table-cell
+  width: 99%
+  vertical-align: middle
 
-  .kf-lh-desc
-    line-height: 23px
+.kf-lh-buttons
+  border-top: 2px solid #f5f5f5
+  padding: 15px 0
+  line-height: 37px
+  font-size: 0
 
-  .kf-lh-stats-line
-    display: table
-    width: 100%
-    height: 72px
-    border-top: 1px solid #dadae2
-
-  .kf-lh-stats
-    display: table-cell
-    vertical-align: top
-    padding-top: 15px
-    width: 1%
-    white-space: nowrap
-
-  .kf-lh-stat
-    display: inline-block
-    padding: 0 20px 0 5px
-    font-size: 12px
-
-  a.kf-lh-stat
-    color: inherit
-    font-smoothing: inherit
-
-    &:hover
-      .kf-lh-stat-val
-        text-decoration: underline
-
-  .kf-lh-stat-name
-  .kf-lh-stat-val
-    display: block
-
-  .kf-lh-stat-name
-    color: textDarkGrey
-    text-transform: uppercase
-
-  .kf-lh-stat-val
-    padding-top: 3px
-    font-size: 16px
-    font-weight: bold
-    text-align: center
-
-  .kf-lfp
-    display: table-cell
-    width: 99%
-    vertical-align: middle
-
-  .kf-lh-buttons
-    border-top: 2px solid #f5f5f5
-    padding: 15px 0
-    line-height: 37px
-    font-size: 0
-
-    .kf-button:not(:last-child):not(.library-share-contact-button)
-      margin-right: 15px
+  .kf-button:not(:last-child):not(.library-share-contact-button)
+    margin-right: 15px
 
   .kf-logged-out & .kf-lh-share-external
     background: #5b6273
