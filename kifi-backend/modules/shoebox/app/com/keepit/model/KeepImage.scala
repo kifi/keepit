@@ -1,6 +1,7 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ States, State, Model, Id }
+import com.keepit.commanders.{ CropImageRequest, ProcessImageRequest, ScaleImageRequest }
+import com.keepit.common.db.{ Id, Model, State, States }
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import org.joda.time.DateTime
@@ -24,6 +25,15 @@ case class KeepImage(
   def dimensions = ImageSize(width, height)
   def withId(id: Id[KeepImage]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
+}
+
+object KeepImage {
+  val label = "keep"
+  import com.keepit.model.ProcessImageOperation._
+  def toProcessImageRequest(keepImage: KeepImage): ProcessImageRequest = keepImage.kind match {
+    case Crop => CropImageRequest(keepImage.dimensions)
+    case ki => ScaleImageRequest(keepImage.dimensions)
+  }
 }
 
 object KeepImageStates extends States[KeepImage]

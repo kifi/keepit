@@ -7,7 +7,6 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
 import com.keepit.model._
-import com.keepit.scraper.ScrapeScheduler
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
@@ -38,7 +37,6 @@ private class RawKeepImporterActor @Inject() (
     libraryRepo: LibraryRepo,
     airbrake: AirbrakeNotifier,
     urlRepo: URLRepo,
-    scraper: ScrapeScheduler,
     libraryAnalytics: LibraryAnalytics,
     collectionRepo: CollectionRepo,
     kifiInstallationRepo: KifiInstallationRepo,

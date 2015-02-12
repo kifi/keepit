@@ -41,6 +41,7 @@ POST    /internal/cortex/lda/userLibrariesScores                                
 GET     /internal/cortex/lda/dumpFeature                                            @com.keepit.controllers.cortex.LDAController.dumpFeature(dataType: String, id: Long, version: Option[Int] ?= None)
 GET     /internal/cortex/lda/similarURIs                                            @com.keepit.controllers.cortex.LDAController.getSimilarURIs(uriId: Id[NormalizedURI], version: Option[Int] ?= None)
 GET     /internal/cortex/lda/similarLibraries                                       @com.keepit.controllers.cortex.LDAController.getSimilarLibraries(libId: Id[Library], limit: Int, version: Option[Int] ?= None)
+POST    /internal/cortex/lda/cleanRelatedLibraries                                  @com.keepit.controllers.cortex.LDAController.cleanRelatedLibraries(version: Int, readOnly: Boolean ?= true)
 POST    /internal/cortex/lda/uploadPMIScores                                        @com.keepit.controllers.cortex.LDAController.uploadPMIScores(version: ModelVersion[DenseLDA])
 GET     /internal/cortex/lda/getExistingPersonaFeature                              @com.keepit.controllers.cortex.LDAController.getExistingPersonaFeature(personaId: Id[Persona], version: ModelVersion[DenseLDA])
 POST    /internal/cortex/lda/generatePersonaFeature                                 @com.keepit.controllers.cortex.LDAController.generatePersonaFeature(version: ModelVersion[DenseLDA])

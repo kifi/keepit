@@ -165,21 +165,6 @@ kifi.form = (function () {
     return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
   }
 
-  // todo (aaron): remove below for twitter launch
-  // if twitter is a url query param
-  if (getParameterByName('twitter')) {
-    // do not show linkedIn on signup
-    var linkedInButtons = $('.form-network.linkedin.signup');
-    for (var i=0; i < linkedInButtons.length; i++) {
-      linkedInButtons.eq(i).hide();
-    }
-    // and show twitter
-    var twitterButtons = $('.form-network.twitter');
-    for (var i=0; i < twitterButtons.length; i++) {
-      twitterButtons.eq(i).css('display','table');
-    }
-  }
-
   var animateButton = function (button) {
     var $button = $(button);
     var $progress = $button.find('.progress');
