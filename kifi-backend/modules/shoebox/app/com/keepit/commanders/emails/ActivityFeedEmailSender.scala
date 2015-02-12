@@ -12,7 +12,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailToSend, TemplateOptions }
-import com.keepit.common.mail.{ ElectronicMail, SystemEmailAddress }
+import com.keepit.common.mail.{ EmailAddress, ElectronicMail, SystemEmailAddress }
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.time._
@@ -48,7 +48,7 @@ case class LibraryInfoFollowersView(view: LibraryInfoView, followers: Seq[Id[Use
     if (otherFollowersCount == 0) followerNamesToShow
     else followerNamesToShow :+ Left(otherFollowersCount)
   }
-  val followerImagesToShow = followers take 9
+  val followerImagesToShow = followers take 6
 }
 
 case class BaseLibraryInfoView(libraryId: Id[Library], libInfo: FullLibraryInfo) extends LibraryInfoView
@@ -82,8 +82,8 @@ case class ActivityEmailData(
 
 @ImplementedBy(classOf[ActivityFeedEmailSenderImpl])
 trait ActivityFeedEmailSender {
-  def apply(sendTo: Set[Id[User]]): Future[Seq[Option[ElectronicMail]]]
-  def apply(): Future[Unit]
+  def apply(sendTo: Set[Id[User]], overrideToEmail: Option[EmailAddress] = None): Future[Seq[Option[ElectronicMail]]]
+  def apply(overrideToEmail: Option[EmailAddress]): Future[Unit]
 }
 
 class ActivityFeedEmailComponents @Inject() (
@@ -125,15 +125,13 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
   val maxActivityComponents = 5
 
-  val maxFollowerImagesToShow = 6
-
   val maxOthersFollowedYourLibrary = 1
 
   // library recommendations to fetch from curator (doesn't mean they will all be used)
   val libRecosToFetch = 20
 
-  def apply(sendTo: Set[Id[User]]): Future[Seq[Option[ElectronicMail]]] = {
-    val emailsF = sendTo.toSeq.map(prepareEmailForUser).map { f =>
+  def apply(sendTo: Set[Id[User]], overrideToEmail: Option[EmailAddress] = None): Future[Seq[Option[ElectronicMail]]] = {
+    val emailsF = sendTo.toSeq.map(id => prepareEmailForUser(id, overrideToEmail)).map { f =>
       // transforms Future[Option[Future[_]]] into Future[Option[_]]
       val f2 = f map { _.map(emailTemplateSender.send) } map { _.map(_.map(Some.apply)).getOrElse(Future.successful(None)) }
       f2 flatMap identity
@@ -141,15 +139,15 @@ class ActivityFeedEmailSenderImpl @Inject() (
     Future.sequence(emailsF)
   }
 
-  def apply(): Future[Unit] = {
-    apply(usersToSendEmailTo()) map (_ => Unit)
+  def apply(overrideToEmail: Option[EmailAddress]): Future[Unit] = {
+    apply(usersToSendEmailTo(), overrideToEmail) map (_ => Unit)
   }
 
   def usersToSendEmailTo(): Set[Id[User]] = {
     experimentCommander.getUserIdsByExperiment(ExperimentType.ACTIVITY_EMAIL)
   }
 
-  def prepareEmailForUser(toUserId: Id[User]): Future[Option[EmailToSend]] = new SafeFuture(reactiveLock.withLockFuture {
+  def prepareEmailForUser(toUserId: Id[User], overrideToEmail: Option[EmailAddress] = None): Future[Option[EmailToSend]] = new SafeFuture(reactiveLock.withLockFuture {
     val previouslySentEmails = db.readOnlyReplica { implicit s => activityEmailRepo.getLatestToUser(toUserId) }
 
     val friends = db.readOnlyReplica { implicit session =>
@@ -203,7 +201,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
           log.info(s"[activityEmail] userId=$toUserId libRecosAtBottom $libRecosAtBottom")
 
           // do not send email without at least 2 activities and 2 lib recos (might look too empty)
-          if (libRecosAtBottom.size < 2 && activityComponents.size < 2) None
+          if (libRecosAtBottom.size < 2 || activityComponents.size < 2) None
           else {
             val activityData = ActivityEmailData(
               userId = toUserId,
@@ -224,13 +222,13 @@ class ActivityFeedEmailSenderImpl @Inject() (
               ))
             }
 
+            val toDest: Either[Id[User], EmailAddress] = overrideToEmail.map(Right.apply).getOrElse(Left(toUserId))
             val htmlBody = views.html.email.v3.activityFeed(activityData)
             // trim whitespace at the beginning of each line
             val trimmedHtml = Html(htmlBody.body.trim().replaceAll("(?m)^\\s+", ""))
             Some(EmailToSend(
               from = SystemEmailAddress.NOTIFICATIONS,
-              //              to = Left(toUserId),
-              to = Right(SystemEmailAddress.FEED_QA),
+              to = toDest,
               subject = "Kifi Activity",
               htmlTemplate = trimmedHtml,
               category = NotificationCategory.User.ACTIVITY,

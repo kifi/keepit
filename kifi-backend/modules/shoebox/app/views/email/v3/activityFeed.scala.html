@@ -279,7 +279,7 @@
                                 </tr>
                                 @trSpacer(12)
                                 <tr>
-                                  <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:18px;line-height:20px;color:#ffffff;">Your Kifi updates</td>
+                                  <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:18px;line-height:20px;color:#ffffff;">Things you should know</td>
                                 </tr>
                                 @trSpacer(25)
                               </table>
@@ -333,7 +333,7 @@
                                                               <tr>
                                                                 <td align="center" valign="top">
                                                                   <a href="@iOsAppStoreUrl" target="_blank" style="font-size:18px;text-decoration:none;color:#62BE73;"> iOS </a>
-                                                                  &middot;
+                                                                  <span style="font-size:18px;">&middot;</span>
                                                                   <a href="@androidAppStoreUrl" target="_blank" style="font-size:18px;text-decoration:none;color:#62BE73;"> Android </a>
                                                                 </td>
                                                               </tr>
@@ -356,7 +356,7 @@
                                 <tr>
                                   <td height="1" bgcolor="#eaeaea" style="font-size:1px; line-height:1px;">&nbsp;</td>
                                 </tr>
-                                @if(activityData.libraryRecos.size > 0) {
+                                @if(activityData.libraryRecos.nonEmpty) {
                                 <tr>
                                   <td align="left" valign="top">
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
@@ -365,7 +365,7 @@
                                           <table width="100%" border="0" cellspacing="0" cellpadding="0">
                                             @trSpacer(28)
                                             <tr>
-                                              <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Relevant libraries to follow</td>
+                                              <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Relevant libraries you should follow</td>
                                             </tr>
                                             @activityData.libraryRecos.map { lib =>
                                             @activityFeedLibRecoPartial(lib)
@@ -387,7 +387,7 @@
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0">
                                       @trSpacer(28)
                                       <tr>
-                                        <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Things to take care of</td>
+                                        <td class="title" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:19px;line-height:22px;color:#a7adb3;">Things you should take care of</td>
                                       </tr>
                                       <tr>
                                         <td align="left" valign="top">
@@ -472,7 +472,7 @@
                                     <span class="hide">|</span>
                                     <span class="br1"></span><a href="@kifiFacebookUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Facebook</a> |
                                     <a href="@kifiTwitterUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Twitter</a><br/>
-                                    <a href="@unsubscribeUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Unsubscribe</a> from updates like this<br/>
+                                    <a href="@unsubscribeUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Unsubscribe from updates like this</a><br/>
                                     Kifi 709 N Shoreline Blvd,<span class="br1"></span> Mountain View, CA 94043, USA.
                                     <br/>&copy; 2015 FortyTwo
                                   </td>
