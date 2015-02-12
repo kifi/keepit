@@ -96,13 +96,12 @@
     padding-top: 3px
 
 .kf-nav-lib-separator
-  position: relative
-  top: 0px
   padding: 6px 0
   line-height: 28px
   width: 252px
   background-color: #fff
-  z-index: 3
+  position: relative  // avoids a Chrome repaint bug
+  z-index: 3  // for when stuck to top
 
 .kf-nav-lib-separator-title
   border-radius: 4px
@@ -181,15 +180,14 @@
 
 .kf-scrollable-libs
   position: relative
-  width: calc(100% + 15px)
   height: calc(100% - 160px)
+  overflow: hidden  // for antiscroll
 
-  // This is a hack to hide the scrollbar
-  // (cf. comments in scrollbar.js)
-  overflow: hidden
-  .antiscroll-inner
-    .kf-nav-lib-users
-      width: calc(100%)
+  &>.antiscroll-scrollbar
+    z-index: 3
+
+.kf-nav-lib-users
+  box-sizing: border-box  // for antiscroll
 
 ////////////////////////////////////
 ////// Library Filtering Box ///////

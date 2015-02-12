@@ -6,7 +6,7 @@ angular.module('kifi')
   function ($compile, $rootScope, $templateCache, $timeout) {
     var modals = [];
 
-    function open (opts) {
+    function open(opts) {
       opts = opts || {};
 
       var template = opts.template;
@@ -31,7 +31,7 @@ angular.module('kifi')
       return scope;
     }
 
-    function close () {
+    function close() {
       var ref = modals.pop();
       if (ref && ref.length > 0 && ref[0].length) {
         var $modal = ref[0];
@@ -43,7 +43,7 @@ angular.module('kifi')
       }
     }
 
-    function openGenericErrorModal (opts) {
+    function openGenericErrorModal(opts) {
       opts = opts || {};
       opts.template = 'common/modal/genericErrorModal.tpl.html';
       open(opts);

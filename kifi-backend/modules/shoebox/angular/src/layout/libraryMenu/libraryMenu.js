@@ -11,7 +11,7 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       templateUrl: 'layout/libraryMenu/libraryMenu.tpl.html',
-      link: function (scope , element /*, attrs*/) {
+      link: function (scope, element) {
         //
         // Internal data.
         //
@@ -54,7 +54,7 @@ angular.module('kifi')
         }
 
         function setMenuHeight() {
-          var menuHeight = getElement('.kf-nav-lib-users').outerHeight() + 230;
+          var menuHeight = getElement('.kf-nav-lib-users')[0].scrollHeight + 230;
           var maxMenuHeight = Math.floor(($window.innerHeight - getElement('.kf-lih').outerHeight()) * 0.9);
           element.css({'height': Math.min(menuHeight, maxMenuHeight) + 'px'});
         }
@@ -63,6 +63,14 @@ angular.module('kifi')
           resetSeparators();
           positionMenu();
           scope.changeList();
+          if (!scrollableLibList.data('antiscroll')) {
+            element.on('transitionend', function f(e) {
+              if (e.target === this) {
+                element.off('transitionend', f);
+                scrollableLibList.antiscroll({autoHide: false});
+              }
+            });
+          }
         }
 
         function updateNavLibs() {
@@ -119,59 +127,31 @@ angular.module('kifi')
           // (which itself is due to the fact that a transform that is anything but "none" does not handle
           // position:fixed correctly, and we are using a transform transition during menu open).
           if (offset !== 0) {
-            getElement('.kf-nav-lib-users').css('padding-top', '35px');
             fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight);
           }
         }
 
         function fixSeparators(offset, firstLimit, firstLimitOverlay, secondLimit, secondLimitOverlay, separatorHeight) {
-          var stickToMaxTop = 225;
-          // all 3 separators properties need to be set because this function is debounced and a user might scroll too fast
+          getElement('.kf-nav-lib-users').css('padding-top', separatorHeight);
+          // all 3 separators need to be positioned because this function is debounced and a user might scroll fast
+          var sep;
           if (offset <= firstLimit) {
-            setPositioning(separators[0], 'fixed', stickToMaxTop);
-            setPositioning(separators[1], 'relative', 0);
-            setPositioning(separators[2], 'relative', 0);
-
+            sep = separators.eq(0).css({position: 'absolute', top: 0});
           } else if (offset > firstLimit && offset <= firstLimitOverlay) {
-            setPositioning(separators[0], 'fixed', stickToMaxTop - (offset - (firstLimitOverlay - separatorHeight)));
-            setPositioning(separators[1], 'relative', 0);
-            setPositioning(separators[2], 'relative', 0);
-
+            sep = separators.eq(0).css({position: 'absolute', top: 0 - (offset - (firstLimitOverlay - separatorHeight))});
           } else if ( offset > firstLimitOverlay && offset <= secondLimit) {
-            setPositioning(separators[0], 'relative', 0);
-            setPositioning(separators[1], 'fixed', stickToMaxTop);
-            setPositioning(separators[2], 'relative', 0);
-
+            sep = separators.eq(1).css({position: 'absolute', top: 0});
           } else if (offset > secondLimit && offset <= secondLimitOverlay) {
-            setPositioning(separators[0], 'relative', 0);
-            setPositioning(separators[1], 'fixed', stickToMaxTop - (offset - (secondLimitOverlay - separatorHeight)));
-            setPositioning(separators[2], 'relative', 0);
-
+            sep = separators.eq(1).css({position: 'absolute', top: 0 - (offset - (secondLimitOverlay - separatorHeight))});
           } else {
-            setPositioning(separators[0], 'relative', 0);
-            setPositioning(separators[1], 'relative', 0);
-            setPositioning(separators[2], 'fixed', stickToMaxTop);
-
+            sep = separators.eq(2).css({position: 'absolute', top: 0});
           }
+          separators.not(sep).css({position: '', top: ''});
         }
 
         function resetSeparators() {
           getElement('.kf-nav-lib-users').css('padding-top', '0px');
-          setPositioning(separators[0], 'relative', 0);
-          setPositioning(separators[1], 'relative', 0);
-          setPositioning(separators[2], 'relative', 0);
-        }
-
-        function setPositioning(dom, position, top) {
-          if (dom) {
-            dom.style.position = position;
-            dom.style.top = top + 'px';
-            if (position === 'fixed') {
-              dom.style.left = angular.element(dom).parent().offset().left + 'px';
-            } else {
-              dom.style.left = '0px';
-            }
-          }
+          separators.css({position: '', top: ''});
         }
 
         //
@@ -293,16 +273,6 @@ angular.module('kifi')
         //
         antiscrollLibList.bind('scroll', _.debounce(setStickySeparator, 10));
 
-        antiscrollLibList.on('wheel', function (event) {
-          event.originalEvent.kfAllow = this.scrollHeight > this.clientHeight;
-        });
-
-        element.on('wheel', function (event) {
-          if (!event.originalEvent.kfAllow) {
-            event.preventDefault();
-          }
-        });
-
         //
         // Filtering.
         //
@@ -338,12 +308,6 @@ angular.module('kifi')
         };
 
         scope.changeList = function () {
-          getElement('.kf-nav-lib-users').css({visibility: 'hidden'});
-          $timeout(function () {
-            setMenuHeight();
-            getElement('.kf-nav-lib-users').css({visibility: 'visible'});
-          });
-
           var term = scope.filter.name;
           var newLibs = allUserLibs;
           var newInvited = libraryService.invitedSummaries;
@@ -356,9 +320,12 @@ angular.module('kifi')
           scope.invitedLibsToShow = newLists[1];
           scope.myLibsToShow = newLists[2]; // should be [] if myLibsFirst false
 
-          scope.$broadcast('refreshScroll');
-          $timeout(function() {
-            antiscrollLibList.scrollTop(0);
+          var libUsers = getElement('.kf-nav-lib-users').css({visibility: 'hidden'});
+          $timeout(function () {
+            setMenuHeight();
+            libUsers.css({visibility: 'visible'});
+            scrollableLibList.scrollTop(0);
+            (scrollableLibList.data('antiscroll') || {refresh: angular.noop}).refresh();
             separators = antiscrollLibList.find('.kf-nav-lib-separator');
           });
           return scope.userLibsToShow.concat(scope.invitedLibsToShow).concat(scope.myLibsToShow);
