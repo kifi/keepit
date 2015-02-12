@@ -155,8 +155,8 @@ package object template {
     val kifiChromeExtensionUrl =
       "https://chrome.google.com/webstore/detail/kifi/fpjooibalklfinmkiodaamcckfbcjhin"
 
-    val iOsAppStoreUrl = "https://play.google.com/store/apps/details?id=com.kifi"
-    val androidAppStoreUrl = "https://itunes.apple.com/us/app/kifi/id740232575?mt=8"
+    val iOsAppStoreUrl = "https://itunes.apple.com/us/app/kifi/id740232575?mt=8"
+    val androidAppStoreUrl = "https://play.google.com/store/apps/details?id=com.kifi"
 
     // prevents email clients from auto-linking text like "kifi.com"
     def escapeAutoLinkText(str: String): Html = {
