@@ -76,7 +76,7 @@ angular.module('kifi')
         function updateNavLibs() {
           scope.mainLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_main' });
           scope.secretLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_secret' });
-          allUserLibs = _.reject(libraryService.librarySummaries, libraryService.isSystemLibrary);
+          allUserLibs = _.reject(libraryService.librarySummaries, libraryService.isLibraryMainOrSecret);
           librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
           invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
 

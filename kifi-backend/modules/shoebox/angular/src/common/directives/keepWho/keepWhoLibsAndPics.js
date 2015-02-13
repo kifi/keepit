@@ -39,7 +39,7 @@ angular.module('kifi')
           _.each(keeps, function (keep) {
             if (!scope.keep.id &&                      // No scope.keep.id if the keep is not on a library page.
                 scope.keep.url === keep.url &&
-                !libraryService.isSystemLibrary(library) &&     // Do not show system libraries as attributions.
+                !libraryService.isLibraryMainOrSecret(library) &&     // Do not show system libraries as attributions.
                 !_.contains(visibleLibraryIds, library.id)) {
               library.keeperPic = friendService.getPictureUrlForUser(profileService.me);
               scope.visibleKeepLibraries.push(library);
@@ -51,7 +51,7 @@ angular.module('kifi')
         var deregisterKeepRemovedListener = $rootScope.$on('keepRemoved', function (e, removedKeep, library) {
           if (!scope.keep.id &&                        // No scope.keep.id if the keep is not on a library page.
               (scope.keep.url === removedKeep.url) &&
-              (!libraryService.isSystemLibrary(library))) {     // Do not hide system libraries as attributions.
+              (!libraryService.isLibraryMainOrSecret(library))) {     // Do not hide system libraries as attributions.
             _.remove(scope.visibleKeepLibraries, { id: library.id });
           }
         });
