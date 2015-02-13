@@ -87,10 +87,10 @@ class KPrefixScorer(weight: KPrefixWeight, subScorer: Scorer, queryTerms: Array[
   override def score(): Float = {
     val name = getName()
     val distance = PrefixMatching.distance(name, queryTerms)
-    val prefixSimilarity = (PrefixMatching.maxDist - distance).toFloat / PrefixMatching.maxDist
-    val lengthSimilarity = (1.0f + weight.query.length) / (1 + name.length)
+    val prefixSimilarity = (PrefixMatching.maxDist - distance) / PrefixMatching.maxDist // todo(Léo): this is either 0 or very close to 1 because of large maxDist, figure out something more meaningful.
+    val lengthSimilarity = Math.sqrt((1.0f + weight.query.length) / (1 + name.length))
     val score = subScorer.score() * prefixSimilarity * lengthSimilarity
-    score
+    score.toFloat
   }
 
   override def freq(): Int = -1
