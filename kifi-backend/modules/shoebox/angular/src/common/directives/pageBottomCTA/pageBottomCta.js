@@ -34,7 +34,7 @@ angular.module('kifi')
           if (!scope.show) {
             $rootScope.$emit('trackLibraryEvent', 'view', { type: 'libraryLandingPopup' });
             scope.show = true;
-            angular.element('.kf-lib-footer').css('padding-bottom', '270px');
+            angular.element('.kf-lib-footer').css('padding-bottom', '300px');
           }
         }
         $window.addEventListener('scroll', onScroll);
