@@ -9,7 +9,7 @@ angular.module('kifi')
     $location, util, keyIndices, modalService, $timeout, $state, routeService) {
 
     $scope.toggleMenu = function () {
-      if ($scope.showCallout()) {
+      if ($scope.calloutVisible) {
         $scope.closeCallout();
       }
 
@@ -21,14 +21,12 @@ angular.module('kifi')
 
 
     // TODO: Remove callout when most users know about library menu (Feb 9 2014)
-    $scope.showCallout = angular.noop;
     $timeout(function () {
-      $scope.showCallout = function () {
-        return profileService.prefs.site_introduce_library_menu && !$scope.libraryMenu.visible;
-      };
+      $scope.calloutVisible = profileService.prefs.site_introduce_library_menu && !$scope.libraryMenu.visible;
     }, 2400);
 
     $scope.closeCallout = function () {
+      $scope.calloutVisible = false;
       profileService.prefs.site_introduce_library_menu = false;
       profileService.savePrefs({site_introduce_library_menu: false});
     };
@@ -43,6 +41,12 @@ angular.module('kifi')
         $scope.libOwnerPicUrl = library && routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 100);
         $scope.libOwnerProfileUrl = library && routeService.getProfileUrl(library.owner.username);
         $scope.search.libraryChip = !!library;
+      }),
+
+      $rootScope.$on('$stateChangeStart', function () {
+        if ($scope.calloutVisible) {
+          $scope.closeCallout();
+        }
       }),
 
       $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams) {
