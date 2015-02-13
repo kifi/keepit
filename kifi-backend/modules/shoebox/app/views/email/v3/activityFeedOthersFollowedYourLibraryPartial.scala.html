@@ -13,7 +13,9 @@
           @followerNames.zipWithIndex.map { case (value, idx) =>
             @if(idx > 0 && idx == followerNames.size - 1){and}
             @value match {
-              case Left(num) => {@num others}
+              case Left(num) => {
+                @num other@if(num != 1){s}
+              }
               case Right(userId) => {@fullName(userId)}
             }@if(idx < followerNames.size - 1 && followerNames.size > 2){,}
           }
