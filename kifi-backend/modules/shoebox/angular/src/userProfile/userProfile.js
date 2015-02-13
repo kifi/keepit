@@ -112,8 +112,6 @@ angular.module('kifi')
     // Initialize controller.
     //
 
-    $rootScope.$emit('libraryUrl', {});
-
     $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi';
     $scope.currentPageOrigin = getCurrentPageOrigin();
     $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
@@ -123,13 +121,13 @@ angular.module('kifi')
 
     trackPageView();
 
-    //if (initParams.install === '1' && !installService.installedVersion) {
-      //showInstallModal();
-    //}
-    if (initParams.install === '1') {
-      showPersonaModal();
-      initParams.install = undefined;
+    if (initParams.install === '1' && !installService.installedVersion) {
+      showInstallModal();
     }
+    // if (initParams.install === '1') {
+    //   showPersonaModal();
+    //   initParams.install = undefined;
+    // }
   }
 ])
 

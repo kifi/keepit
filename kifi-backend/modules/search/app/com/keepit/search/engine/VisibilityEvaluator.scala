@@ -45,6 +45,13 @@ trait VisibilityEvaluator { self: DebugOption =>
       visibilityDocValues)
   }
 
+  protected def getUserVisibilityEvaluator(): UserVisibilityEvaluator = {
+    new UserVisibilityEvaluator(
+      userId,
+      myFriendIds
+    )
+  }
+
   protected def listLibraries(): Unit = {
     debugLog(s"""myLibs: ${myOwnLibraryIds.toSeq.sorted.mkString(",")}""")
     debugLog(s"""memberLibs: ${memberLibraryIds.toSeq.sorted.mkString(",")}""")
@@ -122,5 +129,19 @@ final class LibraryVisibilityEvaluator(
         Visibility.RESTRICTED
       }
     }
+  }
+}
+
+final class UserVisibilityEvaluator(
+    myUserId: Long,
+    myFriendIds: LongArraySet) {
+
+  def apply(profileOwnerId: Long): Int = {
+    if (profileOwnerId == myUserId) {
+      Visibility.OWNER // myself
+    } else if (myFriendIds.findIndex(profileOwnerId) >= 0) {
+      Visibility.NETWORK // a friend
+    } else
+      Visibility.OTHERS // someone else
   }
 }

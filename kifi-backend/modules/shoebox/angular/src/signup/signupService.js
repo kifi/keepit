@@ -49,7 +49,6 @@ angular.module('kifi')
     // Shared data across several modals
 
     $scope.userData = $scope.userData || {};
-    $scope.showTwitter = _.has($location.search(), 'twitter'); // todo (aaron): remove for twitter launch
 
     function setModalScope($modalScope, onClose) {
       $modalScope.close = modalService.close;
@@ -119,8 +118,10 @@ angular.module('kifi')
         trackEvent('visitor_clicked_page', 'signup', 'login');
       };
 
-      $scope.facebookSignupPath = createSignupPath('facebook');
-      $scope.twitterSignupPath = createSignupPath('twitter');
+      //$scope.facebookSignupPath = createSignupPath('facebook');
+      //$scope.twitterSignupPath = createSignupPath('twitter');
+      $scope.facebookSignupPath = routeService.socialSignup('facebook');
+      $scope.twitterSignupPath = routeService.socialSignup('twitter');
       $scope.emailSubmitted = false;
 
       setModalScope(modalService.open({

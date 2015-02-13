@@ -1,14 +1,13 @@
 package com.keepit.model
 
 import com.keepit.common.cache._
-import com.keepit.common.logging.AccessLog
+import com.keepit.common.logging.{ Logging, AccessLog }
 import com.kifi.macros.json
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.db._
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import org.apache.commons.lang3.RandomStringUtils
 import com.keepit.common.store.ImageSize
 import com.keepit.scraper.embedly.EmbedlyKeyword
 import scala.concurrent.duration.Duration
@@ -31,8 +30,37 @@ trait PageGenericInfo {
 
 // Do not modify - PageAuthor is persisted as Json into the database
 case class PageAuthor(name: String, url: Option[String] = None)
-object PageAuthor {
+object PageAuthor extends Logging {
   implicit val format = Json.format[PageAuthor]
+
+  // Trimming for PageInfo table
+  def trimAsJson(authors: Seq[PageAuthor], maxJsonLength: Int)(implicit writes: Writes[PageAuthor]): Seq[PageAuthor] = {
+    var trimmedAuthors = authors.map(author => author.copy(name = author.name.trim.take(maxJsonLength), url = author.url.map(_.trim)))
+    var droppedUrls = 0
+    var droppedAuthors = 0
+
+    // Greedy trimming strategy, assuming more important authors are listed first
+    while (Json.toJson(trimmedAuthors).toString().length > maxJsonLength) {
+      // first drop urls starting from the right
+      val lastAuthorWithUrlIndex = {
+        if (droppedAuthors > 0) -1 // optimization
+        else authors.lastIndexWhere(_.url.isDefined)
+      }
+      if (lastAuthorWithUrlIndex >= 0) {
+        val authorWithoutUrl = trimmedAuthors(lastAuthorWithUrlIndex).copy(url = None)
+        trimmedAuthors = trimmedAuthors.updated(lastAuthorWithUrlIndex, authorWithoutUrl)
+        droppedUrls += 1
+      } else {
+        // if there's no more url to drop, drop authors starting from the right
+        trimmedAuthors = trimmedAuthors.dropRight(1)
+        droppedAuthors += 1
+      }
+    }
+    if (droppedUrls > 0 || droppedAuthors > 0) {
+      log.warn(s"Dropped $droppedUrls urls and $droppedAuthors authors while serializing the following authors within $maxJsonLength characters:\n$authors\ntrimmed to\n$trimmedAuthors")
+    }
+    trimmedAuthors
+  }
 }
 
 object PageInfoStates extends States[PageInfo]

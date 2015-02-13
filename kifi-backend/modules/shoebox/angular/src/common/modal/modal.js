@@ -16,20 +16,18 @@ angular.module('kifi')
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
       controller: ['$scope', function ($scope) {
-        function escapeModal (event) {
+        function onDocKeyDown(event) {
           if (event.which === 27) {  // Escape key
             $scope.close();
           }
         }
 
         function onOpen() {
-          $document.on('keydown', escapeModal);
-          $document.find('body').addClass('modal-open');
+          $document.on('keydown', onDocKeyDown);
         }
 
         function onCloseOrDestroy() {
-          $document.off('keydown', escapeModal);
-          $document.find('body').removeClass('modal-open');
+          $document.off('keydown', onDocKeyDown);
         }
 
         $scope.close = this.close = function (closeAction, forceEscape) {
@@ -64,9 +62,7 @@ angular.module('kifi')
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
         scope.backdropStyle.top = attrs.kfTopOffset || '0';
 
-        scope.$watch(function () {
-          return scope.forceClose;
-        }, function (newVal, oldVal) {
+        scope.$watch('forceClose', function (newVal, oldVal) {
           if (!oldVal && newVal) {
             scope.close();
           }

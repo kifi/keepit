@@ -22,7 +22,13 @@ class TwitterMessages {
       val shortTitle = if (title.size > 79 - shortLibName.size) title.abbreviate(79 - 3 - shortLibName.size) else title
       s"$shortTitle $keepUrl kept to $shortLibName $libUrl via @kifi"
     }
-
   }
 
+  val TwitterUrlPattern = "https://www.twitter.com/(.*)".r
+
+  def parseHandleFromUrl(url: String): String = {
+    url match {
+      case TwitterUrlPattern(handle) => s"@$handle"
+    }
+  }
 }

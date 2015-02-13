@@ -1,37 +1,12 @@
-keepsColumnWidth = 800px
-relatedLibrariesColumnWidth = 226px
-desktopBorderRadius = 19px
-mobileBorderRadius = 54px
-
-.kf-logged-out
-  .kf-library-results-wrapper
-    width: keepsColumnWidth
-    float: left
-
-  &.kf-mobile .kf-library-results-wrapper
-    max-width: initial
-    float: none
-
-  .kf-library-body
-    min-width: keepsColumnWidth + relatedLibrariesColumnWidth
-    .kf-main-keeps
-      max-width: keepsColumnWidth
-
-  &.kf-mobile .kf-library-body
-    min-width: initial
-    .kf-main-keeps
-      max-width: initial
-
 .kf-related-libraries
-  margin-top: 42px
-  float: left
-  width: relatedLibrariesColumnWidth
-  box-sizing: border-box
-  padding: 0
+  display: table-cell
+  width: 210px
+  vertical-align: top
+  padding: 20px 0 0
   .kf-mobile &
-    margin-top: 0
-    float: none
-    width: initial
+    display: block
+    width: auto
+    padding: 0
     text-align: center
 
 .kf-related-libraries-see-more
@@ -46,7 +21,7 @@ mobileBorderRadius = 54px
 
 .kf-related-libraries-card-your-own-card
   background: #73c785
-  border-radius: desktopBorderRadius
+  border-radius: 19px
   font-size: 20px
   text-align: center
   color: #fff
@@ -75,10 +50,9 @@ mobileBorderRadius = 54px
   display: block
   font-size: 14px
   font-weight: bold
-  text-align: left
+  text-align: center
   margin-bottom: 1em
   .kf-mobile &
-    text-align: center
     background: #e8e8e8
     font-size: 30px
     line-height: 3em

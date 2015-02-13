@@ -137,6 +137,16 @@ class SearchController @Inject() (
     }
   }
 
+  def distSearchUsers() = Action.async(parse.tolerantJson) { request =>
+    val json = request.body
+    val shardSpec = (json \ "shards").as[String]
+    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
+    val userSearchRequest = (json \ "request").as[UserSearchRequest]
+    userSearchCommander.distSearchUsers(shards, userSearchRequest).map { userShardResults =>
+      Ok(Json.toJson(userShardResults))
+    }
+  }
+
   //internal (from eliza/shoebox)
   def warmUpUser(userId: Id[User]) = Action { request =>
     uriSearchCommander.warmUp(userId)
@@ -181,11 +191,19 @@ class SearchController @Inject() (
     }
   }
 
-  def explainLibraryResult(query: String, doPrefixSearch: Boolean, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String]) = Action.async { request =>
+  def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     val langs = acceptLangs.split(",").filter(_.nonEmpty)
-    librarySearchCommander.searchLibraries(userId, langs, userExperiments, query, None, None, 1, doPrefixSearch, None, debug, Some(libraryId)).map { result =>
+    librarySearchCommander.searchLibraries(userId, langs, userExperiments, query, None, None, 1, disablePrefixSearch, None, debug, Some(libraryId)).map { result =>
       Ok(html.admin.explainLibraryResult(userId, libraryId, result.explanation))
+    }
+  }
+
+  def explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean) = Action.async { request =>
+    val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
+    val langs = acceptLangs.split(",").filter(_.nonEmpty)
+    userSearchCommander.searchUsers(userId, langs, userExperiments, query, None, None, 1, disablePrefixSearch, None, debug, Some(resultUserId)).map { result =>
+      Ok(html.admin.explainUserResult(userId, resultUserId, result.explanation))
     }
   }
 

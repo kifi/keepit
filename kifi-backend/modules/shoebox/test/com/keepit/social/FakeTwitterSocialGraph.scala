@@ -11,7 +11,7 @@ import com.keepit.common.oauth.{ UserProfileInfo, TwitterOAuthProviderImpl, OAut
 import com.keepit.common.social._
 import com.keepit.common.time.Clock
 import com.keepit.model._
-import play.api.libs.json.{ JsNull, JsArray, JsValue }
+import play.api.libs.json.{ JsNull, JsArray, JsValue, JsObject }
 import play.api.libs.ws.WSResponse
 import securesocial.core.{ IdentityId, OAuth2Settings }
 
@@ -74,6 +74,11 @@ class FakeTwitterSocialGraph @Inject() (
     override def sendImage(socialUserInfo: SocialUserInfo, image: File, message: String): Unit = Future.successful {
       new FakeWSResponse()
     }
+
+  }
+
+  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, sinceId: Long): Future[Seq[JsObject]] = Future.successful {
+    Seq.empty
   }
 
   def extractEmails(parentJson: JsValue): Seq[EmailAddress] = twtrGraph.extractEmails(parentJson)

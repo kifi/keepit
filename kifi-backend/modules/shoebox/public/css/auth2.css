@@ -306,7 +306,7 @@ a.video-frame {
 .form-network {
   display: table;
   width: 100%;
-  margin-top: 16px;
+  margin-top: 17px;
   border-radius: 3px;
 }
 .form-network.facebook {
@@ -329,7 +329,6 @@ a.video-frame {
 }
 .form-network.twitter {
   background: #55acee;
-  display: none;
 }
 .form-network.twitter:hover {
   background: #66b4ef;

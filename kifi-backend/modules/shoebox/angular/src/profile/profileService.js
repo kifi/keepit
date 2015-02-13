@@ -239,9 +239,9 @@ angular.module('kifi')
 
     function fetchPrefs() {
       return $http.get(routeService.prefs).then(function (p) {
+        p.data.auto_show_guide = true;
         var oldPrefs = _.clone(prefs);
         util.replaceObjectInPlace(prefs, p.data);
-        prefs.site_intial_show_library_intro = !!prefs.site_show_library_intro;
         if (prefs.library_sorting_pref !== oldPrefs.library_sorting_pref) {
           $rootScope.$emit('changedLibrarySorting');
         }

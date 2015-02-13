@@ -46,12 +46,12 @@ var styleDeps = {};
 var scriptDeps = {};
 var asap = {};
 
-livereload.options.silent = true;
+livereload.options.port = 35719;
 var reload = function (file) {
   var match = file.path.match(/\/(.*)$/);
   gutil.log('Changed ' + (match ? gutil.colors.green(match[1]) : file.path));
   // Reload the whole extension (partial reload not supported)
-  livereload.changed('*');
+  livereload.changed('*', livereload.options.port);
 };
 
 // gulp-json-editor but with prettier printing
@@ -422,7 +422,7 @@ gulp.task('xpi-firefox', ['build', 'config'], function () {
 });
 
 gulp.task('watch', function () {
-  livereload.listen();
+  livereload.listen(livereload.options.port);
   gulp.watch(
     [].concat(
       chromeAdapterFiles,

@@ -127,6 +127,8 @@ package object template {
     def inviteFriendUrl(id: Id[User], index: Int, subtype: String) =
       htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=$subtype&", "pymk" + index, openInAppIfMobile = true)
 
+    def invitedLibrariesUrl(id: Id[User], content: String) = htmlUrl(Tag1(tags.profileUrl, id) + s"/libraries/invited?", content, openInAppIfMobile = true)
+
     // wrap a url (String) in HTML (so tags aren't escaped)
     def htmlUrl(url: String, content: String, openInAppIfMobile: Boolean): Html =
       Html(appendTrackingParams(url = url, content = content, openInAppIfMobile = openInAppIfMobile))
@@ -136,8 +138,8 @@ package object template {
       val lastUrlChar = url(url.size - 1)
       require(lastUrlChar == '?' || lastUrlChar == '&', "[appendTrackingParams] url must end with ? or &")
       val openInAppIfMobileDirective = if (openInAppIfMobile) KifiMobileAppLinkFlag.arg else ""
-      s"${url}utm_source=$sourceTagStr&utm_medium=$channelTagStr&utm_campaign=$campaignTagStr&utm_content=$content&kcid=$kcidTagStr" +
-        s"&${EmailTrackingParam.paramName}=${trackingParam(content)}&$openInAppIfMobileDirective"
+      s"${url}utm_source=$sourceTagStr&amp;utm_medium=$channelTagStr&amp;utm_campaign=$campaignTagStr&amp;utm_content=$content&amp;kcid=$kcidTagStr" +
+        s"&amp;${EmailTrackingParam.paramName}=${trackingParam(content)}&amp;$openInAppIfMobileDirective"
     }
 
     def kifiUrl(content: String = "unknown") = htmlUrl(s"$baseUrl/?", content, openInAppIfMobile = true)
@@ -148,9 +150,13 @@ package object template {
     val privacyUrl = htmlUrl(s"$baseUrl/privacy?", "footerPrivacy", openInAppIfMobile = false)
     val kifiTwitterUrl = htmlUrl("https://twitter.com/kifi?", "footerTwitter", openInAppIfMobile = false)
     val kifiFacebookUrl = htmlUrl("https://www.facebook.com/kifi42?", "footerFacebook", openInAppIfMobile = false)
+    val kifiSupportUrl = htmlUrl("http://support.kifi.com/?", "footerSupport", openInAppIfMobile = false)
 
     val kifiChromeExtensionUrl =
       "https://chrome.google.com/webstore/detail/kifi/fpjooibalklfinmkiodaamcckfbcjhin"
+
+    val iOsAppStoreUrl = "https://itunes.apple.com/us/app/kifi/id740232575?mt=8"
+    val androidAppStoreUrl = "https://play.google.com/store/apps/details?id=com.kifi"
 
     // prevents email clients from auto-linking text like "kifi.com"
     def escapeAutoLinkText(str: String): Html = {

@@ -26,9 +26,14 @@ class AdminSearchController @Inject() (
     searchClient.explainUriResult(query, request.userId, uriId, lang, debug).map(Ok(_))
   }
 
-  def explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], doPrefixSearch: Boolean) = AdminUserPage.async { request =>
+  def explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], disablePrefixSearch: Boolean) = AdminUserPage.async { request =>
     val acceptLangs = request.acceptLanguages.map(_.code)
-    searchClient.explainLibraryResult(query, doPrefixSearch, request.userId, Library.decodePublicId(libraryId).get, acceptLangs, debug).map(Ok(_))
+    searchClient.explainLibraryResult(query, request.userId, Library.decodePublicId(libraryId).get, acceptLangs, debug, disablePrefixSearch).map(Ok(_))
+  }
+
+  def explainUserResult(query: String, userId: Id[User], debug: Option[String], disablePrefixSearch: Boolean) = AdminUserPage.async { request =>
+    val acceptLangs = request.acceptLanguages.map(_.code)
+    searchClient.explainUserResult(query, request.userId, userId, acceptLangs, debug, disablePrefixSearch).map(Ok(_))
   }
 
   def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminUserPage { implicit request =>

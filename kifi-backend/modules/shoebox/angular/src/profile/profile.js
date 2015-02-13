@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'modalService', 'profileService', 'routeService', '$window', 'socialService', '$rootScope',
-  function ($scope, $http, modalService, profileService, routeService, $window, socialService, $rootScope) {
+  '$scope', '$http', 'modalService', 'profileService', 'routeService', '$window', 'socialService',
+  function ($scope, $http, modalService, profileService, routeService, $window, socialService) {
 
     // $analytics.eventTrack('test_event', { category: 'test', label: 'controller' });
 
@@ -149,8 +149,6 @@ angular.module('kifi')
         );
       }
     }
-
-    $rootScope.$emit('libraryUrl', {});
   }
 ])
 
@@ -215,15 +213,14 @@ angular.module('kifi')
 ])
 
 .directive('kfTwitterConnectButton', [
-  'socialService', 'profileService',
-  function (socialService, profileService) {
+  'socialService',
+  function (socialService) {
     return {
       restrict: 'A',
       link: function (scope) {
 
         scope.isTwitterConnected = socialService.twitter && !!socialService.twitter.profileUrl;
         scope.twitter = socialService.twitter;
-        scope.twitterExperiment = profileService.me.experiments && profileService.me.experiments.indexOf('twitter_beta') !== -1;
 
         scope.$watch(function () {
           return socialService.twitter.profileUrl;

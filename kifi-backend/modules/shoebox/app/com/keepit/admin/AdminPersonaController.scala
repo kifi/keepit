@@ -61,7 +61,7 @@ class AdminPersonaController @Inject() (
   }
 
   def editPersona(id: Id[Persona]) = AdminUserPage { implicit request =>
-    request.body.asJson.map { json =>
+    val personaOpt = request.body.asJson.map { json =>
       val currentNameOpt = (json \ "name").asOpt[PersonaName]
       val displayNameOpt = (json \ "displayName").asOpt[String]
       val displayNamePluralOpt = (json \ "displayNamePlural").asOpt[String]
@@ -87,7 +87,7 @@ class AdminPersonaController @Inject() (
           state = newState))
       }
     }
-    NoContent
+    Ok(Json.toJson(personaOpt))
   }
 
 }

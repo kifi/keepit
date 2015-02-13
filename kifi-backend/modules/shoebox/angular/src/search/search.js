@@ -3,25 +3,24 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$rootScope', '$location', '$q', '$state', '$timeout', '$window', 'keepDecoratorService', 'searchActionService', 'libraryService', 'util',
-  function ($scope, $rootScope, $location, $q, $state, $timeout, $window, keepDecoratorService, searchActionService, libraryService, util) {
+  '$scope', '$rootScope', '$location', '$q', '$state', '$stateParams', '$timeout', '$window', '$$rAF',
+  'keepDecoratorService', 'searchActionService', 'libraryService', 'util', 'library',
+  function ($scope, $rootScope, $location, $q, $state, $stateParams, $timeout, $window, $$rAF,
+            keepDecoratorService, searchActionService, libraryService, util, library) {
     //
     // Internal data.
     //
     var query;
     var filter;
-    var userName;
-    var librarySlug;
-    var library;
     var lastResult = null;
     var selectedCount = 0;
-    var authToken = $location.search().authToken || '';
     var numResults = 0;
 
 
     //
     // Scope data.
     //
+    $scope.isLibrarySearch = !!library;
     $scope.resultKeeps = [];
     $scope.resultTotals = {
       myTotal: 0,
@@ -57,56 +56,70 @@ angular.module('kifi')
     }
 
     function init() {
-      query = $state.params.q || '';
-      filter = $state.params.f || 'a';
-      userName = $state.params.username || '';
-      librarySlug = $state.params.librarySlug || '';
+      query = $stateParams.q || '';
+      filter = $stateParams.f || 'a';
 
-      var libraryPromise = null;
-
-      if (userName && librarySlug) {
-        if (!query) {
-          $state.go('library.keeps');
-          return;
-        }
-
-        libraryPromise = libraryService.getLibraryByUserSlug(userName, librarySlug, authToken, false).then(function (library) {
-          $rootScope.$emit('libraryUrl', library);
-          return library;
-        });
-      } else {
-        if (!query) { // No query or blank query.
-          $state.go('home');
-          return;
-        }
-
-        libraryPromise = $q.when(null);
-        $rootScope.$emit('libraryUrl', {});
+      if (!query) {
+        $state.go(library ? 'library.keeps' : 'home');
+        return;
       }
 
-      libraryPromise.then(function (lib) {
-        library = lib;
+      lastResult = null;
+      selectedCount = 0;
 
-        lastResult = null;
-        selectedCount = 0;
+      $scope.hasMore = true;
+      $scope.scrollDistance = '100%';
+      $scope.loading = false;
 
-        $scope.hasMore = true;
-        $scope.scrollDistance = '100%';
-        $scope.loading = false;
+      setTitle();
 
-        setTitle();
-
-        searchActionService.reset();
-        $scope.getNextKeeps(true);
-      })['catch'](function (/* resp */) {
-        // TODO(yiping): handle (resp.status === 403) somehow
-      });
+      searchActionService.reset();
+      $scope.getNextKeeps(true);
 
       $timeout(function () {
-        $window.document.body.scrollTop = 0;
+        if (library) {
+          var pxToScroll = angular.element('.kf-lib-cols')[0].getBoundingClientRect().top - angular.element('.kf-lih,.kf-loh')[0].offsetHeight;
+          if (pxToScroll > 0) {
+            scrollDown(pxToScroll);
+          }
+        } else {
+          $window.document.body.scrollTop = 0;
+        }
       });
     }
 
+    function scrollDown(px) {
+      var doc = $window.document;
+      var win = doc.defaultView;
+      var newScrollEvent = typeof UIEvent === 'function' ?
+        function () {
+          return new win.UIEvent('scroll');
+        } :
+        function () {
+          var e = doc.createEvent('UIEvent');
+          e.initUIEvent('scroll', false, false, win, 0);
+          return e;
+        };
+
+      var t0, pxScrolled = 0;
+      var ms_1 = 1 / Math.max(400, Math.min(800, 100 * Math.log(px)));
+      $$rAF(function step(t) {
+        if (!t0) {
+          t0 = t;
+        }
+        var pxTarget = Math.round(px * easeInOutQuart(Math.min(1, (t - t0) * ms_1)));
+        win.scrollBy(0, pxTarget - pxScrolled);
+        win.dispatchEvent(newScrollEvent());
+        pxScrolled = pxTarget;
+        if (pxScrolled < px) {
+          $$rAF(step);
+        }
+      });
+    }
+
+    function easeInOutQuart(t) {
+      return t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t;
+    }
 
     //
     // Scope methods.
@@ -192,17 +205,6 @@ angular.module('kifi')
       }.bind(null, query));
     };
 
-    $scope.getFilterUrl = function (type) {
-      if ($scope.isEnabled(type)) {
-        var count = getFilterCount(type);
-        if (count) {
-          var userNameSlug = (userName && librarySlug) ? '/' + userName + '/' + librarySlug : '';
-          return userNameSlug + '/find?q=' + query + '&f=' + type;
-        }
-      }
-      return '';
-    };
-
     $scope.isFilterSelected = function (type) {
       return filter === type;
     };
@@ -250,32 +252,56 @@ angular.module('kifi')
       }
     };
 
+    $scope.onClickSearchFilter = function (newSearchFilter) {
+      $location.search({f: newSearchFilter});
+    };
+
 
     //
     // Watches and event listeners.
     //
-    var newSearch = _.debounce(function () {
-      // Use $state.params instead of $stateParams because changes to $stateParams
-      // does not propagate to HeaderCtrl when it is injected there.
-      // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
-      _.assign($state.params, $location.search());
+    function newSearch() {
+      _.assign($stateParams, _.pick($location.search(), 'q', 'f'));
       init();
-    }, 250);
+    }
+
+    $scope.$on('$destroy', $rootScope.$on('searchTextUpdated', function (e, newSearchText, libraryUrl) {
+      if ($location.path() === '/find') {
+        $location.search('q', newSearchText).replace(); // this keeps any existing URL params
+      } else if (libraryUrl) {
+        if (newSearchText) {
+          if ($stateParams.q) {
+            $location.search('q', newSearchText).replace();
+          } else {
+            $location.url(libraryUrl + '/find?q=' + newSearchText + '&f=a');
+          }
+        } else {
+          $location.url(libraryUrl);
+        }
+      } else if (newSearchText) {
+        $location.url('/find?q=' + newSearchText);
+      }
+
+      newSearch();
+    }));
+
     $scope.$on('$locationChangeSuccess', function (event, newState, oldState) {
       var newPath = newState.slice(0, newState.indexOf('?'));
       var oldPath = oldState.slice(0, oldState.indexOf('?'));
 
+      // If we are going from one search to another, update the search.
       if (newPath === oldPath) {
         newSearch();
+        $rootScope.$emit('newQueryFromLocation', $stateParams.q);
       }
     });
-
 
     // Report search analytics on unload.
     var onUnload = function () {
       var resultsWithLibs = 0;
       $scope.resultKeeps.forEach( function (keep) {
-        if (_.some(keep.libraries, function (lib) { return !libraryService.isSystemLibrary(lib); })) {
+        // does there exist a library that's not system_created?
+        if (_.some(keep.libraries, function (lib) { return !libraryService.isSystemLibraryById(lib.id); })) {
           resultsWithLibs++;
         }
       });

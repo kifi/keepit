@@ -44,8 +44,8 @@ class LinkedInInviteRecommendationRepoImpl @Inject() (
   def table(tag: Tag) = new LinkedInInviteRecommendationTable(tag)
   initTable()
 
-  override def deleteCache(emailAccount: LinkedInInviteRecommendation)(implicit session: RSession): Unit = {}
-  override def invalidateCache(emailAccount: LinkedInInviteRecommendation)(implicit session: RSession): Unit = {}
+  override def deleteCache(recommendation: LinkedInInviteRecommendation)(implicit session: RSession): Unit = {}
+  override def invalidateCache(recommendation: LinkedInInviteRecommendation)(implicit session: RSession): Unit = {}
 
   private val compiledGetByUserAndLinkedInAccount = Compiled { (userId: Column[Id[User]], linkedInAccountId: Column[Id[SocialUserInfo]]) =>
     for (row <- rows if row.userId === userId && row.linkedInAccountId === linkedInAccountId) yield row

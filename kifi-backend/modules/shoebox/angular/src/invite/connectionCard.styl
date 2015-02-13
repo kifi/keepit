@@ -15,19 +15,9 @@
   background-color: #e36767
   background-position: -63px top
 
-
-
-.kf-connection-card-container
-  padding-right: 4px
-  @media screen and (max-width: 1365px)
-    padding-right: 7px
-
-  .kf-connection-card
-    @media screen and (min-width: 1365px)
-      width: calc(50% - 28px)
-
-    @media screen and (max-width: 1365px)
-      width: calc(100% - 25px)
+.kf-twitter-icon-micro
+  background-color: #55ACEE
+  background-position: -31px top
 
 .kf-show-more
   float: right
@@ -39,21 +29,23 @@
   letter-spacing: .5px
   margin-right: 5px
 
-
 .kf-connection-card
-  background-color: #FFFFFF
-  box-shadow: defaultBoxShadow
-  border: defaultBorder
   display: inline-block
-  margin: 5px 6px
-  margin-left: 10px
-  padding: 5px
   min-width: 250px
+  width: calc(50% - 5px)
+  height: 102px
+  box-sizing: border-box
+  margin: 5px 0
+  border-radius: 10px
+  border: defaultBorder
+  padding: 5px
+  background-color: #fff
   position: relative
-  transition: opacity 0.4s ease
   opacity: 1
-  height: 90px
-  border-radius: 5px
+  transition: opacity 0.4s ease
+
+  &:nth-child(2n)
+    margin-left: 10px
 
   &:hover
     background-color: #E5F1FF
@@ -82,7 +74,6 @@
       padding: 10px
 
   .kf-connection-card-who
-
     display: inline-block
     padding-top: 20px
     width: 60%
@@ -104,7 +95,6 @@
       width: 15px
       display: inline-block
 
-
     .kf-byline
       font-size: 90%
       overflow: hidden
@@ -115,7 +105,6 @@
       color: #7A899C
       width: 80%
 
-
   .kf-connection-card-action
     cursor: pointer
     position: absolute
@@ -123,7 +112,7 @@
     bottom: 39px
     background-color: #6FA6EF
     border-radius: 3px
-    color: #FFFFFF
+    color: #fff
     font-weight: 300
     font-size: 13px
     letter-spacing: .5px
@@ -131,13 +120,11 @@
     text-align: center
     padding 4px 0px
 
-
     &.kf-connection-invited
       background-color: initial
       text-decoration: underline
       color: #4B6F9F
       bottom: 7px
-
 
   .kf-connection-card-close
     cursor: pointer

@@ -25,7 +25,7 @@ case class UserValue(
 }
 
 case class UserValueKey(userId: Id[User], key: UserValueName) extends Key[String] {
-  override val version = 3
+  override val version = 4
   val namespace = "uservalue"
   def toKey(): String = userId.id + "_" + key.name
 }
@@ -57,7 +57,6 @@ object UserValueName {
   val FRIENDS_NOTIFIED_ABOUT_JOINING = UserValueName("friendsNotifiedAboutJoining") // no longer in use
   val CONTACTS_NOTIFIED_ABOUT_JOINING = UserValueName("contactsNotifiedAboutJoining")
   val UPDATED_USER_CONNECTIONS = UserValueName("updated_user_connections")
-  val SITE_SHOW_LIBRARY_INTRO = UserValueName("site_show_library_intro")
   val RECENT_INTERACTION = UserValueName("recent_interaction")
   val KIFI_CAMPAIGN_ID = UserValueName("kifi_campaign_id")
   val LAST_DIGEST_EMAIL_SCHEDULED_AT = UserValueName("last_digest_email_scheduled_at")
@@ -75,11 +74,8 @@ object UserValueName {
   val USER_PROFILE_SETTINGS = UserValueName("user_profile_settings")
   val SHOW_FOLLOWED_LIBRARIES = UserValueName("show_followed_libraries") // show libraries I follow
 
-  // temp for library callouts for existing user. remove after users know about libraries (Oct 26 2014)
-  // library_callout_shown tag_callout_shown guide_callout_shown
-  val LIBRARY_CALLOUT_SHOWN = UserValueName("library_callout_shown")
-  val TAG_CALLOUT_SHOWN = UserValueName("tag_callout_shown")
-  val GUIDE_CALLOUT_SHOWN = UserValueName("guide_callout_shown")
+  // temp for library menu callout for existing user. remove after a while (Feb 9 2014)
+  val SITE_INTRODUCE_LIBRARY_MENU = UserValueName("site_introduce_library_menu")
 
   val AUTO_SHOW_GUIDE = UserValueName("auto_show_guide")
 

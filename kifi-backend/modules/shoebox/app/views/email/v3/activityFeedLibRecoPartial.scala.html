@@ -1,39 +1,34 @@
-@(lib: com.keepit.commanders.emails.LibraryInfoView)
+@(lib: com.keepit.commanders.emails.LibraryInfoViewWithKeepImages)
+@import views.html.email.tags._
 @import com.keepit.common.mail.template.helpers._
+@keepImages = @{lib.keepImages}
 
 <tr>
   <td align="left" valign="top">
     <table width="100%" border="0" cellspacing="0" cellpadding="0">
-      <tr>
-        <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
-      </tr>
+      @trSpacer(24)
       <tr>
         <td class="title1" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:23px;line-height:25px;color:#62BE73;">
           <a href="@libraryUrl(lib.url, "libRecoTitle")" target="_blank" style="text-decoration:none;color:#62BE73;">@lib.name</a>
         </td>
       </tr>
-      <tr>
-        <td height="5" style="font-size:1px; line-height:1px;">&nbsp;</td>
-      </tr>
+      @trSpacer(5)
       <tr>
         <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:14px;line-height:20px;color:#7f7f7f;">By
-          <a href="@profileUrl(lib.owner, "libRecoOwnerName")" target="_blank" style="text-decoration:none;color:#62BE73;">@lib.ownerName</a>&nbsp;
+          @lib.ownerName&nbsp;
           @if(lib.numFollowers > 0) {
           @lib.numFollowers follower@if(lib.numFollowers != 1){s}
           }
         </td>
       </tr>
-      <tr>
-        <td height="5" style="font-size:1px; line-height:1px;">&nbsp;</td>
-      </tr>
+      @trSpacer(5)
       <tr>
         <td class="txt1" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:22px;color:#505c68;">
           @lib.description.getOrElse("")
         </td>
       </tr>
-      <tr>
-        <td height="16" style="font-size:1px; line-height:1px;">&nbsp;</td>
-      </tr>
+      @trSpacer(16)
+      @if(keepImages.size > 0) {
       <tr>
         <td align="left" valign="top">
           <table width="100%" border="0" cellspacing="0" cellpadding="0">
@@ -48,26 +43,29 @@
                             <table width="107" border="0" cellspacing="0" cellpadding="0" class="wrapper">
                               <tr>
                                 <td align="center" valign="top">
-                                  <a href="#" target="_blank"><img src="@assetV3Url("square_1.png")" width="107" height="107" alt="" style="display:block;" border="0" class="full_width"/></a>
+                                  <img src="@keepImages(0)" width="107" height="107" alt="" style="display:block;" border="0" class="full_width"/>
                                 </td>
                               </tr>
                             </table>
                           </td>
+                          @if(keepImages.size > 1) {
                           <td width="9"></td>
                           <td>
                             <table width="107" border="0" cellspacing="0" cellpadding="0" class="wrapper">
                               <tr>
                                 <td align="center" valign="top">
-                                  <a href="#" target="_blank"><img src="@assetV3Url("square_2.png")" width="107" height="107" alt="" style="display:block;" border="0" class="full_width"/></a>
+                                  <img src="@keepImages(1)" width="107" height="107" alt="" style="display:block;" border="0" class="full_width"/>
                                 </td>
                               </tr>
                             </table>
                           </td>
+                          }
                         </tr>
                       </table>
                     </td>
                   </tr>
                 </table>
+                @if(keepImages.size > 2) {
                 <table width="233" border="0" cellspacing="0" cellpadding="0" align="left" class="hide">
                   <tr>
                     <td width="10" class="hide"></td>
@@ -75,22 +73,26 @@
                       <table width="223" border="0" cellspacing="0" cellpadding="0" align="center">
                         <tr>
                           <td align="center" valign="top">
-                            <a href="#" target="_blank"><img src="@assetV3Url("square_3.png")" width="107" height="107" alt="" style="display:block;" border="0"/></a>
+                            <img src="@keepImages(2)" width="107" height="107" alt="" style="display:block;" border="0"/>
                           </td>
+                          @if(keepImages.size > 3) {
                           <td width="9"></td>
                           <td align="center" valign="top">
-                            <a href="#" target="_blank"><img src="@assetV3Url("square_4.png")" width="107" height="107" alt="" style="display:block;" border="0"/></a>
+                            <img src="@keepImages(3)" width="107" height="107" alt="" style="display:block;" border="0"/>
                           </td>
+                          }
                         </tr>
                       </table>
                     </td>
                   </tr>
                 </table>
+                }
               </td>
             </tr>
           </table>
         </td>
       </tr>
+      }
     </table>
   </td>
 </tr>

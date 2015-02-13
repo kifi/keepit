@@ -101,8 +101,10 @@ angular.module('kifi')
       $analytics.pageTrack(url, attributes);
     }
 
-    function setTitle(lib) {
-      $window.document.title = lib.name + ' by ' + lib.owner.firstName + ' ' + lib.owner.lastName + ' • Kifi' ;
+    function setTitle() {
+      if (!$scope.librarySearch) {  // search.js does it for library search
+        $window.document.title = library.name + ' by ' + library.owner.firstName + ' ' + library.owner.lastName + ' • Kifi' ;
+      }
     }
 
     function reloadThisLibrary() {
@@ -198,8 +200,12 @@ angular.module('kifi')
     $scope.callImportBookmarkFile = function () {
       $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
     };
-    $scope.callTriggerInstall = function () {
-      $rootScope.$emit('triggerExtensionInstall');
+    $scope.triggerInstall = function () {
+      installService.triggerInstall(function () {
+        modalService.open({
+          template: 'common/modal/installExtensionErrorModal.tpl.html'
+        });
+      });
     };
 
 
@@ -256,7 +262,13 @@ angular.module('kifi')
 
       $rootScope.$on('$stateChangeSuccess', function (e, toState) {
         $scope.librarySearch = toState.name === 'library.search';
-        setTitle(library);
+        setTitle();
+      }),
+
+      $rootScope.$on('$stateChangeStart', function (e, toState) {
+        if (!util.startsWith(toState.name, 'library.')) {
+          $rootScope.$emit('libraryOnPage', null);
+        }
       }),
 
       $rootScope.$on('userLoggedInStateChange', function () {
@@ -272,12 +284,11 @@ angular.module('kifi')
     // Initialize.
     //
 
-    setTitle(library);
+    setTitle();
 
-    $rootScope.$emit('libraryUrl', library);
-    $rootScope.$broadcast('relatedLibrariesChanged', []);
+    $rootScope.$emit('libraryOnPage', library);
 
-    if (library.kind === 'user_created' && library.access !== 'none') {
+    if (!libraryService.isSystemLibrary(library) && library.access !== 'none') {
       $rootScope.$emit('lastViewedLib', library);
     }
 
@@ -300,15 +311,14 @@ angular.module('kifi')
     libraryService.getRelatedLibraries(library.id).then(function (libraries) {
       trackPageView({libraryRecCount: libraries.length});
       $scope.relatedLibraries = libraries;
-      $rootScope.$broadcast('relatedLibrariesChanged', libraries);
 
-      //if (initParams.install === '1' && !installService.installedVersion) {
-        //showInstallModal();
-        //}
-      if (initParams.install === '1') {
-        showPersonaModal();
-        initParams.install = undefined;
+      if (initParams.install === '1' && !installService.installedVersion) {
+        showInstallModal();
       }
+      //if (initParams.install === '1' && !installService.installedVersion) {
+      //  showPersonaModal();
+      //  initParams.install = undefined;
+      //}
       if (initParams.intent === 'follow' && $scope.library.access === 'none') {
         libraryService.joinLibrary($scope.library.id);
       }

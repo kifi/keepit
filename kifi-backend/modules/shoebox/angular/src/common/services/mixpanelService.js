@@ -32,14 +32,10 @@
   var userId;
 
   var locations = {
-    yourKeeps: /^\/$/,
+    yourKeeps: /^\/$/,  // TODO: this is now recommendations!
     yourFriends: /^\/friends$/,
-    tagResults: /^\/tag\//,
     searchResults: /^\/find\b/,
-    addFriends: /^\/invite$/,
-    requests: /^\/friends\/requests$/,
-    helpRankClicks: /^\/helprank\/clicks?$/,
-    helpRankReKeeps: /^\/helprank\/rekeeps?$/
+    addFriends: /^\/invite$/
   };
 
   function trackEventThroughProxy(event, properties)  {

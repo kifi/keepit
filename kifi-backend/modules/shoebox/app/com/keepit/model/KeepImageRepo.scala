@@ -1,6 +1,6 @@
 package com.keepit.model
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.db.{ State, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.time.Clock
@@ -23,6 +23,7 @@ class KeepImageRepoImpl @Inject() (
 
   implicit val KeepImageSourceMapper = MappedColumnType.base[ImageSource, String](_.name, ImageSource.apply)
   implicit val imageHashMapper = MappedColumnType.base[ImageHash, String](_.hash, ImageHash.apply)
+  implicit val processImageOperationMapper = MappedColumnType.base[ProcessImageOperation, String](_.kind, ProcessImageOperation.apply)
 
   type RepoImpl = KeepImageTable
   class KeepImageTable(tag: Tag) extends RepoTable[KeepImage](db, tag, "keep_image") {
@@ -36,11 +37,12 @@ class KeepImageRepoImpl @Inject() (
     def sourceFileHash = column[ImageHash]("source_file_hash", O.NotNull)
     def sourceImageUrl = column[Option[String]]("source_image_url", O.Nullable)
     def isOriginal = column[Boolean]("is_original", O.NotNull)
+    def kind = column[ProcessImageOperation]("kind", O.NotNull)
 
     def idxKeepId = index("keep_image_f_keep_id", keepId, unique = false)
     def idxSourceFileHashSize = index("keep_image_u_source_file_hash_size_keep_id", (sourceFileHash, width, height, keepId), unique = true)
 
-    def * = (id.?, createdAt, updatedAt, state, keepId, imagePath, format, width, height, source, sourceFileHash, sourceImageUrl, isOriginal) <> ((KeepImage.apply _).tupled, KeepImage.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, keepId, imagePath, format, width, height, source, sourceFileHash, sourceImageUrl, isOriginal, kind) <> ((KeepImage.apply _).tupled, KeepImage.unapply _)
   }
 
   def table(tag: Tag) = new KeepImageTable(tag)

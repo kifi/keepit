@@ -31,6 +31,7 @@ import twitter4j.conf.ConfigurationBuilder
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import scala.util.{ Success, Failure, Try }
+import scala.collection.JavaConversions._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -70,6 +71,7 @@ trait TwitterSocialGraph extends SocialGraph {
   def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse]
   def sendTweet(socialUserInfo: SocialUserInfo, msg: String): Future[WSResponse]
   def sendImage(socialUserInfo: SocialUserInfo, image: File, message: String): Unit
+  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, sinceId: Long): Future[Seq[JsObject]] //uses app auth if no social user info is given
 }
 
 class TwitterSocialGraphImpl @Inject() (
@@ -304,6 +306,31 @@ class TwitterSocialGraphImpl @Inject() (
     val client = twitterImageUploadClient(socialUserInfo)
     log.info(s"[sendImage] user ${socialUserInfo.userId} ${socialUserInfo.fullName} sending image with message $message")
     client.upload(image, message)
+  }
+
+  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, sinceId: Long): Future[Seq[JsObject]] = {
+    val endpoint = "https://api.twitter.com/1.1/statuses/user_timeline.json"
+    val sig = socialUserInfoOpt.map { socialUserInfo =>
+      OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo))
+    } getOrElse {
+      OAuthCalculator(providerConfig.key, OAuth1TokenInfo(providerConfig.accessToken.key, providerConfig.accessToken.secret))
+    }
+    val call = if (sinceId > 0) {
+      WS.url(endpoint).sign(sig).withQueryString("screen_name" -> handle, "since_id" -> sinceId.toString, "count" -> "200")
+    } else {
+      WS.url(endpoint).sign(sig).withQueryString("screen_name" -> handle, "count" -> "200")
+    }
+    call.get().map { response =>
+      if (response.status == 200) {
+        response.json.as[JsArray].value.map(_.as[JsObject])
+      } else if (response.status == 420) { //rate limit
+        Seq.empty
+      } else {
+        airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}")
+        Seq.empty
+      }
+    }
+
   }
 
 }

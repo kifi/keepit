@@ -13,12 +13,14 @@ import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ Library, Keep, NormalizedURI, User }
+import org.joda.time.{ Days, DateTime }
 import play.api.libs.json._
 import scala.concurrent.duration._
 import scala.math.exp
 import scala.util.Random
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
+import com.keepit.common.time._
 
 @ImplementedBy(classOf[LDACommanderImpl])
 trait LDACommander {
@@ -60,7 +62,7 @@ class LDACommanderImpl @Inject() (
     userStatUpdatePlugin: LDAUserStatDbUpdatePlugin,
     ldaRelatedLibRepo: LDARelatedLibraryRepo) extends LDACommander with Logging {
 
-  private val consolidater = new RequestConsolidator[Id[User], Seq[PersonaLDAFeature]](FiniteDuration(2, MINUTES))
+  private val consolidater = new RequestConsolidator[Id[User], (Seq[PersonaLDAFeature], Seq[DateTime])](FiniteDuration(2, MINUTES))
 
   def numOfTopics(implicit version: ModelVersion[DenseLDA]): Int = infoCommander.getLDADimension
 
@@ -133,24 +135,23 @@ class LDACommanderImpl @Inject() (
       (userInterestOpt, userInterestStatOpt, libFeats)
     }
 
-    def scoreURI(uriTopicOpt: Option[URILDATopic], userFeatCombo: UserFeaturesCombo, userPersonas: Seq[PersonaLDAFeature]): LDAUserURIInterestScores = {
+    def scoreURI(uriTopicOpt: Option[URILDATopic], userFeatCombo: UserFeaturesCombo, userPersonas: Seq[PersonaLDAFeature], updatedTimes: Seq[DateTime]): LDAUserURIInterestScores = {
       val (userInterestOpt, userInterestStatOpt, libFeats) = userFeatCombo
       val s1 = computeCosineInterestScore(uriTopicOpt, userInterestOpt)
       val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
       val s3 = libraryInducedUserURIInterestScore(libFeats, uriTopicOpt)
-      val s4 = computePersonaInducedInterestScore(userPersonas, uriTopicOpt)
-      val s5 = combineScores(s2.global, s4, userInterestStatOpt.map { _.numOfEvidence })
+      val (s4, personaWeight) = computePersonaInducedInterestScore(userPersonas, updatedTimes, uriTopicOpt)
+      val s5 = combineScores(s2.global, s4, userInterestStatOpt.map { _.numOfEvidence }, personaWeight)
       val (topic1, topic2) = (uriTopicOpt.flatMap(_.firstTopic), uriTopicOpt.flatMap(_.secondTopic))
       LDAUserURIInterestScores(s5, s1.recency, s3, topic1, topic2)
     }
 
     // tweak
-    def combineScores(keepInduced: Option[LDAUserURIInterestScore], personaInduced: Option[LDAUserURIInterestScore], userKeeps: Option[Int]): Option[LDAUserURIInterestScore] = {
+    def combineScores(keepInduced: Option[LDAUserURIInterestScore], personaInduced: Option[LDAUserURIInterestScore], userKeeps: Option[Int], personaWeight: Float): Option[LDAUserURIInterestScore] = {
       val keepWeight = {
         val exponent = (userKeeps.getOrElse(-1000) - 50) / 50
         1.0 / (1 + exp(-exponent))
       }
-      val personaWeight = 1.0 - keepWeight // can include time info later
 
       (keepInduced, personaInduced) match {
         case (Some(kscore), Some(pscore)) =>
@@ -168,36 +169,45 @@ class LDACommanderImpl @Inject() (
       personaCommander.getUserPersonaFeatures(userId)
     }
 
-    personaFeatsFuture.map { personaFeats =>
+    personaFeatsFuture.map {
+      case (personaFeats, updatedTimes) =>
 
-      val (userFeatsCombo, uriTopicOpts) = db.readOnlyReplica { implicit s =>
-        val userFeatsCombo = getUserFeaturesCombo(userId, version)
-        val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, version)
-        assert(uriTopicOpts.size == uriIds.size, "retreived uri lda features size doesn't match with num of uris")
-        (userFeatsCombo, uriTopicOpts)
-      }
+        val (userFeatsCombo, uriTopicOpts) = db.readOnlyReplica { implicit s =>
+          val userFeatsCombo = getUserFeaturesCombo(userId, version)
+          val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, version)
+          assert(uriTopicOpts.size == uriIds.size, "retreived uri lda features size doesn't match with num of uris")
+          (userFeatsCombo, uriTopicOpts)
+        }
 
-      uriTopicOpts.map { uriTopicOpt =>
-        if (!isInJunkTopic(uriTopicOpt, junkTopics)) scoreURI(uriTopicOpt, userFeatsCombo, personaFeats)
-        else LDAUserURIInterestScores(None, None, None)
-      }
+        uriTopicOpts.map { uriTopicOpt =>
+          if (!isInJunkTopic(uriTopicOpt, junkTopics)) scoreURI(uriTopicOpt, userFeatsCombo, personaFeats, updatedTimes)
+          else LDAUserURIInterestScores(None, None, None)
+        }
 
     }
 
   }
 
-  private def computePersonaInducedInterestScore(personas: Seq[PersonaLDAFeature], uriTopicOpt: Option[URILDATopic]): Option[LDAUserURIInterestScore] = {
-    if (personas.isEmpty) None
+  private def computePersonaInducedInterestScore(personas: Seq[PersonaLDAFeature], updatedTimes: Seq[DateTime], uriTopicOpt: Option[URILDATopic]): (Option[LDAUserURIInterestScore], Float) = {
+    if (personas.isEmpty) (None, 0f)
     else {
       uriTopicOpt match {
         case Some(feat) =>
-          feat.feature.map { uriFeat =>
+          val scoreAndWeightOpt: Option[(LDAUserURIInterestScore, Float)] = feat.feature.map { uriFeat =>
             val scores = personas.map { p => cosineDistance(uriFeat.value, p.feature.mean) }
             val score = scores.max
+            val idx = scores.indexOf(score)
+            val days = Days.daysBetween(updatedTimes(idx), currentDateTime).getDays
+            val weight = exp(-days / 14.0)
             val conf = computeURIConfidence(feat.numOfWords, feat.timesFirstTopicChanged)
-            LDAUserURIInterestScore(score, conf)
+            (LDAUserURIInterestScore(score, conf), weight.toFloat)
           }
-        case None => None
+
+          scoreAndWeightOpt match {
+            case Some((s, w)) => (Some(s), w)
+            case None => (None, 0f)
+          }
+        case None => (None, 0f)
       }
     }
   }
@@ -218,30 +228,11 @@ class LDACommanderImpl @Inject() (
       val libsFeats = libFeats.map { _.value }
       val divs = libsFeats.map { v => KL_divergence(v, uriFeat) }
       val scores = divs.map { div => (1f - div) max 0f }.sortBy(x => -x)
-      val score = if (scores.size <= 2) {
-        scores(0)
-      } else {
-        // ensemble of the scores
-        require(scores.size >= 2, "scores size should be >= 2")
-        val r = (scores.size - 1).toFloat / scores.size
-        val weight = bumpFunction(r) // weight of the max score, decays as r increases.
-        val max = scores(0)
-        val remains = scores.drop(1).take(5)
-        val avg = remains.sum / remains.size
-        weight * max + (1 - weight) * avg
-      }
+      val idx = (0.2 * scores.size).toInt // just take about 1-sigma above the mean. avoid outliers.
+      val score = scores(idx)
       val confidence = computeURIConfidence(numWords, numTopicChanges)
       Some(LDAUserURIInterestScore(score, confidence))
     } else None
-  }
-
-  // max value normalized to 1
-  private def bumpFunction(x: Float): Float = {
-    if (math.abs(x) >= 1f) 0f
-    else {
-      val exponent = 1.0 / (1 - x * x)
-      exp(1 - exponent)
-    }
   }
 
   private def computeGaussianInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAStats])(implicit version: ModelVersion[DenseLDA]): LDAUserURIInterestScores = {

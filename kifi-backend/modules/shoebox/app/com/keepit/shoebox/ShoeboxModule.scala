@@ -4,6 +4,7 @@ import com.keepit.common.controller.UserActionsModule
 import com.keepit.common.seo.SiteMapGeneratorModule
 import com.keepit.reports._
 import com.keepit.common.cache.ShoeboxCacheModule
+import com.keepit.shoebox.cron.ActivityEmailCronModule
 import com.keepit.social.SecureSocialModule
 import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
@@ -50,7 +51,8 @@ abstract class ShoeboxModule(
     val cacheModule: ShoeboxCacheModule,
     val scrapeSchedulerModule: ScrapeSchedulerModule,
     val scraperHealthMonitorModule: ScraperHealthMonitorModule,
-    val fjMonitorModule: ForkJoinContextMonitorModule) extends ConfigurationModule with CommonServiceModule {
+    val fjMonitorModule: ForkJoinContextMonitorModule,
+    val shoeboxTasksModule: ShoeboxTasksPluginModule = ShoeboxTasksPluginModule()) extends ConfigurationModule with CommonServiceModule {
   //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients
   val serviceTypeModule = ShoeboxServiceTypeModule()
@@ -77,4 +79,6 @@ abstract class ShoeboxModule(
   val dbSequencingModule = ShoeboxDbSequencingModule()
 
   val mailerModule = PlayMailerModule()
+
+  val activityEmailCronModule = ActivityEmailCronModule()
 }

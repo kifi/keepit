@@ -3,7 +3,7 @@ package com.keepit.commanders.emails
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.mail.{ ElectronicMailRepo, EmailAddress, FakeMailModule }
+import com.keepit.common.mail.{ EmailAddress, ElectronicMailRepo, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -72,10 +72,11 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         val sender = inject[ActivityFeedEmailSender]
 
         val (user1, user2) = db.readWrite { implicit rw =>
-          (
-            user().withName("Kifi", "User1").withEmailAddress("u1@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved,
-            user().withName("Kifi", "User2").withEmailAddress("u2@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
-          )
+          val u1 = user().withName("Kifi", "User1").withEmailAddress("u1@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
+          val u2 = user().withName("Kifi", "User2").withEmailAddress("u2@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
+          keeps(5).foreach(_.withUser(u1).saved)
+          keeps(5).foreach(_.withUser(u2).saved)
+          (u1, u2)
         }
 
         val curator = inject[CuratorServiceClient].asInstanceOf[FakeCuratorServiceClientImpl]
@@ -184,10 +185,11 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
           }
         }
 
-        val senderF = sender()
+        val senderF = sender(None)
         Await.ready(senderF, Duration(5, "seconds"))
 
-        val email1 :: email2 :: Nil = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)
+        val emails = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)
+        val email1 :: email2 :: Nil = emails.filter(_.category == NotificationCategory.toElectronicMailCategory(NotificationCategory.User.ACTIVITY))
 
         val activityEmails = db.readOnlyMaster { implicit s => inject[ActivityEmailRepo].all }
         activityEmails.size === 2
@@ -200,10 +202,12 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         val html1: String = email1.htmlBody
         val html2: String = email2.htmlBody
 
+        val fw = new java.io.FileWriter("activity.html")
+        fw.write(html1)
+        fw.close()
+
         email1.to === Seq(EmailAddress("u1@kifi.com"))
         email2.to === Seq(EmailAddress("u2@kifi.com"))
-
-        html1 must contain("/u1/lib1-reco")
 
       }
     }
