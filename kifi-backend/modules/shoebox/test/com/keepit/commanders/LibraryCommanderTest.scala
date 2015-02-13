@@ -52,7 +52,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
   private val profileLibraryOrdering = new Ordering[Library] {
     def compare(self: Library, that: Library): Int =
-      (self.kind.value compare that.kind.value) match {
+      (self.kind compare that.kind) match {
         case 0 =>
           (self.memberCount compare that.memberCount) match {
             case 0 => -(self.id.get.id compare that.id.get.id)
