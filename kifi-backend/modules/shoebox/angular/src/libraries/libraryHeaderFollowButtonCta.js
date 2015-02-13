@@ -4,7 +4,9 @@ angular.module('kifi')
 
 .directive('kfLibraryHeaderFollowButtonCta', [
   '$compile', '$rootElement', '$rootScope', '$templateCache', '$timeout', '$window', 'libraryService', 'platformService',
-  function ($compile, $rootElement, $rootScope, $templateCache, $timeout, $window, libraryService, platformService) {
+  '$interval',
+  function ($compile, $rootElement, $rootScope, $templateCache, $timeout, $window, libraryService, platformService,
+    $interval) {
     return {
       restrict: 'A',
       link: function (scope, element/*, attrs */) {
@@ -123,15 +125,33 @@ angular.module('kifi')
         });
         element.on('mouseleave', hideCTA);
 
-        var adjustAutoCTAPosition = function () {
+        var lastScrolled = null;
+        var hideAutoCTA = function () {
+          lastScrolled = Date.now();
+
           if (autoCTAShowing) {
-            positionCTA();
+            hideCTA();
+
+            var showCTAOnScrollStop = $interval(function () {
+              if (lastScrolled && (Date.now() - lastScrolled > 500)) {
+                showCTA(true);
+                lastScrolled = null;
+                $interval.cancel(showCTAOnScrollStop);
+              }
+            }, 1000);
           }
         };
-        $window.addEventListener('scroll', adjustAutoCTAPosition);
+        $window.addEventListener('scroll', hideAutoCTA);
         scope.$on('$destroy', function () {
-          $window.removeEventListener(adjustAutoCTAPosition);
+          $window.removeEventListener(hideAutoCTA);
         });
+
+        $interval(function () {
+          if (lastScrolled && (Date.now() - lastScrolled > 1000)) {
+            showCTA(true);
+            lastScrolled = null;
+          }
+        }, 1000);
 
         //
         // On link.
