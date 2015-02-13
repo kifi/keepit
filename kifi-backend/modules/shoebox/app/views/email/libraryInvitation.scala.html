@@ -168,7 +168,7 @@
                     <td>
                       <table width="100%" border="0" cellspacing="0" cellpadding="0">
                         <tr>
-                          <td width="54" valign="top"><img src='@avatarUrl(inviterId)' alt="@firstName(inviterId)" width="54" height="55" style="display:block;" border="0" /></td>
+                          <td width="54" valign="top"><a href="@profileUrl(inviterId, "libraryInvitation")"><img src='@avatarUrl(inviterId)' alt="@firstName(inviterId)" width="54" height="55" style="display:block;" border="0" /></a></td>
                           <td width="20">&nbsp;</td>
                           @inviteMsg.map { msg =>
                           <td valign="middle" style="font-family:Arial,sans-serif;font-size:17px;color:#667a90;line-height:21px;">
