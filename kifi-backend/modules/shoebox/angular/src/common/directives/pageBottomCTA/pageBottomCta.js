@@ -12,6 +12,7 @@ angular.module('kifi')
         library: '='
       },
       link: function (scope /*element, attrs*/) {
+        scope.isMobile = platformService.isSupportedMobilePlatform();
         scope.show = false;
 
         scope.join = function ($event) {
@@ -21,24 +22,13 @@ angular.module('kifi')
 
           $event.preventDefault();
           scope.show = false;
-
-          var userData = { libraryId: scope.library.id };
-          if (platformService.isSupportedMobilePlatform()) {
-            platformService.goToAppOrStore();
-          } else {
-            signupService.register(userData);
-          }
+          signupService.register({libraryId: scope.library.id});
         };
 
-        scope.login = function ($event) {
+        scope.login = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', {
             action: 'clickedLoginPopup'
           });
-
-          if (platformService.isSupportedMobilePlatform()) {
-            $event.preventDefault();
-            platformService.goToAppOrStore();
-          }
         };
 
         function onScroll() {
