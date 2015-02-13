@@ -121,7 +121,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     protected val airbrake: AirbrakeNotifier,
     private implicit val publicIdConfig: PublicIdConfiguration) extends ActivityFeedEmailSender with ActivityEmailHelpers with Logging {
 
-  val reactiveLock = new ReactiveLock(8)
+  val reactiveLock = new ReactiveLock(3)
 
   // max library recommendations to include in the feed
   val maxLibraryRecosInFeed = 3
