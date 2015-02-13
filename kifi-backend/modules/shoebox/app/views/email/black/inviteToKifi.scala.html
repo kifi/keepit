@@ -7,7 +7,7 @@
   <tr><td align="center" style="text-align:center;">
     <table border="0" cellspacing="0" cellpadding="0" align="center" style="border-collapse: collapse; mso-table-lspace: 0px; mso-table-rspace: 0px;">
       <tr><td align="center">
-        <img src="@avatarUrl(fromUserId)" alt="@fullName(fromUserId)" width="75" height="75" border="0" style="display:block;"/>
+          <a href="@profileUrl(fromUserId, "inviteToKifi")"><img src="@avatarUrl(fromUserId)" alt="@fullName(fromUserId)" width="75" height="75" border="0" style="display:block;"/></a>
       </td></tr>
     </table>
   </td></tr>
@@ -15,7 +15,7 @@
 
   <tr>
     <td align="center" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:22px;font-weight:bold;line-height:26px;color:#535762;mso-line-height-rule:exactly;">
-      @fullName(fromUserId)
+        <a href="@profileUrl(fromUserId, "friendRequestAccepted")">@fullName(fromUserId)</a>
     </td>
   </tr>
   @email.tags.trSpacer(20)
