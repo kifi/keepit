@@ -108,6 +108,7 @@ angular.module('kifi')
     };
 
     $scope.showPersonaModal = function() {
+      $analytics.eventTrack('user_clicked_page', {type: 'yourKeeps', action: 'clickedUpdateInterests'});
       modalService.open({
         template: 'persona/managePersonaModal.tpl.html'
       });

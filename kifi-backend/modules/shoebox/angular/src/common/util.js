@@ -27,6 +27,14 @@ angular.module('util', [])
       endsWith: function (str, suffix) {
         return str === suffix || str.indexOf(suffix, str.length - suffix.length) !== -1;
       },
+      upperCaseFirstLetterOfWords: function (strings) {
+        for (var i = 0; i < strings.length; i++) {
+          var currentStr = strings[i];
+          var newStr = currentStr.charAt(0).toUpperCase() + currentStr.slice(1);
+          strings[i] = newStr;
+        }
+        return strings;
+      },
       trimInput: function (input) {
         return input ? input.trim().replace(/\s+/g, ' ') : '';
       },

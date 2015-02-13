@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'modalService', 'profileService', 'routeService', '$window', 'socialService',
-  function ($scope, $http, modalService, profileService, routeService, $window, socialService) {
+  '$scope', '$http', 'modalService', 'profileService', 'routeService', '$window', 'socialService', '$analytics',
+  function ($scope, $http, modalService, profileService, routeService, $window, socialService, $analytics) {
 
     // $analytics.eventTrack('test_event', { category: 'test', label: 'controller' });
 
@@ -96,6 +96,7 @@ angular.module('kifi')
     };
 
     $scope.showPersonaModal = function() {
+      $analytics.eventTrack('user_clicked_page', {type: 'settings', action: 'clickedUpdateInterests'});
       modalService.open({
         template: 'persona/managePersonaModal.tpl.html'
       });

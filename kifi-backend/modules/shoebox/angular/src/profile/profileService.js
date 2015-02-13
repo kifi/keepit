@@ -240,6 +240,7 @@ angular.module('kifi')
     function fetchPrefs() {
       return $http.get(routeService.prefs).then(function (p) {
         p.data.auto_show_guide = true;
+        console.log('blahblahblah');
         var oldPrefs = _.clone(prefs);
         util.replaceObjectInPlace(prefs, p.data);
         if (prefs.library_sorting_pref !== oldPrefs.library_sorting_pref) {

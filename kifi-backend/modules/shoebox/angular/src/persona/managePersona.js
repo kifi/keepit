@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfManagePersona', [ 'userPersonaActionService', 'routeService',
-  function (userPersonaActionService, routeService) {
+.directive('kfManagePersona', [ 'userPersonaActionService', 'routeService', '$analytics', 'util',
+  function (userPersonaActionService, routeService, $analytics, util) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -23,6 +23,10 @@ angular.module('kifi')
           persona.currentIconSrc = persona.activeIconSrc;
           scope.selectedPersonaIds.push(persona.id);
           userPersonaActionService.addPersona(persona.id);
+
+          // to Camel Case Analytics
+          var personaAction = util.upperCaseFirstLetterOfWords(persona.id.split('_')).join('');
+          $analytics.eventTrack('user_clicked_page', {type: persona.id, action: 'selectedPersona' + personaAction});
         };
 
         scope.unselectPersona = function(persona) {
@@ -30,6 +34,10 @@ angular.module('kifi')
           persona.currentIconSrc = persona.iconSrc;
           _.pull(scope.selectedPersonaIds, persona.id);
           userPersonaActionService.removePersona(persona.id);
+
+          // to Camel Case Analytics
+          var personaAction = util.upperCaseFirstLetterOfWords(persona.id.split('_')).join('');
+          $analytics.eventTrack('user_clicked_page', {type: persona.id, action: 'unselectedPersona' + personaAction});
         };
 
         scope.toggleSelect = function(persona) {
@@ -45,6 +53,7 @@ angular.module('kifi')
             var closeFunc = scope.modalData ? scope.modalData.onClose : undefined;
             kfModalCtrl.close(closeFunc, true);
           }
+          $analytics.eventTrack('user_clicked_page', {action: 'closed'});
         };
 
         //
