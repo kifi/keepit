@@ -384,7 +384,6 @@ angular.module('kifi')
         }
 
         switch ($location.search().o) {
-          case 'rl': setOrigin('libraryRec'); break;
           case 'lac': setOrigin('libraryAttributionChip'); break;
         }
 
