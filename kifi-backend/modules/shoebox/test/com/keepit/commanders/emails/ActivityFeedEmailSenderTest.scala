@@ -201,16 +201,15 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         activityEmail1.userFollowedLibraries.get.size === 1
         activityEmail1.libraryRecommendations.get.size === 3
 
-        val html1: String = email1.htmlBody
-        val html2: String = email2.htmlBody
+        // useful for quick-and-dirty testing
+        //        val html1: String = email1.htmlBody
+        //        val html2: String = email2.htmlBody
+        //        val fw = new java.io.FileWriter("activity.html")
+        //        fw.write(html1)
+        //        fw.close()
 
-        val fw = new java.io.FileWriter("activity.html")
-        fw.write(html1)
-        fw.close()
-
-        //        email1.to === Seq(EmailAddress("u1@kifi.com"))
-        //        email2.to === Seq(EmailAddress("u2@kifi.com"))
-        1 === 1
+        email1.to === Seq(EmailAddress("u1@kifi.com"))
+        email2.to === Seq(EmailAddress("u2@kifi.com"))
 
       }
     }
