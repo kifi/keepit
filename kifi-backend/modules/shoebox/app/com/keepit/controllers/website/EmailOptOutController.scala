@@ -1,16 +1,17 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
-import play.api.mvc._
-import com.keepit.model._
-import com.keepit.common.db.slick._
 import com.google.inject.Inject
-import com.keepit.common.mail.EmailAddress
-import scala.util.{ Success, Failure }
-import play.api.data.Form
-import play.api.data.Forms.{ tuple, text, optional }
-import com.keepit.social.SecureSocialClientIds
 import com.keepit.commanders.emails.EmailOptOutCommander
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.db.slick._
+import com.keepit.common.mail.EmailAddress
+import com.keepit.model._
+import com.keepit.social.SecureSocialClientIds
+import play.api.data.Form
+import play.api.data.Forms.{ optional, text, tuple }
+import play.api.mvc._
+
+import scala.util.Success
 
 class EmailOptOutController @Inject() (
   db: Database,
@@ -41,7 +42,8 @@ class EmailOptOutController @Inject() (
       "all" -> optional(text),
       "invite" -> optional(text),
       "message" -> optional(text),
-      "digest" -> optional(text)
+      "digest" -> optional(text),
+      "activity" -> optional(text)
     )
   )
   def optOutAction(optOutToken: String) = Action { implicit request =>
@@ -51,7 +53,7 @@ class EmailOptOutController @Inject() (
       optOutForm.bindFromRequest.fold(
         formWithErrors => BadRequest,
         {
-          case (all, invite, message, digest) =>
+          case (all, invite, message, digest, activity) =>
             // Checkbox unchecked == unsubscribe
             db.readWrite { implicit session =>
               all.collect { case s if s == "true" => emailOptOutRepo.optIn(emailAddress, NotificationCategory.ALL) }
@@ -62,6 +64,8 @@ class EmailOptOutController @Inject() (
                 .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.User.MESSAGE) }
               digest.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.User.DIGEST) }
                 .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.User.DIGEST) }
+              activity.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.User.ACTIVITY) }
+                .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.User.ACTIVITY) }
             }
             Redirect(routes.EmailOptOutController.optOut(optOutToken)).flashing("msg" -> "Your preferences have been updated.")
         }
