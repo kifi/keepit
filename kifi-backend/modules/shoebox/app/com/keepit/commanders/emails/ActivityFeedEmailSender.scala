@@ -172,13 +172,10 @@ class ActivityFeedEmailSenderImpl @Inject() (
     // TODO paginate instead of grabbing all user IDs at once
     val userIds = userRepo.getAllIds()
 
-    // TODO remove this filter when we have library recos for users w/o keeps
-    // 5 is the min number of keeps required in curator for a user to get precomputed lib recos
-    keepRepo.getCountByUsers(userIds).filter(_._2 >= 20).keySet filter { userId =>
-      // TODO use a bulk query / this is N+1 queries - not good
-      val count = keepRepo.getCountByUserAndSource(userId, Set(KeepSource.keeper, KeepSource.mobile))
-      count >= 20
-    }
+    // TODO remove this filter when we have quality library recos for users w/o keeps
+    keepRepo.getCountByUsersAndSource(userIds, Set(KeepSource.keeper, KeepSource.mobile)).collect {
+      case (id, count) if count >= 20 => id
+    }.toSet
   }
 
   def prepareEmailForUser(toUserId: Id[User], overrideToEmail: Option[EmailAddress] = None): Future[Option[EmailToSend]] = new SafeFuture(reactiveLock.withLockFuture {
@@ -252,17 +249,15 @@ class ActivityFeedEmailSenderImpl @Inject() (
               ))
             }
 
-            // uncomment below when releasing
-            //            curator.notifyLibraryRecosDelivered(toUserId, libRecos.map(_.libraryId).toSet,
-            //              RecommendationSource.Email, RecommendationSubSource.ActivityFeed)
+            curator.notifyLibraryRecosDelivered(toUserId, libRecos.map(_.libraryId).toSet,
+              RecommendationSource.Email, RecommendationSubSource.ActivityFeed)
 
             val subjectLine = {
               if (toUserId.id % 2 == 0) "Things you should know on Kifi"
               else "What's happening right now on Kifi"
             }
 
-            //            val toDest: Either[Id[User], EmailAddress] = overrideToEmail.map(Right.apply).getOrElse(Left(toUserId))
-            val toDest = Right(SystemEmailAddress.FEED_QA)
+            val toDest: Either[Id[User], EmailAddress] = overrideToEmail.map(Right.apply).getOrElse(Left(toUserId))
             val htmlBody = views.html.email.v3.activityFeed(activityData)
             // trim whitespace at the beginning of each line
             val trimmedHtml = Html(htmlBody.body.trim().replaceAll("(?m)^\\s+", ""))
