@@ -95,6 +95,11 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
+      if (library.kind == LibraryKind.SYSTEM_PERSONA){
+        contextBuilder += ("libraryType", "personaCreated")
+      } else if (library.kind == LibraryKind.USER_CREATED) {
+        contextBuilder += ("libraryType", "userCreated")
+      }
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
