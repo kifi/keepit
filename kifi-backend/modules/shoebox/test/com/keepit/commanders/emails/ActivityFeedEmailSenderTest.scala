@@ -74,8 +74,10 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         val (user1, user2) = db.readWrite { implicit rw =>
           val u1 = user().withName("Kifi", "User1").withEmailAddress("u1@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
           val u2 = user().withName("Kifi", "User2").withEmailAddress("u2@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
-          keeps(5).foreach(_.withUser(u1).saved)
-          keeps(5).foreach(_.withUser(u2).saved)
+          val u3 = user().withName("Kifi", "User3").withEmailAddress("u3@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
+          keeps(20).foreach(_.withUser(u1).saved)
+          keeps(20).foreach(_.withUser(u2).saved)
+          keeps(2).foreach(_.withUser(u2).saved)
           (u1, u2)
         }
 
