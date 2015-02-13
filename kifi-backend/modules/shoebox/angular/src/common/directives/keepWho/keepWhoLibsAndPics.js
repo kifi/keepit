@@ -61,8 +61,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepWhoLib', ['$rootScope', 'platformService', '$location',
-  function ($rootScope, platformService, $location) {
+.directive('kfKeepWhoLib', ['$rootScope', 'platformService',
+  function ($rootScope, platformService) {
     return {
       restrict: 'A',
       replace: true,

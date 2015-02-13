@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('libraryService', [
-  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService', '$analytics', '$location',
-  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService, $analytics, $location) {
+  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService', '$analytics',
+  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService, $analytics) {
     var librarySummaries = [],
         invitedSummaries = [];
 
