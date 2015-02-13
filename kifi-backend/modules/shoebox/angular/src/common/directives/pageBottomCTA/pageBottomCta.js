@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfPageBottomCta', ['$rootScope', '$window', 'platformService', 'signupService',
-  function ($rootScope, $window, platformService, signupService) {
+.directive('kfPageBottomCta', ['$rootScope', '$window', 'signupService',
+  function ($rootScope, $window, signupService) {
     return {
       restrict: 'A',
       replace: true,
@@ -12,7 +12,6 @@ angular.module('kifi')
         library: '='
       },
       link: function (scope/*element, attrs*/) {
-        scope.isMobile = platformService.isSupportedMobilePlatform();
         scope.show = false;
 
         scope.join = function ($event) {
