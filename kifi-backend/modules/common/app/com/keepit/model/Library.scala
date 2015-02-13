@@ -182,13 +182,15 @@ object LibraryVisibility {
   }
 }
 
-sealed abstract class LibraryKind(val value: String)
+sealed abstract class LibraryKind(val value: String, val priority: Int) {
+  def compare(other: LibraryKind): Int = this.priority compare other.priority
+}
 
 object LibraryKind {
-  case object SYSTEM_MAIN extends LibraryKind("system_main")
-  case object SYSTEM_SECRET extends LibraryKind("system_secret")
-  case object SYSTEM_PERSONA extends LibraryKind("system_persona")
-  case object USER_CREATED extends LibraryKind("user_created")
+  case object SYSTEM_MAIN extends LibraryKind("system_main", 0)
+  case object SYSTEM_SECRET extends LibraryKind("system_secret", 1)
+  case object SYSTEM_PERSONA extends LibraryKind("system_persona", 2)
+  case object USER_CREATED extends LibraryKind("user_created", 2)
 
   implicit def format[T]: Format[LibraryKind] =
     Format(__.read[String].map(LibraryKind(_)), new Writes[LibraryKind] { def writes(o: LibraryKind) = JsString(o.value) })
