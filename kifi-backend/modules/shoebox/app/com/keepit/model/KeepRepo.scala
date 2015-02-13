@@ -28,6 +28,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def bulkGetByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Keep]
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int
+  def getCountByUserAndSource(userId: Id[User], sources: Set[KeepSource])(implicit session: RSession): Int
   def getCountByUsers(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
@@ -310,8 +311,14 @@ class KeepRepoImpl @Inject() (
 
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int = {
     import StaticQuery.interpolation
-
     val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
+    sql.as[Int].first
+  }
+
+  // TODO (this hardcodes keeper and mobile sources - update to use the Set[KeepSource]
+  def getCountByUserAndSource(userId: Id[User], sources: Set[KeepSource])(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+    val sql = sql"select count(*) from bookmark where user_id=$userId and state = '#${KeepStates.ACTIVE}' and source IN ('keeper','mobile')"
     sql.as[Int].first
   }
 

@@ -879,12 +879,12 @@ class AdminUserController @Inject() (
     // Usage example:
     // $.ajax({url:"/admin/sendActivityEmailToAll", type: 'POST', data: JSON.stringify({overrideToEmail:"YOUR_EMAIL_FOR_TESTING@kifi.com"}), contentType: 'application/json', dataType: 'json'});
 
-    val forceSendToAll = (request.request.body \ "force").asOpt[Boolean]
+    val forceSendToAll = (request.request.body \ "forceToAll").asOpt[Boolean]
     val toEmail = (request.request.body \ "overrideToEmail").asOpt[EmailAddress]
-    val toUser = (request.request.body \ "userId").asOpt[Id[User]]
+    val toUsers = (request.request.body \ "userIds").asOpt[Seq[Id[User]]]
 
-    if (toUser.isDefined) {
-      activityEmailSender(Set(toUser.get), toEmail)
+    if (toUsers.isDefined) {
+      activityEmailSender(toUsers.get.toSet, toEmail)
       NoContent
     } else if (toEmail.isDefined) {
       activityEmailSender(toEmail)
@@ -893,7 +893,7 @@ class AdminUserController @Inject() (
       activityEmailSender(None)
       NoContent
     } else {
-      BadRequest("JSON body with force:true is required to send to every user")
+      UnprocessableEntity("Invalid input")
     }
   }
 
