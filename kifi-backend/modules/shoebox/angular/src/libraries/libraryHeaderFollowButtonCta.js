@@ -138,20 +138,13 @@ angular.module('kifi')
                 lastScrolled = null;
                 $interval.cancel(showCTAOnScrollStop);
               }
-            }, 1000);
+            }, 500);
           }
         };
         $window.addEventListener('scroll', hideAutoCTA);
         scope.$on('$destroy', function () {
           $window.removeEventListener(hideAutoCTA);
         });
-
-        $interval(function () {
-          if (lastScrolled && (Date.now() - lastScrolled > 1000)) {
-            showCTA(true);
-            lastScrolled = null;
-          }
-        }, 1000);
 
         //
         // On link.
