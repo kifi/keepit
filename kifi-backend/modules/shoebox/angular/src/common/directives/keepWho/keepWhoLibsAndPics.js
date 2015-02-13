@@ -73,8 +73,6 @@ angular.module('kifi')
       },
       link: function (scope) {
         scope.onLibraryAttributionClicked = function ($event) {
-          $event.preventDefault();
-          $location.path(scope.library.path).search('o', 'lac');
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedLibraryAttribution' });
         };
         scope.isBot = platformService.isBot();

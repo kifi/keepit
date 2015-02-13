@@ -379,14 +379,6 @@ angular.module('kifi')
           defaultAttributes.libraryName = library.name;
         }
 
-        function setOrigin(str) {
-          defaultAttributes.origin = str;
-        }
-
-        switch ($location.search().o) {
-          case 'lac': setOrigin('libraryAttributionChip'); break;
-        }
-
         return defaultAttributes;
       },
 
