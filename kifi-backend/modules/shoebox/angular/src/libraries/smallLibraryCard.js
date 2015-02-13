@@ -15,7 +15,7 @@ angular.module('kifi')
       },
       templateUrl: 'libraries/smallLibraryCard.tpl.html',
       link: function (scope/*, element, attrs*/) {
-        scope.clickCard = function ($event) {
+        scope.clickCard = function () {
           $window.scrollTo(0, 0);
           scope.$emit('trackLibraryEvent', 'click', { action: scope.action });
         };
