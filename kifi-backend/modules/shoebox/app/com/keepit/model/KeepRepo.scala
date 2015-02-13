@@ -28,8 +28,8 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def bulkGetByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Keep]
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int
-  def getCountByUserAndSource(userId: Id[User], sources: Set[KeepSource])(implicit session: RSession): Int
   def getCountByUsers(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
+  def getCountByUsersAndSource(userIds: Set[Id[User]], sources: Set[KeepSource])(implicit session: RSession): Map[Id[User], Int]
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
@@ -331,6 +331,12 @@ class KeepRepoImpl @Inject() (
       missingCounts.map { case (userId, count) => KeepCountKey(userId) -> count }.toMap
     }
   }.map { case (key, count) => key.userId -> count }
+
+  def getCountByUsersAndSource(userIds: Set[Id[User]], sources: Set[KeepSource])(implicit session: RSession): Map[Id[User], Int] = {
+    (for (r <- rows if r.userId.inSet(userIds) && r.source.inSet(sources) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.userId).map {
+      case (userId, keeps) => (userId, keeps.length)
+    }.run
+  }.map { case (userId, count) => userId -> count }.toMap
 
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
     import StaticQuery.interpolation
