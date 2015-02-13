@@ -97,7 +97,7 @@ angular.module('kifi')
         library.owner.image = friendService.getPictureUrlForUser(library.owner);
         library.isMine = library.owner.id === profileService.me.id;
       }
-      if (api.isSystemLibrary(library)) {
+      if (api.isLibraryMainOrSecret(library)) {
         library.color = '#808080';
       }
     }
@@ -143,11 +143,11 @@ angular.module('kifi')
       invitedSummaries: invitedSummaries,
       recentLibraries: recentLibraries,
 
-      isSystemLibrary: function (library) {
+      isLibraryMainOrSecret: function (library) {
         return library.kind === 'system_main' || library.kind === 'system_secret';
       },
 
-      isSystemLibraryById: function (libraryId) {
+      isLibraryIdMainOrSecret: function (libraryId) {
         return _.some(librarySummaries, function (libSum) {
           return (libSum.kind === 'system_main' || libSum.kind === 'system_secret') && libSum.id === libraryId;
         });

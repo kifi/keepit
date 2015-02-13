@@ -301,7 +301,7 @@ angular.module('kifi')
       var resultsWithLibs = 0;
       $scope.resultKeeps.forEach( function (keep) {
         // does there exist a library that's not system_created?
-        if (_.some(keep.libraries, function (lib) { return !libraryService.isSystemLibraryById(lib.id); })) {
+        if (_.some(keep.libraries, function (lib) { return !libraryService.isLibraryIdMainOrSecret(lib.id); })) {
           resultsWithLibs++;
         }
       });

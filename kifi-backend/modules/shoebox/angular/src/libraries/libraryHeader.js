@@ -592,7 +592,7 @@ angular.module('kifi')
         };
 
         scope.isUserCreatedLibrary = function () {
-          return !libraryService.isSystemLibrary(scope.library);
+          return !libraryService.isLibraryMainOrSecret(scope.library);
         };
 
         scope.isMyLibrary = function () {
