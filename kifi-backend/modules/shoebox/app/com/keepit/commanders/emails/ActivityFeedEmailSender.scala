@@ -248,15 +248,17 @@ class ActivityFeedEmailSenderImpl @Inject() (
               ))
             }
 
-            curator.notifyLibraryRecosDelivered(toUserId, libRecos.map(_.libraryId).toSet,
-              RecommendationSource.Email, RecommendationSubSource.ActivityFeed)
+            // uncomment below when releasing
+            //            curator.notifyLibraryRecosDelivered(toUserId, libRecos.map(_.libraryId).toSet,
+            //              RecommendationSource.Email, RecommendationSubSource.ActivityFeed)
 
             val subjectLine = {
               if (toUserId.id % 2 == 0) "Things you should know on Kifi"
               else "What's happening right now on Kifi"
             }
 
-            val toDest: Either[Id[User], EmailAddress] = overrideToEmail.map(Right.apply).getOrElse(Left(toUserId))
+            //            val toDest: Either[Id[User], EmailAddress] = overrideToEmail.map(Right.apply).getOrElse(Left(toUserId))
+            val toDest = Right(SystemEmailAddress.FEED_QA)
             val htmlBody = views.html.email.v3.activityFeed(activityData)
             // trim whitespace at the beginning of each line
             val trimmedHtml = Html(htmlBody.body.trim().replaceAll("(?m)^\\s+", ""))
