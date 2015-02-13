@@ -42,13 +42,11 @@ angular.module('kifi')
         };
 
         function onScroll() {
-          $timeout(function () {
-            if (!scope.show) {
-              $rootScope.$emit('trackLibraryEvent', 'view', { type: 'libraryLandingPopup' });
-              scope.show = true;
-              angular.element('.kf-lib-footer').css('padding-bottom', '270px');
-            }
-          }, 1000);
+          if (!scope.show) {
+            $rootScope.$emit('trackLibraryEvent', 'view', { type: 'libraryLandingPopup' });
+            scope.show = true;
+            angular.element('.kf-lib-footer').css('padding-bottom', '270px');
+          }
         }
         $window.addEventListener('scroll', onScroll);
         scope.$on('$destroy', function () {
