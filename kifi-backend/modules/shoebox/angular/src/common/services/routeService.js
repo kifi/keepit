@@ -107,7 +107,14 @@ angular.module('kifi')
         return route('/recos/adHoc?n=' + howMany);
       },
       recos: function (opts) {
-        return route('/recos/top?more=' + opts.more + '&recency=' + opts.recency);
+        var routeBase = '/recos/topV2?more=' + opts.more + '&recency=' + opts.recency;
+        if (opts.uriContext) {
+          routeBase += '&uriContext=' + opts.uriContext;
+        }
+        if (opts.libContext) {
+          routeBase += '&libContext=' + opts.libContext;
+        }
+        return route(routeBase);
       },
       recosPublic: function () {
         return route('/recos/public');
