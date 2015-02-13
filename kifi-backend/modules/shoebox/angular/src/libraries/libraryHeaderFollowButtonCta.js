@@ -171,6 +171,7 @@ angular.module('kifi')
         var deregisterStateChange = $rootScope.$on('$stateChangeStart', function () {
           $timeout.cancel(autoShowCTAPromise);
           autoShowCTAPromise = null;
+          hideCTA();
         });
         scope.$on('$destroy', deregisterStateChange);
       }
