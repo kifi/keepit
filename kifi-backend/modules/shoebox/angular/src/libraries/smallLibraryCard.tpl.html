@@ -1,5 +1,5 @@
 <div class="kf-slc-card" ng-style="{'background-color': library.color}">
-  <a class="kf-slc-card-link" href="{{library.path}}" ng-click="clickCard($event)" ng-attr-title="{{library.description}}">
+  <a class="kf-slc-card-link" href="{{library.path}}" ng-click="clickCard($event)" ng-attr-title="{{library.description}}" kf-track-origin="{{origin}}">
     <div class="kf-slc-card-cover">
       <div class="kf-slc-card-cover-image" ng-attr-style="background-image:url({{library.imageUrl}});background-position:{{library.image.x}}% {{library.image.y}}%" ng-if="library.image"></div>
     </div>
@@ -21,11 +21,11 @@
     </div>
   </a>
   <div class="kf-slc-counts">
-    <a href="{{library.path}}" class="kf-slc-count">
+    <a class="kf-slc-count" href="{{library.path}}" ng-click="clickCard($event)" kf-track-origin="{{origin}}">
       <ng-pluralize count="library.numKeeps" when="{'1':'{} Keep','other':'{{library.numKeeps|number}} Keeps'}"></ng-pluralize>
     </a>
     <span class="kf-slc-count-dot" ng-if="library.numFollowers > 0">·</span>
-    <a href="javascript:" class="kf-slc-count kf-slc-count-followers" ng-click="openFollowersList(library)" ng-if="library.numFollowers > 0">
+    <a class="kf-slc-count kf-slc-count-followers" href="javascript:" ng-click="openFollowersList(library)" ng-if="library.numFollowers > 0">
       <ng-pluralize count="library.numFollowers" when="{'1':'{} Follower','other':'{{library.numFollowers|number}} Followers'}"></ng-pluralize>
     </a>
   </div>

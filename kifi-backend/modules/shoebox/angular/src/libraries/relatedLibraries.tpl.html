@@ -1,7 +1,7 @@
 <section class="kf-related-libraries">
   <header class="kf-related-library-explore-more-header">Explore More Kifi Libraries</header>
   <div class="kf-related-library-card" ng-repeat="library in relatedLibraries">
-    <div kf-small-library-card library="library" origin="rl" action="clickedLibraryRec"></div>
+    <div kf-small-library-card library="library" action="clickedLibraryRec" origin="libraryRec"></div>
   </div>
   <footer ng-if="!$root.userLoggedIn" class="kf-related-library-footer">
     <a href="/libraries/featured" class="kf-related-libraries-see-more" ng-click="clickSeeMore($event)" target="_blank">See more &raquo;</a>
