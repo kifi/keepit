@@ -1,6 +1,5 @@
 package com.keepit.search.controllers.website
 
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.{ PublicIdConfiguration }
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.search.engine.SearchFactory
