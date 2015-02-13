@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfPageBottomCta', ['$timeout', '$window', 'platformService', 'signupService',
-  function ($timeout, $window, platformService, signupService) {
+.directive('kfPageBottomCta', ['$rootScope', '$timeout', '$window', 'platformService', 'signupService',
+  function ($rootScope, $timeout, $window, platformService, signupService) {
     return {
       restrict: 'A',
       replace: true,
@@ -12,8 +12,16 @@ angular.module('kifi')
         library: '='
       },
       link: function (scope /*element, attrs*/) {
+        scope.show = false;
+
         scope.join = function ($event) {
+          $rootScope.$emit('trackLibraryEvent', 'click', {
+            action: 'clickedSignupPopup'
+          });
+
           $event.preventDefault();
+          scope.show = false;
+
           var userData = { libraryId: scope.library.id };
           if (platformService.isSupportedMobilePlatform()) {
             platformService.goToAppOrStore();
@@ -23,23 +31,29 @@ angular.module('kifi')
         };
 
         scope.login = function ($event) {
+          $rootScope.$emit('trackLibraryEvent', 'click', {
+            action: 'clickedLoginPopup'
+          });
+
           if (platformService.isSupportedMobilePlatform()) {
             $event.preventDefault();
             platformService.goToAppOrStore();
           }
         };
 
-        scope.show = false;
-
         function onScroll() {
           $timeout(function () {
-            scope.show = true;
-            angular.element('.kf-lib-footer').css('padding-bottom', '270px');
+            if (!scope.show) {
+              $rootScope.$emit('trackLibraryEvent', 'view', { type: 'libraryLandingPopup' });
+              scope.show = true;
+              angular.element('.kf-lib-footer').css('padding-bottom', '270px');
+            }
           }, 1000);
-          $window.removeEventListener('scroll', onScroll);
         }
-
         $window.addEventListener('scroll', onScroll);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener('scroll', onScroll);
+        });
       }
     };
   }
