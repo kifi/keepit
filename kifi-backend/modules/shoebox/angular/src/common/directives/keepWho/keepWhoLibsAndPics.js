@@ -73,7 +73,7 @@ angular.module('kifi')
         currentPageOrigin: '@'
       },
       link: function (scope) {
-        scope.onLibraryAttributionClicked = function ($event) {
+        scope.onLibraryAttributionClicked = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedLibraryAttribution' });
         };
         scope.isBot = platformService.isBot();
