@@ -22,7 +22,7 @@ case class LibrarySearchRequest(
   lang1: Lang,
   lang2: Option[Lang],
   maxHits: Int,
-  disablePrefixSearch: Boolean = false,
+  disablePrefixSearch: Boolean,
   predefinedConfig: Option[SearchConfig],
   debug: Option[String],
   explain: Option[Id[Library]])
