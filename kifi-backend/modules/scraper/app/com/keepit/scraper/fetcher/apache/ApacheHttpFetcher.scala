@@ -259,7 +259,11 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     implicit val fetchInfo = FetchInfo(url, System.currentTimeMillis, httpGet, Thread.currentThread()) // pass this up
     try {
       q.offer(WeakReference(fetchInfo))
-      val response = timingWithResult[CloseableHttpResponse](s"fetch($url).execute", { r: CloseableHttpResponse => r.getStatusLine.toString }) { httpClient.execute(httpGet, httpContext) }
+      val response = timingWithResult[CloseableHttpResponse](s"fetch($url).execute", { r: CloseableHttpResponse => r.getStatusLine.toString }) {
+        println(s"[scrape-start] $url")
+        System.out.flush()
+        httpClient.execute(httpGet, httpContext)
+      }
       fetchInfo.respStatusRef.set(response.getStatusLine)
       Some(response)
     } catch {
@@ -269,6 +273,8 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
       case e @ (_: IOException | _: GeneralSecurityException) => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e: NullPointerException => logAndSet(fetchInfo, None)(e, "fetch", url) //can happen on BrowserCompatSpec.formatCookies
       case t: Throwable => logAndSet(fetchInfo, None)(t, "fetch", url, true)
+    } finally {
+      println(s"[scrape-end] $url")
     }
   }
   def fetch(url: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
