@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .factory('routeService', [
-  '$location', 'env', '$window',
-  function ($location, env, $window) {
-    function route(url) {
-      return env.xhrBase + url;
+  'env', 'util',
+  function (env, util) {
+    function route(path, params) {
+      return env.xhrBase + path + (params ? queryStr(params) : '');
     }
 
     function searchRoute(url) {
@@ -16,6 +16,8 @@ angular.module('kifi')
     function formatPicUrl(userId, pictureName, size) {
       return env.picBase + '/users/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
     }
+
+    var queryStr = util.formatQueryString;
 
     return {
       disconnectNetwork: function (network) {
@@ -30,8 +32,8 @@ angular.module('kifi')
       refreshNetworks: env.navBase + '/friends/invite/refresh', // would love to be more ajax-y
       importStatus: route('/user/import-status'),
       prefs: route('/user/prefs'),
-      importGmail: function () {
-        return env.navBase + '/contacts/import?redirectUrl=' + $location.url(); // wtf, why top level route?
+      importGmail: function (returnPath) {
+        return env.navBase + '/contacts/import' + queryStr({redirectUrl: returnPath || []});
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
@@ -57,10 +59,10 @@ angular.module('kifi')
       pageTags: route('/collections/page'),
 
       searchTags: function (query, limit) {
-        return route('/collections/search') + '?query=' + encodeURIComponent(query) + '&limit=' + limit;
+        return route('/collections/search', {query: query, limit: limit});
       },
       suggestTags: function (libraryId, keepId, query) {
-        return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest?q=' + encodeURIComponent(query);
+        return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest' + queryStr({q: query});
       },
       tagKeep: function (libraryId, keepId, tag) {
         return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + encodeURIComponent(tag));
@@ -81,7 +83,7 @@ angular.module('kifi')
         return env.xhrBase + '/user/' + id + '/friend';
       },
       libraryShareSuggest: function (libId, opt_query) {
-        return route('/libraries/' + libId + '/members/suggest?n=30' + (opt_query ? '&q=' + encodeURIComponent(opt_query) : ''));
+        return route('/libraries/' + libId + '/members/suggest', {n: 30, q: opt_query || []});
       },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
@@ -96,8 +98,11 @@ angular.module('kifi')
       searchedAnalytics: searchRoute('/site/search/events/searched'),
       searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
       socialSearch: function (name, limit) {
-        limit = limit || 6;
-        return route('/user/connections/all/search?query=' + encodeURIComponent(name) + '&limit=' + limit + '&pictureUrl=true');
+        return route('/user/connections/all/search', {
+          query: name,
+          limit: limit || 6,
+          pictureUrl: 'true'
+        });
       },
       exportKeeps: route('/keeps/export'),
       postDelightedAnswer: route('/user/delighted/answer'),
@@ -107,14 +112,12 @@ angular.module('kifi')
         return route('/recos/adHoc?n=' + howMany);
       },
       recos: function (opts) {
-        var routeBase = '/recos/topV2?more=' + opts.more + '&recency=' + opts.recency;
-        if (opts.uriContext) {
-          routeBase += '&uriContext=' + opts.uriContext;
-        }
-        if (opts.libContext) {
-          routeBase += '&libContext=' + opts.libContext;
-        }
-        return route(routeBase);
+        return route('/recos/topV2', {
+          more: opts.more,
+          recency: opts.recency,
+          uriContext: opts.uriContext || [],
+          libContext: opts.libContext || []
+        });
       },
       recosPublic: function () {
         return route('/recos/public');
@@ -155,12 +158,10 @@ angular.module('kifi')
         return env.navBase + '/auth/token-signup/' + provider;
       },
       socialSignupWithRedirect: function (provider, redirectPath, intent) {
-        var path = '/signup/' + provider + '?redirect=' + $window.encodeURIComponent(redirectPath);
-        if (intent) {
-          path += '&intent=';
-          path += intent;
-        }
-        return path;
+        return '/signup/' + provider + queryStr({
+          redirect: redirectPath,
+          intent: intent || []
+        });
       },
       socialFinalize: env.navBase + '/auth/token-finalize',
       emailSignup: env.navBase + '/auth/email-signup',
@@ -210,13 +211,13 @@ angular.module('kifi')
         return route('/libraries/' + libraryId + '/image');
       },
       authIntoLibrary: function (username, slug, authToken) {
-        return route('/users/' + username + '/libraries/' + slug + '/auth?authToken=' + authToken || '');
+        return route('/users/' + username + '/libraries/' + slug + '/auth', {authToken: authToken || []});
       },
       copyKeepsFromTagToLibrary: function(libraryId, tagName) {
-        return route('/libraries/' + libraryId + '/importTag?tag=' + encodeURIComponent(tagName));
+        return route('/libraries/' + libraryId + '/importTag', {tag: tagName});
       },
       moveKeepsFromTagToLibrary: function(libraryId, tagName) {
-        return route('/libraries/' + libraryId + '/moveTag?tag=' + encodeURIComponent(tagName));
+        return route('/libraries/' + libraryId + '/moveTag', {tag: tagName});
       },
       getMoreLibraryMembers: function(libraryId, pageSize, offset) {
         return route('/libraries/' + libraryId + '/members?limit=' + pageSize + '&offset=' + (offset * pageSize));

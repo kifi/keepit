@@ -157,7 +157,7 @@ angular.module('kifi')
           'action': 'importGmail',
           'path': $location.path()
         });
-        $window.location.href = routeService.importGmail();
+        $window.location.href = routeService.importGmail($location.path());
       },
 
       disconnectFacebook: function () {
