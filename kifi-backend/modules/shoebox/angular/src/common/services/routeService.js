@@ -112,12 +112,17 @@ angular.module('kifi')
         return route('/recos/adHoc', {n: howMany});
       },
       recos: function (opts) {
-        return route('/recos/topV2', {
-          more: opts.more,
-          recency: opts.recency,
-          uriContext: opts.uriContext || [],
-          libContext: opts.libContext || []
-        });
+        // todo: fix endpoint to use route()
+        var base = route('/recos/topV2');
+        base += '?more=' + opts.more;
+        base += '&recency=' + opts.recency;
+        if (opts.uriContext) {
+          base += '&uriContext=' + opts.uriContext;
+        }
+        if (opts.libContext) {
+          base += '&libContext=' + opts.libContext;
+        }
+        return base;
       },
       recosPublic: function () {
         return route('/recos/public');
