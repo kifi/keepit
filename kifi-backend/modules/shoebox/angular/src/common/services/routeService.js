@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .factory('routeService', [
-  '$location', 'env', 'util',
-  function ($location, env, util) {
-    function route(url) {
-      return env.xhrBase + url;
+  'env', 'util',
+  function (env, util) {
+    function route(path, params) {
+      return env.xhrBase + path + (params ? queryStr(params) : '');
     }
 
     function searchRoute(url) {
@@ -32,8 +32,8 @@ angular.module('kifi')
       refreshNetworks: env.navBase + '/friends/invite/refresh', // would love to be more ajax-y
       importStatus: route('/user/import-status'),
       prefs: route('/user/prefs'),
-      importGmail: function () {
-        return env.navBase + '/contacts/import?redirectUrl=' + $location.url(); // wtf, why top level route?
+      importGmail: function (returnPath) {
+        return env.navBase + '/contacts/import' + queryStr({redirectUrl: returnPath || []});
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
@@ -59,7 +59,7 @@ angular.module('kifi')
       pageTags: route('/collections/page'),
 
       searchTags: function (query, limit) {
-        return route('/collections/search') + queryStr({query: query, limit: limit});
+        return route('/collections/search', {query: query, limit: limit});
       },
       suggestTags: function (libraryId, keepId, query) {
         return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest' + queryStr({q: query});
@@ -83,7 +83,7 @@ angular.module('kifi')
         return env.xhrBase + '/user/' + id + '/friend';
       },
       libraryShareSuggest: function (libId, opt_query) {
-        return route('/libraries/' + libId + '/members/suggest' + queryStr({n: 30, q: opt_query || []}));
+        return route('/libraries/' + libId + '/members/suggest', {n: 30, q: opt_query || []});
       },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
@@ -98,11 +98,11 @@ angular.module('kifi')
       searchedAnalytics: searchRoute('/site/search/events/searched'),
       searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
       socialSearch: function (name, limit) {
-        return route('/user/connections/all/search' + queryStr({
+        return route('/user/connections/all/search', {
           query: name,
           limit: limit || 6,
           pictureUrl: 'true'
-        }));
+        });
       },
       exportKeeps: route('/keeps/export'),
       postDelightedAnswer: route('/user/delighted/answer'),
@@ -112,12 +112,12 @@ angular.module('kifi')
         return route('/recos/adHoc?n=' + howMany);
       },
       recos: function (opts) {
-        return route('/recos/topV2' + queryStr({
+        return route('/recos/topV2', {
           more: opts.more,
           recency: opts.recency,
           uriContext: opts.uriContext || [],
           libContext: opts.libContext || []
-        }));
+        });
       },
       recosPublic: function () {
         return route('/recos/public');
@@ -211,13 +211,13 @@ angular.module('kifi')
         return route('/libraries/' + libraryId + '/image');
       },
       authIntoLibrary: function (username, slug, authToken) {
-        return route('/users/' + username + '/libraries/' + slug + '/auth' + queryStr({authToken: authToken || []}));
+        return route('/users/' + username + '/libraries/' + slug + '/auth', {authToken: authToken || []});
       },
       copyKeepsFromTagToLibrary: function(libraryId, tagName) {
-        return route('/libraries/' + libraryId + '/importTag' + queryStr({tag: tagName}));
+        return route('/libraries/' + libraryId + '/importTag', {tag: tagName});
       },
       moveKeepsFromTagToLibrary: function(libraryId, tagName) {
-        return route('/libraries/' + libraryId + '/moveTag' + queryStr({tag: tagName}));
+        return route('/libraries/' + libraryId + '/moveTag', {tag: tagName});
       },
       getMoreLibraryMembers: function(libraryId, pageSize, offset) {
         return route('/libraries/' + libraryId + '/members?limit=' + pageSize + '&offset=' + (offset * pageSize));
