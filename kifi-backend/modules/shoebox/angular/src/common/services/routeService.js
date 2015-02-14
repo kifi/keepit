@@ -77,7 +77,7 @@ angular.module('kifi')
       whoToInvite: route('/user/invite/recommended'),
       blockWtiConnection: route('/user/invite/hide'),
       friends: function (page, pageSize) {
-        return route('/user/friends') + '?page=' + page + '&pageSize=' + pageSize;
+        return route('/user/friends', {page: page, pageSize: pageSize});
       },
       friendRequest: function (id) {
         return env.xhrBase + '/user/' + id + '/friend';
@@ -88,7 +88,7 @@ angular.module('kifi')
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
       peopleYouMayKnow: function (offset, limit) {
-        return route('/user/friends/recommended') + '?offset=' + offset + '&limit=' + limit;
+        return route('/user/friends/recommended', {offset: offset, limit: limit});
       },
       hideUserRecommendation: function (id) {
         return route('/user/' + id + '/hide');
@@ -109,7 +109,7 @@ angular.module('kifi')
       cancelDelightedSurvey: route('/user/delighted/cancel'),
       userCloseAccount: route('/user/close'),
       adHocRecos: function (howMany) {
-        return route('/recos/adHoc?n=' + howMany);
+        return route('/recos/adHoc', {n: howMany});
       },
       recos: function (opts) {
         return route('/recos/topV2', {
@@ -123,17 +123,16 @@ angular.module('kifi')
         return route('/recos/public');
       },
       recoFeedback: function (urlId) {
-        return route('/recos/feedback?id=' + urlId);
+        return route('/recos/feedback', {id: urlId});
       },
       libraryRecos: function () {
         return route('/libraries/recos/top');
       },
       libraryRecoFeedback: function (libraryId) {
-        return route('/libraries/recos/feedback?id=' + libraryId);
+        return route('/libraries/recos/feedback', {id: libraryId});
       },
       basicUserInfo: function (id, friendCount) {
-        friendCount = friendCount ? 1 : 0;
-        return route('/user/' + id + '?friendCount=' + friendCount);
+        return route('/user/' + id, {friendCount: friendCount ? 1 : []});
       },
       addKeepsToLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/keeps');
@@ -171,7 +170,7 @@ angular.module('kifi')
       ////////////////////////////
       getLibrarySummaries: route('/libraries'),
       getLibraryByUserSlug: function (username, slug, authToken) {
-        return route('/users/' + username + '/libraries/' + slug + '?showPublishedLibraries=1' + (authToken ? '&authToken=' + authToken : ''));
+        return route('/users/' + username + '/libraries/' + slug, {showPublishedLibraries: 1, authToken: authToken || []});
       },
       getLibraryById: function (libraryId) {
         return route('/libraries/' + libraryId);
@@ -180,7 +179,7 @@ angular.module('kifi')
         return route('/libraries/' + libraryId + '/summary');
       },
       getKeepsInLibrary: function (libraryId, count, offset, authToken) {
-        return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + (authToken ? '&authToken=' + authToken : ''));
+        return route('/libraries/' + libraryId + '/keeps', {count: count, offset: offset, authToken: authToken || []});
       },
       createLibrary: route('/libraries/add'),
       modifyLibrary: function (libraryId) {
@@ -202,7 +201,7 @@ angular.module('kifi')
         return route('/libraries/' + libraryId + '/delete');
       },
       uploadLibraryCoverImage: function (libraryId, x, y, idealSize) {
-        return route('/libraries/' + libraryId + '/image/upload?x=' + x + '&y=' + y + (idealSize ? '&is=' + idealSize : ''));
+        return route('/libraries/' + libraryId + '/image/upload', {x: x, y: y, is: idealSize || []});
       },
       positionLibraryCoverImage: function (libraryId) {
         return route('/libraries/' + libraryId + '/image/position');
@@ -220,7 +219,7 @@ angular.module('kifi')
         return route('/libraries/' + libraryId + '/moveTag', {tag: tagName});
       },
       getMoreLibraryMembers: function(libraryId, pageSize, offset) {
-        return route('/libraries/' + libraryId + '/members?limit=' + pageSize + '&offset=' + (offset * pageSize));
+        return route('/libraries/' + libraryId + '/members', {limit: pageSize, offset: offset * pageSize});
       },
       getRelatedLibraries: function (libraryId) {
         return route('/libraries/' + libraryId + '/related');
@@ -236,10 +235,11 @@ angular.module('kifi')
         return route('/user/' + username + '/profile');
       },
       getUserLibraries: function (username, filter, opt_page, opt_size) {
-        return route('/user/' + username + '/libraries?filter=' + filter +
-          (!_.isUndefined(opt_page) ? '&page=' + opt_page : '') +
-          (!_.isUndefined(opt_size) ? '&size=' + opt_size : '')
-        );
+        return route('/user/' + username + '/libraries', {
+          filter: filter,
+          page: _.isUndefined(opt_page) ? [] : opt_page,
+          size: _.isUndefined(opt_size) ? [] : opt_size
+        });
       }
     };
   }
