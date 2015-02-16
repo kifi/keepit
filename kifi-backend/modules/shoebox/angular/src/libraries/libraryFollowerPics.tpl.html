@@ -1,20 +1,17 @@
 <div class="kf-lfp">
-  <div class="kf-lfp-pics">
-    <span ng-repeat="follower in followersToShow">
-      <a href="{{follower.profileUrl}}"
-         kf-track-origin origin="{{currentPageOrigin}}/follower">
-        <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
-          class="kf-lfp-pic"
-          kf-who-tooltip
-          keeper="follower"
-          ng-mouseenter="showTooltip()"
-          ng-mouseleave="hideTooltip()"
-          ng-click="hideTooltip()"
-          alt="{{follower.firstName}} {{follower.lastName}}"
-        ></a>
-    </span>
-  </div>
-  <div class="kf-lfp-more" ng-if="numAdditionalFollowers" ng-click="showFollowers()">
-    <span class="kf-lfp-more-text">+ {{numAdditionalFollowers}}</span>
-  </div>
+  <span class="kf-lfp-pics">
+    <a ng-repeat="follower in followersToShow" href="{{follower.profileUrl}}" kf-track-origin="{{currentPageOrigin}}/follower">
+      <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
+        class="kf-lfp-pic"
+        kf-who-tooltip
+        keeper="follower"
+        ng-mouseenter="showTooltip()"
+        ng-mouseleave="hideTooltip()"
+        ng-click="hideTooltip()"
+        alt="{{follower.firstName}} {{follower.lastName}}">
+    </a>
+  </span>
+  <button class="kf-lfp-more" ng-if="numAdditionalFollowers" ng-click="showFollowers()">
+    <span class="kf-lfp-more-text">{{numAdditionalFollowers}}</span>
+  </button>
 </div>

@@ -37,6 +37,15 @@ describe('util', function () {
     });
   });
 
+  describe('util.formatQueryString', function () {
+    it('correctly formats and escapes query strings', function () {
+      expect(util.formatQueryString({})).toBe('');
+      expect(util.formatQueryString({a: []})).toBe('');
+      expect(util.formatQueryString({a: true, b: false, c: null, d: undefined, e: 0, f: '', g: []})).toBe('?a&b=false&c=null&d=undefined&e=0&f=');
+      expect(util.formatQueryString({a: true, b: '1/=2'})).toBe('?a&b=1%2F%3D2');
+    });
+  });
+
   describe('util.getYoutubeIdFromUrl', function () {
     it('correctly extracts youtube video IDs', function () {
       expect(util.getYoutubeIdFromUrl('http://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');

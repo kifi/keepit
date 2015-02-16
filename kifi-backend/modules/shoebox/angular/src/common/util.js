@@ -3,8 +3,8 @@
 angular.module('util', [])
 
 .factory('util', [
-  '$document', '$window',
-  function ($document, $window) {
+  '$document', '$window', '$location',
+  function ($document, $window, $location) {
     var HTML_ESCAPE_CHARS = /[&<>"'\/]/g;
     var HTML_ESCAPES = {
       '&': '&amp;',
@@ -16,6 +16,8 @@ angular.module('util', [])
     };
     var youtubeVideoUrlRe = /^(?:https?:\/\/)?(?:youtu\.be|(?:www\.)?youtube(?:-nocookie)?\.com)\/(?:|user\/[^\/?#]+)?(?:|.*?[\/=])([a-zA-Z0-9_-]{11})\b/;
     var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|a[cdegilmoqrstuz]|b[abefghimnrtyz]|c[acdfghiklmnoruxyz]|d[ejko]|e[cegst]|f[ijkmor]|g[befghilmnpqrstu]|h[kmnru]|i[delmnorst]|j[eop]|k[eghrwyz]|l[bciktuvy]|m[cdghkmnoqrstuwxyz]|n[acfilouz]|om|p[aeghklmnrty]|qa|r[eouw]|s[abcdeghikmnotuvz]|t[cdfhjmnoprtvwz]|u[agkmsyz]|v[eginu]|wf|y[t|u]|z[amrw]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
+
+    var queryStringHelper = {$$path: '', $$compose: $location.$$compose};
 
     return {
       startsWith: function (str, prefix) {
@@ -59,13 +61,15 @@ angular.module('util', [])
         var _y = rawDom.getBoundingClientRect().top + scrollY;
         return { left: _x, top: _y };
       },
-      isIE: function () {
-        // Feature detection should be preferred to browser detection, so this function should be avoided.
-        return (
-          (navigator.appName === 'Microsoft Internet Explorer') ||
-          ((navigator.appName === 'Netscape') &&
-           (/Trident/.exec(navigator.userAgent) != null))
-        );
+      $debounce: function (scope, f, ms, opts) {
+        return _.debounce(function () {
+          var phase = scope.$root.$$phase;
+          if (phase === '$apply' || phase === '$digest') {
+            f();
+          } else {
+            scope.$apply(f);
+          }
+        }, ms, opts);
       },
       getYoutubeIdFromUrl: function (url) {
         var match = url.match(youtubeVideoUrlRe);
@@ -108,6 +112,15 @@ angular.module('util', [])
         }
 
         return text == null ? '' : String(text).replace(HTML_ESCAPE_CHARS, htmlEscapeReplace);
+      },
+      /**
+       * Behaves like $location.search({...}). Keys whose values are an empty array will be omitted entirely.
+       * https://docs.angularjs.org/api/ng/service/$location#search
+       */
+      formatQueryString: function (params) {
+        queryStringHelper.$$search = params;
+        queryStringHelper.$$compose();
+        return queryStringHelper.$$url;
       },
       generateSlug: function (name) {
         return name.toLowerCase().replace(/[^\w\s-]|_/g, '').replace(/\s+/g, '-').replace(/^-/, '').substr(0, 50).replace(/-$/, '');

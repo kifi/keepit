@@ -2,36 +2,28 @@
 
 angular.module('antiscroll', ['kifi'])
 
+// The parent of 'antiscroll-inner' should have 'position: relative; overflow: hidden'.
+// The 'antiscroll-inner' element should have 'width: calc(100% + 30px)'.
+// Children of 'antiscroll-inner' should have 'width: calc(100% - 30px)'.
 .directive('antiscroll', [
-  '$timeout', 'scrollbar',
-  function ($timeout, scrollbar) {
+  '$timeout',
+  function ($timeout) {
     return {
       restrict: 'A',
       transclude: true,
-      link: function (scope, element, attrs /*, ctrl, transclude*/ ) {
-        var options;
-        if (attrs.antiscroll) {
-          options = scope.$eval(attrs.antiscroll);
-        }
-        scope.scroller = element.antiscroll(options).data('antiscroll');
+      link: function (scope, element, attrs) {
+        var options = attrs.antiscroll ? scope.$eval(attrs.antiscroll) : undefined;
+        var scroller = element.antiscroll(options).data('antiscroll');
+        var refresh = scroller.refresh.bind(scroller);
 
-        scope.refreshScroll = function () {
-          return $timeout(function () {
-            if (scope.scroller) {
-              scope.scroller.refresh();
-            }
-          });
-        };
+        $timeout(refresh);
 
-
-        scope.refreshScroll();
-
-        // http://stackoverflow.com/questions/986937/how-can-i-get-the-browsers-scrollbar-sizes
-        scope.width = 'calc(100% + ' + scrollbar.getAntiscrollWidth() + 'px)';
-
-        scope.$on('refreshScroll', scope.refreshScroll);
+        scope.$on('refreshScroll', function () {
+          $timeout(refresh);
+        });
       },
-      template: '<div class="antiscroll-inner" ng-attr-style="width: {{width}}" ng-transclude></div>'
+
+      template: '<div class="antiscroll-inner" ng-transclude></div>'
     };
   }
 ]);

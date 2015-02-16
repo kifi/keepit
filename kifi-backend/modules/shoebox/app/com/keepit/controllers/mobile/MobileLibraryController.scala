@@ -52,7 +52,7 @@ class MobileLibraryController @Inject() (
     val visibility = (jsonBody \ "visibility").as[LibraryVisibility]
     val color = (jsonBody \ "color").asOpt[LibraryColor]
     val slug = LibrarySlug.generateFromName(name)
-    val addRequest = LibraryAddRequest(name, visibility, description, slug, color)
+    val addRequest = LibraryAddRequest(name = name, visibility = visibility, description = description, slug = slug, color = color)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     libraryCommander.addLibrary(addRequest, request.userId) match {

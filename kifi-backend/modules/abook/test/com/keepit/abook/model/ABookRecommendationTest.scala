@@ -69,4 +69,20 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
       }
     }
   }
+
+  "TwitterRecommendationRepo" should withDb() { implicit injector =>
+    "track irrelevant recommendations" in {
+      val twitterInviteRecoRepo = inject[TwitterInviteRecommendationRepo]
+      db.readWrite { implicit session =>
+        twitterInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42))
+        twitterInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42))
+        twitterInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(420))
+        twitterInviteRecoRepo.recordIrrelevantRecommendation(Id(42), Id(420))
+      }
+      db.readOnlyMaster { implicit session =>
+        twitterInviteRecoRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(42), Id(420))
+        twitterInviteRecoRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(420))
+      }
+    }
+  }
 }

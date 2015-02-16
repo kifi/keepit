@@ -8,46 +8,41 @@ angular.module('kifi')
     return {
       restrict: 'A',
       link: function (scope, element/*, attrs */) {
-        function showCTA(showX) {
+        function positionCTA() {
+          var elementTop = element.offset().top;
+          var elementLeft = element.offset().left;
+
+          var ctaHeight = cta.outerHeight();
+          var ctaMargin = 15;  // Vertical spacing between CTA and the follow button.
+          var ctaHeightWithMargin = ctaHeight + 15;
+
+          // By default, we try to show the CTA above the follow button.
+          var top = elementTop - ctaHeightWithMargin;
+          var ctaOuterArrowTop = ctaHeight - 2;
+          var ctaInnerArrowTop = ctaOuterArrowTop - 1;
+          scope.ctaShownAbove = true;
+
+          // However, if there is no room between the follow button and the
+          // Kifi header, then we show the CTA beneath the follow button.
+          if (elementTop - ctaHeightWithMargin - angular.element($window).scrollTop() < kfHeaderHeight) {
+            top = elementTop + element.outerHeight() + ctaMargin;
+            ctaOuterArrowTop = -ctaArrowHeight;
+            ctaInnerArrowTop = ctaOuterArrowTop + 1;
+            scope.ctaShownAbove = false;
+          }
+
+          // Center the CTA with respect to the follow button.
+          var left = elementLeft - Math.round((cta.outerWidth() - element.outerWidth()) / 2);
+
+          cta.css({position: 'absolute', top: top + 'px', left: left + 'px'});
+          ctaOuterArrow.css({top: ctaOuterArrowTop + 'px'});
+          ctaInnerArrow.css({top: ctaInnerArrowTop + 'px'});
+        }
+
+        function showCTA(showAutoCTA) {
           if (cta) {
-            scope.showX = showX;
-
-            var elementTop = element.offset().top;
-            var elementLeft = element.offset().left;
-
-            var ctaHeight = cta.outerHeight();
-            var ctaMargin = 15;  // Vertical spacing between CTA and the follow button.
-            var ctaHeightWithMargin = ctaHeight + 15;
-
-            // By default, we try to show the CTA above the follow button.
-            var top = elementTop - ctaHeightWithMargin;
-            var ctaOuterArrowTop = ctaHeight - 2;
-            var ctaInnerArrowTop = ctaOuterArrowTop - 1;
-            scope.ctaShownAbove = true;
-
-            // However, if there is no room between the follow button and the
-            // Kifi header, then we show the CTA beneath the follow button.
-            if (elementTop - ctaHeightWithMargin - angular.element($window).scrollTop() < kfHeaderHeight) {
-              top = elementTop + element.outerHeight() + ctaMargin;
-              ctaOuterArrowTop = -ctaArrowHeight;
-              ctaInnerArrowTop = ctaOuterArrowTop + 1;
-              scope.ctaShownAbove = false;
-            }
-
-            // If the follow button is "sticky" (i.e., its position is fixed),
-            // similarly fix the CTA's position so that it won't move upon scroll.
-            var position = 'absolute';
-            if (element.css('position') === 'fixed') {
-              position = 'fixed';
-              top = top - angular.element($window).scrollTop();
-            }
-
-            // Center the CTA with respect to the follow button.
-            var left = elementLeft - Math.round((cta.outerWidth() - element.outerWidth()) / 2);
-
-            cta.css({position: position, top: top + 'px', left: left + 'px'});
-            ctaOuterArrow.css({top: ctaOuterArrowTop + 'px'});
-            ctaInnerArrow.css({top: ctaInnerArrowTop + 'px'});
+            autoCTAShowing = scope.showX = !!showAutoCTA;
+            positionCTA();
 
             scope.$evalAsync(function () {
               cta.show();
@@ -64,6 +59,7 @@ angular.module('kifi')
         function hideCTA() {
           if (cta) {
             cta.hide();
+            autoCTAShowing = false;
           }
         }
 
@@ -127,6 +123,15 @@ angular.module('kifi')
         });
         element.on('mouseleave', hideCTA);
 
+        var adjustAutoCTAPosition = function () {
+          if (autoCTAShowing) {
+            positionCTA();
+          }
+        };
+        $window.addEventListener('scroll', adjustAutoCTAPosition);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener(adjustAutoCTAPosition);
+        });
 
         //
         // On link.
@@ -148,6 +153,7 @@ angular.module('kifi')
 
           // The CTA is initially hidden.
           cta.hide();
+          var autoCTAShowing = false;
 
           var kfHeaderHeight = angular.element('.kf-header').outerHeight();
 
@@ -171,6 +177,7 @@ angular.module('kifi')
         var deregisterStateChange = $rootScope.$on('$stateChangeStart', function () {
           $timeout.cancel(autoShowCTAPromise);
           autoShowCTAPromise = null;
+          hideCTA();
         });
         scope.$on('$destroy', deregisterStateChange);
       }

@@ -3,198 +3,111 @@
 angular.module('kifi')
 
 .directive('kfSticky', [
-  '$window', '$timeout', 'platformService',
-  function ($window, $timeout, platformService) {
+  '$window', '$timeout',
+  function ($window, $timeout) {
     return {
       restrict: 'A',
       scope: {
-        'maxTop': '=',
-        'onStick': '=',
-         // widthMode supports 'calculate' and 'inherit' values
-         // - calculated - try to calculate and explicitly set the same width as the element had
-         // - ignored    - does not do any calculations to determine width; style.width is untouched
-        'stickyWidthMode': '@',
-        'stickyIf': '&'
+        'stickyTop': '=',     // required, px from viewport top at which element becomes stuck
+        'stickyToggle': '&',  // required, implements element stuck/unstuck state transitions
+        'stickyNear': '&',    // optional, reacts to element approaching or leaving stuck position
+        'stickyNearPx': '=',  // optional, px from stuck/unstuck threshold stickyNear cares about (default: 10)
+        'stickyIf': '&'       // optional, disables this directive if falsy, evaluated only once
       },
       link: function (scope, element) {
-        if (_.isFunction(scope.stickyIf) && !scope.stickyIf()) {
+        if (scope.stickyIf && !scope.stickyIf()) {
           return;
         }
 
+        var stickyTop = scope.stickyTop;
+        var stickyToggle = scope.stickyToggle();
+        var stickyNear = scope.stickyNear && scope.stickyNear();
+        var stickyNearPx = scope.stickyNearPx || 10;
+
         var $win = angular.element($window);
-        var sticking = false;
+        var stuck;
+        var pxFromDocTop;      // remembered to avoid calling getBoundingClientRect() too frequently
+        var momentumInterval;  // used to detect when touch-based momentum scrolling has stopped
+        var stickyNearToldPx;  // last px value passed to stickyNear, to ensure we call it a final time
 
-        function getCssPixelProperty(name) {
-          return parseInt(element.css(name), 10);
-        }
-
-        function onStickCallback(isSticking) {
-          if (_.isFunction(scope.onStick)){
-            scope.onStick(isSticking);
+        function measurePxFromDocTop(scrollTop) {
+          if (!stuck) {
+            var pxFromViewportTop = element[0].getBoundingClientRect().top;
+            pxFromDocTop = pxFromViewportTop + scrollTop;
           }
         }
 
-        var isWidthCalculated = scope.stickyWidthMode === 'calculated';
-        var isMobile = platformService.isSupportedMobilePlatform();
-
-        var marginTop, marginLeft,
-          borderLeftWidth, borderRightWidth,
-          offsetTop, offsetLeft,
-          width;
-
-        function updateProperties() {
-          marginLeft = getCssPixelProperty('marginLeft');
-          marginTop = getCssPixelProperty('marginTop');
-          borderLeftWidth = getCssPixelProperty('borderLeftWidth');
-          borderRightWidth = getCssPixelProperty('borderRightWidth');
-
-          function update() {
-            offsetTop = element.offset().top - marginTop;
-            offsetLeft = element.offset().left - marginLeft;
-
-            if (isWidthCalculated) {
-              width = element.width() + borderLeftWidth + borderRightWidth;
-            }
-          }
-
-          // This timeout is needed for mobile Safari.
-          if (isMobile) {
-            $timeout(update);
-          } else {
-            // on desktop, the offsetTop calculation gradually increases in value every time updateProperties is called
-            // and becomes very different from what the actual offset is
-            update();
-          }
-        }
-        updateProperties();
-
-        /*
-          TODO: test & cover wider variety of cases:
-          * border-box vs content-box
-          * padding, border, margin
-        }*/
-
-        var filler = element.clone();
-        filler.css('visibility', 'hidden');
-
-        var unregister;
-
-        function onScroll(e) {
-          // delay offset calculation until the first scroll b/c the initial value is off for libraries with images
-          if (!offsetTop) {
-            updateProperties();
-          }
-
-          var deltaY = e && e.originalEvent.deltaY || 0;
-          var originalWindowTopOffset = offsetTop - $win.scrollTop() - deltaY;
-          if (originalWindowTopOffset <= scope.maxTop) {
-            if (!sticking) {
-              updateProperties();
-              originalWindowTopOffset = offsetTop - ($win.scrollTop() + deltaY);
-              if (originalWindowTopOffset > scope.maxTop) {
-                return;
+        function handleNewScrollTop(scrollTop) {
+          var pxFromThreshold = pxFromDocTop - scrollTop - stickyTop;
+          if (pxFromThreshold <= 0) {
+            if (!stuck) {
+              if (stickyNear) {
+                stickyNear(element, 0, stickyNearPx);
+                stickyNearToldPx = 0;
               }
-
-              var styles = {
-                position: 'fixed',
-                top: scope.maxTop,
-                left: offsetLeft,
-                zIndex: 501
-              };
-              if (isWidthCalculated) {
-                styles.width = width;
-              }
-
-              element.css(styles);
-              element.after(filler);
-
-              unregister = scope.$watch(function () {
-                return {
-                  width: filler.width(),
-                  left: filler.offset().left
-                };
-              }, function (attributes) {
-                if (isWidthCalculated) {
-                  element.css('width', attributes.width + borderLeftWidth + borderRightWidth);
-                }
-                element.css('left', attributes.left - marginLeft);
-              }, true);
-
-              sticking = true;
-              onStickCallback(true);
+              stickyToggle(element, true);
+              stuck = true;
             }
           } else {
-            if (sticking) {
-              element.css({
-                position: '',
-                top: '',
-                left: '',
-                width: '',
-                zIndex: ''
-              });
-
-              filler.remove();
-
-              unregister();
-
-              sticking = false;
-              onStickCallback(false);
+            if (stuck) {
+              stickyToggle(element, false);
+              stuck = false;
+            }
+            if (stickyNear && (pxFromThreshold <= stickyNearPx || stickyNearToldPx < stickyNearPx)) {
+              var px = Math.min(pxFromThreshold, stickyNearPx);
+              stickyNear(element, px, stickyNearPx);
+              stickyNearToldPx = px;
             }
           }
         }
 
-        var momentumInterval;
+        var throttledMeasurePxFromDocTop = _.throttle(measurePxFromDocTop, 200, {leading: true});
 
-        function onScrollTouch(e) {
+        function onScroll() {
+          var scrollTop = $win.scrollTop();
+
+          // changes to the page may change the element's position, so measure it periodically
+          throttledMeasurePxFromDocTop(scrollTop);
+
+          handleNewScrollTop(scrollTop);
+        }
+
+        function onTouchMove() {
           clearInterval(momentumInterval);
-          onScroll(e);
+          handleNewScrollTop($win.scrollTop());
         }
 
         function onTouchEnd() {
-          var lastScrollTop = $win.scrollTop();
-          var zeroDeltaCount = 0;
-          var deltaScrollTop;
+          var prevScrollTop = $win.scrollTop();
+          var noChangeCount = 0;
 
-          var momentumInterval = setInterval(function () {
-            deltaScrollTop = lastScrollTop - $win.scrollTop();
-            if (deltaScrollTop === 0) {
-              zeroDeltaCount++;
+          clearInterval(momentumInterval);
+          momentumInterval = setInterval(function () {
+            var scrollTop = $win.scrollTop();
+            if (scrollTop === prevScrollTop) {
+              if (++noChangeCount >= 5) {
+                clearInterval(momentumInterval);
+              }
             } else {
-              onScroll();
-              lastScrollTop = $win.scrollTop();
-            }
-
-            // allows the interval to keep running until we've counted 5 0 detlas
-            // it's possible that the document is still scrolling even after the delta is zero
-            if (zeroDeltaCount > 5) {
-              clearInterval(momentumInterval);
+              handleNewScrollTop(scrollTop);
+              prevScrollTop = scrollTop;
+              noChangeCount = 0;
             }
           }, 1000 / 60);
-
-          // after 2 seconds it's assumed the
-          setTimeout(function () {
-            clearInterval(momentumInterval);
-          }, 2000);
         }
 
-        // changes to the page, such as images loading before the sticky element, may change the offset,
-        // so update the properties periodically
-        var debouncedUpdateProperties = _.debounce(function () {
-          if (!sticking) {
-            updateProperties();
-          }
-        }, 100);
+        //
+        // Initialization
+        //
 
-        // This timeout is needed for mobile Safari.
-        $timeout(function () {
-          $win.on('scroll', debouncedUpdateProperties);
-          $win.on('mousewheel', onScroll);
-          $win.on('touchmove', onScrollTouch);
+        $timeout(function () {  // timeout needed for mobile Safari
+          $win.on('scroll', onScroll);
+          $win.on('touchmove', onTouchMove);
           $win.on('touchend', onTouchEnd);
 
           scope.$on('$destroy', function () {
-            $win.off('mousewheel', onScroll);
-            $win.off('touchmove', onScrollTouch);
+            $win.off('scroll', onScroll);
+            $win.off('touchmove', onTouchMove);
             $win.off('touchend', onTouchEnd);
           });
         });

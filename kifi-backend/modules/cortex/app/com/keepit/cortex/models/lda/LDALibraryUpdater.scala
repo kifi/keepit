@@ -35,6 +35,8 @@ class LDALibraryUpdaterImpl @Inject() (
 
   type Auxiliary = (Option[LDATopic], Option[LDATopic], Option[LDATopic], Option[Float], Option[Float]) // (1st topic, 2nd topic, 3rd topic, 1st topic score, entropy)
 
+  private def acceptLibraryKind(x: LibraryKind): Boolean = (x == LibraryKind.USER_CREATED)
+
   def update(): Unit = {
     representer.versions.foreach { implicit version =>
       val tasks = fetchTasks
@@ -65,7 +67,7 @@ class LDALibraryUpdaterImpl @Inject() (
     log.info(s"library lda updater cleanup, version = ${version}, fromSeq = ${fromSeq}, num of libs = ${libs.size}")
 
     // make sure non-system library has consitent library state and library feature state
-    libs.filter { x => x.kind != LibraryKind.SYSTEM_MAIN && x.kind != LibraryKind.SYSTEM_SECRET }
+    libs.filter { x => acceptLibraryKind(x.kind) }
       .foreach { lib =>
         db.readWrite { implicit s =>
           val libFeatOpt = libraryLDARepo.getByLibraryId(lib.libraryId, version)
@@ -141,7 +143,7 @@ class LDALibraryUpdaterImpl @Inject() (
   }
 
   private def shouldComputeFeature(libId: Id[Library], model: Option[LibraryLDATopic]): Boolean = {
-    def isApplicableLibrary(lib: Option[CortexLibrary]): Boolean = lib.exists(x => x.state.value == LibraryStates.ACTIVE.value && x.kind != LibraryKind.SYSTEM_MAIN && x.kind != LibraryKind.SYSTEM_SECRET)
+    def isApplicableLibrary(lib: Option[CortexLibrary]): Boolean = lib.exists(x => x.state.value == LibraryStates.ACTIVE.value && acceptLibraryKind(x.kind))
 
     val lib = db.readOnlyReplica { implicit s => libRepo.getByLibraryId(libId) }
     isApplicableLibrary(lib)

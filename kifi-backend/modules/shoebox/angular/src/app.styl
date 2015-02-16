@@ -6,16 +6,10 @@ html
 body
   position: relative
   overflow: visible
-  min-height: calc(100% - 62px)
-  width: 100%
   padding: 0
-  margin: 62px 0 0;
+  margin: 0;
   background: appBackgroundColor
   font-family: Lato, Helvetica, Arial, sans-serif
-  min-width: 800px
-
-  &.modal-open
-    overflow: hidden
 
 *, :after, :before
   box-sizing: content-box
@@ -66,47 +60,41 @@ menu, ol, ul
   outline: none
 
 .clearfix
+  zoom: 1
+
   &::before
   &::after
-    content: ""
+    content: ''
     display: table
 
   &::after
     clear: both
 
-  zoom: 1
-
-.kf-cols
-  text-align: start
-
-.kf-logged-in .kf-col-island
-  max-width: userAppMaxWidth
-  margin: 0 auto
-
-.kf-col
-  display: inline-block
-  vertical-align: top
-  background: appBackgroundColor
+.kf-app
+  // min-height keeps vertical scrollbars present to avoid horizontal shift
+  // during page transitions when content is removed or inserted
+  min-height: 101vh
   box-sizing: border-box
-  z-index: 1
-
-.kf-col-inner
-  height: 100%
-  width: 100%
-
-.kf-horizontal-separator
-  width: 100%
-  padding: 2px 0 0
-  border-bottom: separatorBorder
-  margin: 10px 0
-
-.kf-logged-out
-  &.kf-logged-out
-    .kf-col
-      margin-top: 0
+  padding-top: appHeaderHeight
 
 .ng-cloak
   display: none !important
+
+.kf-width-bounded
+  margin: 0 auto
+  min-width: appMinWidth
+  max-width: appMinWidth
+  padding: 0 appSidePad
+
+  .kf-866-966 &
+    min-width: 866px
+    max-width: 966px
+
+.kf-min-width-bounded
+  min-width: appMinWidth + 2 * appSidePad
+
+  .kf-866-966 &
+    min-width: 866px + 2 * appSidePad
 
 .kf-button
   display: inline-block

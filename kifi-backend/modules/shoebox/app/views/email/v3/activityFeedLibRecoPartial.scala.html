@@ -1,40 +1,33 @@
 @(lib: com.keepit.commanders.emails.LibraryInfoViewWithKeepImages)
+@import views.html.email.tags._
 @import com.keepit.common.mail.template.helpers._
 @keepImages = @{lib.keepImages}
 
 <tr>
   <td align="left" valign="top">
     <table width="100%" border="0" cellspacing="0" cellpadding="0">
-      <tr>
-        <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
-      </tr>
+      @trSpacer(24)
       <tr>
         <td class="title1" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:23px;line-height:25px;color:#62BE73;">
           <a href="@libraryUrl(lib.url, "libRecoTitle")" target="_blank" style="text-decoration:none;color:#62BE73;">@lib.name</a>
         </td>
       </tr>
-      <tr>
-        <td height="5" style="font-size:1px; line-height:1px;">&nbsp;</td>
-      </tr>
+      @trSpacer(5)
       <tr>
         <td align="left" valign="top" class="txt" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:14px;line-height:20px;color:#7f7f7f;">By
-          <a href="@profileUrl(lib.owner, "libRecoOwnerName")" target="_blank" style="text-decoration:none;color:#62BE73;">@lib.ownerName</a>&nbsp;
+          @lib.ownerName&nbsp;
           @if(lib.numFollowers > 0) {
           @lib.numFollowers follower@if(lib.numFollowers != 1){s}
           }
         </td>
       </tr>
-      <tr>
-        <td height="5" style="font-size:1px; line-height:1px;">&nbsp;</td>
-      </tr>
+      @trSpacer(5)
       <tr>
         <td class="txt1" align="left" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:17px;line-height:22px;color:#505c68;">
           @lib.description.getOrElse("")
         </td>
       </tr>
-      <tr>
-        <td height="16" style="font-size:1px; line-height:1px;">&nbsp;</td>
-      </tr>
+      @trSpacer(16)
       @if(keepImages.size > 0) {
       <tr>
         <td align="left" valign="top">

@@ -36,8 +36,9 @@ case class LibraryFail(status: Int, message: String)
 case class LibraryAddRequest(
   name: String,
   visibility: LibraryVisibility,
-  description: Option[String] = None,
   slug: String,
+  kind: Option[LibraryKind] = None,
+  description: Option[String] = None,
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None)
 

@@ -158,7 +158,7 @@ class MobileSearchController @Inject() (
     // Library Search
 
     val futureLibrarySearchResultJson = if (maxLibraries <= 0) Future.successful(JsNull) else {
-      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, filter, libraryContext, maxLibraries, !disablePrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
+      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, filter, libraryContext, maxLibraries, disablePrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
         val librarySearcher = libraryIndexer.getSearcher
         val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
@@ -202,10 +202,8 @@ class MobileSearchController @Inject() (
 
     // User Search
 
-    val futureUserSearchResultJson = if (maxUsers <= 0) {
-      Future.successful(JsNull)
-    } else if (experiments.contains(ADMIN) && experiments.contains(USER_SEARCH_ENGINE)) {
-      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, libraryContext, maxUsers, !disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
+    val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
+      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, libraryContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
         val userIds = userSearchResult.hits.map(_.id).toSet
         val futureUsers = shoeboxClient.getBasicUsers(userIds.toSeq)
         val futureFriends = searchFactory.getFriends(userId)
@@ -231,36 +229,6 @@ class MobileSearchController @Inject() (
                 "username" -> user.username.value,
                 "pictureName" -> user.pictureName,
                 "isFriend" -> friends.contains(hit.id.id),
-                "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
-                "libraryCount" -> publishedLibrariesCountByUser(hit.id),
-                "keepCount" -> keepCountsByUser(hit.id)
-              )
-            })
-          )
-        }
-      }
-    } else {
-      SafeFuture { userSearchCommander.searchUsers(Some(userId), query, maxUsers, userContext, filter, excludeSelf = true) }.flatMap { userResult =>
-        val userIds = userResult.hits.map(_.id).toSet
-        val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
-        val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
-        val publishedLibrariesCountByUser = {
-          val librarySearcher = libraryIndexer.getSearcher
-          userResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByMember(librarySearcher, hit.id) }.toMap
-        }
-        for {
-          keepCountsByUser <- futureKeepCountsByUser
-          mutualFriendsByUser <- futureMutualFriendsByUser
-        } yield {
-          Json.obj(
-            "context" -> userResult.context,
-            "hits" -> JsArray(userResult.hits.map { hit =>
-              Json.obj(
-                "id" -> hit.basicUser.externalId,
-                "name" -> hit.basicUser.fullName,
-                "username" -> hit.basicUser.username.value,
-                "pictureName" -> hit.basicUser.pictureName,
-                "isFriend" -> hit.isFriend,
                 "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
                 "libraryCount" -> publishedLibrariesCountByUser(hit.id),
                 "keepCount" -> keepCountsByUser(hit.id)

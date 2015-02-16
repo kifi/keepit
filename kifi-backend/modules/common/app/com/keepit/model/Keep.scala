@@ -241,6 +241,7 @@ object KeepSource {
   val emailReco = KeepSource("emailReco")
   val userCopied = KeepSource("userCopied")
   val twitterFileImport = KeepSource("twitterFileImport")
+  val twitterSync = KeepSource("twitterSync")
 
   val valid = Set(keeper, bookmarkImport, site, mobile, email, default, bookmarkFileImport, kippt, pocket, instapaper, emailReco, twitterFileImport)
 

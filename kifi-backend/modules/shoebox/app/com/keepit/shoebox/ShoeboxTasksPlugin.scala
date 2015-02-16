@@ -25,7 +25,7 @@ class ShoeboxTasksPlugin @Inject() (
 
   override def onStart() {
     log.info("ShoeboxTasksPlugin onStart")
-    scheduleTaskOnOneMachine(system, 5 minutes, 20 minutes, twitterSync) {
+    scheduleTaskOnOneMachine(system, 1 minute, 20 minutes, twitterSync) {
       twitterSyncCommander.syncAll()
     }
   }

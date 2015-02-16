@@ -63,7 +63,6 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           |<a href="$unsubscribeUrl">Unsubscribe Me</a>
           |<a href="${unsubscribeUrl(id3)}">Unsubscribe User</a>
           |<a href="${unsubscribeUrl(user3.primaryEmail.get)}">Unsubscribe Email</a>
-          |<img src="img.jpg">
         """.stripMargin)
 
         val text1 = Html(
@@ -102,11 +101,10 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         output must contain("Aaron Paul and Bryan Cranston joined!")
         output must contain("Join my library: Avengers Missions")
         output must contain("liburl: http://dev.ezkeep.com:9000/test/avengers")
-        output must contain("""<img src="https://cloudfront/users/1/pics/100/0.jpg" alt="Aaron Paul" />""")
-        output must contain("""<img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Bryan Cranston" />""")
-        output must contain("""<img src="https://cloudfront/users/3/pics/100/0.jpg" alt="Anna Gunn" />""")
-        output must contain("""<img src="https://cloudfront/users/4/pics/100/0.jpg" alt="Dean Norris" />""")
-        output must contain("""<img src="img.jpg" alt="" />""")
+        output must contain("""<img src="https://cloudfront/users/1/pics/100/0.jpg" alt="Aaron Paul"/>""")
+        output must contain("""<img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Bryan Cranston"/>""")
+        output must contain("""<img src="https://cloudfront/users/3/pics/100/0.jpg" alt="Anna Gunn"/>""")
+        output must contain("""<img src="https://cloudfront/users/4/pics/100/0.jpg" alt="Dean Norris"/>""")
 
         val text = processed.textBody.get.value
         text must contain("Bryan Cranston and Aaron Paul joined!")

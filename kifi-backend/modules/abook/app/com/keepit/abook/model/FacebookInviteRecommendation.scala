@@ -44,8 +44,8 @@ class FacebookInviteRecommendationRepoImpl @Inject() (
   def table(tag: Tag) = new FacebookInviteRecommendationTable(tag)
   initTable()
 
-  override def deleteCache(emailAccount: FacebookInviteRecommendation)(implicit session: RSession): Unit = {}
-  override def invalidateCache(emailAccount: FacebookInviteRecommendation)(implicit session: RSession): Unit = {}
+  override def deleteCache(recommendation: FacebookInviteRecommendation)(implicit session: RSession): Unit = {}
+  override def invalidateCache(recommendation: FacebookInviteRecommendation)(implicit session: RSession): Unit = {}
 
   private val compiledGetByUserAndFacebookAccount = Compiled { (userId: Column[Id[User]], facebookAccountId: Column[Id[SocialUserInfo]]) =>
     for (row <- rows if row.userId === userId && row.facebookAccountId === facebookAccountId) yield row
