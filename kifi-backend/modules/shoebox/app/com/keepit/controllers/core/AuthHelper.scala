@@ -169,7 +169,10 @@ class AuthHelper @Inject() (
    * be related to what's their (emailString, password) login combination.
    */
   def userPasswordSignupAction(implicit request: MaybeUserRequest[JsValue]) = emailPasswordForm.bindFromRequest.fold(
-    hasErrors = formWithErrors => Forbidden(Json.obj("error" -> formWithErrors.errors.head.message)),
+    hasErrors = formWithErrors => {
+      log.warn("[userpass-signup] Rejected email signup because of form errors: " + formWithErrors.errors)
+      Forbidden(Json.obj("error" -> formWithErrors.errors.head.message))
+    },
     success = {
       case EmailPassword(emailAddress, password) => handleEmailPasswordSuccessForm(emailAddress, password)
     }
@@ -239,7 +242,11 @@ class AuthHelper @Inject() (
   private val socialFinalizeAccountForm = Form[SocialFinalizeInfo](
     mapping(
       "email" -> EmailAddress.formMapping.verifying("known_email_address", email => db.readOnlyMaster { implicit s =>
-        userCredRepo.findByEmailOpt(email.address).isEmpty
+        val existing = userCredRepo.findByEmailOpt(email.address)
+        if (existing.nonEmpty) {
+          log.warn("[social-finalize] Can't finalize because email is known: " + existing)
+        }
+        existing.isEmpty
       }),
       "firstName" -> text, // todo(ray/andrew): revisit non-empty requirement for twitter
       "lastName" -> optional(text),
@@ -256,8 +263,10 @@ class AuthHelper @Inject() (
   )
   def doSocialFinalizeAccountAction(implicit request: MaybeUserRequest[JsValue]): Result = {
     socialFinalizeAccountForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
-      {
+      formWithErrors => {
+        log.warn("[social-finalize] Rejected social finalize because of form errors: " + formWithErrors.errors)
+        BadRequest(Json.obj("error" -> formWithErrors.errors.head.message))
+      }, {
         case sfi: SocialFinalizeInfo =>
           handleSocialFinalizeInfo(sfi, None, isFinalizedImmediately = false)
       })
@@ -293,8 +302,10 @@ class AuthHelper @Inject() (
   )(EmailPassFinalizeInfo.apply)(EmailPassFinalizeInfo.unapply))
   def doUserPassFinalizeAccountAction(implicit request: UserRequest[JsValue]): Future[Result] = {
     userPassFinalizeAccountForm.bindFromRequest.fold(
-      formWithErrors => Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth"))),
-      {
+      formWithErrors => {
+        log.warn("[userpass-finalize] Rejected user pass finalize because of form errors: " + formWithErrors.errors)
+        Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth")))
+      }, {
         case efi: EmailPassFinalizeInfo =>
           handleEmailPassFinalizeInfo(efi, None)
       }
