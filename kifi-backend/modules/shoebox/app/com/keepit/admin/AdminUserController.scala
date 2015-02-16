@@ -875,6 +875,28 @@ class AdminUserController @Inject() (
     Ok(html.admin.userLibraries(owner, accessToLibs))
   }
 
+  def sendActivityEmailToAll() = AdminUserPage(parse.tolerantJson) { implicit request =>
+    // Usage example:
+    // $.ajax({url:"/admin/sendActivityEmailToAll", type: 'POST', data: JSON.stringify({overrideToEmail:"YOUR_EMAIL_FOR_TESTING@kifi.com"}), contentType: 'application/json', dataType: 'json'});
+
+    val forceSendToAll = (request.request.body \ "forceToAll").asOpt[Boolean]
+    val toEmail = (request.request.body \ "overrideToEmail").asOpt[EmailAddress]
+    val toUsers = (request.request.body \ "userIds").asOpt[Seq[Id[User]]]
+
+    if (toUsers.isDefined) {
+      activityEmailSender(toUsers.get.toSet, toEmail)
+      NoContent
+    } else if (toEmail.isDefined) {
+      activityEmailSender(toEmail)
+      NoContent
+    } else if (forceSendToAll.exists(true ==)) {
+      activityEmailSender(None)
+      NoContent
+    } else {
+      UnprocessableEntity("Invalid input")
+    }
+  }
+
   def sendEmail(toUserId: Id[User], code: String) = AdminUserPage { implicit request =>
     code match {
       case "activity" => activityEmailSender(Set(toUserId))

@@ -27,7 +27,6 @@ highlightColor = #eeeeee
     .kf-tag-inner-container.hover
       background-color: transparent
 
-
   .kf-dropdown-menu
     right: 0
 
@@ -84,104 +83,10 @@ highlightColor = #eeeeee
 .kf-dragged-clone-mask
   background-color: appBackgroundColor
 
-.kf-tag-new
-  cursor: pointer
-  margin: 10px 20px 10px 0
-  line-height: 18px
-  padding: 10px 0 4px
-  font-size: 13px
-  color: textDarkColor
-  vertical-align: middle
-  border-top: 1px solid separatorColor
-  width: calc(100% - 50px)
-
-  .kf-tag-caption
-    font-style: italic
-
-  .kf-tag-name
-    color: blueColor
-
-.kf-tag-new-icon
-  float: left
-  line-height: 29px
-
-.kf-tag-new-contents
-  overflow: hidden
-  padding-left: 5px
-
-.antiscroll-inner
-  position: relative // necessary to scroll with keyboard
-
-.kf-sidebar-tag-list
-  user-select: none
-
-.kf-dragging-keep
-  .kf-sidebar-tag-list
-    background-color: clearYellowColor
-
-.kf-tag-new-inner:hover
-  background-color: highlightColor
-
-.kf-sidebar-tag-list .highlight .kf-tag-inner-container
-.kf-tag-new-inner.highlight
-  background-color: highlightColor
-
-.kf-sidebar-tag-list .highlight .kf-tag-inner-container.hover
-.kf-tag-new-inner.highlight:hover
-  background-color: #e9e9e9
-
-.kf-tag-new-inner
-  padding: 3px 20px 2px 20px
-
 .kf-tag-info
   cursor: pointer
   padding: 0 20px 0 20px
   line-height: kfTagHeight
-
-.kf-tag-input-box
-  cursor: text
-  border-radius: 12px
-  border-style: none
-  background: highlightColor
-  transition: all .16s
-  height: 24px
-  margin: 2px 32px 10px 11px
-  font-weight: 200
-  box-sizing: border-box
-  border: 1px solid highlightColor
-
-  &.focused
-    background: #fff
-    border-color: blueColor
-
-  input
-    width: calc(100% - 20px)
-    white-space: nowrap
-    margin: 0
-    border: 0
-    padding: 3px 10px
-    background-color: transparent
-    color: textDarkGrey
-    font-size: 13px
-    font-weight: 200
-    font-smoothing: antialiased
-    line-height: 18px
-    box-sizing: border-box
-
-.kf-tag-input-clear
-  float: right
-  width: 20px
-  padding: 0 10px 0 0
-  font-size: 17px
-  line-height: 20px
-  cursor: pointer
-  box-sizing: border-box
-
-  &.kf-tag-input-clear
-    color: #99a3b3
-
-  &:hover
-    color: #6fa6ef
 
 .kf-tag-name-holder
   padding: 0 15px 0 0
@@ -201,28 +106,10 @@ highlightColor = #eeeeee
   overflow: hidden
   text-overflow: ellipsis
 
-.kf-tag-rename-container
-  overflow: hidden
-
-input.kf-tag-rename
-  background-color: transparent
-  box-sizing: border-box
-  width: 100%
-
 .kf-tag-count
   font-size: 12px
   color: countColor
   font-weight: 200
-
-.kf-scrollable-tags
-  position: relative
-
-  // This is a hack to hide the scrollbar
-  // (cf. comments in scrollbar.js)
-  overflow: hidden
-  .antiscroll-inner
-    .kf-sidebar-tag-list
-      width: calc(100% - 50px)
 
 .kf-tag-tool
   position: absolute
@@ -244,8 +131,3 @@ input.kf-tag-rename
 .kf-fake-tag-item
   .kf-tag-container
     visibility: hidden
-
-.kf-add-tag-shown
-  .kf-fake-tag-item
-    display: none
-

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfSocialConnectNetworks', [
-  'socialService', 'profileService',
-  function (socialService, profileService) {
+  'socialService',
+  function (socialService) {
     return {
       scope: {},
       replace: true,
@@ -23,8 +23,6 @@ angular.module('kifi')
 
         scope.isRefreshingSocialGraph = socialService.isRefreshingSocialGraph;
         scope.refreshingGraphs = socialService.refreshingGraphs;
-
-        scope.onTwitterExperiment = _.indexOf(profileService.me.experiments, 'twitter_beta') > -1;
 
         scope.facebookStatus = function () {
           if (scope.refreshingGraphs.network.facebook) {

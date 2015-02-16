@@ -3,68 +3,23 @@
 angular.module('kifi')
 
 .controller('MainCtrl', [
-  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
-  'initParams', '$rootScope', '$analytics', 'installService', 'profileService', '$q', 'routeService',
-  'modalService', 'libraryService',
-  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    initParams, $rootScope, $analytics, installService, profileService, $q, routeService,
-    modalService, libraryService) {
+  '$scope', '$rootScope', '$window', '$timeout', '$rootElement', '$q',
+  'initParams', 'undoService', 'installService', 'profileService', 'routeService',
+  'modalService', 'libraryService', 'extensionLiaison',
+  function ($scope, $rootScope, $window, $timeout, $rootElement, $q,
+    initParams, undoService, installService, profileService, routeService,
+    modalService, libraryService, extensionLiaison) {
 
+    var importBookmarksMessageEvent;
     var tooltipMessages = {
       0: 'Welcome back!',
       2: 'Bookmark import in progress. Reload the page to update.'
     };
 
-    $scope.search = {};
-    $scope.searchEnabled = false;
     $scope.data = $scope.data || {};
     $scope.editMode = {
       enabled: false
     };
-
-    $scope.enableSearch = function () {
-      $scope.searchEnabled = true;
-      // add event handler on the inheriting scope
-      this.$on('$destroy', function () {
-        $scope.searchEnabled = false;
-      });
-    };
-
-    $scope.onKeydown = function (e) {
-      if (e.keyCode === keyIndices.KEY_ESC) {
-        $scope.clear();
-      } else if (e.keyCode === keyIndices.KEY_ENTER) {
-        performSearch();
-      }
-    };
-
-    $scope.clear = function () {
-      $scope.search.text = '';
-      performSearch();
-    };
-
-    $scope.clearable = function () {
-      return !!$scope.search.text;
-    };
-
-    function performSearch() {
-      var text = $scope.search.text || '';
-      text = _.str.trim(text);
-
-      if (text) {
-        $location.path('/find').search('q', text);
-      }
-      else {
-        $location.path('/').search('');
-      }
-
-      // hacky solution to url event not getting fired
-      $timeout(function () {
-        $scope.$apply();
-      });
-    }
-
-    $scope.onChange = _.debounce(performSearch, 350);
 
     $scope.undo = undoService;
 
@@ -94,7 +49,7 @@ angular.module('kifi')
         scope: $scope
       });
 
-      $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
+      importBookmarksMessageEvent = msgEvent;
     }
 
     function initBookmarkFileUpload() {
@@ -146,17 +101,8 @@ angular.module('kifi')
         //   'action': '???'
         // });
 
-        var event = $scope.msgEvent;
-        var message = {
-          type: 'import_bookmarks',
-          libraryId: library.id
-        };
-
-        if (event) {
-          event.source.postMessage(message, event.origin);
-        } else {
-          $window.postMessage(message, '*');
-        }
+        extensionLiaison.importBookmarksTo(library.id, importBookmarksMessageEvent);
+        importBookmarksMessageEvent = null;
 
         modalService.open({
           template: 'common/modal/importBookmarksInProgressModal.tpl.html'
@@ -165,7 +111,8 @@ angular.module('kifi')
     };
 
     $scope.cancelImport = function () {
-      $window.postMessage('import_bookmarks_declined', '*');
+      extensionLiaison.declineBookmarkImport(importBookmarksMessageEvent);
+      importBookmarksMessageEvent = null;
     };
 
     $scope.disableBookmarkImport = true;
@@ -309,47 +256,12 @@ angular.module('kifi')
       $rootElement.find('body').addClass('mac');
     }
 
-
-    var deregisterPrefsChangedListener = $rootScope.$on('prefsChanged', function () {
-      $scope.showDelightedSurvey = profileService.prefs && profileService.prefs.show_delighted_question;
-    });
-    $scope.$on('$destroy', deregisterPrefsChangedListener);
-
-    /**
-     * Make the page "extension-friendly"
-     */
-    var htmlElement = angular.element(document.documentElement);
-    // override right margin to always be 0
-    htmlElement.css({marginRight: 0});
     $rootScope.$watch(function () {
-      return htmlElement[0].getAttribute('kifi-pane-parent') !== null;
-    }, function (res) {
-      var mainElement = $rootElement.find('.kf-main');
-      var rightCol = $rootElement.find('.kf-col-right');
-      var header = $rootElement.find('.kf-header-inner');
-      if (res) {
-        // find the margin-right rule that should have been applied
-        var fakeHtml = angular.element(document.createElement('html'));
-        fakeHtml.attr({
-          'kifi-pane-parent':'',
-          'kifi-with-pane':''
-        });
-        fakeHtml.hide().appendTo('html');
-        var marginRight = fakeHtml.css('margin-right');
-        fakeHtml.remove();
-
-        var currentRightColWidth = rightCol.width();
-        if (Math.abs(parseInt(marginRight,10) - currentRightColWidth) < 15) {
-          // avoid resizing if the width difference would be too small
-          marginRight = currentRightColWidth + 'px';
-        }
-        mainElement.css('width', 'calc(100% - ' + marginRight + ')');
-        rightCol.css('width', fakeHtml.css('margin-right'));
-        header.css('padding-right', marginRight);
-      } else {
-        mainElement.css('width', '');
-        rightCol.css('width', '');
-        header.css('padding-right', '');
+      return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide);
+    }, function (show) {
+      if (show) {
+        extensionLiaison.triggerGuide();
+        profileService.savePrefs({auto_show_guide: null});
       }
     });
   }

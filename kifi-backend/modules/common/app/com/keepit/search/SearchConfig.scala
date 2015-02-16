@@ -19,24 +19,32 @@ import play.api.libs.json.JsObject
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
+      // Common Query Parser
       "prefixBoost" -> "1.0",
-      "libraryNameBoost" -> "0.5",
-      "userNameBoost" -> "0.5",
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
       "concatBoost" -> "0.8",
       "homePageBoost" -> "0.2",
+
+      // Shared Search Parameters (should probably not be shared)
+      "percentMatch" -> "75",
+      "halfDecayHours" -> "24",
+      "recencyBoost" -> "1.0",
+
+      // UriSearch
+      "libraryNameBoost" -> "0.5",
       "maxResultClickBoost" -> "20.0",
       "minMyBookmarks" -> "2",
       "myBookmarkBoost" -> "1.5",
       "usefulPageBoost" -> "1.1",
       "sharingBoostInNetwork" -> "0.5",
       "sharingBoostOutOfNetwork" -> "0.01",
-      "percentMatch" -> "75",
-      "halfDecayHours" -> "24",
-      "recencyBoost" -> "1.0",
       "newContentBoost" -> "1.0",
       "tailCutting" -> "0.3",
+
+      // LibrarySearch
+      // UserSearch
+
       "proximityBoost" -> "0.95",
       "dampingHalfDecayMine" -> "6.0",
       "dampingHalfDecayFriends" -> "4.0",
@@ -54,24 +62,32 @@ object SearchConfig {
     )
   private[this] val descriptions =
     Map[String, String](
-      "prefixBoost" -> "importance of prefix search vs full text search",
-      "libraryNameBoost" -> "boost value for library name in Kifi search",
-      "userNameBoost" -> "boost value for user name in Kifi search",
+      // Common Query Parser
+      "prefixBoost" -> "importance of prefix query vs regular text query",
       "phraseBoost" -> "boost value for the detected phrase [0f,1f]",
       "siteBoost" -> "boost value for matching website names and domains",
       "concatBoost" -> "boost value for concatenated terms",
       "homePageBoost" -> "boost value for home page [0f,1f]",
+
+      // Shared Search Parameters (should probably not be shared)
+      "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF) for a result to show up",
+      "halfDecayHours" -> "the time the recency boost becomes half",
+      "recencyBoost" -> "importance of the recent bookmarks",
+
+      // UriSearch
+      "libraryNameBoost" -> "boost value for library name in uri search",
       "maxResultClickBoost" -> "boosting by recent result clicks",
       "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
       "myBookmarkBoost" -> "importance of my bookmark",
       "usefulPageBoost" -> "importance of usefulPage (clicked page)",
       "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
       "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
-      "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF) for a keep to show up",
-      "halfDecayHours" -> "the time the recency boost becomes half",
-      "recencyBoost" -> "importance of the recent bookmarks",
       "newContentBoost" -> "importance of a new content introduced to the network",
       "tailCutting" -> "after damping, a hit with a score below the high score multiplied by this will be removed",
+
+      // LibrarySearch
+      // UserSearch
+
       "proximityBoost" -> "boosting by proximity",
       "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
       "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",

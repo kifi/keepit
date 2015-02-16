@@ -1,5 +1,5 @@
 <div ng-controller="ProfileCtrl">
-  <div class="profile-wrapper">
+  <div class="profile-wrapper kf-width-bounded">
     <div class="profile">
       <h2>Settings</h2>
       <div class="profile-container">
@@ -55,7 +55,7 @@
             </span>
           </li>
 
-          <li kf-twitter-connect-button data-network="twitter" ng-class="{ 'connected': isTwitterConnected }" ng-show="twitterExperiment">
+          <li kf-twitter-connect-button data-network="twitter" ng-class="{ 'connected': isTwitterConnected }">
             <a class="profile-nw nw-twitter" href="https://www.kifi.com/link/twitter" target="_self" ng-click="connectTwitter()" ng-show="!isTwitterConnected">Twitter</a>
             <a class="profile-nw nw-twitter" ng-href="{{twProfileUrl}}" target="_blank" ng-show="isTwitterConnected">Twitter</a>
             <span class="profile-nw-connected">

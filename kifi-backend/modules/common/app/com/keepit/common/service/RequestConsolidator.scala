@@ -95,5 +95,9 @@ class RequestConsolidator[K, T](ttl: Duration) extends Logging {
     futureRefMap.put(key, new FutureRef(key, future, now + ttlMillis, referenceQueue))
   }
 
+  def remove(key: K): Unit = {
+    futureRefMap.remove(key)
+  }
+
   def clear() { futureRefMap.clear() }
 }

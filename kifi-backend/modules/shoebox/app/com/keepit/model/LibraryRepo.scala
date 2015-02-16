@@ -222,7 +222,7 @@ class LibraryRepoImpl @Inject() (
 
   def getLibrariesOfUserFromAnonymous(ownerId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
     val q = (for {
-      lib <- rows if lib.ownerId === ownerId && lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && lib.state === LibraryStates.ACTIVE
+      lib <- rows if lib.ownerId === ownerId && lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && lib.state === LibraryStates.ACTIVE && lib.lastKept.isNotNull
       lm <- libraryMembershipRepo.get.rows if lm.libraryId === lib.id && lm.userId === ownerId && lm.listed && lm.state === LibraryMembershipStates.ACTIVE
     } yield lib).sortBy(x => (x.memberCount.desc, x.lastKept.desc, x.id.desc)).drop(page.itemsToDrop).take(page.size)
     q.list
@@ -272,7 +272,9 @@ class LibraryRepoImpl @Inject() (
   }
 
   def getLibrariesOfSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
-    (for (r <- rows if r.ownerId === userId && r.state === LibraryStates.ACTIVE) yield r).sortBy(x => (x.kind, x.memberCount.desc, x.lastKept.desc, x.id.desc)).drop(page.itemsToDrop).take(page.size).list
+    import StaticQuery.interpolation
+    val query = sql"select lib.* from library lib where lib.owner_id = $userId and lib.state='active' order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end, lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    query.as[Library].list
   }
 
   def getAllPublishedLibraries()(implicit session: RSession): Seq[Library] = {

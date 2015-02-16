@@ -22,21 +22,11 @@ rcl-side-pad = 30px
 .kf-rcl-card
   border: defaultBorder
   border-top: none
-  border-radius: 0 0 3px 3px
+  border-radius: 0 0 10px 10px
   background-color: #fff
-  box-shadow: defaultBoxShadow
-
-  // Do not display text on buttons when the card is very narrow
-  @media screen and (max-width: 1250px)
-    .kf-button-text-optional
-      padding: 0 7px 0 14px
-      font-size: 0
-
-    .library-share-menu
-      left: -44px
 
   .kf-rcl-body
-    padding: 0 rcl-side-pad 5px
+    padding: 0 rcl-side-pad
 
   .kf-rcl-name-wrap-2
     padding-top: 4px
@@ -62,7 +52,7 @@ rcl-side-pad = 30px
     color: textBlackColor
 
   .kf-rcl-info
-    margin: 16px 0 10px
+    margin-top: 16px
     color: kifiBlack
     vertical-align: top
 
@@ -100,18 +90,21 @@ rcl-side-pad = 30px
     line-height: 23px
 
   .kf-rcl-stats-line
+    display: table
+    width: 100%
+    height: 72px
     border-top: 1px solid #dadae2
-    padding-top: 15px
-    height: 42px
-    overflow: hidden
 
   .kf-rcl-stats
-    display: inline-block
-    height: 42px
+    display: table-cell
+    vertical-align: top
+    padding-top: 15px
+    width: 1%
+    white-space: nowrap
 
   .kf-rcl-stat
     display: inline-block
-    margin: 0 20px 0 5px
+    padding: 0 20px 0 5px
     font-size: 12px
 
   a.kf-rcl-stat
@@ -137,35 +130,9 @@ rcl-side-pad = 30px
     text-align: center
 
   .kf-lfp
-    display: inline
-
-  .kf-lfp-pics
-    display: inline-block
-    height: 42px
-    vertical-align: top
-
-    .kf-lfp-pic
-      display: inline-block
-      margin-right: 8px
-      border-radius: 50%
-      width: 42px
-      height: 42px
-
-  .kf-lfp-more
-    display: inline-block
-    border-radius: 21px
-    padding: 0 6px 0 5px
-    height: 42px
-    background-color: kifiBlack
-    color: #fff
-    vertical-align: top
-    cursor: pointer
-    min-width: 31px
-
-  .kf-lfp-more-text
-    display: block
-    padding-top: 12px
-    text-align: center
+    display: table-cell
+    width: 99%
+    vertical-align: middle
 
   .kf-rcl-buttons
     border-top: 2px solid #f5f5f5

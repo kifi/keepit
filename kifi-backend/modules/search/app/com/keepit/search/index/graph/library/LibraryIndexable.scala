@@ -52,11 +52,13 @@ object LibraryFields {
     val SYSTEM_MAIN = 0
     val SYSTEM_SECRET = 1
     val USER_CREATED = 2
+    val SYSTEM_PERSONA = 3
 
     @inline def toNumericCode(kind: LibraryKind) = kind match {
       case LibraryKind.SYSTEM_MAIN => SYSTEM_MAIN
       case LibraryKind.SYSTEM_SECRET => SYSTEM_SECRET
       case LibraryKind.USER_CREATED => USER_CREATED
+      case LibraryKind.SYSTEM_PERSONA => SYSTEM_PERSONA
     }
 
     @inline def fromNumericCode(kind: Long) = {
@@ -135,7 +137,7 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]
     val doc = super.buildDocument
 
     library.kind match {
-      case LibraryKind.SYSTEM_MAIN | LibraryKind.SYSTEM_SECRET => // do not index the name of main/private libraries
+      case LibraryKind.SYSTEM_MAIN | LibraryKind.SYSTEM_SECRET | LibraryKind.SYSTEM_PERSONA => // do not index the name of main/private libraries
       case LibraryKind.USER_CREATED =>
         val nameLang = LangDetector.detect(library.name)
         doc.add(buildTextField(nameField, library.name, DefaultAnalyzer.getAnalyzer(nameLang)))

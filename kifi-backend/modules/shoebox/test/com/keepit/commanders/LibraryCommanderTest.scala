@@ -4,6 +4,8 @@ import com.keepit.common.util.Paginator
 import com.keepit.model.UserFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryFactory._
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.KeepFactory._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.LibraryInviteFactory._
@@ -50,7 +52,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
   private val profileLibraryOrdering = new Ordering[Library] {
     def compare(self: Library, that: Library): Int =
-      (self.kind.value compare that.kind.value) match {
+      (self.kind compare that.kind) match {
         case 0 =>
           (self.memberCount compare that.memberCount) match {
             case 0 => -(self.id.get.id compare that.id.get.id)
@@ -608,7 +610,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.joinLibrary(userIron.id.get, libMurica.id.get).right.get.name === libMurica.name // Ironman accepts invite to 'Murica'
 
         eliza.inbox.size === 1
-        eliza.inbox(0) === (userCaptain.id.get, NotificationCategory.User.LIBRARY_FOLLOWED, "https://www.kifi.com/captainamerica/murica", s"http://localhost/users/${userIron.externalId}/pics/200/0.jpg")
+        eliza.inbox(0) === (userCaptain.id.get, NotificationCategory.User.LIBRARY_FOLLOWED, "https://www.kifi.com/ironman", s"http://localhost/users/${userIron.externalId}/pics/200/0.jpg")
 
         libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get).right.get.name === libMurica.name // Agent accepts invite to 'Murica'
         libraryCommander.declineLibrary(userHulk.id.get, libMurica.id.get) // Hulk declines invite to 'Murica'
@@ -1287,6 +1289,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraries(2).map(_.secret().withUser(other)).saved
           val ownerLibs2 = libraries(10).map(_.published().withUser(owner)).saved
           libraries(10).map(_.published().withUser(other)).saved
+
+          libraryRepo.all.map { lib =>
+            keeps(2).map(_.withLibrary(lib)).saved
+          }
           (owner, other, friend, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
         }
 
@@ -1314,17 +1320,23 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraries(2).map(_.secret().withUser(other)).saved
           val ownerLibs2 = libraries(10).map(_.published().withUser(owner)).saved
           libraries(10).map(_.published().withUser(other)).saved
+
+          libraryRepo.all.take(4).map { lib =>
+            keeps(2).map(_.withLibrary(lib)).saved
+          }
+
           (owner, other, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
         }
 
-        libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 12
+        // 4 libs with keeps. First two are private, next two should be seen by anonymous.
+        libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 2
 
         val libsForOther = libraryCommander.getOwnProfileLibraries(owner, Some(other), Paginator(0, 1000), ImageSize("100x100"))
         libsForOther.size === 12
 
         val libsForFriend = libraryCommander.getOwnProfileLibraries(owner, Some(owner), Paginator(0, 1000), ImageSize("100x100"))
         libsForFriend.size === 13
-        libsForFriend.map(_.id) === allLibs.reverse.map(_.id.get).map(Library.publicId)
+        libsForFriend.map(_.id).toSet === allLibs.reverse.map(_.id.get).map(Library.publicId).toSet
       }
     }
 
@@ -1342,6 +1354,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraries(10).map(_.published().withUser(other).withMemberCount(6)).saved
           val ownerLibs3 = libraries(3).map(_.published().withUser(owner)).saved
           libraries(3).map(_.published().withUser(other)).saved
+
+          libraryRepo.all.map { lib =>
+            keeps(2).map(_.withLibrary(lib)).saved
+          }
+
           (owner, ownerLibs1 ++ ownerLibs2 ++ ownerLibs3)
         }
 

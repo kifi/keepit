@@ -56,7 +56,7 @@ angular.module('kifi')
           lib.keeperName = user.firstName + ' ' + user.lastName;
           lib.owner = user;
 
-          if (!libraryService.isSystemLibrary(lib.id)) {
+          if (!libraryService.isLibraryIdMainOrSecret(lib.id)) {
             decompressedLibraries.push(lib);
           }
 

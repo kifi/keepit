@@ -1,4 +1,4 @@
-<div class="kf-library-share-search">
+<div class="kf-library-share-search" kf-wheel-stop>
   <button ng-if="!manageLibInvite" class="kf-button kf-button-text-optional library-share-button" ng-click="toggleMenu()">
     <span class="kf-button-icon svg-share-icon"></span> Share
   </button>
@@ -9,13 +9,13 @@
       <div class="library-share-input-box">
         <img ng-src="/img/spinner_32.gif" ng-show="showSpinner" class="library-share-search-spinner">
         <input type="text" ng-model="search.name" class="library-share-input library-share-search-input" placeholder="Search people" ng-change="onSearchInputChange()" ng-keydown="processKeyEvent($event)" ng-focus="onSearchInputFocus()">
-        <div ng-if="manageLibInvite" class="kf-query-icon sprite-search-icon"></div>
+        <span ng-if="manageLibInvite" class="library-share-search-icon svg-search-icon-gray"></span>
       </div>
-      <ul class="library-share-contact-list">
+      <ul class="library-share-contact-list" kf-wheel-allow>
         <li class="library-share-contact" ng-repeat="result in results" ng-mouseenter="onResultHover(result)" ng-mouseleave="onResultUnhover(result)" ng-class="{'library-share-selected': result.selected, 'library-share-actionable': result.actionable}">
           <!-- Kifi friend -->
           <div ng-if="result.id" class="library-share-contact-container library-share-kifi">
-            <a href="{{result.userProfileUrl}}" ng-click="close()" kf-track-origin origin="{{currentPageOrigin}}/invitationDropdown">
+            <a href="{{result.userProfileUrl}}" ng-click="close()" kf-track-origin="{{currentPageOrigin}}/invitationDropdown">
               <img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="library-share-contact-image">
             </a>
             <div class="library-share-contact-summary">

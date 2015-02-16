@@ -49,7 +49,6 @@ angular.module('kifi')
     // Shared data across several modals
 
     $scope.userData = $scope.userData || {};
-    $scope.showTwitter = _.has($location.search(), 'twitter'); // todo (aaron): remove for twitter launch
 
     function setModalScope($modalScope, onClose) {
       $modalScope.close = modalService.close;

@@ -55,6 +55,10 @@ class LoggingFilter() extends EssentialFilter {
     val remoteServiceType = rh.headers.get(CommonHeaders.LocalServiceType).getOrElse(null)
     //report headers and query string only if there was an error (4xx or 5xx)
     val duration: Long = if (result.header.status / 100 >= 4) {
+      val requestBody = rh match {
+        case r: Request[_] => r.body.toString.abbreviate(512)
+        case _ => null
+      }
       result.body(Iteratee.head[Array[Byte]]).map { fut =>
         fut.map { arrayOpt =>
           val body = arrayOpt.map { array =>
@@ -73,7 +77,8 @@ class LoggingFilter() extends EssentialFilter {
             currentRequestCount = countStart,
             url = rh.uri,
             body = body,
-            statusCode = result.header.status
+            statusCode = result.header.status,
+            requestBody = requestBody
           ))
         }
       }

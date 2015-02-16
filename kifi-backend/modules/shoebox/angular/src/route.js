@@ -30,25 +30,18 @@ angular.module('kifi')
     $stateProvider
       .state('home', {  // Home page.
         url: '/',
-        templateUrl: 'recos/recosView.tpl.html'
+        templateUrl: 'recos/recosView.tpl.html',
+        data: {
+          width: 'kf-866-966'
+        }
       })
       .state('friends', {
         url: '/friends',
         templateUrl: 'friends/friends.tpl.html'
       })
-      .state('helpRank', {
-        url: '/helprank/:helprank',
-        templateUrl: 'helprank/helprank.tpl.html',
-        controller: 'HelpRankCtrl'
-      })
       .state('invite', {
         url: '/invite',
         templateUrl: 'invite/invite.tpl.html'
-      })
-      .state('keep', {
-        url: '/keep/:keepId',
-        templateUrl: 'keep/keepView.tpl.html',
-        controller: 'KeepViewCtrl'
       })
       .state('manageTags', {
         url: '/tags/manage',
@@ -64,6 +57,9 @@ angular.module('kifi')
         url: '/find?q&f',
         templateUrl: 'search/search.tpl.html',
         controller: 'SearchCtrl',
+        resolve: {
+          library: angular.noop
+        },
         reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('userProfile', {
@@ -147,7 +143,8 @@ angular.module('kifi')
       .state('library.search', {
         url: '/find?q&f',
         templateUrl: 'search/search.tpl.html',
-        controller: 'SearchCtrl'
+        controller: 'SearchCtrl',
+        reloadOnSearch: false  // controller handles search query changes itself
       });
       // ↑↑↑↑↑ Important: This needs to be last! ↑↑↑↑↑
 }]);

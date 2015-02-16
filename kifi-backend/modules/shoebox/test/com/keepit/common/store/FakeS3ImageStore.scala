@@ -1,10 +1,13 @@
 package com.keepit.common.store
-import com.keepit.model.{ User, SocialUserInfo }
-import scala.concurrent._
-import com.amazonaws.services.s3.model.PutObjectResult
-import com.keepit.common.db.{ Id, ExternalId }
-import scala.util.{ Success, Try }
+
 import java.io.File
+
+import com.amazonaws.services.s3.model.PutObjectResult
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.model.{ SocialUserInfo, User }
+
+import scala.concurrent._
+import scala.util.{ Success, Try }
 
 case class FakeS3ImageStore(val config: S3ImageConfig) extends S3ImageStore {
   def getPictureUrl(w: Int, user: User) =

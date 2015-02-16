@@ -11,14 +11,14 @@ k.guide.step4 = k.guide.step4 || function () {
   'use strict';
   var $stage, cutScreen, $feats, arrows, $steps, timeout;
   var holes = [
-    {sel: '.kf-nav-lib-system', pad: [0, -20, 56, 20]},
-    {sel: '.kf-lih-search-wrap', pad: [6, 8, 8]},
-    {sel: '.kf-lih-right>*', pad: [-6, 6, -6, 12], anchor: 'tr'}
+    {sel: '.kifi-guide-target-1', pad: [7]},
+    {sel: '.kifi-guide-target-2', pad: [8]},
+    {sel: '.kifi-guide-target-3', pad: [-9, 10, -9, -14]}
   ];
   var arcs = [
-    {dx: -63, dy: -40, from: {angle: 180, gap: 36, along: [0, .55], spacing: 7}, to: {angle: 100, gap: 20, along: [.95, 1]}},
-    {dx: -30, dy: -70, from: {angle: 150, gap: 20, along: [0, .35], spacing: 7}, to: {angle: 78, gap: 12, along: [.32, 1]}},
-    {dx: 26, dy: -70, from: {angle: 100, gap: 0, along: [.5, 0], spacing: 7}, to: {angle: 30, gap: 16, along: [.5, .7]}}
+    {dx: 0, dy: -48, from: {angle: 90, gap: 12, along: [.2, 0], spacing: 7}, to: {angle: 90, gap: 12, along: [.5, 1]}},
+    {dx: 0, dy: -48, from: {angle: 90, gap: 12, along: [.4, 0], spacing: 7}, to: {angle: 90, gap: 12, along: [.4, 1]}},
+    {dx: 0, dy: -48, from: {angle: 90, gap: 12, along: [.4, 0], spacing: 7}, to: {angle: 90, gap: 12, along: [.37, 1]}}
   ];
   return {show: show, remove: removeAll};
 
@@ -50,7 +50,7 @@ k.guide.step4 = k.guide.step4 || function () {
     $(document).data('esc').add(hide);
     arrows = [];
     clearTimeout(timeout);
-    timeout = setTimeout(cutHole, 600);
+    timeout = setTimeout(welcome, 600);
     api.port.emit('track_guide', [4, 0]);
   }
 
@@ -76,6 +76,15 @@ k.guide.step4 = k.guide.step4 || function () {
         });
       }
     }
+  }
+
+  function welcome() {
+    $stage.find('.kifi-guide-4-welcome')
+      .show()
+      .each(layout)
+      .addClass('kifi-opaque');
+    clearTimeout(timeout);
+    timeout = setTimeout(cutHole, 800);
   }
 
   function removeAll() {
@@ -130,11 +139,8 @@ k.guide.step4 = k.guide.step4 || function () {
   }
 
   function drumRoll() {
-    $stage.find('.kifi-guide-drum-roll')
-      .show()
-      .each(layout)
+    $stage.find('.kifi-guide-4-welcome>.kifi-guide-4-next')
       .addClass('kifi-opaque')
-    .find('.kifi-guide-4-next')
       .one('click', farewell);
   }
 
@@ -144,7 +150,7 @@ k.guide.step4 = k.guide.step4 || function () {
       arrow.fadeAndDetach(260);
     });
     var farewellShown;
-    $feats.add('.kifi-guide-drum-roll')
+    $feats.add('.kifi-guide-4-welcome')
       .on('transitionend', function () {
         $(this).remove();
         if (!farewellShown) {

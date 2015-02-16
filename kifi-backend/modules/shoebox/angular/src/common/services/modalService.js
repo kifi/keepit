@@ -6,7 +6,7 @@ angular.module('kifi')
   function ($compile, $rootScope, $templateCache, $timeout) {
     var modals = [];
 
-    function open (opts) {
+    function open(opts) {
       opts = opts || {};
 
       var template = opts.template;
@@ -21,17 +21,17 @@ angular.module('kifi')
       }
 
       $compile($modal)(scope);
-      angular.element(document.body).find('.kf-cols').append($modal);
+      angular.element('.kf-app').append($modal);
 
       // We need to save a reference to the scope, because .append() appears to set the scope of the element
-      // as .kf-cols's scope. Clearly we're missing something trivial (using a scope in $compile and then
+      // as .kf-app's scope. Clearly we're missing something trivial (using a scope in $compile and then
       // assigning it to the DOM node's scope), so if someone can fix it, go for it :).
       modals.push([$modal, scope]);
 
       return scope;
     }
 
-    function close () {
+    function close() {
       var ref = modals.pop();
       if (ref && ref.length > 0 && ref[0].length) {
         var $modal = ref[0];
@@ -43,7 +43,7 @@ angular.module('kifi')
       }
     }
 
-    function openGenericErrorModal (opts) {
+    function openGenericErrorModal(opts) {
       opts = opts || {};
       opts.template = 'common/modal/genericErrorModal.tpl.html';
       open(opts);

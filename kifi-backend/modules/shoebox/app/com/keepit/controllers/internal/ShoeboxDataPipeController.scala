@@ -1,18 +1,16 @@
 package com.keepit.controllers.internal
 
-import com.keepit.common.db.slick.Database.Replica
 import com.keepit.common.db.SequenceNumber
-import play.api.libs.json.{ JsNumber, JsObject, JsArray, Json }
+import com.keepit.common.service.RequestConsolidator
+import play.api.libs.json._
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import play.api.mvc.Action
 import com.keepit.model._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
-import org.msgpack.ScalaMessagePack
-import play.api.http.ContentTypes
-import com.keepit.model.serialize.{ UriIdAndSeqBatch, UriIdAndSeq }
-import com.keepit.model.serialize.UriIdAndSeqBatch
+import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class ShoeboxDataPipeController @Inject() (
     db: Database,
@@ -38,12 +36,18 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(uris))
   }
 
-  def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
-    val uris = db.readOnlyReplica { implicit s =>
-      normUriRepo.getIndexable(seqNum, fetchSize)
+  private[this] val consolidateGetIndexableUrisReq = new RequestConsolidator[(SequenceNumber[NormalizedURI], Int), Seq[IndexableUri]](ttl = 60 seconds)
+
+  def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action.async { request =>
+    val future = consolidateGetIndexableUrisReq((seqNum, fetchSize)) { key =>
+      db.readOnlyReplicaAsync { implicit s =>
+        normUriRepo.getIndexable(seqNum, fetchSize)
+      } map { uris => uris map { u => IndexableUri(u) } }
     }
-    val indexables = uris map { u => IndexableUri(u) }
-    Ok(Json.toJson(indexables))
+    future.map { indexables =>
+      if (indexables.isEmpty) consolidateGetIndexableUrisReq.remove((seqNum, fetchSize))
+      Ok(Json.toJson(indexables))
+    }
   }
 
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
@@ -75,11 +79,18 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(phrases))
   }
 
-  def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action { request =>
-    val bookmarks = db.readOnlyReplica { implicit session =>
-      keepRepo.getBookmarksChanged(seqNum, fetchSize)
+  private[this] val consolidateGetBookmarksChangedReq = new RequestConsolidator[(SequenceNumber[Keep], Int), Seq[Keep]](ttl = 60 seconds)
+
+  def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action.async { request =>
+    val future = consolidateGetBookmarksChangedReq((seqNum, fetchSize)) { key =>
+      db.readOnlyReplicaAsync { implicit session =>
+        keepRepo.getBookmarksChanged(seqNum, fetchSize)
+      }
     }
-    Ok(Json.toJson(bookmarks))
+    future.map { bookmarks =>
+      if (bookmarks.isEmpty) consolidateGetBookmarksChangedReq.remove((seqNum, fetchSize))
+      Ok(Json.toJson(bookmarks))
+    }
   }
 
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int) = Action { request =>

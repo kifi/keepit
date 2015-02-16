@@ -15,7 +15,6 @@ angular.module('kifi')
         //
         // Internal data.
         //
-        var nameInput = element.find('.manage-lib-name-input');
         var returnAction = null;
         var submitting = false;
         var colorNames = {
@@ -191,7 +190,7 @@ angular.module('kifi')
           }
         }
 
-        function setMemberStatus (member) {
+        function setMemberStatus(member) {
           if (member.lastInvitedAt) {
             return 'Invitation Pending';
           } else if (member.membership === 'read_only') {
@@ -249,7 +248,7 @@ angular.module('kifi')
         returnAction = scope.modalData && scope.modalData.returnAction;
         scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
 
-        nameInput.focus();
+        element.find('.manage-lib-name-input').focus();
       }
     };
   }

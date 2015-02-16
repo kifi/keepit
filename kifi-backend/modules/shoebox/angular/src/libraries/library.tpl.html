@@ -1,32 +1,28 @@
-<div class="kf-lib-header-container" ng-if="!librarySearch || !$root.userLoggedIn">
-  <div kf-library-header
-    library="library"
-    username="username"
-    library-slug="librarySlug"
-    loading="loading"
-    toggle-edit="toggleEdit"
-    library-search="librarySearch"
-  ></div>
+<div kf-library-header
+  library="library"
+  username="username"
+  library-slug="librarySlug"
+  loading="loading"
+  toggle-edit="toggleEdit"
+  library-search="librarySearch"
+></div>
+
+<div class="kf-lib-cols">
+  <div class="kf-lib-col" ui-view></div>
+  <div kf-related-libraries related-libraries="relatedLibraries" parent-library="library" ng-if="relatedLibraries"></div>
 </div>
 
-<div class="kf-main-library-keeps" ng-class="{'library-search': librarySearch}">
-  <div class="kf-library-body clearfix">
-    <div ui-view></div>
-    <div kf-related-libraries ng-if="!userLoggedIn && relatedLibraries" ng-hide="librarySearch"
-      related-libraries="relatedLibraries" parent-library="library">
-    </div>
+<footer class="kf-lib-footer" ng-if="!$root.userLoggedIn">
+  <div class="kf-lib-footer-1">
+    <a class="kf-lib-footer-a" target="_top" href="/how_it_works">How it works</a> &middot;
+    <a class="kf-lib-footer-a" target="_top" href="/about">About</a> &middot;
+    <a class="kf-lib-footer-a" target="_top" href="http://blog.kifi.com">Blog</a>
   </div>
-</div>
+  <span ng-if="!isMobile">&middot;</span>
+  <div class="kf-lib-footer-2">
+    <a class="kf-lib-footer-a" target="_top" href="/privacy">Privacy</a> &middot;
+    <a class="kf-lib-footer-a" target="_top" href="/terms">Terms</a>
+  </div>
+</footer>
 
-<div class="kf-lib-info-footer" ng-if="!$root.userLoggedIn">
-  <div class="first-line">
-    <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/how_it_works">How it works</a> &middot;
-    <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/about">About</a> &middot;
-    <a class="kf-footer-item-link" target="_top" href="http://blog.kifi.com">Blog</a>
-  </div>
-  <span ng-if="!isMobile"> &middot; </span>
-  <div class="second-line">
-    <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/privacy">Privacy</a> &middot;
-    <a class="kf-footer-item-link" target="_top" href="https://www.kifi.com/terms">Terms</a>
-  </div>
-</div>
+<div ng-if="!$root.userLoggedIn && !isMobile" kf-page-bottom-CTA library="library"></div>
