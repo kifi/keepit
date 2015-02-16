@@ -110,14 +110,12 @@ class BookmarkImporter @Inject() (
       }
     }
 
-    val importTag = keepsCommander.getOrCreateTag(userId, "Imported links")(context)
-
     val tags = tagSet.map { tagStr =>
       tagStr.trim -> keepsCommander.getOrCreateTag(userId, tagStr.trim)(context)
     }.toMap
     val taggedKeeps = parsed.map {
       case Bookmark(t, h, tagNames, createdDate, originalJson) =>
-        val keepTags = tagNames.map(tags.get).flatten.map(_.id.get) :+ importTag.id.get
+        val keepTags = tagNames.map(tags.get).flatten.map(_.id.get)
         BookmarkWithTagIds(t, h, keepTags, createdDate, originalJson)
     }
 
