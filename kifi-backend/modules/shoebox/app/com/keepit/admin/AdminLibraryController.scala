@@ -252,5 +252,13 @@ class AdminLibraryController @Inject() (
     }
     searchClient.getLibraryDocument(libraryAndMemberships).map(Ok(_))
   }
+
+  def saveSuggestedSearches() = AdminUserPage { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val libId = body.get("libId").get
+    val tc = body.get("tc").get
+    println(s"\n\n\n=====\n\n\n libId = ${libId}, tc = ${tc}")
+    Ok
+  }
 }
 
