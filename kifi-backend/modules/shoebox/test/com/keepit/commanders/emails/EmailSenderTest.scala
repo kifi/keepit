@@ -140,7 +140,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           email.subject === "Billy Madison accepted your Kifi friend request"
           html must contain("""<a href="http://dev.ezkeep.com:9000/billy?""")
           html must contain("""Billy Madison</a> accepted your Kifi friend request""")
-          html must contain("""<a href="http://dev.ezkeep.com:9000/billy?utm_source=fromFriends&amp;utm_medium=email&amp;utm_campaign=friendRequestAccepted&amp;utm_content=friendRequestAccepted&amp;kcid=friendRequestAccepted-email-fromFriends&amp;dat=eyJsIjoiZnJpZW5kUmVxdWVzdEFjY2VwdGVkIiwiYyI6W10sInQiOltdfQ==&amp;kma=1"><img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Billy Madison" width="73" height="73" style="display:block;" border="0"/></a>""")
+          html must contain("""<a href="http://dev.ezkeep.com:9000/billy?utm_source=friendRequestAccepted&amp;utm_medium=email&amp;utm_campaign=friendRequestAccepted&amp;utm_content=friendRequestAccepted&amp;kcid=friendRequestAccepted-email-fromFriends&amp;dat=eyJsIjoiZnJpZW5kUmVxdWVzdEFjY2VwdGVkIiwiYyI6W10sInQiOltdfQ==&amp;kma=1"><img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Billy Madison" width="73" height="73" style="display:block;" border="0"/></a>""")
 
           val text = email.textBody.get.value
           text must contain("""Billy Madison accepted your Kifi friend request""")
