@@ -250,21 +250,28 @@ class AuthHelper @Inject() (
       }),
       "firstName" -> text, // todo(ray/andrew): revisit non-empty requirement for twitter
       "lastName" -> optional(text),
-      "password" -> optional(text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray))),
+      "password" -> optional(text),
       "picToken" -> optional(text),
       "picHeight" -> optional(number),
       "picWidth" -> optional(number),
       "cropX" -> optional(number),
       "cropY" -> optional(number),
       "cropSize" -> optional(number)
-    )((email, fName, lName, pwd, picToken, picH, picW, cX, cY, cS) =>
-        SocialFinalizeInfo(email = email, firstName = fName, lastName = lName.getOrElse(""), password = pwd.getOrElse(RandomStringUtils.random(20)).toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS))((sfi: SocialFinalizeInfo) =>
+    )({ (email, fName, lName, pwd, picToken, picH, picW, cX, cY, cS) =>
+        val allowedPassword = if (pwd.exists(p => AuthHelper.validatePwd(p.toCharArray))) {
+          pwd.get
+        } else {
+          log.warn(s"[social-finalize] Rejected social password, generating one instead. Supplied password was ${pwd.map(_.length).getOrElse(0)} chars.")
+          RandomStringUtils.random(20)
+        }
+        SocialFinalizeInfo(email = email, firstName = fName, lastName = lName.getOrElse(""), password = allowedPassword.toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS)
+      })((sfi: SocialFinalizeInfo) =>
         Some((sfi.email, sfi.firstName, Option(sfi.lastName), Option(new String(sfi.password)), sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize)))
   )
   def doSocialFinalizeAccountAction(implicit request: MaybeUserRequest[JsValue]): Result = {
     socialFinalizeAccountForm.bindFromRequest.fold(
       formWithErrors => {
-        log.warn("[social-finalize] Rejected social finalize because of form errors: " + formWithErrors.errors)
+        log.warn("[social-finalize] Rejected social finalize because of form errors: " + formWithErrors.errors + " from request " + request.body + " from " + request.userAgentOpt)
         BadRequest(Json.obj("error" -> formWithErrors.errors.head.message))
       }, {
         case sfi: SocialFinalizeInfo =>
