@@ -87,6 +87,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       libraryIndexer,
       userIndexer,
       userGraphsSearcherFactory,
+      inject[ShoeboxServiceClient],
       phraseDetector,
       resultClickTracker,
       inject[ClickHistoryTracker],
