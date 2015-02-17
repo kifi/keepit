@@ -570,11 +570,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // Agent Nick Fury accepts invite & joins the Library
         libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get)
-        // Tests that users can have multiple invitations multiple times,
-        // but users with active membership to a library should not get invites with same access level
+        // Tests that users can have multiple invitations multiple times
+        // but if invites are sent within 5 Minutes of each other, they do not persist!
         Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.count === 7
+          libraryInviteRepo.count === 4 // 8 invites sent, only 4 persisted
         }
 
         val inviteList2_RW = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
@@ -1098,13 +1098,29 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val eliza = inject[ElizaServiceClient].asInstanceOf[FakeElizaServiceClientImpl]
         eliza.inbox.size === 0
 
-        val allInvites = db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.all
-        }
-        Await.result(libraryCommander.processInvites(allInvites), Duration(10, "seconds"))
+        val t1 = new DateTime(2014, 8, 1, 7, 0, 0, 1, DEFAULT_DATE_TIME_ZONE)
+        val newInvites = Seq(
+          LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1),
+          LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1),
+          LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1),
+          LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t1)
+        )
+
+        Await.result(libraryCommander.processInvites(newInvites), Duration(10, "seconds"))
         eliza.inbox.size === 4
         eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_INVITATION && t._4.endsWith("/0.jpg")) === 4
         eliza.inbox.count(t => t._3 == "https://www.kifi.com/captainamerica/murica") === 3
+        db.readOnlyMaster { implicit s => emailRepo.count === 4 }
+
+        val t2 = t1.plusMinutes(3) // send another set of invites 3 minutes later - too spammy, should not persist!
+        val newInvitesAgain = Seq(
+          LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t2),
+          LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t2),
+          LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t2),
+          LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t2)
+        )
+        Await.result(libraryCommander.processInvites(newInvitesAgain), Duration(10, "seconds"))
+        eliza.inbox.size === 4
         db.readOnlyMaster { implicit s => emailRepo.count === 4 }
       }
     }
