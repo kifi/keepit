@@ -4,7 +4,8 @@
   contributors: Seq[User],
   followers: Seq[User],
   publicId: com.keepit.common.crypto.PublicId[Library],
-  relatedLibs: Seq[Library]
+  relatedLibs: Seq[Library],
+  suggestedSearches: String
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin(owner.firstName + " " + owner.lastName + "'s " + library.name, stylesheets = List("admin_library")) {
@@ -71,7 +72,7 @@
   <div>
     <h3>View and Edit Tag Clouds</h3>
     <form "tag_cloud_form">
-     <textarea disabled id = "tag_cloud">place_holder</textarea>
+     <textarea disabled id = "tag_cloud">@suggestedSearches</textarea>
      <button type = 'button' id = "edit_tc">edit</button>
      <button type = 'submit' id = 'save_tc'>save</button>
      <button type = 'button' id = 'cancel_edit_tc'>cancel</button>
