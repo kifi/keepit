@@ -71,7 +71,7 @@
 
   <div>
     <h3>View and Edit Tag Clouds</h3>
-    <form "tag_cloud_form">
+    <form id = "tag_cloud_form">
      <textarea disabled id = "tag_cloud">@suggestedSearches</textarea>
      <button type = 'button' id = "edit_tc">edit</button>
      <button type = 'submit' id = 'save_tc'>save</button>
@@ -130,7 +130,6 @@
       var old = $("#tag_cloud").val()
       disableEdit(false)
       document.getElementById("cancel_edit_tc").addEventListener("click", function(){ cancelEditWith(old)}, true);
-      document.getElementById("save_tc").addEventListener("click", saveEdit, true);
     }
 
     function cancelEditWith(old){
@@ -138,15 +137,16 @@
       disableEdit(true)
     }
 
-    function saveEdit(){
+    $("#tag_cloud_form").submit(function(event){
+      event.preventDefault();
+
       var text = $("#tag_cloud").val()
       $.post("@com.keepit.controllers.admin.routes.AdminLibraryController.saveSuggestedSearches", {libId: @library.id, tc: text}).done(done).fail(fail);
 
       function done(data) { disableEdit(true) }
       function fail() { alert("bad things happened") }
 
-    }
-
+    });
 
 
     $("#state").change(function() {
