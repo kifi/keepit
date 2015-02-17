@@ -261,7 +261,6 @@ angular.module('kifi')
         template: 'persona/managePersonaUnescapableModal.tpl.html',
         modalData: {
           onClose: function() {
-            debugger;
             if (installService.installedVersion) {
               extensionLiaison.triggerGuide();
             }

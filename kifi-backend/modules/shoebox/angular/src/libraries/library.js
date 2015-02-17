@@ -75,20 +75,6 @@ angular.module('kifi')
       });
     }
 
-    function showPersonaModal() {
-      modalService.open({
-        template: 'persona/managePersonaUnescapableModal.tpl.html',
-        modalData: {
-          onClose: function() {
-            if (!installService.installedVersion) {
-              showInstallModal();
-            }
-          },
-          finishText: 'Done'
-        }
-      });
-    }
-
     function trackPageView(attributes) {
       var url = $analytics.settings.pageTracking.basePath + $location.url();
 
@@ -315,10 +301,6 @@ angular.module('kifi')
       if (initParams.install === '1' && !installService.installedVersion) {
         showInstallModal();
       }
-      //if (initParams.install === '1' && !installService.installedVersion) {
-      //  showPersonaModal();
-      //  initParams.install = undefined;
-      //}
       if (initParams.intent === 'follow' && $scope.library.access === 'none') {
         libraryService.joinLibrary($scope.library.id);
       }
