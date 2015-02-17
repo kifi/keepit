@@ -73,6 +73,7 @@ class MobileLibraryController @Inject() (
     val newColor = (json \ "newColor").asOpt[LibraryColor]
     val newListed = (json \ "newListed").asOpt[Boolean]
 
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     val modifyRequest = LibraryModifyRequest(newName, newSlug, newVisibility, newDescription, newColor, newListed)
     val res = libraryCommander.modifyLibrary(libId, request.userId, modifyRequest)
     res match {
