@@ -12,10 +12,11 @@ import com.keepit.common.util.Paginator
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import play.api.mvc.AnyContent
+import play.api.mvc.{ Action, AnyContent }
 import views.html
 import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json._
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -242,6 +243,12 @@ class AdminLibraryController @Inject() (
     }
     log.info("updating changed users")
     Redirect(request.request.referer)
+  }
+
+  def dumpLibraryURIIds(libId: Id[Library]) = Action { implicit request =>
+    val keeps = db.readOnlyReplica { implicit s => keepRepo.getByLibrary(libId, offset = 0, limit = Integer.MAX_VALUE) }
+    val ids = keeps.map { _.uriId }
+    Ok(Json.toJson(ids))
   }
 
   def getLuceneDocument(libraryId: Id[Library]) = AdminUserPage.async { implicit request =>
