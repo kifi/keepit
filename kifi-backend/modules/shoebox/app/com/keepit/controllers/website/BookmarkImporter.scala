@@ -176,7 +176,7 @@ class BookmarkImporter @Inject() (
 
       log.info(s"[bmFileImport:${lf.id}] Raw keep finished persisting in ${clock.getMillis() - lf.startMillis}ms")
 
-      log.info(s"[bmFileImport:${lf.id}] Done in ${clock.getMillis() - lf.startMillis}ms. Successfully processed bookmark file import for ${lf.request.userId}. $rawKeeps.length keeps processed, $tags.size tags.")
+      log.info(s"[bmFileImport:${lf.id}] Done in ${clock.getMillis() - lf.startMillis}ms. Successfully processed bookmark file import for ${lf.request.userId}. ${rawKeeps.length} keeps processed, ${tags.size} tags.")
 
       Some((rawKeeps.length, tags.size))
     }
