@@ -398,7 +398,7 @@ class ShoeboxController @Inject() (
   }
 
   def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]) = Action.async { request =>
-    val socialUserInfo = db.readOnlyReplica { implicit session =>
+    val socialUserInfo = db.readOnlyMaster { implicit session =>
       socialUserInfoRepo.get(socialUserInfoId)
     }
     socialGraphPlugin.asyncFetch(socialUserInfo, broadcastToOthers = false).map { _ =>
