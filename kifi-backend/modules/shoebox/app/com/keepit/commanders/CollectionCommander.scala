@@ -83,7 +83,7 @@ class CollectionCommander @Inject() (
   private def userSort(uid: Id[User], unsortedCollections: Seq[BasicCollection]): Seq[BasicCollection] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
     log.info(s"Getting collection ordering for user $uid")
-    val ordering = db.readWrite { implicit s => userValueRepo.getValueStringOpt(uid, UserValueName.USER_COLLECTION_ORDERING) }
+    val ordering = db.readOnlyMaster { implicit s => userValueRepo.getValueStringOpt(uid, UserValueName.USER_COLLECTION_ORDERING) }
     ordering.map {
       value => Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get
     } match {
@@ -128,11 +128,14 @@ class CollectionCommander @Inject() (
     newCollectionIds
   }
 
-  def setCollectionIndexOrdering(uid: Id[User], tagId: ExternalId[Collection], newIndex: Int)(implicit s: RWSession): Seq[ExternalId[Collection]] = {
+  def setCollectionIndexOrdering(uid: Id[User], tagId: ExternalId[Collection], newIndex: Int): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
 
-    val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).zipWithIndex
-    val orderStr = userValueRepo.getValue(uid, UserValues.tagOrdering)
+    val (allCollectionIds, orderStr) = db.readOnlyMaster { implicit s =>
+      val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).zipWithIndex
+      val orderStr = userValueRepo.getValue(uid, UserValues.tagOrdering)
+      (allCollectionIds, orderStr)
+    }
     val orderStrArr = orderStr.as[JsArray].value.map(_.as[ExternalId[Collection]])
 
     val tupleBuffer = allCollectionIds.sortWith {
@@ -154,8 +157,9 @@ class CollectionCommander @Inject() (
     idsBuffer.insert(newIndex, tagId)
 
     val newOrdering = idsBuffer.toSeq
-    userValueRepo.setValue(uid, UserValueName.USER_COLLECTION_ORDERING, Json.stringify(Json.toJson(newOrdering)))
-
+    db.readWrite { implicit s =>
+      userValueRepo.setValue(uid, UserValueName.USER_COLLECTION_ORDERING, Json.stringify(Json.toJson(newOrdering)))
+    }
     newOrdering
   }
 
