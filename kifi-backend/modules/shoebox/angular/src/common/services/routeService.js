@@ -118,7 +118,6 @@ angular.module('kifi')
       },
       recos: function (opts) {
         return route('/recos/topV2', {
-          more: opts.more ? 1 : 0,
           recency: opts.recency,
           uriContext: opts.uriContext || [],
           libContext: opts.libContext || []
