@@ -66,6 +66,7 @@ object ExperimentType {
   val CORTEX_NEW_MODEL = ExperimentType("cortex_new_model")
   val CURATOR_DIVERSE_TOPIC_RECOS = ExperimentType("curator_diverse_topic_recos")
   val NEW_PUBLIC_FEED = ExperimentType("new_public_feed")
+
   val PROFILES_BETA = ExperimentType("profiles_beta")
   val TWITTER_BETA = ExperimentType("twitter_beta")
   val ACTIVITY_EMAIL = ExperimentType("activity_email")

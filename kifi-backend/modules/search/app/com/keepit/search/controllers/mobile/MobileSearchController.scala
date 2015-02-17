@@ -209,10 +209,9 @@ class MobileSearchController @Inject() (
         val futureFriends = searchFactory.getFriends(userId)
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
         val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
-        val publishedLibrariesCountByUser = {
-          val librarySearcher = libraryIndexer.getSearcher
-          userSearchResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByMember(librarySearcher, hit.id) }.toMap
-        }
+        val librarySearcher = libraryIndexer.getSearcher
+        val publishedLibrariesCountByUser = userSearchResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByMember(librarySearcher, hit.id) }.toMap
+        val relevantLibraryRecordsAndVisibity = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
         for {
           keepCountsByUser <- futureKeepCountsByUser
           mutualFriendsByUser <- futureMutualFriendsByUser
@@ -223,6 +222,14 @@ class MobileSearchController @Inject() (
             "context" -> IdFilterCompressor.fromSetToBase64(userSearchResult.idFilter),
             "hits" -> JsArray(userSearchResult.hits.map { hit =>
               val user = users(hit.id)
+              val relevantLibrary = hit.library.flatMap { libraryId =>
+                relevantLibraryRecordsAndVisibity.get(libraryId).map {
+                  case (record, visibility) =>
+                    require(record.ownerId == hit.id, "Relevant library owner doesn't match returned user.")
+                    val library = makeBasicLibrary(record, visibility, user)
+                    Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
+                }
+              }
               Json.obj(
                 "id" -> user.externalId,
                 "name" -> user.fullName,
@@ -231,7 +238,8 @@ class MobileSearchController @Inject() (
                 "isFriend" -> friends.contains(hit.id.id),
                 "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
                 "libraryCount" -> publishedLibrariesCountByUser(hit.id),
-                "keepCount" -> keepCountsByUser(hit.id)
+                "keepCount" -> keepCountsByUser(hit.id),
+                "relevantLibrary" -> relevantLibrary
               )
             })
           )
