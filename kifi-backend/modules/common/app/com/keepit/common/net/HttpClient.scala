@@ -127,13 +127,13 @@ case class HttpClientImpl(
           trackingId = req.trackingId,
           error = e.toString))
         val fullException = req.tracer.withCause(e)
-        airbrake.get.notify(
-          AirbrakeError.outgoing(
-            exception = fullException,
-            request = req.req,
-            message = s"[${remoteServiceString(req)}] calling ${req.httpUri.summary} after ${al.duration}ms"
-          )
+        val error = AirbrakeError.outgoing(
+          exception = fullException,
+          request = req.req,
+          message = s"[${remoteServiceString(req)}] calling ${req.httpUri.summary} after ${al.duration}ms"
         )
+        if (e.getMessage.contains("Too many open files")) airbrake.get.panic(error)
+        else airbrake.get.notify(error)
     }
   }
 
