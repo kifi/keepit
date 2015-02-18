@@ -273,7 +273,6 @@ angular.module('kifi')
     }
 
     $rootScope.$watch(function () {
-      //return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide);
       return profileService.prefs.auto_show_guide;
     }, function (show) {
       if (show) {

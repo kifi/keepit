@@ -107,15 +107,20 @@ angular.module('kifi')
       });
     };
 
+    $scope.closeInitialCard = function () {
+      $scope.initialCardClosed = true;
+    };
+
     $scope.showPersonaModal = function() {
       $analytics.eventTrack('user_clicked_page', {type: 'yourKeeps', action: 'clickedUpdateInterests'});
       modalService.open({
-        template: 'persona/managePersonaModal.tpl.html'
+        template: 'persona/managePersonaModal.tpl.html',
+        modalData: {
+          onClose: function() {
+            reloadRecos(true);
+          }
+        }
       });
-    };
-
-    $scope.closeInitialCard = function () {
-      $scope.initialCardClosed = true;
     };
 
 
@@ -132,11 +137,11 @@ angular.module('kifi')
       });
     };
 
-    function reloadRecos() {
+    function reloadRecos(invalidate) {
       $scope.loading = true;
 
       recoStateService.empty();
-      recoActionService.get().then(function (rawRecos) {
+      recoActionService.get(invalidate).then(function (rawRecos) {
         var recos = [];
         if (rawRecos.length > 0) {
           rawRecos.forEach(function (rawReco) {
@@ -159,7 +164,6 @@ angular.module('kifi')
         }
       });
     }
-    reloadRecos();
 
     // Load a new set of recommendations only on page refresh.
     // Otherwise, load the recommendations we have previously shown.
@@ -168,6 +172,8 @@ angular.module('kifi')
         return reco && reco.recoKeep && reco.recoKeep.isMyBookmark;
       });
       $scope.recosState = 'hasRecos';
+    } else {
+      reloadRecos();
     }
 
     $scope.showDelightedSurvey = profileService.prefs.show_delighted_question;
@@ -181,7 +187,7 @@ angular.module('kifi')
 
     [
       $rootScope.$on('refreshRecos', function () {
-        reloadRecos();
+        reloadRecos(true);
       })
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);
