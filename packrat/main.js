@@ -619,7 +619,9 @@ api.port.on({
         og: !tab.usedHistoryApi && data.og || undefined,
         title: !tab.usedHistoryApi && data.ogTitle || data.title,
         guided: data.guided,
-        how: data.how
+        how: data.how,
+        fPost: data.fPost,
+        tweet: data.tweet
       }, function done(keep) {
         log('[keep:done]', keep);
         // main and secret are mutually exclusive
@@ -684,7 +686,7 @@ api.port.on({
       libraries.filter(idIsIn(mySysLibIds)).forEach(setProp('system', true));
       libraries.filter(idIsIn(loadRecentLibs())).forEach(setProp('recent', true));
       var keeps = d ? d.keeps : [];
-      respond({keeps: keeps, libraries: libraries});
+      respond({keeps: keeps, libraries: libraries, posting: experiments.indexOf('explicit_social_posting') >= 0});
       // preload keep details
       keeps.forEach(function (keep) {
         ajax('GET', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function (details) {
