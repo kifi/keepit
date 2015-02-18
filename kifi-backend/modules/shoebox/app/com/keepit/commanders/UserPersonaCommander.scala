@@ -58,7 +58,7 @@ class UserPersonaCommanderImpl @Inject() (
     // create libraries based on added personas
     personasToPersist.map {
       case (personaName, persona) =>
-        val defaultLibraryName = PersonaName.personaLibraryNames.get(personaName).getOrElse(personaName.value)
+        val defaultLibraryName = Persona.libraryNames.getOrElse(personaName, personaName.value)
         val defaultLibrarySlug = LibrarySlug.generateFromName(defaultLibraryName)
         val libraryAddReq = LibraryAddRequest(name = defaultLibraryName, visibility = LibraryVisibility.PUBLISHED, slug = defaultLibrarySlug, kind = Some(LibraryKind.SYSTEM_PERSONA))
         (persona, libraryCommander.addLibrary(libraryAddReq, userId))
@@ -97,14 +97,14 @@ class UserPersonaCommanderImpl @Inject() (
       userPersonaRepo.getFirstPersonaForUser(userId)
     }
     personaOpt.map { persona =>
-      val personaLibName = PersonaName.personaLibraryNames(persona.name) // find library with persona name
+      val personaLibName = Persona.libraryNames(persona.name) // find library with persona name
       val libOpt = db.readOnlyMaster { implicit s =>
         libraryRepo.getByNameAndUserId(userId, personaLibName)
       }
-      val personaKeep = PersonaName.personaKeeps.get(persona.name).getOrElse(PersonaKeep.default) // find keep associated with persona
+      val personaKeep = Persona.keeps.getOrElse(persona.name, Persona.defaultKeep) // find keep associated with persona
       (personaKeep, libOpt)
     }.getOrElse {
-      (PersonaKeep.default, None)
+      (Persona.defaultKeep, None)
     }
   }
 }
