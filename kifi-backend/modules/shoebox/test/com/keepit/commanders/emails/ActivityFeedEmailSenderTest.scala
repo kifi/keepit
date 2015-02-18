@@ -74,8 +74,10 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         val (user1, user2) = db.readWrite { implicit rw =>
           val u1 = user().withName("Kifi", "User1").withEmailAddress("u1@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
           val u2 = user().withName("Kifi", "User2").withEmailAddress("u2@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
-          keeps(5).foreach(_.withUser(u1).saved)
-          keeps(5).foreach(_.withUser(u2).saved)
+          val u3 = user().withName("Kifi", "User3").withEmailAddress("u3@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
+          keeps(20).foreach(_.withUser(u1).saved)
+          keeps(20).foreach(_.withUser(u2).saved)
+          keeps(2).foreach(_.withUser(u2).saved)
           (u1, u2)
         }
 
@@ -199,12 +201,12 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         activityEmail1.userFollowedLibraries.get.size === 1
         activityEmail1.libraryRecommendations.get.size === 3
 
-        val html1: String = email1.htmlBody
-        val html2: String = email2.htmlBody
-
-        val fw = new java.io.FileWriter("activity.html")
-        fw.write(html1)
-        fw.close()
+        // useful for quick-and-dirty testing
+        //        val html1: String = email1.htmlBody
+        //        val html2: String = email2.htmlBody
+        //        val fw = new java.io.FileWriter("activity.html")
+        //        fw.write(html1)
+        //        fw.close()
 
         email1.to === Seq(EmailAddress("u1@kifi.com"))
         email2.to === Seq(EmailAddress("u2@kifi.com"))

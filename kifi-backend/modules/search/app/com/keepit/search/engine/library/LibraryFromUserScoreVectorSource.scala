@@ -22,6 +22,7 @@ class LibraryFromUserScoreVectorSource(
     userSearcher: Searcher,
     val userId: Long,
     val friendIdsFuture: Future[Set[Long]],
+    val restrictedUserIdsFuture: Future[Set[Long]],
     val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     filter: SearchFilter,
     config: SearchConfig,

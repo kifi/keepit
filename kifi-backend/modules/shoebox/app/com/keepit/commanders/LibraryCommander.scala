@@ -474,7 +474,7 @@ class LibraryCommander @Inject() (
     db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) }
   }
 
-  def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest): Either[LibraryFail, Library] = {
+  def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
 
     val (targetLib, targetMembershipOpt) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
@@ -539,7 +539,7 @@ class LibraryCommander @Inject() (
             searchClient.updateKeepIndex()
           }
         }
-        db.readWrite { implicit s =>
+        val lib = db.readWrite { implicit s =>
           if (targetLib.slug != newSlug) {
             val ownerId = targetLib.ownerId
             libraryAliasRepo.reclaim(ownerId, newSlug)
@@ -550,11 +550,29 @@ class LibraryCommander @Inject() (
           }
           libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, state = LibraryStates.ACTIVE))
         }
+
+        val edits = Map(
+          "title" -> (newName != targetLib.name),
+          "slug" -> (newSlug != targetLib.slug),
+          "description" -> (newDescription != targetLib.description),
+          "color" -> (newColor != targetLib.color),
+          "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
+          "listed" -> (newListed != targetMembership.listed)
+        )
+        (lib, edits)
       }
       future {
+        if (result.isRight) {
+          val editedLibrary = result.right.get._1
+          val edits = result.right.get._2
+          libraryAnalytics.editLibrary(userId, editedLibrary, context, None, edits)
+        }
         searchClient.updateLibraryIndex()
       }
-      result
+      result match {
+        case Right((lib, _)) => Right(lib)
+        case Left(error) => Left(error)
+      }
     }
   }
 
@@ -837,8 +855,8 @@ class LibraryCommander @Inject() (
       userIds = Set(lib.ownerId),
       title = "New Library Follower",
       body = s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}",
-      linkText = "Go to Library",
-      linkUrl = "https://www.kifi.com" + Library.formatLibraryPath(owner.username, lib.slug),
+      linkText = s"See ${follower.firstName}'s profile",
+      linkUrl = s"https://www.kifi.com/${follower.username.value}",
       imageUrl = s3ImageStore.avatarUrlByUser(follower),
       sticky = false,
       category = NotificationCategory.User.LIBRARY_FOLLOWED,

@@ -95,6 +95,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
+      contextBuilder ++= addLibraryKindContext(library).data
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
@@ -110,10 +111,11 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
       contextBuilder += ("daysSinceLibraryCreated", numDays)
+      contextBuilder ++= addLibraryKindContext(library).data
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
-  def editLibrary(userId: Id[User], library: Library, context: HeimdalContext, subAction: Option[String] = None): Unit = {
+  def editLibrary(userId: Id[User], library: Library, context: HeimdalContext, subAction: Option[String] = None, edits: Map[String, Boolean] = Map.empty): Unit = {
     val when = currentDateTime
     val numDays = getDaysSinceLibraryCreated(library)
     SafeFuture {
@@ -129,11 +131,19 @@ class LibraryAnalytics @Inject() (
           contextBuilder += ("subAction", "importedKeeps")
         case _ =>
       }
+      contextBuilder += ("editTitle", edits.get("title").getOrElse(false))
+      contextBuilder += ("editSlug", edits.get("slug").getOrElse(false))
+      contextBuilder += ("editDescription", edits.get("description").getOrElse(false))
+      contextBuilder += ("editColor", edits.get("color").getOrElse(false))
+      contextBuilder += ("editMadePrivate", edits.get("madePrivate").getOrElse(false))
+      contextBuilder += ("editListed", edits.get("listed").getOrElse(false))
+
       contextBuilder += ("privacySetting", getLibraryVisibility(library.visibility))
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
       contextBuilder += ("daysSinceLibraryCreated", numDays)
+      contextBuilder ++= addLibraryKindContext(library).data
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
@@ -150,6 +160,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("imageHeight", imageSize.height)
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("daysSinceLibraryCreated", numDays)
+      contextBuilder ++= addLibraryKindContext(library).data
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
@@ -165,6 +176,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("imageHeight", imageSize.height)
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("daysSinceLibraryCreated", numDays)
+      contextBuilder ++= addLibraryKindContext(library).data
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
@@ -239,6 +251,7 @@ class LibraryAnalytics @Inject() (
     contextBuilder += ("libraryOwnerId", library.ownerId.toString)
     contextBuilder += ("libraryKeepCount", numKeepsInLibrary)
     contextBuilder += ("daysSinceLibraryCreated", numDays)
+    contextBuilder ++= addLibraryKindContext(library).data
     contextBuilder.build
   }
 
@@ -365,11 +378,18 @@ class LibraryAnalytics @Inject() (
   }
   private def getLibraryVisibility(visibility: LibraryVisibility): String = {
     visibility match {
-      case LibraryVisibility.SECRET =>
-        "private"
-      case _ =>
-        visibility.value.toLowerCase
+      case LibraryVisibility.SECRET => "private"
+      case _ => visibility.value.toLowerCase
     }
+  }
+  private def addLibraryKindContext(library: Library): HeimdalContext = {
+    val contextBuilder = new HeimdalContextBuilder
+    if (library.kind == LibraryKind.SYSTEM_PERSONA) {
+      contextBuilder += ("libraryKind", "personaCreated")
+    } else if (library.kind == LibraryKind.USER_CREATED) {
+      contextBuilder += ("libraryKind", "userCreated")
+    }
+    contextBuilder.build
   }
 
   def taggedPage(tag: Collection, keep: Keep, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit = {

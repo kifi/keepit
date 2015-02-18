@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('libraryService', [
-  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService', '$analytics', '$location',
-  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService, $analytics, $location) {
+  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService', '$analytics',
+  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService, $analytics) {
     var librarySummaries = [],
         invitedSummaries = [];
 
@@ -97,7 +97,7 @@ angular.module('kifi')
         library.owner.image = friendService.getPictureUrlForUser(library.owner);
         library.isMine = library.owner.id === profileService.me.id;
       }
-      if (api.isSystemLibrary(library)) {
+      if (api.isLibraryMainOrSecret(library)) {
         library.color = '#808080';
       }
     }
@@ -143,11 +143,11 @@ angular.module('kifi')
       invitedSummaries: invitedSummaries,
       recentLibraries: recentLibraries,
 
-      isSystemLibrary: function (library) {
+      isLibraryMainOrSecret: function (library) {
         return library.kind === 'system_main' || library.kind === 'system_secret';
       },
 
-      isSystemLibraryById: function (libraryId) {
+      isLibraryIdMainOrSecret: function (libraryId) {
         return _.some(librarySummaries, function (libSum) {
           return (libSum.kind === 'system_main' || libSum.kind === 'system_secret') && libSum.id === libraryId;
         });
@@ -377,15 +377,6 @@ angular.module('kifi')
 
         if (library.visibility === 'published') {
           defaultAttributes.libraryName = library.name;
-        }
-
-        function setOrigin(str) {
-          defaultAttributes.origin = str;
-        }
-
-        switch ($location.search().o) {
-          case 'rl': setOrigin('libraryRec'); break;
-          case 'lac': setOrigin('libraryAttributionChip'); break;
         }
 
         return defaultAttributes;

@@ -110,14 +110,12 @@ class BookmarkImporter @Inject() (
       }
     }
 
-    val importTag = keepsCommander.getOrCreateTag(userId, "Imported links")(context)
-
     val tags = tagSet.map { tagStr =>
       tagStr.trim -> keepsCommander.getOrCreateTag(userId, tagStr.trim)(context)
     }.toMap
     val taggedKeeps = parsed.map {
       case Bookmark(t, h, tagNames, createdDate, originalJson) =>
-        val keepTags = tagNames.map(tags.get).flatten.map(_.id.get) :+ importTag.id.get
+        val keepTags = tagNames.map(tags.get).flatten.map(_.id.get)
         BookmarkWithTagIds(t, h, keepTags, createdDate, originalJson)
     }
 
@@ -178,7 +176,7 @@ class BookmarkImporter @Inject() (
 
       log.info(s"[bmFileImport:${lf.id}] Raw keep finished persisting in ${clock.getMillis() - lf.startMillis}ms")
 
-      log.info(s"[bmFileImport:${lf.id}] Done in ${clock.getMillis() - lf.startMillis}ms. Successfully processed bookmark file import for ${lf.request.userId}. $rawKeeps.length keeps processed, $tags.size tags.")
+      log.info(s"[bmFileImport:${lf.id}] Done in ${clock.getMillis() - lf.startMillis}ms. Successfully processed bookmark file import for ${lf.request.userId}. ${rawKeeps.length} keeps processed, ${tags.size} tags.")
 
       Some((rawKeeps.length, tags.size))
     }

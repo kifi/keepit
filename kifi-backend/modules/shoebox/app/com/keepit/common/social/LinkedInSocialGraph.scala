@@ -172,7 +172,11 @@ class LinkedInSocialGraph @Inject() (
     import LinkedInSocialGraph.{ ConnectionsPageSize => PageSize }
     val token = getAccessToken(socialUserInfo)
     val sid = socialUserInfo.socialId
-    val connectionsPages = Stream.from(0).map { n => getJson(connectionsUrl(sid, token, n * PageSize, PageSize)) }
+    val connectionsPages = Stream.from(0).map { n =>
+      val getUrl = connectionsUrl(sid, token, n * PageSize, PageSize)
+      log.info(s"getting connections from linkedin for sui ${socialUserInfo.id.get} #${n} page using url: $getUrl")
+      getJson(getUrl)
+    }
     val numPages = 1 + connectionsPages.indexWhere(json => (json \ "_count").asOpt[Int].getOrElse(0) < PageSize)
     getJson(profileUrl(sid, token)) #:: connectionsPages.take(numPages)
   }

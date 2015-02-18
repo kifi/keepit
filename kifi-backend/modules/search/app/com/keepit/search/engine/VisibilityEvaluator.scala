@@ -11,10 +11,13 @@ trait VisibilityEvaluator { self: DebugOption =>
 
   protected val userId: Long
   protected val friendIdsFuture: Future[Set[Long]]
+  protected val restrictedUserIdsFuture: Future[Set[Long]]
   protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])]
   protected val monitoredAwait: MonitoredAwait
 
   lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
+
+  lazy val restrictedUserIds = LongArraySet.fromSet(monitoredAwait.result(restrictedUserIdsFuture, 5 seconds, s"getting restricted user ids"))
 
   lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds, authorizedLibraryIds) = {
     val (myLibIds, memberLibIds, trustedLibIds, authorizedLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
@@ -28,6 +31,7 @@ trait VisibilityEvaluator { self: DebugOption =>
     new KeepVisibilityEvaluator(
       userId,
       myFriendIds,
+      restrictedUserIds,
       myOwnLibraryIds,
       memberLibraryIds,
       trustedLibraryIds,
@@ -41,6 +45,7 @@ trait VisibilityEvaluator { self: DebugOption =>
       myOwnLibraryIds,
       memberLibraryIds,
       myFriendIds,
+      restrictedUserIds,
       ownerIdDocValues,
       visibilityDocValues)
   }
@@ -48,7 +53,8 @@ trait VisibilityEvaluator { self: DebugOption =>
   protected def getUserVisibilityEvaluator(): UserVisibilityEvaluator = {
     new UserVisibilityEvaluator(
       userId,
-      myFriendIds
+      myFriendIds,
+      restrictedUserIds
     )
   }
 
@@ -63,6 +69,7 @@ trait VisibilityEvaluator { self: DebugOption =>
 final class KeepVisibilityEvaluator(
     userId: Long,
     myFriendIds: LongArraySet,
+    restrictedUserIds: LongArraySet,
     myOwnLibraryIds: LongArraySet,
     memberLibraryIds: LongArraySet,
     trustedLibraryIds: LongArraySet,
@@ -77,7 +84,8 @@ final class KeepVisibilityEvaluator(
       if (myOwnLibraryIds.findIndex(libId) >= 0) {
         Visibility.OWNER // the keep is in my library (I may or may not have kept it)
       } else {
-        if (userIdDocValues.get(docId) == userId) {
+        val keeperId = userIdDocValues.get(docId)
+        if (keeperId == userId) {
           Visibility.OWNER // the keep in a library I am a member of, and I kept it
         } else {
           Visibility.MEMBER // the keep is in a library I am a member of
@@ -87,12 +95,15 @@ final class KeepVisibilityEvaluator(
       Visibility.MEMBER // the keep is in an authorized library
     } else {
       if (visibilityDocValues.get(docId) == published) {
-        if (myFriendIds.findIndex(userIdDocValues.get(docId)) >= 0) {
+        val keeperId = userIdDocValues.get(docId)
+        if (myFriendIds.findIndex(keeperId) >= 0) {
           Visibility.NETWORK // the keep is in a published library, and my friend kept it
         } else if (trustedLibraryIds.findIndex(libId) >= 0) {
           Visibility.OTHERS // the keep is in a published library, and it is in a trusted library
+        } else if (restrictedUserIds.findIndex(keeperId) >= 0) {
+          Visibility.RESTRICTED // explicitly restricted user (e.g. fake user for non-admins)
         } else {
-          Visibility.RESTRICTED
+          Visibility.RESTRICTED // currently not searching published keeps by others
         }
       } else {
         Visibility.RESTRICTED
@@ -105,6 +116,7 @@ final class LibraryVisibilityEvaluator(
     myOwnLibraryIds: LongArraySet,
     memberLibraryIds: LongArraySet,
     myFriendIds: LongArraySet,
+    restrictedUserIds: LongArraySet,
     ownerIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 
@@ -122,6 +134,8 @@ final class LibraryVisibilityEvaluator(
         val ownerId = ownerIdDocValues.get(docId)
         if (myFriendIds.findIndex(ownerId) >= 0) {
           Visibility.NETWORK // a published library owned by my friend
+        } else if (restrictedUserIds.findIndex(ownerId) >= 0) {
+          Visibility.RESTRICTED // explicitly restricted user (e.g. fake user for non-admins)
         } else {
           Visibility.OTHERS // another published library
         }
@@ -134,14 +148,18 @@ final class LibraryVisibilityEvaluator(
 
 final class UserVisibilityEvaluator(
     myUserId: Long,
-    myFriendIds: LongArraySet) {
+    myFriendIds: LongArraySet,
+    restrictedUserIds: LongArraySet) {
 
   def apply(profileOwnerId: Long): Int = {
     if (profileOwnerId == myUserId) {
       Visibility.OWNER // myself
     } else if (myFriendIds.findIndex(profileOwnerId) >= 0) {
       Visibility.NETWORK // a friend
-    } else
+    } else if (restrictedUserIds.findIndex(profileOwnerId) >= 0)
+      Visibility.RESTRICTED // explicitly restricted user (e.g. fake user for non-admins)
+    else {
       Visibility.OTHERS // someone else
+    }
   }
 }

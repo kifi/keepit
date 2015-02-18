@@ -172,9 +172,10 @@ class ActivityFeedEmailSenderImpl @Inject() (
     // TODO paginate instead of grabbing all user IDs at once
     val userIds = userRepo.getAllIds()
 
-    // TODO remove this filter when we have library recos for users w/o keeps
-    // 5 is the min number of keeps required in curator for a user to get precomputed lib recos
-    keepRepo.getCountByUsers(userIds).filter(_._2 >= 5).keySet
+    // TODO remove this filter when we have quality library recos for users w/o keeps
+    keepRepo.getCountByUsersAndSource(userIds, Set(KeepSource.keeper, KeepSource.mobile)).collect {
+      case (id, count) if count >= 20 && (id.id <= 3 || id.id > 1215) => id // TODO remove the id < / > condition safter first round of emails sent
+    }.toSet
   }
 
   def prepareEmailForUser(toUserId: Id[User], overrideToEmail: Option[EmailAddress] = None): Future[Option[EmailToSend]] = new SafeFuture(reactiveLock.withLockFuture {

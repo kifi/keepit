@@ -21,8 +21,7 @@ angular.module('kifi')
         libContext: libContext
       };
 
-      return $http.get(routeService.recos2(recoOpts)).then(function (res) {
-      //return $http.get(routeService.recos(recoOpts)).then(function (res) { //old recos endpoint
+      return $http.get(routeService.recos(recoOpts)).then(function (res) {
         if (res && res.data) {
           // Save recommendation data from the backend so we don't have to
           // fetch them again on Angular route reload of recommendations.

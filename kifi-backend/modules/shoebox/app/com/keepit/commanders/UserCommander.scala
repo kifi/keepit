@@ -287,7 +287,7 @@ class UserCommander @Inject() (
 
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
     val usernameCandidates = createUsernameCandidates(firstName, lastName)
-    val newUser = db.readWrite { implicit session =>
+    val newUser = db.readWrite(attempts = 3) { implicit session =>
       val username: Username = usernameCandidates.find { candidate => userRepo.getByUsername(candidate).isEmpty && usernameRepo.reclaim(candidate).isSuccess } getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
@@ -296,7 +296,7 @@ class UserCommander @Inject() (
           username = username, normalizedUsername = UsernameOps.normalize(username.value)))
     }
     SafeFuture {
-      db.readWrite { implicit session =>
+      db.readWrite(attempts = 3) { implicit session =>
         userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_GUIDE, true)
         userValueRepo.setValue(newUser.id.get, UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
       }
@@ -566,7 +566,7 @@ class UserCommander @Inject() (
 
   def setLastUserActive(userId: Id[User]): Unit = {
     val time = clock.now
-    db.readWrite { implicit s =>
+    db.readWrite(attempts = 3) { implicit s =>
       userValueRepo.setValue(userId, UserValueName.LAST_ACTIVE, time)
     }
   }
@@ -583,9 +583,9 @@ class UserCommander @Inject() (
     heimdalClient.cancelDelightedSurvey(DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName))
   }
 
-  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, readOnly: Boolean = false, overrideProtection: Boolean = false): Either[String, Username] = {
+  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false, readOnly: Boolean = false): Either[String, Username] = {
     if (overrideValidityCheck || UsernameOps.isValid(username.value)) {
-      db.readWrite { implicit session =>
+      db.readWrite(attempts = 3) { implicit session =>
         val existingUser = userRepo.getByUsername(username)
         if (existingUser.isDefined && existingUser.get.id.get != userId) {
           log.warn(s"[dry run] for user $userId another user ${existingUser.get} has an existing username: $username")
@@ -601,8 +601,8 @@ class UserCommander @Inject() (
               usernameCache.remove(UsernameKey(user.username))
               val normalizedUsername = UsernameOps.normalize(username.value)
               if (user.normalizedUsername != normalizedUsername) {
-                usernameRepo.alias(user.username, userId) // create an alias for the old username
-                usernameRepo.reclaim(username, Some(userId)).get // reclaim any existing alias for the new username
+                usernameRepo.alias(user.username, userId, overrideProtection) // create an alias for the old username
+                usernameRepo.reclaim(username, Some(userId), overrideProtection).get // reclaim any existing alias for the new username
               }
               userRepo.save(user.copy(username = username, normalizedUsername = normalizedUsername))
             } else {

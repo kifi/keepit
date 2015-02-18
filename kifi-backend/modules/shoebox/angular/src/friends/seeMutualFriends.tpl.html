@@ -1,7 +1,7 @@
 <div class="kf-mutual-friends">
   <!-- Person who has mutual friends with the user -->
   <div class="kf-mutual-friends-pymk">
-    <a href="{{userProfileUrl}}" ng-click="close()" kf-track-origin origin="pymk/mutualFriends">
+    <a href="{{userProfileUrl}}" ng-click="close()" kf-track-origin="pymk/mutualFriends">
       <img class="kf-mutual-friends-image" title="{{name}}" ng-src="{{pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
     </a>
     <a href="javascript:" class="kf-mutual-friends-action" ng-click="addFriend(id)" ng-class="{clickable: clickable}"><span class="sprite sprite-tag-new-plus-icon"></span>{{actionText}}</a>
@@ -16,7 +16,7 @@
     <div ng-repeat="mutualFriendPair in mutualFriendsPairs" class="kf-mutual-friend-pair">
       <div ng-repeat="mutualFriend in mutualFriendPair" class="kf-mutual-friend-card">
         <a href="{{mutualFriend.profileUrl}}" ng-click="close()"
-          kf-track-origin origin="pymk/mutualFriends">
+          kf-track-origin="pymk/mutualFriends">
           <img class="kf-mutual-friends-image" title="{{mutualFriend.firstName}} {{mutualFriend.lastName}}" ng-src="{{mutualFriend.pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
         </a>
         <div class="kf-mutual-friend-card-info">

@@ -159,6 +159,7 @@ angular.module('kifi')
         }
       });
     }
+    reloadRecos();
 
     // Load a new set of recommendations only on page refresh.
     // Otherwise, load the recommendations we have previously shown.

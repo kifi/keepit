@@ -44,7 +44,7 @@ angular.module('kifi')
     return {
       restrict: 'A',
       scope: {
-        origin: '@'
+        origin: '@kfTrackOrigin'
       },
       link: function (scope, element /*, attrs*/) {
         element.on('click', function () {

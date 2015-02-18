@@ -13,7 +13,7 @@ import play.mvc._
 import com.keepit.common.core._
 import com.keepit.common.strings._
 import com.keepit.common.zookeeper.ServiceInstance
-import com.keepit.common.logging.{ Logging, AccessLogTimer, AccessLog }
+import com.keepit.common.logging.{ AccessLogEvent, Logging, AccessLogTimer, AccessLog }
 import com.keepit.common.logging.Access._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError, StackTrace }
 import com.keepit.common.concurrent.ExecutionContext.immediate
@@ -118,22 +118,22 @@ case class HttpClientImpl(
     {
       case e: Throwable =>
         val remoteInstance = req.httpUri.serviceInstanceOpt
-        val al = accessLog.add(req.timer.done(
+        val duration: Int = accessLog.add(req.timer.done(
           result = "fail",
           query = req.queryString,
           url = req.url,
           remoteServiceType = remoteInstance.map(_.remoteService.serviceType.shortName).getOrElse(null),
           remoteServiceId = remoteInstance.map(_.id.id.toString).getOrElse(null),
           trackingId = req.trackingId,
-          error = e.toString))
+          error = e.toString)).duration
         val fullException = req.tracer.withCause(e)
-        airbrake.get.notify(
-          AirbrakeError.outgoing(
-            exception = fullException,
-            request = req.req,
-            message = s"[${remoteServiceString(req)}] calling ${req.httpUri.summary} after ${al.duration}ms"
-          )
+        val error = AirbrakeError.outgoing(
+          exception = fullException,
+          request = req.req,
+          message = s"[${remoteServiceString(req)}] calling ${req.httpUri.summary} after ${duration}ms"
         )
+        if (e.getMessage.contains("Too many open files")) airbrake.get.panic(error)
+        else airbrake.get.notify(error)
     }
   }
 
@@ -244,7 +244,7 @@ case class HttpClientImpl(
       dataSize = res.bytes.length))
 
     e.waitTime map { waitTime =>
-      if (waitTime > callTimeouts.maxWaitTime.get && Play.maybeApplication.map(_.mode) == Some(play.api.Mode.Prod)) {
+      if (waitTime > callTimeouts.maxWaitTime.get * serviceDiscovery.thisService.loadFactor && Play.maybeApplication.map(_.mode) == Some(play.api.Mode.Prod)) {
         val initTime = request.initTime.toInt
         val exception = request.tracer.withCause(LongWaitException(request, res, initTime, waitTime - initTime, e.duration, remoteTime, midFlightRequests.count, midFlightRequests.topRequests, remoteMidFlightRequestCount))
         airbrake.get.notify(

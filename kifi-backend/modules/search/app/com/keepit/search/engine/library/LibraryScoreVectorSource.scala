@@ -16,6 +16,7 @@ class LibraryScoreVectorSource(
     protected val searcher: Searcher,
     protected val userId: Long,
     protected val friendIdsFuture: Future[Set[Long]],
+    protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     filter: SearchFilter,
     protected val config: SearchConfig,
