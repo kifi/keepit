@@ -71,7 +71,7 @@ class EmailDeepLinkControllerTest extends Specification with ShoeboxTestInjector
           val result = controller.handle(deepLink.token.value)(request)
           status(result) must equalTo(OK)
           val content = contentAsString(result)
-          contentAsString(result).contains("""'kifi:open/my/location'""") === true
+          contentAsString(result).contains("""'kifi:/open/my/location'""") === true
         }
       }
     }
