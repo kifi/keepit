@@ -16,6 +16,7 @@ trait LibrarySuggestedSearchRepo extends DbRepo[LibrarySuggestedSearch] {
 @Singleton
 class LibrarySuggestedSearchRepoImpl @Inject() (
     val db: DataBaseComponent,
+    termsCache: LibrarySuggestedSearchCache,
     val clock: Clock,
     airbrake: AirbrakeNotifier) extends DbRepo[LibrarySuggestedSearch] with LibrarySuggestedSearchRepo {
 
@@ -33,14 +34,24 @@ class LibrarySuggestedSearchRepoImpl @Inject() (
   def table(tag: Tag) = new LibrarySuggestedSearchTable(tag)
   initTable()
 
-  def invalidateCache(keep: LibrarySuggestedSearch)(implicit session: RSession): Unit = {}
+  def invalidateCache(model: LibrarySuggestedSearch)(implicit session: RSession): Unit = {
+    // do not eagerly update. Each save operation acts on a term. What we cache is a collection of terms.
+    deleteCache(model)
+  }
 
-  def deleteCache(uri: LibrarySuggestedSearch)(implicit session: RSession): Unit = {}
+  def deleteCache(model: LibrarySuggestedSearch)(implicit session: RSession): Unit = {
+    termsCache.remove(LibrarySuggestedSearchKey(model.libraryId))
+  }
 
   def getSuggestedTermsByLibrary(libId: Id[Library], limit: Int)(implicit session: RSession): SuggestedSearchTerms = {
-    val q = { for { r <- rows if r.libraryId === libId && r.state === LibrarySuggestedSearchStates.ACTIVE } yield r }.sortBy(_.weight.desc).take(limit).list
-    val terms = q.map { m => (m.term, m.weight) }.toMap
-    SuggestedSearchTerms(terms)
+    // first, ignore the parameter limit.
+    val maxCached = termsCache.getOrElse(LibrarySuggestedSearchKey(libId)) {
+      val q = { for { r <- rows if r.libraryId === libId && r.state === LibrarySuggestedSearchStates.ACTIVE } yield r }.sortBy(_.weight.desc).take(SuggestedSearchTerms.MAX_CACHE_LIMIT).list
+      val terms = q.map { m => (m.term, m.weight) }.toMap
+      SuggestedSearchTerms(terms)
+    }
+
+    maxCached.takeTopK(limit)
   }
 
   def getByLibraryId(libId: Id[Library])(implicit session: RSession): Seq[LibrarySuggestedSearch] = {
