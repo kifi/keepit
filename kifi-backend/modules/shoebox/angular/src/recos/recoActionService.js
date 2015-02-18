@@ -15,7 +15,7 @@ angular.module('kifi')
 
     var kifiRecommendationService = new Clutch(function (opts) {
       var recoOpts = {
-        recency: opts && angular.isNumber(opts.recency) ? opts.recency : 0.75,
+        recency: opts && angular.isNumber(opts.recency) ? opts.recency : 0.75
       };
 
       if (opts && opts.more) {
