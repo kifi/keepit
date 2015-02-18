@@ -23,7 +23,7 @@ var IS_IPAD = navigator.userAgent.match(/iPad/i) != null,
     IS_MOBILE = IS_IOS || IS_ANDROID;
 
 if (IS_IOS) {
-    window.location = 'kifi:@url';
+    window.location = 'kifi:/@url';
     setTimeout(function() {
         // If the user is still here, open the App Store
         if (!document.webkitHidden) {
