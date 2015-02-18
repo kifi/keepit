@@ -180,7 +180,4 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def userActivePersonasCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserActivePersonasCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
 
-  @Provides @Singleton
-  def LibrarySuggestedSearchCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new LibrarySuggestedSearchCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 28 days))
 }
