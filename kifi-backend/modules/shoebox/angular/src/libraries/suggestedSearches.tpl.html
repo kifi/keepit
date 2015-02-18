@@ -1,0 +1,4 @@
+<div class="suggested-searches" ng-if="termsWithActions">
+  <h2 class="suggested-searches-header"> SUGGESTED SEARCHES </h2>
+  <div class="suggested-search" ng-repeat="term in termsWithActions | limitTo: 10" ng-click="term.action()">{{term.name}}</div>
+</div>
