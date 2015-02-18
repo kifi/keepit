@@ -245,12 +245,6 @@ class AdminLibraryController @Inject() (
     Redirect(request.request.referer)
   }
 
-  def dumpLibraryURIIds(libId: Id[Library]) = Action { implicit request =>
-    val keeps = db.readOnlyReplica { implicit s => keepRepo.getByLibrary(libId, offset = 0, limit = Integer.MAX_VALUE) }
-    val ids = keeps.map { _.uriId }
-    Ok(Json.toJson(ids))
-  }
-
   def getLuceneDocument(libraryId: Id[Library]) = AdminUserPage.async { implicit request =>
     val libraryAndMemberships = db.readOnlyMaster { implicit session =>
       val library = libraryRepo.get(libraryId)
