@@ -76,7 +76,6 @@ class LibraryCommander @Inject() (
     friendStatusCommander: FriendStatusCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
-    socialPublishingCommander: AllSocialPublishingCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -918,7 +917,6 @@ class LibraryCommander @Inject() (
             libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(currentDateTime)))
             SafeFuture {
               notifyOwnerOfNewFollower(userId, lib)
-              socialPublishingCommander.publishLibraryMembership(userId, lib)
             }
           case Some(mem) =>
             val maxWithExisting = (maxAccess :: mem.access :: Nil).sorted.last
@@ -953,7 +951,7 @@ class LibraryCommander @Inject() (
     } match {
       case None => Right()
       case Some(mem) if mem.access == LibraryAccess.OWNER => Left(LibraryFail(BAD_REQUEST, "cannot_leave_own_library"))
-      case Some(mem) => {
+      case Some(mem) =>
         val (keepCount, lib) = db.readWrite { implicit s =>
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           val lib = libraryRepo.get(libraryId)
@@ -965,7 +963,6 @@ class LibraryCommander @Inject() (
           searchClient.updateLibraryIndex()
         }
         Right()
-      }
     }
   }
 

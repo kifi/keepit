@@ -15,8 +15,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
 class TwitterPublishingCommander @Inject() (
-    experimentCommander: LocalUserExperimentCommander,
-    db: Database,
+    val experimentCommander: LocalUserExperimentCommander,
+    val db: Database,
     socialUserInfoRepo: SocialUserInfoRepo,
     keepImageCommander: KeepImageCommander,
     libraryImageCommander: LibraryImageCommander,
@@ -28,7 +28,7 @@ class TwitterPublishingCommander @Inject() (
 
   def publishKeep(userId: Id[User], keep: Keep, library: Library): Unit = {
     require(keep.userId == userId, s"User $userId cannot publish to Twitter a keep by user ${keep.userId}")
-    if (library.visibility == LibraryVisibility.PUBLISHED && hasTwitterExperiment(userId)) {
+    if (library.visibility == LibraryVisibility.PUBLISHED && hasExplicitShareExperiment(userId)) {
       db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.TWITTER) } match {
         case None =>
           log.info(s"user $userId is not connected to twitter!")
@@ -63,7 +63,7 @@ class TwitterPublishingCommander @Inject() (
   }
 
   def publishLibraryMembership(userId: Id[User], library: Library): Unit = {
-    if (library.visibility == LibraryVisibility.PUBLISHED && hasTwitterExperiment(userId)) {
+    if (library.visibility == LibraryVisibility.PUBLISHED && hasExplicitShareExperiment(userId)) {
       db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.TWITTER) } match {
         case None => log.info(s"user $userId is not connected to twitter!")
         case Some(sui) =>
@@ -81,10 +81,6 @@ class TwitterPublishingCommander @Inject() (
           }
       }
     }
-  }
-
-  private def hasTwitterExperiment(userId: Id[User]) = {
-    db.readOnlyMaster { implicit session => experimentCommander.userHasExperiment(userId, ExperimentType.TWEET_ALL) }
   }
 
 }
