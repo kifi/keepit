@@ -20,7 +20,9 @@ angular.module('kifi')
         return $q.when([]);
       }
       return $http.get(routeService.socialSearch(name)).then(function (res) {
-        var results = res.data;
+        var results = _.filter(res.data, function(res){
+          return res.networkType !== 'twitter';
+        });
         _.forEach(results, augmentSocialResult);
         $analytics.eventTrack('user_clicked_page', {
           'action': 'searchContacts',
