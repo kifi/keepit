@@ -59,7 +59,8 @@ class ExtUserControllerTest extends Specification with ShoeboxTestInjector with 
                 "query":"steve+jobs",
                 "title":"Steve Jobs: How to live before you die | Talk Video | TED.com",
                 "matches":{"title":[[0,5],[6,4]],"url":[[25,5],[31,4]]},"track":"steveJobsSpeech"
-              }
+              },
+              "libraryId":null
             }
            """)
 
@@ -84,11 +85,7 @@ class ExtUserControllerTest extends Specification with ShoeboxTestInjector with 
                 "title":"Steve Jobs: How to live before you die | Talk Video | TED.com",
                 "matches":{"title":[[0,5],[6,4]],"url":[[25,5],[31,4]]},"track":"steveJobsSpeech"
               },
-              "library":{
-                "id":"${Library.publicId(personaLibOpt.get.id.get).id}",
-                "name":"Techie Picks",
-                "color":"${personaLibOpt.get.color.get.hex}"
-              }
+              "libraryId":"${Library.publicId(personaLibOpt.get.id.get).id}"
             }
            """)
       }
