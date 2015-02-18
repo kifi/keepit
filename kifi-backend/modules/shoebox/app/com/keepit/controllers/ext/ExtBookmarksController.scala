@@ -175,7 +175,7 @@ class ExtBookmarksController @Inject() (
       }
     }
 
-    val (keep, _) = bookmarksCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
+    val (keep, _) = bookmarksCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source, SocialShare(info))
     Ok(Json.toJson(KeepInfo.fromKeep(keep)))
   }
 
