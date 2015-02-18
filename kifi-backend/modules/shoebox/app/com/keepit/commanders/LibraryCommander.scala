@@ -213,7 +213,7 @@ class LibraryCommander @Inject() (
 
     val futureCountsByLibraryId = {
       val keepCountsByLibraries: Map[Id[Library], Int] = db.readOnlyMaster { implicit s =>
-        val userLibs = libraries.filter(_.kind == LibraryKind.USER_CREATED).map(_.id.get).toSet
+        val userLibs = libraries.filter { lib => lib.kind == LibraryKind.USER_CREATED || lib.kind == LibraryKind.SYSTEM_PERSONA }.map(_.id.get).toSet
         var userLibCounts: Map[Id[Library], Int] = keepRepo.getCountsByLibrary(userLibs) //todo(eishay): switch on ALL_KEEPS_VIEW
         if (userLibs.size < libraries.size) {
           val privateLibOpt = libraries.find(_.kind == LibraryKind.SYSTEM_SECRET)
