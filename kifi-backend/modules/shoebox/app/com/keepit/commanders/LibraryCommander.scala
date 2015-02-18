@@ -677,29 +677,41 @@ class LibraryCommander @Inject() (
 
   def processInvites(invites: Seq[LibraryInvite]): Future[Seq[ElectronicMail]] = {
     val emailFutures = {
-      // save invites
-      db.readWrite { implicit s =>
-        invites.map { invite =>
-          libraryInviteRepo.save(invite)
-        }
-      }
-
-      invites.groupBy(invite => (invite.inviterId, invite.libraryId))
+      invites.groupBy(invite => (invite.inviterId, invite.libraryId, invite.userId, invite.emailAddress))
         .map { key =>
-          val (inviterId, libId) = key._1
-          val (inviter, lib, libOwner) = db.readOnlyReplica { implicit session =>
+          val (inviterId, libId, recipientId, recipientEmail) = key._1
+
+          val (inviter, lib, libOwner, lastInviteOpt) = db.readOnlyMaster { implicit s =>
             val inviter = basicUserRepo.load(inviterId)
             val lib = libraryRepo.get(libId)
             val libOwner = basicUserRepo.load(lib.ownerId)
-
-            (inviter, lib, libOwner)
+            val lastInviteOpt = (recipientId, recipientEmail) match {
+              case (Some(userId), _) =>
+                libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(libId, inviterId, userId, Set(LibraryInviteStates.ACTIVE))
+              case (_, Some(email)) =>
+                libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndEmail(libId, inviterId, email, Set(LibraryInviteStates.ACTIVE))
+              case _ => None
+            }
+            (inviter, lib, libOwner, lastInviteOpt)
           }
+          val invitesToPersist = key._2.filter { invite =>
+            lastInviteOpt.map { lastInvite =>
+              lastInvite.createdAt.plusMinutes(5).isBefore(invite.createdAt)
+            }.getOrElse(true)
+          }
+
+          db.readWrite { implicit s =>
+            invitesToPersist.map { inv =>
+              libraryInviteRepo.save(inv)
+            }
+          }
+
           val imgUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName, Some("https"))
           val inviterImage = if (imgUrl.endsWith(".jpg.jpg")) imgUrl.dropRight(4) else imgUrl // basicUser appends ".jpg" which causes an extra .jpg in this case
           val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
 
           // send notifications to kifi users only
-          val inviteeIdSet = key._2.map(_.userId).flatten.toSet
+          val inviteeIdSet = invitesToPersist.map(_.userId).flatten.toSet
           elizaClient.sendGlobalNotification(
             userIds = inviteeIdSet,
             title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a Library!",
@@ -712,14 +724,12 @@ class LibraryCommander @Inject() (
           )
 
           // send emails to both users & non-users
-          key._2.map { invite =>
+          invitesToPersist.map { invite =>
             invite.userId match {
               case Some(id) =>
-                libraryInvitesAbuseMonitor.inspect(inviterId, Some(id), None, libId, key._2.length)
-                Left(id)
+                libraryInvitesAbuseMonitor.inspect(inviterId, Some(id), None, libId, invitesToPersist.length)
               case _ =>
-                libraryInvitesAbuseMonitor.inspect(inviterId, None, invite.emailAddress, libId, key._2.length)
-                Right(invite.emailAddress.get)
+                libraryInvitesAbuseMonitor.inspect(inviterId, None, invite.emailAddress, libId, invitesToPersist.length)
             }
             libraryInviteSender.get.sendInvite(invite)
           }
