@@ -47,8 +47,9 @@ object EmailAddress {
   }
 
   def validate(address: String): Try[EmailAddress] = {
-    if (isValid(address)) {
-      Success(EmailAddress(canonicalize(address)))
+    val trimmed = address.trim
+    if (isValid(trimmed)) {
+      Success(EmailAddress(canonicalize(trimmed)))
     } else {
       Failure(new IllegalArgumentException(s"Invalid email address: $address"))
     }
