@@ -9,8 +9,12 @@ angular.module('kifi')
       return env.xhrBase + path + (params ? queryStr(params) : '');
     }
 
-    function searchRoute(url) {
-      return env.xhrBaseSearch + url;
+    function searchRoute(path) {
+      return env.xhrBaseSearch + path;
+    }
+
+    function navRoute(path, params) {
+      return env.navBase + path + (params ? queryStr(params) : '');
     }
 
     function formatPicUrl(userId, pictureName, size) {
@@ -33,12 +37,12 @@ angular.module('kifi')
       importStatus: route('/user/import-status'),
       prefs: route('/user/prefs'),
       importGmail: function (returnPath) {
-        return env.navBase + '/contacts/import' + queryStr({redirectUrl: returnPath || []});
+        return navRoute('/contacts/import', {redirectUrl: returnPath || []});
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
       profileSettings: route('/user/settings'),
-      logoutUrl: env.navBase + '/logout',
+      logoutUrl: '/logout',
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),
@@ -62,6 +66,7 @@ angular.module('kifi')
         return route('/collections/search', {query: query, limit: limit});
       },
       suggestTags: function (libraryId, keepId, query) {
+        // TODO: stop using extension endpoint
         return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest' + queryStr({q: query});
       },
       tagKeep: function (libraryId, keepId, tag) {
@@ -112,17 +117,11 @@ angular.module('kifi')
         return route('/recos/adHoc', {n: howMany});
       },
       recos: function (opts) {
-        // todo: fix endpoint to use route()
-        var base = route('/recos/topV2');
-        base += '?more=' + opts.more;
-        base += '&recency=' + opts.recency;
-        if (opts.uriContext) {
-          base += '&uriContext=' + opts.uriContext;
-        }
-        if (opts.libContext) {
-          base += '&libContext=' + opts.libContext;
-        }
-        return base;
+        return route('/recos/topV2', {
+          recency: opts.recency,
+          uriContext: opts.uriContext || [],
+          libContext: opts.libContext || []
+        });
       },
       recosPublic: function () {
         return route('/recos/public');
@@ -159,7 +158,7 @@ angular.module('kifi')
       // User registration      //
       ////////////////////////////
       socialSignup: function (provider) {
-        return env.navBase + '/auth/token-signup/' + provider;
+        return route('/auth/token-signup/' + provider);
       },
       socialSignupWithRedirect: function (provider, redirectPath, intent) {
         return '/signup/' + provider + queryStr({

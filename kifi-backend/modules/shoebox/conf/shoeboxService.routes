@@ -236,8 +236,8 @@ POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.M
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
-GET     /m/2/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV2(more: Boolean, recency: Float)
-GET     /m/2/recos/topV3                        @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3(more: Boolean, recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
+GET     /m/2/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV2(recency: Float, more: Boolean ?= false)
+GET     /m/3/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
 GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
 POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
 
@@ -400,8 +400,7 @@ GET     /site/libraries/recos/top           @com.keepit.controllers.website.Libr
 POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
-GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
-GET     /site/recos/topV2           @com.keepit.controllers.website.RecommendationsController.topRecosV2(more: Boolean, recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
+GET     /site/recos/topV2           @com.keepit.controllers.website.RecommendationsController.topRecosV2(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
 GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
 POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
@@ -834,6 +833,7 @@ GET     /internal/shoebox/database/getLibrariesChanged                     @com.
 GET     /internal/shoebox/database/getDetailedLibrariesChanged             @com.keepit.controllers.internal.ShoeboxDataPipeController.getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 GET     /internal/shoebox/database/getLibraryMembershipsChanged            @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int)
 GET     /internal/shoebox/database/newKeepsInLibraryForEmail               @com.keepit.controllers.internal.ShoeboxController.newKeepsInLibraryForEmail(userId: Id[User], max: Int)
+GET     /internal/shoebox/database/dumpLibraryURIIds                       @com.keepit.controllers.internal.ShoeboxDataPipeController.dumpLibraryURIIds(libId: Id[Library])
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.internal.ShoeboxDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.internal.ShoeboxDeepLinkController.getDeepUrl()

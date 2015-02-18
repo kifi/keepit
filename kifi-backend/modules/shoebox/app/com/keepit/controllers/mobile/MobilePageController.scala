@@ -25,14 +25,21 @@ class MobilePageController @Inject() (
     extends UserActions with ShoeboxServiceController {
 
   def getPageDetails() = UserAction(parse.tolerantJson) { request =>
-    val url = (request.body \ "url").as[String]
-    URI.parse(url) match {
-      case Success(_) =>
-        val info = pageCommander.getPageDetails(url, request.userId, request.experiments)
-        Ok(Json.toJson(info))
-      case Failure(e) =>
-        log.error(s"Error parsing url: $url", e)
-        BadRequest(Json.obj("error" -> s"Error parsing url: $url"))
+    val urlOpt = (request.body \ "url").asOpt[String]
+    urlOpt match {
+      case Some(url) =>
+        URI.parse(url) match {
+          case Success(_) =>
+            val info = pageCommander.getPageDetails(url, request.userId, request.experiments)
+            Ok(Json.toJson(info))
+          case Failure(e) =>
+            log.error(s"Error parsing url: $url", e)
+            BadRequest(Json.obj("error" -> s"Error parsing url: $url"))
+        }
+      case None =>
+        // Change this back to non-optional when clients are on latest Android (2015/2/17)
+        log.warn(s"[getPageDetails] No URL provided for request $request")
+        BadRequest(Json.obj("error" -> "no_url_provided"))
     }
   }
 

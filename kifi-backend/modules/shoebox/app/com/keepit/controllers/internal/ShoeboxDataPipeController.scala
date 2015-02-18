@@ -1,6 +1,6 @@
 package com.keepit.controllers.internal
 
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.RequestConsolidator
 import play.api.libs.json._
 import com.google.inject.Inject
@@ -190,4 +190,11 @@ class ShoeboxDataPipeController @Inject() (
     val mem = db.readOnlyReplica { implicit s => libraryMembershipRepo.getBySequenceNumber(seqNum, fetchSize) } map { _.toLibraryMembershipView }
     Ok(Json.toJson(mem))
   }
+
+  def dumpLibraryURIIds(libId: Id[Library]) = Action { implicit request =>
+    val keeps = db.readOnlyReplica { implicit s => keepRepo.getByLibrary(libId, offset = 0, limit = Integer.MAX_VALUE) }
+    val ids = keeps.map { _.uriId }
+    Ok(Json.toJson(ids))
+  }
+
 }
