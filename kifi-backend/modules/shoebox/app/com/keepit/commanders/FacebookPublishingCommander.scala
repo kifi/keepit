@@ -78,7 +78,7 @@ class FacebookPublishingCommander @Inject() (
         case Success(res) =>
           log.info(s"sent FB action with res = ${res.status}")
         case Failure(e) =>
-          airbrake.notify(s"FB didn't like our posting of action: $url", tracer.withCause(e))
+          airbrake.notify(s"FB didn't like our posting of action for action $action user ${socialUserInfo.userId} ${socialUserInfo.fullName} ${socialUserInfo.id.get} : $url", tracer.withCause(e))
       }
     }
   }
