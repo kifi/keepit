@@ -36,7 +36,6 @@ class ExtPreferenceController @Inject() (
     enterToSend: Boolean,
     maxResults: Int,
     showExtMsgIntro: Boolean,
-    showLibraryIntro: Boolean,
     messagingEmails: Boolean)
 
   private implicit val userPrefsFormat = (
@@ -44,7 +43,6 @@ class ExtPreferenceController @Inject() (
     (__ \ 'enterToSend).write[Boolean] and
     (__ \ 'maxResults).write[Int] and
     (__ \ 'showExtMsgIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-    (__ \ 'showLibraryIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
   )(unlift(UserPrefs.unapply))
 
@@ -79,8 +77,9 @@ class ExtPreferenceController @Inject() (
     Ok(JsNumber(0))
   }
 
+  // Note: can delete this action after 22 Feb 2015
   def setShowLibraryIntro(show: Boolean) = UserAction { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showLibraryIntro.name, show))
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValueName.EXT_SHOW_LIBRARY_INTRO, show))
     NoContent
   }
 
@@ -162,7 +161,6 @@ class ExtPreferenceController @Inject() (
         enterToSend = UserValues.enterToSend.parseFromMap(userVals),
         maxResults = UserValues.maxResults.parseFromMap(userVals),
         showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals),
-        showLibraryIntro = UserValues.showLibraryIntro.parseFromMap(userVals),
         messagingEmails = messagingEmails)
     }
   }
