@@ -684,7 +684,7 @@ api.port.on({
       libraries.filter(idIsIn(mySysLibIds)).forEach(setProp('system', true));
       libraries.filter(idIsIn(loadRecentLibs())).forEach(setProp('recent', true));
       var keeps = d ? d.keeps : [];
-      respond({keeps: keeps, libraries: libraries, showLibraryIntro: prefs && prefs.showLibraryIntro});
+      respond({keeps: keeps, libraries: libraries});
       // preload keep details
       keeps.forEach(function (keep) {
         ajax('GET', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function (details) {
@@ -855,16 +855,16 @@ api.port.on({
     if (prefs) prefs.maxResults = n;
   },
   terminate_ftue: function (data) {
-    var prefName = {e: 'showExtMsgIntro', l: 'showLibraryIntro'}[data.type];
+    var prefName = {e: 'showExtMsgIntro'}[data.type];
     if (!prefName) return;
     ajax('POST', '/ext/pref/' + prefName + '?show=false');
     api.tabs.each(function (tab) {
-      api.tabs.emit(tab, {e: 'hide_ext_msg_intro', l: 'hide_library_intro'}[data.type]);
+      api.tabs.emit(tab, {e: 'hide_ext_msg_intro'}[data.type]);
     });
     (prefs || {})[prefName] = false;
     if (data.action) {
       tracker.track('user_clicked_notification', {
-        category: {e: 'extMsgFTUE', l: 'libFTUE'}[data.type],
+        category: {e: 'extMsgFTUE'}[data.type],
         action: data.action,
         subaction: data.subaction
       });

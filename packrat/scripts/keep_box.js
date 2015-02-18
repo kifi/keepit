@@ -46,7 +46,7 @@ k.keepBox = k.keepBox || (function () {
         }
         setShortcut(lib);
       });
-      show($parent, trigger, guided, data.libraries, data.showLibraryIntro);
+      show($parent, trigger, guided, data.libraries);
     },
     hide: function (trigger) {
       if ($box) {
@@ -69,7 +69,7 @@ k.keepBox = k.keepBox || (function () {
     }
   };
 
-  function show($parent, trigger, guided, libraries, showIntro) {
+  function show($parent, trigger, guided, libraries) {
     log('[keepBox:show]', trigger, guided ? 'guided' : '');
     $box = $(k.render('html/keeper/keep_box', partitionLibs(libraries), {
       view: 'keep_box_libs',
@@ -102,19 +102,16 @@ k.keepBox = k.keepBox || (function () {
     api.port.emit('track_pane_view', {type: 'libraryChooser', subsource: trigger, guided: guided});
 
     $box.layout()
-    .on('transitionend', $.proxy(onShown, null, showIntro))
+    .on('transitionend', onShown)
     .removeClass('kifi-down');
   }
 
-  function onShown(showIntro, e) {
+  function onShown(e) {
     if (e.target === this && e.originalEvent.propertyName === 'opacity') {
       log('[keepBox:onShown]');
       $box.off('transitionend', onShown);
       $box.find('input').first().focus();
       makeScrollable($box);
-      if (showIntro && !k.guide) {
-        api.require('scripts/libraries_intro.js', api.noop);
-      }
       var deferred = Q.defer();
       $box.data({imagePromise: deferred.promise, imagePromisedAt: Date.now()});
       setTimeout(findPageImages.bind(null, $box.data(), deferred), 10);
