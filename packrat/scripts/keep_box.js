@@ -46,7 +46,7 @@ k.keepBox = k.keepBox || (function () {
         }
         setShortcut(lib);
       });
-      show($parent, trigger, guided, data.libraries);
+      show($parent, trigger, guided, data.libraries, data.posting);
     },
     hide: function (trigger) {
       if ($box) {
@@ -69,9 +69,11 @@ k.keepBox = k.keepBox || (function () {
     }
   };
 
-  function show($parent, trigger, guided, libraries) {
+  function show($parent, trigger, guided, libraries, posting) {
     log('[keepBox:show]', trigger, guided ? 'guided' : '');
-    $box = $(k.render('html/keeper/keep_box', partitionLibs(libraries), {
+    var params = partitionLibs(libraries);
+    params.socialPosting = posting;
+    $box = $(k.render('html/keeper/keep_box', params, {
       view: 'keep_box_libs',
       keep_box_lib: 'keep_box_lib',
       keep_box_libs_list: 'keep_box_libs_list'
@@ -110,7 +112,7 @@ k.keepBox = k.keepBox || (function () {
     if (e.target === this && e.originalEvent.propertyName === 'opacity') {
       log('[keepBox:onShown]');
       $box.off('transitionend', onShown);
-      $box.find('input').first().focus();
+      $box.find('input[type=text]').first().focus();
       makeScrollable($box);
       var deferred = Q.defer();
       $box.data({imagePromise: deferred.promise, imagePromisedAt: Date.now()});
@@ -163,7 +165,13 @@ k.keepBox = k.keepBox || (function () {
     $new[back ? 'prependTo' : 'appendTo']($cart);
     makeScrollable($new);
 
-    $box.find('.kifi-keep-box-back').toggleClass('kifi-hidden', $new.hasClass('kifi-keep-box-view-libs'));
+    var isLibList = $new.hasClass('kifi-keep-box-view-libs');
+    var isKeep = $new.hasClass('kifi-keep-box-view-keep');
+    $box.find('.kifi-keep-box-back').toggleClass('kifi-hidden', isLibList);
+    $box.find('.kifi-keep-box-nw').toggleClass('kifi-hidden', isKeep);
+    if (isKeep) {
+      $box.find('.kifi-keep-box-nw-checkbox').prop('checked', false);
+    }
     var $title = $box.find('.kifi-keep-box-title').first().on('transitionend', removeThis);
     $title.clone().text($new.data('boxTitle')).css('opacity', 0).insertAfter($title).layout().css('opacity', '');
 
@@ -410,6 +418,10 @@ k.keepBox = k.keepBox || (function () {
       $(this).off('transitionend', end).removeClass('kifi-transition');
     }).addClass('kifi-transition');
     var secret = this.parentNode.classList.toggle('kifi-secret');
+    $box.find('.kifi-keep-box-nw').toggleClass('kifi-hidden', secret);
+    if (!secret) {
+      $box.find('.kifi-keep-box-nw-checkbox').prop('checked', false);
+    }
     api.port.emit('track_pane_click', {
       type: 'createLibrary',
       action: 'changedVisibility',
@@ -477,7 +489,13 @@ k.keepBox = k.keepBox || (function () {
   }
 
   function keepTo(library, guided) {
-    var data = {libraryId: library.id, guided: guided};
+    var $checked = library.visibility === 'published' ? $box.find('.kifi-keep-box-nw-checkbox:checked') : $();
+    var data = {
+      libraryId: library.id,
+      guided: guided,
+      fPost: $checked.is('.kifi-keep-box-nw-fb>*') || undefined,
+      tweet: $checked.is('.kifi-keep-box-nw-tw>*') || undefined
+    };
     log('[keep]', data);
     var deferred = Q.defer();
     api.port.emit('keep', withTitles(withUrls(data)), function (keep) {
