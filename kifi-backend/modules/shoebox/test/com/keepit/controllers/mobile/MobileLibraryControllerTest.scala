@@ -11,6 +11,8 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.DBSession.RWSession
 
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
@@ -192,6 +194,16 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
              |  "membership" : "owner"
              |}
            """.stripMargin)
+
+        // test retrieving persona library
+        val personaLib = db.readWrite { implicit s =>
+          library().withName("Healthy Habits").withSlug("healthy-habits").withUser(user1).withKind(LibraryKind.SYSTEM_PERSONA).saved
+        }
+        val pubLib2 = Library.publicId(personaLib.id.get)(inject[PublicIdConfiguration])
+        val result2 = getLibraryById(user1, pubLib2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        (contentAsJson(result2) \\ "name").map(_.as[String]) === Seq("Healthy Habits")
       }
     }
 
