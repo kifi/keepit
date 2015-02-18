@@ -1,6 +1,6 @@
 package com.keepit.controllers.internal
 
-import com.keepit.common.db.{Id, SequenceNumber}
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.RequestConsolidator
 import play.api.libs.json._
 import com.google.inject.Inject
