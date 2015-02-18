@@ -303,7 +303,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"numFollowers":0
            |},
            |"membership":"owner",
-           |"listed": true
+           |"listed": true,
+           |"suggestedSearches": {"terms": [], "weights": []}
           }""".stripMargin))
 
         // viewed by another user with an invite
@@ -345,7 +346,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"numFollowers":0
            |},
            |"membership":"none",
-           |"listed": null
+           |"listed": null,
+           |"suggestedSearches": {"terms": [], "weights": []}
           }""".stripMargin))
       }
     }
@@ -427,7 +429,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"numFollowers":0
              |},
              |"membership":"owner",
-             |"listed": false
+             |"listed": false,
+             |"suggestedSearches": {"terms": [], "weights": []}
             |}""".stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
         Json.parse(contentAsString(result2)) must equalTo(expected)
