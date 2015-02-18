@@ -40,6 +40,32 @@ class MobileMessagingController @Inject() (
     }
   }
 
+  def getSystemNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
+    val noticesFuture = before match {
+      case Some(before) =>
+        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true, filterByReplyable = Some(false))
+      case None =>
+        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true, filterByReplyable = Some(false))
+    }
+    noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
+      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+      Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
+    }
+  }
+
+  def getMessageNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
+    val noticesFuture = before match {
+      case Some(before) =>
+        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true, filterByReplyable = Some(true))
+      case None =>
+        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true, filterByReplyable = Some(true))
+    }
+    noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
+      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+      Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
+    }
+  }
+
   def getUnreadNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
     val noticesFuture = before match {
       case Some(before) =>
