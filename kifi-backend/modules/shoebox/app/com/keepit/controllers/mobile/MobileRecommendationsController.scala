@@ -19,7 +19,7 @@ class MobileRecommendationsController @Inject() (
     userExperimentCommander: LocalUserExperimentCommander,
     db: Database) extends UserActions with ShoeboxServiceController {
 
-  def topRecosV2(more: Boolean, recencyWeight: Float) = UserAction.async { request =>
+  def topRecosV2(recencyWeight: Float, more: Boolean) = UserAction.async { request =>
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight, None)
     val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = None)
 
@@ -31,8 +31,8 @@ class MobileRecommendationsController @Inject() (
     }
   }
 
-  def topRecosV3(more: Boolean, recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
-    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight, context = uriContext)
+  def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
+    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, uriContext.isDefined, recencyWeight, context = uriContext)
     val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = libContext)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {

@@ -17,6 +17,9 @@ angular.module('kifi')
           more = false;
         } else {
           offset += pageSize;
+          res.data = _.filter(res.data, function(r) {
+            return r.network !== 'twitter';
+          });
           list.push.apply(list, res.data);
         }
         return res.data;

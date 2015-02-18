@@ -61,9 +61,7 @@ class KeepsController @Inject() (
       (tagId, currentIndex)
     }
 
-    val newCollectionIds = db.readWrite { implicit s =>
-      collectionCommander.setCollectionIndexOrdering(request.userId, id, currInd)
-    }
+    val newCollectionIds = collectionCommander.setCollectionIndexOrdering(request.userId, id, currInd)
 
     Ok(Json.obj(
       "newCollection" -> newCollectionIds.map { id => Json.toJson(id) }

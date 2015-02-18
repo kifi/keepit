@@ -25,21 +25,9 @@ class RecommendationsController @Inject() (
     commander.adHocRecos(request.userId, n, scores).map(fkis => Ok(Json.toJson(fkis)))
   }
 
-  def topRecos(more: Boolean, recencyWeight: Float) = UserAction.async { request =>
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = None)
-    val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, more, recencyWeight, context = None)
-
-    for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
-      val FullUriRecoResults(urisReco, _) = uris
-      val FullLibRecoResults(libsReco, _) = libs
-      val shuffled = util.Random.shuffle(urisReco ++ libsReco.map(_._2))
-      Json.toJson(shuffled)
-    }
-  }
-
-  def topRecosV2(more: Boolean, recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
+  def topRecosV2(recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
     val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = uriContext)
-    val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, more, recencyWeight, context = libContext)
+    val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, libContext.isDefined, recencyWeight, context = libContext)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
       val FullUriRecoResults(urisReco, newUriContext) = uris

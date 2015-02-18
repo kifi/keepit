@@ -15,11 +15,13 @@ angular.module('kifi')
 
     var kifiRecommendationService = new Clutch(function (opts) {
       var recoOpts = {
-        more: (!opts || opts.more === undefined) ? false : opts.more,
-        recency: opts && angular.isNumber(opts.recency) ? opts.recency : 0.75,
-        uriContext: uriContext,
-        libContext: libContext
+        recency: opts && angular.isNumber(opts.recency) ? opts.recency : 0.75
       };
+
+      if (opts && opts.more) {
+        recoOpts.uriContext = uriContext;
+        recoOpts.libContext = libContext;
+      }
 
       return $http.get(routeService.recos(recoOpts)).then(function (res) {
         if (res && res.data) {
