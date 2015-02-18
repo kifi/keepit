@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryHeaderFollowButtonCta', [
-  '$rootScope', '$timeout', '$window', 'libraryService', 'util',
-  function ($rootScope, $timeout, $window, libraryService, util) {
+  '$rootScope', '$timeout', '$window', 'libraryService',
+  function ($rootScope, $timeout, $window, libraryService) {
     return {
       restrict: 'A',
       scope: {
@@ -55,15 +55,15 @@ angular.module('kifi')
           if (!$window.document.hidden) {
             var buttonRect = measureButtonRect();
             var canFit = calcWhereCanFit(buttonRect);
-            if (canFit.above && !(scroll.deltaY > 0 && Date.now() - scroll.time < 100)) {  // if not scrolling up
+            if (canFit.above && !(scrollInfo.deltaY > 0 && Date.now() - scrollInfo.time < 100)) {  // if not scrolling up
               show({auto: true});
-              var lowerBound = scroll.top + buttonRect.top - minSpace;
+              var lowerBound = scrollInfo.top + buttonRect.top - minSpace;
               hideIfScrollTop = function (scrollTop) {
                 return scrollTop > lowerBound;
               };
             } else if (canFit.below && !canFit.above) {
               show({auto: true, below: true});
-              var upperBoundPlusWinHeight = scroll.top + buttonRect.bottom + minSpace;
+              var upperBoundPlusWinHeight = scrollInfo.top + buttonRect.bottom + minSpace;
               hideIfScrollTop = function (scrollTop) {
                 return scrollTop < upperBoundPlusWinHeight - winHeight;
               };
@@ -125,9 +125,9 @@ angular.module('kifi')
 
         function onScroll() {
           var top = $window.pageYOffset;
-          scroll.time = Date.now();
-          scroll.deltaY = top - scroll.top;
-          scroll.top = top;
+          scrollInfo.time = Date.now();
+          scrollInfo.deltaY = top - scrollInfo.top;
+          scrollInfo.top = top;
 
           if (hideIfScrollTop && hideIfScrollTop(top)) {
             hide();
@@ -158,7 +158,7 @@ angular.module('kifi')
         var showTimeout;
         var minSpace = 210;
         var hideIfScrollTop;
-        var scroll = {top: $window.pageYOffset};
+        var scrollInfo = {top: $window.pageYOffset};
         var winHeight = $window.innerHeight;
 
         _.extend(scope, _.pick(scope.library.abTestTreatment.data, 'mainHtml', 'quoteHtml', 'quoteAttribution'));
