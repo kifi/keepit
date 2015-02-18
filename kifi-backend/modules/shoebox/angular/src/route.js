@@ -30,10 +30,7 @@ angular.module('kifi')
     $stateProvider
       .state('home', {  // Home page.
         url: '/',
-        templateUrl: 'recos/recosView.tpl.html',
-        data: {
-          width: 'kf-866-966'
-        }
+        templateUrl: 'recos/recosView.tpl.html'
       })
       .state('friends', {
         url: '/friends',
