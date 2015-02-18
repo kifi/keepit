@@ -33,6 +33,10 @@
         </a>
 
         <div class="kf-lh-info">
+          <div class="kf-lh-private-wrap" ng-if="library.visibility === 'secret'">
+            <span class="kf-lh-private svg-card-lock">Private</span>
+          </div>
+
           <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person">
             <a href="{{library.owner.profileUrl}}" itemprop="url"
                kf-track-origin="libraryPage/curator">
