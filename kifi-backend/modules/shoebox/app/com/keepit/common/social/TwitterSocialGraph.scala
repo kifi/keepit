@@ -197,7 +197,7 @@ class TwitterSocialGraphImpl @Inject() (
         case UNAUTHORIZED => "unauthorized or invalid/expired token"
         case _ => "non-OK response"
       }
-      val errMsg = s"[$tag] Error: $errorMessage for $endpoint. status=${resp.status} body=${resp.body}; request.uri=${nettyResp.getUri}"
+      val errMsg = s"[$tag] Error for user ${sui.userId} ${sui.fullName} sui ${sui.id}: $errorMessage for $endpoint. status=${resp.status} body=${resp.body}; request.uri=${nettyResp.getUri}"
       if (notify)
         airbrake.notify(errMsg)
       else
