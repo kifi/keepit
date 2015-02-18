@@ -24,6 +24,8 @@ trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryI
   def getByLibraryIdAndAuthToken(libraryId: Id[Library], authToken: String, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def pageInviteesByLibraryId(libraryId: Id[Library], offset: Int, limit: Int, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]
   def getByLibraryIdAndInviterId(libraryId: Id[Library], inviterId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite]
+  def getLastSentByLibraryIdAndInviterIdAndUserId(libraryId: Id[Library], inviterId: Id[User], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
+  def getLastSentByLibraryIdAndInviterIdAndEmail(libraryId: Id[Library], inviterId: Id[User], email: EmailAddress, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
 }
 
 @Singleton
@@ -153,4 +155,17 @@ class LibraryInviteRepoImpl @Inject() (
     getByLibraryIdAndInviterIdCompiled(libraryId, inviterId, includeStates).list
   }
 
+  private def getByLibraryIdAndInviterIdAndUserIdCompiled(libraryId: Column[Id[Library]], inviterId: Column[Id[User]], userId: Column[Id[User]], includeStates: Set[State[LibraryInvite]]) = Compiled {
+    (for (b <- rows if b.libraryId === libraryId && b.inviterId === inviterId && b.userId === userId && b.state.inSet(includeStates)) yield b).sortBy(_.createdAt.desc)
+  }
+  def getLastSentByLibraryIdAndInviterIdAndUserId(libraryId: Id[Library], inviterId: Id[User], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite] = {
+    getByLibraryIdAndInviterIdAndUserIdCompiled(libraryId, inviterId, userId, includeStates).firstOption
+  }
+
+  private def getByLibraryIdAndInviterIdAndEmailCompiled(libraryId: Column[Id[Library]], inviterId: Column[Id[User]], email: Column[EmailAddress], includeStates: Set[State[LibraryInvite]]) = Compiled {
+    (for (b <- rows if b.libraryId === libraryId && b.inviterId === inviterId && b.emailAddress === email && b.state.inSet(includeStates)) yield b).sortBy(_.createdAt.desc)
+  }
+  def getLastSentByLibraryIdAndInviterIdAndEmail(libraryId: Id[Library], inviterId: Id[User], email: EmailAddress, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite] = {
+    getByLibraryIdAndInviterIdAndEmailCompiled(libraryId, inviterId, email, includeStates).firstOption
+  }
 }

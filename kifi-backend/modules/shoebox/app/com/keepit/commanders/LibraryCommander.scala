@@ -677,38 +677,31 @@ class LibraryCommander @Inject() (
 
   def processInvites(invites: Seq[LibraryInvite]): Future[Seq[ElectronicMail]] = {
     val emailFutures = {
-      invites.groupBy(invite => (invite.inviterId, invite.libraryId))
+      invites.groupBy(invite => (invite.inviterId, invite.libraryId, invite.userId, invite.emailAddress))
         .map { key =>
-          val (inviterId, libId) = key._1
-          val (inviter, lib, libOwner, prevInvites) = db.readOnlyReplica { implicit session =>
+          val (inviterId, libId, recipientId, recipientEmail) = key._1
+
+          val (inviter, lib, libOwner, lastInviteOpt) = db.readOnlyMaster { implicit s =>
             val inviter = basicUserRepo.load(inviterId)
             val lib = libraryRepo.get(libId)
             val libOwner = basicUserRepo.load(lib.ownerId)
-            val prevInvites = libraryInviteRepo.getByLibraryIdAndInviterId(libId, inviterId, Set(LibraryInviteStates.ACTIVE)) // sorted by createdAt (ascending)
-            (inviter, lib, libOwner, prevInvites)
-          }
-
-          val prevInvitesByUserId = prevInvites.filter(_.userId.isDefined).groupBy(invite => invite.userId.get)
-          val prevInvitesByEmail = prevInvites.filter(_.emailAddress.isDefined).groupBy(invite => invite.emailAddress.get)
-
-          val persistedInvites = key._2.filter { invite =>
-            (invite.userId, invite.emailAddress) match {
+            val lastInviteOpt = (recipientId, recipientEmail) match {
               case (Some(userId), _) =>
-                prevInvitesByUserId.get(userId).map { prevInvites =>
-                  val lastInviteTimeOpt = prevInvites.lastOption.map(_.createdAt)
-                  lastInviteTimeOpt.map(_.plusMinutes(5).isBefore(invite.createdAt))
-                }.flatten.getOrElse(true)
+                libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(libId, inviterId, userId, Set(LibraryInviteStates.ACTIVE))
               case (_, Some(email)) =>
-                prevInvitesByEmail.get(email).map { prevInvites =>
-                  val lastInviteTimeOpt = prevInvites.lastOption.map(_.createdAt)
-                  lastInviteTimeOpt.map(_.plusMinutes(5).isBefore(invite.createdAt))
-                }.flatten.getOrElse(true)
-              case (_, _) =>
-                false
+                libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndEmail(libId, inviterId, email, Set(LibraryInviteStates.ACTIVE))
+              case _ => None
             }
+            (inviter, lib, libOwner, lastInviteOpt)
           }
+          val invitesToPersist = key._2.filter { invite =>
+            lastInviteOpt.map { lastInvite =>
+              lastInvite.createdAt.plusMinutes(5).isBefore(invite.createdAt)
+            }.getOrElse(true)
+          }
+
           db.readWrite { implicit s =>
-            persistedInvites.map { inv =>
+            invitesToPersist.map { inv =>
               libraryInviteRepo.save(inv)
             }
           }
@@ -718,7 +711,7 @@ class LibraryCommander @Inject() (
           val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
 
           // send notifications to kifi users only
-          val inviteeIdSet = persistedInvites.map(_.userId).flatten.toSet
+          val inviteeIdSet = invitesToPersist.map(_.userId).flatten.toSet
           elizaClient.sendGlobalNotification(
             userIds = inviteeIdSet,
             title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a Library!",
@@ -731,12 +724,12 @@ class LibraryCommander @Inject() (
           )
 
           // send emails to both users & non-users
-          persistedInvites.map { invite =>
+          invitesToPersist.map { invite =>
             invite.userId match {
               case Some(id) =>
-                libraryInvitesAbuseMonitor.inspect(inviterId, Some(id), None, libId, persistedInvites.length)
+                libraryInvitesAbuseMonitor.inspect(inviterId, Some(id), None, libId, invitesToPersist.length)
               case _ =>
-                libraryInvitesAbuseMonitor.inspect(inviterId, None, invite.emailAddress, libId, persistedInvites.length)
+                libraryInvitesAbuseMonitor.inspect(inviterId, None, invite.emailAddress, libId, invitesToPersist.length)
             }
             libraryInviteSender.get.sendInvite(invite)
           }

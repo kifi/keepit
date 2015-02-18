@@ -561,11 +561,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 4
-          libraryInviteRepo.all.map(x => (x.userId, x.access)) ===
-            Seq((Some(userIron.id.get), LibraryAccess.READ_ONLY),
-              (Some(userAgent.id.get), LibraryAccess.READ_ONLY),
-              (Some(userHulk.id.get), LibraryAccess.READ_ONLY),
-              (None, LibraryAccess.READ_ONLY))
+          val allInvites = libraryInviteRepo.all
+          allInvites.count(_.access == LibraryAccess.READ_ONLY) === 4
+          allInvites.count(_.userId.isDefined) === 3
+          allInvites.count(_.emailAddress.isDefined) === 1
         }
 
         // Agent Nick Fury accepts invite & joins the Library
