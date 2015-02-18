@@ -441,6 +441,20 @@ a.kf-lh-stat
   .kf-library-share-search
     vertical-align: top
 
+.kf-lh-follow-btn-wrap
+  display: inline-block
+  vertical-align: top
+  line-height: 0
+  z-index: 501
+
+  .kf-logged-out &
+    position: relative
+
+  .kf-loh-right>&
+    position: absolute
+    top: 14px
+    right: 0
+
 follow-unfollow-width = 112px
 
 .kf-lh-follow-btn
@@ -448,16 +462,8 @@ follow-unfollow-width = 112px
   width: follow-unfollow-width
   padding: 0
   background: #008aee
-  color: white
-
-  &.kf-stickable
-    position: relative
-    z-index: 501
-
-  .kf-loh-right>&
-    position: absolute
-    top: 14px
-    right: 0
+  color: #fff
+  position: relative  // to stack in front of its hover callout
 
   &::before  // moves the text slightly right
     content: ''
