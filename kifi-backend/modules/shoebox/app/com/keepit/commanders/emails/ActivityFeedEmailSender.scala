@@ -85,6 +85,8 @@ case class ActivityEmailData(
 trait ActivityFeedEmailSender {
   def apply(sendTo: Set[Id[User]], overrideToEmail: Option[EmailAddress] = None): Future[Seq[Option[Id[ElectronicMail]]]]
   def apply(overrideToEmail: Option[EmailAddress]): Future[Unit]
+  def sendToUser(toUserId: Id[User], overrideToEmail: Option[EmailAddress] = None): Future[Option[Id[ElectronicMail]]]
+  def usersToSendEmailTo(): Set[Id[User]]
 }
 
 class ActivityFeedEmailComponents @Inject() (
@@ -138,13 +140,9 @@ class ActivityFeedEmailSenderImpl @Inject() (
   def apply(sendTo: Set[Id[User]], overrideToEmail: Option[EmailAddress] = None): Future[Seq[Option[Id[ElectronicMail]]]] = {
     val sw = Stopwatch("ActivityEmail")
     val orderedUserIds = sendTo.toSeq.sortBy(_.id)
-    val emailsF = orderedUserIds.map(id => prepareEmailForUser(id, overrideToEmail)).map { f =>
-      // transforms Future[Option[Future[_]]] into Future[Option[_]]
-      val f2 = f map { _.map(e => emailTemplateSender.send(e).map(_.id.get)) } map { _.map(_.map(Some.apply)).getOrElse(Future.successful(None)) }
-      f2 flatMap identity
-    }
+    val emailsF = orderedUserIds.map(id => sendToUser(id, overrideToEmail))
 
-    val doneF = new SafeFuture(Future.sequence(emailsF))
+    val doneF: Future[Seq[Option[Id[ElectronicMail]]]] = new SafeFuture(Future.sequence(emailsF))
     doneF.onComplete {
       case Success(emailOpts) =>
         val sentCount = emailOpts.count(_.isDefined)
@@ -178,7 +176,17 @@ class ActivityFeedEmailSenderImpl @Inject() (
     }.toSet
   }
 
-  def prepareEmailForUser(toUserId: Id[User], overrideToEmail: Option[EmailAddress] = None): Future[Option[EmailToSend]] = new SafeFuture(reactiveLock.withLockFuture {
+  def sendToUser(toUserId: Id[User], overrideToEmail: Option[EmailAddress] = None): Future[Option[Id[ElectronicMail]]] = {
+    val emailToSendF = prepareEmailForUser(toUserId, overrideToEmail)
+
+    // this nasty sequence of `map` calls is to transform a Future[Option[Future[Id[_]]] into Future[Option[Id[_]]
+    emailToSendF
+      .map { _.map(emailToSend => emailTemplateSender.send(emailToSend).map(_.id.get)) }
+      .map { _.map(_.map(Some.apply)).getOrElse(Future.successful(None)) }
+      .flatMap(identity)
+  }
+
+  private def prepareEmailForUser(toUserId: Id[User], overrideToEmail: Option[EmailAddress] = None): Future[Option[EmailToSend]] = new SafeFuture(reactiveLock.withLockFuture {
     val previouslySentEmails = db.readOnlyReplica { implicit s => activityEmailRepo.getLatestToUser(toUserId) }
 
     val friends = db.readOnlyReplica { implicit session =>
