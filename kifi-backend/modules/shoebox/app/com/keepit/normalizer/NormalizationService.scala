@@ -125,7 +125,7 @@ class NormalizationServiceImpl @Inject() (
   }
 
   private def migrate(currentReference: NormalizationReference, successfulCandidate: NormalizationCandidate, weakerCandidates: Seq[NormalizationCandidate]): Option[NormalizationReference] =
-    db.readWrite { implicit session =>
+    db.readWrite(attempts = 2) { implicit session =>
       val latestCurrentUri = normalizedURIRepo.get(currentReference.uriId)
       val isWriteSafe =
         latestCurrentUri.state != NormalizedURIStates.INACTIVE &&
