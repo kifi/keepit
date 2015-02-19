@@ -18,20 +18,20 @@ class TwitterMessagesTest extends Specification {
 
     "keepMessage constants" in {
       val messages = new TwitterMessages()
-      messages.ContextSpace === 71
+      messages.ContentSpace === 69
     }
 
     "keepMessage long keep" in {
       val messages = new TwitterMessages()
-      val res = "long keep with lots of text that should be trimmed down so th... http://keep.com/1234 kept to s... http://lib.com/12345 via @kifi"
-      res.length === 129
+      val res = "long keep with lots of text that should be trimmed down so ... http://keep.com/1234 kept to s... http://lib.com/12345 via @kifi"
+      res.length === 127
       messages.keepMessage("long keep with lots of text that should be trimmed down so the more then 140 chars", "http://keep.com/1234", "short lib", "http://lib.com/12345") === res
     }
 
     "keepMessage long keep long lib" in {
       val messages = new TwitterMessages()
-      val res = "long keep with lots of text that should be trimmed ... http://keep.com/1234 kept to a long lib ... http://lib.com/12345 via @kifi"
-      res.length === 129
+      val res = "long keep with lots of text that should be ... http://keep.com/1234 kept to a long lib title ... http://lib.com/12345 via @kifi"
+      res.length === 127
       messages.keepMessage("long keep with lots of text that should be trimmed down so the more then 140 chars", "http://keep.com/1234", "a long lib title that has some meaning", "http://lib.com/12345") === res
     }
 
