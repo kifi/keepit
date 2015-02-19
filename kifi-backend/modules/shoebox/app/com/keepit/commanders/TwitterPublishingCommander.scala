@@ -49,8 +49,8 @@ class TwitterPublishingCommander @Inject() (
             }
           }
           imageOpt match {
-            case None => twitterSocialGraph.sendTweet(sui, msg)
-            case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendImage(sui, imageFile.file, msg) }
+            case None => twitterSocialGraph.sendTweet(sui, None, msg)
+            case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendTweet(sui, Some(imageFile.file), msg) }
           }
       }
     } else {
@@ -79,8 +79,8 @@ class TwitterPublishingCommander @Inject() (
             libraryImageStore.get(libImage.imagePath)
           }
           imageOpt match {
-            case None => twitterSocialGraph.sendTweet(sui, message)
-            case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendImage(sui, imageFile.file, message) }
+            case None => twitterSocialGraph.sendTweet(sui, None, message)
+            case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendTweet(sui, Some(imageFile.file), message) }
           }
       }
     }
