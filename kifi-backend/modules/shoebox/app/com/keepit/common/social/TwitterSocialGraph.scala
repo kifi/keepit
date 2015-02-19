@@ -24,7 +24,7 @@ import play.api.libs.oauth.OAuthCalculator
 import play.api.libs.ws.{ WSResponse, WS }
 import securesocial.core.{ IdentityId, OAuth2Settings }
 import twitter4j.auth.OAuthAuthorization
-import twitter4j.{ TwitterFactory, Twitter }
+import twitter4j.{ StatusUpdate, TwitterFactory, Twitter }
 import twitter4j.media.{ ImageUpload, MediaProvider, ImageUploadFactory }
 import twitter4j.conf.ConfigurationBuilder
 
@@ -69,8 +69,7 @@ trait TwitterSocialGraph extends SocialGraph {
   val networkType: SocialNetworkType = SocialNetworks.TWITTER
 
   def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse]
-  def sendTweet(socialUserInfo: SocialUserInfo, msg: String): Future[WSResponse]
-  def sendImage(socialUserInfo: SocialUserInfo, image: File, message: String): Unit
+  def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Unit
   def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, sinceId: Long): Future[Seq[JsObject]] //uses app auth if no social user info is given
 }
 
@@ -291,21 +290,14 @@ class TwitterSocialGraphImpl @Inject() (
     call
   }
 
-  def sendTweet(socialUserInfo: SocialUserInfo, msg: String): Future[WSResponse] = {
-    val endpoint = "https://api.twitter.com/1.1/statuses/update.json"
-    val call = WS.url(endpoint)
-      .sign(OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo)))
-      .withQueryString("status" -> msg)
-      .post(Map.empty[String, Seq[String]])
-    call.onSuccess { case tr => log.info(s"[sendTweet] sent msg=$msg res=$tr") }
-    call.onFailure { case ex => airbrake.notify(s"[sendTweet] fail msg=$msg", ex) }
-    call
-  }
-
-  def sendImage(socialUserInfo: SocialUserInfo, image: File, message: String): Unit = {
-    val client = twitterImageUploadClient(socialUserInfo)
-    log.info(s"[sendImage] user ${socialUserInfo.userId} ${socialUserInfo.fullName} sending image with message $message")
-    client.upload(image, message)
+  def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Unit = try {
+    log.info(s"tweeting for ${socialUserInfo.profileUrl} ${socialUserInfo.userId} ${socialUserInfo.fullName} with image: ${image.isDefined} message: $msg")
+    val status = new StatusUpdate(msg)
+    image.foreach(file => status.setMedia(file))
+    val res = twitterClient(socialUserInfo).updateStatus(status)
+    log.info(s"twitted status id ${res.getId} for message $msg")
+  } catch {
+    case e: Exception => airbrake.notify(s"error tweeting for ${socialUserInfo.profileUrl} ${socialUserInfo.userId} ${socialUserInfo.fullName} with image: ${image.isDefined} message: $msg", e)
   }
 
   def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, sinceId: Long): Future[Seq[JsObject]] = {
