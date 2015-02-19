@@ -78,6 +78,7 @@ object UserValueName {
   val SITE_INTRODUCE_LIBRARY_MENU = UserValueName("site_introduce_library_menu")
 
   val AUTO_SHOW_GUIDE = UserValueName("auto_show_guide")
+  val FORCE_SHOW_PERSONA = UserValueName("force_show_persona") // for new users, show who-are-you modal on page land
 
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
