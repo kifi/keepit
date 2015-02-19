@@ -297,7 +297,7 @@ class TwitterSocialGraphImpl @Inject() (
     val res = twitterClient(socialUserInfo).updateStatus(status)
     log.info(s"twitted status id ${res.getId} for message $msg")
   } catch {
-    case e: Exception => log.error(s"error tweeting for ${socialUserInfo.profileUrl} ${socialUserInfo.userId} ${socialUserInfo.fullName} with image: ${image.isDefined} message: $msg", e)
+    case e: Exception => airbrake.notify(s"error tweeting for ${socialUserInfo.profileUrl} ${socialUserInfo.userId} ${socialUserInfo.fullName} with image: ${image.isDefined} message: $msg", e)
   }
 
   def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, sinceId: Long): Future[Seq[JsObject]] = {
