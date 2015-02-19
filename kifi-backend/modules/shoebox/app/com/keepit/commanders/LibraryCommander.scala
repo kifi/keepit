@@ -742,6 +742,7 @@ class LibraryCommander @Inject() (
     db.readWrite(attempts = 3) { implicit session =>
       val libMem = libraryMembershipRepo.getWithUserId(userId, None)
       val allLibs = libraryRepo.getByUser(userId, None)
+      val user = userRepo.get(userId)
 
       // Get all current system libraries, for main/secret, make sure only one is active.
       // This corrects any issues with previously created libraries / memberships
@@ -753,27 +754,33 @@ class LibraryCommander @Inject() (
           case (kind, libs) =>
             val (slug, name, visibility) = if (kind == LibraryKind.SYSTEM_MAIN) ("main", "Main Library", LibraryVisibility.DISCOVERABLE) else ("secret", "Secret Library", LibraryVisibility.SECRET)
 
-            val activeLib = libs.head._2.copy(state = LibraryStates.ACTIVE, slug = LibrarySlug(slug), name = name, visibility = visibility, memberCount = 1)
-            val membership = libMem.find(m => m.libraryId == activeLib.id.get && m.access == LibraryAccess.OWNER)
-            if (membership.isEmpty) airbrake.notify(s"user $userId - non-existing ownership of library kind $kind (id: ${activeLib.id.get})")
-            val activeMembership = membership.getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER)).copy(state = LibraryMembershipStates.ACTIVE)
-            val active = (activeMembership, activeLib)
-            if (libs.tail.length > 0) airbrake.notify(s"user $userId - duplicate active ownership of library kind $kind (ids: ${libs.tail.map(_._2.id.get)})")
-            val otherLibs = libs.tail.map {
-              case (a, l) =>
-                val inactMem = libMem.find(_.libraryId == l.id.get)
-                  .getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER))
-                  .copy(state = LibraryMembershipStates.INACTIVE)
-                (inactMem, l.copy(state = LibraryStates.INACTIVE))
+            if (user.state == UserStates.ACTIVE) {
+              val activeLib = libs.head._2.copy(state = LibraryStates.ACTIVE, slug = LibrarySlug(slug), name = name, visibility = visibility, memberCount = 1)
+              val membership = libMem.find(m => m.libraryId == activeLib.id.get && m.access == LibraryAccess.OWNER)
+              if (membership.isEmpty) airbrake.notify(s"user $userId - non-existing ownership of library kind $kind (id: ${activeLib.id.get})")
+              val activeMembership = membership.getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER)).copy(state = LibraryMembershipStates.ACTIVE)
+              val active = (activeMembership, activeLib)
+              if (libs.tail.length > 0) airbrake.notify(s"user $userId - duplicate active ownership of library kind $kind (ids: ${libs.tail.map(_._2.id.get)})")
+              val otherLibs = libs.tail.map {
+                case (a, l) =>
+                  val inactMem = libMem.find(_.libraryId == l.id.get)
+                    .getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER))
+                    .copy(state = LibraryMembershipStates.INACTIVE)
+                  (inactMem, l.copy(state = LibraryStates.INACTIVE))
+              }
+              active +: otherLibs
+            } else { // do not reactivate libraries / memberships for nonactive users
+              libs
             }
-            active +: otherLibs
         }.flatten.toList // force eval
 
-      // Save changes
-      sysLibs.map {
-        case (mem, lib) =>
-          libraryRepo.save(lib)
-          libraryMembershipRepo.save(mem)
+      // save changes for active users only
+      if (sysLibs.nonEmpty && user.state == UserStates.ACTIVE) {
+        sysLibs.map {
+          case (mem, lib) =>
+            libraryRepo.save(lib)
+            libraryMembershipRepo.save(mem)
+        }
       }
 
       // If user is missing a system lib, create it

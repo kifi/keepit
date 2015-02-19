@@ -37,7 +37,6 @@ class EmailRecosController @Inject() (
   }
 
   def keepReco(uriId: ExternalId[NormalizedURI]) = UserAction { request =>
-    println(s"keepReco: uriId=$uriId userId=${request.userId}")
     db.readOnlyReplica(uriRepo.getOpt(uriId)(_)) map { uri =>
       val source = KeepSource.emailReco
       val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)

@@ -2,6 +2,7 @@ package com.keepit.controllers.ext
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.LibraryCommander
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
@@ -67,9 +68,8 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         val libCommander = inject[LibraryCommander]
         val extBookmarksController = inject[ExtBookmarksController]
 
-        val (user, k1, collections) = db.readWrite { implicit s =>
+        val (user, k1, collections, lib1) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          libCommander.internSystemGeneratedLibraries(user1.id.get)
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
 
@@ -92,8 +92,10 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
             Nil
           keepToCollectionRepo.save(KeepToCollection(keepId = k1.id.get, collectionId = collections(0).id.get))
           collectionRepo.collectionChanged(collections(0).id.get, true, false)
-          (user1, k1, collections)
+          (user1, k1, collections, lib1)
         }
+
+        val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
 
         val bookmarksWithTags = db.readOnlyMaster { implicit s =>
           keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
@@ -116,7 +118,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
-        val expected = Json.obj("id" -> k1.externalId, "title" -> "G1", "url" -> "http://www.google.com", "isPrivate" -> false, "libraryId" -> "l2T24z3R1M8Y")
+        val expected = Json.obj("id" -> k1.externalId, "title" -> "G1", "url" -> "http://www.google.com", "isPrivate" -> false, "libraryId" -> pubLibId1.id)
         Json.parse(contentAsString(result)) must equalTo(expected)
 
         val bookmarks = db.readOnlyMaster { implicit s =>
@@ -143,7 +145,6 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
 
         val (user, collections) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          libCommander.internSystemGeneratedLibraries(user1.id.get)
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
 
@@ -216,7 +217,6 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
 
         val (user, bookmark1, bookmark2, collections) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          libCommander.internSystemGeneratedLibraries(user1.id.get)
 
           uriRepo.count === 0
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
@@ -290,7 +290,6 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
 
         val (user, collections) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          libCommander.internSystemGeneratedLibraries(user1.id.get)
 
           uriRepo.count === 0
 
@@ -302,6 +301,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
 
           (user1, collections)
         }
+        libCommander.internSystemGeneratedLibraries(user.id.get)
 
         db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(user.id.get, None, None, 100).size === 0
