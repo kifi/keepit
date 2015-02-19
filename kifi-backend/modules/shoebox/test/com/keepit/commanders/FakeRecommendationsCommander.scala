@@ -41,12 +41,12 @@ class FakeRecommendationsCommander @Inject() (
   var libRecoInfos: Seq[(Id[Library], FullLibRecoInfo)] = Seq.empty
 
   override def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[FullUriRecoResults] =
-    Future.successful(FullUriRecoResults(uriRecoInfos, ""))
+    Future.successful(FullUriRecoResults(uriRecoInfos, "fake_uri_context"))
 
   override def topPublicRecos(userId: Id[User]) = Future.successful(Seq.empty)
 
   override def topPublicLibraryRecos(userId: Id[User], limit: Int, source: RecommendationSource, subSource: RecommendationSubSource, trackDelivery: Boolean = true, context: Option[String]) = {
     val libs = libRecoInfos take limit
-    Future.successful(FullLibRecoResults(libs, ""))
+    Future.successful(FullLibRecoResults(libs, "fake_lib_context"))
   }
 }
