@@ -77,6 +77,16 @@ class AdminLibraryController @Inject() (
       while (hasMore) {
         val from = page * pageSize
         val chunk: Seq[Keep] = keepRepo.getByLibrary(libraryId, from, from + pageSize, None) map { keep =>
+          val tags = keepToCollectionRepo.getByKeep(keep.id.get)
+          tags foreach { keepToTag =>
+            val origTag = collectionRepo.get(keepToTag.collectionId)
+            val tag = collectionRepo.getByUserAndName(toUserId, origTag.name, excludeState = None) match {
+              case None => collectionRepo.save(Collection(userId = toUserId, name = origTag.name))
+              case Some(existing) if !existing.isActive => collectionRepo.save(existing.copy(state = CollectionStates.ACTIVE, name = origTag.name))
+              case Some(existing) => existing
+            }
+            keepToCollectionRepo.save(keepToTag.copy(collectionId = tag.id.get))
+          }
           keepRepo.save(keep.copy(userId = toUserId))
         }
         hasMore = chunk.size >= pageSize
