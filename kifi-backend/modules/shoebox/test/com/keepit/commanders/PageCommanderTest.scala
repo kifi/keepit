@@ -51,15 +51,15 @@ class PageCommanderTest extends Specification with ShoeboxTestInjector {
     "firstQualityFilter" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PageCommander]
-        val lib1 = library().withId(1).withName("foo").withKind(LibraryKind.SYSTEM_PERSONA).get
+        val lib1 = library().withId(1).withName("foo").withKind(LibraryKind.SYSTEM_PERSONA).withMemberCount(10).get
         val lib2 = library().withId(2).withName("bar").withMemberCount(10).get
         val lib3 = library().withId(3).withName("test my lib").get
-        val lib4 = library().withId(4).withName("legit").get
+        val lib4 = library().withId(4).withName("legit").withMemberCount(20).get
         val lib5 = library().withId(5).withName("this is Pocket imports").get
         val lib6 = library().withId(6).withName("Bookmark").get
         val lib7 = library().withId(7).withName("Instapaper").get
         val filtered = commander.firstQualityFilterAndSort(Seq(lib1, lib2, lib3, lib4, lib5, lib6, lib7))
-        filtered.map(_.id.get) === Seq(lib2, lib4, lib1).map(_.id.get)
+        filtered.map(_.id.get) === Seq(lib4, lib2, lib1).map(_.id.get)
       }
     }
 
