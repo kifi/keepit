@@ -156,7 +156,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
           subject = subject,
           category = NotificationCategory.System.ADMIN,
           htmlBody = LargeString(body))
-      //        db.readWrite { implicit rw => postOffice.sendMail(mail) }
+        db.readWrite { implicit rw => postOffice.sendMail(mail) }
       case Failure(e) =>
         log.error(s"ActivityEmail.apply failed userIds=${sendTo}", e)
     }
@@ -174,8 +174,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
     // TODO remove this filter when we have quality library recos for users w/o keeps
     keepRepo.getCountByUsersAndSource(userIds, Set(KeepSource.keeper, KeepSource.mobile)).collect {
-      //case (id, count) if count >= 20 => id
-      case (id, count) if id.id <= 1215 => id // TODO remove after deployed and emails mock-sent once
+      case (id, count) if count >= 20 && (id.id <= 3 || id.id > 1215) => id // TODO remove the id < / > condition safter first round of emails sent
     }.toSet
   }
 
@@ -262,15 +261,14 @@ class ActivityFeedEmailSenderImpl @Inject() (
             val htmlBody = views.html.email.v3.activityFeed(activityData)
             // trim whitespace at the beginning of each line
             val trimmedHtml = Html(htmlBody.body.trim().replaceAll("(?m)^\\s+", ""))
-            //            Some(EmailToSend(
-            //              from = SystemEmailAddress.NOTIFICATIONS,
-            //              to = toDest,
-            //              subject = subjectLine,
-            //              htmlTemplate = trimmedHtml,
-            //              category = NotificationCategory.User.ACTIVITY,
-            //              templateOptions = Seq(TemplateOptions.CustomLayout).toMap
-            //            ))
-            None
+            Some(EmailToSend(
+              from = SystemEmailAddress.NOTIFICATIONS,
+              to = toDest,
+              subject = subjectLine,
+              htmlTemplate = trimmedHtml,
+              category = NotificationCategory.User.ACTIVITY,
+              templateOptions = Seq(TemplateOptions.CustomLayout).toMap
+            ))
           }
         }
       }

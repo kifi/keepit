@@ -191,16 +191,15 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         Await.ready(senderF, Duration(5, "seconds"))
 
         val emails = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)
-        emails.size === 0
-        //        val email1 :: email2 :: Nil = emails.filter(_.category == NotificationCategory.toElectronicMailCategory(NotificationCategory.User.ACTIVITY))
-        //
-        //        val activityEmails = db.readOnlyMaster { implicit s => inject[ActivityEmailRepo].all }
-        //        activityEmails.size === 2
+        val email1 :: email2 :: Nil = emails.filter(_.category == NotificationCategory.toElectronicMailCategory(NotificationCategory.User.ACTIVITY))
 
-        //        val activityEmail1 = activityEmails.find(_.userId == user1.id.get).get
-        //        activityEmail1.otherFollowedLibraries.get.size === 4
-        //        activityEmail1.userFollowedLibraries.get.size === 1
-        //        activityEmail1.libraryRecommendations.get.size === 3
+        val activityEmails = db.readOnlyMaster { implicit s => inject[ActivityEmailRepo].all }
+        activityEmails.size === 2
+
+        val activityEmail1 = activityEmails.find(_.userId == user1.id.get).get
+        activityEmail1.otherFollowedLibraries.get.size === 4
+        activityEmail1.userFollowedLibraries.get.size === 1
+        activityEmail1.libraryRecommendations.get.size === 3
 
         // useful for quick-and-dirty testing
         //        val html1: String = email1.htmlBody
@@ -209,8 +208,8 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         //        fw.write(html1)
         //        fw.close()
 
-        //        email1.to === Seq(EmailAddress("u1@kifi.com"))
-        //        email2.to === Seq(EmailAddress("u2@kifi.com"))
+        email1.to === Seq(EmailAddress("u1@kifi.com"))
+        email2.to === Seq(EmailAddress("u2@kifi.com"))
 
       }
     }
