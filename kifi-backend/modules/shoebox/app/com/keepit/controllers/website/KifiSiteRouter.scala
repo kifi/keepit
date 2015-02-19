@@ -160,7 +160,7 @@ class AngularRouter @Inject() (
 
       userOpt.flatMap {
         case (user, isUserAlias) =>
-          if (user.username.value != path.primary) { // username normalization or alias
+          if (user.username.value != path.primary) { // user moved or username normalization
             val redir = "/" + (user.username.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
             if (isUserAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
           } else if (path.split.length == 1) { // user profile page
@@ -173,9 +173,12 @@ class AngularRouter @Inject() (
             path.secondary.flatMap { secondary =>
               libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(secondary)).map {
                 case (library, isLibraryAlias) =>
-                  if (library.slug.value != secondary) { // slug normalization or alias
+                  if (isLibraryAlias) { // library moved
+                    val redir = libraryCommander.getLibraryPath(library).split("/").map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
+                    Some(MovedPermanentlyRoute(redir))
+                  } else if (library.slug.value != secondary) { // slug normalization
                     val redir = "/" + (path.split.dropRight(1) :+ library.slug.value).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
-                    if (isLibraryAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
+                    Some(SeeOtherRoute(redir))
                   } else {
                     val metadata = if (userAgent.possiblyBot) {
                       Some(libMetadata(library))
