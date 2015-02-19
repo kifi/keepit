@@ -617,6 +617,7 @@ class KeepsCommander @Inject() (
   }
 
   private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library, socialShare: SocialShare): Unit = SafeFuture {
+    log.info(s"postSingleKeepReporting for user ${keep.userId} with $socialShare keep ${keep.title}")
     if (socialShare.twitter) twitterPublishingCommander.publishKeep(keep.userId, keep, library)
     if (socialShare.facebook) facebookPublishingCommander.publishKeep(keep.userId, keep, library)
     searchClient.updateKeepIndex()
