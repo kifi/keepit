@@ -29,6 +29,7 @@ class TwitterPublishingCommander @Inject() (
   def publishKeep(userId: Id[User], keep: Keep, library: Library): Unit = {
     require(keep.userId == userId, s"User $userId cannot publish to Twitter a keep by user ${keep.userId}")
     if (library.visibility == LibraryVisibility.PUBLISHED && hasExplicitShareExperiment(userId)) {
+      log.info(s"trying to tweet about a keep ${keep.id.get} of user ${keep.userId} and lib ${library.id.get}")
       db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.TWITTER) } match {
         case None =>
           log.info(s"user $userId is not connected to twitter!")
@@ -52,6 +53,8 @@ class TwitterPublishingCommander @Inject() (
             case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendImage(sui, imageFile.file, msg) }
           }
       }
+    } else {
+      log.info(s"did not tweet a keep ${keep.id.get} of user ${keep.userId} and lib ${library.id.get} since lib is not published or lack of experiment")
     }
   }
 

@@ -292,6 +292,7 @@ class TwitterSocialGraphImpl @Inject() (
   }
 
   def sendTweet(socialUserInfo: SocialUserInfo, msg: String): Future[WSResponse] = {
+    log.info(s"tweeting plain text to ${socialUserInfo.profileUrl} ${socialUserInfo.userId} ${socialUserInfo.fullName} message: $msg")
     val endpoint = "https://api.twitter.com/1.1/statuses/update.json"
     val call = WS.url(endpoint)
       .sign(OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo)))
@@ -303,8 +304,8 @@ class TwitterSocialGraphImpl @Inject() (
   }
 
   def sendImage(socialUserInfo: SocialUserInfo, image: File, message: String): Unit = {
+    log.info(s"tweeting image to ${socialUserInfo.profileUrl} ${socialUserInfo.userId} ${socialUserInfo.fullName} of size ${image.length()}b message: $message")
     val client = twitterImageUploadClient(socialUserInfo)
-    log.info(s"[sendImage] user ${socialUserInfo.userId} ${socialUserInfo.fullName} sending image with message $message")
     client.upload(image, message)
   }
 
