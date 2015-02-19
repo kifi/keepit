@@ -333,6 +333,7 @@ class UserController @Inject() (
     import UserValueName._
     Set(
       AUTO_SHOW_GUIDE,
+      FORCE_SHOW_PERSONA,
       SHOW_DELIGHTED_QUESTION,
       LIBRARY_SORTING_PREF,
       SITE_INTRODUCE_LIBRARY_MENU,
