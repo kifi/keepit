@@ -125,6 +125,11 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def getLibraryPath(library: Library): String = {
+    val owner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
+    Library.formatLibraryPath(owner.username, library.slug)
+  }
+
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibraryStatistics] = {
     db.readOnlyReplica { implicit session =>
       val memberCountByLibraryId = libraryRepo.getLibraries(libraryIds).mapValues(_.memberCount)
