@@ -78,14 +78,6 @@ angular.module('kifi')
       trackEvent('visitor_clicked_page', 'install', 'getFirefox');
     };
 
-    function createSignupPath(network) {
-      return routeService.socialSignupWithRedirect(
-          network,
-          $scope.userData.redirectPath || $location.url().split('?')[0],
-          $scope.userData.intent
-        );
-    }
-
     function trackEvent(eventName, typeBase, action) {
       var currentState = $state.current.name;
       if (util.startsWith(currentState, 'library')) {
@@ -118,8 +110,8 @@ angular.module('kifi')
         trackEvent('visitor_clicked_page', 'signup', 'login');
       };
 
-      $scope.facebookSignupPath = createSignupPath('facebook');
-      $scope.twitterSignupPath = createSignupPath('twitter');
+      $scope.facebookSignupPath = routeService.socialSignup('facebook');
+      $scope.twitterSignupPath = routeService.socialSignup('twitter');
       $scope.emailSubmitted = false;
 
       setModalScope(modalService.open({
