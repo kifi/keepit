@@ -620,6 +620,8 @@ class KeepsCommander @Inject() (
     if (isNewKeep) {
       if (socialShare.twitter) twitterPublishingCommander.publishKeep(keep.userId, keep, library)
       if (socialShare.facebook) facebookPublishingCommander.publishKeep(keep.userId, keep, library)
+    } else {
+      log.info(s"keep ${keep.id.get} of user ${keep.userId} and lib ${library.id.get} is not new, not considering publish to social network")
     }
     searchClient.updateKeepIndex()
     curator.updateUriRecommendationFeedback(keep.userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
