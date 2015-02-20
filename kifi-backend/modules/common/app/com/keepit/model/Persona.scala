@@ -57,7 +57,7 @@ object Persona {
   val keeps: Map[PersonaName, PersonaKeep] = Map(
     PersonaName.DEVELOPER -> PersonaKeep(
       title = "Top 10 Professional Sample Code Websites For Programmers",
-      url = "http =//www.makeuseof.com/tag/top-10-professional-sample-code-websites-for-programmers/",
+      url = "http://www.makeuseof.com/tag/top-10-professional-sample-code-websites-for-programmers/",
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/sample_websites.b87fdb6.jpg", 480, 394),
       noun = "blog post",
       query = "sample+codes",
@@ -75,7 +75,7 @@ object Persona {
     ),
     PersonaName.ENTREPRENEUR -> PersonaKeep(
       title = "11 Famous Entrepreneurs Share How They Overcame Their Biggest Failure",
-      url = "http =//www.fastcompany.com/3029883/bottom-line/11-famous-entrepreneurs-share-how-they-overcame-their-biggest-failure",
+      url = "http://www.fastcompany.com/3029883/bottom-line/11-famous-entrepreneurs-share-how-they-overcame-their-biggest-failure",
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/moving_cultures.542973a.jpg", 480, 372),
       noun = "blog post",
       query = "entrepreneurship",
@@ -102,7 +102,7 @@ object Persona {
     ),
     PersonaName.SCIENCE_BUFF -> PersonaKeep(
       title = "The Physics of Popcorn",
-      url = "http=//www.nytimes.com/video/science/100000003510016/the-physics-of-popcorn.html",
+      url = "http://www.nytimes.com/video/science/100000003510016/the-physics-of-popcorn.html",
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/physics_popcorn.95caf57.jpg", 480, 368),
       noun = "video",
       query = "popcorn",
@@ -183,7 +183,7 @@ object Persona {
     ),
     PersonaName.DEEP_THINKER -> PersonaKeep(
       title = "How Cultures Move Across Continents = Goats and Soda",
-      url = "http=//www.npr.org/blogs/goatsandsoda/2014/08/01/336646562/how-cultures-move-across-continents",
+      url = "http://www.npr.org/blogs/goatsandsoda/2014/08/01/336646562/how-cultures-move-across-continents",
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/moving_cultures.542973a.jpg", 480, 412),
       noun = "blog post",
       query = "cultures+across+continents",
