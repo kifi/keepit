@@ -195,7 +195,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
           status(result) must equalTo(OK)
           contentType(result) must beSome("application/json")
 
-          val js = Json.parse(contentAsString(result))          // expected: {"recos": [....], "uctx": "...", "lctx": "..."}
+          val js = Json.parse(contentAsString(result)) // expected: {"recos": [....], "uctx": "...", "lctx": "..."}
           val recos = (js \ "recos")
 
           val kind = (recos(0) \ "kind").as[String]
