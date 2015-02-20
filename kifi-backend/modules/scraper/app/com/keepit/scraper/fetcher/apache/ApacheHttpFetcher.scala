@@ -374,6 +374,10 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
           val msg = s"ConnectionClosedException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
           log.warn(msg, cce)
           HttpFetchStatus(statusCode = 500, message = Some(msg), context = new FetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
+        case ze: ZipException =>
+          val msg = s"ZipException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
+          log.warn(msg, ze)
+          HttpFetchStatus(statusCode = 500, message = Some(msg), context = new FetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
         case e: Exception =>
           throw new Exception(s"on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]", e)
       }
