@@ -24,7 +24,8 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val db = inject[Database]
         val keepRepo = inject[KeepRepo]
-        val monitor = new KeepsAbuseMonitor(absoluteWarn = 200, absoluteError = 500, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
+        val experiments = inject[UserExperimentRepo]
+        val monitor = new KeepsAbuseMonitor(absoluteWarn = 200, absoluteError = 500, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier], experiments = experiments)
         val user = db.readWrite { implicit s => UserFactory.user().saved }
         monitor.inspect(user.id.get, 20)
         1 === 1
@@ -38,7 +39,8 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         val keeper = KeepSource.keeper
         val db = inject[Database]
         val keepRepo = inject[KeepRepo]
-        val monitor = new KeepsAbuseMonitor(absoluteWarn = 1, absoluteError = 2, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
+        val experiments = inject[UserExperimentRepo]
+        val monitor = new KeepsAbuseMonitor(absoluteWarn = 1, absoluteError = 2, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier], experiments = experiments)
         val fakeUser = db.readWrite { implicit s =>
           user().saved
           val user1 = user().saved
@@ -75,7 +77,8 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         val keeper = KeepSource.keeper
         val db = inject[Database]
         val keepRepo = inject[KeepRepo]
-        val monitor = new KeepsAbuseMonitor(absoluteWarn = 1, absoluteError = 30, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
+        val experiments = inject[UserExperimentRepo]
+        val monitor = new KeepsAbuseMonitor(absoluteWarn = 1, absoluteError = 30, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier], experiments = experiments)
         val fakeUser = db.readWrite { implicit s =>
           user().saved
           val user1 = user().saved
@@ -112,7 +115,8 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val db = inject[Database]
         val keepRepo = inject[KeepRepo]
-        def createChecker(): Unit = new KeepsAbuseMonitor(absoluteWarn = 10, absoluteError = 5, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier]) { createChecker() } must throwA[IllegalStateException]
+        val experiments = inject[UserExperimentRepo]
+        def createChecker(): Unit = new KeepsAbuseMonitor(absoluteWarn = 10, absoluteError = 5, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier], experiments = experiments) { createChecker() } must throwA[IllegalStateException]
       }
     }
   }

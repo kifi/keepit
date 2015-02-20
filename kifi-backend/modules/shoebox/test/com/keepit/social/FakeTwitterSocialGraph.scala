@@ -3,6 +3,7 @@ package com.keepit.social
 import java.io.File
 
 import com.google.inject.Inject
+import com.keepit.common.core._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
@@ -67,13 +68,7 @@ class FakeTwitterSocialGraph @Inject() (
       new FakeWSResponse()
     }
 
-    override def sendTweet(socialUserInfo: SocialUserInfo, msg: String): Future[WSResponse] = Future.successful {
-      new FakeWSResponse()
-    }
-
-    override def sendImage(socialUserInfo: SocialUserInfo, image: File, message: String): Unit = Future.successful {
-      new FakeWSResponse()
-    }
+    override def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Unit = {}
 
   }
 
@@ -88,7 +83,6 @@ class FakeTwitterSocialGraph @Inject() (
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = twtrGraph.revokePermissions(socialUserInfo)
   def extractUserValues(json: JsValue): Map[UserValueName, String] = twtrGraph.extractUserValues(json)
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = twtrGraph.fetchSocialUserRawInfo(socialUserInfo)
+  def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Unit = twtrGraph.sendTweet(socialUserInfo, image, msg)
   def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse] = twtrGraph.sendDM(socialUserInfo, receiverUserId, msg)
-  def sendTweet(socialUserInfo: SocialUserInfo, msg: String): Future[WSResponse] = twtrGraph.sendTweet(socialUserInfo, msg)
-  def sendImage(socialUserInfo: SocialUserInfo, image: File, message: String): Unit = twtrGraph.sendImage(socialUserInfo, image, message)
 }

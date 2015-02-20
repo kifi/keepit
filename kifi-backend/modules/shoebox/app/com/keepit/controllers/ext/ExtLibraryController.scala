@@ -143,7 +143,7 @@ class ExtLibraryController @Inject() (
           }
           implicit val context = hcb.build
 
-          val (keep, isNewKeep) = keepsCommander.keepOne(body.as[RawBookmarkRepresentation], request.userId, libraryId, request.kifiInstallationId, source)
+          val (keep, isNewKeep) = keepsCommander.keepOne(body.as[RawBookmarkRepresentation], request.userId, libraryId, request.kifiInstallationId, source, SocialShare(body))
           val (tags, image) = if (isNewKeep) {
             val existingImageUri = db.readOnlyReplica { implicit session =>
               keepImageCommander.getExistingImageUrlForKeepUri(keep.uriId)

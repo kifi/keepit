@@ -174,7 +174,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
     // TODO remove this filter when we have quality library recos for users w/o keeps
     keepRepo.getCountByUsersAndSource(userIds, Set(KeepSource.keeper, KeepSource.mobile)).collect {
-      case (id, count) if count >= 20 && (id.id <= 3 || id.id > 1215) => id // TODO remove the id < / > condition safter first round of emails sent
+      case (id, count) if count >= 20 => id
     }.toSet
   }
 

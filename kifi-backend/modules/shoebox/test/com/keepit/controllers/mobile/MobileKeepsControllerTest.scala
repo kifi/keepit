@@ -5,6 +5,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders._
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -55,7 +56,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
       val (user, bookmark1, bookmark2, collections) = db.readWrite { implicit s =>
         val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-        libCommander.internSystemGeneratedLibraries(user1.id.get)
         val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
         val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
 
@@ -122,7 +122,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
       val (user, bookmark1, bookmark2, collections) = db.readWrite { implicit s =>
         val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test2"), normalizedUsername = "test2"))
-        libCommander.internSystemGeneratedLibraries(user1.id.get)
 
         uriRepo.count === 0
         val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
@@ -191,7 +190,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
       val (user, collections) = db.readWrite { implicit s =>
         val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test3"), normalizedUsername = "test3"))
-        libCommander.internSystemGeneratedLibraries(user1.id.get)
         uriRepo.count === 0
 
         val collections = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction1"))) ::
@@ -243,13 +241,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val keeper = KeepSource.keeper
       val initLoad = KeepSource.bookmarkImport
 
-      val libCommander = inject[LibraryCommander]
-
-      val (user1, user2, bookmark1, bookmark2, bookmark3) = db.readWrite { implicit s =>
+      val (user1, user2, bookmark1, bookmark2, bookmark3, lib1) = db.readWrite { implicit s =>
         val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test1"), normalizedUsername = "test1"))
         val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
-        libCommander.internSystemGeneratedLibraries(user1.id.get)
-        libCommander.internSystemGeneratedLibraries(user2.id.get)
 
         uriRepo.count === 0
         val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -271,9 +265,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = t2.plusDays(1), state = KeepStates.ACTIVE,
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
-        (user1, user2, bookmark1, bookmark2, bookmark3)
+        (user1, user2, bookmark1, bookmark2, bookmark3, lib1)
       }
-
+      val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
       val keeps = db.readWrite { implicit s =>
         keepRepo.getByUser(user1.id.get, None, None, 100)
       }
@@ -309,7 +303,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "isPrivate":false,
             "createdAt":"${bookmark2.keptAt.toStandardTimeString}",
             "others":1,
-            "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}","libraryId":"lzmfsKLJyou6"}],
+            "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}","libraryId":"${pubLibId1.id}"}],
             "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg", "username":"test"}],
             "keepersOmitted": 0,
             "keepersTotal": 3,
@@ -321,7 +315,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "hashtags":[],
             "summary":{},
             "siteName":"Amazon",
-            "libraryId":"lzmfsKLJyou6"},
+            "libraryId":"${pubLibId1.id}"},
           {
             "id":"${bookmark1.externalId.toString}",
             "title":"G1",
@@ -329,7 +323,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "isPrivate":false,
             "createdAt":"${bookmark1.keptAt.toStandardTimeString}",
             "others":0,
-            "keeps":[{"id":"${bookmark1.externalId}", "mine":true, "removable":true, "visibility":"${bookmark1.visibility.value}", "libraryId":"lzmfsKLJyou6"}],
+            "keeps":[{"id":"${bookmark1.externalId}", "mine":true, "removable":true, "visibility":"${bookmark1.visibility.value}", "libraryId":"${pubLibId1.id}"}],
             "keepers":[],
             "keepersOmitted": 0,
             "keepersTotal": 1,
@@ -341,7 +335,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "hashtags":[],
             "summary":{},
             "siteName":"Google",
-            "libraryId":"lzmfsKLJyou6"}
+            "libraryId":"${pubLibId1.id}"}
         ]}
       """)
       Json.parse(contentAsString(result)) must equalTo(expected)
@@ -504,14 +498,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val keeper = KeepSource.keeper
       val initLoad = KeepSource.bookmarkImport
 
-      val libCommander = inject[LibraryCommander]
-
-      val (user, bookmark1, bookmark2, bookmark3) = db.readWrite { implicit s =>
+      val (user, bookmark1, bookmark2, bookmark3, lib1) = db.readWrite { implicit s =>
         val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test1"), normalizedUsername = "test1"))
         val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
-
-        libCommander.internSystemGeneratedLibraries(user1.id.get)
-        libCommander.internSystemGeneratedLibraries(user2.id.get)
 
         uriRepo.count === 0
         val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -533,8 +522,10 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = t2.plusDays(1), state = KeepStates.ACTIVE,
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
-        (user1, bookmark1, bookmark2, bookmark3)
+        (user1, bookmark1, bookmark2, bookmark3, lib1)
       }
+
+      val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
 
       val keeps = db.readWrite { implicit s =>
         keepRepo.getByUser(user.id.get, None, None, 100)
@@ -569,7 +560,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                 "isPrivate":false,
                 "createdAt":"2013-02-16T23:59:00.000Z",
                 "others":0,
-                "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}","libraryId":"lzmfsKLJyou6"}],
+                "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}","libraryId":"${pubLibId1.id}"}],
                 "keepers":[],
                 "keepersOmitted": 0,
                 "keepersTotal": 1,
@@ -581,7 +572,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                 "hashtags":[],
                 "summary":{},
                 "siteName":"Amazon",
-                "libraryId":"lzmfsKLJyou6"
+                "libraryId":"${pubLibId1.id}"
               }
             ]
           }
@@ -595,8 +586,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val user = db.readWrite { implicit session =>
         userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
       }
-
-      inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
       val path = com.keepit.controllers.mobile.routes.MobileKeepsController.saveCollection().url
       path === "/m/1/collections/create"
@@ -626,7 +615,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, collections) = db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-          inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
+
           val collectionRepo = inject[CollectionRepo]
           val collections = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("myCollaction1"))) ::
             collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("myCollaction2"))) ::

@@ -78,6 +78,7 @@ object UserValueName {
   val SITE_INTRODUCE_LIBRARY_MENU = UserValueName("site_introduce_library_menu")
 
   val AUTO_SHOW_GUIDE = UserValueName("auto_show_guide")
+  val FORCE_SHOW_PERSONA = UserValueName("force_show_persona") // for new users, show who-are-you modal on page land
 
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
@@ -141,9 +142,8 @@ object UserValues {
   val enterToSend = UserValueBooleanHandler(UserValueName.ENTER_TO_SEND, true)
   val maxResults = UserValueIntHandler(UserValueName.EXT_MAX_RESULTS, 1)
   val showExtMsgIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
-  val showLibraryIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_LIBRARY_INTRO, false)
 
-  val ExtUserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro, showLibraryIntro).map(_.name)
+  val ExtUserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro).map(_.name)
 
   val availableInvites = UserValueIntHandler(UserValueName.AVAILABLE_INVITES, 1000)
   val hasSeenInstall = UserValueBooleanHandler(UserValueName.HAS_SEEN_INSTALL, false)

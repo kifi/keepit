@@ -10,7 +10,7 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
 import scala.concurrent.duration.Duration
 
 case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
-  override val version = 19
+  override val version = 20
   val namespace = "library_metadata_by_id"
   def toKey(): String = id.id.toString
 }
@@ -165,7 +165,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |<meta name="twitter:url" content="$url">
       |<meta name="twitter:app:name:iphone" content="Kifi iPhone App">
       |<meta name="twitter:app:id:iphone" content="740232575">
-      |<meta name="twitter:app:url:iphone" content="kifi:/$urlPathOnly">
+      |<meta name="twitter:app:url:iphone" content="kifi://www.kifi.com$urlPathOnly">
       |<meta name="twitter:app:name:googleplay" content="Kifi Android App">
       |<meta name="twitter:app:id:googleplay" content="com.kifi">
       |<meta name="twitter:app:url:googleplay" content="kifi:/$urlPathOnly">

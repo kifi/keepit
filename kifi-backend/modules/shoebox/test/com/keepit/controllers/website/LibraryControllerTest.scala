@@ -303,7 +303,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"numFollowers":0
            |},
            |"membership":"owner",
-           |"listed": true
+           |"listed": true,
+           |"suggestedSearches": {"terms": [], "weights": []}
           }""".stripMargin))
 
         // viewed by another user with an invite
@@ -345,7 +346,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"numFollowers":0
            |},
            |"membership":"none",
-           |"listed": null
+           |"listed": null,
+           |"suggestedSearches": {"terms": [], "weights": []}
           }""".stripMargin))
       }
     }
@@ -427,7 +429,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"numFollowers":0
              |},
              |"membership":"owner",
-             |"listed": false
+             |"listed": false,
+             |"suggestedSearches": {"terms": [], "weights": []}
             |}""".stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
         Json.parse(contentAsString(result2)) must equalTo(expected)
@@ -721,7 +724,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         Json.parse(contentAsString(result2)) must equalTo(Json.parse(s"""[{"email":"squirtle@gmail.com","access":"${LibraryAccess.READ_INSERT.value}"}]"""))
         db.readOnlyMaster { implicit s =>
           val invitesToSquirtle = libraryInviteRepo.getWithLibraryId(lib1.id.get).filter(i => i.emailAddress.nonEmpty)
-          invitesToSquirtle.map(_.message) === Seq(None, Some("Here is another invite!"))
+          invitesToSquirtle.map(_.message) === Seq(None) // second invite doesn't persist because it was sent too close to previous one
         }
 
         inject[FakeUserActionsHelper].setUser(user2)

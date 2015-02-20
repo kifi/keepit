@@ -4,7 +4,8 @@
   contributors: Seq[User],
   followers: Seq[User],
   publicId: com.keepit.common.crypto.PublicId[Library],
-  relatedLibs: Seq[Library]
+  relatedLibs: Seq[Library],
+  suggestedSearches: String
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin(owner.firstName + " " + owner.lastName + "'s " + library.name, stylesheets = List("admin_library")) {
@@ -67,6 +68,18 @@
       </td>
     </tr>
   </table>
+
+  <div>
+    <h3>View and Edit Tag Clouds</h3>
+    <form id = "tag_cloud_form">
+     <textarea disabled id = "tag_cloud">@suggestedSearches</textarea>
+     <button type = 'button' id = "edit_tc">edit</button>
+     <button type = 'submit' id = 'save_tc'>save</button>
+     <button type = 'button' id = 'cancel_edit_tc'>cancel</button>
+  </form>
+
+  </div>
+
   <p>
     <a href="@com.keepit.controllers.admin.routes.AdminLibraryController.libraryKeepsView(library.id.get, 0)">Library Keeps</a>
   </p>
@@ -92,7 +105,50 @@
 }
 
 <script type="text/javascript">
+
+
   $(function() {
+
+    document.getElementById("edit_tc").addEventListener("click", startEdit, true);
+    disableEdit(true)
+
+    function disableEdit(disabled){
+        if (disabled){
+          $("#edit_tc").show()
+          $("#save_tc").hide()
+          $("#cancel_edit_tc").hide()
+          document.getElementById("tag_cloud").setAttribute('disabled', 'true')
+        } else {
+          document.getElementById("tag_cloud").removeAttribute('disabled')
+          $("#edit_tc").hide()
+          $("#save_tc").show()
+          $("#cancel_edit_tc").show()
+        }
+      }
+
+    function startEdit() {
+      var old = $("#tag_cloud").val()
+      disableEdit(false)
+      document.getElementById("cancel_edit_tc").addEventListener("click", function(){ cancelEditWith(old)}, true);
+    }
+
+    function cancelEditWith(old){
+      document.getElementById("tag_cloud").value = old
+      disableEdit(true)
+    }
+
+    $("#tag_cloud_form").submit(function(event){
+      event.preventDefault();
+
+      var text = $("#tag_cloud").val()
+      $.post("@com.keepit.controllers.admin.routes.AdminLibraryController.saveSuggestedSearches", {libId: @library.id, tc: text}).done(done).fail(fail);
+
+      function done(data) { disableEdit(true) }
+      function fail() { alert("bad things happened") }
+
+    });
+
+
     $("#state").change(function() {
       var $td = $(this).closest("td");
       var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
@@ -101,5 +157,8 @@
             $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
           });
     });
+
+
+
   });
 </script>

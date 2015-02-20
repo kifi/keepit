@@ -123,7 +123,6 @@ angular.module('kifi')
       },
       recos: function (opts) {
         return route('/recos/topV2', {
-          more: opts.more ? 1 : 0,
           recency: opts.recency,
           uriContext: opts.uriContext || [],
           libContext: opts.libContext || []
@@ -163,18 +162,14 @@ angular.module('kifi')
       ////////////////////////////
       // User registration      //
       ////////////////////////////
-      socialSignup: function(provider) {
-        return env.navBase + '/signup/' + provider;
+      socialSignup: function (provider) {
+        return '/signup/' + provider;
       },
-      tokenSocialSignup: function (provider) {
-        return env.navBase + '/auth/token-signup/' + provider;
+
+      socialSignupWithToken: function (provider) {
+        return route('/auth/token-signup/' + provider);
       },
-      socialSignupWithRedirect: function (provider, redirectPath, intent) {
-        return '/signup/' + provider + queryStr({
-          redirect: redirectPath,
-          intent: intent || []
-        });
-      },
+
       socialFinalize: env.navBase + '/auth/token-finalize',
       emailSignup: env.navBase + '/auth/email-signup',
 

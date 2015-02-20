@@ -14,17 +14,11 @@ import scala.util.{ Failure, Success }
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.ImageFetcher
-import com.keepit.common.store.{ S3ImageConfig, ImageSize, S3URIImageStore }
-import com.keepit.model._
 import com.keepit.scraper.{ URIPreviewFetchResult, NormalizedURIRef }
-import com.keepit.scraper.embedly.{ EmbedlyImage, EmbedlyClient }
-
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.keepit.common.net.URI
-import com.keepit.common.performance._
 import com.keepit.common.store.{ S3ImageConfig, S3URIImageStore }
-import com.keepit.model.{ ImageStoreFailureWithException, ImageInfo, PageInfo, URISummary }
+import com.keepit.model.{ ImageStoreFailureWithException, ImageInfo}
 import com.keepit.scraper.embedly.{ EmbedlyClient, EmbedlyImage }
 import com.keepit.scraper._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

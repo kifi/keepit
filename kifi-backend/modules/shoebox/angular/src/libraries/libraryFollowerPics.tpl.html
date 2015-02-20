@@ -11,7 +11,7 @@
         alt="{{follower.firstName}} {{follower.lastName}}">
     </a>
   </span>
-  <button class="kf-lfp-more" ng-if="numAdditionalFollowers" ng-click="showFollowers()">
-    <span class="kf-lfp-more-text">{{numAdditionalFollowers}}</span>
+  <button class="kf-lfp-more" ng-if="moreCountText" ng-click="showFollowers()">
+    <span class="kf-lfp-more-text kf-{{moreCountText.length}}">{{moreCountText}}</span>
   </button>
 </div>

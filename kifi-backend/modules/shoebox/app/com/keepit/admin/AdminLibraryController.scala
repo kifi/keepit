@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.LibraryCommander
+import com.keepit.commanders.{ LibrarySuggestedSearchCommander, LibraryCommander }
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -51,6 +51,7 @@ class AdminLibraryController @Inject() (
     db: Database,
     clock: Clock,
     searchClient: SearchServiceClient,
+    suggestedSearchCommander: LibrarySuggestedSearchCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
   def updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User]) = AdminUserPage { implicit request =>
@@ -76,6 +77,16 @@ class AdminLibraryController @Inject() (
       while (hasMore) {
         val from = page * pageSize
         val chunk: Seq[Keep] = keepRepo.getByLibrary(libraryId, from, from + pageSize, None) map { keep =>
+          val tags = keepToCollectionRepo.getByKeep(keep.id.get)
+          tags foreach { keepToTag =>
+            val origTag = collectionRepo.get(keepToTag.collectionId)
+            val tag = collectionRepo.getByUserAndName(toUserId, origTag.name, excludeState = None) match {
+              case None => collectionRepo.save(Collection(userId = toUserId, name = origTag.name))
+              case Some(existing) if !existing.isActive => collectionRepo.save(existing.copy(state = CollectionStates.ACTIVE, name = origTag.name))
+              case Some(existing) => existing
+            }
+            keepToCollectionRepo.save(keepToTag.copy(collectionId = tag.id.get))
+          }
           keepRepo.save(keep.copy(userId = toUserId))
         }
         hasMore = chunk.size >= pageSize
@@ -136,7 +147,7 @@ class AdminLibraryController @Inject() (
         libIds.map(libraryRepo.get)
       }
     }
-    val (library, owner, keepCount, contributors, followers) = db.readOnlyReplica { implicit session =>
+    val (library, owner, keepCount, contributors, followers, suggestedSearches) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(libraryId)
       val owner = userRepo.get(lib.ownerId)
       val keepCount = keepRepo.getCountByLibrary(libraryId)
@@ -144,11 +155,13 @@ class AdminLibraryController @Inject() (
 
       val contributors = members.filter(x => (x.access == LibraryAccess.READ_WRITE || x.access == LibraryAccess.READ_INSERT)).map { m => userRepo.get(m.userId) }
       val followers = members.filter(x => x.access == LibraryAccess.READ_ONLY).map { m => userRepo.get(m.userId) }
-      (lib, owner, keepCount, contributors, followers)
+      val terms = suggestedSearchCommander.getSuggestedTermsForLibrary(libraryId, limit = 25)
+      (lib, owner, keepCount, contributors, followers, terms)
     }
 
     simLibsFut.map { relatedLibs =>
-      Ok(html.admin.library(library, owner, keepCount, contributors, followers, Library.publicId(libraryId), relatedLibs))
+      val termsStr = suggestedSearches.terms.map { case (t, w) => t + ":" + w.toString }.mkString(", ")
+      Ok(html.admin.library(library, owner, keepCount, contributors, followers, Library.publicId(libraryId), relatedLibs, termsStr))
     }
   }
 
@@ -245,12 +258,6 @@ class AdminLibraryController @Inject() (
     Redirect(request.request.referer)
   }
 
-  def dumpLibraryURIIds(libId: Id[Library]) = Action { implicit request =>
-    val keeps = db.readOnlyReplica { implicit s => keepRepo.getByLibrary(libId, offset = 0, limit = Integer.MAX_VALUE) }
-    val ids = keeps.map { _.uriId }
-    Ok(Json.toJson(ids))
-  }
-
   def getLuceneDocument(libraryId: Id[Library]) = AdminUserPage.async { implicit request =>
     val libraryAndMemberships = db.readOnlyMaster { implicit session =>
       val library = libraryRepo.get(libraryId)
@@ -258,6 +265,15 @@ class AdminLibraryController @Inject() (
       LibraryAndMemberships(library, memberships)
     }
     searchClient.getLibraryDocument(libraryAndMemberships).map(Ok(_))
+  }
+
+  def saveSuggestedSearches() = AdminUserPage { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val libId = body.get("libId").get.toLong
+    val tc = body.get("tc").get
+    val terms = tc.trim.split(", ").map { token => val Array(term, weight) = token.split(":"); (term.trim, weight.trim.toFloat) }.toMap
+    suggestedSearchCommander.saveSuggestedSearchTermsForLibrary(Id[Library](libId), SuggestedSearchTerms(terms))
+    Ok
   }
 }
 

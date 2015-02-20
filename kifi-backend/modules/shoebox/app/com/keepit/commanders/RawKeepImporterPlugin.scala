@@ -3,6 +3,7 @@ package com.keepit.commanders
 import java.util.concurrent.{ Callable, TimeUnit }
 
 import com.google.common.cache.{ Cache, CacheBuilder }
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
@@ -13,6 +14,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 
 import com.google.inject.{ Provider, Inject, Singleton }
+import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success, Try }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
@@ -27,6 +29,12 @@ import play.api.libs.json.Json
 import com.keepit.search.SearchServiceClient
 
 private case object ProcessKeeps
+
+private object RawKeepImporterActor {
+  val throttleContentFetch = new ReactiveLock(1)
+  val sourcesToEnsureContentFetch = Set(KeepSource.twitterSync)
+}
+
 private class RawKeepImporterActor @Inject() (
     db: Database,
     rawKeepRepo: RawKeepRepo,
@@ -42,8 +50,10 @@ private class RawKeepImporterActor @Inject() (
     kifiInstallationRepo: KifiInstallationRepo,
     bookmarksCommanderProvider: Provider[KeepsCommander],
     libraryCommanderProvider: Provider[LibraryCommander],
+    uriSummaryCommander: URISummaryCommander,
     searchClient: SearchServiceClient,
-    clock: Clock) extends FortyTwoActor(airbrake) with Logging {
+    clock: Clock,
+    implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with Logging {
 
   private val batchSize = 500
   def receive = {
@@ -147,6 +157,13 @@ private class RawKeepImporterActor @Inject() (
 
           //the bookmarks list may be very large!
           searchClient.updateKeepIndex()
+          if (RawKeepImporterActor.sourcesToEnsureContentFetch.contains(source)) {
+            successes.foreach { keep =>
+              RawKeepImporterActor.throttleContentFetch.withLockFuture {
+                uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting = false)
+              }
+            }
+          }
 
           db.readWriteBatch(successesRawKeep) {
             case (session, rk) =>

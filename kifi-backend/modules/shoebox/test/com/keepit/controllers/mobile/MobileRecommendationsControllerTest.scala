@@ -16,7 +16,7 @@ import com.keepit.common.time._
 import com.keepit.controllers.website.RecommendationsController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.curator.model.{ FullLibRecoInfo, FullUriRecoInfo, RecoAttributionInfo, RecoAttributionKind, RecoKind, RecoMetaData, UriRecoItemInfo }
+import com.keepit.curator.model._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
@@ -161,11 +161,11 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
         withDb(modules: _*) { implicit injector =>
           topRecosSetup()
 
-          val call = com.keepit.controllers.mobile.routes.MobileRecommendationsController.topRecosV2(true, 0.75f)
-          call.url === "/m/2/recos/top?more=true&recency=0.75"
+          val call = routes.MobileRecommendationsController.topRecosV2(0.75f, true)
+          call.url === "/m/2/recos/top?recency=0.75&more=true"
           call.method === "GET"
 
-          val result = runCommonTopRecosTests(call, request => inject[MobileRecommendationsController].topRecosV2(true, 0.75f)(request))
+          val result = runCommonTopRecosTests(call, request => inject[MobileRecommendationsController].topRecosV2(0.75f, true)(request))
           val json = Json.parse(contentAsString(result)).asInstanceOf[JsArray]
           json.value.size == 2
 
@@ -174,6 +174,39 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
 
           json(libIdx) === Json.parse(expectedLibRecoInfosJson)
           json(keepIdx) === Json.parse(expectedRecoInfosJson)
+        }
+      }
+
+      "version 3 passes and receives context info" in {
+        withDb(modules: _*) { implicit injector =>
+          topRecosSetup()
+
+          val recoCommander = inject[RecommendationsCommander].asInstanceOf[FakeRecommendationsCommander]
+          recoCommander.uriRecoInfos = recoInfos
+          recoCommander.libRecoInfos = libRecoInfos
+
+          val call = routes.MobileRecommendationsController.topRecosV3(0.75f, None, None)
+          call.url === "/m/3/recos/top?recency=0.75"
+          call.method === "GET"
+
+          val request = FakeRequest(call).withHeaders(USER_AGENT -> "iKeefee/0.0.0 (Device-Type: NA, OS: iOS NA)")
+          val result = inject[MobileRecommendationsController].topRecosV3(0.75f, None, None)(request)
+
+          status(result) must equalTo(OK)
+          contentType(result) must beSome("application/json")
+
+          val js = Json.parse(contentAsString(result)) // expected: {"recos": [....], "uctx": "...", "lctx": "..."}
+          val recos = (js \ "recos")
+
+          val kind = (recos(0) \ "kind").as[String]
+          val (keepIdx, libIdx) = if (kind == "library") (1, 0) else (0, 1)
+
+          recos(libIdx) === Json.parse(expectedLibRecoInfosJson)
+          recos(keepIdx) === Json.parse(expectedRecoInfosJson)
+
+          (js \ "uctx").as[String] === "fake_uri_context"
+          (js \ "lctx").as[String] === "fake_lib_context"
+
         }
       }
     }
@@ -186,12 +219,12 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
 
         inject[UserActionsHelper].asInstanceOf[FakeUserActionsHelper].setUser(user, Set())
 
-        val route = com.keepit.controllers.mobile.routes.MobileRecommendationsController.topPublicRecos().url
+        val route = routes.MobileRecommendationsController.topPublicRecos().url
         route === "/m/1/recos/public"
 
-        val request = FakeRequest("GET", route)
+        val request = FakeRequest("GET", route).withHeaders(USER_AGENT -> "iKeefee/0.0.0 (Device-Type: NA, OS: iOS NA)")
 
-        val controller = inject[RecommendationsController]
+        val controller = inject[MobileRecommendationsController]
         val result: Future[Result] = controller.topPublicRecos()(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
@@ -220,7 +253,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
           explain = Some("because :-)")))
         inject[RecommendationsCommander].asInstanceOf[FakeRecommendationsCommander].uriRecoInfos = recoInfos
 
-        val result2: Future[Result] = controller.topRecos(true, 0.75f)(request)
+        val result2: Future[Result] = controller.topRecosV2(0.75f, true)(request)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 

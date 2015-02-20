@@ -31,11 +31,11 @@
             <div class="kf-rcl-stats">
               <div class="kf-rcl-stat">
                 <span class="kf-rcl-stat-name">Keeps</span>
-                <span class="kf-rcl-stat-val">{{library.numKeeps}}</span>
+                <span class="kf-rcl-stat-val">{{library.numKeeps | number}}</span>
               </div>
               <a class="kf-rcl-stat" ng-click="showFollowers()" href="javascript:">
                 <span class="kf-rcl-stat-name">Followers</span>
-                <span class="kf-rcl-stat-val">{{library.numFollowers}}</span>
+                <span class="kf-rcl-stat-val">{{library.numFollowers | number}}</span>
               </a>
             </div>
             <div kf-library-follower-pics num-followers="library.numFollowers" followers="library.followers"

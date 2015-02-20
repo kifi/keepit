@@ -336,13 +336,31 @@ invite-banner-orange = #ff7c3c
 
 .kf-lh-info
   margin-top: 16px
+  padding-top: 5px
   color: kifiBlack
   vertical-align: top
+
+.kf-lh-private-wrap
+  position: absolute
+  left: 0
+  right: 0
+  text-align: center
+
+.kf-lh-private
+  display: inline-block
+  line-height: 42px
+  border-radius: 21px
+  padding: 0 20px 0 44px
+  background-position: 19px 11px
+  background-size: 14px auto
+  background-repeat: no-repeat
+  background-color: libraryRed
+  color: #fff
+  font-size: 16px
 
 .kf-lh-owner
   position: relative
   padding-bottom: 10px
-  padding-top: 5px
 
 .kf-lh-owner-image
   display: inline-block
@@ -441,6 +459,20 @@ a.kf-lh-stat
   .kf-library-share-search
     vertical-align: top
 
+.kf-lh-follow-btn-wrap
+  display: inline-block
+  vertical-align: top
+  line-height: 0
+  z-index: 501
+
+  .kf-logged-out &
+    position: relative
+
+  .kf-loh-right>&
+    position: absolute
+    top: 14px
+    right: 0
+
 follow-unfollow-width = 112px
 
 .kf-lh-follow-btn
@@ -448,16 +480,8 @@ follow-unfollow-width = 112px
   width: follow-unfollow-width
   padding: 0
   background: #008aee
-  color: white
-
-  &.kf-stickable
-    position: relative
-    z-index: 501
-
-  .kf-loh-right>&
-    position: absolute
-    top: 14px
-    right: 0
+  color: #fff
+  position: relative  // to stack in front of its hover callout
 
   &::before  // moves the text slightly right
     content: ''

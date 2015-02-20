@@ -89,20 +89,21 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
           val uriRepo = inject[NormalizedURIRepo]
           val controller = inject[EmailRecosController]
 
-          val uri1 = db.readWrite { implicit rw =>
+          val (user1, uri1) = db.readWrite { implicit rw =>
+            val user1 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
             val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.scala-lang.org/documentation", Some("Scala")))
-            keepRepo.getByUser(Id[User](1)).size === 0
-            uri1
+            keepRepo.getByUser(user1.id.get).size === 0
+            (user1, uri1)
           }
 
           val call = com.keepit.controllers.email.routes.EmailRecosController.keepReco(uri1.externalId)
           call.toString === s"/r/e/1/recos/keep?id=${uri1.externalId}"
 
-          inject[FakeUserActionsHelper].setUser(User(Some(Id[User](1L)), firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
+          inject[FakeUserActionsHelper].setUser(user1)
           val result = controller.keepReco(uri1.externalId)(FakeRequest())
           status(result) === SEE_OTHER // redirect
           db.readOnlyMaster { implicit session =>
-            val keeps = keepRepo.getByUser(Id[User](1))
+            val keeps = keepRepo.getByUser(user1.id.get)
             keeps.size === 1
             keeps(0).uriId === uri1.id.get
             keeps(0).source === KeepSource.emailReco

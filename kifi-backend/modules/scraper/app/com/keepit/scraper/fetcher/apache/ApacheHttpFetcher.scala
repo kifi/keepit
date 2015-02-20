@@ -277,6 +277,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
       println(s"[scrape-end] $url")
     }
   }
+
   def fetch(url: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
     val HttpFetchHandlerResult(responseOpt, fetchInfo, httpGet, httpContext) = fetchHandler(url, ifModifiedSince, proxy)
     responseOpt match {
@@ -368,6 +369,10 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
         case ste: SocketTimeoutException =>
           val msg = s"SocketTimeoutException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
           log.warn(msg, ste)
+          HttpFetchStatus(statusCode = 500, message = Some(msg), context = new FetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
+        case cce: ConnectionClosedException =>
+          val msg = s"ConnectionClosedException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
+          log.warn(msg, cce)
           HttpFetchStatus(statusCode = 500, message = Some(msg), context = new FetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
         case e: Exception =>
           throw new Exception(s"on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]", e)

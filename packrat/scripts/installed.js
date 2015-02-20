@@ -26,7 +26,7 @@
       log('[onMessageEvent]', data);
       switch (data && data.type || data) {
       case 'start_guide':
-        api.port.emit('start_guide', data.pages);
+        api.port.emit('start_guide');
         break;
       case 'get_bookmark_count_if_should_import':
         api.port.emit('get_bookmark_count_if_should_import', function (count) {
