@@ -81,8 +81,7 @@ private[social] class SocialGraphActor @Inject() (
     case m => throw new UnsupportedActorMessage(m)
   }
 
-  // hotspot: need optimization; gathering timing info for analysis
-  private def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[SocialConnection] = timing(s"fetchUserInfo($socialUserInfo)") {
+  private def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[Id[SocialConnection]] = timing(s"fetchUserInfo($socialUserInfo)") {
     try {
       require(socialUserInfo.credentials.isDefined, s"SocialUserInfo's credentials are not defined: $socialUserInfo")
       require(socialUserInfo.state != SocialUserInfoStates.APP_NOT_AUTHORIZED, s"SocialUserInfo's state is not authorized, need to wait until user re-auth: $socialUserInfo")
