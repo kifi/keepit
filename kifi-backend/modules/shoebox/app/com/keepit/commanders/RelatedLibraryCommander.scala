@@ -112,7 +112,7 @@ class RelatedLibraryCommanderImpl @Inject() (
 
   def topicRelatedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]] = {
     cortex.similarLibraries(libId, limit = SUB_RETURN_SIZE).map { ids =>
-      db.readOnlyReplica { implicit s =>
+      db.readOnlyMaster { implicit s =>
         ids.map { id => libRepo.get(id) }
       }.filter(_.visibility == LibraryVisibility.PUBLISHED)
         .map { lib => RelatedLibrary(lib, RelatedLibraryKind.TOPIC) }
