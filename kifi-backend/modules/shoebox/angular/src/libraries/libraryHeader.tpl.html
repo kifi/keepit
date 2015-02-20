@@ -60,11 +60,11 @@
             <div class="kf-lh-stats">
               <div class="kf-lh-stat">
                 <span class="kf-lh-stat-name">Keeps</span>
-                <span class="kf-lh-stat-val">{{library.numKeeps}}</span>
+                <span class="kf-lh-stat-val">{{library.numKeeps | number}}</span>
               </div>
               <a class="kf-lh-stat" ng-click="showFollowers()" ng-if="isUserCreatedLibrary()" href="javascript:">
                 <span class="kf-lh-stat-name">Followers</span>
-                <span class="kf-lh-stat-val">{{library.numFollowers}}</span>
+                <span class="kf-lh-stat-val">{{library.numFollowers | number}}</span>
               </a>
             </div>
             <div kf-library-follower-pics num-followers="library.numFollowers" followers="library.followers"
