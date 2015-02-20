@@ -58,7 +58,7 @@ class PersonaRepoImpl @Inject() (
   }
 
   private val getByStateCompiled = Compiled { (state: Column[State[Persona]]) =>
-    (for (r <- rows if r.state === state) yield r).sortBy(_.createdAt)
+    (for (r <- rows if r.state === state) yield r).sortBy(x => (x.createdAt, x.id))
   }
   def getByState(state: State[Persona])(implicit session: RSession): Seq[Persona] = {
     getByStateCompiled(state).list
