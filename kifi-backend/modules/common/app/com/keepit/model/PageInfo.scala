@@ -70,7 +70,6 @@ case class PageInfo(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[PageInfo] = PageInfoStates.ACTIVE,
-    seq: SequenceNumber[PageInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     title: Option[String] = None,
     description: Option[String] = None,
@@ -79,7 +78,7 @@ case class PageInfo(
     safe: Option[Boolean] = None,
     lang: Option[String] = None,
     faviconUrl: Option[String] = None,
-    imageInfoId: Option[Id[ImageInfo]] = None) extends ModelWithState[PageInfo] with ModelWithSeqNumber[PageInfo] with PageGenericInfo with PageSafetyInfo {
+    imageInfoId: Option[Id[ImageInfo]] = None) extends ModelWithState[PageInfo] with Model[PageInfo] with PageGenericInfo with PageSafetyInfo {
   def withId(pageInfoId: Id[PageInfo]) = copy(id = Some(pageInfoId))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
   def withImageInfoId(imgInfoId: Id[ImageInfo]) = copy(imageInfoId = Some(imgInfoId))
@@ -92,7 +91,6 @@ object PageInfo {
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'state).format(State.format[PageInfo]) and
-    (__ \ 'seq).format(SequenceNumber.format[PageInfo]) and
     (__ \ 'uri_id).format(Id.format[NormalizedURI]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'description).formatNullable[String] and
