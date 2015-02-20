@@ -298,7 +298,8 @@ class WebsiteSearchController @Inject() (
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
         val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
         val librarySearcher = libraryIndexer.getSearcher
-        val publishedLibrariesCountByUser = userSearchResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByMember(librarySearcher, hit.id) }.toMap
+        val publishedLibrariesCountByMember = userSearchResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByMember(librarySearcher, hit.id) }.toMap
+        val publishedLibrariesCountByOwner = userSearchResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByOwner(librarySearcher, hit.id) }.toMap
         val relevantLibraryRecordsAndVisibity = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
         for {
           keepCountsByUser <- futureKeepCountsByUser
@@ -325,7 +326,8 @@ class WebsiteSearchController @Inject() (
                 "pictureName" -> user.pictureName,
                 "isFriend" -> friends.contains(hit.id.id),
                 "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
-                "libraryCount" -> publishedLibrariesCountByUser(hit.id),
+                "libraryCount" -> publishedLibrariesCountByOwner(hit.id),
+                "libraryMembershipCount" -> publishedLibrariesCountByMember(hit.id),
                 "keepCount" -> keepCountsByUser(hit.id),
                 "relevantLibrary" -> relevantLibrary
               )
