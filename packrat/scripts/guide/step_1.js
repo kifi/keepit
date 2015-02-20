@@ -55,6 +55,7 @@ k.guide.step1 = k.guide.step1 || function () {
   function show($guide, page) {
     if (!step) {
       k.tile.style.display = '';
+      page.nounOrOne = page.noun === 'page' ? 'one' : page.noun;
       var stepsCopy = steps.slice();
       stepsCopy[2] = $.extend({}, steps[2]);
       stepsCopy[2].arrow = $.extend({}, steps[2].arrow);
