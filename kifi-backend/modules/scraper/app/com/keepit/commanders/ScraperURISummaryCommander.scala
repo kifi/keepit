@@ -18,7 +18,7 @@ import com.keepit.scraper.{ URIPreviewFetchResult, NormalizedURIRef }
 
 import com.keepit.common.net.URI
 import com.keepit.common.store.{ S3ImageConfig, S3URIImageStore }
-import com.keepit.model.{ ImageStoreFailureWithException, ImageInfo}
+import com.keepit.model.{ ImageStoreFailureWithException, ImageInfo }
 import com.keepit.scraper.embedly.{ EmbedlyClient, EmbedlyImage }
 import com.keepit.scraper._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
