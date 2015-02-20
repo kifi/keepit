@@ -98,7 +98,7 @@ object Persona {
       noun = "page",
       query = "dim+sum",
       matches = createMatchJson(Seq((24, 3), (28, 3)), Seq((51, 3), (55, 3))),
-      track = "dimSumFoodie"
+      track = "dimSumFoodiePersona"
     ),
     PersonaName.SCIENCE_BUFF -> PersonaKeep(
       title = "The Physics of Popcorn",
@@ -116,7 +116,7 @@ object Persona {
       noun = "page",
       query = "habits+of+stylish+people",
       matches = createMatchJson(Seq((2, 6), (19, 7), (27, 6)), Seq((29, 6), (46, 7), (54, 6))),
-      track = "styleHabitsFashion"
+      track = "styleHabitsFashionPersona"
     ),
     PersonaName.HEALTH_NUT -> PersonaKeep(
       title = "We make exercise way too complicated. Here's how to get it right.",
@@ -125,7 +125,7 @@ object Persona {
       noun = "article",
       query = "exercise+and+working+out",
       matches = createMatchJson(Seq((8, 8)), Seq((43, 7))),
-      track = "complicatedFitnessHealth"
+      track = "complicatedFitnessHealthPersona"
     ),
     PersonaName.STUDENT -> PersonaKeep(
       title = "This Diagram Shows Cornell's Revolutionary Method For Taking Notes",
