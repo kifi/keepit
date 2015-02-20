@@ -29,14 +29,6 @@ angular.module('util', [])
       endsWith: function (str, suffix) {
         return str === suffix || str.indexOf(suffix, str.length - suffix.length) !== -1;
       },
-      upperCaseFirstLetterOfWords: function (strings) {
-        for (var i = 0; i < strings.length; i++) {
-          var currentStr = strings[i];
-          var newStr = currentStr.charAt(0).toUpperCase() + currentStr.slice(1);
-          strings[i] = newStr;
-        }
-        return strings;
-      },
       trimInput: function (input) {
         return input ? input.trim().replace(/\s+/g, ' ') : '';
       },
@@ -113,6 +105,17 @@ angular.module('util', [])
       validateUrl: function (keepUrl) {
         // Extremely simple for now, can be developed in the future
         return keepUrl.indexOf('.') !== -1;
+      },
+      toCamelCase: function (strings) { // given a list of strings, return a single camel cased string
+        var str = '';
+        for (var i=0; i < strings.length; i++) {
+          if (i === 0) {
+            str += strings[i].toLowerCase();
+          } else {
+            str += strings[i].charAt(0).toUpperCase() + strings[i].substr(1).toLowerCase();
+          }
+        }
+        return str;
       },
       htmlEscape: function (text) {
         function htmlEscapeReplace(ch) {

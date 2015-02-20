@@ -5,8 +5,6 @@ angular.module('kifi')
 .factory('routeService', [
   'env', 'util',
   function (env, util) {
-    var cdnImageBase = 'https://djty7jcqog9qu.cloudfront.net/'; // for dynamic images (keeps, library images, user profile pics, etc.)
-    var cdnAssetBase = 'https://d1dwdv9wd966qu.cloudfront.net/'; // for static assets (icons)
 
     function route(path, params) {
       return env.xhrBase + path + (params ? queryStr(params) : '');
@@ -27,8 +25,6 @@ angular.module('kifi')
     var queryStr = util.formatQueryString;
 
     return {
-      cdnImageBase : cdnImageBase,
-      cdnAssetBase : cdnAssetBase,
       disconnectNetwork: function (network) {
         return env.navBase + '/disconnect/' + network;
       },
@@ -253,13 +249,13 @@ angular.module('kifi')
       /////////////////////////////
       // User Personas           //
       /////////////////////////////
-      getAllPersonas: function() {
+      getAllPersonas: function () {
         return route('/user/personas');
       },
-      addPersona: function(personaName) {
+      addPersona: function (personaName) {
         return route('/user/personas/' + personaName);
       },
-      removePersona: function(personaName) {
+      removePersona: function (personaName) {
         return route('/user/personas/' + personaName);
       }
     };

@@ -1,19 +1,20 @@
-<div class="manage-persona dialog-content" ng-if="allPersonas.length > 0">
+<div class="kf-mp dialog-content" ng-if="allPersonas.length > 0">
   <div class="dialog-body-wrap">
     <div class="dialog-body">
       <h1 class="dialog-header"> Who are you? </h1>
 
-      <div class="persona-table">
-        <div ng-repeat="persona in allPersonas" class="persona-icon" ng-class="{active: persona.selected}" ng-click="toggleSelect(persona)">
-          <div class="persona-icon-image-wrapper">
-            <img class="persona-icon-image" src="{{persona.currentIconSrc}}">
+      <div class="kf-mp-table">
+        <div ng-repeat="persona in allPersonas" class="kf-mp-icon" ng-class="{active: persona.selected}" ng-click="toggleSelect(persona)">
+          <div class="kf-mp-icon-image-wrapper">
+            <img class="kf-mp-icon-image" src="{{persona.iconSrc}}" ng-if="!persona.selected">
+            <img class="kf-mp-icon-image" src="{{persona.activeIconSrc}}" ng-if="persona.selected">
           </div>
-          <div class="persona-icon-display-name">{{persona.displayName}}</div>
+          <div class="kf-mp-icon-display-name">{{persona.displayName}}</div>
         </div>
       </div>
 
       <div class="dialog-button">
-        <button class="manage-persona-exit-button" ng-class="{active: selectedPersonaIds.length > 0}" ng-click="close()">{{finishText}}</button>
+        <button class="kf-mp-exit-button" ng-class="{active: selectedPersonaIds.length > 0}" ng-click="close()">{{modalData.finishText || 'Update interests'}}</button>
       </div>
 
     </div>

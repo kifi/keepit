@@ -13,31 +13,34 @@ angular.module('kifi')
         // Scope data.
         //
         scope.selectedPersonaIds = [];
-        scope.finishText = scope.modalData && scope.modalData.finishText ? scope.modalData.finishText : 'Update interests';
 
         //
         // Scope methods.
         //
         scope.selectPersona = function(persona) {
           persona.selected = true;
-          persona.currentIconSrc = persona.activeIconSrc;
           scope.selectedPersonaIds.push(persona.id);
           userPersonaActionService.addPersona(persona.id);
 
           // to Camel Case Analytics
-          var personaAction = util.upperCaseFirstLetterOfWords(persona.id.split('_')).join('');
-          $analytics.eventTrack('user_clicked_page', {type: persona.id, action: 'selectedPersona' + personaAction});
+          var personaAction = ['selected','persona'].concat(persona.id.split('_'));
+          $analytics.eventTrack('user_clicked_page', {
+            type: persona.id,
+            action: util.toCamelCase(personaAction)
+          });
         };
 
         scope.unselectPersona = function(persona) {
           persona.selected = false;
-          persona.currentIconSrc = persona.iconSrc;
           _.pull(scope.selectedPersonaIds, persona.id);
           userPersonaActionService.removePersona(persona.id);
 
           // to Camel Case Analytics
-          var personaAction = util.upperCaseFirstLetterOfWords(persona.id.split('_')).join('');
-          $analytics.eventTrack('user_clicked_page', {type: persona.id, action: 'unselectedPersona' + personaAction});
+          var personaAction = ['unselected','persona'].concat(persona.id.split('_'));
+          $analytics.eventTrack('user_clicked_page', {
+            type: persona.id,
+            action: util.toCamelCase(personaAction)
+          });
         };
 
         scope.toggleSelect = function(persona) {
@@ -60,13 +63,12 @@ angular.module('kifi')
         // On link.
         //
         // call for List of Personas
-        var cdnBase = routeService.cdnAssetBase;
+        // todo (aaron): put this asset CDN base url into env?
+        var cdnBase = 'https://d1dwdv9wd966qu.cloudfront.net/'; // for static assets (icons)
         userPersonaActionService.getPersonas().then(function (data) {
           _.map(data.personas, function(p) {
-            p.displayName = p.displayName.toUpperCase();
             p.iconSrc = cdnBase + p.iconPath;
             p.activeIconSrc = cdnBase + p.activeIconPath;
-            p.currentIconSrc = p.selected ? p.activeIconSrc : p.iconSrc;
             if (p.selected) {
               scope.selectedPersonaIds.push(p.id);
             }
