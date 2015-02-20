@@ -165,12 +165,16 @@ angular.module('kifi')
       });
     }
 
-    // Load a new set of recommendations only on page refresh.
-    // Otherwise, load the recommendations we have previously shown.
-    if ($scope.recos.length > 0) {
+    function removeAlreadyKeptKeeps() {
       _.remove($scope.recos, function (reco) {
         return reco && reco.recoKeep && reco.recoKeep.isMyBookmark;
       });
+    }
+
+    // Load a new set of recommendations only on page refresh.
+    // Otherwise, load the recommendations we have previously shown.
+    removeAlreadyKeptKeeps();
+    if ($scope.recos.length > 0) {
       $scope.recosState = 'hasRecos';
     } else {
       reloadRecos();
