@@ -1,4 +1,8 @@
-<div class="suggested-searches" ng-if="termsWithActions">
-  <h2 class="suggested-searches-header"> SUGGESTED SEARCHES </h2>
-  <div class="suggested-search" ng-repeat="term in termsWithActions | limitTo: 10" ng-click="term.action()">{{term.name}}</div>
+<div class="kf-lss">
+  <h2 class="kf-lss-title">Suggested Searches</h2>
+  <ul>
+    <li class="kf-lss-query" ng-repeat="query in library.suggestedSearches | limitTo: 10">
+      <a class="kf-lss-query-a" href="{{library.url}}/find?q={{query}}">{{query}}</a>
+    </li>
+  </ul>
 </div>
