@@ -19,7 +19,7 @@ class LibraryFixedSetPersonaRecoPool @Inject() () extends FixedSetPersonaRecoPoo
 
 object FixedSetLibraryReco {
 
-  private def fakeMasterScore = 100f
+  val fakeMasterScore = 6f // empirically the upper bound. becomes invalid if scoring method changes
   private def fakeLibraryScores: LibraryScores = LibraryScores(socialScore = 1f, interestScore = 1f, recencyScore = 1f, popularityScore = 1f, sizeScore = 1f, contentScore = None)
 
   import PersonaName2Id.name2Id

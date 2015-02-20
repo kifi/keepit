@@ -18,7 +18,7 @@ class URIFixedSetPersonaRecoPool @Inject() () extends FixedSetPersonaRecoPool[No
 }
 
 object FixedSetURIReco {
-  private def fakeMasterScore: Float = 100f
+  val fakeMasterScore: Float = 18f // empirically the upper bound. becomes invalid if scoring method changes
   private def fakeUriScores: UriScores = UriScores(socialScore = 1f, popularityScore = 1f, overallInterestScore = 1f, recentInterestScore = 1f, recencyScore = 1f, priorScore = 1f, rekeepScore = 1f, discoveryScore = 1f, curationScore = None, multiplier = None, libraryInducedScore = None)
   import PersonaName2Id.name2Id
 
