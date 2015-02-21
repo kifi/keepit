@@ -1,5 +1,6 @@
 package com.keepit.common.social
 
+import com.keepit.common.api.{ FakeUriShortner, UriShortener }
 import com.keepit.model.SocialUserInfo
 import net.codingwell.scalaguice.ScalaMultibinder
 import scala.concurrent._
@@ -12,6 +13,7 @@ case class FakeSocialGraphModule() extends SocialGraphModule {
   def configure() {
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[TwitterSocialGraph].to[FakeTwitterSocialGraph]
+    bind[UriShortener].to[FakeUriShortner]
   }
 
 }

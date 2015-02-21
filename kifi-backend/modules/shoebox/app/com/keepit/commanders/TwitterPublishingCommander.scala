@@ -39,18 +39,19 @@ class TwitterPublishingCommander @Inject() (
           }
           val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
           val title = keep.title.getOrElse("interesting link")
-          val msg = twitterMessages.keepMessage(title.trim, keep.url.trim, library.name.trim, libraryUrl.trim)
-          log.info(s"twitting about user $userId keeping $title with msg = $msg of size ${msg.size}")
-          val imageOpt: Option[Future[TemporaryFile]] = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(1024, 512)).flatten.map { keepImage =>
-            keepImageStore.get(keepImage.imagePath)
-          } orElse {
-            libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)) map { libImage =>
-              libraryImageStore.get(libImage.imagePath)
+          twitterMessages.keepMessage(title.trim, keep.url.trim, library.name.trim, libraryUrl.trim) map { msg =>
+            log.info(s"twitting about user $userId keeping $title with msg = $msg of size ${msg.size}")
+            val imageOpt: Option[Future[TemporaryFile]] = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(1024, 512)).flatten.map { keepImage =>
+              keepImageStore.get(keepImage.imagePath)
+            } orElse {
+              libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)) map { libImage =>
+                libraryImageStore.get(libImage.imagePath)
+              }
             }
-          }
-          imageOpt match {
-            case None => twitterSocialGraph.sendTweet(sui, None, msg)
-            case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendTweet(sui, Some(imageFile.file), msg) }
+            imageOpt match {
+              case None => twitterSocialGraph.sendTweet(sui, None, msg)
+              case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendTweet(sui, Some(imageFile.file), msg) }
+            }
           }
       }
     } else {
