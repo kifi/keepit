@@ -291,7 +291,7 @@ class WebsiteSearchController @Inject() (
     // User Search
 
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
-      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, libraryContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
+      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, userContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
         val userIds = userSearchResult.hits.map(_.id).toSet
         val futureUsers = shoeboxClient.getBasicUsers(userIds.toSeq)
         val futureFriends = searchFactory.getFriends(userId)
