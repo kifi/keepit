@@ -16,6 +16,7 @@ import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
@@ -79,7 +80,7 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
 
     "query related libraries" in {
 
-      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], null)
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], inject[RelatedLibrariesCache], null)
 
       val libsF = commander.topicRelatedLibraries(Id[Library](1))
       Await.result(libsF, FiniteDuration(5, SECONDS)).map { _.library }.sortBy(_.id.get).map { _.id.get.id } === List(2, 3, 4, 5)
@@ -90,20 +91,20 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
     }
 
     "do not show non-publised libraries" in {
-      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], null)
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], inject[RelatedLibrariesCache], null)
       val libsF = commander.topicRelatedLibraries(Id[Library](10))
       Await.result(libsF, FiniteDuration(5, SECONDS)).map { _.library }.sortBy(_.id.get).map { _.id.get.id } === List()
     }
 
     "get libraries from same owner" in {
-      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], null)
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], inject[RelatedLibrariesCache], null)
       val libsF = commander.librariesFromSameOwner(Id[Library](1), minFollow = 1)
       Await.result(libsF, FiniteDuration(5, SECONDS)).map { _.library.id.get.id } === List(12)
     }
 
     "get top followed libraries" in {
 
-      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], null, null, fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], null)
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], null, null, fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], inject[RelatedLibrariesCache], null)
 
       val libsF = commander.topFollowedLibraries(5, 10)
       Await.result(libsF, FiniteDuration(5, SECONDS)).map { _.library }.sortBy(_.id.get).map { _.id.get.id } === List(6, 7, 8, 9, 10)
@@ -113,7 +114,7 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
 
     "fill in topic related libs, same owner libs, and popular libs in order" in {
 
-      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], null, null, fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], null)
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], null, null, fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], inject[RelatedLibrariesCache], null)
 
       val libsF = commander.suggestedLibraries(Id[Library](1))
       Await.result(libsF, FiniteDuration(5, SECONDS)).map { _.library }.sortBy(_.id.get).map { _.id.get.id }.toList === List(2, 3, 4, 5) ++ List(6, 7, 8, 9, 10)
@@ -127,7 +128,7 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
     }
 
     "get full library info for non-user" in {
-      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], null)
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], inject[RelatedLibrariesCache], null)
       val resF = commander.suggestedLibrariesInfo(Id[Library](1), None)
       val res = Await.result(resF, FiniteDuration(5, SECONDS))._1
       res.seq.sortBy(_.numFollowers).map { _.numFollowers } === List(1, 2, 3, 4, _: Int) // last one is random
@@ -135,7 +136,7 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
     }
 
     "do not show libraries user already know" in {
-      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], null)
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, inject[UserCommander], inject[LibraryQualityHelper], inject[RelatedLibrariesCache], null)
       val resF = commander.suggestedLibrariesInfo(Id[Library](1), Some(Id[User](1)))
       Await.result(resF, FiniteDuration(5, SECONDS))._1.size === 0
 
@@ -155,7 +156,7 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
       experimentCommander.addExperimentForUser(Id[User](6), ExperimentType.FAKE)
       experimentCommander.getExperimentsByUser(Id[User](6)).contains(ExperimentType.FAKE) === true
 
-      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, userCommander, inject[LibraryQualityHelper], null)
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, userCommander, inject[LibraryQualityHelper], inject[RelatedLibrariesCache], null)
       val resF = commander.suggestedLibrariesInfo(Id[Library](1), Some(Id[User](1)))
       Await.result(resF, FiniteDuration(5, SECONDS))._1.size === 0
 
@@ -173,10 +174,11 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
         }
       }
 
-      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], null, null, fakeCortex2, inject[UserCommander], inject[LibraryQualityHelper], null) {
+      val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], null, null, fakeCortex2, inject[UserCommander], inject[LibraryQualityHelper], inject[RelatedLibrariesCache], null) {
         override val DEFAULT_MIN_FOLLOW = 2
       }
 
+      inject[RelatedLibrariesCache].remove(RelatedLibariesKey(Id[Library](1)))
       val libsF = commander.suggestedLibraries(Id[Library](1))
       val libs = Await.result(libsF, FiniteDuration(5, SECONDS))
       libs.take(2).map { _.library }.map { _.id.get.id }.toList === List(2, 12) // 12 occurs as similar library
