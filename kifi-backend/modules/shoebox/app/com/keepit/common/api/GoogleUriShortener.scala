@@ -31,7 +31,7 @@ trait UriShortener {
 }
 
 class GoogleUriShortener @Inject() (
-    httpClient: HttpClient) extends Logging {
+    httpClient: HttpClient) extends Logging with UriShortener {
 
   def shorten(uri: String): Future[String] = {
     if (uri.length < 20) {
