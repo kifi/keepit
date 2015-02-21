@@ -3,7 +3,7 @@ package com.keepit.common.api
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ DirectUrl, HttpClient }
+import com.keepit.common.net.{ CallTimeouts, DirectUrl, HttpClient }
 import play.api.libs.json.{ Json, JsObject }
 
 import scala.concurrent.Future
@@ -39,11 +39,14 @@ class GoogleUriShortener @Inject() (
       Future.successful(uri)
     } else {
       val payload = Json.obj("longUrl" -> uri)
-      httpClient.withHeaders("Content-Type" -> "application/json").postFuture(GoogleUriShortener.RequestUrl, payload).map { res =>
-        val shortUrl = (res.json \ "id").as[String]
-        log.info(s"shorten [$uri] to [$shortUrl]")
-        shortUrl
-      }
+      httpClient
+        .withTimeout(CallTimeouts(Some(60000), Some(60000)))
+        .withHeaders("Content-Type" -> "application/json")
+        .postFuture(GoogleUriShortener.RequestUrl, payload).map { res =>
+          val shortUrl = (res.json \ "id").as[String]
+          log.info(s"shorten [$uri] to [$shortUrl]")
+          shortUrl
+        }
     }
   }
 }
