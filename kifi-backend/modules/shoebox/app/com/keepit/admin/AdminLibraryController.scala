@@ -28,6 +28,7 @@ case class LibraryStatistic(
 
 case class LibraryPageInfo(
   libraryStats: Seq[LibraryStatistic],
+  hotTodayWithStats: Seq[(Double, LibraryStatistic)],
   topDailyFollower: Seq[(Int, LibraryStatistic)],
   topDailyKeeps: Seq[(Int, LibraryStatistic)],
   libraryCount: Int,
@@ -96,7 +97,11 @@ class AdminLibraryController @Inject() (
   def index(page: Int = 0) = AdminUserPage { implicit request =>
     val pageSize = 30
     val topListSize = 15
-    val (stats, topDailyFollower, topDailyKeeps, totalPublishedCount) = db.readOnlyReplica { implicit session =>
+    val (stats, hotTodayWithStats, topDailyFollower, topDailyKeeps, totalPublishedCount) = db.readOnlyReplica { implicit session =>
+      val hotToday = if (page == 0) {
+        libraryMembershipRepo.percentGainSince(clock.now().minusHours(24), totalMoreThan = 0, recentMoreThan = 0, count = topListSize)
+      } else Seq()
+
       val topDailyFollower = if (page == 0) {
         libraryMembershipRepo.mostMembersSince(topListSize, clock.now().minusHours(24))
       } else Seq()
@@ -109,7 +114,7 @@ class AdminLibraryController @Inject() (
 
       val statsByLibraryId = {
         val pagedLibrariesById = pagePublished.map(lib => lib.id.get -> lib).toMap
-        val allLibraryIds = pagedLibrariesById.keySet ++ topDailyFollower.map(_._1) ++ topDailyKeeps.map(_._1)
+        val allLibraryIds = pagedLibrariesById.keySet ++ topDailyFollower.map(_._1) ++ topDailyKeeps.map(_._1) ++ hotToday.map(_._1)
         val librariesById = {
           val missingLibraryIds = allLibraryIds -- pagedLibrariesById.keys
           val missingLibraries = if (missingLibraryIds.nonEmpty) libraryRepo.getLibraries(missingLibraryIds) else Map.empty
@@ -119,13 +124,14 @@ class AdminLibraryController @Inject() (
         librariesById.mapValues(lib => buildLibStatistic(lib, usersById(lib.ownerId)))
       }
 
+      val hotTodayWithStats = hotToday.map { case (libId, _, _, growth) => (growth, statsByLibraryId(libId)) }
       val topDailyFollowerWithStats = topDailyFollower.map { case (libId, count) => (count, statsByLibraryId(libId)) }
       val topDailyKeepsWithStats = topDailyKeeps.map { case (libId, count) => (count, statsByLibraryId(libId)) }
       val pagePublishedWithStats = pagePublished.map { lib => statsByLibraryId(lib.id.get) }
 
-      (pagePublishedWithStats, topDailyFollowerWithStats, topDailyKeepsWithStats, libraryRepo.countPublished)
+      (pagePublishedWithStats, hotTodayWithStats, topDailyFollowerWithStats, topDailyKeepsWithStats, libraryRepo.countPublished)
     }
-    val info = LibraryPageInfo(libraryStats = stats, topDailyFollower = topDailyFollower, topDailyKeeps = topDailyKeeps, libraryCount = totalPublishedCount, page = page, pageSize = pageSize)
+    val info = LibraryPageInfo(libraryStats = stats, hotTodayWithStats = hotTodayWithStats, topDailyFollower = topDailyFollower, topDailyKeeps = topDailyKeeps, libraryCount = totalPublishedCount, page = page, pageSize = pageSize)
     Ok(html.admin.libraries(info))
   }
 
