@@ -111,7 +111,7 @@ class AdminLibraryController @Inject() (
     val topListSize = 15
     val (stats, hotTodayWithStats, topDailyFollower, topDailyKeeps, totalPublishedCount) = db.readOnlyReplica { implicit session =>
       val hotToday = if (page == 0) {
-        libraryMembershipRepo.percentGainSince(clock.now().minusHours(24), totalMoreThan = 0, recentMoreThan = 0, count = topListSize)
+        libraryMembershipRepo.percentGainSince(clock.now().minusHours(24), totalMoreThan = 10, recentMoreThan = 10, count = topListSize)
       } else Seq()
 
       val topDailyFollower = if (page == 0) {
