@@ -64,6 +64,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
         userCommander.setUsername(user2.id.get, Username("léo1221"))
 
         val router = inject[KifiSiteRouter]
+        val actionsHelper = inject[FakeUserActionsHelper].setUser(user1)
 
         router.route(NonUserRequest(FakeRequest.apply("GET", "/asdf"))) === Error404
 
@@ -98,7 +99,13 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/most-awesome-lib"))) must beAnInstanceOf[Angular]
 
         router.route(NonUserRequest(FakeRequest.apply("GET", "/invite"))) === RedirectToLogin("/invite")
-        router.route(UserRequest(FakeRequest.apply("GET", "/invite"), Id[User](1), None, inject[FakeUserActionsHelper])) must beAnInstanceOf[Angular]
+        router.route(UserRequest(FakeRequest.apply("GET", "/invite"), Id[User](1), None, actionsHelper)) must beAnInstanceOf[Angular]
+
+        // /me
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/me"))) === RedirectToLogin("/me")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/me/libraries/following"))) === RedirectToLogin("/me/libraries/following")
+        router.route(UserRequest(FakeRequest.apply("GET", "/me"), Id[User](1), None, actionsHelper)) === SeeOtherRoute("/abez")
+        router.route(UserRequest(FakeRequest.apply("GET", "/me/libraries/invited"), Id[User](1), None, actionsHelper)) === SeeOtherRoute("/abez/libraries/invited")
 
         1 === 1
       }
