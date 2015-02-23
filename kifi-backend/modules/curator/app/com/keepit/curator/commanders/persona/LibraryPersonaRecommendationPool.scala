@@ -11,9 +11,12 @@ trait LibraryPersonaRecommendationPool extends PersonaRecommendationPool[Library
 @Singleton
 class LibraryFixedSetPersonaRecoPool @Inject() () extends FixedSetPersonaRecoPool[Library, LibraryRecommendation] with LibraryPersonaRecommendationPool {
   val fixedRecos = FixedSetLibraryReco.recos
+  val specialBoostSet = Set(46862, 36680, 49078, 24103, 47498, 51798, 47889, 47191, 47494, 48661, 49090, 50874, 49135, 26460, 27238, 25168, 50812, 47488, 42651, 27760, 25368, 44475, 24203, 50862, 47284, 25000, 27545, 51496, 27049, 26465).map { Id[Library](_) }
+  val specialBoostScore = 2f
 
-  def generateRecoItemFromId(userId: Id[User], recoId: Id[Library]): LibraryRecommendation = {
-    FixedSetLibraryReco(userId, recoId)
+  def generateRecoItemFromId(userId: Id[User], recoId: Id[Library], applyBoost: Boolean): LibraryRecommendation = {
+    val perturb = perturbation(applyBoost)
+    FixedSetLibraryReco(userId, recoId, perturb)
   }
 }
 
@@ -26,11 +29,11 @@ object FixedSetLibraryReco {
 
   private def toLibraryList(ids: Seq[Int]): Seq[Id[Library]] = ids.map { Id[Library](_) }
 
-  def apply(userId: Id[User], libId: Id[Library]): LibraryRecommendation = {
+  def apply(userId: Id[User], libId: Id[Library], perturbation: Float): LibraryRecommendation = {
     LibraryRecommendation(
       userId = userId,
       libraryId = libId,
-      masterScore = fakeMasterScore,
+      masterScore = fakeMasterScore + perturbation,
       allScores = fakeLibraryScores
     )
   }
