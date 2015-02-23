@@ -3,7 +3,7 @@ package com.keepit.shoebox
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.cache.{ EhCacheCacheModule, MemcachedCacheModule, ShoeboxCacheModule }
 import com.keepit.common.controller.ProdShoeboxUserActionsModule
-import com.keepit.common.seo.{ ProdSiteMapGeneratorModule, DevSiteMapGeneratorModule }
+import com.keepit.common.seo.{ ProdSiteMapGeneratorModule }
 import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.graph.ProdGraphServiceClientModule
@@ -13,7 +13,6 @@ import com.keepit.social.ProdShoeboxSecureSocialModule
 import com.keepit.common.analytics.ProdAnalyticsModule
 import com.keepit.common.mail.ProdMailModule
 import com.keepit.common.store.ShoeboxDevStoreModule
-import com.keepit.classify.ProdDomainTagImporterModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.common.integration.ProdReaperModule
 import com.keepit.scraper.{ ProdScraperHealthMonitorModule, ProdScrapeSchedulerModule, ProdScraperServiceClientModule }
@@ -35,7 +34,6 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   // Shoebox Functional Modules
   analyticsModule = ProdAnalyticsModule(),
   //topicModelModule = LdaTopicModelModule(), //disable for now
-  domainTagImporterModule = ProdDomainTagImporterModule(),
   scrapeSchedulerModule = ProdScrapeSchedulerModule(),
   scraperHealthMonitorModule = ProdScraperHealthMonitorModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),
