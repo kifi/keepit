@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.concurrent.PimpMyFuture._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.common.api.UriShortener
@@ -23,24 +24,33 @@ class TwitterMessages @Inject() (
     if (libUrl.length + keepUrl.length + Overhead + title.length + libName.length <= 140) {
       Future.successful(message(title, keepUrl, libName, libUrl))
     } else {
-      shortner.shorten(keepUrl) map { shortenUrl =>
-        if (libUrl.length + shortenUrl.length + Overhead + title.length + libName.length <= 140) {
-          message(title, shortenUrl, libName, libUrl)
-        } else try {
-          val urlsLen = libUrl.length + shortenUrl.length
-          val overtext = contentLength + urlsLen + (2 * 3) - ContentSpace //the 3 stands for the "..."
-          assume(overtext >= 0, s"expecting overtext to be a positive number, its $overtext. contentLength = $contentLength, ContentSpace = $ContentSpace, title = $title, libName = $libName")
-          val maxLibName = libName.length - (overtext / 3)
-          val shortLibName = if (maxLibName < 20) libName else libName.abbreviate(maxLibName)
-          val shortTitle = if (title.size > ContentSpace - urlsLen - shortLibName.size) {
-            title.abbreviate(ContentSpace - urlsLen - 3 - shortLibName.size)
-          } else title
-          message(shortTitle, keepUrl, shortLibName, libUrl)
-        } catch {
-          case e: Exception =>
-            throw new Exception(s"could not create a keep message from [$title] [$keepUrl] [$libName] [$libUrl]", e)
+      val shortMessage = shortner.shorten(keepUrl) map { shortenKeepUrl: String =>
+        if (libUrl.length + shortenKeepUrl.length + Overhead + title.length + libName.length <= 140) {
+          Future.successful(message(title, shortenKeepUrl, libName, libUrl))
+        } else {
+          shortner.shorten(libUrl) map { shortenLibUrl =>
+            if (shortenLibUrl.length + shortenKeepUrl.length + Overhead + title.length + libName.length <= 140) {
+              message(title, shortenKeepUrl, libName, shortenLibUrl)
+            } else {
+              try {
+                val urlsLen = shortenLibUrl.length + shortenKeepUrl.length
+                val overtext = contentLength + urlsLen + (2 * 3) - ContentSpace //the 3 stands for the "..."
+                assume(overtext >= 0, s"expecting overtext to be a positive number, its $overtext. contentLength = $contentLength, ContentSpace = $ContentSpace, title = $title, libName = $libName")
+                val maxLibName = libName.length - (overtext / 3)
+                val shortLibName = if (maxLibName < 20) libName else libName.abbreviate(maxLibName)
+                val shortTitle = if (title.size > ContentSpace - urlsLen - shortLibName.size) {
+                  title.abbreviate(ContentSpace - urlsLen - 3 - shortLibName.size)
+                } else title
+                message(shortTitle, shortenKeepUrl, shortLibName, shortenLibUrl)
+              } catch {
+                case e: Exception =>
+                  throw new Exception(s"could not create a keep message from [$title] [$shortenKeepUrl] [$libName] [$shortenLibUrl]", e)
+              }
+            }
+          }
         }
       }
+      shortMessage.flatten
     }
   }
 
