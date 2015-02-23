@@ -158,14 +158,13 @@ angular.module('kifi')
       // User registration      //
       ////////////////////////////
       socialSignup: function (provider) {
+        return '/signup/' + provider;
+      },
+
+      socialSignupWithToken: function (provider) {
         return route('/auth/token-signup/' + provider);
       },
-      socialSignupWithRedirect: function (provider, redirectPath, intent) {
-        return '/signup/' + provider + queryStr({
-          redirect: redirectPath,
-          intent: intent || []
-        });
-      },
+
       socialFinalize: env.navBase + '/auth/token-finalize',
       emailSignup: env.navBase + '/auth/email-signup',
 

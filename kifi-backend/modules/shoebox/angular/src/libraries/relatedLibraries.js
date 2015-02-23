@@ -32,6 +32,4 @@ angular.module('kifi')
       }
     };
   }
-])
-
-;
+]);

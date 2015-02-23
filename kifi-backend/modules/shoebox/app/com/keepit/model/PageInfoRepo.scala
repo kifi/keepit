@@ -16,7 +16,7 @@ object PageInfoRepo {
 }
 
 @ImplementedBy(classOf[PageInfoRepoImpl])
-trait PageInfoRepo extends Repo[PageInfo] with SeqNumberFunction[PageInfo] {
+trait PageInfoRepo extends Repo[PageInfo] {
   def getByUri(uriId: Id[NormalizedURI])(implicit ro: RSession): Option[PageInfo]
 }
 
@@ -27,12 +27,12 @@ class PageInfoRepoImpl @Inject() (
   pageInfoUriCache: PageInfoUriCache,
   uriSummaryCache: URISummaryCache,
   airbrake: AirbrakeNotifier)
-    extends DbRepo[PageInfo] with PageInfoRepo with SeqNumberDbFunction[PageInfo] with Logging {
+    extends DbRepo[PageInfo] with PageInfoRepo with Logging {
 
   import db.Driver.simple._
 
   type RepoImpl = PageInfoTable
-  class PageInfoTable(tag: Tag) extends RepoTable[PageInfo](db, tag, "page_info") with SeqNumberColumn[PageInfo] {
+  class PageInfoTable(tag: Tag) extends RepoTable[PageInfo](db, tag, "page_info") {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def title = column[String]("title")
     def description = column[String]("description")
@@ -42,7 +42,7 @@ class PageInfoRepoImpl @Inject() (
     def lang = column[String]("lang")
     def faviconUrl = column[String]("favicon_url")
     def imageInfoId = column[Id[ImageInfo]]("image_info_id")
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, title.?, description.?, authors, publishedAt.?, safe.?, lang.?, faviconUrl.?, imageInfoId.?) <> ((PageInfo.apply _).tupled, PageInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, uriId, title.?, description.?, authors, publishedAt.?, safe.?, lang.?, faviconUrl.?, imageInfoId.?) <> ((PageInfo.apply _).tupled, PageInfo.unapply _)
   }
 
   def table(tag: Tag) = new PageInfoTable(tag)
@@ -65,7 +65,6 @@ class PageInfoRepoImpl @Inject() (
   override def save(model: PageInfo)(implicit session: RWSession): PageInfo = {
     import PageInfoRepo._
     val toSave = model.copy(
-      seq = deferredSeqNum(),
       title = model.title.map(_.take(titleColumnLength)),
       authors = PageAuthor.trimAsJson(model.authors, authorsColumnLength)
     )

@@ -56,14 +56,13 @@ class ExtUserControllerTest extends Specification with ShoeboxTestInjector with 
             {
               "keep":{
                 "url":"http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die",
-                "imagePath":"/img/guide/ted_jobs.jpg",
-                "imageWidth":480,
-                "imageHeight":425,
+                "image":{"url":"//d1dwdv9wd966qu.cloudfront.net/img/guide/ted_jobs.7878954.jpg","width":480,"height":425},
                 "noun":"video",
                 "query":"steve+jobs",
                 "title":"Steve Jobs: How to live before you die | Talk Video | TED.com",
                 "matches":{"title":[[0,5],[6,4]],"url":[[25,5],[31,4]]},"track":"steveJobsSpeech"
-              }
+              },
+              "library":null
             }
            """)
 
@@ -81,18 +80,22 @@ class ExtUserControllerTest extends Specification with ShoeboxTestInjector with 
           s"""
             {
               "keep":{
-                "url":"http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die",
-                "imagePath":"/img/guide/ted_jobs.jpg",
-                "imageWidth":480,
-                "imageHeight":425,
-                "noun":"video",
-                "query":"steve+jobs",
-                "title":"Steve Jobs: How to live before you die | Talk Video | TED.com",
-                "matches":{"title":[[0,5],[6,4]],"url":[[25,5],[31,4]]},"track":"steveJobsSpeech"
+                "url":"http://www.fastcoexist.com/3020622/the-rise-of-nostalgia-tech",
+                "image":{
+                  "url":"//d1dwdv9wd966qu.cloudfront.net/img/guide/nostalgia_tech.0232540.jpg",
+                  "width":480,
+                  "height":358
+                },
+                "noun":"article",
+                "query":"tech+trends",
+                "title":"The Rise Of Nostalgia Tech",
+                "matches":{"title":[[22,4]],"url":[[57,4]]},
+                "track":"nostalgiaTechiePersona"
               },
               "library":{
                 "id":"${Library.publicId(personaLibOpt.get.id.get).id}",
                 "name":"Techie Picks",
+                "path":"/spiderman/techie-picks",
                 "color":"${personaLibOpt.get.color.get.hex}"
               }
             }

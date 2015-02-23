@@ -1,0 +1,8 @@
+<div class="kf-lss">
+  <h2 class="kf-lss-title">Suggested Searches</h2>
+  <ul>
+    <li class="kf-lss-query" ng-repeat="query in library.suggestedSearches | limitTo: 10">
+      <a class="kf-lss-query-a" href="{{library.url}}/find?q={{query}}">{{query}}</a>
+    </li>
+  </ul>
+</div>

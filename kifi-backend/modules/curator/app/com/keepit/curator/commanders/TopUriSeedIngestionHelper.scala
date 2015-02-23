@@ -29,7 +29,7 @@ class TopUriSeedIngestionHelper @Inject() (
 
   val uriIngestionFreq = 120 //hours
 
-  val graphCallLimiterLock = new ReactiveLock(4)
+  val graphCallLimiterLock = new ReactiveLock(2)
 
   private def updateUserTrackItem(userTrackItem: LastTopUriIngestion, lastSeen: DateTime)(implicit session: RWSession): Unit = {
     lastTopUriIngestionRepo.save(userTrackItem.copy(
@@ -91,7 +91,7 @@ class TopUriSeedIngestionHelper @Inject() (
         }.take(2000).toMap //Last part (sort + take) is a stop gap
         val normalizationFactor = if (rescaledUriScores.isEmpty) 0.0f else rescaledUriScores.values.max
 
-        db.readWriteAsync { implicit session =>
+        db.readWriteAsync(attempts = 2) { implicit session =>
           if (firstTimeIngesting) {
             lastTopUriIngestionRepo.save(LastTopUriIngestion(userId = userId, lastIngestionTime = currentDateTime))
           } else {

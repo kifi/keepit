@@ -1,6 +1,6 @@
 {
-  "name": "kifi",
-  "short_name": "kifi",
+  "name": "Kifi Knowledge Keeper",
+  "short_name": "Kifi Keeper",
   "description": "Never lose the pages that matter to you most",
   "version": "see build.properties",
   "manifest_version": 2,

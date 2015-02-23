@@ -76,27 +76,6 @@ GET     /get                        @com.keepit.controllers.website.HomeControll
 
 POST    /ext/events                 @com.keepit.controllers.tracking.EventProxyController.track()
 
-#------ begin pre-library routes (ExtBookmarksController will be deprecated when libraries launch; see /ext/libraries section further down)
-
-POST    /ext/keeps                  @com.keepit.controllers.ext.ExtBookmarksController.keep
-# Note: /bookmarks/add is now for browser bookmark imports only
-POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
-# Note: /bookmarks/remove is deprecated. Use /ext/keeps/:id/unkeep instead.
-POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
-POST    /ext/keeps/:id/unkeep       @com.keepit.controllers.ext.ExtBookmarksController.unkeep(id: ExternalId[Keep])
-# Note: /bookmarks/private should be deprecated as soon as we move mobile onto it's own endpoitns for bookmarks entirely
-POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
-POST    /bookmarks/update           @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
-
-GET     /tags                       @com.keepit.controllers.ext.ExtBookmarksController.tags()
-POST    /tagsByUrl                  @com.keepit.controllers.ext.ExtBookmarksController.tagsByUrl()
-POST    /tags/add                   @com.keepit.controllers.ext.ExtBookmarksController.createAndApplyTag()
-POST    /tags/:id/removeFromKeep    @com.keepit.controllers.ext.ExtBookmarksController.removeTag(id: ExternalId[Collection])
-POST    /tags/:id/addToKeep         @com.keepit.controllers.ext.ExtBookmarksController.addTag(id: ExternalId[Collection])
-POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksController.clearTags()
-
-#------ end pre-library routes
-
 # Note: /kifi/start is deprecated. 3.2.12 and later use /ext/start instead.
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
 POST    /ext/start                  @com.keepit.controllers.ext.ExtAuthController.start
@@ -668,10 +647,7 @@ POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.getDomainTags
 POST    /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.saveDomainTags
 GET     /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
-GET     /admin/slider/classifications @com.keepit.controllers.admin.SliderAdminController.getClassifications(domain: Option[String])
 POST    /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
-GET     /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminController.refetchClassifications
-GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
 POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminController.killVersion(ver: String)

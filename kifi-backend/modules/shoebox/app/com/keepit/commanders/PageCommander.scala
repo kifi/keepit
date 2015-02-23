@@ -11,8 +11,8 @@ import com.keepit.common.net.URI
 import com.keepit.common.social._
 import com.keepit.curator.LibraryQualityHelper
 import com.keepit.model._
-import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationService }
-import com.keepit.search.{ SearchServiceClient }
+import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
 
@@ -134,12 +134,12 @@ class PageCommander @Inject() (
     libraryIds.map(libraryMap)
   }
 
-  def firstQualityFilter(libraries: Seq[Library]): Seq[Library] = {
+  def firstQualityFilterAndSort(libraries: Seq[Library]): Seq[Library] = {
     libraries.filterNot { lib =>
       require(lib.state == LibraryStates.ACTIVE, s"library is not active: $lib")
-      require(lib.kind == LibraryKind.USER_CREATED, s"library is not user created: $lib")
+      require(lib.kind == LibraryKind.USER_CREATED || lib.kind == LibraryKind.SYSTEM_PERSONA, s"library is not persona or user created: $lib")
       libraryQualityHelper.isBadLibraryName(lib.name)
-    }
+    } sortBy (lib => (lib.kind != LibraryKind.USER_CREATED, -1 * lib.memberCount))
   }
 
   def secondQualityFilter(libraries: Seq[Library], keepCounts: Map[Id[Library], Int]): Seq[Library] = libraries.filter { lib =>
@@ -168,7 +168,7 @@ class PageCommander @Inject() (
         val userIdSet = info.keepers.toSet
         val (basicUserMap, libraries, keepCounts) = db.readOnlyMaster { implicit session =>
           val notMyLibs = filterLibrariesUserDoesNotOwnOrFollow(info.libraries, userId)
-          val libraries = firstQualityFilter(notMyLibs)
+          val libraries = firstQualityFilterAndSort(notMyLibs)
           val keepCounts = keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet)
           val qualityLibraries = secondQualityFilter(libraries, keepCounts)
           val basicUserMap = basicUserRepo.loadAll(userIdSet ++ qualityLibraries.map(_.ownerId) - userId)

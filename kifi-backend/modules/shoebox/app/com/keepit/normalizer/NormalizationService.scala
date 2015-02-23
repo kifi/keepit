@@ -125,7 +125,7 @@ class NormalizationServiceImpl @Inject() (
   }
 
   private def migrate(currentReference: NormalizationReference, successfulCandidate: NormalizationCandidate, weakerCandidates: Seq[NormalizationCandidate]): Option[NormalizationReference] =
-    db.readWrite { implicit session =>
+    db.readWrite(attempts = 2) { implicit session =>
       val latestCurrentUri = normalizedURIRepo.get(currentReference.uriId)
       val isWriteSafe =
         latestCurrentUri.state != NormalizedURIStates.INACTIVE &&
@@ -204,6 +204,10 @@ class NormalizationServiceImpl @Inject() (
   }
 
   private def persistFailedAttempts(contentCheck: ContentCheck): Unit = {
-    contentCheck.getFailedAttempts().foreach { case (url1, url2) => db.readWrite { implicit session => failedContentCheckRepo.createOrIncrease(url1, url2) } }
+    contentCheck.getFailedAttempts().foreach {
+      case (url1, url2) => db.readWrite(attempts = 3) { implicit session =>
+        failedContentCheckRepo.createOrIncrease(url1, url2)
+      }
+    }
   }
 }

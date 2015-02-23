@@ -18,14 +18,14 @@
     <div class="kf-library-mini-card-stats-container">
       <span class="kf-library-mini-card-stat">
         <div class="kf-library-mini-card-stat-title">Keeps</div>
-        <div class="kf-library-mini-card-stat-num">{{library.numKeeps || 0}}</div>
+        <div class="kf-library-mini-card-stat-num">{{library.numKeeps || 0 | number}}</div>
       </span>
 
       <span class="kf-library-mini-card-vdivider"></span>
 
       <span class="kf-library-mini-card-stat">
         <div class="kf-library-mini-card-stat-title">Followers<div>
-        <div class="kf-library-mini-card-stat-num">{{library.numFollowers || 0}}</div>
+        <div class="kf-library-mini-card-stat-num">{{library.numFollowers || 0 | number}}</div>
       </span>
     </div>
   </div>

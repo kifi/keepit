@@ -16,8 +16,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.{ Failure, Success }
 
 class FacebookPublishingCommander @Inject() (
-    experimentCommander: LocalUserExperimentCommander,
-    db: Database,
+    val experimentCommander: LocalUserExperimentCommander,
+    val db: Database,
     socialUserInfoRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
     httpClient: HttpClient,
@@ -29,19 +29,19 @@ class FacebookPublishingCommander @Inject() (
 
   def publishKeep(userId: Id[User], keep: Keep, library: Library): Unit = {
     require(keep.userId == userId, s"User $userId cannot publish to Facebook a keep by user ${keep.userId}")
-    if (library.visibility == LibraryVisibility.PUBLISHED && hasFacebookExperiment(userId)) {
+    if (library.visibility == LibraryVisibility.PUBLISHED && hasExplicitShareExperiment(userId)) {
       db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.FACEBOOK) } match {
         case None => log.info(s"user $userId is not connected to facebook!")
         case Some(sui) =>
           val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
           val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
-          postOpenGraphAction(sui, facebookKeepAction, "library" -> libraryUrl, "object" -> keep.url)
+          postOpenGraphAction(sui, facebookKeepAction, "library" -> libraryUrl, "object" -> keep.url, "fb:explicitly_shared" -> "true")
       }
     }
   }
 
   def publishLibraryMembership(userId: Id[User], library: Library): Unit = {
-    if (library.visibility == LibraryVisibility.PUBLISHED && hasFacebookExperiment(userId)) {
+    if (library.visibility == LibraryVisibility.PUBLISHED && hasExplicitShareExperiment(userId)) {
       db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.FACEBOOK) } match {
         case None => log.info(s"user $userId is not connected to facebook!")
         case Some(sui) =>
@@ -50,10 +50,6 @@ class FacebookPublishingCommander @Inject() (
           postOpenGraphAction(sui, facebookJoinAction, "library" -> libraryUrl)
       }
     }
-  }
-
-  private def hasFacebookExperiment(userId: Id[User]) = {
-    db.readOnlyMaster { implicit session => experimentCommander.userHasExperiment(userId, ExperimentType.FACEBOOK_POST) }
   }
 
   protected def getFbAccessToken(socialUserInfo: SocialUserInfo): String = {
@@ -78,7 +74,7 @@ class FacebookPublishingCommander @Inject() (
         case Success(res) =>
           log.info(s"sent FB action with res = ${res.status}")
         case Failure(e) =>
-          airbrake.notify(s"FB didn't like our posting of action: $url", tracer.withCause(e))
+          airbrake.notify(s"FB didn't like our posting of action for action $action user ${socialUserInfo.userId} ${socialUserInfo.fullName} ${socialUserInfo.id.get} : $url", tracer.withCause(e))
       }
     }
   }

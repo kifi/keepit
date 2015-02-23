@@ -33,7 +33,7 @@ angular.module('kifi')
     function triggerGuide() {
       $window.postMessage({
         type: 'start_guide',
-        pages: [{
+        pages: [{  // TODO: remove pages once extension 3.3.41 is out of use
           url: 'http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die',
           image: ['/img/guide/ted_jobs.jpg', 480, 425],
           noun: 'video',

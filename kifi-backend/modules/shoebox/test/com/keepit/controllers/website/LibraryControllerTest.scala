@@ -724,7 +724,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         Json.parse(contentAsString(result2)) must equalTo(Json.parse(s"""[{"email":"squirtle@gmail.com","access":"${LibraryAccess.READ_INSERT.value}"}]"""))
         db.readOnlyMaster { implicit s =>
           val invitesToSquirtle = libraryInviteRepo.getWithLibraryId(lib1.id.get).filter(i => i.emailAddress.nonEmpty)
-          invitesToSquirtle.map(_.message) === Seq(None, Some("Here is another invite!"))
+          invitesToSquirtle.map(_.message) === Seq(None) // second invite doesn't persist because it was sent too close to previous one
         }
 
         inject[FakeUserActionsHelper].setUser(user2)

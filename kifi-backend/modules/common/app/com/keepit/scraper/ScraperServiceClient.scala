@@ -163,12 +163,12 @@ class ScraperServiceClientImpl @Inject() (
     val serviceCluster: ServiceCluster,
     val cacheProvider: ScraperCacheProvider) extends ScraperServiceClient with Logging {
 
-  val longTimeout = CallTimeouts(responseTimeout = Some(60000))
+  val longTimeout = CallTimeouts(responseTimeout = Some(60000), maxWaitTime = Some(60000), maxJsonParseTime = Some(60000))
   val superExtraLongTimeoutJustForEmbedly = CallTimeouts(responseTimeout = Some(250000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
   val httpClient = defaultHttpClient.withTimeout(longTimeout)
 
   def getBasicArticle(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
-    call(Scraper.internal.getBasicArticle, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map { r =>
+    call(Scraper.internal.getBasicArticle, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name)), callTimeouts = longTimeout).map { r =>
       r.json.validate[BasicArticle].asOpt
     }
   }
@@ -176,7 +176,7 @@ class ScraperServiceClientImpl @Inject() (
   private[this] val consolidateGetSignatureReq = new RequestConsolidator[String, Option[Signature]](5 minutes)
 
   def getSignature(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = consolidateGetSignatureReq(url) { url =>
-    call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map { r =>
+    call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name)), callTimeouts = longTimeout).map { r =>
       r.json.asOpt[String].map(Signature(_))
     }
   }
