@@ -155,7 +155,11 @@ class AngularRouter @Inject() (
 
   // combined to re-use User lookup
   private def userOrLibrary(request: MaybeUserRequest[_], path: Path, userAgent: UserAgent): Option[Routeable] = {
-    if (path.split.length > 0) {
+    if (path.primary.toLowerCase == "me") {
+      Some(request.userOpt.map { user =>
+        SeeOtherRoute("/" + (user.username.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/"))
+      }.getOrElse(RedirectToLogin("/" + path.path)))
+    } else if (path.split.length > 0) {
       val userOpt = userCommander.getUserByUsernameOrAlias(Username(path.primary))
 
       userOpt.flatMap {

@@ -37,6 +37,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def updateLastEmailSent(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
   def getMemberCountSinceForLibrary(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
+  def percentGainSince(since: DateTime, totalMoreThan: Int, recentMoreThan: Int, count: Int)(implicit session: RSession): Seq[(Id[Library], Int, Int, Double)]
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
   def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
@@ -159,6 +160,33 @@ class LibraryMembershipRepoImpl @Inject() (
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
     import StaticQuery.interpolation
     sql"""select lm.library_id, count(*) as cnt from library_membership lm, library l where l.id = lm.library_id and l.state='active' and l.visibility='published' and lm.created_at > $since group by lm.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
+  }
+
+  def percentGainSince(since: DateTime, totalMoreThan: Int, recentMoreThan: Int, count: Int)(implicit session: RSession): Seq[(Id[Library], Int, Int, Double)] = {
+    import StaticQuery.interpolation
+    sql"""
+         SELECT tp.library_id,
+                tp.new_followers,
+                count(lm2.id) AS total_followers,
+                new_followers/count(lm2.id) AS growth
+         FROM
+           (SELECT lm.library_id,
+                   count(*) AS new_followers
+            FROM library_membership lm,
+                 library l
+            WHERE l.id = lm.library_id
+              AND l.state='active'
+              AND l.visibility='published'
+              AND lm.created_at > $since
+            GROUP BY lm.library_id
+            HAVING new_followers > $recentMoreThan
+            ORDER BY new_followers DESC) tp, library_membership lm2
+         WHERE lm2.library_id = tp.library_id
+         GROUP BY tp.library_id
+         HAVING total_followers > $totalMoreThan
+         ORDER BY growth DESC
+         LIMIT $count
+       """.as[(Id[Library], Int, Int, Double)].list
   }
 
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)] = {

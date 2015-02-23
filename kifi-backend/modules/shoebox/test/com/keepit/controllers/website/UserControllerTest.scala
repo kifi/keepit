@@ -194,7 +194,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result2) must beSome("application/json")
         Json.parse(contentAsString(result2)) === Json.obj(
           "auto_show_guide" -> JsNull,
-          "force_show_persona" -> JsNull,
+          "auto_show_persona" -> JsNull,
           "library_sorting_pref" -> "name",
           "show_delighted_question" -> false,
           "site_introduce_library_menu" -> JsNull,

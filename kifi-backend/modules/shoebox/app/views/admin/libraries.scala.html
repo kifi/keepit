@@ -9,24 +9,46 @@
   <h2>Top libraries by followers in past 24 hours</h2>
   <table class="table table-bordered">
     <tr>
-      <th>Cnt</th>
-      <th>#</th>
+      <th>New followers</th>
       <th>Owner</th>
       <th>Name</th>
-      <th>Slug</th>
       <th>Keeps</th>
       <th>Members</th>
       <th>Invites</th>
       <th>Date Created</th>
       <th>Date Updated</th>
     </tr>
-  @for(((count,libStat),i) <- libraryData.topDailyFollower.zipWithIndex) {
+  @for((count,libStat) <- libraryData.topDailyFollower) {
     <tr>
       <td>@count</td>
-      <td>@{i+1}</td>
       <td>@adminHelper.userDisplay(libStat.owner)</td>
-      <td>@adminHelper.libraryDisplay(libStat.library)</td>
-      <td><a href="https://www.kifi.com/@{libStat.owner.username.value}/@{libStat.library.slug.value}">@libStat.library.slug.value</a></td>
+      <td>@adminHelper.libraryDisplay(libStat.library) <b><a href="https://www.kifi.com/@{libStat.owner.username.value}/@{libStat.library.slug.value}">→</a></b></td>
+      <td>@libStat.numKeeps</td>
+      <td>@libStat.numMembers</td>
+      <td>@libStat.numInvites</td>
+      <td>@adminHelper.dateTimeDisplay(libStat.library.createdAt)</td>
+      <td>@adminHelper.dateTimeDisplay(libStat.library.updatedAt)</td>
+    </tr>
+  }
+  </table>
+
+  <h2>Hot libraries in past 24 hours</h2>
+  <table class="table table-bordered">
+    <tr>
+      <th>Growth</th>
+      <th>Owner</th>
+      <th>Name</th>
+      <th>Keeps</th>
+      <th>Members</th>
+      <th>Invites</th>
+      <th>Date Created</th>
+      <th>Date Updated</th>
+    </tr>
+  @for((growth,libStat) <- libraryData.hotTodayWithStats) {
+    <tr>
+      <td>@{"%.0f%%".format(growth*100)}</td>
+      <td>@adminHelper.userDisplay(libStat.owner)</td>
+      <td>@adminHelper.libraryDisplay(libStat.library) <b><a href="https://www.kifi.com/@{libStat.owner.username.value}/@{libStat.library.slug.value}">→</a></b></td>
       <td>@libStat.numKeeps</td>
       <td>@libStat.numMembers</td>
       <td>@libStat.numInvites</td>
@@ -39,11 +61,9 @@
   <h2>Top libraries by keeps in past 24 hours</h2>
   <table class="table table-bordered">
     <tr>
-      <th>Cnt</th>
-      <th>#</th>
+      <th>New keeps</th>
       <th>Owner</th>
       <th>Name</th>
-      <th>Slug</th>
       <th>Keeps</th>
       <th>Members</th>
       <th>Invites</th>
@@ -53,10 +73,8 @@
   @for(((count,libStat),i) <- libraryData.topDailyKeeps.zipWithIndex) {
     <tr>
       <td>@count</td>
-      <td>@{i+1}</td>
       <td>@adminHelper.userDisplay(libStat.owner)</td>
-      <td>@adminHelper.libraryDisplay(libStat.library)</td>
-      <td><a href="https://www.kifi.com/@{libStat.owner.username.value}/@{libStat.library.slug.value}">@libStat.library.slug.value</a></td>
+      <td>@adminHelper.libraryDisplay(libStat.library) <b><a href="https://www.kifi.com/@{libStat.owner.username.value}/@{libStat.library.slug.value}">→</a></b></td>
       <td>@libStat.numKeeps</td>
       <td>@libStat.numMembers</td>
       <td>@libStat.numInvites</td>

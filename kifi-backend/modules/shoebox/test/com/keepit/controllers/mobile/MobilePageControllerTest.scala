@@ -3,7 +3,6 @@ package com.keepit.controllers.mobile
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.classify.FakeDomainTagImporterModule
 
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule

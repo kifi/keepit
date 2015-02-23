@@ -85,7 +85,7 @@ class UserFromLibrariesScoreVectorSource(
         val ownerId = ownerIdDocValues.get(docId)
         if (idFilter.findIndex(ownerId) < 0) { // use findIndex to avoid boxing
           // write to the buffer
-          output.alloc(writer, Visibility.MEMBER | Visibility.HAS_SECONDARY_ID, 8) // ownerId (8 bytes)
+          output.alloc(writer, Visibility.MEMBER, 8) // ownerId (8 bytes)
           writer.putLong(ownerId)
           explanation.foreach(_.collectBufferScoreContribution(ownerId, -1, Visibility.MEMBER, Array.empty[Int], 0, 0))
         }

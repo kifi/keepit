@@ -28,14 +28,12 @@ class SliderAdminController @Inject() (
   kifiInstallationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   domainTagRepo: DomainTagRepo,
-  domainClassifier: DomainClassifier,
   sensitivityUpdater: SensitivityUpdater,
   domainToTagRepo: DomainToTagRepo,
   domainRepo: DomainRepo,
   userRepo: UserRepo,
   kifiInstallationStore: KifiInstallationStore,
   userValueRepo: UserValueRepo,
-  domainTagImporter: DomainTagImporter,
   heimdal: HeimdalServiceClient,
   eliza: ElizaServiceClient)
     extends AdminUserActions {
@@ -78,17 +76,6 @@ class SliderAdminController @Inject() (
       domainTagRepo.all
     }
     Ok(html.admin.domainTags(tags))
-  }
-
-  def getClassifications(domain: Option[String]) = AdminUserPage.async { implicit request =>
-    domain.map(domainClassifier.fetchTags)
-      .getOrElse(promise[Seq[DomainTagName]].success(Seq()).future).map { tags =>
-        val tagPairs = tags.map { t =>
-          val tag = db.readOnlyReplica { implicit s => domainTagRepo.get(t) }
-          (t.name, tag.map(_.sensitive.getOrElse(false)))
-        }
-        Ok(html.admin.classifications(domain, tagPairs))
-      }
   }
 
   def saveDomainTags = AdminUserPage { implicit request =>
@@ -147,42 +134,6 @@ class SliderAdminController @Inject() (
       }
     }
     Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
-  }
-
-  def refetchClassifications = /* TODO: AdminJson */ Action { implicit request =>
-    domainTagImporter.refetchClassifications()
-    Ok(JsObject(Seq()))
-  }
-
-  def getImportEvents = AdminUserPage.async { implicit request =>
-    import com.keepit.classify.DomainTagImportEvents._
-
-    val eventsFuture = heimdal.getRawEvents[SystemEvent](50, 42000, SystemEventTypes.IMPORTED_DOMAIN_TAGS).map { rawEvents =>
-      rawEvents.value.map { json =>
-        val createdAt = DateTimeJsonFormat.reads(json \ "time" \ "$date").get
-        val context = (json \ "context").as[HeimdalContext]
-        val eventName = context.getSeq[String]("eventName").get.head
-        val description = eventName match {
-          case IMPORT_START => "Full import started"
-          case IMPORT_TAG_SUCCESS => "Tag %s imported (%d added, %d removed, %d total domains)".format(
-            context.getSeq[String]("tagName").get.head,
-            context.getSeq[Double]("numDomainsAdded").get.head.toInt,
-            context.getSeq[Double]("numDomainsRemoved").get.head.toInt,
-            context.getSeq[Double]("totalDomains").get.head.toInt
-          )
-          case IMPORT_SUCCESS => "Domains imported (%d added, %d removed, %d total domains)".format(
-            context.getSeq[Double]("numDomainsAdded").get.head.toInt,
-            context.getSeq[Double]("numDomainsRemoved").get.head.toInt,
-            context.getSeq[Double]("totalDomains").get.head.toInt
-          )
-          case REMOVE_TAG_SUCCESS => "Tag %s removed".format(context.getSeq[String]("tagName").get.head)
-          case IMPORT_FAILURE => context.getSeq[String]("message").get.head
-        }
-        ImportEvent(createdAt, eventName, description)
-      }.sortBy(_.createdAt).reverse
-    }
-
-    eventsFuture.map { events => Ok(html.admin.domainImportEvents(events)) }
   }
 
   def getVersionForm = AdminUserPage { implicit request =>

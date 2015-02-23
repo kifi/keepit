@@ -145,7 +145,7 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private def saveScoredSeedItems(items: Seq[ScoredSeedItemWithAttribution], userId: Id[User], newState: UserRecommendationGenerationState) =
-    db.readWrite { implicit s =>
+    db.readWrite(attempts = 2) { implicit s =>
       items foreach { item =>
         val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
         recoOpt.map { reco =>
