@@ -13,7 +13,8 @@ angular.module('kifi')
     $scope.recosState = 'loading';
     $scope.initialCardClosed = false;
     $scope.noMoreRecos = false;
-    $scope.autoShowPersona = profileService.prefs.auto_show_persona;
+    $scope.showHints = false;
+    $scope.autoShowPersona = undefined;
 
     $scope.getMore = function (opt_recency) {
       $scope.loading = true;
@@ -172,13 +173,15 @@ angular.module('kifi')
       });
     }
 
-    // Load a new set of recommendations only on page refresh.
-    // Otherwise, load the recommendations we have previously shown.
-    removeAlreadyKeptKeeps();
-    if ($scope.recos.length > 0) {
-      $scope.recosState = 'hasRecos';
-    } else {
-      reloadRecos();
+    function initRecos() {
+      // Load a new set of recommendations only on page refresh.
+      // Otherwise, load the recommendations we have previously shown.
+      removeAlreadyKeptKeeps();
+      if ($scope.recos.length > 0) {
+        $scope.recosState = 'hasRecos';
+      } else {
+        reloadRecos();
+      }
     }
 
     $scope.showDelightedSurvey = profileService.prefs.show_delighted_question;
@@ -203,8 +206,15 @@ angular.module('kifi')
       return profileService.prefs.auto_show_persona;
     }, function (newValue, oldValue) {
       $scope.autoShowPersona = newValue;
+
+      // load recommendations only when autoShowPersona is set to non-true
+      if (newValue === null) {
+        initRecos();
+      }
+
+      // stop listening when autoShowPersona from true -> null (means we're closing the auto-show-persona)
       if (!newValue && oldValue) {
-        // stop listening when autoShowPersona from true -> null (means we're closing the auto-show-persona)
+        $scope.showHints = true;
         unregisterAutoShowPersona();
       }
     });
