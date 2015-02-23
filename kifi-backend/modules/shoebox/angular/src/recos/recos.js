@@ -13,6 +13,7 @@ angular.module('kifi')
     $scope.recosState = 'loading';
     $scope.initialCardClosed = false;
     $scope.noMoreRecos = false;
+    $scope.autoShowPersona = profileService.prefs.auto_show_persona;
 
     $scope.getMore = function (opt_recency) {
       $scope.loading = true;
@@ -111,16 +112,16 @@ angular.module('kifi')
       $scope.initialCardClosed = true;
     };
 
+    // click on 'update your interests'
     $scope.showPersonaModal = function() {
       $analytics.eventTrack('user_clicked_page', {type: 'yourKeeps', action: 'clickedUpdateInterests'});
       modalService.open({
-        template: 'persona/managePersonaModal.tpl.html',
-        modalData: {
-          onClose: function() {
-            reloadRecos(true);
-          }
-        }
+        template: 'persona/managePersonaModal.tpl.html'
       });
+    };
+
+    $scope.closeAutoShowPersonas = function() {
+      profileService.savePrefs({'auto_show_persona' : null});
     };
 
 
@@ -197,6 +198,16 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
+
+    var unregisterAutoShowPersona = $scope.$watch(function () {
+      return profileService.prefs.auto_show_persona;
+    }, function (newValue, oldValue) {
+      $scope.autoShowPersona = newValue;
+      if (!newValue && oldValue) {
+        // stop listening when autoShowPersona from true -> null (means we're closing the auto-show-persona)
+        unregisterAutoShowPersona();
+      }
+    });
   }
 ])
 

@@ -9,9 +9,7 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
-        forceClose: '=',
-        disableScroll: '=',
-        escapable: '='
+        disableScroll: '='
       },
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
@@ -30,10 +28,7 @@ angular.module('kifi')
           $document.off('keydown', onDocKeyDown);
         }
 
-        $scope.close = this.close = function (closeAction, forceEscape) {
-          if (_.isBoolean($scope.escapable) && !$scope.escapable && !forceEscape) {
-            return;
-          }
+        $scope.close = this.close = function (closeAction) {
           onCloseOrDestroy();
           modalService.close();
 
@@ -60,12 +55,6 @@ angular.module('kifi')
 
         scope.backdropStyle.opacity = attrs.kfOpacity || 0.3;
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
-
-        scope.$watch('forceClose', function (newVal, oldVal) {
-          if (!oldVal && newVal) {
-            scope.close();
-          }
-        });
 
         if (!scope.disableScroll) {
           element.find('.dialog-body').css({'overflow-y': 'auto', 'overflow-x': 'hidden'});

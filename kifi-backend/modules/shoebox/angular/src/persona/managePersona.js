@@ -2,17 +2,20 @@
 
 angular.module('kifi')
 
-.directive('kfManagePersona', [ 'userPersonaActionService', 'routeService', '$analytics', 'util',
-  function (userPersonaActionService, routeService, $analytics, util) {
+.directive('kfManagePersona', [ 'userPersonaActionService', 'routeService', '$analytics', 'util', 'modalService', '$rootScope',
+  function (userPersonaActionService, routeService, $analytics, util, modalService, $rootScope) {
     return {
       restrict: 'A',
-      require: '^kfModal',
+      scope: {
+        closeAction: '='
+      },
       templateUrl: 'persona/managePersona.tpl.html',
-      link: function (scope, element, attrs, kfModalCtrl) {
+      link: function (scope, element) {
         //
         // Scope data.
         //
         scope.selectedPersonaIds = [];
+        scope.closeText = element.is('#kf-modal *') ? 'Update interests' : 'Done';
 
         //
         // Scope methods.
@@ -53,10 +56,14 @@ angular.module('kifi')
 
         scope.close = function() {
           if (scope.selectedPersonaIds.length > 0) {
-            var closeFunc = scope.modalData ? scope.modalData.onClose : undefined;
-            kfModalCtrl.close(closeFunc, true);
+            if (_.isFunction(scope.closeAction)) {
+              scope.closeAction();
+            } else if (element.is('#kf-modal *')) {
+              $rootScope.$emit('refreshRecos');
+              modalService.close();
+            }
+            $analytics.eventTrack('user_clicked_page', {action: 'closed'});
           }
-          $analytics.eventTrack('user_clicked_page', {action: 'closed'});
         };
 
         //

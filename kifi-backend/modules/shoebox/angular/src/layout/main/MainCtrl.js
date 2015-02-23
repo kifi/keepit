@@ -256,36 +256,14 @@ angular.module('kifi')
       $rootElement.find('body').addClass('mac');
     }
 
-    function startGuide() {
-      if (installService.installedVersion) {
+
+    var unregisterAutoShowGuide = $rootScope.$watch(function () {
+      return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide && !profileService.prefs.auto_show_persona);
+    }, function (show) {
+      if (show) {
         extensionLiaison.triggerGuide();
         profileService.savePrefs({auto_show_guide: null});
-      }
-    }
-
-    function showPersonaModal() {
-      modalService.open({
-        template: 'persona/managePersonaUnescapableModal.tpl.html',
-        modalData: {
-          onClose: function() {
-            profileService.savePrefs({auto_show_persona: null});
-            if (profileService.prefs.auto_show_guide) { // start guide after showing persona modal
-              startGuide();
-            }
-            $rootScope.$emit('refreshRecos');
-          },
-          finishText: 'Done'
-        }
-      });
-    }
-
-    $rootScope.$watchCollection(function () {
-      return [profileService.prefs.auto_show_guide, profileService.prefs.auto_show_persona];
-    }, function () {
-      if (profileService.prefs.auto_show_persona) {
-        showPersonaModal();
-      } else if (profileService.prefs.auto_show_guide) {
-        startGuide();
+        unregisterAutoShowGuide();
       }
     });
   }
