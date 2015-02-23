@@ -39,6 +39,7 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   scrapeSchedulerModule = ProdScrapeSchedulerModule(),
   scraperHealthMonitorModule = ProdScraperHealthMonitorModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),
+  twilioCredentialsModule = ProdTwilioCredentialsModule(),
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
 ) with CommonProdModule {
   // Service clients

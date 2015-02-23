@@ -52,6 +52,7 @@ abstract class ShoeboxModule(
     val scrapeSchedulerModule: ScrapeSchedulerModule,
     val scraperHealthMonitorModule: ScraperHealthMonitorModule,
     val fjMonitorModule: ForkJoinContextMonitorModule,
+    val twilioCredentialsModule: TwilioCredentialsModule,
     val shoeboxTasksModule: ShoeboxTasksPluginModule = ShoeboxTasksPluginModule()) extends ConfigurationModule with CommonServiceModule {
   //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients
