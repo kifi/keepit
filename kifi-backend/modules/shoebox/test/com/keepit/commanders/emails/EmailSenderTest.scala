@@ -137,13 +137,13 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === SystemEmailAddress.SUPPORT.address
 
           val html = email.htmlBody.value
-          email.subject === "Billy Madison accepted your Kifi friend request"
+          email.subject === "Billy Madison accepted your invitation to connect"
           html must contain("""<a href="http://dev.ezkeep.com:9000/billy?""")
-          html must contain("""Billy Madison</a> accepted your Kifi friend request""")
+          html must contain("""Billy Madison</a> accepted your invitation to connect""")
           html must contain("""<a href="http://dev.ezkeep.com:9000/billy?utm_source=fromFriends&amp;utm_medium=email&amp;utm_campaign=friendRequestAccepted&amp;utm_content=friendConnectionMade&amp;kcid=friendRequestAccepted-email-fromFriends&amp;dat=eyJsIjoiZnJpZW5kQ29ubmVjdGlvbk1hZGUiLCJjIjpbXSwidCI6W119&amp;kma=1"><img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Billy Madison" width="73" height="73" style="display:block;" border="0"/></a>""")
 
           val text = email.textBody.get.value
-          text must contain("""Billy Madison accepted your Kifi friend request""")
+          text must contain("""Billy Madison accepted your invitation to connect""")
         }
       }
     }
@@ -196,7 +196,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           val email = testFriendConnectionMade(toUser, NotificationCategory.User.CONNECTION_MADE, Some(FACEBOOK))
           val html = email.htmlBody.value
           val text = email.textBody.get.value
-          email.subject === "You are now friends with Billy Madison on Kifi!"
+          email.subject === "You and Billy Madison are now connected on Kifi!"
           html must contain("utm_campaign=connectionMade")
           html must contain("You have a new connection on Kifi")
           html must contain("""Your Facebook friend, <a href="http://dev.ezkeep.com:9000/billy?""")
@@ -225,18 +225,18 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.to === Seq(EmailAddress("billy@gmail.com"))
-        email.subject === "Johnny Manziel sent you a friend request."
+        email.subject === "Johnny Manziel wants to connect with you on Kifi"
         email.fromName === Some(s"Johnny Manziel (via Kifi)")
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.FRIEND_REQUEST)
         val html = email.htmlBody.value
         html must contain("Hi Billy")
-        html must contain("Johnny Manziel wants to be your kifi friend")
+        html must contain("Johnny Manziel wants to connect with you on Kifi.")
         html must contain("utm_campaign=friendRequest")
 
         val text = email.textBody.get.value
         text must contain("Hi Billy")
-        text must contain("Johnny Manziel wants to be your kifi friend")
-        text must contain("Add Johnny by visiting the link below")
+        text must contain("Johnny Manziel wants to connect with you on Kifi.")
+        text must contain("You can visit this link to accept the invitation")
       }
     }
   }
@@ -263,14 +263,14 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.CONTACT_JOINED)
         val html = email.htmlBody.value
         html must contain("Hi Billy,")
-        html must contain("Johnny Manziel just joined kifi.")
+        html must contain("Johnny Manziel just joined Kifi.")
         html must contain("utm_campaign=contactJoined")
         html must contain("friend=" + fromUser.externalId)
 
         val text = email.textBody.get.value
         text must contain("Hi Billy,")
-        text must contain("Johnny Manziel just joined kifi.")
-        text must contain("to add Johnny as a friend")
+        text must contain("Johnny Manziel just joined Kifi.")
+        text must contain("to invite Johnny to connect on Kifi")
         text must contain("friend=" + fromUser.externalId)
       }
     }

@@ -1,9 +1,9 @@
-<div kf-modal class="kf-unfriend-confirm-modal">
-  <div kf-basic-modal-content with-cancel="true" title="Unfriend {{name}}?" with-warning action="reallyUnfriend()">
-    Are you sure you want to unfriend this user?
-    <ul>
-      <li> You will not see each other's results </li>
-      <li> You will not be able to send messages to each other </li>
+<div kf-modal>
+  <div kf-basic-modal-content with-cancel="true" title="Remove connection?" with-warning action="reallyUnfriend()">
+    If you remove this connection with {{name}}:
+    <ul class="kf-unfriend-confirm-ul">
+      <li>You’ll no longer see each other’s keeps in search results.</li>
+      <li>You’ll no longer be able to send messages to each other.</li>
     </ul>
   </div>
 </div>

@@ -1,11 +1,11 @@
 @(toUserId: Id[User], otherUserId: Id[User])
 @import com.keepit.common.mail.template.helpers._
 
-Hi @firstName(toUserId)
+Hi @firstName(toUserId),
 
-@fullName(otherUserId) wants to be your kifi friend. Woo hoo
+@fullName(otherUserId) wants to connect with you on Kifi. Woo hoo!
 
-Add @firstName(otherUserId) by visiting the link below:
+You can visit this link to accept the invitation.
 @acceptFriendUrl(otherUserId, "acceptBtn")
 
 Have a great day,
