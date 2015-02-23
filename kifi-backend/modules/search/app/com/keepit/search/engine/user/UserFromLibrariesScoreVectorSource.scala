@@ -18,6 +18,7 @@ class UserFromLibrariesScoreVectorSource(
     protected val searcher: Searcher,
     protected val userId: Long,
     protected val friendIdsFuture: Future[Set[Long]],
+    protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     filter: SearchFilter,
     protected val config: SearchConfig,
@@ -84,9 +85,9 @@ class UserFromLibrariesScoreVectorSource(
         val ownerId = ownerIdDocValues.get(docId)
         if (idFilter.findIndex(ownerId) < 0) { // use findIndex to avoid boxing
           // write to the buffer
-          output.alloc(writer, Visibility.MEMBER | Visibility.HAS_SECONDARY_ID, 8 + 8) // ownerId (8 bytes), libId (8 bytes)
-          writer.putLong(ownerId, libId)
-          explanation.foreach(_.collectBufferScoreContribution(ownerId, libId, Visibility.MEMBER, Array.empty[Int], 0, 0))
+          output.alloc(writer, Visibility.MEMBER, 8) // ownerId (8 bytes)
+          writer.putLong(ownerId)
+          explanation.foreach(_.collectBufferScoreContribution(ownerId, -1, Visibility.MEMBER, Array.empty[Int], 0, 0))
         }
       }
     }

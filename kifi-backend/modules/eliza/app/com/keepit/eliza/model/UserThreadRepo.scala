@@ -43,9 +43,9 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getRawNotification(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): RawNotification
 
-  def getLatestRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
+  def getLatestRawNotifications(userId: Id[User], howMany: Int, filterByReplyable: Option[Boolean])(implicit session: RSession): List[RawNotification]
 
-  def getRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
+  def getRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, filterByReplyable: Option[Boolean])(implicit session: RSession): List[RawNotification]
 
   def getLatestUnreadRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
 
@@ -213,27 +213,52 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.user === userId && row.threadId === threadId) yield (row.lastNotification, row.unread, row.uriId.?)).first
   }
 
-  def getLatestRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
-    (for (
-      row <- rows if row.user === userId &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-        row.lastNotification.isNotNull
-    ) yield row)
-      .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
-      .list
+  def getLatestRawNotifications(userId: Id[User], howMany: Int, filterByReplyable: Option[Boolean])(implicit session: RSession): List[RawNotification] = {
+    filterByReplyable.map { replyable =>
+      (for (
+        row <- rows if row.user === userId &&
+          row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+          row.lastNotification.isNotNull &&
+          row.replyable === replyable
+      ) yield row)
+        .sortBy(row => (row.notificationUpdatedAt) desc)
+        .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
+        .list
+    } getOrElse {
+      (for (
+        row <- rows if row.user === userId &&
+          row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+          row.lastNotification.isNotNull
+      ) yield row)
+        .sortBy(row => (row.notificationUpdatedAt) desc)
+        .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
+        .list
+    }
   }
 
-  def getRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
-    (for (
-      row <- rows if row.user === userId &&
-        row.notificationUpdatedAt < time &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-        row.lastNotification.isNotNull
-    ) yield row)
-      .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
-      .list
+  def getRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, filterByReplyable: Option[Boolean])(implicit session: RSession): List[RawNotification] = {
+    filterByReplyable.map { replyable =>
+      (for (
+        row <- rows if row.user === userId &&
+          row.notificationUpdatedAt < time &&
+          row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+          row.lastNotification.isNotNull &&
+          row.replyable === replyable
+      ) yield row)
+        .sortBy(row => (row.notificationUpdatedAt) desc)
+        .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
+        .list
+    } getOrElse {
+      (for (
+        row <- rows if row.user === userId &&
+          row.notificationUpdatedAt < time &&
+          row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+          row.lastNotification.isNotNull
+      ) yield row)
+        .sortBy(row => (row.notificationUpdatedAt) desc)
+        .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
+        .list
+    }
   }
 
   def getLatestUnreadRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {

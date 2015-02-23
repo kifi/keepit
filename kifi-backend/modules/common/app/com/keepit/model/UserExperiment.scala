@@ -49,6 +49,7 @@ object ExperimentType {
   val ADMIN = ExperimentType("admin")
   val AUTO_GEN = ExperimentType("autogen")
   val FAKE = ExperimentType("fake")
+  val BYPASS_ABUSE_CHECKS = ExperimentType("bypass_abuse_checks")
   val VISITED = ExperimentType("visited")
   val NO_SEARCH_EXPERIMENTS = ExperimentType("no search experiments")
   val CAN_MESSAGE_ALL_USERS = ExperimentType("can message all users")
@@ -66,19 +67,18 @@ object ExperimentType {
   val CORTEX_NEW_MODEL = ExperimentType("cortex_new_model")
   val CURATOR_DIVERSE_TOPIC_RECOS = ExperimentType("curator_diverse_topic_recos")
   val NEW_PUBLIC_FEED = ExperimentType("new_public_feed")
+
   val PROFILES_BETA = ExperimentType("profiles_beta")
   val TWITTER_BETA = ExperimentType("twitter_beta")
   val ACTIVITY_EMAIL = ExperimentType("activity_email")
-  val FACEBOOK_POST = ExperimentType("facebook_post")
-  val TWEET_ALL = ExperimentType("tweet_all")
   val ALL_KEEPS_VIEW = ExperimentType("all_keeps_view")
   val EXPLICIT_SOCIAL_POSTING = ExperimentType("explicit_social_posting")
 
-  val _ALL = ADMIN :: AUTO_GEN :: FAKE :: VISITED :: NO_SEARCH_EXPERIMENTS ::
+  val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
     MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH ::
     GRAPH_BASED_PEOPLE_TO_INVITE :: NEW_KEEP_NOTIFICATIONS :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
-    NEW_PUBLIC_FEED :: PROFILES_BETA :: TWITTER_BETA :: ACTIVITY_EMAIL :: FACEBOOK_POST :: ALL_KEEPS_VIEW :: TWEET_ALL :: EXPLICIT_SOCIAL_POSTING :: Nil
+    NEW_PUBLIC_FEED :: PROFILES_BETA :: TWITTER_BETA :: ACTIVITY_EMAIL :: ALL_KEEPS_VIEW :: EXPLICIT_SOCIAL_POSTING :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL.map(e => e.value -> e).toMap
 

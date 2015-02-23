@@ -93,7 +93,8 @@ class KeepsCommander @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     hashtagTypeahead: HashtagTypeahead,
     keepDecorator: KeepDecorator,
-    socialPublishingCommander: AllSocialPublishingCommander,
+    twitterPublishingCommander: TwitterPublishingCommander,
+    facebookPublishingCommander: FacebookPublishingCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getKeepsCountFuture(): Future[Int] = {
@@ -264,13 +265,13 @@ class KeepsCommander @Inject() (
   }
 
   // TODO: if keep is already in library, return it and indicate whether userId is the user who originally kept it
-  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): (Keep, Boolean) = {
+  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean) = {
     log.info(s"[keep] $rawBookmark")
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
     val (keep, isNewKeep) = keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId).get
-    postSingleKeepReporting(keep, isNewKeep, library)
+    postSingleKeepReporting(keep, isNewKeep, library, socialShare)
     (keep, isNewKeep)
   }
 
@@ -582,7 +583,7 @@ class KeepsCommander @Inject() (
   }
 
   //todo(hopefully not Léo): this method does not report to analytics, let's fix this after we get rid of Collection
-  def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String])(implicit context: HeimdalContext): Either[String, (Keep, Seq[Collection])] = {
+  def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String], socialShare: SocialShare)(implicit context: HeimdalContext): Either[String, (Keep, Seq[Collection])] = {
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
@@ -610,15 +611,15 @@ class KeepsCommander @Inject() (
           curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
           keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
         }
-        postSingleKeepReporting(keep, isNewKeep, library)
+        postSingleKeepReporting(keep, isNewKeep, library, socialShare)
         Right((keep, tags))
     }
   }
 
-  private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library): Unit = SafeFuture {
-    if (isNewKeep) {
-      socialPublishingCommander.publishKeep(keep.userId, keep, library)
-    }
+  private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library, socialShare: SocialShare): Unit = SafeFuture {
+    log.info(s"postSingleKeepReporting for user ${keep.userId} with $socialShare keep ${keep.title}")
+    if (socialShare.twitter) twitterPublishingCommander.publishKeep(keep.userId, keep, library)
+    if (socialShare.facebook) facebookPublishingCommander.publishKeep(keep.userId, keep, library)
     searchClient.updateKeepIndex()
     curator.updateUriRecommendationFeedback(keep.userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
   }

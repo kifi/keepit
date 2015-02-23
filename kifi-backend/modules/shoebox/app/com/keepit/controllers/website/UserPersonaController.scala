@@ -9,6 +9,7 @@ import com.keepit.common.time.Clock
 import com.keepit.heimdal.{ HeimdalContextBuilderFactory }
 import com.keepit.model._
 import play.api.libs.json.Json
+import play.api.libs.concurrent.Execution.Implicits._
 
 class UserPersonaController @Inject() (
   db: Database,
@@ -38,14 +39,16 @@ class UserPersonaController @Inject() (
     Ok(Json.obj("personas" -> Json.toJson(personaObjs)))
   }
 
-  def addPersona(personaStr: String) = UserAction { request =>
+  def addPersona(personaStr: String) = UserAction.async { request =>
     implicit val context = heimdalContextFactory.withRequestInfoAndSource(request, KeepSource.site).build
     val personaName = PersonaName(personaStr)
-    val (personaOpt, _) = userPersonaCommander.addPersonaForUser(request.userId, personaName)
-    if (personaOpt.isEmpty)
-      BadRequest(Json.obj("error" -> s"failed to add persona ${personaName} for ${request.userId}"))
-    else
-      NoContent
+    userPersonaCommander.addPersonaForUser(request.userId, personaName).map {
+      case (personaOpt, _) =>
+        if (personaOpt.isEmpty)
+          BadRequest(Json.obj("error" -> s"failed to add persona ${personaName} for ${request.userId}"))
+        else
+          NoContent
+    }
   }
 
   def removePersona(personaStr: String) = UserAction { request =>

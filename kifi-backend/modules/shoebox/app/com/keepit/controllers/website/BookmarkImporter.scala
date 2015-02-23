@@ -12,6 +12,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.URI
 import com.keepit.common.social.twitter.RawTweet
+import com.keepit.common.util.UrlClassifier
 import com.keepit.model._
 
 import play.api.libs.json._
@@ -41,6 +42,7 @@ class BookmarkImporter @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
     rawKeepFactory: RawKeepFactory,
+    urlClassifier: UrlClassifier,
     keepInterner: KeepInterner,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
     keepsCommander: KeepsCommander,
@@ -236,7 +238,7 @@ class BookmarkImporter @Inject() (
 
   private def rawTweetToBookmarks(tweet: RawTweet): Seq[Bookmark] = {
     val tags = tweet.entities.hashtags.map(_.text).toList
-    tweet.entities.urls.map { url =>
+    tweet.entities.urls.filterNot(url => urlClassifier.socialActivityUrl(url.expandedUrl)).map { url =>
       Bookmark(title = None, href = url.expandedUrl, tags = tags, createdDate = Some(tweet.createdAt), originalJson = Some(tweet.originalJson))
     }
   }

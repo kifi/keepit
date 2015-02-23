@@ -15,8 +15,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
 class TwitterPublishingCommander @Inject() (
-    experimentCommander: LocalUserExperimentCommander,
-    db: Database,
+    val experimentCommander: LocalUserExperimentCommander,
+    val db: Database,
     socialUserInfoRepo: SocialUserInfoRepo,
     keepImageCommander: KeepImageCommander,
     libraryImageCommander: LibraryImageCommander,
@@ -28,7 +28,8 @@ class TwitterPublishingCommander @Inject() (
 
   def publishKeep(userId: Id[User], keep: Keep, library: Library): Unit = {
     require(keep.userId == userId, s"User $userId cannot publish to Twitter a keep by user ${keep.userId}")
-    if (library.visibility == LibraryVisibility.PUBLISHED && hasTwitterExperiment(userId)) {
+    if (library.visibility == LibraryVisibility.PUBLISHED && hasExplicitShareExperiment(userId)) {
+      log.info(s"trying to tweet about a keep ${keep.id.get} of user ${keep.userId} and lib ${library.id.get}")
       db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.TWITTER) } match {
         case None =>
           log.info(s"user $userId is not connected to twitter!")
@@ -38,20 +39,23 @@ class TwitterPublishingCommander @Inject() (
           }
           val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
           val title = keep.title.getOrElse("interesting link")
-          val msg = twitterMessages.keepMessage(title.trim, keep.url.trim, library.name.trim, libraryUrl.trim)
-          log.info(s"twitting about user $userId keeping $title with msg = $msg of size ${msg.size}")
-          val imageOpt: Option[Future[TemporaryFile]] = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(1024, 512)).flatten.map { keepImage =>
-            keepImageStore.get(keepImage.imagePath)
-          } orElse {
-            libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)) map { libImage =>
-              libraryImageStore.get(libImage.imagePath)
+          twitterMessages.keepMessage(title.trim, keep.url.trim, library.name.trim, libraryUrl.trim) map { msg =>
+            log.info(s"twitting about user $userId keeping $title with msg = $msg of size ${msg.size}")
+            val imageOpt: Option[Future[TemporaryFile]] = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(1024, 512)).flatten.map { keepImage =>
+              keepImageStore.get(keepImage.imagePath)
+            } orElse {
+              libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)) map { libImage =>
+                libraryImageStore.get(libImage.imagePath)
+              }
+            }
+            imageOpt match {
+              case None => twitterSocialGraph.sendTweet(sui, None, msg)
+              case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendTweet(sui, Some(imageFile.file), msg) }
             }
           }
-          imageOpt match {
-            case None => twitterSocialGraph.sendTweet(sui, msg)
-            case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendImage(sui, imageFile.file, msg) }
-          }
       }
+    } else {
+      log.info(s"did not tweet a keep ${keep.id.get} of user ${keep.userId} and lib ${library.id.get} since lib is not published or lack of experiment")
     }
   }
 
@@ -63,7 +67,7 @@ class TwitterPublishingCommander @Inject() (
   }
 
   def publishLibraryMembership(userId: Id[User], library: Library): Unit = {
-    if (library.visibility == LibraryVisibility.PUBLISHED && hasTwitterExperiment(userId)) {
+    if (library.visibility == LibraryVisibility.PUBLISHED && hasExplicitShareExperiment(userId)) {
       db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.TWITTER) } match {
         case None => log.info(s"user $userId is not connected to twitter!")
         case Some(sui) =>
@@ -76,15 +80,11 @@ class TwitterPublishingCommander @Inject() (
             libraryImageStore.get(libImage.imagePath)
           }
           imageOpt match {
-            case None => twitterSocialGraph.sendTweet(sui, message)
-            case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendImage(sui, imageFile.file, message) }
+            case None => twitterSocialGraph.sendTweet(sui, None, message)
+            case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendTweet(sui, Some(imageFile.file), message) }
           }
       }
     }
-  }
-
-  private def hasTwitterExperiment(userId: Id[User]) = {
-    db.readOnlyMaster { implicit session => experimentCommander.userHasExperiment(userId, ExperimentType.TWEET_ALL) }
   }
 
 }

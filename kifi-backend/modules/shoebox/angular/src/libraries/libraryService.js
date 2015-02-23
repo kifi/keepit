@@ -67,6 +67,7 @@ angular.module('kifi')
         if (res.data && res.data.library) {
           res.data.library.access = res.data.membership;
           res.data.library.listed = res.data.listed;
+          res.data.library.suggestedSearches = (res.data.suggestedSearches && res.data.suggestedSearches.terms) || [];
           augmentLibrarySummary(res.data.library);
           return res.data.library;
         }

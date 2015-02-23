@@ -8,11 +8,14 @@ import com.keepit.common.time.Clock
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
+import play.api.libs.concurrent.Execution.Implicits._
+
+import scala.concurrent.Future
 
 @ImplementedBy(classOf[UserPersonaCommanderImpl])
 trait UserPersonaCommander {
-  def addPersonaForUser(userId: Id[User], persona: PersonaName)(implicit context: HeimdalContext): (Option[Persona], Option[Library])
-  def addPersonasForUser(userId: Id[User], personas: Set[PersonaName])(implicit context: HeimdalContext): Map[Persona, Option[Library]]
+  def addPersonaForUser(userId: Id[User], persona: PersonaName)(implicit context: HeimdalContext): Future[(Option[Persona], Option[Library])]
+  def addPersonasForUser(userId: Id[User], personas: Set[PersonaName])(implicit context: HeimdalContext): Future[Map[Persona, Option[Library]]]
   def removePersonaForUser(userId: Id[User], persona: PersonaName): Option[Persona]
   def removePersonasForUser(userId: Id[User], personas: Set[PersonaName]): Set[Persona]
   def getPersonaKeepAndLibrary(userId: Id[User]): (PersonaKeep, Option[Library])
@@ -28,14 +31,16 @@ class UserPersonaCommanderImpl @Inject() (
     curator: CuratorServiceClient,
     clock: Clock) extends UserPersonaCommander with Logging {
 
-  def addPersonaForUser(userId: Id[User], persona: PersonaName)(implicit context: HeimdalContext): (Option[Persona], Option[Library]) = {
-    addPersonasForUser(userId, Set(persona)).headOption match {
-      case Some(pair) => (Some(pair._1), pair._2)
-      case _ => (None, None)
+  def addPersonaForUser(userId: Id[User], persona: PersonaName)(implicit context: HeimdalContext): Future[(Option[Persona], Option[Library])] = {
+    addPersonasForUser(userId, Set(persona)).map { x =>
+      x.headOption match {
+        case Some(pair) => (Some(pair._1), pair._2)
+        case _ => (None, None)
+      }
     }
   }
 
-  def addPersonasForUser(userId: Id[User], personas: Set[PersonaName])(implicit context: HeimdalContext): Map[Persona, Option[Library]] = {
+  def addPersonasForUser(userId: Id[User], personas: Set[PersonaName])(implicit context: HeimdalContext): Future[Map[Persona, Option[Library]]] = {
     val personasToPersist = db.readOnlyMaster { implicit s =>
       val currentPersonas = userPersonaRepo.getPersonasForUser(userId).toSet
       val personaNamesToAdd = personas diff currentPersonas.map(_.name)
@@ -53,19 +58,21 @@ class UserPersonaCommanderImpl @Inject() (
       }
     }
 
-    curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct)
+    curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct).collect {
+      case _ =>
+        // create libraries based on added personas
+        personasToPersist.map {
+          case (personaName, persona) =>
+            val defaultLibraryName = Persona.libraryNames.getOrElse(personaName, personaName.value)
+            val defaultLibrarySlug = LibrarySlug.generateFromName(defaultLibraryName)
+            val libraryAddReq = LibraryAddRequest(name = defaultLibraryName, visibility = LibraryVisibility.PUBLISHED, slug = defaultLibrarySlug, kind = Some(LibraryKind.SYSTEM_PERSONA))
+            (persona, libraryCommander.addLibrary(libraryAddReq, userId))
+        }.collect {
+          case (persona, Right(lib)) => (persona, Some(lib)) // library successfully created
+          case (persona, Left(_)) => (persona, None) // library with name or slug already created
+        }.toMap
+    }
 
-    // create libraries based on added personas
-    personasToPersist.map {
-      case (personaName, persona) =>
-        val defaultLibraryName = PersonaName.personaLibraryNames.get(personaName).getOrElse(personaName.value)
-        val defaultLibrarySlug = LibrarySlug.generateFromName(defaultLibraryName)
-        val libraryAddReq = LibraryAddRequest(name = defaultLibraryName, visibility = LibraryVisibility.PUBLISHED, slug = defaultLibrarySlug, kind = Some(LibraryKind.SYSTEM_PERSONA))
-        (persona, libraryCommander.addLibrary(libraryAddReq, userId))
-    }.collect {
-      case (persona, Right(lib)) => (persona, Some(lib)) // library successfully created
-      case (persona, Left(_)) => (persona, None) // library with name or slug already created
-    }.toMap
   }
 
   def removePersonaForUser(userId: Id[User], persona: PersonaName): Option[Persona] = {
@@ -97,14 +104,14 @@ class UserPersonaCommanderImpl @Inject() (
       userPersonaRepo.getFirstPersonaForUser(userId)
     }
     personaOpt.map { persona =>
-      val personaLibName = PersonaName.personaLibraryNames(persona.name) // find library with persona name
+      val personaLibName = Persona.libraryNames(persona.name) // find library with persona name
       val libOpt = db.readOnlyMaster { implicit s =>
         libraryRepo.getByNameAndUserId(userId, personaLibName)
       }
-      val personaKeep = PersonaName.personaKeeps.get(persona.name).getOrElse(PersonaKeep.default) // find keep associated with persona
+      val personaKeep = Persona.keeps.getOrElse(persona.name, Persona.defaultKeep) // find keep associated with persona
       (personaKeep, libOpt)
     }.getOrElse {
-      (PersonaKeep.default, None)
+      (Persona.defaultKeep, None)
     }
   }
 }

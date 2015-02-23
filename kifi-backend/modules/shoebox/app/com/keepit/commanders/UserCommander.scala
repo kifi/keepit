@@ -298,6 +298,7 @@ class UserCommander @Inject() (
     SafeFuture {
       db.readWrite(attempts = 3) { implicit session =>
         userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_GUIDE, true)
+        userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_PERSONA, true)
         userValueRepo.setValue(newUser.id.get, UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
       }
       searchClient.warmUpUser(newUser.id.get)
@@ -583,7 +584,7 @@ class UserCommander @Inject() (
     heimdalClient.cancelDelightedSurvey(DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName))
   }
 
-  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, readOnly: Boolean = false, overrideProtection: Boolean = false): Either[String, Username] = {
+  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false, readOnly: Boolean = false): Either[String, Username] = {
     if (overrideValidityCheck || UsernameOps.isValid(username.value)) {
       db.readWrite(attempts = 3) { implicit session =>
         val existingUser = userRepo.getByUsername(username)
@@ -601,8 +602,8 @@ class UserCommander @Inject() (
               usernameCache.remove(UsernameKey(user.username))
               val normalizedUsername = UsernameOps.normalize(username.value)
               if (user.normalizedUsername != normalizedUsername) {
-                usernameRepo.alias(user.username, userId) // create an alias for the old username
-                usernameRepo.reclaim(username, Some(userId)).get // reclaim any existing alias for the new username
+                usernameRepo.alias(user.username, userId, overrideProtection) // create an alias for the old username
+                usernameRepo.reclaim(username, Some(userId), overrideProtection).get // reclaim any existing alias for the new username
               }
               userRepo.save(user.copy(username = username, normalizedUsername = normalizedUsername))
             } else {

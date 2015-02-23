@@ -22,7 +22,7 @@ k.guide.step1 = k.guide.step1 || function () {
     {
       pad: [0],
       afterTransition: '.kifi-keep-box',
-      arrow: {dx: 150, dy: 0, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: 0, gap: 5, sel: '.kifi-keep-box-lib.kifi-system.kifi-discoverable'}},
+      arrow: {dx: 150, dy: 0, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: 0, gap: 5, sel: '.kifi-keep-box-lib'}},
       allow: [
         {type: /^key/, target: '.kifi-keep-box-lib-input', unless: function (e) {
           return e.keyCode === 27 ||  // allow all keys except Esc (anywhere) and Enter (on Create New Library)
@@ -55,7 +55,13 @@ k.guide.step1 = k.guide.step1 || function () {
   function show($guide, page) {
     if (!step) {
       k.tile.style.display = '';
-      step = k.guide.step(steps, {
+      page.nounOrOne = page.noun === 'page' ? 'one' : page.noun;
+      var stepsCopy = steps.slice();
+      stepsCopy[2] = $.extend({}, steps[2]);
+      stepsCopy[2].arrow = $.extend({}, steps[2].arrow);
+      stepsCopy[2].arrow.to = $.extend({}, steps[2].arrow.to);
+      stepsCopy[2].arrow.to.sel = steps[2].arrow.to.sel + '[data-id=' + page.libraryId + ']';
+      step = k.guide.step(stepsCopy, {
         $guide: $guide,
         page: page,
         index: 1,

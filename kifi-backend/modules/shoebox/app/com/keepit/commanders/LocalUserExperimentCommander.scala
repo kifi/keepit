@@ -1,14 +1,6 @@
 package com.keepit.commanders
 
-import com.keepit.model.{
-  ExperimentType,
-  User,
-  UserExperimentRepo,
-  Name,
-  ProbabilisticExperimentGeneratorRepo,
-  ProbabilisticExperimentGenerator,
-  ProbabilisticExperimentGeneratorAllCache
-}
+import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.akka.MonitoredAwait
@@ -19,7 +11,6 @@ import com.google.inject.{ Inject, Singleton }
 import scala.concurrent.Future
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.model.UserExperiment
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.math.ProbabilityDensity
 import com.keepit.common.logging.Logging
@@ -43,8 +34,15 @@ class LocalUserExperimentCommander @Inject() (
     addDynamicExperiments(userId, staticExperiments)
   }
 
-  def addExperimentForUser(userId: Id[User], experiment: ExperimentType) = {
-    db.readWrite { implicit session => userExperimentRepo.save(UserExperiment(userId = userId, experimentType = experiment)) }
+  def addExperimentForUser(userId: Id[User], experiment: ExperimentType): UserExperiment = {
+    db.readWrite(attempts = 3) { implicit session =>
+      userExperimentRepo.get(userId, experiment, excludeState = None) match {
+        case None => userExperimentRepo.save(UserExperiment(userId = userId, experimentType = experiment))
+        case Some(existing) if existing.isActive == false => userExperimentRepo.save(existing.copy(state = UserExperimentStates.ACTIVE))
+        case Some(existing) => existing
+      }
+
+    }
   }
 
   def userHasExperiment(userId: Id[User], experiment: ExperimentType) = {

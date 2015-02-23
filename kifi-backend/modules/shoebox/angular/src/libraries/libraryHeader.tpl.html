@@ -33,6 +33,10 @@
         </a>
 
         <div class="kf-lh-info">
+          <div class="kf-lh-private-wrap" ng-if="library.visibility === 'secret'">
+            <span class="kf-lh-private svg-card-lock">Private</span>
+          </div>
+
           <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person">
             <a href="{{library.owner.profileUrl}}" itemprop="url"
                kf-track-origin="libraryPage/curator">
@@ -56,11 +60,11 @@
             <div class="kf-lh-stats">
               <div class="kf-lh-stat">
                 <span class="kf-lh-stat-name">Keeps</span>
-                <span class="kf-lh-stat-val">{{library.numKeeps}}</span>
+                <span class="kf-lh-stat-val">{{library.numKeeps | number}}</span>
               </div>
               <a class="kf-lh-stat" ng-click="showFollowers()" ng-if="isUserCreatedLibrary()" href="javascript:">
                 <span class="kf-lh-stat-name">Followers</span>
-                <span class="kf-lh-stat-val">{{library.numFollowers}}</span>
+                <span class="kf-lh-stat-val">{{library.numFollowers | number}}</span>
               </a>
             </div>
             <div kf-library-follower-pics num-followers="library.numFollowers" followers="library.followers"
@@ -71,11 +75,10 @@
       <div class="kf-lh-buttons clearfix">
         <div style="float:right">
           <div kf-library-share-search ng-if="canBeShared()" library="library" current-page-origin="libraryPage"></div>
-          <button class="kf-button kf-lh-follow-btn" ng-click="followLibrary()" ng-if="canFollowLibrary()"
-            ng-class="{'kf-stickable': isUserLoggedOut}"
-            kf-sticky sticky-if="isUserLoggedOut" sticky-top="isMobile ? 25 : 14" sticky-toggle="followButtonToggleStuck" sticky-near="followButtonNearlyStuck" sticky-near-px="isMobile ? 90 : 40"
-            kf-library-header-follow-button-cta
-          >{{ library.followButtonText }}</button>
+          <div class="kf-lh-follow-btn-wrap" kf-sticky sticky-if="!$root.userLoggedIn" sticky-top="isMobile ? 25 : 14" sticky-toggle="followButtonToggleStuck" sticky-near="followButtonNearlyStuck" sticky-near-px="isMobile ? 90 : 40" ng-if="canFollowLibrary()">
+            <div kf-library-header-follow-button-cta library="library" ng-if="!isMobile && library.abTest.name === 'exp_follow_popup' && library.abTestTreatment.data"></div>
+            <button class="kf-button kf-lh-follow-btn" ng-click="followLibrary()">{{library.abTestTreatment.data.buttonText || 'Follow Library'}}</button>
+          </div>
           <button class="kf-button kf-lh-unfollow-btn" ng-click="unfollowLibrary()" ng-if="alreadyFollowingLibrary()"></button>
           <button class="kf-button" ng-click="toggleEditKeeps()" ng-if="isMyLibrary() && library.numKeeps > 0">{{editKeepsText}}</button>
           <button class="kf-button kf-button-text-optional" ng-click="manageLibrary()" ng-if="isMyLibrary() && isUserCreatedLibrary()">

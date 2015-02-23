@@ -13,7 +13,6 @@ trait DomainRepo extends Repo[Domain] {
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int
-  def getByPrefix(prefix: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
 }
 
 @Singleton
@@ -60,9 +59,5 @@ class DomainRepoImpl @Inject() (
     val count = (for (d <- rows if d.id.inSet(domainIds)) yield (d.autoSensitive, d.updatedAt)).update(value -> clock.now())
     domainIds foreach { id => invalidateCache(get(id)) }
     count
-  }
-
-  def getByPrefix(prefix: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] = {
-    (for (d <- rows if d.hostname.startsWith(prefix) && d.state =!= excludeState.orNull) yield d).sortBy(_.hostname).list
   }
 }

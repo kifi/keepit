@@ -78,27 +78,6 @@ POST    /sms                        @com.keepit.controllers.website.HomeControll
 
 POST    /ext/events                 @com.keepit.controllers.tracking.EventProxyController.track()
 
-#------ begin pre-library routes (ExtBookmarksController will be deprecated when libraries launch; see /ext/libraries section further down)
-
-POST    /ext/keeps                  @com.keepit.controllers.ext.ExtBookmarksController.keep
-# Note: /bookmarks/add is now for browser bookmark imports only
-POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
-# Note: /bookmarks/remove is deprecated. Use /ext/keeps/:id/unkeep instead.
-POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
-POST    /ext/keeps/:id/unkeep       @com.keepit.controllers.ext.ExtBookmarksController.unkeep(id: ExternalId[Keep])
-# Note: /bookmarks/private should be deprecated as soon as we move mobile onto it's own endpoitns for bookmarks entirely
-POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
-POST    /bookmarks/update           @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
-
-GET     /tags                       @com.keepit.controllers.ext.ExtBookmarksController.tags()
-POST    /tagsByUrl                  @com.keepit.controllers.ext.ExtBookmarksController.tagsByUrl()
-POST    /tags/add                   @com.keepit.controllers.ext.ExtBookmarksController.createAndApplyTag()
-POST    /tags/:id/removeFromKeep    @com.keepit.controllers.ext.ExtBookmarksController.removeTag(id: ExternalId[Collection])
-POST    /tags/:id/addToKeep         @com.keepit.controllers.ext.ExtBookmarksController.addTag(id: ExternalId[Collection])
-POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksController.clearTags()
-
-#------ end pre-library routes
-
 # Note: /kifi/start is deprecated. 3.2.12 and later use /ext/start instead.
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
 POST    /ext/start                  @com.keepit.controllers.ext.ExtAuthController.start
@@ -238,8 +217,8 @@ POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.M
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
-GET     /m/2/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV2(more: Boolean, recency: Float)
-GET     /m/2/recos/topV3                        @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3(more: Boolean, recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
+GET     /m/2/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV2(recency: Float, more: Boolean ?= false)
+GET     /m/3/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
 GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
 POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
 
@@ -402,8 +381,7 @@ GET     /site/libraries/recos/top           @com.keepit.controllers.website.Libr
 POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
-GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
-GET     /site/recos/topV2           @com.keepit.controllers.website.RecommendationsController.topRecosV2(more: Boolean, recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
+GET     /site/recos/topV2           @com.keepit.controllers.website.RecommendationsController.topRecosV2(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
 GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
 POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
@@ -671,10 +649,7 @@ POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.getDomainTags
 POST    /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.saveDomainTags
 GET     /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
-GET     /admin/slider/classifications @com.keepit.controllers.admin.SliderAdminController.getClassifications(domain: Option[String])
 POST    /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
-GET     /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminController.refetchClassifications
-GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
 POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminController.killVersion(ver: String)
@@ -691,6 +666,7 @@ POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminL
 POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminLibraryController.updateLibraries
 POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepImageController.loadPrevImageForKeep(startUserId: Long, endUserId: Long)
 POST    /admin/libraries/updateLibraryOwner @com.keepit.controllers.admin.AdminLibraryController.updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User])
+POST    /admin/libraries/saveSuggestedSearches    @com.keepit.controllers.admin.AdminLibraryController.saveSuggestedSearches
 
 GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
 POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()
@@ -836,6 +812,7 @@ GET     /internal/shoebox/database/getLibrariesChanged                     @com.
 GET     /internal/shoebox/database/getDetailedLibrariesChanged             @com.keepit.controllers.internal.ShoeboxDataPipeController.getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 GET     /internal/shoebox/database/getLibraryMembershipsChanged            @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int)
 GET     /internal/shoebox/database/newKeepsInLibraryForEmail               @com.keepit.controllers.internal.ShoeboxController.newKeepsInLibraryForEmail(userId: Id[User], max: Int)
+GET     /internal/shoebox/database/dumpLibraryURIIds                       @com.keepit.controllers.internal.ShoeboxDataPipeController.dumpLibraryURIIds(libId: Id[Library])
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.internal.ShoeboxDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.internal.ShoeboxDeepLinkController.getDeepUrl()

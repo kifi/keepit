@@ -210,7 +210,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
           connectionCount === userConnections.size
           connectionCount === 2
         }
-        connectionsAfter.size === 5
+        connectionsAfter.size === 0
       }
     }
 

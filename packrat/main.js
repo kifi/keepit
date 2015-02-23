@@ -24,7 +24,7 @@ var threadsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
 var contactSearchCache;
 var urlPatterns;
-var guidePage;
+var guideData;
 
 function clearDataCache() {
   log('[clearDataCache]');
@@ -42,7 +42,7 @@ function clearDataCache() {
   messageData = {};
   contactSearchCache = null;
   urlPatterns = null;
-  guidePage = null;
+  guideData = null;
 }
 
 // ===== Error reporting
@@ -619,7 +619,9 @@ api.port.on({
         og: !tab.usedHistoryApi && data.og || undefined,
         title: !tab.usedHistoryApi && data.ogTitle || data.title,
         guided: data.guided,
-        how: data.how
+        how: data.how,
+        fPost: data.fPost,
+        tweet: data.tweet
       }, function done(keep) {
         log('[keep:done]', keep);
         // main and secret are mutually exclusive
@@ -684,7 +686,7 @@ api.port.on({
       libraries.filter(idIsIn(mySysLibIds)).forEach(setProp('system', true));
       libraries.filter(idIsIn(loadRecentLibs())).forEach(setProp('recent', true));
       var keeps = d ? d.keeps : [];
-      respond({keeps: keeps, libraries: libraries, showLibraryIntro: prefs && prefs.showLibraryIntro});
+      respond({keeps: keeps, libraries: libraries, posting: experiments.indexOf('explicit_social_posting') >= 0});
       // preload keep details
       keeps.forEach(function (keep) {
         ajax('GET', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function (details) {
@@ -855,16 +857,16 @@ api.port.on({
     if (prefs) prefs.maxResults = n;
   },
   terminate_ftue: function (data) {
-    var prefName = {e: 'showExtMsgIntro', l: 'showLibraryIntro'}[data.type];
+    var prefName = {e: 'showExtMsgIntro'}[data.type];
     if (!prefName) return;
     ajax('POST', '/ext/pref/' + prefName + '?show=false');
     api.tabs.each(function (tab) {
-      api.tabs.emit(tab, {e: 'hide_ext_msg_intro', l: 'hide_library_intro'}[data.type]);
+      api.tabs.emit(tab, {e: 'hide_ext_msg_intro'}[data.type]);
     });
     (prefs || {})[prefName] = false;
     if (data.action) {
       tracker.track('user_clicked_notification', {
-        category: {e: 'extMsgFTUE', l: 'libFTUE'}[data.type],
+        category: {e: 'extMsgFTUE'}[data.type],
         action: data.action,
         subaction: data.subaction
       });
@@ -1313,7 +1315,7 @@ api.port.on({
   },
   await_deep_link: function(link, _, tab) {
     awaitDeepLink(link, tab.id);
-    if (guidePage && /^#guide\/\d/.test(link.locator)) {
+    if (guideData && /^#guide\/\d/.test(link.locator)) {
       var step = +link.locator.substr(7, 1);
       switch (step) {
         case 1:
@@ -1321,8 +1323,8 @@ api.port.on({
           tabsByUrl[link.url] = tabsByUrl[link.url] || [];
           break;
         case 2:
-          var page = guidePage;
-          var query = page.query.replace(/\+/g, ' ');
+          var keep = guideData.keep;
+          var query = keep.query.replace(/\+/g, ' ');
           var entry = searchPrefetchCache[query] = {
             response: pimpSearchResponse([{
               context: 'guide',
@@ -1330,9 +1332,9 @@ api.port.on({
               query: query,
               hits: [{
                 keepId: '00000000-0000-0000-0000-000000000000',
-                title: page.title,
-                url: page.url,
-                matches: page.matches
+                title: keep.title,
+                url: keep.url,
+                matches: keep.matches
               }],
               cutPoint: 1
             }, {
@@ -1341,7 +1343,7 @@ api.port.on({
                 keepersTotal: 816,
                 libraries: [0, -1]
               }],
-              libraries: [{id: mySysLibIds[0]}],
+              libraries: [guideData.library || {id: mySysLibIds[0]}],
               users: []
             }])
           };
@@ -1392,47 +1394,40 @@ api.port.on({
       api.mode.toggle();
     }
   },
-  start_guide: function (pages, _, tab) {
-    for (var i = 0; i < pages.length; i++) {
-      var page = pages[i];
-      if (page.image) {
-        page.width = page.image[1] / 2;
-        page.height = page.image[2] / 2;
-        page.image = page.image[0];
-        guidePage = page;
-        break;
-      }
-    }
-    api.tabs.emit(tab, 'guide', {step: 0, page: guidePage});
+  start_guide: function (_, __, tab) {
+    ajax('GET', '/ext/guide', function (data) {
+      guideData = data;
+      data.keep.image.width /= 2;
+      data.keep.image.height /= 2;
+      api.tabs.emit(tab, 'guide', {step: 0, page: data.keep});
+    });
     unsilence(false);
   },
   track_guide: function (stepParts) {
     tracker.track('user_viewed_pane', {type: 'guide' + stepParts.join('')});
   },
   track_guide_choice: function () {
-    tracker.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guidePage.track});
+    tracker.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guideData.keep.track});
   },
   resume_guide: function (step, _, tab) {
-    api.tabs.emit(tab, 'guide', {
-      step: step,
-      page: guidePage || (guidePage = {
-        url: 'http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die',
-        name: ['Steve Jobs:','How to Live','Before You Die'],
-        image: '//d1dwdv9wd966qu.cloudfront.net/img/guide/ted_jobs.7878954.jpg',
-        noun: 'video',
-        query: 'steve+jobs',
-        title: 'Steve Jobs: How to live before you die | Talk Video | TED.com',
-        matches: {title: [[0,5],[6,4]], url: [[25,5],[31,4]]},
-        track: 'steveJobsSpeech',
-        width: 240,
-        height: 212.5
-      })
-    });
+    if (guideData) {
+      resume(guideData);
+    } else {
+      ajax('GET', '/ext/guide', resume);
+    }
+    function resume(data) {
+      guideData = data;
+      var page = guideData.keep;
+      if (step === 1) {
+        page = extend({libraryId: (guideData.library || {id: mySysLibIds[0]}).id}, page);
+      }
+      api.tabs.emit(tab, 'guide', {step: step, page: page});
+    }
   },
   end_guide: function (stepParts) {
     tracker.track('user_clicked_pane', {type: 'guide' + stepParts.join(''), action: 'closeGuide'});
     if (api.isPackaged()) {
-      guidePage = null;
+      guideData = null;
     }
   }
 });
@@ -1701,10 +1696,12 @@ function awaitDeepLink(link, tabId, retrySec) {
     if (tab && sameOrLikelyRedirected(link.url || link.nUri, tab.nUri || tab.url)) {
       log('[awaitDeepLink]', tabId, link);
       if (loc.lastIndexOf('#guide/', 0) === 0) {
-        api.tabs.emit(tab, 'guide', {
-          step: +loc.substr(7, 1),
-          page: guidePage
-        }, {queue: 1});
+        var step = +loc.substr(7, 1);
+        var page = guideData.keep;
+        if (step === 1) {
+          page = extend({libraryId: (guideData.library || {id: mySysLibIds[0]}).id}, page);
+        }
+        api.tabs.emit(tab, 'guide', {step: step, page: page}, {queue: 1});
       } else if (loc.indexOf('#compose') >= 0) {
         api.tabs.emit(tab, 'compose', {trigger: 'deepLink'}, {queue: 1});
       } else {

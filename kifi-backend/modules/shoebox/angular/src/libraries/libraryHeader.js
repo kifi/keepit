@@ -35,7 +35,6 @@ angular.module('kifi')
         //
         // Scope data.
         //
-        scope.isUserLoggedOut = $rootScope.userLoggedIn === false;
         scope.clippedDescription = false;
         scope.editKeepsText = 'Edit Keeps';
         scope.search = { 'text': $stateParams.q || '' };
@@ -101,7 +100,7 @@ angular.module('kifi')
           scope.library.followers.forEach(augmentFollower);
 
           var maxLength = 150;
-          if (scope.library.description.length > maxLength && !scope.isUserLoggedOut) {
+          if (scope.library.description.length > maxLength && $rootScope.userLoggedIn) {
             // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
             var clipLastIndex = maxLength;
             var lastSpaceIndex = scope.library.description.lastIndexOf(' ', maxLength);
@@ -133,10 +132,6 @@ angular.module('kifi')
             scope.coverImageUrl = env.picBase + '/' + image.path;
             scope.coverImagePos = formatCoverImagePos(image);
           }
-
-          scope.library.followButtonText = (scope.isUserLoggedOut && scope.library.abTestTreatment && !scope.library.abTestTreatment.isControl) ?
-            scope.library.abTestTreatment.data.buttonText :
-            'Follow Library';
         }
 
         function augmentFollower(follower) {
@@ -603,7 +598,7 @@ angular.module('kifi')
           // Only user-created (i.e. not Main or Secret) libraries can be shared.
           // Of the user-created libraries, public libraries can be shared by any Kifi user;
           // discoverable/secret libraries can be shared only by the library owner.
-          return !scope.isUserLoggedOut && scope.isUserCreatedLibrary() &&
+          return $rootScope.userLoggedIn && scope.isUserCreatedLibrary() &&
                  (scope.isPublic() || scope.isMyLibrary());
         };
 
@@ -640,7 +635,7 @@ angular.module('kifi')
             var url = $location.absUrl();
             platformService.goToAppOrStore(url + (url.indexOf('?') > 0 ? '&' : '?') + 'follow=true');
             return;
-          } else if ($rootScope.userLoggedIn === false) {
+          } else if (!$rootScope.userLoggedIn) {
             return signupService.register({libraryId: scope.library.id, intent: 'follow'});
           }
 

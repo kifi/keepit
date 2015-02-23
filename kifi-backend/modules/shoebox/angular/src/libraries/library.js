@@ -7,38 +7,6 @@ angular.module('kifi')
   'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'originTrackingService', 'installService',
   function ($scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window, util, initParams, library,
     keepDecoratorService, libraryService, modalService, platformService, profileService, originTrackingService, installService) {
-    //
-    // A/B Tests.
-    //
-    var abTest = {
-      name: 'exp_follow_popup',
-      salt: 'hgg1dv',
-      treatments: [
-        {
-          name: 'none',
-          isControl: true
-        },
-        {
-          name: 'popupLibrary',
-          data: {
-            buttonText: 'Follow',
-            mainText: 'Join Kifi to follow this library.<br/>Discover other libraries,<br/>and build your own!',
-            quote: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
-            quoteAttribution: 'Remy Weinstein, California'
-          }
-        },
-        {
-          name: 'popupCollection',
-          data: {
-            buttonText: 'Save',
-            mainText: 'Join Kifi to save this collection.<br/>Discover other collections,<br/>and build your own!',
-            quote: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
-            quoteAttribution: 'Remy Weinstein, California'
-          }
-        }
-      ]
-    };
-
 
     //
     // Internal data.
@@ -305,7 +273,35 @@ angular.module('kifi')
       }
     });
 
-    library.abTest = abTest;
-    library.abTestTreatment = util.chooseTreatment(library.abTest.salt, library.abTest.treatments);
+    if (!$rootScope.userLoggedIn) {
+      library.abTest = {
+        name: 'exp_follow_popup',
+        salt: 'hgg1dv',
+        treatments: [
+          {
+            name: 'none'
+          },
+          {
+            name: 'popupLibrary',
+            data: {
+              buttonText: 'Follow',
+              mainHtml: 'Join Kifi to follow this library.<br/>Discover other libraries,<br/>and build your own!',
+              quoteHtml: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
+              quoteAttribution: 'Remy Weinstein, California'
+            }
+          },
+          {
+            name: 'popupCollection',
+            data: {
+              buttonText: 'Save',
+              mainHtml: 'Join Kifi to save this collection.<br/>Discover other collections,<br/>and build your own!',
+              quoteHtml: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
+              quoteAttribution: 'Remy Weinstein, California'
+            }
+          }
+        ]
+      };
+      library.abTestTreatment = util.chooseTreatment(library.abTest.salt, library.abTest.treatments);
+    }
   }
 ]);

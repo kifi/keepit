@@ -9,7 +9,7 @@ angular.module('kifi')
       if (allowedProviders.indexOf(provider) === -1) {
         return $q.reject('invalid_provider');
       } else {
-        return $http.post(routeService.socialSignup(provider), oauth2TokenInfo).then(function (resp) {
+        return $http.post(routeService.socialSignupWithToken(provider), oauth2TokenInfo).then(function (resp) {
           return resp.data;
         });
       }

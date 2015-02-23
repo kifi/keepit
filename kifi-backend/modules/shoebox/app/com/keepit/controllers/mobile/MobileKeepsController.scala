@@ -105,7 +105,7 @@ class MobileKeepsController @Inject() (
         }.getOrElse(main.id.get)
       }
     }
-    keepsCommander.keepWithSelectedTags(request.userId, rawBookmark, libraryId, source, collectionNames) match {
+    keepsCommander.keepWithSelectedTags(request.userId, rawBookmark, libraryId, source, collectionNames, SocialShare(json)) match {
       case Left(msg) => BadRequest(msg)
       case Right((keep, tags)) =>
         Ok(Json.obj(
@@ -198,8 +198,8 @@ class MobileKeepsController @Inject() (
       case (Some(ssUrl), Some(imgUrl)) =>
         Json.obj("url" -> url, "imgUrl" -> imgUrl, "screenshotUrl" -> ssUrl)
     }
-    val width = (imageWidthOpt map { width => Json.obj("imgWidth" -> width) } getOrElse Json.obj())
-    val height = (imageHeightOpt map { height => Json.obj("imgHeight" -> height) } getOrElse Json.obj())
+    val width = imageWidthOpt map { width => Json.obj("imgWidth" -> width) } getOrElse Json.obj()
+    val height = imageHeightOpt map { height => Json.obj("imgHeight" -> height) } getOrElse Json.obj()
     main ++ width ++ height
   }
 

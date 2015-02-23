@@ -158,7 +158,7 @@ class AllKeepSeedIngestionHelper @Inject() (
         updateRawSeedItem(rawSeedItem, keep.uriId, keep.keptAt, countChange, discoverable)
       }
     } else {
-      airbrake.notify(s"Missing RSI: keepId ${keepInfo.keepId}, oldUriId ${keepInfo.uriId}, newUriId ${keep.uriId}. Skipping this keep update.")
+      log.info(s"Missing RSI: keepId ${keepInfo.keepId}, oldUriId ${keepInfo.uriId}, newUriId ${keep.uriId}. Skipping this keep update.")
     }
   }
 

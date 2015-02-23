@@ -22,22 +22,26 @@ angular.module('kifi')
           var n = scope.numFollowers;
           var maxWidth = element[0].offsetWidth;
           var picWidth = isMobile ? 110 : 50;
-          var addWidth = picWidth * (n < 100 ? 1 : n < 1000 ? 1.1 : 1.2);  // for "+N"
 
-          var numToShow = Math.floor(Math.max(0, maxWidth - addWidth) / picWidth);
-          // If we only have one additional follower that we can't fit in, then we can fit that one
-          // in if we don't show the additional-number-of-followers circle.
-          if (numToShow === n - 1) {
-            numToShow++;
+          var numCanFit = Math.floor(maxWidth / picWidth);
+          if (numCanFit < n) {
+            numCanFit--;  // need to show +N circle
           }
-          numToShow = Math.min(scope.followers.length, numToShow);
+          var numToShow = Math.min(scope.followers.length, numCanFit);
 
           scope.followersToShow = scope.followers.slice(0, numToShow);
-          scope.numAdditionalFollowers = n - numToShow;
+          scope.moreCountText = formatMoreCountText(n - numToShow);
 
           element.find('.kf-lfp-pics').width(numToShow * picWidth);
         }
 
+        function formatMoreCountText(n) {
+          if (n < 1000) {
+            return n ? String(n) : '';
+          }
+          var hundreds = String(n).slice(0, -2);
+          return hundreds.slice(-1) === '0' ? hundreds.slice(0, -1) + 'K' : hundreds.replace(/(\d)$/, '.$1') + 'K';
+        }
 
         //
         // Watches and listeners
@@ -57,13 +61,6 @@ angular.module('kifi')
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', onWinResize);
         });
-
-
-        //
-        // Initialization
-        //
-        scope.followersToShow = [];
-        scope.numAdditionalFollowers = 0;
       }
     };
   }

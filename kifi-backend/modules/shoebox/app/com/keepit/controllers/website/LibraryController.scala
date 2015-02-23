@@ -46,11 +46,18 @@ class LibraryController @Inject() (
   fortyTwoConfig: FortyTwoConfig,
   clock: Clock,
   relatedLibraryCommander: RelatedLibraryCommander,
+  suggestedSearchCommander: LibrarySuggestedSearchCommander,
   val libraryCommander: LibraryCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController with Logging {
+
+  private def getSuggestedSearchesAsJson(libId: Id[Library]): JsValue = {
+    val top = suggestedSearchCommander.getSuggestedTermsForLibrary(libId, limit = 10)
+    val (terms, weights) = top.terms.toArray.sortBy(-_._2).unzip
+    Json.obj("terms" -> terms, "weights" -> weights)
+  }
 
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
     val addRequest = request.body.as[LibraryAddRequest]
@@ -73,6 +80,7 @@ class LibraryController @Inject() (
     val id = Library.decodePublicId(pubId).get
     val libModifyRequest = request.body.as[LibraryModifyRequest]
 
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
@@ -104,7 +112,8 @@ class LibraryController @Inject() (
       val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, libraryId)
       val accessStr = memOpt.map(_.access.value).getOrElse("none")
       val listed = memOpt.map(_.listed)
-      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed))
+      val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
+      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches))
     }
   }
 
@@ -126,7 +135,8 @@ class LibraryController @Inject() (
             val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
             val accessStr = memOpt.map(_.access.value).getOrElse("none")
             val listed = memOpt.map(_.listed)
-            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed))
+            val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
+            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches))
           }
         })
       case Left(fail) => Future.successful {

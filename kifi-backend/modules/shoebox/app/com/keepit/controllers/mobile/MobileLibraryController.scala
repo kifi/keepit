@@ -73,6 +73,7 @@ class MobileLibraryController @Inject() (
     val newColor = (json \ "newColor").asOpt[LibraryColor]
     val newListed = (json \ "newListed").asOpt[Boolean]
 
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     val modifyRequest = LibraryModifyRequest(newName, newSlug, newVisibility, newDescription, newColor, newListed)
     val res = libraryCommander.modifyLibrary(libId, request.userId, modifyRequest)
     res match {
@@ -299,7 +300,7 @@ class MobileLibraryController @Inject() (
     val rawKeep = RawBookmarkRepresentation(title, url, None, keptAt = Some(clock.now))
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    keepsCommander.keepWithSelectedTags(request.userId, rawKeep, libraryId, source, tagNames) match {
+    keepsCommander.keepWithSelectedTags(request.userId, rawKeep, libraryId, source, tagNames, SocialShare(jsonBody)) match {
       case Left(msg) =>
         Future.successful(BadRequest(msg))
       case Right((keep, tags)) =>

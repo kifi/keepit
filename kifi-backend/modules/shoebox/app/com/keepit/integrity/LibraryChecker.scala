@@ -26,11 +26,11 @@ class LibraryChecker @Inject() (
     val currentTime = DateTime.now()
     val hourInd = currentTime.hourOfDay().get
     val minuteInd = currentTime.minuteOfHour().get / 10
+    val index = hourInd * 6 + minuteInd // hour * 6 + minute / 10 (int div)
 
     db.readOnlyMaster { implicit s =>
-      val index = hourInd * 6 + minuteInd // hour * 6 + minute / 10 (int div)
-      val pageSize = userRepo.count / 144 // 144 = 24 (hours per day) * 6 (10 minute intervals per hour)
-      userRepo.page(index, pageSize)
+      val pageSize = userRepo.countIncluding(UserStates.ACTIVE) / 144 // 144 = 24 (hours per day) * 6 (10 minute intervals per hour)
+      userRepo.pageIncluding(UserStates.ACTIVE)(index, pageSize)
     }.map { u =>
       // libraryCommander.internSystemGeneratedLibraries does the following...
       // takes the earliest MAIN & SECRET Library created for a user

@@ -1,19 +1,28 @@
-rel-libs-width = 210px
+rightColWidth = 210px
 
 .kf-lib-cols
   display: table
   margin: 0 auto
   padding: 10px appSidePad 0
-  box-sizing: border-box
-  min-width: appMinWidth + 2 * appSidePad
-  max-width: appMinWidth + 2 * appSidePad + 100px
-  width: 100%
   min-height: 100vh  // for auto-scrolling down to search results
   table-layout: fixed
 
 .kf-lib-col
   display: table-cell
   vertical-align: top
+  width: appMinWidth - rightColWidth
+  max-width: appMinWidth - rightColWidth
+
+.kf-lib-right-col
+  display: table-cell
+  vertical-align: top
+  width: rightColWidth
+  padding: 20px 0 0
+  .kf-mobile &
+    display: block
+    width: auto
+    padding: 0
+    text-align: center
 
 .kf-lib-footer
   padding-bottom: 30px

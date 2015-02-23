@@ -114,6 +114,10 @@ object LibraryIndexable {
   def countPublishedLibrariesByMember(librarySearcher: Searcher, memberId: Id[User]): Int = {
     librarySearcher.findPrimaryIds(new Term(LibraryFields.usersField, memberId.id.toString)).toArray().count(isPublished(librarySearcher, _))
   }
+
+  def countPublishedLibrariesByOwner(librarySearcher: Searcher, ownerId: Id[User]): Int = {
+    librarySearcher.findPrimaryIds(new Term(LibraryFields.ownerField, ownerId.id.toString)).toArray().count(isPublished(librarySearcher, _))
+  }
 }
 
 class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]) extends Indexable[Library, Library] {

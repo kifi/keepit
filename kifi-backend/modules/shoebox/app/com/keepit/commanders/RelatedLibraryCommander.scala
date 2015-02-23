@@ -1,10 +1,11 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.LibraryQualityHelper
@@ -13,6 +14,7 @@ import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import scala.collection.mutable
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import scala.concurrent.Future
 
@@ -33,6 +35,7 @@ class RelatedLibraryCommanderImpl @Inject() (
     cortex: CortexServiceClient,
     userCommander: UserCommander,
     libQualityHelper: LibraryQualityHelper,
+    relatedLibsCache: RelatedLibrariesCache,
     airbrake: AirbrakeNotifier) extends RelatedLibraryCommander with Logging {
 
   protected val DEFAULT_MIN_FOLLOW = 5
@@ -85,34 +88,39 @@ class RelatedLibraryCommanderImpl @Inject() (
 
   }
 
-  def suggestedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]] = consolidater(libId) { libId =>
-    val topicRelatedF = topicRelatedLibraries(libId)
-    val ownerLibsF = librariesFromSameOwner(libId)
-    val popularF = topFollowedLibraries()
-    for {
-      topicRelated <- topicRelatedF
-      ownerLibs <- ownerLibsF
-      popular <- popularF
-    } yield {
-      val libs = topicRelated ++
-        ownerLibs.sortBy(-_.library.memberCount).take(SUB_RETURN_SIZE) ++
-        util.Random.shuffle(popular.filter(_.library.id.get != libId)).take(SUB_RETURN_SIZE)
+  def suggestedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]] = {
+    val relatedLibs = relatedLibsCache.getOrElseFuture(RelatedLibariesKey(libId)) {
+      val topicRelatedF = topicRelatedLibraries(libId)
+      val ownerLibsF = librariesFromSameOwner(libId)
+      val popularF = topFollowedLibraries()
+      for {
+        topicRelated <- topicRelatedF
+        ownerLibs <- ownerLibsF
+        popular <- popularF
+      } yield {
+        val libs = topicRelated ++
+          ownerLibs.sortBy(-_.library.memberCount).take(SUB_RETURN_SIZE) ++
+          util.Random.shuffle(popular.filter(_.library.id.get != libId)).take(SUB_RETURN_SIZE)
 
-      // dedup
-      val libIds = mutable.Set.empty[Id[Library]]
-      libs.flatMap { lib =>
-        if (libIds.contains(lib.library.id.get)) None
-        else {
-          libIds += lib.library.id.get
-          Some(lib)
+        // dedup
+        val libIds = mutable.Set.empty[Id[Library]]
+        val libs2 = libs.flatMap { lib =>
+          if (libIds.contains(lib.library.id.get)) None
+          else {
+            libIds += lib.library.id.get
+            Some(lib)
+          }
         }
+        RelatedLibraries(libs2)
       }
     }
+
+    relatedLibs.map(_.libs)
   }
 
   def topicRelatedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]] = {
     cortex.similarLibraries(libId, limit = SUB_RETURN_SIZE).map { ids =>
-      db.readOnlyReplica { implicit s =>
+      db.readOnlyMaster { implicit s =>
         ids.map { id => libRepo.get(id) }
       }.filter(_.visibility == LibraryVisibility.PUBLISHED)
         .map { lib => RelatedLibrary(lib, RelatedLibraryKind.TOPIC) }
@@ -147,4 +155,15 @@ object RelatedLibraryKind {
   val POPULAR = RelatedLibraryKind("popular")
 }
 
-case class RelatedLibrary(library: Library, kind: RelatedLibraryKind)
+@json case class RelatedLibrary(library: Library, kind: RelatedLibraryKind)
+
+@json case class RelatedLibraries(libs: Seq[RelatedLibrary])
+
+case class RelatedLibariesKey(id: Id[Library]) extends Key[RelatedLibraries] {
+  override val version = 1
+  val namespace = "related_libraries_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class RelatedLibrariesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[RelatedLibariesKey, RelatedLibraries](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
