@@ -5,7 +5,6 @@ angular.module('kifi')
 .factory('routeService', [
   'env', 'util',
   function (env, util) {
-
     function route(path, params) {
       return env.xhrBase + path + (params ? queryStr(params) : '');
     }

@@ -9,6 +9,7 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
+        forceClose: '=',
         disableScroll: '='
       },
       templateUrl: 'common/modal/modal.tpl.html',
@@ -55,6 +56,12 @@ angular.module('kifi')
 
         scope.backdropStyle.opacity = attrs.kfOpacity || 0.3;
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
+
+        scope.$watch('forceClose', function (newVal, oldVal) {
+          if (!oldVal && newVal) {
+            scope.close();
+          }
+        });
 
         if (!scope.disableScroll) {
           element.find('.dialog-body').css({'overflow-y': 'auto', 'overflow-x': 'hidden'});
