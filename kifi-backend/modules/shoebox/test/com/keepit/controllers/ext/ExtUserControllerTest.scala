@@ -19,6 +19,8 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 import scala.concurrent.Future
 
@@ -66,7 +68,7 @@ class ExtUserControllerTest extends Specification with ShoeboxTestInjector with 
            """)
 
         // get guide info with a persona
-        val (_, personaLibOpt) = inject[UserPersonaCommander].addPersonaForUser(user1.id.get, PersonaName.TECHIE)
+        val (_, personaLibOpt) = Await.result(inject[UserPersonaCommander].addPersonaForUser(user1.id.get, PersonaName.TECHIE), FiniteDuration(5, SECONDS))
         personaLibOpt.nonEmpty === true
         db.readOnlyMaster { implicit s =>
           libraryRepo.getByUser(user1.id.get).length === 1

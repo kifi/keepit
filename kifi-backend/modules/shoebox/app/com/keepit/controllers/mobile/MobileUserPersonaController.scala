@@ -9,6 +9,7 @@ import com.keepit.common.time.Clock
 import com.keepit.heimdal.{ HeimdalContextBuilderFactory }
 import com.keepit.model._
 import play.api.libs.json.Json
+import play.api.libs.concurrent.Execution.Implicits._
 
 class MobileUserPersonaController @Inject() (
   db: Database,
@@ -41,7 +42,7 @@ class MobileUserPersonaController @Inject() (
     Ok(Json.obj("personas" -> Json.toJson(personaObjs)))
   }
 
-  def selectPersonas() = UserAction(parse.tolerantJson) { request =>
+  def selectPersonas() = UserAction.async(parse.tolerantJson) { request =>
     implicit val context = heimdalContextFactory.withRequestInfoAndSource(request, KeepSource.mobile).build
     val persistPersonaNames = (request.body \ "personas").as[Seq[PersonaName]]
     val currentPersonaNames = db.readOnlyMaster { implicit s =>
@@ -51,12 +52,14 @@ class MobileUserPersonaController @Inject() (
     val personasToAdd = persistPersonaNames diff currentPersonaNames
     val personasToRemove = currentPersonaNames diff persistPersonaNames
 
-    val added = userPersonaCommander.addPersonasForUser(request.userId, personasToAdd.toSet)
+    val addedF = userPersonaCommander.addPersonasForUser(request.userId, personasToAdd.toSet)
     val removed = userPersonaCommander.removePersonasForUser(request.userId, personasToRemove.toSet)
 
-    Ok(Json.obj(
-      "added" -> added.keys.map(_.name).toSeq,
-      "removed" -> removed.map(_.name).toSeq
-    ))
+    addedF.map { added =>
+      Ok(Json.obj(
+        "added" -> added.keys.map(_.name).toSeq,
+        "removed" -> removed.map(_.name).toSeq
+      ))
+    }
   }
 }
