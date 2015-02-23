@@ -11,9 +11,12 @@ trait URIPersonaRecommendationPool extends PersonaRecommendationPool[UriRecommen
 @Singleton
 class URIFixedSetPersonaRecoPool @Inject() () extends FixedSetPersonaRecoPool[NormalizedURI, UriRecommendation] with URIPersonaRecommendationPool {
   val fixedRecos = FixedSetURIReco.recos
+  val specialBoostSet = Set.empty[Id[NormalizedURI]]
+  val specialBoostScore = 0f
 
-  def generateRecoItemFromId(userId: Id[User], recoId: Id[NormalizedURI]): UriRecommendation = {
-    FixedSetURIReco(userId, recoId)
+  def generateRecoItemFromId(userId: Id[User], recoId: Id[NormalizedURI], applyBoost: Boolean): UriRecommendation = {
+    val perturb = perturbation(applyBoost)
+    FixedSetURIReco(userId, recoId, perturb)
   }
 }
 
@@ -24,11 +27,11 @@ object FixedSetURIReco {
 
   private def toURIList(ids: Seq[Int]): Seq[Id[NormalizedURI]] = ids.map { Id[NormalizedURI](_) }
 
-  def apply(userId: Id[User], recoId: Id[NormalizedURI]): UriRecommendation = {
+  def apply(userId: Id[User], recoId: Id[NormalizedURI], perturbation: Float): UriRecommendation = {
     UriRecommendation(
       uriId = recoId,
       userId = userId,
-      masterScore = fakeMasterScore,
+      masterScore = fakeMasterScore + perturbation,
       allScores = fakeUriScores,
       attribution = SeedAttribution.EMPTY,
       topic1 = None,

@@ -27,14 +27,14 @@ class PersonaRecommendationIngestorTest extends Specification with CuratorTestIn
           val recos = uriRecRepo.getByUserId(Id[User](1))
           recos.size === 1
           recos.head.uriId.id === 1
-          recos.head.masterScore === FixedSetURIReco.fakeMasterScore
+          (math.abs(recos.head.masterScore - FixedSetURIReco.fakeMasterScore) <= 1.0) === true // random noise in [0, 1]
         }
 
         db.readOnlyReplica { implicit s =>
           val recos = libRecRepo.getByUserId(Id[User](1))
           recos.size === 1
           recos.head.libraryId.id === 1
-          recos.head.masterScore === FixedSetLibraryReco.fakeMasterScore
+          (math.abs(recos.head.masterScore - FixedSetLibraryReco.fakeMasterScore) <= 1.0) === true // random noise in [0, 1]
         }
       }
     }

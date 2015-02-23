@@ -35,7 +35,7 @@ class FacebookPublishingCommander @Inject() (
         case Some(sui) =>
           val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
           val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
-          postOpenGraphAction(sui, facebookKeepAction, "library" -> libraryUrl, "object" -> keep.url)
+          postOpenGraphAction(sui, facebookKeepAction, "library" -> libraryUrl, "object" -> keep.url, "fb:explicitly_shared" -> "true")
       }
     }
   }
