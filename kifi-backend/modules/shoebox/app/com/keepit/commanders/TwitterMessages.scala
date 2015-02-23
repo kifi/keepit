@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.concurrent.PimpMyFuture._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.common.api.UriShortener
@@ -23,9 +24,9 @@ class TwitterMessages @Inject() (
     if (libUrl.length + keepUrl.length + Overhead + title.length + libName.length <= 140) {
       Future.successful(message(title, keepUrl, libName, libUrl))
     } else {
-      shortner.shorten(keepUrl) map { shortenKeepUrl =>
+      val shortMessage = shortner.shorten(keepUrl) map { shortenKeepUrl: String =>
         if (libUrl.length + shortenKeepUrl.length + Overhead + title.length + libName.length <= 140) {
-          message(title, shortenKeepUrl, libName, libUrl)
+          Future.successful(message(title, shortenKeepUrl, libName, libUrl))
         } else {
           shortner.shorten(libUrl) map { shortenLibUrl =>
             if (shortenLibUrl.length + shortenKeepUrl.length + Overhead + title.length + libName.length <= 140) {
@@ -49,6 +50,7 @@ class TwitterMessages @Inject() (
           }
         }
       }
+      shortMessage.flatten
     }
   }
 
