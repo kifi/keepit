@@ -3,7 +3,7 @@ package com.keepit.common.util
 import com.keepit.common.logging.Logging
 
 object UrlClassifier {
-  val SocialActivityUrls = """(http[s]?://www.swarmapp.com/c/.*)|(http[s]?://runkeeper.com/user/.*/activity/.*)""".r
+  val SocialActivityUrls = """(http[s]?://www.swarmapp.com/c/.*)|(http[s]?://runkeeper.com/user/.*/activity/.*)|(http[s]?://rnkpr.com/.*)""".r
 }
 
 class UrlClassifier extends Logging {
