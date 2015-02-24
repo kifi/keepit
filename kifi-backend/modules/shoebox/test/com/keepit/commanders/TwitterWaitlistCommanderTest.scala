@@ -58,32 +58,6 @@ class TwitterWaitlistCommanderTest extends TestKitSupport with ShoeboxTestInject
         db.readOnlyMaster { implicit s =>
           twitterWaitlistRepo.getByUserAndHandle(user1.id.get, "therealcaptainfalcon").nonEmpty === true
         }
-
-      }
-    }
-
-    "edit a user" in {
-      withDb(modules: _*) { implicit injector =>
-        val twitterWaitlistCommander = inject[TwitterWaitlistCommander]
-        val twitterWaitlistRepo = inject[TwitterWaitlistRepo]
-        val (user1) = db.readWrite { implicit s =>
-          user().withName("Captain", "Falcon").withUsername("cfalc").saved
-        }
-
-        twitterWaitlistCommander.addEntry(user1.id.get, "therealcaptainfalcon").isRight === true
-        val waitlistEntry = db.readOnlyMaster { implicit s =>
-          twitterWaitlistRepo.getByUserAndHandle(user1.id.get, "therealcaptainfalcon")
-        }
-
-        val entryId = waitlistEntry.get.id.get
-
-        // change state
-        twitterWaitlistCommander.editEntry(entryId, Some(TwitterWaitlistEntryStates.ACCEPTED))
-        db.readOnlyMaster { implicit s =>
-          val entry = twitterWaitlistRepo.getByUserAndHandle(user1.id.get, "therealcaptainfalcon")
-          entry.get.state === TwitterWaitlistEntryStates.ACCEPTED
-        }
-
       }
     }
 

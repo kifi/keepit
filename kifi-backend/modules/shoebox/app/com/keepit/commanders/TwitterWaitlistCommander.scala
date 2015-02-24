@@ -10,7 +10,6 @@ import com.keepit.model.{ TwitterWaitlistEntryStates, TwitterWaitlistRepo, User,
 @ImplementedBy(classOf[TwitterWaitlistCommanderImpl])
 trait TwitterWaitlistCommander {
   def addEntry(userId: Id[User], handle: String): Either[String, TwitterWaitlistEntry]
-  def editEntry(entryId: Id[TwitterWaitlistEntry], state: Option[State[TwitterWaitlistEntry]] = None): TwitterWaitlistEntry
 }
 
 @Singleton
@@ -38,19 +37,6 @@ class TwitterWaitlistCommanderImpl @Inject() (
       db.readWrite { implicit s =>
         twitterWaitlistRepo.save(entry)
       }
-    }
-  }
-
-  def editEntry(entryId: Id[TwitterWaitlistEntry], stateOpt: Option[State[TwitterWaitlistEntry]] = None): TwitterWaitlistEntry = {
-    val targetEntry = db.readOnlyMaster { implicit s =>
-      twitterWaitlistRepo.get(entryId)
-    }
-    val newState = stateOpt.getOrElse(targetEntry.state)
-
-    db.readWrite { implicit s =>
-      twitterWaitlistRepo.save(
-        targetEntry.copy(state = newState)
-      )
     }
   }
 }
