@@ -12,6 +12,7 @@ import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox._
 import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
+import com.keepit.shoebox.DevTwilioCredentialsModule
 import com.keepit.social.ProdShoeboxSecureSocialModule
 import com.keepit.common.analytics.DevAnalyticsModule
 import com.keepit.common.store.ShoeboxDevStoreModule
@@ -39,6 +40,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   scrapeSchedulerModule = DevScrapeSchedulerModule(),
   scraperHealthMonitorModule = DevScraperHealthMonitorModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),
+  twilioCredentialsModule = DevTwilioCredentialsModule(),
   cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule())
 ) with CommonDevModule {
   // Service clients

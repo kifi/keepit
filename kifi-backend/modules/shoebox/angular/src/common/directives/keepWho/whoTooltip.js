@@ -22,7 +22,7 @@ angular.module('kifi')
         // Probably needs more research on scopes in Angular.
 
         // If this is being used on followers in a library, do not show additional
-        // information about the follower (i.e., 'Your Kifi friend').
+        // information about the follower (i.e., 'Your Kifi connection').
         if (!scope.keeper && scope.follower) {
           scope.keeper = scope.follower;
           scope.hideWhoInfo = true;

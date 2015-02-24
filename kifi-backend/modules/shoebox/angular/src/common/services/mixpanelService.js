@@ -33,7 +33,7 @@
 
   var locations = {
     yourKeeps: /^\/$/,  // TODO: this is now recommendations!
-    yourFriends: /^\/friends$/,
+    yourFriends: /^\/connections$/,
     searchResults: /^\/find\b/,
     addFriends: /^\/invite$/
   };

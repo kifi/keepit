@@ -16,6 +16,8 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
@@ -42,15 +44,15 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
           userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.INVESTOR, PersonaName.TECHIE)
         }
         // add an existing persona
-        val mapping1 = userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.INVESTOR))
+        val mapping1 = Await.result(userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.INVESTOR)), 5 seconds)
         mapping1.size === 0
 
         // add a new persona
-        val mapping2 = userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.FOODIE))
+        val mapping2 = Await.result(userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.FOODIE)), 5 seconds)
         mapping2.size === 1
 
         // add a mixed set
-        val mapping3 = userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.INVESTOR, PersonaName.DEVELOPER, PersonaName.FOODIE))
+        val mapping3 = Await.result(userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.INVESTOR, PersonaName.DEVELOPER, PersonaName.FOODIE)), 5 seconds)
         mapping3.size === 1
 
         db.readOnlyMaster { implicit s =>

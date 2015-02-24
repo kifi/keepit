@@ -92,7 +92,7 @@ describe('kifi.friends.seeMutualFriends', function () {
       scope.$digest();
 
       spyOn(inviteService, 'friendRequest').and.returnValue(promise(null));
-      expect(elem.find('.kf-mutual-friends-action').text()).toBe('Add Friend');
+      expect(elem.find('.kf-mutual-friends-action').text()).toBe('Connect');
       elem.find('.kf-mutual-friends-action').click();
       expect(elem.find('.kf-mutual-friends-action').text()).toBe('Sent!');
     });
@@ -102,7 +102,7 @@ describe('kifi.friends.seeMutualFriends', function () {
       scope.$digest();
 
       spyOn(inviteService, 'friendRequest').and.returnValue(rejectedPromise());
-      expect(elem.find('.kf-mutual-friends-action').text()).toBe('Add Friend');
+      expect(elem.find('.kf-mutual-friends-action').text()).toBe('Connect');
       elem.find('.kf-mutual-friends-action').click();
       expect(elem.find('.kf-mutual-friends-action').text()).toBe('Error. Retry?');
     });

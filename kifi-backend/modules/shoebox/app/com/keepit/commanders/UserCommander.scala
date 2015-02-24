@@ -333,8 +333,8 @@ class UserCommander @Inject() (
             elizaServiceClient.sendGlobalNotification(
               userIds = toNotify,
               title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-              body = s"To discover ${newUser.firstName}’s public keeps while searching, get connected! Click this to send a friend request to ${newUser.firstName}.",
-              linkText = "Kifi Friends",
+              body = s"To discover ${newUser.firstName}’s public keeps while searching, get connected! Invite ${newUser.firstName} to connect on Kifi »",
+              linkText = "Kifi Connections",
               linkUrl = "https://www.kifi.com/invite?friend=" + newUser.externalId,
               imageUrl = s3ImageStore.avatarUrlByUser(newUser),
               sticky = false,

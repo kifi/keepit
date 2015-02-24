@@ -22,7 +22,7 @@ class FriendRequestEmailSender @Inject() (
     val emailToSend = EmailToSend(
       fromName = Some(Left(fromUserId)),
       from = SystemEmailAddress.NOTIFICATIONS,
-      subject = s"${fullName(fromUserId)} sent you a friend request.",
+      subject = s"${fullName(fromUserId)} wants to connect with you on Kifi",
       to = Left(toUserId),
       category = NotificationCategory.User.FRIEND_REQUEST,
       htmlTemplate = views.html.email.black.friendRequest(toUserId, fromUserId),

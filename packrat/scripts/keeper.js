@@ -182,7 +182,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       var tip = {
         s: ['Home', 'Browse and manage your<br/>keeps in a new tab.'],
         i: ['Inbox (' + MOD_KEYS.c + '+Shift+O)', 'See the messages in<br/>your Inbox.'],
-        c: ['Send (' + MOD_KEYS.c + '+Shift+S)', 'Send this page to any email<br/>address or Kifi friend.']
+        c: ['Send (' + MOD_KEYS.c + '+Shift+S)', 'Send this page to any email<br/>address or Kifi connection.']
       }[this.dataset.tip];
       k.render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
         configureHover(html, {

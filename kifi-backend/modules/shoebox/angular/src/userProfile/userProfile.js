@@ -345,20 +345,4 @@ angular.module('kifi')
       });
     };
   }
-])
-
-
-.controller('UserProfilePeopleCtrl', [
-  '$scope', '$state',
-  function ($scope, $state) {
-    $scope.peopleType = $state.current.data.peopleType;
-  }
-])
-
-
-.controller('UserProfileKeepsCtrl', [
-  '$scope',
-  function ($scope) {
-    $scope.keepType = 'Helped Rekeep';
-  }
 ]);
