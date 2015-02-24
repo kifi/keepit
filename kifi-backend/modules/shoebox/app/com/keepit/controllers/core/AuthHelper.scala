@@ -217,23 +217,15 @@ class AuthHelper @Inject() (
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => {
-        val cookieRedirect = request.cookies.get("redirect")
-        val cookieIntent = request.cookies.get("intent")
-        val result = if (cookieRedirect.isDefined) {
-          val redirectPath = java.net.URLDecoder.decode(cookieRedirect.get.value, "UTF-8")
-          val initParams = new StringBuilder("?install=1") // tell browser to pop-up install modal
-          if (cookieIntent.isDefined) {
-            initParams ++= s"&intent=${cookieIntent.get.value}"
-          }
-          val returnUri = redirectPath + initParams.toString
-          val discardedCookies = Seq(cookieRedirect, cookieIntent).flatten.map(c => DiscardingCookie(c.name))
-          Ok(Json.obj("uri" -> returnUri)).discardingCookies(discardedCookies: _*)
-        } else if (isFinalizedImmediately) {
+        val result = if (isFinalizedImmediately) {
           Redirect(uri)
         } else {
           Ok(Json.obj("uri" -> uri))
         }
-        result.withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv"))
+        val cookieTargetLibId = request.cookies.get("publicLibraryId")
+        val cookieIntent = request.cookies.get("intent")
+        val discardedCookies = Seq(cookieTargetLibId, cookieIntent).flatten.map(c => DiscardingCookie(c.name)) :+ DiscardingCookie("inv")
+        result.withCookies(authenticator.toCookie).discardingCookies(discardedCookies: _*)
           .withSession(request.session.setUserId(user.id.get))
       }
     )
