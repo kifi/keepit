@@ -10,7 +10,7 @@ angular.module('kifi')
       templateUrl: 'friends/seeMutualFriends.tpl.html',
       require: '^kfModal',
       link: function (scope, element, attrs, kfModalCtrl) {
-        scope.actionText = 'Add Friend';
+        scope.actionText = 'Connect';
         scope.clickable = true;
 
         function init() {
@@ -19,7 +19,7 @@ angular.module('kifi')
 
         // Helper function to update scope values based on passed-in person.
         function updateScopeValues (person) {
-          scope.actionText = 'Add Friend';
+          scope.actionText = 'Connect';
           scope.clickable = true;
 
           scope.id = person.id;

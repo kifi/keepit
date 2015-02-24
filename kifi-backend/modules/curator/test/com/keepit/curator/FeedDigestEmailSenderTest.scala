@@ -183,10 +183,10 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         //mail42body must contain("/r/e/1/recos/send?id=" + savedRecoModels(1)._1.externalId)
 
         // others-who-kept messages
-        mail42body must contain("2 friends and 1 other kept this")
-        mail42text must contain("2 friends and 1 other kept this")
-        mail42body must contain("1 friend and 2 others kept this")
-        mail42text must contain("1 friend and 2 others kept this")
+        mail42body must contain("2 connections and 1 other kept this")
+        mail42text must contain("2 connections and 1 other kept this")
+        mail42body must contain("1 connection and 2 others kept this")
+        mail42text must contain("1 connection and 2 others kept this")
 
         // read times
         mail42body must contain("45 min")

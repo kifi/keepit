@@ -2,43 +2,51 @@
 .social-invite-search
   display: inline-block
 
-  input
-    padding: 10px
-    font-size: 14px
-    width: 285px
-    border: 1px solid #c5d0da
+.social-invite-search-label
+  display: inline-block
+  position: relative
 
-  .social-invite-search-explain
-    font-size: 90%
-    margin-top: 7px
-    margin-left: 10px
-    color: #B6C3CC
+input.social-invite-search-input
+  padding: 10px 10px 10px 32px
+  font-size: 14px
+  width: 263px
+  border: 1px solid #c5d0da
 
-  .social-invite-dropdown
-    position: absolute
-    box-sizing: border-box
-    z-index: 2
+.social-invite-search-icon
+  position: absolute
+  top: 0
+  left: 11px
+  height: 100%
+  width: 15px
+  background-repeat: no-repeat
+  background-size: contain
+  background-position: center
 
-    .social-invite-element
-      background: #fff
-      width: 289px
-      border: 1px solid #c5d0da
-      border-bottom: 0
-      padding: 4px
-      padding-left: 12px
-      height: 56px
+.social-invite-dropdown
+  position: absolute
+  box-sizing: border-box
+  z-index: 2
 
-      &.social-invite-invited
-        background-color: #E5F1FF
+.social-invite-element
+  background: #fff
+  width: 289px
+  border: 1px solid #c5d0da
+  border-bottom: 0
+  padding: 4px
+  padding-left: 12px
+  height: 56px
 
-      &.social-invite-joined
-        background-color: #FFFFFF
+  &.social-invite-invited
+    background-color: #E5F1FF
 
-      &:first-child
-        border-top: 0
+  &.social-invite-joined
+    background-color: #FFFFFF
 
-      &:last-child
-        border-bottom: 1px solid #c5d0da
+  &:first-child
+    border-top: 0
+
+  &:last-child
+    border-bottom: 1px solid #c5d0da
 
 .social-invite-image
   width: 55px
@@ -66,9 +74,11 @@
   color: #000
   text-overflow: ellipsis
   overflow: hidden
-  width: 150px
   white-space: nowrap
   text-align: left
+
+  .social-invite-summary:not(:last-child)>&
+    width: 150px
 
 .social-invite-name-long
   font-size: 14px
@@ -107,7 +117,7 @@
   display: block
   background-color: #6fa6ef
   border-radius: 3px
-  padding: 4px 12px
+  padding: 4px 10px 4px 4px
   color: #fff
   font-weight: 300
   font-size: 13px

@@ -231,9 +231,9 @@ class UserConnectionsCommander @Inject() (
 
     val friendReqF = elizaServiceClient.sendGlobalNotification(
       userIds = Set(recipient.id.get),
-      title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request",
+      title = s"${requestingUser.firstName} ${requestingUser.lastName} wants to connect with you on Kifi",
       body = s"Enjoy ${requestingUser.firstName}’s keeps in your search results and message ${requestingUser.firstName} directly.",
-      linkText = s"Respond to ${requestingUser.firstName}’s friend request",
+      linkText = s"Respond to ${requestingUser.firstName}’s invitation",
       linkUrl = s"https://www.kifi.com/${requestingUser.username.value}",
       imageUrl = requestingUserImage,
       sticky = false,
