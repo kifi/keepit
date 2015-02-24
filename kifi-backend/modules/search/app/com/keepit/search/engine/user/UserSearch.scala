@@ -53,7 +53,7 @@ class UserSearch(
   private def executeTextSearch(): ((HitQueue, HitQueue), Option[UserSearchExplanation]) = {
 
     val engine = engineBuilder.build()
-    debugLog("user search engine created")
+    debugLog(s"user search engine created: ${engine.getQuery()}")
 
     val explanation = explain.map {
       case (libraryId, firstLang, secondLang) =>
