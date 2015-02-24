@@ -78,17 +78,10 @@ class TwitterWaitlistCommanderTest extends TestKitSupport with ShoeboxTestInject
         val entryId = waitlistEntry.get.id.get
 
         // change state
-        twitterWaitlistCommander.editEntry(entryId, None, Some(TwitterWaitlistEntryStates.ACCEPTED))
+        twitterWaitlistCommander.editEntry(entryId, Some(TwitterWaitlistEntryStates.ACCEPTED))
         db.readOnlyMaster { implicit s =>
           val entry = twitterWaitlistRepo.getByUserAndHandle(user1.id.get, "therealcaptainfalcon")
           entry.get.state === TwitterWaitlistEntryStates.ACCEPTED
-        }
-
-        // change userId & handle
-        twitterWaitlistCommander.editEntry(entryId, Some("scar"), None)
-        db.readOnlyMaster { implicit s =>
-          twitterWaitlistRepo.getByUserAndHandle(user1.id.get, "therealcaptainfalcon").isEmpty === true
-          twitterWaitlistRepo.getByUserAndHandle(user1.id.get, "scar").isEmpty === false
         }
 
       }

@@ -10,7 +10,7 @@ import com.keepit.model.{ TwitterWaitlistEntryStates, TwitterWaitlistRepo, User,
 @ImplementedBy(classOf[TwitterWaitlistCommanderImpl])
 trait TwitterWaitlistCommander {
   def addEntry(userId: Id[User], handle: String): Either[String, TwitterWaitlistEntry]
-  def editEntry(entryId: Id[TwitterWaitlistEntry], handle: Option[String] = None, state: Option[State[TwitterWaitlistEntry]] = None): TwitterWaitlistEntry
+  def editEntry(entryId: Id[TwitterWaitlistEntry], state: Option[State[TwitterWaitlistEntry]] = None): TwitterWaitlistEntry
 }
 
 @Singleton
@@ -41,16 +41,15 @@ class TwitterWaitlistCommanderImpl @Inject() (
     }
   }
 
-  def editEntry(entryId: Id[TwitterWaitlistEntry], handleOpt: Option[String] = None, stateOpt: Option[State[TwitterWaitlistEntry]] = None): TwitterWaitlistEntry = {
+  def editEntry(entryId: Id[TwitterWaitlistEntry], stateOpt: Option[State[TwitterWaitlistEntry]] = None): TwitterWaitlistEntry = {
     val targetEntry = db.readOnlyMaster { implicit s =>
       twitterWaitlistRepo.get(entryId)
     }
-    val newHandle = handleOpt.getOrElse(targetEntry.twitterHandle)
     val newState = stateOpt.getOrElse(targetEntry.state)
 
     db.readWrite { implicit s =>
       twitterWaitlistRepo.save(
-        targetEntry.copy(twitterHandle = newHandle, state = newState)
+        targetEntry.copy(state = newState)
       )
     }
   }
