@@ -157,8 +157,12 @@ angular.module('kifi')
       ////////////////////////////
       // User registration      //
       ////////////////////////////
-      socialSignup: function (provider) {
-        return '/signup/' + provider;
+      socialSignup: function (provider, opts) {
+        var params = {
+          publicLibraryId : opts.libraryId || [],
+          intent : opts.intent || []
+        };
+        return route('/signup/' + provider, params);
       },
 
       socialSignupWithToken: function (provider) {
