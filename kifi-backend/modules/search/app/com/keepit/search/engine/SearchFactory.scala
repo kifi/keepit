@@ -253,7 +253,7 @@ class SearchFactory @Inject() (
   }
 
   private def addLibraryFilter(engBuilder: QueryEngineBuilder, libId: Long) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.toString))) }
-  private def addUserFilter(engBuilder: QueryEngineBuilder, userId: Id[User]) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.userField, userId.id.toString)) }
+  private def addUserFilter(engBuilder: QueryEngineBuilder, userId: Id[User]) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.userField, userId.id.toString))) }
 
   def getLibrarySearches(
     shards: Set[Shard[NormalizedURI]],
