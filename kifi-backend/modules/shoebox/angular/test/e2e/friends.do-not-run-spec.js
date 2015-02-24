@@ -5,7 +5,7 @@ describe('kifi angular friends test suite', function () {
 
   describe('Kifi friends page for logged in users', function () {
     beforeEach(function () {
-      browser.get('/friends');
+      browser.get('/connections');
       util.loginUserWithCookies();
     });
 

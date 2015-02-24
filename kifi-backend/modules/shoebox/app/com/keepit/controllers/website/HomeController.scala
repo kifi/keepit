@@ -52,8 +52,7 @@ class HomeController @Inject() (
   applicationConfig: FortyTwoConfig,
   keepsCommander: KeepsCommander,
   smsCommander: SmsCommander,
-  clock: Clock,
-  siteRouter: KifiSiteRouter)
+  clock: Clock)
     extends UserActions with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: UserRequest[_]): Boolean = {
@@ -67,8 +66,8 @@ class HomeController @Inject() (
 
   def home = MaybeUserAction { implicit request =>
     request match {
-      case r: NonUserRequest[_] => MarketingSiteRouter.marketingSite()
-      case userRequest: UserRequest[_] => AngularDistAssets.angularApp()
+      case _: NonUserRequest[_] => MarketingSiteRouter.marketingSite()
+      case _: UserRequest[_] => AngularDistAssets.angularApp()
     }
   }
 
