@@ -138,9 +138,9 @@ trait SearchControllerUtil {
   }
 
   def getUserFilterFuture(filter: Option[String]): Future[Option[Either[Id[User], String]]] = {
-    filter match {
-      case Some(ExternalId.UUIDPattern(id)) => shoeboxClient.getUserIdsByExternalIds(Seq(ExternalId(id))).imap(_.headOption.map(Left(_)))
-      case f => Future.successful(f.map(Right(_)))
+    filter.flatMap(ExternalId.asOpt[User]) match {
+      case Some(userId) => shoeboxClient.getUserIdsByExternalIds(Seq(userId)).imap(_.headOption.map(Left(_)))
+      case _ => Future.successful(filter.map(Right(_)))
     }
   }
 }
