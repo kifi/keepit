@@ -15,7 +15,8 @@ angular.module('kifi')
         // Scope data.
         //
         scope.selectedPersonaIds = [];
-        scope.closeText = element.is('#kf-modal *') ? 'Update interests' : 'Done';
+        scope.isModal = element.is('#kf-modal *');
+        scope.closeText = scope.isModal ? 'Update interests' : 'Done';
 
         //
         // Scope methods.
@@ -58,7 +59,7 @@ angular.module('kifi')
           if (scope.selectedPersonaIds.length > 0) {
             if (_.isFunction(scope.closeAction)) {
               scope.closeAction();
-            } else if (element.is('#kf-modal *')) {
+            } else if (scope.isModal) {
               $rootScope.$emit('refreshRecos');
               modalService.close();
             }
