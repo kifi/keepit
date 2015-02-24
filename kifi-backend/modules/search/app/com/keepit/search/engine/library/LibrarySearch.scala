@@ -54,8 +54,7 @@ class LibrarySearch(
   private def executeTextSearch(): ((HitQueue, HitQueue, HitQueue), Option[LibrarySearchExplanation]) = {
 
     val engine = engineBuilder.build()
-    debugLog("library search engine created")
-
+    debugLog(s"library search engine created: ${engine.getQuery()}")
     val explanation = explain.map {
       case (libraryId, firstLang, secondLang) =>
         val labels = engineBuilder.getQueryLabels()
