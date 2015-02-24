@@ -134,11 +134,12 @@ class MobileSearchController @Inject() (
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
+    val filterFuture = getUserFilterFuture(filter)
 
     // Uri Search
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
-      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filter, Future.successful(LibraryContext.None), maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
+      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, Future.successful(LibraryContext.None), maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
         getMobileUriSearchResults(userId, uriSearchResult).imap {
           case (jsHits, users) =>
             Json.obj(

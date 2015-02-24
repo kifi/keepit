@@ -53,7 +53,7 @@ trait UriSearchCommander {
     acceptLangs: Seq[String],
     experiments: Set[ExperimentType],
     query: String,
-    filter: Option[String],
+    filterFuture: Future[Option[Either[Id[User], String]]],
     libraryContextFuture: Future[LibraryContext],
     maxHits: Int,
     lastUUIDStr: Option[String],
@@ -68,7 +68,7 @@ trait UriSearchCommander {
     secondLang: Option[Lang],
     experiments: Set[ExperimentType],
     query: String,
-    filter: Option[String],
+    filter: Option[Either[Id[User], String]],
     libraryContext: LibraryContext,
     maxHits: Int,
     context: Option[String],
@@ -154,7 +154,7 @@ class UriSearchCommanderImpl @Inject() (
       ).future
     }
 
-    val searchFilter = SearchFilter(filter, LibraryContext.None, context)
+    val searchFilter = SearchFilter(filter.map(Right(_)), LibraryContext.None, context)
 
     val mergedResult = {
 
@@ -226,7 +226,7 @@ class UriSearchCommanderImpl @Inject() (
       secondLang,
       experiments,
       query,
-      filter,
+      filter.map(Right(_)),
       LibraryContext.None,
       maxHits,
       context,
@@ -245,7 +245,7 @@ class UriSearchCommanderImpl @Inject() (
     acceptLangs: Seq[String],
     experiments: Set[ExperimentType],
     query: String,
-    filter: Option[String],
+    filterFuture: Future[Option[Either[Id[User], String]]],
     libraryContextFuture: Future[LibraryContext],
     maxHits: Int,
     lastUUID: Option[String],
@@ -266,6 +266,8 @@ class UriSearchCommanderImpl @Inject() (
 
     // build distribution plan
     val (localShards, dispatchPlan) = distributionPlan(userId, shards)
+
+    val filter = monitoredAwait.result(filterFuture, 1 second, "getting user filter")
 
     val libraryContext = monitoredAwait.result(libraryContextFuture, 1 seconds, "getting library context")
 
@@ -351,7 +353,7 @@ class UriSearchCommanderImpl @Inject() (
     secondLang: Option[Lang],
     experiments: Set[ExperimentType],
     query: String,
-    filter: Option[String],
+    filter: Option[Either[Id[User], String]],
     libraryContext: LibraryContext,
     maxHits: Int,
     context: Option[String],

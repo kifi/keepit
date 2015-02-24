@@ -75,10 +75,11 @@ class ExtSearchController @Inject() (
     val libraryContextFuture = getLibraryContextFuture(None, None, request)
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
+    val filterFuture = getUserFilterFuture(filter)
 
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt)
+    val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt)
     val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
