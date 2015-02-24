@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfManagePersona', [ 'userPersonaActionService', 'routeService', '$analytics', 'util', 'modalService', '$rootScope',
-  function (userPersonaActionService, routeService, $analytics, util, modalService, $rootScope) {
+.directive('kfManagePersona', [ 'userPersonaActionService', 'routeService', '$analytics', 'util', 'modalService', '$rootScope', 'libraryService',
+  function (userPersonaActionService, routeService, $analytics, util, modalService, $rootScope, libraryService) {
     return {
       restrict: 'A',
       scope: {
@@ -62,6 +62,7 @@ angular.module('kifi')
               $rootScope.$emit('refreshRecos');
               modalService.close();
             }
+            libraryService.fetchLibrarySummaries(true);
             $analytics.eventTrack('user_clicked_page', {action: 'closed'});
           }
         };
