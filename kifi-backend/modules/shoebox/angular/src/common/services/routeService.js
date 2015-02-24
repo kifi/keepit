@@ -162,11 +162,11 @@ angular.module('kifi')
           publicLibraryId : opts.libraryId || [],
           intent : opts.intent || []
         };
-        return route('/signup/' + provider, params);
+        return navRoute('/signup/' + provider, params);
       },
 
       socialSignupWithToken: function (provider) {
-        return route('/auth/token-signup/' + provider);
+        return navRoute('/auth/token-signup/' + provider);
       },
 
       socialFinalize: env.navBase + '/auth/token-finalize',
