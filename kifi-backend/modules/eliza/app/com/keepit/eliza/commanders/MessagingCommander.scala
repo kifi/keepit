@@ -42,7 +42,7 @@ object MessagingCommander {
   val MAX_NON_USER_PARTICIPANTS_PER_THREAD = 30
   val WARNING_NON_USER_PARTICIPANTS_PER_THREAD = 20
 
-  val maxEmailRecipientsPerThreadErrorMessage = s"You have hit the limit on the number of emails you are able to send through Kifi."
+  def maxEmailRecipientsPerThreadErrorMessage(user: Id[User], emailCount: Int) = s"You (user #$user) have hit the limit on the number of emails ($emailCount) you are able to send through Kifi."
 }
 
 class MessagingCommander @Inject() (
@@ -680,7 +680,7 @@ class MessagingCommander @Inject() (
     val newEmailParticipants = totalEmailParticipants - existingEmailParticipants.size
 
     if (totalEmailParticipants > MessagingCommander.MAX_NON_USER_PARTICIPANTS_PER_THREAD) {
-      throw new ExternalMessagingRateLimitException(MessagingCommander.maxEmailRecipientsPerThreadErrorMessage)
+      throw new ExternalMessagingRateLimitException(MessagingCommander.maxEmailRecipientsPerThreadErrorMessage(user, nonUsers.size))
     }
 
     if (totalEmailParticipants >= MessagingCommander.WARNING_NON_USER_PARTICIPANTS_PER_THREAD && newEmailParticipants > 0) {
