@@ -1,12 +1,8 @@
 package com.keepit.model
 
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db._
-import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import org.joda.time.DateTime
-
-import scala.concurrent.duration.Duration
 
 case class TwitterWaitlistEntry(
     id: Option[Id[TwitterWaitlistEntry]] = None,
