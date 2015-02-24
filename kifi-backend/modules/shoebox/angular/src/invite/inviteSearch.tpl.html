@@ -1,5 +1,8 @@
 <div class="social-invite-search">
-  <input type="text" ng-model="search.name" placeholder="Search for friends" ng-change="change($event)">
+  <label class="social-invite-search-label">
+    <input class="social-invite-search-input" type="text" ng-model="search.name" placeholder="Type a name or email address" ng-change="change($event)">
+    <span class="social-invite-search-icon svg-search-icon-gray"></span>
+  </label>
   <ul class="social-invite-dropdown" ng-show="search.showDropdown">
     <li class="social-invite-element" ng-repeat="result in results" ng-class="'social-invite-{{result.status === 'joined' && result.network === 'fortytwoNF' ? '' : result.status}}'">
 
@@ -26,7 +29,7 @@
           <div class="social-invite-summary">
             <div class="social-invite-name">{{result.label}}</div>
             <div class="social-invite-network">
-              Your friend on Kifi
+              Your connection on Kifi
             </div>
           </div>
         </div>
@@ -48,7 +51,7 @@
             </div>
           </div>
           <div kf-social-invite-action class="social-invite-action clickable" result="result">
-            <div class="social-invite-button user-add-button clickable-target" ng-click="invite(result, $event)"><span class="sprite sprite-tag-new-plus-icon"></span> Add</div>
+            <div class="social-invite-button user-add-button clickable-target" ng-click="invite(result, $event)"><span class="sprite sprite-tag-new-plus-icon"></span> Connect</div>
           </div>
         </div>
 
@@ -82,12 +85,11 @@
       <div ng-if="result.custom === 'cant_find'" class="fill-parent clickable" ng-click="showCantFindFriendModal()">
         <img src="/img/friend-missing@2x.png" class="social-invite-image cant-find">
         <div class="social-invite-summary">
-          <div class="social-invite-name social-invite-custom-email">Can't find your friend?</div>
+          <div class="social-invite-name social-invite-custom-email">Can't find your connection?</div>
         </div>
       </div>
 
       <div class="clearfix"></div>
     </li>
   </ul>
-  <div class="social-invite-search-explain">Search by name or email address</div>
 </div>

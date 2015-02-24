@@ -41,8 +41,8 @@ class SendFriendConnectionMadeNotificationHelper @Inject() (
 
     val notificationF = elizaServiceClient.sendGlobalNotification(
       userIds = Set(friendUserId),
-      title = s"You’re friends with ${respondingUser.firstName} ${respondingUser.lastName} on Kifi! ",
-      body = s"Enjoy ${respondingUser.firstName}'s keeps in your search results and message ${respondingUser.firstName} directly. Find and invite more friends »",
+      title = s"You’re connected with ${respondingUser.firstName} ${respondingUser.lastName} on Kifi!",
+      body = s"Enjoy ${respondingUser.firstName}’s keeps in your search results and message ${respondingUser.firstName} directly. Find and invite more connections »",
       linkText = "Invite more friends to kifi",
       linkUrl = "https://www.kifi.com/friends/invite",
       imageUrl = respondingUserImage,

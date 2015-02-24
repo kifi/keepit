@@ -8,6 +8,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, FakeSchedulerModule }
 import com.keepit.common.aws.AwsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsModule }
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
@@ -58,7 +59,9 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     FakeNormalizationUpdateJobQueueModule(),
     AwsModule(),
     FakeShoeboxRepoChangeListenerModule(),
-    FakeCryptoModule()
+    FakeCryptoModule(),
+    DevTwilioCredentialsModule(),
+    FakeExecutionContextModule()
   ))
 
 trait ShoeboxApplicationInjector extends ApplicationInjector with DbInjectionHelper with ShoeboxInjectionHelpers
@@ -94,7 +97,9 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeHttpClientModule()
+    FakeHttpClientModule(),
+    DevTwilioCredentialsModule(),
+    FakeExecutionContextModule()
   )
 
   def testFactory(implicit injector: Injector) = inject[ShoeboxTestFactory]

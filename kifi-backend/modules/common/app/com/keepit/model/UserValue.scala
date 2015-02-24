@@ -80,6 +80,8 @@ object UserValueName {
   val AUTO_SHOW_GUIDE = UserValueName("auto_show_guide")
   val AUTO_SHOW_PERSONA = UserValueName("auto_show_persona") // for new users, show who-are-you modal on page land
 
+  val LAST_SMS_SENT = UserValueName("last_sms_sent")
+
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
   def bookmarkImportContextName(newImportId: String) = UserValueName(s"bookmark_import_${newImportId}_context")
@@ -158,6 +160,8 @@ object UserValues {
   val userProfileSettings = UserValueJsValueHandler(UserValueName.USER_PROFILE_SETTINGS, Json.obj())
 
   val hasNoPassword = UserValueBooleanHandler(UserValueName.HAS_NO_PASSWORD, false)
+
+  val lastSmsSent = UserValueDateTimeHandler(UserValueName.LAST_SMS_SENT, START_OF_TIME)
 }
 
 @json case class UserValueSettings(showFollowedLibraries: Boolean)

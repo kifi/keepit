@@ -76,7 +76,7 @@ class LibrarySearchCommanderImpl @Inject() (
         val futureLocalLibraryShardResult = distSearchLibraries(localShards, request)
         val configFuture = searchFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig)
         val futureResults = Future.sequence(futureRemoteLibraryShardResults :+ futureLocalLibraryShardResult)
-        val searchFilter = SearchFilter(filter, LibraryContext.None, context)
+        val searchFilter = SearchFilter(filter.map(Right(_)), LibraryContext.None, context)
         for {
           results <- futureResults
           (config, searchExperimentId) <- configFuture
@@ -100,7 +100,7 @@ class LibrarySearchCommanderImpl @Inject() (
         val debug = request.debug
         if (debug.isDefined) debugOption.debug(debug.get)
 
-        val searchFilter = SearchFilter(request.filter, LibraryContext.None, request.context)
+        val searchFilter = SearchFilter(request.filter.map(Right(_)), LibraryContext.None, request.context)
         val searches = searchFactory.getLibrarySearches(shards, request.userId, request.queryString, request.lang1, request.lang2, request.maxHits, request.disablePrefixSearch, searchFilter, searchConfig, request.explain)
         val futureResults: Seq[Future[LibraryShardResult]] = searches.map { librarySearch =>
           if (debug.isDefined) librarySearch.debug(debugOption)

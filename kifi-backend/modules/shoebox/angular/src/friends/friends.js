@@ -5,7 +5,7 @@ angular.module('kifi')
 .controller('FriendsCtrl', [
   '$scope', '$window', 'friendService', 'socialService',
   function ($scope, $window, friendService, socialService) {
-    $window.document.title = 'Kifi • Your Friends on Kifi';
+    $window.document.title = 'Kifi • Your Connections on Kifi';
 
     $scope.$watch(socialService.checkIfRefreshingSocialGraph, function (v) {
       $scope.isRefreshingSocialGraph = v;

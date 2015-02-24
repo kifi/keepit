@@ -248,7 +248,7 @@ trait UserActions extends Logging { self: Controller =>
           val nRes = Redirect("/login")
           // Less than ideal, but we can't currently test this:
           Play.maybeApplication match {
-            case Some(_) => nRes.withSession(result.session + ("original-url" -> request.uri))
+            case Some(_) => nRes.withSession(result.session + (SecureSocial.OriginalUrlKey -> request.uri))
             case None => nRes
           }
         case result =>

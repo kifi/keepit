@@ -366,6 +366,10 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
           val msg = s"EOF on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
           log.warn(msg, eof)
           HttpFetchStatus(statusCode = 500, message = Some(msg), context = new FetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
+        case ste: SocketException =>
+          val msg = s"SocketException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
+          log.warn(msg, ste)
+          HttpFetchStatus(statusCode = 500, message = Some(msg), context = new FetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
         case ste: SocketTimeoutException =>
           val msg = s"SocketTimeoutException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
           log.warn(msg, ste)

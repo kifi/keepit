@@ -110,8 +110,13 @@ angular.module('kifi')
         trackEvent('visitor_clicked_page', 'signup', 'login');
       };
 
-      $scope.facebookSignupPath = routeService.socialSignup('facebook');
-      $scope.twitterSignupPath = routeService.socialSignup('twitter');
+      var params = $scope.userData ? {
+        libraryId : $scope.userData.libraryId,
+        intent : $scope.userData.intent
+      } : {};
+      $scope.facebookSignupPath = routeService.socialSignup('facebook', params);
+      $scope.twitterSignupPath = routeService.socialSignup('twitter', params);
+
       $scope.emailSubmitted = false;
 
       setModalScope(modalService.open({

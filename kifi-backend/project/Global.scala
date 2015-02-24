@@ -74,7 +74,7 @@ object Global {
     "net.codingwell" %% "scala-guice" % "3.0.2",
     "org.imgscalr" % "imgscalr-lib" % "4.2",
     "us.theatr" %% "akka-quartz" % "0.3.0" exclude("c3p0", "c3p0"),
-    "org.jsoup" % "jsoup" % "1.7.1",
+    "org.jsoup" % "jsoup" % "1.8.1",
     "org.bouncycastle" % "bcprov-jdk15on" % "1.50",
     "org.msgpack" %% "msgpack-scala" % "0.6.8",
     "com.kifi" %% "json-annotation" % "0.1",

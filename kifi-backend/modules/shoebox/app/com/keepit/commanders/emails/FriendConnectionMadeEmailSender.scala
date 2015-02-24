@@ -29,12 +29,12 @@ class FriendConnectionMadeEmailSender @Inject() (
     val (emailPlainText, emailHtmlText, subject, campaign) = category match {
       case NotificationCategory.User.FRIEND_ACCEPTED =>
         val emailHtmlText = ConnectionMadeEmailValues(
-          line1 = None,
-          line2 = s"""<a href="${profileUrl(friendUserId, "friendRequestAccepted")}">${fullName(friendUserId)}</a> accepted your Kifi friend request""")
+          line1 = Some(s"""<a href="${profileUrl(friendUserId, "friendRequestAccepted")}">${fullName(friendUserId)}</a> accepted your invitation to connect."""),
+          line2 = s"""Congrats! You and ${firstName(friendUserId)} are connected. Discover the libraries ${firstName(friendUserId)} is curating and following.""")
         val emailPlainText = ConnectionMadeEmailValues(
-          line1 = None,
-          line2 = s"""${fullName(friendUserId)} accepted your Kifi friend request""")
-        val subject = s"${fullName(friendUserId)} accepted your Kifi friend request"
+          line1 = Some(s"""${fullName(friendUserId)} accepted your invitation to connect."""),
+          line2 = s"""Congrats! You and ${firstName(friendUserId)} are connected. Discover the libraries ${firstName(friendUserId)} is curating and following.""")
+        val subject = s"${fullName(friendUserId)} accepted your invitation to connect"
         (emailPlainText, emailHtmlText, subject, Some("friendRequestAccepted"))
       case NotificationCategory.User.SOCIAL_FRIEND_JOINED if networkTypeOpt.isDefined =>
         val emailHtmlText = ConnectionMadeEmailValues(
@@ -52,7 +52,7 @@ class FriendConnectionMadeEmailSender @Inject() (
         val emailPlainText = ConnectionMadeEmailValues(
           line1 = Some("You have a new connection on Kifi"),
           line2 = s"""Your $friendSourceName, ${fullName(friendUserId)}, is now connected to you on Kifi""")
-        val subject = s"You are now friends with ${fullName(friendUserId)} on Kifi!"
+        val subject = s"You and ${fullName(friendUserId)} are now connected on Kifi!"
         (emailPlainText, emailHtmlText, subject, Some("connectionMade"))
     }
 

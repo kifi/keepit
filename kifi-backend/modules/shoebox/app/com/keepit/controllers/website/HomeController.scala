@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ InviteCommander, KeepsCommander, LocalUserExperimentCommander, UserCommander, UserConnectionsCommander }
+import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller._
 import com.keepit.common.core._
@@ -22,8 +22,12 @@ import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import play.twirl.api.Html
 import securesocial.core.{ Authenticator, SecureSocial }
+import play.api.libs.json.Json
+import com.keepit.common.time._
 
 import KifiSession._
+
+import scala.concurrent.Future
 
 class HomeController @Inject() (
   db: Database,
@@ -47,7 +51,8 @@ class HomeController @Inject() (
   curatorServiceClient: CuratorServiceClient,
   applicationConfig: FortyTwoConfig,
   keepsCommander: KeepsCommander,
-  siteRouter: KifiSiteRouter)
+  smsCommander: SmsCommander,
+  clock: Clock)
     extends UserActions with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: UserRequest[_]): Boolean = {
@@ -61,8 +66,8 @@ class HomeController @Inject() (
 
   def home = MaybeUserAction { implicit request =>
     request match {
-      case r: NonUserRequest[_] => MarketingSiteRouter.marketingSite()
-      case userRequest: UserRequest[_] => AngularDistAssets.angularApp()
+      case _: NonUserRequest[_] => MarketingSiteRouter.marketingSite()
+      case _: UserRequest[_] => AngularDistAssets.angularApp()
     }
   }
 
@@ -185,6 +190,29 @@ class HomeController @Inject() (
 
   def getKifiExtensionIPhone(s: String) = Action { implicit request =>
     Ok(Html("""<img src="http://djty7jcqog9qu.cloudfront.net/assets/site/keep-from-other-apps.png" style="width: 100%;">"""))
+  }
+
+  def sendSmsToGetKifi() = UserAction.async(parse.tolerantJson) { implicit request =>
+    val toOpt = (request.body \ "phoneNumber").asOpt[String].map(PhoneNumber.apply)
+    val lastSmsSent = db.readOnlyReplica { implicit session =>
+      userValueRepo.getValue(request.userId, UserValues.lastSmsSent)
+    }
+    toOpt match {
+      case None =>
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_number")))
+      case _ if lastSmsSent > clock.now().minusMinutes(1) =>
+        Future.successful(BadRequest(Json.obj("error" -> "rate_limit")))
+      case Some(number) =>
+        db.readWrite { implicit session =>
+          userValueRepo.setValue(request.userId, UserValues.lastSmsSent.name, clock.now())
+        }
+        smsCommander.sendSms(number, "Get Kifi for iOS and Android: https://kifi.com/get").map {
+          case SmsSuccess =>
+            Ok
+          case SmsRemoteFailure =>
+            InternalServerError
+        }
+    }
   }
 
 }

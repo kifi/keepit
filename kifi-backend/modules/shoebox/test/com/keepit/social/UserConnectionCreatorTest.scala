@@ -138,7 +138,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
     "updateUserConnections sends emails to old user (Facebook)" in
       runTest(SocialNetworks.FACEBOOK, longTimeAgo) { outbox =>
-        outbox(0).subject === "You are now friends with Greg Smith on Kifi!"
+        outbox(0).subject === "You and Greg Smith are now connected on Kifi!"
       }
 
     "updateUserConnections sends emails to new user (LinkedIn)" in
@@ -148,7 +148,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
     "updateUserConnections sends emails to old user (LinkedIn)" in
       runTest(SocialNetworks.LINKEDIN, longTimeAgo) { outbox =>
-        outbox(0).subject === "You are now friends with Greg Smith on Kifi!"
+        outbox(0).subject === "You and Greg Smith are now connected on Kifi!"
       }
 
     "disable non existing connections for social users but not kifi users" in {

@@ -37,7 +37,9 @@
               @email.tags.trSpacer(10)
               <tr>
                 <td align="left">
-                  @email.tags.findMoreFriendsButton("left")
+                  @email.tags.roundedContainer(150, 40, 8, "#41c381", "left") {
+                    <a href="@profileUrl(otherUserId, "friendConnectionMade")" style="font:bold 16px/26px Arial,sans-serif;color:#fff;text-decoration:none;display:block">View Profile</a>
+                  }
                 </td>
               </tr>
             </table>

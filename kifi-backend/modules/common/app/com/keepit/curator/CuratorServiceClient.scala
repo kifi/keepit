@@ -27,7 +27,7 @@ trait CuratorServiceClient extends ServiceClient {
   def topLibraryRecos(userId: Id[User], limit: Option[Int] = None, context: Option[String]): Future[LibraryRecoResults]
   def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None): Future[Unit]
   def notifyLibraryRecosDelivered(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource): Future[Unit]
-  def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]]): Unit
+  def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]]): Future[Unit]
 }
 
 class CuratorServiceClientImpl(
@@ -122,7 +122,7 @@ class CuratorServiceClientImpl(
     call(Curator.internal.notifyLibraryRecosDelivered(userId), body = payload).map { _ => Unit }
   }
 
-  def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]]): Unit = {
+  def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]]): Future[Unit] = {
     val payload = Json.obj("personaIds" -> personaIds)
     call(Curator.internal.ingestPersonaRecos(userId), payload).map { _ => Unit }
   }

@@ -14,7 +14,7 @@ import com.keepit.search.engine.parser.KQueryParser
 import com.keepit.search.engine.uri.{ UriSearch, UriSearchImpl, UriSearchNonUserImpl }
 import com.keepit.search.engine.user.UserSearch
 import com.keepit.search.index.graph.keep.{ KeepFields, ShardedKeepIndexer }
-import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryIndexer }
+import com.keepit.search.index.graph.library.{ LibraryFields, LibraryIndexable, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.phrase.PhraseDetector
 import com.keepit.search.index.user.UserIndexer
@@ -93,6 +93,9 @@ class SearchFactory @Inject() (
           case LibraryContext.NotAuthorized(libId) => addLibraryFilter(engBuilder, libId)
           case _ =>
         }
+
+        // if this is a user restricted search, add a user filter query
+        filter.userFilter.foreach(addUserFilter(engBuilder, _))
 
         val librarySearcher = libraryIndexer.getSearcher
 
@@ -250,6 +253,10 @@ class SearchFactory @Inject() (
   }
 
   private def addLibraryFilter(engBuilder: QueryEngineBuilder, libId: Long) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.toString))) }
+  private def addUserFilter(engBuilder: QueryEngineBuilder, userId: Id[User]) = {
+    engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.userField, userId.id.toString)))
+    engBuilder.addFilterQuery(new TermQuery(new Term(LibraryFields.ownerField, userId.id.toString)))
+  }
 
   def getLibrarySearches(
     shards: Set[Shard[NormalizedURI]],

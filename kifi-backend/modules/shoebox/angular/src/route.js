@@ -19,11 +19,7 @@ angular.module('kifi')
           return match[1] + match[2]; // remove trailing slash
         }
       })
-      .when('/friends/invite', '/invite')
-      .when('/friends/requests', '/friends')
-      .when('/friends/requests/:network', '/friends')
       .when('/:username/libraries', '/:username')
-      .when('/recommendations', '/')
       .otherwise('/');  // last resort
 
     // Set up the states.
@@ -32,8 +28,8 @@ angular.module('kifi')
         url: '/',
         templateUrl: 'recos/recosView.tpl.html'
       })
-      .state('friends', {
-        url: '/friends',
+      .state('connections', {
+        url: '/connections',
         templateUrl: 'friends/friends.tpl.html'
       })
       .state('invite', {
@@ -97,27 +93,6 @@ angular.module('kifi')
         data: {
           libraryType: 'invited'
         }
-      })
-      .state('userProfile.friends', {
-        url: '/friends',
-        templateUrl: 'userProfile/userProfilePeople.tpl.html',
-        controller: 'UserProfilePeopleCtrl',
-        data: {
-          peopleType: 'friends'
-        }
-      })
-      .state('userProfile.followers', {
-        url: '/followers',
-        templateUrl: 'userProfile/userProfilePeople.tpl.html',
-        controller: 'UserProfilePeopleCtrl',
-        data: {
-          peopleType: 'followers'
-        }
-      })
-      .state('userProfile.helped', {
-        url: '/helped',
-        templateUrl: 'userProfile/userProfileKeeps.tpl.html',
-        controller: 'UserProfileKeepsCtrl'
       })
 
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
