@@ -14,11 +14,11 @@ describe('kifi angular friends test suite', function () {
     });
 
     it('should have the correct title', function () {
-      expect(browser.getTitle()).toEqual('Kifi • Your Friends on Kifi');
+      expect(browser.getTitle()).toEqual('Kifi • Your Connections on Kifi');
     });
 
-    it('should display the correct Friends header', function () {
-      expect(element(by.css('.friends h2')).getText()).toEqual('Kifi Friends');
+    it('should display the correct Connections header', function () {
+      expect(element(by.css('.friends h2')).getText()).toEqual('Kifi Connections');
     });
   });
 });

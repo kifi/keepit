@@ -7,7 +7,7 @@
       <span class="kf-user-profile-friend-respond decline" ng-click="ignoreFriendRequest()">
         Decline
       </span>
-      <span class="kf-user-profile-friend-request-msg">{{profile.firstName}} has sent you a friend request</span>
+      <span class="kf-user-profile-friend-request-msg">{{profile.firstName}} wants to connect with you on Kifi</span>
     </div>
     <div class="kf-up-basic-info-main-content" itemscope itemtype="http://schema.org/Person">
       <a href="{{userProfileRootUrl}}" itemprop="url">
@@ -18,12 +18,12 @@
         <div ng-switch-when="not_friends" class="kf-user-profile-connect connect" ng-click="sendFriendRequest()">
           <div class="kf-user-profile-action connect">Connect</div>
           <span class="kf-user-profile-connect-image add-friend"></span>
-          <div class="kf-user-profile-action hidden">Friend Request Sent</div>
+          <div class="kf-user-profile-action hidden">Invited to connect</div>
         </div>
 
         <div ng-switch-when="request_sent" class="kf-user-profile-connect request-sent">
           <span class="kf-user-profile-connect-image add-friend"></span>
-          <span class="kf-user-profile-action">Friend Request Sent</span>
+          <span class="kf-user-profile-action">Invited to connect</span>
         </div>
 
         <div ng-switch-when="request_received" class="kf-user-profile-connect request-received">
@@ -33,7 +33,7 @@
         <div ng-switch-when="friends" class="kf-user-profile-connect friends" ng-click="toggleFriendMenu()">
           <span class="kf-user-profile-connect-image already-friends"></span>
           <div class="kf-user-profile-action-menu" ng-class="{on: showFriendMenu}">
-            <div class="kf-user-profile-action-selection">Unfriend?</div>
+            <div class="kf-user-profile-action-selection">Remove connection</div>
           </div>
         </div>
 

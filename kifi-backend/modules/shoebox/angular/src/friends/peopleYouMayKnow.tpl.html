@@ -9,7 +9,7 @@
       <div class="kf-pymk-via">
         {{person.via}}
         <button class="kf-pymk-mutual" ng-if="person.numMutualFriends > 0" ng-click="showMutualFriends(person)">
-          <ng-pluralize count="person.numMutualFriends" when="{'one': '1 mutual friend', 'other': '{} mutual friends'}"></ng-pluralize>
+          <ng-pluralize count="person.numMutualFriends" when="{'one': '1 mutual connection', 'other': '{} mutual connections'}"></ng-pluralize>
         </button>
       </div>
       <button class="kf-pymk-action" ng-click="action(person)" ng-class="{clickable: person.clickable}">{{person.actionText}}</button>

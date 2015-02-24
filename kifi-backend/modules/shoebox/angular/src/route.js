@@ -98,27 +98,6 @@ angular.module('kifi')
           libraryType: 'invited'
         }
       })
-      .state('userProfile.friends', {
-        url: '/friends',
-        templateUrl: 'userProfile/userProfilePeople.tpl.html',
-        controller: 'UserProfilePeopleCtrl',
-        data: {
-          peopleType: 'friends'
-        }
-      })
-      .state('userProfile.followers', {
-        url: '/followers',
-        templateUrl: 'userProfile/userProfilePeople.tpl.html',
-        controller: 'UserProfilePeopleCtrl',
-        data: {
-          peopleType: 'followers'
-        }
-      })
-      .state('userProfile.helped', {
-        url: '/helped',
-        templateUrl: 'userProfile/userProfileKeeps.tpl.html',
-        controller: 'UserProfileKeepsCtrl'
-      })
 
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {

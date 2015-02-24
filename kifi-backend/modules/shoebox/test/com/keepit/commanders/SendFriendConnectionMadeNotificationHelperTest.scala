@@ -56,7 +56,7 @@ class SendFriendConnectionMadeNotificationHelperTest extends Specification with 
         val htmlBody: String = outbox(0).htmlBody.toString
         val textBody: String = outbox(0).textBody.get.toString
 
-        outbox(0).subject === "You are now friends with Peter Griffin on Kifi!"
+        outbox(0).subject === "You and Peter Griffin are now connected on Kifi!"
         outbox(0).to === Seq(EmailAddress("homer@gmail.com"))
         outbox(0).fromName === Some("Peter Griffin (via Kifi)")
         htmlBody must contain("Hi Homer")
