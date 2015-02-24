@@ -3,12 +3,13 @@
   emailText: com.keepit.commanders.emails.ConnectionMadeEmailValues)
 @import com.keepit.common.mail.template.helpers._
 
-Hi @firstName(toUserId)
+Hi @firstName(toUserId),
 
 @Html(emailText.line1.getOrElse(""))
 @Html(emailText.line2)
 
-Find more connections at @kifiFriendsUrl("findMoreFriendsBtn")
+You can view @firstName(otherUserId)’s profile at:
+@profileUrl(otherUserId, "friendConnectionMade")"
 
 Have a great day,
 The Kifi team

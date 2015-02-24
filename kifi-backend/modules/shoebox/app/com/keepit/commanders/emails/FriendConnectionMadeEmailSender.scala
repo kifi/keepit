@@ -29,11 +29,11 @@ class FriendConnectionMadeEmailSender @Inject() (
     val (emailPlainText, emailHtmlText, subject, campaign) = category match {
       case NotificationCategory.User.FRIEND_ACCEPTED =>
         val emailHtmlText = ConnectionMadeEmailValues(
-          line1 = None,
-          line2 = s"""<a href="${profileUrl(friendUserId, "friendRequestAccepted")}">${fullName(friendUserId)}</a> accepted your invitation to connect""")
+          line1 = Some(s"""<a href="${profileUrl(friendUserId, "friendRequestAccepted")}">${fullName(friendUserId)}</a> accepted your invitation to connect."""),
+          line2 = s"""Congrats! You and ${firstName(friendUserId)} are connected. Discover the libraries ${firstName(friendUserId)} is curating and following.""")
         val emailPlainText = ConnectionMadeEmailValues(
-          line1 = None,
-          line2 = s"""${fullName(friendUserId)} accepted your invitation to connect""")
+          line1 = Some(s"""${fullName(friendUserId)} accepted your invitation to connect."""),
+          line2 = s"""Congrats! You and ${firstName(friendUserId)} are connected. Discover the libraries ${firstName(friendUserId)} is curating and following.""")
         val subject = s"${fullName(friendUserId)} accepted your invitation to connect"
         (emailPlainText, emailHtmlText, subject, Some("friendRequestAccepted"))
       case NotificationCategory.User.SOCIAL_FRIEND_JOINED if networkTypeOpt.isDefined =>
