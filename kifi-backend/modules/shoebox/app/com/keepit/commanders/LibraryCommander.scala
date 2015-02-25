@@ -724,7 +724,11 @@ class LibraryCommander @Inject() (
             linkUrl = libLink,
             imageUrl = inviterImage,
             sticky = false,
-            category = NotificationCategory.User.LIBRARY_INVITATION
+            category = NotificationCategory.User.LIBRARY_INVITATION,
+            extra = Some(Json.obj(
+              "inviter" -> inviter,
+              "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libOwner))
+            ))
           )
 
           // send emails to both users & non-users
@@ -872,9 +876,9 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Future[Unit] = SafeFuture {
+  private def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Unit = SafeFuture {
     val (follower, owner) = db.readOnlyReplica { implicit session =>
-      userRepo.get(newFollowerId) -> userRepo.get(lib.ownerId)
+      userRepo.get(newFollowerId) -> basicUserRepo.load(lib.ownerId)
     }
     elizaClient.sendGlobalNotification(
       userIds = Set(lib.ownerId),
@@ -885,7 +889,10 @@ class LibraryCommander @Inject() (
       imageUrl = s3ImageStore.avatarUrlByUser(follower),
       sticky = false,
       category = NotificationCategory.User.LIBRARY_FOLLOWED,
-      extra = Some(Json.obj("follower" -> BasicUser.fromUser(follower)))
+      extra = Some(Json.obj(
+        "follower" -> BasicUser.fromUser(follower),
+        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, owner))
+      ))
     )
   }
 
@@ -903,6 +910,7 @@ class LibraryCommander @Inject() (
       val toBeNotified = relevantFollowers - newKeep.userId
       if (toBeNotified.nonEmpty) {
         val keeper = usersById(newKeep.userId)
+        val basicKeeper = BasicUser.fromUser(keeper)
         elizaClient.sendGlobalNotification(
           userIds = toBeNotified,
           title = s"New Keep in ${library.name}",
@@ -911,7 +919,15 @@ class LibraryCommander @Inject() (
           linkUrl = "https://www.kifi.com" + Library.formatLibraryPath(owner.username, library.slug),
           imageUrl = s3ImageStore.avatarUrlByUser(keeper),
           sticky = false,
-          category = NotificationCategory.User.NEW_KEEP
+          category = NotificationCategory.User.NEW_KEEP,
+          extra = Some(Json.obj(
+            "keeper" -> basicKeeper,
+            "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, basicKeeper)),
+            "keep" -> Json.obj(
+              "id" -> newKeep.externalId,
+              "url" -> newKeep.url
+            )
+          ))
         )
       }
     }
