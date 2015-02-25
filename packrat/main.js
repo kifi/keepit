@@ -1402,6 +1402,9 @@ api.port.on({
       api.tabs.emit(tab, 'guide', {step: 0, page: data.keep});
     });
     unsilence(false);
+    // be sure to load any newly created persona libraries
+    storeLibraries([]);
+    ajaxLoadLibraries(api.noop);
   },
   track_guide: function (stepParts) {
     tracker.track('user_viewed_pane', {type: 'guide' + stepParts.join('')});
