@@ -1,0 +1,47 @@
+@()
+
+@content = {
+<div class="page signup">
+  <div id="photo-upload-step1">
+    <div id="center_container" class="small">
+      <div class="inner">
+        <div class="image_container target">
+          <div class="image-inner"></div>
+          <div class="image-upload-wrapper">
+            <a id="upload-image-btn" href="#" class="image-upload"><span class="plus">+</span></a>
+          </div>
+        </div>
+        <h3>Your name</h3>
+        <form class="signup-form" method="#" post="#">
+          <div class="input-wrapper inline-wrap">
+            <input type="text" name="firstname" class="form-input inline right2" placeholder="First">
+            <div id="signup-firstname" class="error"></div>
+          </div>
+          <div class="input-wrapper inline-wrap">
+            <input type="text" name="lastname" class="form-input inline" placeholder="Last">
+            <div id="signup-lastname" class="error"></div>
+          </div>
+
+          <button id="signup-btn" class="btn-authentication btn-done" type="submit">Done</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="photo-upload-step2" style="display:none;">
+    <div id="center_container" class="small upload-container">
+      <div class="inner photo">
+        <h3>Grab photo from</h3>
+        <div class="social-btn-wrap">
+          <a href="#" class="photo-facebook"><i class="i-fbtn"></i></a>
+          <a href="#" class="photo-linkedin"><i class="i-lbtn"></i></a>
+          <a href="#" class="file-upload">Upload your computer</a>
+          <a id="back-btn" href="#" class="btn-authentication btn-back">Go back</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+}
+
+@minimal.layout(content = content, htmlClass = "signup-page")
