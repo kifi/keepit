@@ -49,9 +49,7 @@ angular.module('kifi')
         toggleSelect: '&',
         isSelected: '&',
         keepCallback: '&',
-        clickCallback: '&',
-        dragKeeps: '&',
-        stopDraggingKeeps: '&'
+        clickCallback: '&'
       },
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
@@ -83,16 +81,10 @@ angular.module('kifi')
         var strippedSchemeRe = /^https?:\/\//;
         var domainTrailingSlashRe = /^([^\/]*)\/$/;
 
-        var tagDragMask = element.find('.kf-tag-drag-mask');
-        var mouseX, mouseY;
-
-
         //
         // Scope data.
         //
         scope.addingTag = {enabled: false};
-        scope.isDragTarget = false;
-        scope.isDragging = false;
         scope.userLoggedIn = $rootScope.userLoggedIn;
         scope.cardType = '';
         scope.youtubeId = '';
@@ -303,12 +295,6 @@ angular.module('kifi')
           return scope.toggleSelect(keep);
         };
 
-        // TODO: bind to 'drop' event
-        scope.onTagDrop = function (tag) {
-          tagService.addKeepToTag(tag, scope.keep);
-          scope.isDragTarget = false;
-        };
-
         scope.triggerInstall = function () {
           installService.triggerInstall(function () {
             modalService.open({
@@ -355,42 +341,6 @@ angular.module('kifi')
           if (newVal) {
             scope.libraries = _.reject(libraryService.getOwnInfos(), {id: scope.keep.libraryId});
           }
-        });
-
-        // Dragging.
-        tagDragMask.on('dragenter', function () {
-          scope.$apply(function () { scope.isDragTarget = true; });
-        });
-
-        tagDragMask.on('dragleave', function () {
-          scope.$apply(function () { scope.isDragTarget = false; });
-        });
-
-        element.on('mousemove', function (e) {
-          var offset = util.offset(element);
-          mouseX = e.pageX - offset.left;
-          mouseY = e.pageY - offset.top;
-        })
-        .on('dragstart', function (e) {
-          scope.$apply(function () {
-            $rootScope.DRAGGING_KEEP = true;
-            $rootElement.find('html').addClass('kf-dragging-keep');
-            element.addClass('kf-dragged');
-            scope.dragKeeps({keep: scope.keep, event: e, mouseX: 20, mouseY: 50});
-            scope.isDragging = true;
-          });
-        })
-        .on('dragend', function () {
-          scope.$apply(function () {
-            $rootScope.DRAGGING_KEEP = false;
-            $rootElement.find('html').removeClass('kf-dragging-keep');
-            element.removeClass('kf-dragged');
-            scope.stopDraggingKeeps();
-            scope.isDragging = false;
-          });
-        })
-        .on('drop', function (e) {
-          e.preventDefault();
         });
 
 

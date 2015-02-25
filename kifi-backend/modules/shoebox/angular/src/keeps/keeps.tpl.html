@@ -42,24 +42,7 @@
     <div ng-repeat="keep in keeps" kf-keep-card is-selected="!!selection.isSelected(keep)"
       keep="keep" library="library" me="me" current-page-origin="{{currentPageOrigin}}"
       toggle-select="selection.toggleSelect(keep)" click-callback="keepClickAction(event, keep)"
-      drag-keeps="dragKeeps(keep, event, mouseX, mouseY, selection)" stop-dragging-keeps="stopDraggingKeeps()"
       edit-mode="editMode" edit-options="editOptions()"></div>
-    <div class="kf-shadow-dragged-keeps" ng-class="{ two: draggedTwo(), three: draggedThree(), more: draggedMore() }">
-      <span class="kf-shadow-keep-first" ng-show="data.draggedKeeps.length >= 1">
-        <div kf-keep-card is-selected="!!selection.isSelected(data.draggedKeeps[0])" keep="data.draggedKeeps[0]" edit-mode="editMode" edit-options="editOptions()"></div>
-      </span>
-      <span class="kf-shadow-keep-second" ng-show="data.draggedKeeps.length === 3">
-        <div kf-keep-card is-selected="!!selection.isSelected(data.draggedKeeps[1])" keep="data.draggedKeeps[1]" edit-mode="editMode"></div>
-      </span>
-      <span class="kf-shadow-keep-ellipsis" ng-class="{'active': data.draggedKeeps.length >= 4}">
-        <div class="kf-shadow-keep-ellipsis-line"></div>
-        <div class="kf-shadow-keep-ellipsis-counter">{{data.draggedKeeps.length - 2}} other keeps selected</div>
-      </span>
-      <div class="kf-shadow-keep-ellipsis-counter-hidden">{{data.draggedKeeps.length - 2}} other keeps selected</div>
-      <span class="kf-shadow-keep-last" ng-show="data.draggedKeeps.length >= 2">
-        <div kf-keep-card is-selected="!!selection.isSelected(data.draggedKeeps[data.draggedKeeps.length-1])" keep="data.draggedKeeps[data.draggedKeeps.length-1]" edit-mode="editMode"></div>
-      </span>
-    </div>
   </ol>
   <div class="kf-keep-group-title-fixed"></div>
   <img class="kf-keeps-loading" ng-show="keepsLoading" src="/img/load.gif">
