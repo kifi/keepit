@@ -44,7 +44,7 @@ case class GraphCacheProvider @Inject() (
   uriScoreCache: ConnectedUriScoreCache,
   relatedEntitiesCache: SociallyRelatedEntitiesCache)
 
-class GraphServiceClientImpl @Inject() (
+class GraphServiceClientImpl(
     override val serviceCluster: ServiceCluster,
     override val httpClient: HttpClient,
     val airbrakeNotifier: AirbrakeNotifier,
