@@ -7,7 +7,6 @@ angular.module('kifi', [
   'ngAnimate',
   'ui.router',
   'util',
-  'dom',
   'antiscroll',
   'nodraginput',
   'jun.smartScroll',
