@@ -40,7 +40,7 @@
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()(keeps.length)">
     <div ng-repeat="keep in keeps" kf-keep-card is-selected="!!selection.isSelected(keep)"
-      keep="keep" library="library" me="me" libraries="libraries" current-page-origin="{{currentPageOrigin}}"
+      keep="keep" library="library" me="me" current-page-origin="{{currentPageOrigin}}"
       toggle-select="selection.toggleSelect(keep)" click-callback="keepClickAction(event, keep)"
       drag-keeps="dragKeeps(keep, event, mouseX, mouseY, selection)" stop-dragging-keeps="stopDraggingKeeps()"
       edit-mode="editMode" edit-options="editOptions()"></div>

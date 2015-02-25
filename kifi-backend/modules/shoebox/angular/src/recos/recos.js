@@ -173,12 +173,10 @@ angular.module('kifi')
 
 // For individual recommendation
 .controller('RecoCtrl', [
-  '$scope', 'modalService', 'recoActionService', 'libraryService',
-  function ($scope, modalService, recoActionService, libraryService) {
+  '$scope', 'modalService', 'recoActionService',
+  function ($scope, modalService, recoActionService) {
     $scope.reasons = $scope.reco.recoData.reasons;
     $scope.reasonIndex = 0;
-
-    $scope.libraries = libraryService.fetchLibraryInfos(false);
 
     $scope.hasReason = function () {
       return $scope.reco.recoData.reasons &&
