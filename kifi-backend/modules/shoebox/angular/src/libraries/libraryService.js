@@ -20,11 +20,8 @@ angular.module('kifi')
 
     var libraryInfosClutch = new Clutch(function () {
       return $http.get(routeService.getLibraryInfos).then(function (res) {
-        var libraries = res.data.libraries;
-        var following = res.data.following || _.remove(libraries, {access: 'read_only'});  // TODO: remove fallback when server sends "following"
-        libraries.concat(following).forEach(function (lib) { delete lib.access; });
-        infos.own = libraries.map(augment);
-        infos.following = following.map(augment);
+        infos.own = res.data.libraries.map(augment);
+        infos.following = res.data.following.map(augment);
         infos.invited = res.data.invited.map(augment);
       });
     });
