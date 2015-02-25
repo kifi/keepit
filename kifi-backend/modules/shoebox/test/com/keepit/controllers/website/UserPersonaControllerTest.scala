@@ -17,7 +17,7 @@ import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
 import org.specs2.mutable.Specification
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsObject, Json }
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -130,6 +130,30 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
+    "select user persona" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, allPersonas) = setupUserPersona
+        val controller = inject[UserPersonaController]
+        inject[FakeUserActionsHelper].setUser(user1)
+
+        db.readOnlyMaster { implicit s =>
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.ARTIST, PersonaName.STUDENT)
+        }
+
+        // add new persona "artist", remove "student"
+        val result1 = selectPersonas(user1, Json.obj("personas" -> Seq("student", "science_buff")))
+        status(result1) must equalTo(OK)
+        val resultJson1 = contentAsJson(result1)
+        (resultJson1 \ "added").as[Seq[String]] === Seq("science_buff")
+        (resultJson1 \ "removed").as[Seq[String]] === Seq("artist")
+
+        db.readOnlyMaster { implicit s =>
+          userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.STUDENT, PersonaName.SCIENCE_BUFF)
+        }
+
+      }
+    }
   }
 
   private def controller(implicit injector: Injector) = inject[UserPersonaController]
@@ -148,6 +172,11 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
   private def removePersona(user: User, name: String)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.removePersona(name)(request(routes.UserPersonaController.removePersona(name)))
+  }
+
+  private def selectPersonas(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.selectPersonas()(request(routes.UserPersonaController.selectPersonas()).withBody(body))
   }
 
   // sets up a Map of [String, Persona]

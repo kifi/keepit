@@ -405,6 +405,7 @@ GET     /site/user/settings         @com.keepit.controllers.website.UserControll
 POST    /site/user/settings         @com.keepit.controllers.website.UserController.setSettings()
 
 GET     /site/user/personas             @com.keepit.controllers.website.UserPersonaController.getAllPersonas()
+POST    /site/user/personas              @com.keepit.controllers.website.UserPersonaController.selectPersonas()
 POST    /site/user/personas/:name        @com.keepit.controllers.website.UserPersonaController.addPersona(name: String)
 DELETE  /site/user/personas/:name        @com.keepit.controllers.website.UserPersonaController.removePersona(name: String)
 
