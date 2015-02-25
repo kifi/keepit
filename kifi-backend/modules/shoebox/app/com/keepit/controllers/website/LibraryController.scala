@@ -152,7 +152,7 @@ class LibraryController @Inject() (
     }
 
     val (libInfosWithMemberships, libInfosWithInvites) = db.readOnlyMaster { implicit s =>
-      val basicUsers = basicUserRepo.loadAll((libsWithMemberships.map(_._2.ownerId) ++ libsWithInvites.map(_._2.ownerId)).toSet)
+      val basicUsers = basicUserRepo.loadAll((libsWithMemberships.map(_._2.ownerId) ++ libsWithInvites.map(_._2.ownerId) ++ libsWithInvites.map(_._1.inviterId)).toSet)
       val libInfosWithMemberships = for ((mem, library) <- libsWithMemberships) yield {
         val owner = basicUsers(library.ownerId)
         val numKeeps = keepRepo.getCountByLibrary(library.id.get)
