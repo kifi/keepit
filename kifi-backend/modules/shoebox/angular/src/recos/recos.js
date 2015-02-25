@@ -178,7 +178,7 @@ angular.module('kifi')
     $scope.reasons = $scope.reco.recoData.reasons;
     $scope.reasonIndex = 0;
 
-    $scope.libraries = libraryService.fetchLibrarySummaries(false);
+    $scope.libraries = libraryService.fetchLibraryInfos(false);
 
     $scope.hasReason = function () {
       return $scope.reco.recoData.reasons &&

@@ -60,19 +60,9 @@ angular.module('kifi')
           $document.off('keydown', processKey);
         });
 
-        var writeableLibs = _.filter(libraryService.librarySummaries, function (lib) {
-          return lib.access !== 'read_only';
-        });
-
-        var defaultLib = _.find(writeableLibs, { 'kind': 'system_main' });
-        if (_.isEmpty(scope.modalData.currentLib)) {
-          scope.selectedLibrary = defaultLib;
-        } else {
-          scope.selectedLibrary = _.find(writeableLibs, { 'id': scope.modalData.currentLib.id });
-          if (!scope.selectedLibrary) {
-            scope.selectedLibrary = defaultLib;
-          }
-        }
+        scope.selectedLibrary =
+          scope.modalData.selectedLibId && _.find(libraryService.getOwnInfos(), {id: scope.modalData.selectedLibId}) ||
+          libraryService.getSysMainInfo();
 
         scope.onLibrarySelected = function (selectedLibrary) {
           scope.selectedLibrary = selectedLibrary;
@@ -88,7 +78,7 @@ angular.module('kifi')
                   template: 'common/modal/genericErrorModal.tpl.html'
                 });
               } else {
-                libraryService.fetchLibrarySummaries(true);
+                libraryService.fetchLibraryInfos(true);
                 if (scope.selectedLibrary.visibility === 'secret') {
                   scope.keptPrivate = true;
                 } else {
@@ -108,7 +98,7 @@ angular.module('kifi')
                     var keep = new keepDecoratorService.Keep(fullKeep);
                     keep.buildKeep(keep);
                     keep.makeKept();
-                    $rootScope.$emit('keepAdded', libraryService.getSlugById(scope.selectedLibrary.id), [keep]);
+                    $rootScope.$emit('keepAdded', [keep], scope.selectedLibrary);
                   });
                 }
               }

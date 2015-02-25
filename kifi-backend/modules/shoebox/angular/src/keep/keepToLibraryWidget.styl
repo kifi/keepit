@@ -98,173 +98,171 @@
     background-color: #f3f3f3
     color: #777
 
-  .library-select-list
-    max-height: 305px
-    overflow-x: hidden
-    overflow-y: auto
+.library-select-list
+  max-height: 305px
+  overflow-x: hidden
+  overflow-y: auto
 
-  .library-select-option
-    position: relative
-    box-sizing: border-box
-    border-bottom: 1px solid #e7e7e7
-    padding: 17px 25px 15px 46px
-    font-weight: 600
-    white-space: nowrap
-    text-overflow: ellipsis
-    overflow: hidden
-    cursor: pointer
+.library-select-option
+  position: relative
+  box-sizing: border-box
+  border-bottom: 1px solid #e7e7e7
+  padding: 17px 25px 15px 46px
+  font-weight: 600
+  white-space: nowrap
+  text-overflow: ellipsis
+  overflow: hidden
+  cursor: pointer
 
-    &.selected
-      background-color: #f3f5f7
-
-    &:active
-      background-color: #e6e8ea
-
-  .keep-to-library-lib-icon-container
-    position: absolute
-    top: 6px
-    left: 14px
-
-  .keep-to-library-create-name-input-container
-    .keep-to-library-lib-icon-container
-      top: 14px
-
-  .keep-to-library-unkeep-button
-    display: none
-
-  .library-select-option.keptTo
+  .kf-kept-to>&
     cursor: default
 
-    .keep-to-library-unkeep-button
-      display: block
-      position: absolute
-      top: 9px
-      right: 15px
-      padding: 0 10px
-      height: 25px
-      line-height: 25px
-      font-size: 12px
-
-  .keep-to-library-create
-    position: relative
-    box-sizing: border-box
-    padding: 17px 25px 15px 46px
-    font-weight: 600
-    background-color: #f3f5f7
-    white-space: nowrap
-    overflow: hidden
-    cursor: pointer
-
-  .keep-to-library-create-header
-    position: relative
-    box-sizing: border-box
-    padding: 17px 25px 15px 46px
-    font-weight: 600
-    background-color: #fff
-    white-space: nowrap
-    overflow: hidden
-    cursor: pointer
-
-  .go-back-left-arrow
-    position: absolute
-    top: 13px
-    left: 15px
-    border-radius: 100%
-    width: 20px
-    height: 20px
-    background-color: #c8ced7
-    cursor: pointer
-
-    &:hover
-    &:focus
-      background-color: #bbc1ca
-
-    &:active
-      background-color: #afb5be
-
-    &::before
-    &::after
-      content: ' '
-      position: absolute;
-      left: 47%
-      border-radius: 2px
-      width: 2px;
-      background: #fff
-      font-size: 0
-
-    &::before
-      top: 4px
-      bottom: 8px
-      transform: translate(-1px) rotate(45deg)
-
-    &::after
-      top: 8px
-      bottom: 4px
-      transform: translate(-1px) rotate(-45deg)
-
-  .keep-to-library-create-heading
-    box-sizing: border-box
-    padding: 8px 15px
-    font-weight: 600
+  &.selected
     background-color: #f3f5f7
 
-  .keep-to-library-create-name-input-container
-    position: relative
-    box-sizing: border-box
-    padding: 20px 16px 20px 15px
-    font-weight: 600
-    background-color: #fff
-    white-space: nowrap
+  &:active
+    background-color: #e6e8ea
 
-  .keep-to-library-create-name-input
-    border: none
-    width: 302px
-    font-size: 12px
-    placeholder secondaryTextGray
+.keep-to-library-lib-icon-container
+  position: absolute
+  top: 6px
+  left: 14px
 
-  .keep-to-library-create-name-error
-    pop-over 40px 18px redColor
-    font-size: 11px
-    font-weight: 500
+  .keep-to-library-create-name-input-container &
+    top: 14px
 
-  .keep-to-library-create-visibility
-    margin: 15px 0
+.keep-to-library-unkeep-button
+  position: absolute
+  top: 9px
+  right: 15px
+  padding: 0 10px
+  height: 25px
+  line-height: 25px
+  font-size: 12px
 
-  .keep-to-library-create-visibility-switch
-  .keep-to-library-create-visibility-explanation
-    display: inline-block
-    vertical-align: middle
-    font-size: 12px
-    color: textGreyColor
+  :not(.kf-kept-to)>*>&
+    display: none
 
-  .keep-to-library-create-general-error
-    padding: 10px
-    background-color: redColor
-    color: #fff
-    text-align: center
+.keep-to-library-create
+  position: relative
+  box-sizing: border-box
+  padding: 17px 25px 15px 46px
+  font-weight: 600
+  background-color: #f3f5f7
+  white-space: nowrap
+  overflow: hidden
+  cursor: pointer
 
-  .keep-to-library-create-button-container
-    padding: 10px
-    background-color: #f3f5f7
-    text-align: center
+.keep-to-library-create-header
+  position: relative
+  box-sizing: border-box
+  padding: 17px 25px 15px 46px
+  font-weight: 600
+  background-color: #fff
+  white-space: nowrap
+  overflow: hidden
+  cursor: pointer
 
-  .keep-to-library-create-button
-    width: 100px
-    padding: 5px 0
-    border: 1px solid rgba(166, 175, 189, 0.53)
-    border-radius: 6px
-    font-size: 12px
-    font-weight: 700
-    font-smoothing: antialiased
-    color: #5c6373
-    background: linear-gradient(to top, #f3f3f3, #fff)
-    cursor: pointer
+.keep-to-library-back-arrow
+  position: absolute
+  top: 13px
+  left: 15px
+  border-radius: 100%
+  width: 20px
+  height: 20px
+  background-color: #c8ced7
+  cursor: pointer
 
-    &:hover
-      background: #e6e8ea
+  &:hover
+  &:focus
+    background-color: #bbc1ca
 
-    &:active
-      background: #dadcde
+  &:active
+    background-color: #afb5be
+
+  &::before
+  &::after
+    content: ' '
+    position: absolute;
+    left: 47%
+    border-radius: 2px
+    width: 2px;
+    background: #fff
+    font-size: 0
+
+  &::before
+    top: 4px
+    bottom: 8px
+    transform: translate(-1px) rotate(45deg)
+
+  &::after
+    top: 8px
+    bottom: 4px
+    transform: translate(-1px) rotate(-45deg)
+
+.keep-to-library-create-heading
+  box-sizing: border-box
+  padding: 8px 15px
+  font-weight: 600
+  background-color: #f3f5f7
+
+.keep-to-library-create-name-input-container
+  position: relative
+  box-sizing: border-box
+  padding: 20px 16px 20px 15px
+  font-weight: 600
+  background-color: #fff
+  white-space: nowrap
+
+input.keep-to-library-create-name-input
+  border: none
+  width: 302px
+  font-size: 12px
+  placeholder secondaryTextGray
+
+.keep-to-library-create-name-error
+  pop-over 40px 18px redColor
+  font-size: 11px
+  font-weight: 500
+
+.keep-to-library-create-visibility
+  margin: 15px 0
+
+.keep-to-library-create-visibility-switch
+.keep-to-library-create-visibility-explanation
+  display: inline-block
+  vertical-align: middle
+  font-size: 12px
+  color: textGreyColor
+
+.keep-to-library-create-general-error
+  padding: 10px
+  background-color: redColor
+  color: #fff
+  text-align: center
+
+.keep-to-library-create-button-container
+  padding: 10px
+  background-color: #f3f5f7
+  text-align: center
+
+.keep-to-library-create-button
+  width: 100px
+  padding: 5px 0
+  border: 1px solid rgba(166, 175, 189, 0.53)
+  border-radius: 6px
+  font-size: 12px
+  font-weight: 700
+  font-smoothing: antialiased
+  color: #5c6373
+  background: linear-gradient(to top, #f3f3f3, #fff)
+  cursor: pointer
+
+  &:hover
+    background: #e6e8ea
+
+  &:active
+    background: #dadcde
 
 .kf-klw-library-card
   display: inline-block

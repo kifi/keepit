@@ -28,6 +28,7 @@ angular.module('kifi')
           }
 
           libraryService.joinLibrary(scope.library.id).then(function () {
+            // TODO: would be better user experience not to reload page or navigate away
             if ($location.path() === scope.library.url) {
               $state.reload();
             } else {
@@ -38,6 +39,7 @@ angular.module('kifi')
 
         function unfollowLibrary() {
           libraryService.leaveLibrary(scope.library.id).then(function () {
+            // TODO: would be better user experience not to navigate away
             $location.path(scope.library.url);
           })['catch'](modalService.openGenericErrorModal);
         }
@@ -47,21 +49,17 @@ angular.module('kifi')
         // Scope methods.
         //
         scope.following = function () {
-          return !scope.invite && !scope.library.isMine && scope.library.access === 'read_only';
+          return !scope.invite && !scope.library.isMine && scope.isFollowing;
         };
 
         scope.toggleFollow = function () {
-          if (scope.isMine) {
+          if (scope.library.isMine) {
             modalService.openGenericErrorModal({
               modalData: {
                 genericErrorMessage: 'You cannot follow your own libraries!'
               }
             });
-
-            return;
-          }
-
-          if (scope.following()) {
+          } else if (scope.isFollowing) {
             unfollowLibrary();
           } else  {
             followLibrary();
@@ -77,21 +75,14 @@ angular.module('kifi')
         // On link.
         //
 
-        // Fetch full library summary if we don't have it already.
-        if (!scope.library.isMine) {
-          libraryService.getLibrarySummaryById(scope.library.id).then(function (data) {
-            _.assign(scope.library, data.library);
-
-            scope.library.owner.image = friendService.getPictureUrlForUser(scope.library.owner);
-            scope.library.owner.profileUrl = routeService.getProfileUrl(scope.library.owner.username);
-            scope.library.access = data.membership;
-            scope.library.isMine = scope.library.access === 'owner';
-          })['catch'](function () {
-            scope.showMiniCard = false;
-          });
-        } else {
+        libraryService.getLibraryInfoById(scope.library.id).then(function (data) {
+          _.assign(scope.library, data.library);
+          scope.library.owner.image = friendService.getPictureUrlForUser(scope.library.owner);
           scope.library.owner.profileUrl = routeService.getProfileUrl(scope.library.owner.username);
-        }
+          scope.isFollowing = data.membership === 'read_only';
+        })['catch'](function () {
+          scope.showMiniCard = false;
+        });
       }
     };
   }

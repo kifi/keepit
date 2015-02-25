@@ -272,10 +272,10 @@ angular.module('kifi')
           keepActionService.keepToLibrary(keepInfos, clickedLibrary.id).then(function (data) {
             var addedKeeps = data.keeps;
             if (addedKeeps.length > 0) {
-              libraryService.fetchLibrarySummaries(true);
-              scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, clickedLibrary);
+              libraryService.fetchLibraryInfos(true);
+              scope.$emit('keepAdded', addedKeeps, clickedLibrary);
             }
-            libraryService.fetchLibrarySummaries(true);
+            libraryService.fetchLibraryInfos(true);
           })['catch'](modalService.openGenericErrorModal);
         };
 
@@ -286,8 +286,8 @@ angular.module('kifi')
           keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), clickedLibrary.id).then(function (data) {
             var addedKeeps = data.successes;
             if (addedKeeps.length > 0) {
-              libraryService.fetchLibrarySummaries(true);
-              scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, clickedLibrary);
+              libraryService.fetchLibraryInfos(true);
+              scope.$emit('keepAdded', addedKeeps, clickedLibrary);
             }
           })['catch'](modalService.openGenericErrorModal);
         };
@@ -303,7 +303,7 @@ angular.module('kifi')
               selectedKeep.makeUnkept();
             });
 
-            libraryService.fetchLibrarySummaries(true);
+            libraryService.fetchLibraryInfos(true);
             var currentLibraryId = scope.library.id;
             libraryService.addToLibraryCount(currentLibraryId, -1 * selectedKeeps.length);
             scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);

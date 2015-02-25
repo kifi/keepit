@@ -167,17 +167,16 @@ angular.module('kifi')
     // Watches and listeners.
     //
     [
-      $rootScope.$on('keepAdded', function (e, libSlug, keeps, library) {
+      $rootScope.$on('keepAdded', function (e, keeps, library) {
         keeps.forEach(function (keep) {
-          // checks if the keep was added to the secret library from main or
-          // vice-versa.  If so, it removes the keep from the current library
-          if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
-              (libSlug === 'main' && $scope.librarySlug === 'secret')) {
+          // if the keep was added to the secret library from main or vice-versa, removes the keep from the current library
+          if (library.kind === 'system_secret' && $scope.librarySlug === 'main' ||
+              library.kind === 'system_main' && $scope.librarySlug === 'secret') {
             var idx = _.findIndex($scope.keeps, { url: keep.url });
             if (idx > -1) {
               $scope.keeps.splice(idx, 1);
             }
-          } else if (libSlug === $scope.librarySlug) {
+          } else if (library.id === $scope.library.id) {
             $scope.keeps.unshift(keep);
           }
 

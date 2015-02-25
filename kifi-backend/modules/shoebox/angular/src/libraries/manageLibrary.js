@@ -77,7 +77,7 @@ angular.module('kifi')
             listed: scope.library.listed,
             color: colorNames[scope.library.color]
           }).then(function (resp) {
-            libraryService.fetchLibrarySummaries(true);
+            libraryService.fetchLibraryInfos(true);
 
             var newLibrary = resp.data.library;
             newLibrary.listed = resp.data.listed;

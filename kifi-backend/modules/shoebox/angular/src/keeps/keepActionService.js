@@ -78,7 +78,7 @@ angular.module('kifi')
 
       var url = routeService.addKeepsToLibrary(libraryId);
       return $http.post(url, data, {}).then(function (res) {
-        libraryService.addRecentLibrary(libraryId);
+        libraryService.rememberRecentId(libraryId);
 
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
@@ -105,7 +105,7 @@ angular.module('kifi')
 
       var url = routeService.copyKeepsToLibrary();
       return $http.post(url, data, {}).then(function (res) {
-        libraryService.addRecentLibrary(libraryId);
+        libraryService.rememberRecentId(libraryId);
 
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
@@ -132,7 +132,7 @@ angular.module('kifi')
 
       var url = routeService.moveKeepsToLibrary();
       return $http.post(url, data, {}).then(function (res) {
-        libraryService.addRecentLibrary(libraryId);
+        libraryService.rememberRecentId(libraryId);
 
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
