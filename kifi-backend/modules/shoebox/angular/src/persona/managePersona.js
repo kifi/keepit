@@ -24,7 +24,9 @@ angular.module('kifi')
         scope.selectPersona = function(persona) {
           persona.selected = true;
           scope.selectedPersonaIds.push(persona.id);
-          userPersonaActionService.addPersona(persona.id);
+          if (scope.isModal) {
+            userPersonaActionService.addPersona(persona.id);
+          }
 
           // to Camel Case Analytics
           var personaAction = ['selected','persona'].concat(persona.id.split('_'));
@@ -37,7 +39,9 @@ angular.module('kifi')
         scope.unselectPersona = function(persona) {
           persona.selected = false;
           _.pull(scope.selectedPersonaIds, persona.id);
-          userPersonaActionService.removePersona(persona.id);
+          if (scope.isModal) {
+            userPersonaActionService.removePersona(persona.id);
+          }
 
           // to Camel Case Analytics
           var personaAction = ['unselected','persona'].concat(persona.id.split('_'));
@@ -59,6 +63,7 @@ angular.module('kifi')
           if (scope.selectedPersonaIds.length > 0) {
             if (_.isFunction(scope.closeAction)) {
               scope.closeAction();
+              userPersonaActionService.selectPersonas(scope.selectedPersonaIds);
             } else if (scope.isModal) {
               $rootScope.$emit('refreshRecos');
               modalService.close();

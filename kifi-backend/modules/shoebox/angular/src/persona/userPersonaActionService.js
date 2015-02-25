@@ -14,12 +14,17 @@ angular.module('kifi')
     }
 
     var userPersonaService = new Clutch(function () {
-      return $http.get(routeService.getAllPersonas()).then(getData);
+      return $http.get(routeService.getPersonas()).then(getData);
     }, clutchParams);
 
     var api = {
       getPersonas: function () {
         return userPersonaService.get();
+      },
+
+      selectPersonas: function (personaNames) {
+        var body = { personas : personaNames };
+        return $http.post(routeService.getPersonas(), body);
       },
 
       addPersona: function(personaId) {

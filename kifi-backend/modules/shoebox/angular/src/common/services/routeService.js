@@ -252,7 +252,7 @@ angular.module('kifi')
       /////////////////////////////
       // User Personas           //
       /////////////////////////////
-      getAllPersonas: function () {
+      getPersonas: function () {
         return route('/user/personas');
       },
       addPersona: function (personaName) {
