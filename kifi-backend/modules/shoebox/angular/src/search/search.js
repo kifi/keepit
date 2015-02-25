@@ -246,7 +246,6 @@ angular.module('kifi')
     };
 
     $scope.editOptions = {
-      draggable: false,
       actions: {
         keepToLibrary: true
       }
