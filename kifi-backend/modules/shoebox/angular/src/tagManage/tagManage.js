@@ -152,7 +152,7 @@ angular.module('kifi')
           modalData: { library : clickedLibrary, action: 'copy' }
         });
         // todo (aaron): call addToLibraryCount accordingly (make sure source libraries do NOT lose keep counts)
-        libraryService.fetchLibrarySummaries(true);
+        libraryService.fetchLibraryInfos(true);
       })['catch'](function () {
         modalService.open({
           template: 'common/modal/genericErrorModal.tpl.html'
@@ -167,7 +167,7 @@ angular.module('kifi')
           modalData: { library : clickedLibrary, action: 'move' }
         });
         // todo (aaron): call addToLibraryCount accordingly (make sure source libraries lose keep counts)
-        libraryService.fetchLibrarySummaries(true);
+        libraryService.fetchLibraryInfos(true);
       })['catch'](function () {
         modalService.open({
           template: 'common/modal/genericErrorModal.tpl.html'

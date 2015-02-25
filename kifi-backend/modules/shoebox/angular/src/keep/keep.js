@@ -63,7 +63,7 @@ angular.module('kifi')
 
         scope.isMyLibrary = false;
         scope.$emit('getCurrentLibrary', { callback: function (lib) {
-          scope.isMyLibrary = lib.access === 'owner';
+          scope.isMyLibrary = lib.isMine;
         }});
 
         // test data:
@@ -351,15 +351,10 @@ angular.module('kifi')
         });
 
         scope.$watch(function () {
-          return libraryService.librarySummaries.length;
+          return libraryService.getOwnInfos().length;
         }, function (newVal) {
           if (newVal) {
-            scope.keep.libraryInfo = libraryService.getLibraryInfoById(scope.keep.libraryId);
-
-            scope.libraries = _.filter(libraryService.librarySummaries, function(library) {
-              return (library.access !== 'read_only') && (library.id !== scope.keep.libraryId);
-            });
-            scope.data = {};
+            scope.libraries = _.reject(libraryService.getOwnInfos(), {id: scope.keep.libraryId});
           }
         });
 
@@ -373,8 +368,9 @@ angular.module('kifi')
         });
 
         element.on('mousemove', function (e) {
-          mouseX = e.pageX - util.offset(element).left;
-          mouseY = e.pageY - util.offset(element).top;
+          var offset = util.offset(element);
+          mouseX = e.pageX - offset.left;
+          mouseY = e.pageY - offset.top;
         })
         .on('dragstart', function (e) {
           scope.$apply(function () {
@@ -445,8 +441,8 @@ angular.module('kifi')
         // Scope methods.
         //
         scope.onWidgetLibraryClicked = function (clickedLibrary) {
-          // Unkeep.
-          if (clickedLibrary && clickedLibrary.keptTo) {
+          // Unkeep. TODO: only if unkeep button was clicked
+          if (clickedLibrary && scope.keptToLibraryIds.indexOf(clickedLibrary.id) >= 0) {
             var keepToUnkeep = _.find(scope.keep.keeps, { libraryId: clickedLibrary.id });
             keepActionService.unkeepFromLibrary(clickedLibrary.id, keepToUnkeep.id).then(function () {
               if (clickedLibrary.id === scope.keep.libraryId) {
@@ -462,7 +458,7 @@ angular.module('kifi')
           // Keep.
           } else {
             var fetchKeepInfoCallback = function (fullKeep) {
-              libraryService.fetchLibrarySummaries(true);
+              libraryService.fetchLibraryInfos(true);
               libraryService.addToLibraryCount(clickedLibrary.id, 1);
               tagService.addToKeepCount(1);
 
@@ -471,7 +467,7 @@ angular.module('kifi')
               var keep = new keepDecoratorService.Keep(fullKeep);
               keep.buildKeep(keep);
               keep.makeKept();
-              scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), [keep], clickedLibrary);
+              scope.$emit('keepAdded', [keep], clickedLibrary);
             };
 
             var keepToLibrary;

@@ -167,43 +167,23 @@ angular.module('kifi')
         }
 
         function groupWidgetLibraries(libraries) {
-          // Libraries are divided into two possible groupings:
-          // (1) "Kept In" libraries followed by "My Libraries"; and
-          // (2) "Recent Libraries" followed by "Other Libraries".
-          //
-          // If there are any kept-in libraries, the first grouping is displayed.
+          libraries = libraries.slice();
+          var recentIds = libraryService.getRecentIds();
 
-          scope.widgetKeptInLibraries = [];
-          scope.widgetMyLibraries = [];
-          scope.widgetRecentLibraries = [];
-          scope.widgetOtherLibraries = [];
-
-          libraries.forEach(function (library) {
-            library.keptTo = false;
-
-            if (_.indexOf(keptToLibraryIds, library.id) !== -1) {
-              library.keptTo = true;
-              scope.widgetKeptInLibraries.push(library);
-            } else {
-              library.keptTo = false;
-              scope.widgetMyLibraries.push(library);
-            }
-
-            if (_.indexOf(libraryService.recentLibraries, library.id) !== -1) {
-              scope.widgetRecentLibraries.push(library);
-            } else {
-              scope.widgetOtherLibraries.push(library);
-            }
+          scope.widgetKeptInLibraries = _.remove(libraries, function (lib) {
+            return keptToLibraryIds.indexOf(lib.id) >= 0;
           });
+          scope.widgetRecentLibraries = _.remove(libraries, function (lib) {
+            return recentIds.indexOf(lib.id) >= 0;
+          }).sort(function (a, b) {  // restore recentIds's sort order
+            return recentIds.indexOf(a.id) - recentIds.indexOf(b.id);
+          });
+          scope.widgetOtherLibraries = libraries;
 
-          // widgetLibraries is the list of libraries being displayed in the widget.
-          if (scope.widgetKeptInLibraries.length) {
-            widgetLibraries = scope.widgetKeptInLibraries.concat(scope.widgetMyLibraries);
-          } else {
-            widgetLibraries = scope.widgetRecentLibraries.concat(scope.widgetOtherLibraries);
-          }
+          // widgetLibraries is the list of libraries being displayed in the widget in display order.
+          widgetLibraries = scope.widgetKeptInLibraries.concat(scope.widgetRecentLibraries, scope.widgetOtherLibraries);
 
-          // Select the top listed library.
+          // Select the first listed library.
           selectedIndex = 0;
           if (widgetLibraries.length) {
             widgetLibraries[selectedIndex].selected = true;
@@ -306,9 +286,7 @@ angular.module('kifi')
           //
           // Group widget libraries.
           //
-          allLibraries = _.filter(libraryService.librarySummaries, function (lib) {
-            return lib.access !== 'read_only';
-          });
+          allLibraries = libraryService.getOwnInfos();
 
           libraryNameSearch = new Fuse(allLibraries, {
             keys: ['name'],
@@ -444,10 +422,10 @@ angular.module('kifi')
           library.slug = util.generateSlug(library.name);
           library.visibility = library.visibility || 'published';
 
-          libraryService.createLibrary(library).then(function () {
-            libraryService.fetchLibrarySummaries(true).then(function () {
+          libraryService.createLibrary(library).then(function (res) {
+            libraryService.fetchLibraryInfos(true).then(function () {
               scope.$evalAsync(function () {
-                invokeWidgetCallbacks(_.find(libraryService.librarySummaries, { 'name': library.name }));
+                invokeWidgetCallbacks(_.find(libraryService.getOwnInfos(), {id: res.data.library.id}));
               });
             });
 
