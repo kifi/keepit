@@ -1402,9 +1402,6 @@ api.port.on({
       api.tabs.emit(tab, 'guide', {step: 0, page: data.keep});
     });
     unsilence(false);
-    // be sure to load any newly created persona libraries
-    storeLibraries([]);
-    ajaxLoadLibraries(api.noop);
   },
   track_guide: function (stepParts) {
     tracker.track('user_viewed_pane', {type: 'guide' + stepParts.join('')});
@@ -1703,6 +1700,10 @@ function awaitDeepLink(link, tabId, retrySec) {
         var page = guideData.keep;
         if (step === 1) {
           page = extend({libraryId: (guideData.library || {id: mySysLibIds[0]}).id}, page);
+          if (guideData.library) {
+            storeLibraries([]);
+            ajaxLoadLibraries(api.noop); // load any newly created persona libraries
+          }
         }
         api.tabs.emit(tab, 'guide', {step: step, page: page}, {queue: 1});
       } else if (loc.indexOf('#compose') >= 0) {
