@@ -43,7 +43,6 @@ angular.module('kifi')
       scope: {
         keep: '=',
         library: '=',
-        libraries: '=',
         currentPageOrigin: '@',
         editMode: '=',
         editOptions: '&',
