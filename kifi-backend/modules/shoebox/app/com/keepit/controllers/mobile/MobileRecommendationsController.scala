@@ -22,7 +22,7 @@ class MobileRecommendationsController @Inject() (
 
   def topRecosV2(recencyWeight: Float, more: Boolean) = UserAction.async { request =>
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight, None)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = None)
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, 10, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = None)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
       val FullUriRecoResults(urisReco, _) = uris
@@ -34,7 +34,7 @@ class MobileRecommendationsController @Inject() (
 
   def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, uriContext.isDefined, recencyWeight, context = uriContext)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = libContext)
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, 10, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = libContext)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
       val FullUriRecoResults(urisReco, newUrisContext) = uris
