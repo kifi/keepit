@@ -59,4 +59,25 @@ class UserPersonaController @Inject() (
     else
       NoContent
   }
+
+  def selectPersonas() = UserAction.async(parse.tolerantJson) { request =>
+    implicit val context = heimdalContextFactory.withRequestInfoAndSource(request, KeepSource.site).build
+    val persistPersonaNames = (request.body \ "personas").as[Seq[PersonaName]]
+    val currentPersonaNames = db.readOnlyMaster { implicit s =>
+      userPersonaRepo.getPersonasForUser(request.userId)
+    }.map(_.name)
+
+    val personasToAdd = persistPersonaNames diff currentPersonaNames
+    val personasToRemove = currentPersonaNames diff persistPersonaNames
+
+    val addedF = userPersonaCommander.addPersonasForUser(request.userId, personasToAdd.toSet)
+    val removed = userPersonaCommander.removePersonasForUser(request.userId, personasToRemove.toSet)
+
+    addedF.map { added =>
+      Ok(Json.obj(
+        "added" -> added.keys.map(_.name).toSeq,
+        "removed" -> removed.map(_.name).toSeq
+      ))
+    }
+  }
 }
