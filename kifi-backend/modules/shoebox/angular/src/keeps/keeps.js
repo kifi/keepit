@@ -64,7 +64,7 @@ angular.module('kifi')
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
-      link: function (scope, element /*, attrs*/) {
+      link: function (scope) {
         //
         // Internal data.
         //
