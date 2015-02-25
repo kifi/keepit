@@ -50,17 +50,6 @@ angular.module('util', [])
           oldObj[key] = newObj[key];
         });
       },
-      /* see http://cvmlrobotics.blogspot.com/2013/03/angularjs-get-element-offset-position.html */
-      offset: function (elm) {
-        try { return elm.offset(); } catch (e) {}
-        var rawDom = elm[0];
-        var body = $document.documentElement || $document.body;
-        var scrollX = $window.pageXOffset || body.scrollLeft;
-        var scrollY = $window.pageYOffset || body.scrollTop;
-        var _x = rawDom.getBoundingClientRect().left + scrollX;
-        var _y = rawDom.getBoundingClientRect().top + scrollY;
-        return { left: _x, top: _y };
-      },
       $debounce: function (scope, f, ms, opts) {
         return _.debounce(function () {
           var phase = scope.$root.$$phase;
