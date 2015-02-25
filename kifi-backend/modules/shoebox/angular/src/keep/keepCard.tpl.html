@@ -1,11 +1,7 @@
-<div class="kf-keep" ng-hide="keep.unkept && !keep.isProtected && keep.itemType !== 'reco'"
-    ng-class="{ 'editing': editMode.enabled, 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget }" draggable="!!editOptions.draggable">
+<div class="kf-keep" ng-hide="keep.unkept && !keep.isProtected && keep.itemType !== 'reco'" ng-class="{'editing': editMode.enabled}">
   <div class="kf-keep-edit-tools">
     <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!isSelected({keep: keep})" ng-click="toggleSelect({keep: keep})"></div>
     <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="isSelected({keep: keep})" ng-click="toggleSelect({keep: keep})"></div>
-    <div ng-if="editOptions().draggable" class="kf-keep-handle sprite sprite-grabbericon">
-      <div class="kf-keep-checkbox" ng-click="onCheck($event, keep)"></div>
-    </div>
   </div>
 
   <div class="kf-keep-body">
@@ -59,6 +55,4 @@
     <span kf-keep-share-button keep="keep" show-install-extension-modal="showInstallExtensionModal()" ng-if="keep"></span>
     <span kf-keep-tag-button keep="keep" ng-show="isTaggable(keep) && !hasTag(keep)" show-add-tag="showAddTag()"></span>
   </div>
-
-  <div class="kf-keep-drag-mask"></div>
 </div>

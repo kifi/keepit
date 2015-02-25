@@ -53,7 +53,7 @@ GET     /connect/:provider          @com.keepit.controllers.core.AuthController.
 GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider: String, redirect: Option[String] ?= None)
 
-GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, redirect: Option[String] ?= None, intent: Option[String] ?= None)
+GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None)
 
 # do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
@@ -411,6 +411,7 @@ GET     /site/user/settings         @com.keepit.controllers.website.UserControll
 POST    /site/user/settings         @com.keepit.controllers.website.UserController.setSettings()
 
 GET     /site/user/personas             @com.keepit.controllers.website.UserPersonaController.getAllPersonas()
+POST    /site/user/personas              @com.keepit.controllers.website.UserPersonaController.selectPersonas()
 POST    /site/user/personas/:name        @com.keepit.controllers.website.UserPersonaController.addPersona(name: String)
 DELETE  /site/user/personas/:name        @com.keepit.controllers.website.UserPersonaController.removePersona(name: String)
 

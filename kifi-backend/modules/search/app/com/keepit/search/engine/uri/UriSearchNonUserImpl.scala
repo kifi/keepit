@@ -52,7 +52,7 @@ class UriSearchNonUserImpl(
   def execute(): UriShardResult = {
 
     val engine = engineBuilder.build()
-    debugLog("engine created")
+    debugLog(s"uri search engine created: ${engine.getQuery()}")
 
     val textHits = executeTextSearch(engine)
 

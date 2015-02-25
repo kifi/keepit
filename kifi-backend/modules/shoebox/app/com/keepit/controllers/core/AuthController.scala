@@ -341,15 +341,16 @@ class AuthController @Inject() (
     Ok(s"<!doctype html><script>if(window.opener)opener.postMessage('$message',location.origin);window.close()</script>").as(HTML)
   }
 
-  def signup(provider: String, redirect: Option[String] = None, intent: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
+  def signup(provider: String, publicLibraryId: Option[String] = None, intent: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map { result =>
       authHelper.transformResult(result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
         val res = result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
 
+        // todo(aaron): targetLibId is a String because Play has trouble with Option[PublicId[T]]. And it will be converted into a string for the cookie anyway
         val cookies = Seq(
-          redirect.map(path => Cookie("redirect", path)),
+          publicLibraryId.map(libId => Cookie("publicLibraryId", libId)),
           intent.map(action => Cookie("intent", action))
         ).flatten
         res.withCookies(cookies: _*)
@@ -430,27 +431,27 @@ class AuthController @Inject() (
     if (agentOpt.exists(_.isOldIE)) {
       Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
     } else {
+      val cookiePublicLibraryId = request.cookies.get("publicLibraryId")
+      val cookieIntent = request.cookies.get("intent")
+      val pubLibIdOpt = cookiePublicLibraryId.map(cookie => PublicId[Library](cookie.value))
+
       request match {
         case ur: UserRequest[_] =>
           if (ur.user.state != UserStates.INCOMPLETE_SIGNUP) {
             // Complete user, they don't need to be here!
-
-            val cookieRedirect = request.cookies.get("redirect")
-            if (cookieRedirect.isDefined) {
-              val redirectPath = java.net.URLDecoder.decode(cookieRedirect.get.value, "UTF-8")
-              val initParams = new StringBuilder("?m=0")
-
-              val cookieIntent = request.cookies.get("intent")
-              if (cookieIntent.isDefined) {
-                initParams ++= s"&intent=${cookieIntent.get.value}"
+            log.info(s"[doSignupPage] ${ur.userId} already completed signup!")
+            if (pubLibIdOpt.isDefined && cookieIntent.isDefined) {
+              cookieIntent.get.value match {
+                case "follow" =>
+                  authCommander.autoJoinLib(ur.userId, pubLibIdOpt.get)
+                case _ =>
               }
-              val discardedCookies = Seq(cookieRedirect, cookieIntent).flatten.map(c => DiscardingCookie(c.name))
-              Redirect(s"${redirectPath}${initParams.toString}").discardingCookies(discardedCookies: _*)
-            } else {
-              Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
             }
+            val discardedCookies = Seq(cookiePublicLibraryId, cookieIntent).flatten.map(c => DiscardingCookie(c.name))
+            Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0").discardingCookies(discardedCookies: _*)
 
           } else if (ur.identityOpt.isDefined) {
+            log.info(s"[doSignupPage] ${ur.identityOpt.get} has incomplete signup state")
             val identity = ur.identityOpt.get
             // User exists, is incomplete
             val (firstName, lastName) = if (identity.firstName.contains("@")) ("", "") else (User.sanitizeName(identity.firstName), User.sanitizeName(identity.lastName))
@@ -463,6 +464,7 @@ class AuthController @Inject() (
               lastName = lastName
             ))
           } else {
+            log.info(s"[doSignupPage] ${ur.userId} has no identity ${ur.user.state}")
             // User but no identity. Huh?
             // Haven't run into this one. Redirecting user to logout, ideally to fix their cookie situation
             Redirect(securesocial.controllers.routes.LoginPage.logout)
@@ -472,6 +474,7 @@ class AuthController @Inject() (
             val identity = requestNonUser.identityOpt.get
             if (identity.email.exists(e => authCommander.emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
               // No user exists, but social network identity’s email address matches a Kifi user
+              log.info(s"[doSignupPage] ${identity} social network email ${identity.email}")
               Ok(views.html.auth.connectToAuthenticate(
                 emailAddress = identity.email.get,
                 network = SocialNetworkType(identity.identityId.providerId),
@@ -479,6 +482,7 @@ class AuthController @Inject() (
               ))
             } else if (requestNonUser.flash.get("signin_error").exists(_ == "no_account")) {
               // No user exists, social login was attempted. Let user choose what to do next.
+              log.info(s"[doSignupPage] ${identity} logged in with wrong network")
               Ok(views.html.auth.loggedInWithWrongNetwork(
                 network = SocialNetworkType(identity.identityId.providerId)
               ))
@@ -486,6 +490,7 @@ class AuthController @Inject() (
               // No user exists, has social network identity, must finalize
 
               if (requestNonUser.identityOpt.get.identityId.providerId == "twitter") {
+                log.info(s"[doSignupPage] ${identity} finalizing twitter account")
                 Ok(views.html.auth.authGrey(
                   view = "signup2Social",
                   firstName = User.sanitizeName(identity.firstName),
@@ -495,6 +500,7 @@ class AuthController @Inject() (
                   network = Some(SocialNetworkType(identity.identityId.providerId))
                 ))
               } else {
+                log.info(s"[doSignupPage] ${identity} finalizing social id")
                 val password = identity.passwordInfo match {
                   case Some(info) => info.password
                   case _ => Random.alphanumeric.take(10).mkString
@@ -506,7 +512,8 @@ class AuthController @Inject() (
                   password = password.toCharArray,
                   picToken = None, picHeight = None, picWidth = None, cropX = None, cropY = None, cropSize = None)
 
-                authHelper.handleSocialFinalizeInfo(sfi, None, true)(request)
+                val targetPubLibId = if (cookieIntent.isDefined && cookieIntent.get.value == "follow") pubLibIdOpt else None
+                authHelper.handleSocialFinalizeInfo(sfi, targetPubLibId, true)(request)
               }
 
             }

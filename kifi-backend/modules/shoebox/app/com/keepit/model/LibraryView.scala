@@ -90,7 +90,8 @@ object BasicUserWithFriendStatus {
   }
 }
 
-case class LibraryInfo(id: PublicId[Library],
+case class LibraryInfo(
+  id: PublicId[Library],
   name: String,
   visibility: LibraryVisibility,
   shortDescription: Option[String],

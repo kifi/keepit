@@ -7,7 +7,6 @@ angular.module('kifi', [
   'ngAnimate',
   'ui.router',
   'util',
-  'dom',
   'antiscroll',
   'nodraginput',
   'jun.smartScroll',
@@ -90,7 +89,7 @@ angular.module('kifi', [
         profileService.fetchMe().then(function () {
           if ($rootScope.userLoggedIn) {
             profileService.fetchPrefs();
-            libraryService.fetchLibrarySummaries(true);
+            libraryService.fetchLibraryInfos(true);
           }
         });
       });

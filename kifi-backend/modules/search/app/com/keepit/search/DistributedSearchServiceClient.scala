@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.common.json.EitherFormat
 import com.keepit.common.service.{ ServiceUri, ServiceType, ServiceClient }
 import com.keepit.common.zookeeper.{ ServiceCluster, ServiceInstance }
 import com.keepit.search.engine.library.LibraryShardResult
@@ -43,7 +44,7 @@ trait DistributedSearchServiceClient extends ServiceClient {
     firstLang: Lang,
     secondLang: Option[Lang],
     query: String,
-    filter: Option[String],
+    filter: Option[Either[Id[User], String]],
     libraryId: LibraryContext,
     maxHits: Int,
     context: Option[String],
@@ -92,7 +93,7 @@ class DistributedSearchServiceClientImpl @Inject() (
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
 
-    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter, LibraryContext.None, maxHits, context, debug)
+    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter.map(Right(_)), LibraryContext.None, maxHits, context, debug)
   }
 
   def distSearchUris(
@@ -101,7 +102,7 @@ class DistributedSearchServiceClientImpl @Inject() (
     firstLang: Lang,
     secondLang: Option[Lang],
     query: String,
-    filter: Option[String],
+    filter: Option[Either[Id[User], String]],
     library: LibraryContext,
     maxHits: Int,
     context: Option[String],
@@ -117,7 +118,7 @@ class DistributedSearchServiceClientImpl @Inject() (
     firstLang: Lang,
     secondLang: Option[Lang],
     query: String,
-    filter: Option[String],
+    filter: Option[Either[Id[User], String]],
     library: LibraryContext,
     maxHits: Int,
     context: Option[String],
@@ -130,7 +131,10 @@ class DistributedSearchServiceClientImpl @Inject() (
     builder += ("maxHits", maxHits)
     builder += ("lang1", firstLang.lang)
     if (secondLang.isDefined) builder += ("lang2", secondLang.get.lang)
-    if (filter.isDefined) builder += ("filter", filter.get)
+    if (filter.isDefined) {
+      implicit val format = EitherFormat[Id[User], String]
+      builder += ("filter", Json.toJson(filter.get))
+    }
     library match {
       case LibraryContext.Authorized(libId) => builder += ("authorizedLibrary", libId)
       case LibraryContext.NotAuthorized(libId) => builder += ("library", libId)

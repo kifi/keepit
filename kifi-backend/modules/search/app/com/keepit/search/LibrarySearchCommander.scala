@@ -3,6 +3,7 @@ package com.keepit.search
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
+import com.keepit.common.json.EitherFormat
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search.engine.library.{ LibrarySearchExplanation, LibrarySearch, LibraryShardHit, LibraryShardResult }
@@ -17,7 +18,7 @@ case class LibrarySearchRequest(
   userId: Id[User],
   experiments: Set[ExperimentType],
   queryString: String,
-  filter: Option[String],
+  filter: Option[Either[Id[User], String]],
   context: Option[String],
   lang1: Lang,
   lang2: Option[Lang],
@@ -28,7 +29,10 @@ case class LibrarySearchRequest(
   explain: Option[Id[Library]])
 
 object LibrarySearchRequest {
-  implicit val format = Json.format[LibrarySearchRequest]
+  implicit val format = {
+    implicit val filterFormat = EitherFormat[Id[User], String]
+    Json.format[LibrarySearchRequest]
+  }
 }
 
 case class LibrarySearchResult(hits: Seq[LibraryShardHit], show: Boolean, idFilter: Set[Long], searchExperimentId: Option[Id[SearchConfigExperiment]], explanation: Option[LibrarySearchExplanation])
@@ -40,7 +44,7 @@ trait LibrarySearchCommander {
     acceptLangs: Seq[String],
     experiments: Set[ExperimentType],
     query: String,
-    filter: Option[String],
+    filterFuture: Future[Option[Either[Id[User], String]]],
     context: Option[String],
     maxHits: Int,
     disablePrefixSearch: Boolean,
@@ -61,7 +65,7 @@ class LibrarySearchCommanderImpl @Inject() (
     acceptLangs: Seq[String],
     experiments: Set[ExperimentType],
     query: String,
-    filter: Option[String],
+    futureFilter: Future[Option[Either[Id[User], String]]],
     context: Option[String],
     maxHits: Int,
     disablePrefixSearch: Boolean,
@@ -69,18 +73,21 @@ class LibrarySearchCommanderImpl @Inject() (
     debug: Option[String] = None,
     explain: Option[Id[Library]]): Future[LibrarySearchResult] = {
     val (localShards, remotePlan) = distributionPlan(userId, activeShards)
-    languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, LibraryContext.None).flatMap {
-      case (lang1, lang2) =>
-        val request = LibrarySearchRequest(userId, experiments, query, filter, context, lang1, lang2, maxHits, disablePrefixSearch, predefinedConfig, debug, explain)
-        val futureRemoteLibraryShardResults = searchClient.distSearchLibraries(remotePlan, request)
-        val futureLocalLibraryShardResult = distSearchLibraries(localShards, request)
-        val configFuture = searchFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig)
-        val futureResults = Future.sequence(futureRemoteLibraryShardResults :+ futureLocalLibraryShardResult)
-        val searchFilter = SearchFilter(filter, LibraryContext.None, context)
-        for {
-          results <- futureResults
-          (config, searchExperimentId) <- configFuture
-        } yield toLibrarySearchResult(results.flatten, maxHits, searchFilter, config, searchExperimentId)
+    val futureLangs = languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, LibraryContext.None)
+    futureFilter.flatMap { filter =>
+      futureLangs.flatMap {
+        case (lang1, lang2) =>
+          val request = LibrarySearchRequest(userId, experiments, query, filter, context, lang1, lang2, maxHits, disablePrefixSearch, predefinedConfig, debug, explain)
+          val futureRemoteLibraryShardResults = searchClient.distSearchLibraries(remotePlan, request)
+          val futureLocalLibraryShardResult = distSearchLibraries(localShards, request)
+          val configFuture = searchFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig)
+          val futureResults = Future.sequence(futureRemoteLibraryShardResults :+ futureLocalLibraryShardResult)
+          val searchFilter = SearchFilter(filter, LibraryContext.None, context)
+          for {
+            results <- futureResults
+            (config, searchExperimentId) <- configFuture
+          } yield toLibrarySearchResult(results.flatten, maxHits, searchFilter, config, searchExperimentId)
+      }
     }
   }
 

@@ -137,9 +137,9 @@ class HealthcheckActor @Inject() (
     case CheckDiskSpace =>
       val GB = 1024 * 1024 * 1024
       val usableDiskSpace = new File(".").getUsableSpace
-      if (usableDiskSpace < 1 * GB) { // less then 2gb of available disk space
+      if (usableDiskSpace < 2 * GB) {
         self ! AirbrakeError(message = Some(s"machine has only ${(usableDiskSpace * 1d) / GB}gb free of usable disk space !!!"), panic = true)
-      } else if (usableDiskSpace < 2 * GB) { // less then 2gb of available disk space
+      } else if (usableDiskSpace < 10 * GB) {
         self ! AirbrakeError(message = Some(s"machine has only ${(usableDiskSpace * 1d) / GB}gb free of usable disk space"))
       }
     case CheckUpdateStatusOfService =>

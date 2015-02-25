@@ -19,11 +19,7 @@ angular.module('kifi')
           return match[1] + match[2]; // remove trailing slash
         }
       })
-      .when('/friends/invite', '/invite')
-      .when('/friends/requests', '/friends')
-      .when('/friends/requests/:network', '/friends')
       .when('/:username/libraries', '/:username')
-      .when('/recommendations', '/')
       .otherwise('/');  // last resort
 
     // Set up the states.
@@ -32,8 +28,8 @@ angular.module('kifi')
         url: '/',
         templateUrl: 'recos/recosView.tpl.html'
       })
-      .state('friends', {
-        url: '/friends',
+      .state('connections', {
+        url: '/connections',
         templateUrl: 'friends/friends.tpl.html'
       })
       .state('invite', {

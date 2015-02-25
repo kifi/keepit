@@ -3,6 +3,7 @@ package com.keepit.search.controllers.search
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
+import com.keepit.common.json.EitherFormat
 import com.keepit.model._
 import com.keepit.search._
 import play.api.mvc.Action
@@ -72,7 +73,10 @@ class SearchController @Inject() (
     val lang1 = (searchRequest \ "lang1").as[String]
     val lang2 = (searchRequest \ "lang2").asOpt[String]
     val query = (searchRequest \ "query").as[String]
-    val filter = (searchRequest \ "filter").asOpt[String]
+    val filter = {
+      implicit val format = EitherFormat[Id[User], String]
+      (searchRequest \ "filter").asOpt[Either[Id[User], String]]
+    }
     val libraryContext = ((searchRequest \ "authorizedLibrary").asOpt[Long], (searchRequest \ "library").asOpt[Long]) match {
       case (Some(libId), _) => LibraryContext.Authorized(libId)
       case (None, Some(libId)) => LibraryContext.NotAuthorized(libId)
@@ -194,7 +198,7 @@ class SearchController @Inject() (
   def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     val langs = acceptLangs.split(",").filter(_.nonEmpty)
-    librarySearchCommander.searchLibraries(userId, langs, userExperiments, query, None, None, 1, disablePrefixSearch, None, debug, Some(libraryId)).map { result =>
+    librarySearchCommander.searchLibraries(userId, langs, userExperiments, query, Future.successful(None), None, 1, disablePrefixSearch, None, debug, Some(libraryId)).map { result =>
       Ok(html.admin.explainLibraryResult(userId, libraryId, result.explanation))
     }
   }

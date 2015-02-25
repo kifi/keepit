@@ -9,36 +9,28 @@
 
     <div class="library-select-list" kf-wheel-allow>
       <div ng-if="widgetKeptInLibraries.length" class="library-group-header kept-to-libraries-group-header">Kept In</div>
-      <ul ng-if="widgetKeptInLibraries.length" >
+      <ul ng-if="widgetKeptInLibraries.length" class="kf-kept-to">
         <li ng-repeat="library in widgetKeptInLibraries" class="library-select-option"
-          ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
+          ng-class="{'selected': library.selected}"
           ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
           ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
         </li>
       </ul>
 
-      <div ng-if="widgetKeptInLibraries.length && widgetMyLibraries.length" class="library-group-header my-libraries-group-header">My Libraries</div>
-      <ul ng-if="widgetKeptInLibraries.length && widgetMyLibraries.length">
-        <li ng-repeat="library in widgetMyLibraries" class="library-select-option"
-          ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
-          ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
-          ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
-        </li>
-      </ul>
-
-      <div ng-if="!widgetKeptInLibraries.length && widgetRecentLibraries.length" class="library-group-header my-libraries-group-header">Recent Libraries</div>
-      <ul ng-if="!widgetKeptInLibraries.length && widgetRecentLibraries.length">
+      <div ng-if="widgetRecentLibraries.length" class="library-group-header my-libraries-group-header">Recent Libraries</div>
+      <ul ng-if="widgetRecentLibraries.length">
         <li ng-repeat="library in widgetRecentLibraries" class="library-select-option"
-          ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
+          ng-class="{'selected': library.selected}"
           ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
           ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
         </li>
       </ul>
 
-      <div ng-if="!widgetKeptInLibraries.length && widgetRecentLibraries.length" class="library-group-header my-libraries-group-header">Other Libraries</div>
-      <ul ng-if="!widgetKeptInLibraries.length">
+      <div ng-if="widgetOtherLibraries.length && widgetRecentLibraries.length" class="library-group-header my-libraries-group-header">Other Libraries</div>
+      <div ng-if="widgetOtherLibraries.length && !widgetRecentLibraries.length" class="library-group-header my-libraries-group-header">My Libraries</div>
+      <ul ng-if="widgetOtherLibraries.length">
         <li ng-repeat="library in widgetOtherLibraries" class="library-select-option"
-          ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
+          ng-class="{'selected': library.selected}"
           ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
           ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
         </li>
@@ -55,7 +47,7 @@
 
   <div ng-show="showCreate">
     <header class="keep-to-library-create-header">
-      <span class="go-back-left-arrow" ng-click="hideCreatePanel()"></span>Keep to a new library
+      <span class="keep-to-library-back-arrow" ng-click="hideCreatePanel()"></span>Keep to a new library
     </header>
     <div class="keep-to-library-create-heading">Name Your Library</div>
     <div class="keep-to-library-create-name-input-container">

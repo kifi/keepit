@@ -26,80 +26,9 @@
   height: 8px
   margin: 40px auto
 
-.kf-shadow-dragged-keeps
 .kf-my-keeps
   padding: 0 25px 20px 0
 
-.kf-shadow-dragged-keeps
-  position: absolute
-  left: 0
-  top: 0
-  width: 100%
-  z-index: -1
-  box-sizing: border-box
-
-  &.two
-    .kf-shadow-keep-last
-      top: 40px
-
-  &.three
-    .kf-shadow-keep-second
-      top: 40px
-    .kf-shadow-keep-last
-      top: 80px
-
-  &.more
-    .kf-shadow-keep-ellipsis
-      top: 40px
-    .kf-shadow-keep-last
-      top: 80px
-
-.kf-shadow-keep-ellipsis
-  display: none
-  position: absolute
-  height: 40px
-  top: 0
-  left: 3px
-  width: calc(100% - 28px)
-  border-radius: 3px 3px 0 0
-  border: defaultBorder
-  border-bottom: none
-  background-color: #fafafa
-  box-sizing: border-box
-
-  &.active
-    display: block
-
-.kf-shadow-keep-ellipsis-line
-  position: relative
-  top: 50%
-  height: 50%
-  width: 100%
-  border: inherit
-  border-left: none
-  border-right: none
-  margin-top: -1px
-
-.kf-shadow-keep-ellipsis-counter
-.kf-shadow-keep-ellipsis-counter-hidden
-  position: absolute
-  font-size: 16px
-  color: black
-  background-color: inherit
-  line-height: 40px
-  top: 0
-  padding: 0 3px
-  font-family: Lato, Arial, sans-serif
-
-.kf-shadow-keep-ellipsis-counter-hidden
-  visibility: hidden
-
-.kf-shadow-keep-first
-.kf-shadow-keep-second
-.kf-shadow-keep-last
-  position: absolute
-  top: 0
-  width: calc(100% - 55px) // (100% - total left/right padding)
 
 //
 // Add keep modal

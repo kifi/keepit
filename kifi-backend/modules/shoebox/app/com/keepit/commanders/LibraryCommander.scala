@@ -842,13 +842,17 @@ class LibraryCommander @Inject() (
             val access = if (targetLib.ownerId != inviterId) LibraryAccess.READ_ONLY else inviteAccess
             recipient match {
               case Left(userId) =>
-                libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
-                  case Some(mem) if mem.access == access =>
-                    None
-                  case _ =>
-                    val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(userId), access = access, message = msgOpt)
-                    val inviteeInfo = (Left(invitedBasicUsersById(userId)), access)
-                    Some(newInvite, inviteeInfo)
+                if (userId == targetLib.ownerId) {
+                  None
+                } else {
+                  libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
+                    case Some(mem) if mem.access == access =>
+                      None
+                    case _ =>
+                      val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(userId), access = access, message = msgOpt)
+                      val inviteeInfo = (Left(invitedBasicUsersById(userId)), access)
+                      Some(newInvite, inviteeInfo)
+                  }
                 }
               case Right(email) =>
                 val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = access, message = msgOpt)

@@ -246,7 +246,6 @@ angular.module('kifi')
     };
 
     $scope.editOptions = {
-      draggable: false,
       actions: {
         keepToLibrary: true
       }
@@ -315,7 +314,7 @@ angular.module('kifi')
     });
 
     // used for bulk-edit Copy To Library in search, it updates the model to include the new library keep(s)
-    var deregisterKeepAddedListener = $rootScope.$on('keepAdded', function (event, slug, keeps, library) {
+    var deregisterKeepAddedListener = $rootScope.$on('keepAdded', function (event, keeps, library) {
       keeps.forEach(function (keep) {
         var searchKeep = _.find($scope.resultKeeps, { url: keep.url });
         if (searchKeep && !_.find(searchKeep.keeps, { id: keep.id })) {
