@@ -1,12 +1,8 @@
 <div class="kf-user-profile-header kf-min-width-bounded">
   <div class="kf-width-bounded">
     <div class="kf-user-profile-friend-request-header" ng-if="connectionWithUser==='request_received'">
-      <span class="kf-user-profile-friend-respond accept" ng-click="acceptFriendRequest()">
-        Accept
-      </span>
-      <span class="kf-user-profile-friend-respond decline" ng-click="ignoreFriendRequest()">
-        Decline
-      </span>
+      <button class="kf-user-profile-friend-respond kf-accept" ng-click="acceptFriendRequest()">Accept</button>
+      <button class="kf-user-profile-friend-respond kf-decline" ng-click="ignoreFriendRequest()">Decline</button>
       <span class="kf-user-profile-friend-request-msg">{{profile.firstName}} wants to connect with you on Kifi</span>
     </div>
     <div class="kf-up-basic-info-main-content" itemscope itemtype="http://schema.org/Person">
