@@ -598,14 +598,14 @@ class UserCommander @Inject() (
           case _ => {
             if (!readOnly) {
               val user = userRepo.get(userId)
-              //we have to do cache invalidation now, the repo will not have the old username for that
-              usernameCache.remove(UsernameKey(user.username))
               val normalizedUsername = UsernameOps.normalize(username.value)
               if (user.normalizedUsername != normalizedUsername) {
                 usernameRepo.alias(user.username, userId, overrideProtection) // create an alias for the old username
                 usernameRepo.reclaim(username, Some(userId), overrideProtection).get // reclaim any existing alias for the new username
               }
               userRepo.save(user.copy(username = username, normalizedUsername = normalizedUsername))
+              //we have to do cache invalidation now, the repo does not have the old username for that
+              usernameCache.remove(UsernameKey(user.username))
             } else {
               log.info(s"[dry run] user $userId set with username $username")
             }
