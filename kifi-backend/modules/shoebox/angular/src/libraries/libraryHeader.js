@@ -38,7 +38,6 @@ angular.module('kifi')
         scope.clippedDescription = false;
         scope.editKeepsText = 'Edit Keeps';
         scope.search = { 'text': $stateParams.q || '' };
-        scope.pageScrolled = false;
         scope.isMobile = platformService.isSupportedMobilePlatform();
 
         //
@@ -124,12 +123,6 @@ angular.module('kifi')
           if (!$twitter.failedToLoad && !$twitter.loaded) {
             $twitter.load();
           }
-        }
-
-        function onScroll() {
-          scope.$apply(function () {
-            scope.pageScrolled = $window.document.body.scrollTop > 0;
-          });
         }
 
 
@@ -739,11 +732,6 @@ angular.module('kifi')
           })
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);
-        });
-
-        $window.addEventListener('scroll', onScroll);
-        scope.$on('$destroy', function () {
-          $window.removeEventListener('scroll', onScroll);
         });
 
 
