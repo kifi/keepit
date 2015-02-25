@@ -237,9 +237,10 @@ class RecommendationsCommander @Inject() (
     // get extra recos from curator incase we filter out some below
     curator.topLibraryRecos(userId, Some(limit * 4), context) flatMap { libResults =>
       val libInfos = libResults.recos
-      val libIds = libInfos.map(_.libraryId).toSet
+      val libIds = libInfos.map(_.libraryId)
       val libraries = db.readOnlyReplica { implicit s =>
-        libRepo.getLibraries(libIds).toSeq.filter(_._2.visibility == LibraryVisibility.PUBLISHED)
+        val mapping = libRepo.getLibraries(libIds.toSet)
+        libIds.map { id => (id, mapping(id)) }.filter(_._2.visibility == LibraryVisibility.PUBLISHED)
       }.take(limit)
 
       val idToLibraryMap = libraries.toMap
