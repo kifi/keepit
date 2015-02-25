@@ -14,7 +14,6 @@ import play.api.mvc.{ Result }
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
 import scala.concurrent.duration._
-import com.keepit.model.LibraryInfo
 import com.keepit.social.BasicUser
 
 class WanderingAdminController @Inject() (
