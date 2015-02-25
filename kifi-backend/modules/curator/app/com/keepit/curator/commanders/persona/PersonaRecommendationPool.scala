@@ -15,7 +15,7 @@ trait FixedSetPersonaRecoPool[T, R] extends PersonaRecommendationPool[R] {
   protected val specialBoostScore: Float
 
   def perturbation(hasSpecialBoost: Boolean): Float = {
-    if (hasSpecialBoost) specialBoostScore else util.Random.nextFloat()
+    if (hasSpecialBoost) specialBoostScore + util.Random.nextFloat() else util.Random.nextFloat()
   }
 
   def getRecoIdsByPersona(pid: Id[Persona]): Seq[Id[T]] = fixedRecos.getOrElse(pid, Seq())
