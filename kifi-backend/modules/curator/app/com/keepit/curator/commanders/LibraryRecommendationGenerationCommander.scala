@@ -70,15 +70,19 @@ class LibraryRecommendationGenerationCommander @Inject() (
     def hackySort(scored: Seq[LibraryRecoScore]): Seq[LibraryRecoScore] = {
       val specialBoostSet = Set(46862, 36680, 49078, 24103, 47498, 51798, 47889, 47191, 47494, 48661, 49090, 50874, 49135, 26460, 27238, 25168, 50812, 47488, 42651, 27760, 25368, 44475, 24203, 50862, 47284, 25000, 27545, 51496, 27049, 26465).map { Id[Library](_) }
       val (lucky, rest) = scored.partition { x => specialBoostSet.contains(x.reco.libraryId) && x.reco.delivered == 0 }
+      log.info(s"[lrgc] total num of libraries for sorting: ${scored.size}, lucky ones: ${lucky.size}")
       lucky ++ rest
     }
 
     val (recos, newContext) = db.readOnlyReplica { implicit session =>
       val recosByTopScore = libraryRecRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
+      log.info(s"[lrgc] total retrieved recos: ${recosByTopScore.size}. context = ${context.getOrElse("null")}")
       val finalSorted = recoSortStrategy.sort(recosByTopScore)
       val hackySorted = hackySort(finalSorted) // REMOVE THIS LATER
       idFilter.take(hackySorted, context, limit = howManyMax)((x: LibraryRecoScore) => x.reco.libraryId.id)
     }
+
+    log.info(s"[lrgc] returing ${recos.size} reco libraries.")
 
     val recosInfo = recos.map { case LibraryRecoScore(s, r) => LibraryRecommendation.toLibraryRecoInfo(r) }
 
