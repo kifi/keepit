@@ -729,7 +729,11 @@ angular.module('kifi')
               lib.numFollowers--;
               _.remove(lib.followers, {id: profileService.me.id});
             }
-          })
+          }),
+          function () {
+            elemLohRight.find('.kf-lh-follow-btn-wrap').remove();
+            elemLohLinks.css({bottom: '', opacity: ''});
+          }
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);
         });
