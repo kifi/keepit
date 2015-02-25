@@ -27,6 +27,7 @@ class RecommendationsController @Inject() (
   }
 
   def topRecosV2(recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
+    log.info(s"uriContex: ${uriContext.getOrElse("null")}, libContext: ${libContext.getOrElse("null")}")
     val libRecosF = commander.topPublicLibraryRecos(request.userId, 10, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = uriContext)
     val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, libContext.isDefined, recencyWeight, context = libContext)
 
