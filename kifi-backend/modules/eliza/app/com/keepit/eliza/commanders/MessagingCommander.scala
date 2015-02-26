@@ -550,9 +550,9 @@ class MessagingCommander @Inject() (
     setLastSeen(userId, message.thread, Some(message.createdAt))
   }
 
-  def getUnreadUnmutedThreadCount(userId: Id[User]): Int = {
+  def getUnreadUnmutedThreadCount(userId: Id[User], filterByReplyable: Option[Boolean] = None): Int = {
     db.readOnlyReplica { implicit session =>
-      userThreadRepo.getUnreadUnmutedThreadCount(userId)
+      userThreadRepo.getUnreadUnmutedThreadCount(userId, filterByReplyable)
     }
   }
 
