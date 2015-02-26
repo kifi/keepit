@@ -62,13 +62,15 @@ angular.module('kifi')
         scope.close = function() {
           if (scope.selectedPersonaIds.length > 0) {
             if (_.isFunction(scope.closeAction)) {
-              scope.closeAction();
-              userPersonaActionService.selectPersonas(scope.selectedPersonaIds);
+              userPersonaActionService.selectPersonas(scope.selectedPersonaIds).then(function() {
+                scope.closeAction();
+                libraryService.fetchLibrarySummaries(true);
+              });
             } else if (scope.isModal) {
               $rootScope.$emit('refreshRecos');
               modalService.close();
+              libraryService.fetchLibrarySummaries(true);
             }
-            libraryService.fetchLibrarySummaries(true);
             $analytics.eventTrack('user_clicked_page', {action: 'closed'});
           }
         };
