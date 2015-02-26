@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfKeepWhoLibsAndPics', [
-  '$rootScope', 'friendService', 'keepWhoService', 'profileService', 'libraryService', 'env',
-  function ($rootScope, friendService, keepWhoService, profileService, libraryService, env) {
+  '$rootScope', 'friendService', 'profileService', 'libraryService', 'env',
+  function ($rootScope, friendService, profileService, libraryService, env) {
     return {
       restrict: 'A',
       replace: true,
@@ -15,8 +15,6 @@ angular.module('kifi')
       },
       link: function (scope) {
         scope.me = profileService.me;
-        scope.getPicUrl = keepWhoService.getPicUrl;
-        scope.getName = keepWhoService.getName;
         scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
         scope.visibleKeepLibraries = scope.keep.libraries;
         scope.visibleKeepLibraries.forEach(function (lib) {

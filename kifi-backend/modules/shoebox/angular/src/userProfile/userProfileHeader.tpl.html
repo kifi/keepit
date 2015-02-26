@@ -7,7 +7,7 @@
     </div>
     <div class="kf-up-basic-info-main-content" itemscope itemtype="http://schema.org/Person">
       <a href="{{userProfileRootUrl}}" itemprop="url">
-        <img class="kf-user-profile-picture" ng-src="{{profile.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" alt="{{profile.firstName}} {{profile.lastName}}" itemprop="image">
+        <img class="kf-user-profile-picture" ng-src="{{profile | pic:200}}" alt="{{profile.firstName}} {{profile.lastName}}" itemprop="image">
       </a>
 
       <div ng-if="!isKifiCurator" ng-switch="connectionWithUser" class="kf-user-profile-available-action">

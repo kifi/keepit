@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .controller('UserProfileCtrl', [
   '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window', 'profile',
-  'env', 'inviteService', 'keepWhoService', 'originTrackingService', 'profileService',
+  'env', 'inviteService', 'originTrackingService', 'profileService',
   'installService', 'modalService', 'initParams',
   function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window, profile,
-            env, inviteService, keepWhoService, originTrackingService, profileService,
+            env, inviteService, originTrackingService, profileService,
             installService, modalService, initParams) {
     //
     // Internal functions.
@@ -102,7 +102,6 @@ angular.module('kifi')
     $scope.currentPageOrigin = getCurrentPageOrigin();
     $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
     $scope.profile = _.cloneDeep(profile);
-    $scope.profile.picUrl = keepWhoService.getPicUrl(profile, 200);
     $scope.viewingOwnProfile = profile.id === profileService.me.id;
 
     trackPageView();
@@ -116,9 +115,9 @@ angular.module('kifi')
 
 .controller('UserProfileLibrariesCtrl', [
   '$scope', '$rootScope', '$state', '$stateParams', '$timeout', '$location',
-  'routeService', 'keepWhoService', 'profileService', 'userProfileActionService', 'libraryService', 'modalService', 'platformService', 'signupService',
+  'routeService', 'profileService', 'userProfileActionService', 'libraryService', 'modalService', 'platformService', 'signupService',
   function ($scope, $rootScope, $state, $stateParams, $timeout, $location,
-    routeService, keepWhoService, profileService, userProfileActionService, libraryService, modalService, platformService, signupService) {
+    routeService, profileService, userProfileActionService, libraryService, modalService, platformService, signupService) {
     var username = $stateParams.username;
     var fetchPageSize = 12;
     var fetchPageNumber = 0;
@@ -139,7 +138,6 @@ angular.module('kifi')
       owner = lib.owner || owner;
       lib.path = '/' + owner.username + '/' + lib.slug;
       lib.owner = owner;
-      lib.ownerPicUrl = keepWhoService.getPicUrl(owner, 200);
       lib.ownerProfileUrl = routeService.getProfileUrl(owner.username);
       lib.imageUrl = lib.image ? routeService.libraryImageUrl(lib.image.path) : null;
       lib.followers.forEach(augmentFollower);
@@ -150,7 +148,6 @@ angular.module('kifi')
     }
 
     function augmentFollower(user) {
-      user.picUrl = keepWhoService.getPicUrl(user, 100);
       user.profileUrl = routeService.getProfileUrl(user.username);
     }
 
