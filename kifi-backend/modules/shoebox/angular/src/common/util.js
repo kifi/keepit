@@ -15,9 +15,57 @@ angular.module('util', [])
       '/': '&#x2F;'
     };
     var youtubeVideoUrlRe = /^(?:https?:\/\/)?(?:youtu\.be|(?:www\.)?youtube(?:-nocookie)?\.com)\/(?:|user\/[^\/?#]+)?(?:|.*?[\/=])([a-zA-Z0-9_-]{11})\b/;
-    var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|a[cdegilmoqrstuz]|b[abefghimnrtyz]|c[acdfghiklmnoruxyz]|d[ejko]|e[cegst]|f[ijkmor]|g[befghilmnpqrstu]|h[kmnru]|i[delmnorst]|j[eop]|k[eghrwyz]|l[bciktuvy]|m[cdghkmnoqrstuwxyz]|n[acfilouz]|om|p[aeghklmnrty]|qa|r[eouw]|s[abcdeghikmnotuvz]|t[cdfhjmnoprtvwz]|u[agkmsyz]|v[eginu]|wf|y[t|u]|z[amrw]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
+    var uriDetectRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|a[cdegilmoqrstuz]|b[abefghimnrtyz]|c[acdfghiklmnoruxyz]|d[ejko]|e[cegst]|f[ijkmor]|g[befghilmnpqrstu]|h[kmnru]|i[delmnorst]|j[eop]|k[eghrwyz]|l[bciktuvy]|m[cdghkmnoqrstuwxyz]|n[acfilouz]|om|p[aeghklmnrty]|qa|r[eouw]|s[abcdeghikmnotuvz]|t[cdfhjmnoprtvwz]|u[agkmsyz]|v[eginu]|wf|y[t|u]|z[amrw]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
+    var emailAddrDetectRe = /(?:\b|^)([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+)(?:\b|$)/;  // jshint ignore:line
+    var emailAddrValidateRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/; // jshint ignore:line
 
     var queryStringHelper = {$$path: '', $$compose: $location.$$compose};
+
+    function htmlEscape(text) {
+      return text == null ? '' : String(text).replace(HTML_ESCAPE_CHARS, htmlEscapeReplace);
+    }
+
+    function htmlEscapeReplace(ch) {
+      return HTML_ESCAPES[ch];
+    }
+
+    function processEmailAddresses(text) {
+      if (text.indexOf('@', 1)) {
+        var parts = text.split(emailAddrDetectRe);
+        for (var i = 1; i < parts.length; i += 2) {
+          var escapedAddr = htmlEscape(parts[i]);
+          parts[i] = '<a href="mailto:' + escapedAddr + '">' + escapedAddr + '</a>';
+        }
+        return parts.join('');
+      } else {
+        return text;
+      }
+    }
+
+    function processUrlsThen(process, text) {
+      var parts = text.split(uriDetectRe);
+      for (var i = 1; i < parts.length; i += 3) {
+        var uri = parts[i];
+        var scheme = parts[i+1];
+        if (!scheme && uri.indexOf('/') < 0 || parts[i-1].slice(-1) === '@') {
+          var ambiguous = parts[i-1] + uri;
+          var ambiguousProcessed = process(ambiguous);
+          if (ambiguousProcessed.indexOf('</a>', ambiguousProcessed.length - 4) > 0) {
+            parts[i] = ambiguousProcessed;
+            parts[i-1] = parts[i+1] = '';
+            continue;
+          }
+        }
+        var escapedUri = htmlEscape(uri);
+        var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
+        parts[i] = '<a target="_blank" rel="nofollow" href="' + escapedUrl + '">' + escapedUri;
+        parts[i+1] = '</a>';
+      }
+      for (i = 0; i < parts.length; i += 3) {
+        parts[i] = process(parts[i]);
+      }
+      return parts.join('');
+    }
 
     return {
       startsWith: function (str, prefix) {
@@ -33,8 +81,7 @@ angular.module('util', [])
         return input ? input.trim().replace(/\s+/g, ' ') : '';
       },
       validateEmail: function (input) {
-        var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/; // jshint ignore:line
-        return emailAddrRe.test(input);
+        return emailAddrValidateRe.test(input);
       },
       replaceArrayInPlace: function (oldArray, newArray) {
         // empties oldArray, loads newArray values into it, keeping the same reference.
@@ -95,13 +142,7 @@ angular.module('util', [])
         // Extremely simple for now, can be developed in the future
         return keepUrl.indexOf('.') !== -1;
       },
-      htmlEscape: function (text) {
-        function htmlEscapeReplace(ch) {
-          return HTML_ESCAPES[ch];
-        }
-
-        return text == null ? '' : String(text).replace(HTML_ESCAPE_CHARS, htmlEscapeReplace);
-      },
+      htmlEscape: htmlEscape,
       /**
        * Behaves like $location.search({...}). Keys whose values are an empty array will be omitted entirely.
        * https://docs.angularjs.org/api/ng/service/$location#search
@@ -114,22 +155,7 @@ angular.module('util', [])
       generateSlug: function (name) {
         return name.toLowerCase().replace(/[^\w\s-]|_/g, '').replace(/\s+/g, '-').replace(/^-/, '').substr(0, 50).replace(/-$/, '');
       },
-      processUrls: function (text) {
-        var parts = (text || '').split(uriRe);
-
-        for (var i = 1; i < parts.length; i += 3) {
-          var uri = parts[i];
-          var scheme = parts[i+1];
-          var url = (scheme ? '' : 'http://') + this.htmlEscape(uri);
-
-          parts[i] = '<a target="_blank" href="' + url + '">' + url;
-          parts[i+1] = '</a>';
-          parts[i-1] = this.htmlEscape(parts[i-1]);
-        }
-        parts[parts.length-1] = this.htmlEscape(parts[parts.length-1]);
-
-        return parts.join('');
-      },
+      linkify: angular.bind(null, processUrlsThen, processEmailAddresses),
       chooseTreatment: function (salt, treatments) {
         // To generate the salt for an experiment:
         // [0,0,0,0,0,0].map(function () { return Math.floor(Math.random() * 32).toString(32) }).join('')
