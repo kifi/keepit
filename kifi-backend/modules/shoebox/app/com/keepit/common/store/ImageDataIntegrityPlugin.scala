@@ -13,7 +13,7 @@ import com.keepit.common.plugin._
 import com.keepit.model.{ UserPictureRepo, UserStates, UserRepo, User }
 import akka.actor.ActorSystem
 import play.api.Plugin
-import play.api.http.Status.OK
+import play.api.http.Status.{ OK, NOT_FOUND }
 import com.keepit.common.net.NonOKResponseException
 import com.keepit.common.net.DirectUrl
 import scala.Some
@@ -44,12 +44,12 @@ private[store] class ImageDataIntegrityActor @Inject() (
           }
         ) yield {
           for (((url, response), cloudfrontInfo) <- findPictures(user)) {
-            if (response.status != OK) {
+            if (response.status == NOT_FOUND) {
               log.warn(s"S3 request for avatar at $url returned ${response.status}")
               airbrake.notify(s"S3 avatar for ${user.firstName} ${user.lastName} at $url returned ${response.status}")
             }
             for ((url, response) <- cloudfrontInfo) {
-              if (response.status != OK) {
+              if (response.status == NOT_FOUND) {
                 log.warn(s"Cloudfront request for avatar at $url returned ${response.status}")
                 airbrake.notify(s"Cloudfront avatar for ${user.firstName} ${user.lastName} at $url returned ${response.status}")
               }

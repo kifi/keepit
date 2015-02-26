@@ -5,7 +5,7 @@
   </button>
   <div class="kf-upl-card kf-upl-lib-card" ng-repeat="lib in libraries" ng-style="{'background-color': lib.color}"
        ng-class="{'justAddedBelow': lib.justAddedBelow, 'justAddedBelowAcross': lib.justAddedBelowAcross}">
-    <a class="kf-upl-card-setting svg-settings-gear" ng-if="lib.owner.id === me.id && lib.kind !== 'system_main' && lib.kind !== 'system_secret'" href="javascript:" ng-click="openModifyLibrary(lib)"></a>
+    <a class="kf-upl-card-setting svg-settings-gear" ng-if="profile.id === me.id && lib.owner.id === me.id && lib.kind !== 'system_main' && lib.kind !== 'system_secret'" href="javascript:" ng-click="openModifyLibrary(lib)"></a>
     <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib, 'clickedLibraryTitle')">
       <div class="kf-upl-card-icon" ng-class="{system_main: 'kf-sys svg-card-star', system_secret: 'kf-sys svg-card-lock'}[lib.kind] || 'kf-user svg-card-lock'" ng-if="(lib.visibility === 'secret' && lib.owner.id === me.id) || lib.kind === 'system_main'"></div>
       <div class="kf-upl-card-cover">
@@ -35,7 +35,7 @@
       </a>
     </div>
     <button ng-class="{'kf-upl-card-follow': true, 'kf-following': lib.following}" ng-if="lib.owner.id !== me.id" ng-click="onFollowButtonClick(lib, $event); trackUplCardClick(lib, 'clickedLibraryFollowButton')"></button>
-    <div class="kf-upl-card-foot" ng-switch="lib.visibility === 'published' && lib.owner.id === me.id && !lib.listed ? 'unlisted' : lib.followers.length ? 'followers' : lib.lastKept ? 'updated' : ''">
+    <div class="kf-upl-card-foot" ng-switch="profile.id === me.id && lib.visibility === 'published' && lib.owner.id === me.id && !lib.listed ? 'unlisted' : lib.followers.length ? 'followers' : lib.lastKept ? 'updated' : ''">
       <div class="kf-upl-followers" ng-switch-when="followers">
         <a href="{{user.profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" kf-track-origin="{{currentPageOrigin}}/follower" ng-click="trackUplCardClick(lib, 'clickedLibraryFollowersFace')"
            ng-attr-style="background-image:url({{user.picUrl}})"></a>
