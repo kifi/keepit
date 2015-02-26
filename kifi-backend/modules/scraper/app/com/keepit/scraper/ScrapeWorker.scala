@@ -84,8 +84,8 @@ class ScrapeWorkerImpl @Inject() (
     def scrapeFailed = latestUri.state == NormalizedURIStates.SCRAPE_FAILED
     def activeURI = latestUri.state == NormalizedURIStates.ACTIVE
     def signatureChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (schedulerConfig.intervalConfig.minInterval / info.interval))
-
-    titleChanged || restrictionChanged || scrapeFailed || activeURI || signatureChanged
+    def differentCanonicalUrl = article.canonicalUrl.exists(_.equalsIgnoreCase(latestUri.url))
+    titleChanged || restrictionChanged || scrapeFailed || activeURI || signatureChanged || differentCanonicalUrl
   }
 
   private def updateWordCountCache(uriId: Id[NormalizedURI], article: Option[Article]) = {
