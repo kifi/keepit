@@ -201,12 +201,12 @@ object LibraryCardInfo {
 case class LibraryNotificationInfo(
   id: PublicId[Library],
   name: String,
-  owner: Username,
-  slug: LibrarySlug)
+  slug: LibrarySlug,
+  owner: BasicUser)
 
 object LibraryNotificationInfo {
   def fromLibraryAndOwner(lib: Library, owner: BasicUser)(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
-    LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, owner.username, lib.slug)
+    LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, lib.slug, owner)
   }
 }
 
