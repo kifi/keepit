@@ -210,6 +210,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def userConnectionRelationshipCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserConnectionRelationshipCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
   def basicUserConnectionIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new BasicUserConnectionIdCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
 
@@ -351,8 +356,8 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
 
   @Provides @Singleton
-  def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedEntitiesCache(stats, accessLog, (outerRepo, 7 days))
+  def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedEntitiesCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
   @Provides @Singleton
   def userHashtagTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =

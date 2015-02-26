@@ -10,6 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialNetworkType, SocialNetworks }
@@ -35,11 +36,42 @@ class UserConnectionsCommander @Inject() (
     userCache: SocialUserInfoUserCache,
     socialConnectionRepo: SocialConnectionRepo,
     socialGraphPlugin: SocialGraphPlugin,
+    graphServiceClient: GraphServiceClient,
     kifiUserTypeahead: KifiUserTypeahead,
     socialUserTypeahead: SocialUserTypeahead,
     emailSender: EmailSenderProvider,
     s3ImageStore: S3ImageStore,
+    userConnectionRelationshipCache: UserConnectionRelationshipCache,
     db: Database) extends Logging {
+
+  def getConnectionsSortedByRelationship(viewer: Id[User], owner: Id[User]): Future[Seq[Id[User]]] = {
+    import com.keepit.common.cache.TransactionalCaching.Implicits._
+    userConnectionRelationshipCache.getOrElseFuture(UserConnectionRelationshipKey(viewer, owner)) {
+      val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntities(viewer)
+      val connectionsF = db.readOnlyReplicaAsync { implicit s =>
+        val all = userConnectionRepo.getConnectedUsersForUsers(Set(viewer, owner))
+        all(viewer) -> all(owner)
+      }
+      for {
+        sociallyRelatedEntities <- sociallyRelatedEntitiesF
+        (viewerConnections, ownerConnections) <- connectionsF
+      } yield {
+        val relatedUsersMap = sociallyRelatedEntities.map(_.users.related).getOrElse(Seq.empty).toMap
+        val ownerConnectionsMap = collection.mutable.Map(ownerConnections.toSeq.zip(List.fill(ownerConnections.size)(0d)): _*)
+        //if its a mutual connection, set the relationship score to 100
+        viewerConnections.filter(ownerConnectionsMap.contains).foreach { con =>
+          ownerConnectionsMap(con) = 100d
+        }
+        relatedUsersMap.filter(t => ownerConnectionsMap.contains(t._1)).foreach {
+          case (con, score) =>
+            val newScore = ownerConnectionsMap(con) + score
+            ownerConnectionsMap(con) = newScore
+        }
+        val scoring = ownerConnectionsMap.toSeq.sortBy(_._2 * -1)
+        scoring.map(_._1)
+      }
+    }
+  }
 
   def ignoreFriendRequest(userId: Id[User], id: ExternalId[User]): (Boolean, String) = {
     db.readWrite { implicit s =>

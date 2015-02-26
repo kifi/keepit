@@ -14,7 +14,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 class GraphControllerTest extends Specification with GraphTestInjector with GraphTestHelper {
   "graph controller" should {
     val modules = Seq(
-      FakeGraphServiceClientModule(),
+      FakeGraphServiceModule(),
       FakeABookServiceClientModule(),
       SimpleGraphTestModule())
 
