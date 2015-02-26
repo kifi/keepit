@@ -56,7 +56,6 @@ angular.module('kifi')
           // The passed-in library may have owner information on different properties;
           // normalize the properties (scope.library properties override scope.library.owner properties).
           scope.library.owner = scope.library.owner || {};
-          scope.library.owner.picUrl = scope.library.ownerPicUrl || scope.library.owner.picUrl;
           scope.library.owner.profileUrl = scope.library.ownerProfileUrl || scope.library.owner.profileUrl;
         }
 

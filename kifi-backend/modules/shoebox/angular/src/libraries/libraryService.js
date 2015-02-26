@@ -87,7 +87,6 @@ angular.module('kifi')
       this.owner = library.owner;
       this.numFollowers = library.numFollowers;
       this.numKeeps = library.numKeeps;
-      this.ownerPicUrl = routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 200);
       this.ownerProfileUrl = routeService.getProfileUrl(library.owner.username);
       this.name = library.name;
       this.description = library.description;
