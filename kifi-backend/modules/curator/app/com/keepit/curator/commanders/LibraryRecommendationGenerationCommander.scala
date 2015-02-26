@@ -238,7 +238,7 @@ class TopScoreLibraryRecoSelectionStrategy(val minScore: Float = 0f) extends Lib
   def sort(recosByTopScore: Seq[LibraryRecoScore]) = {
     val ret = recosByTopScore filter (_.score > minScore) sortBy (-_.score)
     if (ret.size < recosByTopScore.size) {
-      log.info(s"[lrgc] sorting strategy: before sorting ${recosByTopScore.size} libraries. after sorting: ${ret.size} libraris. threshold = ${minScore}")
+      log.info(s"[lrgc] sorting strategy: before sorting ${recosByTopScore.size} libraries. after sorting: ${ret.size} libraris. threshold = ${minScore}. userId = ${recosByTopScore.headOption.map(_.reco.userId).getOrElse("n/a")}")
     }
     ret
   }
