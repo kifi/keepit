@@ -65,7 +65,10 @@ object ServiceType {
 
   case object CURATOR extends ServiceType("CURATOR", "CU", loadFactor = 5)
 
-  case object ROVER extends ServiceType("ROVER", "RO", loadFactor = 5)
+  case object ROVER extends ServiceType("ROVER", "RO", loadFactor = 5) {
+    override val minInstances = 0
+    override val warnInstances = 0
+  }
 
   // Possible initialization cycle/deadlock when one of the case objects above is first dereferenced before the ServiceType object
   lazy val inProduction: List[ServiceType] = SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: CORTEX :: GRAPH :: CURATOR :: ROVER :: Nil
