@@ -17,7 +17,7 @@
           <ul class="lib-followers-list">
             <a href="{{library.owner.profileUrl}}" class="lib-follower lib-owner" ng-click="close()"
                kf-track-origin="{{currentPageOrigin}}/curator">
-              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="lib-follower-image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
+              <img ng-src="{{library.owner | pic:100}}" class="lib-follower-image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
               <div class="lib-follower-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
             </a>
             <a ng-if="follower.id" ng-repeat="follower in followerList" href="{{follower.profileUrl}}" ng-click="close()"
