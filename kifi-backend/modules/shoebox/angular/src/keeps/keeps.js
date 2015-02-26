@@ -6,7 +6,6 @@ angular.module('kifi')
   '$scope', 'profileService', 'tagService', 'util',
   function ($scope, profileService, tagService, util) {
     $scope.me = profileService.me;
-    $scope.data = {draggedKeeps: []};
 
     // Whenever new keeps are loaded or when tags have been added or removed,
     // sync up the keep tags with the current list of tags.
@@ -39,24 +38,6 @@ angular.module('kifi')
     $scope.$watch(function () {
       return tagService.allTags.length;
     }, joinTags);
-
-    $scope.dragKeeps = function (keep, event, mouseX, mouseY, selection) {
-      var draggedKeeps = selection.getSelected($scope.keeps);
-      if (draggedKeeps.length === 0) {
-        draggedKeeps = [keep];
-      }
-      $scope.data.draggedKeeps = draggedKeeps;
-      var sendData = angular.toJson($scope.data.draggedKeeps);
-      event.dataTransfer.setData('Text', sendData);
-      //event.dataTransfer.setData('text/plain', '');
-      var draggedKeepsElement = $scope.getDraggedKeepsElement();
-      draggedKeepsElement.find('.kf-keep').css('background', 'rgba(255,255,255,.7)');
-      event.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
-    };
-
-    $scope.stopDraggingKeeps = function () {
-      $scope.data.draggedKeeps = null;
-    };
   }
 ])
 
@@ -83,7 +64,7 @@ angular.module('kifi')
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
-      link: function (scope, element /*, attrs*/) {
+      link: function (scope) {
         //
         // Internal data.
         //
@@ -143,8 +124,6 @@ angular.module('kifi')
         // set default edit-mode options if it's not set by parent
         scope.editOptions = _.isObject(scope.editOptions()) ? scope.editOptions : function() {
           return {
-            // TODO draggable can be default to true when that is fixed
-            draggable: false,
             actions: {
               bulkUnkeep: true,
               copyToLibrary: true,
@@ -184,28 +163,6 @@ angular.module('kifi')
 
         scope.isShowMore = function () {
           return !scope.keepsLoading && scope.keepsHasMore;
-        };
-
-        scope.getDraggedKeepsElement = function () {
-          if (scope.data.draggedKeeps.length >= 4) {
-            var ellipsis = element.find('.kf-shadow-keep-ellipsis');
-            var ellipsisCounter = element.find('.kf-shadow-keep-ellipsis-counter');
-            var ellipsisCounterHidden = element.find('.kf-shadow-keep-ellipsis-counter-hidden');
-            ellipsisCounter.css({left: (parseInt(ellipsis.width(), 10) - parseInt(ellipsisCounterHidden.width(), 10)) / 2});
-          }
-          return element.find('.kf-shadow-dragged-keeps');
-        };
-
-        scope.draggedTwo = function () {
-          return scope.data.draggedKeeps && scope.data.draggedKeeps.length === 2;
-        };
-
-        scope.draggedThree = function () {
-          return scope.data.draggedKeeps && scope.data.draggedKeeps.length === 3;
-        };
-
-        scope.draggedMore = function () {
-          return scope.data.draggedKeeps && scope.data.draggedKeeps.length > 3;
         };
 
         scope.isScrollDisabled = function () {
@@ -272,10 +229,10 @@ angular.module('kifi')
           keepActionService.keepToLibrary(keepInfos, clickedLibrary.id).then(function (data) {
             var addedKeeps = data.keeps;
             if (addedKeeps.length > 0) {
-              libraryService.fetchLibrarySummaries(true);
-              scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, clickedLibrary);
+              libraryService.fetchLibraryInfos(true);
+              scope.$emit('keepAdded', addedKeeps, clickedLibrary);
             }
-            libraryService.fetchLibrarySummaries(true);
+            libraryService.fetchLibraryInfos(true);
           })['catch'](modalService.openGenericErrorModal);
         };
 
@@ -286,8 +243,8 @@ angular.module('kifi')
           keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), clickedLibrary.id).then(function (data) {
             var addedKeeps = data.successes;
             if (addedKeeps.length > 0) {
-              libraryService.fetchLibrarySummaries(true);
-              scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), addedKeeps, clickedLibrary);
+              libraryService.fetchLibraryInfos(true);
+              scope.$emit('keepAdded', addedKeeps, clickedLibrary);
             }
           })['catch'](modalService.openGenericErrorModal);
         };
@@ -303,7 +260,7 @@ angular.module('kifi')
               selectedKeep.makeUnkept();
             });
 
-            libraryService.fetchLibrarySummaries(true);
+            libraryService.fetchLibraryInfos(true);
             var currentLibraryId = scope.library.id;
             libraryService.addToLibraryCount(currentLibraryId, -1 * selectedKeeps.length);
             scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);

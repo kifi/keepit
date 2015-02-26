@@ -64,12 +64,12 @@ angular.module('kifi')
             if (_.isFunction(scope.closeAction)) {
               userPersonaActionService.selectPersonas(scope.selectedPersonaIds).then(function() {
                 scope.closeAction();
-                libraryService.fetchLibrarySummaries(true);
+                libraryService.fetchLibraryInfos(true);
               });
             } else if (scope.isModal) {
               $rootScope.$emit('refreshRecos');
               modalService.close();
-              libraryService.fetchLibrarySummaries(true);
+              libraryService.fetchLibraryInfos(true);
             }
             $analytics.eventTrack('user_clicked_page', {action: 'closed'});
           }

@@ -38,7 +38,6 @@ angular.module('kifi')
         scope.clippedDescription = false;
         scope.editKeepsText = 'Edit Keeps';
         scope.search = { 'text': $stateParams.q || '' };
-        scope.pageScrolled = false;
         scope.isMobile = platformService.isSupportedMobilePlatform();
 
         //
@@ -54,33 +53,6 @@ angular.module('kifi')
         // TODO(yiping): make new libraryDecoratorService to do this. Then, DRY up the code that is
         // currently in nav.js too.
         function augmentData() {
-
-          // Figure out whether this library is a library that the user has been invited to.
-          function getInvitePromise() {
-            var promise = null;
-
-            if (libraryService.invitedSummaries.length) {
-              promise = $q.when(libraryService.invitedSummaries);
-            } else {
-              promise = libraryService.fetchLibrarySummaries(true).then(function () {
-                return libraryService.invitedSummaries;
-              });
-            }
-
-            return promise.then(function (invitedSummaries) {
-              var maybeLib = _.find(invitedSummaries, { 'id' : scope.library.id });
-
-              if (maybeLib) {
-                return {
-                  inviterName: maybeLib.inviter.firstName + ' ' + maybeLib.inviter.lastName,
-                  actedOn: false
-                };
-              } else {
-                return null;
-              }
-            });
-          }
-
           // Libraries created with the extension do not have the description field.
           if (!scope.library.description) {
             scope.library.description = '';
@@ -108,10 +80,10 @@ angular.module('kifi')
               clipLastIndex = lastSpaceIndex + 1;  // Grab the space too.
             }
 
-            scope.library.shortDescription = util.processUrls(scope.library.description.substr(0, clipLastIndex));
+            scope.library.shortDescription = util.linkify(scope.library.description.substr(0, clipLastIndex));
             scope.clippedDescription = true;
           }
-          scope.library.formattedDescription = '<p>' + util.processUrls(scope.library.description).replace(/\n+/g, '<p>');
+          scope.library.formattedDescription = '<p>' + util.linkify(scope.library.description).replace(/\n+/g, '<p>');
 
           scope.library.shareUrl = env.origin + scope.library.url;
           scope.library.shareFbUrl = scope.library.shareUrl +
@@ -122,10 +94,6 @@ angular.module('kifi')
             '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + scope.library.id +
             '&kcid=na-vf_twitter-library_share-lid_' + scope.library.id);
           scope.library.shareText = 'Discover this amazing @Kifi library about ' + scope.library.name + '!';
-
-          getInvitePromise().then(function (invite) {
-            scope.library.invite = invite;
-          });
 
           var image = scope.library.image;
           if (image) {
@@ -140,6 +108,14 @@ angular.module('kifi')
           return follower;
         }
 
+        function updateInvite() {
+          var info = _.find(libraryService.getInvitedInfos(), {id: scope.library.id});
+          scope.library.invite = info && {
+            inviterName: info.inviter.firstName + ' ' + info.inviter.lastName,
+            actedOn: false
+          };
+        }
+
         function preloadSocial() {
           if (!$FB.failedToLoad && !$FB.loaded) {
             $FB.init();
@@ -147,12 +123,6 @@ angular.module('kifi')
           if (!$twitter.failedToLoad && !$twitter.loaded) {
             $twitter.load();
           }
-        }
-
-        function onScroll() {
-          scope.$apply(function () {
-            scope.pageScrolled = $window.document.body.scrollTop > 0;
-          });
         }
 
 
@@ -734,6 +704,7 @@ angular.module('kifi')
         //
 
         [
+          $rootScope.$on('libraryInfosChanged', updateInvite),
           $rootScope.$on('libraryKeepCountChanged', function (e, libraryId, keepCount) {
             if (libraryId === scope.library.id) {
               scope.library.numKeeps = keepCount;
@@ -758,14 +729,13 @@ angular.module('kifi')
               lib.numFollowers--;
               _.remove(lib.followers, {id: profileService.me.id});
             }
-          })
+          }),
+          function () {
+            elemLohRight.find('.kf-lh-follow-btn-wrap').remove();
+            elemLohLinks.css({bottom: '', opacity: ''});
+          }
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);
-        });
-
-        $window.addEventListener('scroll', onScroll);
-        scope.$on('$destroy', function () {
-          $window.removeEventListener('scroll', onScroll);
         });
 
 
@@ -774,6 +744,8 @@ angular.module('kifi')
         //
 
         augmentData();
+
+        updateInvite();
 
         scope.$evalAsync(preloadSocial);
 

@@ -126,8 +126,7 @@
 
 .kf-user-profile-friend-request-header
   position: relative
-  border-bottom-right-radius: 10px
-  border-bottom-left-radius: 10px
+  border-radius: 8px
   height: 40px
   padding: 0 30px
   overflow: hidden
@@ -136,27 +135,27 @@
   color: white
   transition: 0.2s linear height
 
-  &.close
-    height: 0px
+.kf-user-profile-friend-request-msg
+  float: left
+  margin-top: 12px
 
-  .kf-user-profile-friend-request-msg
-    float: left
-    margin-top: 12px
+.kf-user-profile-friend-respond
+  float: right
+  padding: 5px 15px
+  margin-left: 10px
+  margin-top: 8px
+  border: 1px solid white
+  border-radius: 4px
+  font-size: 11px
+  cursor: pointer
 
+  &.kf-accept
+    background-color: white
+    color: libraryGreen
 
-  .kf-user-profile-friend-respond
-    float: right
-    padding: 5px 15px
-    margin-left: 10px
-    margin-top: 8px
-    border: 1px solid white
-    border-radius: 5px
-    font-size: 11px
-    cursor: pointer
-
-    &.accept
-      background-color: white
-      color: libraryGreen
+  &.kf-decline
+    background-color: transparent
+    color: #fff
 
 .kf-user-profile-picture
   height: 100px
@@ -186,6 +185,11 @@
 
 .kf-upl-card-list
   margin-bottom: 40px
+
+  &:empty
+    // maintains page height and thus window scroll position while the list
+    // is temporarily empty during library sub-tab navigations
+    min-height: 100vh
 
 .kf-upl-nav
   display: table

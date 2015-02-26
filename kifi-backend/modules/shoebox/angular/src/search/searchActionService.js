@@ -143,7 +143,7 @@ angular.module('kifi')
       //$log.log('searchActionService.find() req', reqData);
 
       var searchActionPromise = $http.get(url, reqData);
-      var librarySummariesPromise = userLoggedIn ? libraryService.fetchLibrarySummaries(false) : true;
+      var librarySummariesPromise = userLoggedIn ? libraryService.fetchLibraryInfos(false) : true;
       var resultsFetched = $q.all([librarySummariesPromise, searchActionPromise]);
 
       // ensures that the libraries have been loaded before the hits are decompressed

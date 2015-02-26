@@ -7,7 +7,6 @@ angular.module('kifi', [
   'ngAnimate',
   'ui.router',
   'util',
-  'dom',
   'antiscroll',
   'nodraginput',
   'jun.smartScroll',
@@ -76,10 +75,10 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  '$scope', 'profileService', '$rootScope', 'libraryService', '$timeout', '$log',
-  'platformService', '$rootElement', '$analytics', '$location', 'util',
-  function ($scope, profileService, $rootScope, libraryService, $timeout, $log,
-      platformService, $rootElement, $analytics, $location, util) {
+  '$scope', '$rootScope', '$rootElement', '$window', '$timeout', '$log', '$analytics', '$location', '$state',
+  'profileService', 'platformService', 'libraryService',
+  function ($scope, $rootScope, $rootElement, $window, $timeout, $log, $analytics, $location, $state,
+      profileService, platformService, libraryService) {
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
 
     function start() {
@@ -90,26 +89,32 @@ angular.module('kifi', [
         profileService.fetchMe().then(function () {
           if ($rootScope.userLoggedIn) {
             profileService.fetchPrefs();
-            libraryService.fetchLibrarySummaries(true);
+            libraryService.fetchLibraryInfos(true);
           }
         });
       });
 
-      // track the current page; this requires angulartics autoTrackVirtualPages
-      // setting be false, or we will duplicate 2 page-track events
-      if (!$analytics.settings.pageTracking.autoTrackVirtualPages) {
-        $rootScope.$on('$stateChangeSuccess', function (event, toState) {
-          $scope.errorStatus = $scope.errorParams = null;
+      $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
+        $scope.errorStatus = $scope.errorParams = null;
 
+        var toStateParts = toState.name.split('.');
+        if (fromState.name && (toStateParts[0] !== fromState.name.split('.')[0] || paramsDiffer(toStateParts[0], fromParams, toParams))) {
+          $window.document.body.scrollTop = 0;
+        }
+
+        // track the current page; this requires angulartics autoTrackVirtualPages
+        // setting be false, or we will duplicate 2 page-track events
+        if (!$analytics.settings.pageTracking.autoTrackVirtualPages) {
           // We cannot track the library and profile pages yet because we have not loaded
           // information about the library/profile; therefore, libraries and profiles are
           // responsible for calling pageTrack themselves.
-          if (!util.startsWith(toState.name, 'library') && !util.startsWith(toState.name, 'userProfile')) {
+          // TODO: The above statement is now false, so we may want to standardize tracking of those page views.
+          if (toStateParts[0] !== 'library' && toStateParts[0] !== 'userProfile') {
             var url = $analytics.settings.pageTracking.basePath + $location.url();
             $analytics.pageTrack(url);
           }
-        });
-      }
+        }
+      });
 
       $rootScope.$on('$stateChangeError', function (event, toState, toParams, fromState, fromParams, error) {
         if (error && _.contains([403, 404], error.status)) {
@@ -122,6 +127,13 @@ angular.module('kifi', [
       $scope.libraryMenu = {
         visible: false
       };
+    }
+
+    function paramsDiffer(stateName, p1, p2) {
+      var paramNames = $state.get(stateName).url.match(/[:?&]\w+/g).map(function (prop) {
+        return prop.slice(1);  // remove leading [:?&]
+      });
+      return !_.isEqual(_.pick(p1, paramNames), _.pick(p2, paramNames));
     }
 
     start();

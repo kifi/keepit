@@ -3,6 +3,7 @@ package com.keepit.graph
 import com.keepit.common.db.{ Id }
 import com.keepit.model._
 
+import scala.collection.mutable
 import scala.concurrent.Future
 import com.keepit.common.amazon.{ AmazonInstanceInfo, AmazonInstanceId }
 import com.keepit.graph.manager.{ PrettyGraphState, PrettyGraphStatistics }
@@ -45,6 +46,15 @@ class FakeGraphServiceClientImpl(
     scores
   }
 
-  def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities]] = Future.successful(None)
+  val sociallyRelatedEntitiesMap = mutable.Map[Id[User], SociallyRelatedEntities]()
+
+  def setSociallyRelatedEntities(userId: Id[User], sociallyRelatedEntities: SociallyRelatedEntities): Unit = {
+    sociallyRelatedEntitiesMap(userId) = sociallyRelatedEntities
+  }
+
+  def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities]] = {
+    val rels = sociallyRelatedEntitiesMap.get(userId)
+    Future.successful(rels)
+  }
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = Future.successful(Seq.fill(uriIds.size)(GraphFeedExplanation(Map(), Map())))
 }

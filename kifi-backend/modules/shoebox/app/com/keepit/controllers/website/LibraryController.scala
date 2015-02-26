@@ -146,34 +146,43 @@ class LibraryController @Inject() (
   }
 
   def getLibrarySummariesByUser = UserAction { request =>
-    val (librariesWithMemberships, librariesWithInvites) = libraryCommander.getLibrariesByUser(request.userId)
-    // rule out invites that are not duplicate invites to same library (only show library invite with highest access)
-    val invitesToShow = librariesWithInvites.groupBy(x => x._2).map { lib =>
-      val invites = lib._2.unzip._1
-      val highestInvite = invites.sorted.last
-      (highestInvite, lib._1)
-    }.toSeq
+    val (libsWithMemberships, libsWithAllInvites) = libraryCommander.getLibrariesByUser(request.userId)
+    val libsWithInvites = for ((lib, invites) <- libsWithAllInvites.groupBy(_._2).mapValues(_.map(_._1))) yield {
+      (invites.sorted.last, lib) // only show one invite per library - the one with highest access
+    }
 
-    val libsFollowing = for ((mem, library) <- librariesWithMemberships) yield {
-      val (owner, numKeeps) = db.readOnlyMaster { implicit s =>
-        (basicUserRepo.load(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
+    val (libInfosWithMemberships, libInfosWithInvites) = db.readOnlyMaster { implicit s =>
+      val basicUsers = basicUserRepo.loadAll((libsWithMemberships.map(_._2.ownerId) ++ libsWithInvites.map(_._2.ownerId) ++ libsWithInvites.map(_._1.inviterId)).toSet)
+      val libInfosWithMemberships = for ((mem, library) <- libsWithMemberships) yield {
+        val owner = basicUsers(library.ownerId)
+        val numKeeps = keepRepo.getCountByLibrary(library.id.get)
+        (LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps, None), mem)
       }
-      val info = LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps, None)
-      val memInfo = if (mem.lastViewed.nonEmpty) Json.obj("access" -> mem.access, "lastViewed" -> mem.lastViewed) else Json.obj("access" -> mem.access)
-      Json.toJson(info).as[JsObject] ++ memInfo
-    }
-    val libsInvitedTo = for (invitePair <- invitesToShow) yield {
-      val invite = invitePair._1
-      val lib = invitePair._2
-      val (libOwner, inviter, numKeeps) = db.readOnlyMaster { implicit s =>
-        (basicUserRepo.load(lib.ownerId),
-          basicUserRepo.load(invite.inviterId),
-          keepRepo.getCountByLibrary(lib.id.get))
+      val libInfosWithInvites = for ((invite, lib) <- libsWithInvites) yield {
+        val owner = basicUsers(lib.ownerId)
+        val inviter = basicUsers(invite.inviterId)
+        val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
+        (LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, Some(inviter)), invite)
       }
-      val info = LibraryInfo.fromLibraryAndOwner(lib, libOwner, numKeeps, Some(inviter))
-      Json.toJson(info).as[JsObject] ++ Json.obj("access" -> invite.access)
+      (libInfosWithMemberships, libInfosWithInvites)
     }
-    Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
+
+    val (ownWithMemberships, followingWithMemberships) = libInfosWithMemberships.partition(_._2.access == LibraryAccess.OWNER)
+
+    Ok(Json.obj(
+      "libraries" -> ownWithMemberships.map(libInfoToJsonWithLastViewed),
+      "following" -> followingWithMemberships.map(libInfoToJsonWithLastViewed),
+      "invited" -> libInfosWithInvites.map(pair => Json.toJson(pair._1))
+    ))
+  }
+
+  @inline private def libInfoToJsonWithLastViewed(pair: (LibraryInfo, LibraryMembership)): JsValue = {
+    val lastViewed = pair._2.lastViewed
+    if (lastViewed.nonEmpty) {
+      Json.toJson(pair._1).as[JsObject] ++ Json.obj("lastViewed" -> lastViewed)
+    } else {
+      Json.toJson(pair._1)
+    }
   }
 
   def inviteUsersToLibrary(pubId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>

@@ -43,16 +43,13 @@ angular.module('kifi')
       scope: {
         keep: '=',
         library: '=',
-        libraries: '=',
         currentPageOrigin: '@',
         editMode: '=',
         editOptions: '&',
         toggleSelect: '&',
         isSelected: '&',
         keepCallback: '&',
-        clickCallback: '&',
-        dragKeeps: '&',
-        stopDraggingKeeps: '&'
+        clickCallback: '&'
       },
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
@@ -63,7 +60,7 @@ angular.module('kifi')
 
         scope.isMyLibrary = false;
         scope.$emit('getCurrentLibrary', { callback: function (lib) {
-          scope.isMyLibrary = lib.access === 'owner';
+          scope.isMyLibrary = lib.isMine;
         }});
 
         // test data:
@@ -84,16 +81,10 @@ angular.module('kifi')
         var strippedSchemeRe = /^https?:\/\//;
         var domainTrailingSlashRe = /^([^\/]*)\/$/;
 
-        var tagDragMask = element.find('.kf-tag-drag-mask');
-        var mouseX, mouseY;
-
-
         //
         // Scope data.
         //
         scope.addingTag = {enabled: false};
-        scope.isDragTarget = false;
-        scope.isDragging = false;
         scope.userLoggedIn = $rootScope.userLoggedIn;
         scope.cardType = '';
         scope.youtubeId = '';
@@ -304,12 +295,6 @@ angular.module('kifi')
           return scope.toggleSelect(keep);
         };
 
-        // TODO: bind to 'drop' event
-        scope.onTagDrop = function (tag) {
-          tagService.addKeepToTag(tag, scope.keep);
-          scope.isDragTarget = false;
-        };
-
         scope.triggerInstall = function () {
           installService.triggerInstall(function () {
             modalService.open({
@@ -351,51 +336,11 @@ angular.module('kifi')
         });
 
         scope.$watch(function () {
-          return libraryService.librarySummaries.length;
+          return libraryService.getOwnInfos().length;
         }, function (newVal) {
           if (newVal) {
-            scope.keep.libraryInfo = libraryService.getLibraryInfoById(scope.keep.libraryId);
-
-            scope.libraries = _.filter(libraryService.librarySummaries, function(library) {
-              return (library.access !== 'read_only') && (library.id !== scope.keep.libraryId);
-            });
-            scope.data = {};
+            scope.libraries = _.reject(libraryService.getOwnInfos(), {id: scope.keep.libraryId});
           }
-        });
-
-        // Dragging.
-        tagDragMask.on('dragenter', function () {
-          scope.$apply(function () { scope.isDragTarget = true; });
-        });
-
-        tagDragMask.on('dragleave', function () {
-          scope.$apply(function () { scope.isDragTarget = false; });
-        });
-
-        element.on('mousemove', function (e) {
-          mouseX = e.pageX - util.offset(element).left;
-          mouseY = e.pageY - util.offset(element).top;
-        })
-        .on('dragstart', function (e) {
-          scope.$apply(function () {
-            $rootScope.DRAGGING_KEEP = true;
-            $rootElement.find('html').addClass('kf-dragging-keep');
-            element.addClass('kf-dragged');
-            scope.dragKeeps({keep: scope.keep, event: e, mouseX: 20, mouseY: 50});
-            scope.isDragging = true;
-          });
-        })
-        .on('dragend', function () {
-          scope.$apply(function () {
-            $rootScope.DRAGGING_KEEP = false;
-            $rootElement.find('html').removeClass('kf-dragging-keep');
-            element.removeClass('kf-dragged');
-            scope.stopDraggingKeeps();
-            scope.isDragging = false;
-          });
-        })
-        .on('drop', function (e) {
-          e.preventDefault();
         });
 
 
@@ -445,8 +390,8 @@ angular.module('kifi')
         // Scope methods.
         //
         scope.onWidgetLibraryClicked = function (clickedLibrary) {
-          // Unkeep.
-          if (clickedLibrary && clickedLibrary.keptTo) {
+          // Unkeep. TODO: only if unkeep button was clicked
+          if (clickedLibrary && scope.keptToLibraryIds.indexOf(clickedLibrary.id) >= 0) {
             var keepToUnkeep = _.find(scope.keep.keeps, { libraryId: clickedLibrary.id });
             keepActionService.unkeepFromLibrary(clickedLibrary.id, keepToUnkeep.id).then(function () {
               if (clickedLibrary.id === scope.keep.libraryId) {
@@ -462,7 +407,7 @@ angular.module('kifi')
           // Keep.
           } else {
             var fetchKeepInfoCallback = function (fullKeep) {
-              libraryService.fetchLibrarySummaries(true);
+              libraryService.fetchLibraryInfos(true);
               libraryService.addToLibraryCount(clickedLibrary.id, 1);
               tagService.addToKeepCount(1);
 
@@ -471,7 +416,7 @@ angular.module('kifi')
               var keep = new keepDecoratorService.Keep(fullKeep);
               keep.buildKeep(keep);
               keep.makeKept();
-              scope.$emit('keepAdded', libraryService.getSlugById(clickedLibrary.id), [keep], clickedLibrary);
+              scope.$emit('keepAdded', [keep], clickedLibrary);
             };
 
             var keepToLibrary;

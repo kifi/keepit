@@ -15,6 +15,7 @@ angular.module('kifi')
     var lastResult = null;
     var selectedCount = 0;
     var numResults = 0;
+    var smoothScrollStep;  // used to ensure that only one smooth scroll animation happens at a time
 
 
     //
@@ -78,9 +79,10 @@ angular.module('kifi')
 
       $timeout(function () {
         if (library) {
-          var pxToScroll = angular.element('.kf-lib-cols')[0].getBoundingClientRect().top - angular.element('.kf-lih,.kf-loh')[0].offsetHeight;
-          if (pxToScroll > 0) {
-            scrollDown(pxToScroll);
+          var cols = angular.element('.kf-lib-cols');
+          var header = angular.element('.kf-lih,.kf-loh');
+          if (cols.length && header.length) {
+            smoothScroll(cols[0].getBoundingClientRect().top - header[0].offsetHeight);
           }
         } else {
           $window.document.body.scrollTop = 0;
@@ -88,7 +90,7 @@ angular.module('kifi')
       });
     }
 
-    function scrollDown(px) {
+    function smoothScroll(px) {
       var doc = $window.document;
       var win = doc.defaultView;
       var newScrollEvent = typeof UIEvent === 'function' ?
@@ -102,8 +104,11 @@ angular.module('kifi')
         };
 
       var t0, pxScrolled = 0;
-      var ms_1 = 1 / Math.max(400, Math.min(800, 100 * Math.log(px)));
-      $$rAF(function step(t) {
+      var ms_1 = 1 / Math.max(400, Math.min(800, 100 * Math.log(Math.abs(px))));
+      var step = smoothScrollStep = function (t) {  // jshint ignore:line
+        if (step !== smoothScrollStep) {
+          return;
+        }
         if (!t0) {
           t0 = t;
         }
@@ -111,10 +116,13 @@ angular.module('kifi')
         win.scrollBy(0, pxTarget - pxScrolled);
         win.dispatchEvent(newScrollEvent());
         pxScrolled = pxTarget;
-        if (pxScrolled < px) {
+        if (Math.abs(pxScrolled) < Math.abs(px)) {
           $$rAF(step);
+        } else {
+          smoothScrollStep = null;
         }
-      });
+      };
+      $$rAF(step);
     }
 
     function easeInOutQuart(t) {
@@ -246,7 +254,6 @@ angular.module('kifi')
     };
 
     $scope.editOptions = {
-      draggable: false,
       actions: {
         keepToLibrary: true
       }
@@ -279,6 +286,7 @@ angular.module('kifi')
           $location.url(libraryUrl);
         }
       } else if (newSearchText) {
+        library = null;
         $location.url('/find?q=' + newSearchText);
       }
 
@@ -315,7 +323,7 @@ angular.module('kifi')
     });
 
     // used for bulk-edit Copy To Library in search, it updates the model to include the new library keep(s)
-    var deregisterKeepAddedListener = $rootScope.$on('keepAdded', function (event, slug, keeps, library) {
+    var deregisterKeepAddedListener = $rootScope.$on('keepAdded', function (event, keeps, library) {
       keeps.forEach(function (keep) {
         var searchKeep = _.find($scope.resultKeeps, { url: keep.url });
         if (searchKeep && !_.find(searchKeep.keeps, { id: keep.id })) {

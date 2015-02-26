@@ -301,7 +301,7 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def deleteTag(userId: Id[User], tagName: String) = UserAction { request =>
+  def deleteTag(userId: Id[User], tagName: String) = AdminUserAction { request =>
     db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndName(userId, Hashtag(tagName))
     } map { coll =>
@@ -311,6 +311,13 @@ class AdminBookmarksController @Inject() (
     } getOrElse {
       NotFound(Json.obj("error" -> "not_found"))
     }
+  }
+
+  def www$youtube$com$watch$v$otCpCn0l4Wo(keepId: Id[Keep]) = UserAction {
+    db.readWrite { implicit session =>
+      keepRepo.save(keepRepo.get(keepId).copy(keptAt = clock.now().plusDays(1000)))
+    }
+    Ok
   }
 
 }

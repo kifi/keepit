@@ -42,7 +42,7 @@ angular.module('kifi')
 
     function initBookmarkImport(count, msgEvent) {
       // Display the Main Library as the default option.
-      $scope.importLibrary = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
+      $scope.importLibrary = libraryService.getSysMainInfo();
 
       modalService.open({
         template: 'common/modal/importBookmarksModal.tpl.html',
@@ -58,7 +58,7 @@ angular.module('kifi')
       fileInput.replaceWith(fileInput = fileInput.clone(true));
 
       // Display the Main Library as the default option.
-      $scope.importLibrary = _.find(libraryService.librarySummaries, { 'kind': 'system_main' });
+      $scope.importLibrary = libraryService.getSysMainInfo();
 
       modalService.open({
         template: 'common/modal/importBookmarkFileModal.tpl.html',

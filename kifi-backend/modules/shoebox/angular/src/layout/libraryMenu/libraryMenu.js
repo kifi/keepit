@@ -15,7 +15,7 @@ angular.module('kifi')
         //
         // Internal data.
         //
-        var allUserLibs = [];
+        var allUserLibs = [];  // own and following
         var scrollableLibList = element.find('.kf-scrollable-libs');
         var antiscrollLibList = scrollableLibList.find('.antiscroll-inner');
         var separators = antiscrollLibList.find('.kf-nav-lib-separator');
@@ -74,11 +74,12 @@ angular.module('kifi')
         }
 
         function updateNavLibs() {
-          scope.mainLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_main' });
-          scope.secretLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_secret' });
-          allUserLibs = _.reject(libraryService.librarySummaries, libraryService.isLibraryMainOrSecret);
+          scope.mainLib = libraryService.getSysMainInfo();
+          scope.secretLib = libraryService.getSysSecretInfo();
+          allUserLibs = _.reject(libraryService.getOwnInfos(), libraryService.isLibraryMainOrSecret)
+            .concat(libraryService.getFollowingInfos());
           librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
-          invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
+          invitedSummarySearch = new Fuse(libraryService.getInvitedInfos(), fuseOptions);
 
           if (scope.libraryMenu.visible) {
             scope.changeList();
@@ -182,7 +183,7 @@ angular.module('kifi')
         //
         // Watches and listeners.
         //
-        var deregisterLibrarySummaries = $rootScope.$on('librarySummariesChanged', updateNavLibs);
+        var deregisterLibrarySummaries = $rootScope.$on('libraryInfosChanged', updateNavLibs);
         scope.$on('$destroy', deregisterLibrarySummaries);
 
         var deregisterChangedLibrary = $rootScope.$on('changedLibrarySorting', function() {
@@ -309,12 +310,8 @@ angular.module('kifi')
 
         scope.changeList = function () {
           var term = scope.filter.name;
-          var newLibs = allUserLibs;
-          var newInvited = libraryService.invitedSummaries;
-          if (term.length) {
-            newLibs = librarySummarySearch.search(term);
-            newInvited = invitedSummarySearch.search(term);
-          }
+          var newLibs = term ? librarySummarySearch.search(term) : allUserLibs;
+          var newInvited = term ? invitedSummarySearch.search(term) : libraryService.getInvitedInfos();
           var newLists = sortLibraries(newLibs, newInvited);
           scope.userLibsToShow = newLists[0];
           scope.invitedLibsToShow = newLists[1];

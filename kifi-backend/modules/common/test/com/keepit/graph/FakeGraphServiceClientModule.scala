@@ -6,20 +6,6 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.{ ServiceCluster, ServiceDiscovery }
 import com.keepit.common.service.ServiceType
 
-case class FakeGraphServiceClientModule() extends GraphServiceClientModule {
-
-  def configure() {}
-
-  @Provides @Singleton
-  def graphServiceClient(httpClient: HttpClient, serviceDiscovery: ServiceDiscovery, airbrakeNotifier: AirbrakeNotifier): GraphServiceClient = {
-    new FakeGraphServiceClientImpl(
-      serviceDiscovery.serviceCluster(ServiceType.GRAPH),
-      httpClient,
-      airbrakeNotifier
-    )
-  }
-}
-
 case class FakeGraphServiceModule() extends GraphServiceClientModule {
   override def configure(): Unit = {
     install(FakeAirbrakeModule())
@@ -27,8 +13,7 @@ case class FakeGraphServiceModule() extends GraphServiceClientModule {
 
   @Singleton
   @Provides
-  def graphServiceClient(serviceCluster: ServiceCluster, httpClient: HttpClient, airbrakeNotifier: AirbrakeNotifier): GraphServiceClient =
-    fakeGraphServiceClient(serviceCluster, httpClient, airbrakeNotifier)
+  def graphServiceClient(client: FakeGraphServiceClientImpl): GraphServiceClient = client
 
   @Singleton
   @Provides

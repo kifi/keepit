@@ -619,9 +619,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |"numKeeps":0,
                   |"numFollowers":0,
                   |"kind":"user_created",
-                  |"access":"owner",
                   |"lastViewed":${Json.toJson(t2)(DateTimeJsonLongFormat)}
-                },
+                |}
+              |],
+            |"following":
+              |[
                 |{
                   |"id":"${pubId3.id}",
                   |"name":"Library3",
@@ -636,8 +638,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |  },
                   |"numKeeps":0,
                   |"numFollowers":1,
-                  |"kind":"user_created",
-                  |"access":"read_only"
+                  |"kind":"user_created"
                 |}
               |],
               |"invited":
@@ -657,8 +658,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                     |"numKeeps":0,
                     |"numFollowers":0,
                     |"kind":"user_created",
-                    |"inviter":{"id":"${user2.externalId}","firstName":"Baron","lastName":"B","pictureName":"0.jpg","username":"bhsu"},
-                    |"access":"read_insert"
+                    |"inviter":{"id":"${user2.externalId}","firstName":"Baron","lastName":"B","pictureName":"0.jpg","username":"bhsu"}
                   |}
               | ]
             |}

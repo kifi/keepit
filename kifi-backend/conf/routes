@@ -17,5 +17,7 @@
 
 -> /  graphService.Routes
 
+-> /  roverService.Routes
+
 # This must be last, since it serves the site and has a wildcard.
 ->  / shoeboxService.Routes

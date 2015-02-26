@@ -17,6 +17,12 @@ POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controlle
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
+# New signup pages
+
+GET     /signupMinimal              @com.keepit.controllers.core.AuthController.signupMinimal()
+
+# End new signup pages
+
 POST    /auth/sign-up               @com.keepit.controllers.core.AuthController.userPasswordSignup()
 POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.userPassFinalizeAccountAction()
 POST    /auth/social-finalize       @com.keepit.controllers.core.AuthController.socialFinalizeAccountAction()
@@ -338,8 +344,10 @@ GET     /site/users/:userStr/libraries/:slug    @com.keepit.controllers.website.
 POST    /site/users/:userStr/libraries/:slug/auth    @com.keepit.controllers.website.LibraryController.authToLibrary(userStr: String, slug: String, authToken: Option[String])
 
 # Profile pages
-GET     /site/user/:username/profile    @com.keepit.controllers.website.UserController.profile(username)
-GET     /site/user/:username/libraries  @com.keepit.controllers.website.LibraryController.getProfileLibraries(username: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
+GET     /site/user/:name/profile    @com.keepit.controllers.website.UserController.profile(name: Username)
+GET     /site/user/:name/libraries  @com.keepit.controllers.website.LibraryController.getProfileLibraries(name: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
+GET     /site/user/:name/connections @com.keepit.controllers.website.UserController.profileConnections(name: Username, n: Int ?= 12, ids: String ?= "")
+GET     /site/user/:name/connections/ids @com.keepit.controllers.website.UserController.profileConnectionIds(name: Username, n: Int ?= 480)
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
 POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
@@ -405,6 +413,7 @@ GET     /site/user/settings         @com.keepit.controllers.website.UserControll
 POST    /site/user/settings         @com.keepit.controllers.website.UserController.setSettings()
 
 GET     /site/user/personas             @com.keepit.controllers.website.UserPersonaController.getAllPersonas()
+POST    /site/user/personas              @com.keepit.controllers.website.UserPersonaController.selectPersonas()
 POST    /site/user/personas/:name        @com.keepit.controllers.website.UserPersonaController.addPersona(name: String)
 DELETE  /site/user/personas/:name        @com.keepit.controllers.website.UserPersonaController.removePersona(name: String)
 
@@ -419,6 +428,7 @@ POST    /site/user/:id/exclude      @com.keepit.controllers.website.UserControll
 POST    /site/user/:id/include      @com.keepit.controllers.website.UserController.includeFriend(id: ExternalId[User])
 GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserController.outgoingFriendRequests
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
+
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 GET     /site/user/friends/recommended   @com.keepit.controllers.website.PeopleRecommendationController.getFriendRecommendations(offset: Int ?= 0, limit: Int ?= 5)
@@ -493,6 +503,7 @@ POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Keep])
 POST    /admin/bookmarks/inactive   @com.keepit.controllers.admin.AdminBookmarksController.inactive(id: Id[Keep])
+POST    /admin/bookmarks/special    @com.keepit.controllers.admin.AdminBookmarksController.www$youtube$com$watch$v$otCpCn0l4Wo(id: Id[Keep])
 GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
 GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
 DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)

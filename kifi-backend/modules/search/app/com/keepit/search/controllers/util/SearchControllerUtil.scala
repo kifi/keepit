@@ -3,7 +3,7 @@ package com.keepit.search.controllers.util
 import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller.{ UserRequest, MaybeUserRequest }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.search.controllers.util.SearchControllerUtil._
 import com.keepit.model._
 import com.keepit.search.engine.uri.UriSearchResult
@@ -134,6 +134,13 @@ trait SearchControllerUtil {
         }
       case _ =>
         Future.successful(LibraryContext.None)
+    }
+  }
+
+  def getUserFilterFuture(filter: Option[String]): Future[Option[Either[Id[User], String]]] = {
+    filter.flatMap(ExternalId.asOpt[User]) match {
+      case Some(userId) => shoeboxClient.getUserIdsByExternalIds(Seq(userId)).imap(_.headOption.map(Left(_)))
+      case _ => Future.successful(filter.map(Right(_)))
     }
   }
 }

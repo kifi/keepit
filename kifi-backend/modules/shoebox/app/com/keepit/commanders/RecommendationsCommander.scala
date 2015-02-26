@@ -220,7 +220,7 @@ class RecommendationsCommander @Inject() (
 
   def curatedPublicLibraryRecos(userId: Id[User]): Future[Seq[(Id[Library], FullRecoInfo)]] = {
     val curatedLibIds: Seq[Id[Library]] = Seq(
-      25537L, 25116L, 25345L, 24542L, 36680L, 25471L, 28148L, 25381L, 24203L, 27207L, 25370L, 25388L, 25371L, 25340L, 25000L, 26106L, 26473L, 26460L
+      25537L, 25116L, 25345L, 44612L, 24542L, 36680L, 25471L, 28148L, 25381L, 24203L, 27207L, 25370L, 25388L, 25371L, 25340L, 25000L, 26106L, 26473L, 26460L
     ).map(Id[Library])
 
     val curatedLibraries = {
@@ -237,9 +237,10 @@ class RecommendationsCommander @Inject() (
     // get extra recos from curator incase we filter out some below
     curator.topLibraryRecos(userId, Some(limit * 4), context) flatMap { libResults =>
       val libInfos = libResults.recos
-      val libIds = libInfos.map(_.libraryId).toSet
+      val libIds = libInfos.map(_.libraryId)
       val libraries = db.readOnlyReplica { implicit s =>
-        libRepo.getLibraries(libIds).toSeq.filter(_._2.visibility == LibraryVisibility.PUBLISHED)
+        val mapping = libRepo.getLibraries(libIds.toSet)
+        libIds.flatMap { id => mapping.get(id).map { x => (id, x) } }.filter(_._2.visibility == LibraryVisibility.PUBLISHED)
       }.take(limit)
 
       val idToLibraryMap = libraries.toMap

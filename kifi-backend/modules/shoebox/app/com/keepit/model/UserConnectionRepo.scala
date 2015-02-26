@@ -41,6 +41,7 @@ class UnfriendedConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, i
 class UserConnectionRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
+  userConnectionRelationshipCache: UserConnectionRelationshipCache,
   val friendRequestRepo: FriendRequestRepo,
   val connCountCache: UserConnectionCountCache,
   val userConnCache: UserConnectionIdCache,
@@ -67,12 +68,12 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   override def deleteCache(conn: UserConnection)(implicit session: RSession): Unit = {
+    userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(conn.user1, conn.user2))
+    userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(conn.user2, conn.user1))
     List(conn.user1, conn.user2) foreach invalidateCache
   }
 
-  override def invalidateCache(conn: UserConnection)(implicit session: RSession): Unit = {
-    Set(conn.user1, conn.user2) foreach invalidateCache
-  }
+  override def invalidateCache(conn: UserConnection)(implicit session: RSession): Unit = deleteCache(conn)
 
   def getConnectionCount(userId: Id[User])(implicit session: RSession): Int = {
     connCountCache.getOrElse(UserConnectionCountKey(userId)) {

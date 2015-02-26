@@ -6,6 +6,7 @@ import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelpe
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.UserAgent
+import com.keepit.controllers.website.RecoMixingHelper
 import com.keepit.curator.model.{ FullLibRecoResults, FullUriRecoResults, RecommendationSubSource, RecommendationSource }
 import com.keepit.model.{ ExperimentType, NormalizedURI, UriRecommendationFeedback }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -17,29 +18,29 @@ class MobileRecommendationsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     commander: RecommendationsCommander,
     userExperimentCommander: LocalUserExperimentCommander,
-    db: Database) extends UserActions with ShoeboxServiceController {
+    db: Database) extends UserActions with ShoeboxServiceController with RecoMixingHelper {
 
   def topRecosV2(recencyWeight: Float, more: Boolean) = UserAction.async { request =>
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight, None)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = None)
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, 10, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = None)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
       val FullUriRecoResults(urisReco, _) = uris
       val FullLibRecoResults(libsReco, _) = libs
-      val shuffled = util.Random.shuffle(urisReco ++ libsReco.map(_._2))
+      val shuffled = mix(urisReco, libsReco)
       Json.toJson(shuffled)
     }
   }
 
   def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, uriContext.isDefined, recencyWeight, context = uriContext)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, 5, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = libContext)
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, 10, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = libContext)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
       val FullUriRecoResults(urisReco, newUrisContext) = uris
       val FullLibRecoResults(libsReco, newLibsContext) = libs
-      val shuffled = util.Random.shuffle(urisReco ++ libsReco.map(_._2))
-      Json.obj("recos" -> shuffled, "uctx" -> newUrisContext, "lctx" -> newLibsContext)
+      val recos = mix(urisReco, libsReco)
+      Json.obj("recos" -> recos, "uctx" -> newUrisContext, "lctx" -> newLibsContext)
     }
   }
 
