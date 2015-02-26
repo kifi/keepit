@@ -186,6 +186,11 @@
 .kf-upl-card-list
   margin-bottom: 40px
 
+  &:empty
+    // maintains page height and thus window scroll position while the list
+    // is temporarily empty during library sub-tab navigations
+    min-height: 100vh
+
 .kf-upl-nav
   display: table
   width: 75%

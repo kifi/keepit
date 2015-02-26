@@ -17,6 +17,12 @@ POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controlle
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
+# New signup pages
+
+GET     /signupMinimal              @com.keepit.controllers.core.AuthController.signupMinimal()
+
+# End new signup pages
+
 POST    /auth/sign-up               @com.keepit.controllers.core.AuthController.userPasswordSignup()
 POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.userPassFinalizeAccountAction()
 POST    /auth/social-finalize       @com.keepit.controllers.core.AuthController.socialFinalizeAccountAction()
@@ -420,6 +426,10 @@ POST    /site/user/:id/exclude      @com.keepit.controllers.website.UserControll
 POST    /site/user/:id/include      @com.keepit.controllers.website.UserController.includeFriend(id: ExternalId[User])
 GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserController.outgoingFriendRequests
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
+
+GET     /site/user/profile/connectionsIds @com.keepit.controllers.website.UserController.connectionsByViewer(owner: Id[User])
+GET     /site/user/profile/connections @com.keepit.controllers.website.UserController.fullConnectionsByViewer(owner: Id[User], limit: Int)
+
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 GET     /site/user/friends/recommended   @com.keepit.controllers.website.PeopleRecommendationController.getFriendRecommendations(offset: Int ?= 0, limit: Int ?= 5)

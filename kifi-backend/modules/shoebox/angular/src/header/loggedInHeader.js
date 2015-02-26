@@ -128,6 +128,20 @@ angular.module('kifi')
       }
     };
 
+    $scope.showMenu = function (event) {
+      var el = angular.element(event.currentTarget);
+      $timeout.cancel(el.data('timeout'));
+      el.data('timeout', $timeout(function () {
+        el.addClass('kf-open').removeData('timeout');
+      }, 120));
+    };
+
+    $scope.hideMenu = function (event) {
+      var el = angular.element(event.currentTarget);
+      $timeout.cancel(el.data('timeout'));
+      el.removeClass('kf-open').removeData('timeout');
+    };
+
     $scope.me = profileService.me;
     $scope.me.picUrl = $scope.me.picUrl || '//www.kifi.com/assets/img/ghost.200.png';
 

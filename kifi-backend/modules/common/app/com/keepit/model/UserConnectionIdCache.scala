@@ -2,7 +2,7 @@ package com.keepit.model
 
 import scala.concurrent.duration.Duration
 
-import com.keepit.common.cache.{ PrimitiveCacheImpl, BinaryCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics }
+import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db.Id
 import com.keepit.serializer.ArrayBinaryFormat
@@ -23,3 +23,11 @@ case class UserConnectionCountKey(userId: Id[User]) extends Key[Int] {
 
 class UserConnectionCountCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[UserConnectionCountKey, Int](stats, accessLog, inner, outer: _*)
+
+case class UserConnectionRelationshipKey(viewerId: Id[User], ownerId: Id[User]) extends Key[Seq[Id[User]]] {
+  val namespace = "user_con_rel"
+  def toKey(): String = ownerId.id.toString + ":" + viewerId.id.toString
+}
+
+class UserConnectionRelationshipCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UserConnectionRelationshipKey, Seq[Id[User]]](stats, accessLog, inner, outer: _*)

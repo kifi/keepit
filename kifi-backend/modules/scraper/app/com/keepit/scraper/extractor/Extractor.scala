@@ -20,20 +20,22 @@ trait Extractor {
   def getLinks(key: String): Set[String]
   def getCanonicalUrl(destinationUrl: String): Option[String] = {
     getLinks("canonical").headOption orElse getMetadata("og:url") flatMap { url =>
-      URI.parse(url) match {
-        case Success(parsed) =>
-          // Question marks are allowed in query parameter names and values, but their presence
-          // in a canonical URL usually indicates a bad url.
-          if (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?'))))) {
+      URI.absoluteUrl(destinationUrl, url).flatMap { absoluteUrl =>
+        URI.parse(absoluteUrl) match {
+          case Success(parsed) =>
+            // Question marks are allowed in query parameter names and values, but their presence
+            // in a canonical URL usually indicates a bad url.
+            if (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?'))))) {
+              None
+              // A common site error is copying the page URL directly into a canoncial URL tag, escaped an extra time.
+            } else if (absoluteUrl.length > destinationUrl.length && unescapeHtml4(absoluteUrl) == destinationUrl) {
+              None
+            } else {
+              Some(absoluteUrl)
+            }
+          case Failure(_) =>
             None
-            // A common site error is copying the page URL directly into a canoncial URL tag, escaped an extra time.
-          } else if (url.length > destinationUrl.length && unescapeHtml4(url) == destinationUrl) {
-            None
-          } else {
-            Some(url)
-          }
-        case Failure(_) =>
-          None
+        }
       }
     }
   }

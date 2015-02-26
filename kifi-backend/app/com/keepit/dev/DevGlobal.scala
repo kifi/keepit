@@ -21,6 +21,8 @@ import com.keepit.scraper.ScraperServices
 import com.keepit.abook.ABookServices
 import com.keepit.cortex.CortexServices
 import com.keepit.graph.GraphServices
+import com.keepit.rover.RoverServices
+import com.keepit.rover.dev.RoverDevModule
 
 import scala.concurrent.Future
 
@@ -33,7 +35,8 @@ object DevGlobal extends FortyTwoGlobal(Dev)
     with GraphServices
     with HeimdalServices
     with ElizaServices
-    with CuratorServices {
+    with CuratorServices
+    with RoverServices {
 
   def composeModules(modules: Seq[Module]): Module = {
     modules match {
@@ -45,7 +48,7 @@ object DevGlobal extends FortyTwoGlobal(Dev)
   }
 
   // Modules are overridden on top of each other, so the last modules in this list have higher precedence
-  val modules: Seq[Module] = Seq(CuratorDevModule(), GraphDevModule(), CortexDevModule(), ScraperDevModule(), ABookDevModule(), HeimdalDevModule(), ElizaDevModule(), SearchDevModule(), ShoeboxDevModule())
+  val modules: Seq[Module] = Seq(RoverDevModule(), CuratorDevModule(), GraphDevModule(), CortexDevModule(), ScraperDevModule(), ABookDevModule(), HeimdalDevModule(), ElizaDevModule(), SearchDevModule(), ShoeboxDevModule())
 
   override val module = composeModules(modules)
 
@@ -64,6 +67,7 @@ object DevGlobal extends FortyTwoGlobal(Dev)
       startElizaServices()
       startHeimdalServices()
       startCuratorServices()
+      startRoverServices()
       log.info(s"Started services in ${System.currentTimeMillis - t}ms")
     }
 

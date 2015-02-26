@@ -235,30 +235,30 @@ input.kf-lih-search-input
   display: inline-block
   position: relative
   margin-left: btn-space
+  menuGap = 8px
 
   .kf-dropdown-menu
-    dur = .08s
-    top: 100%
+    dur = .1s
+    top: 'calc(100% + %s)' % menuGap
     right: -24px
-    transform: translate(0, 6px)
     transform-origin: 80% top
     transition: visibility 0s, opacity linear dur, transform dur
 
   &:not(.kf-open)>.kf-dropdown-menu
-    dur = .05s
+    dur = .16s
     visibility: hidden
     opacity: 0
-    transform: scale(.5)
+    transform: scale(.9)
     transition-duration: 0s, dur, dur
     transition-delay: dur, 0s, 0s
 
   &.kf-open::before
     content: ''
     position: absolute
-    top: 100%
-    left: -6px
-    right: -6px
-    height: 6px
+    top: 'calc(100% - %s)' % menuGap
+    left: -10px
+    right: -10px
+    height: 20px
 
 .kf-lih-tags
 .kf-lih-friends
@@ -295,6 +295,9 @@ input.kf-lih-search-input
     opacity: .7
 
 .kf-lih-friends
+  position: relative
+  z-index: 1  // to cover invisible ::before pseudo-element on :hover parent
+
   &>.svg-friends-white
     display: inline-block
     width: 100%
