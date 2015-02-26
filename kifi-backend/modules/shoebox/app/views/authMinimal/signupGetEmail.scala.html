@@ -1,0 +1,36 @@
+@()
+
+@headHtml = {
+  <link rel="stylesheet" type="text/css" href="/assets/ml/css/authentication.css">
+}
+@content = {
+  <div class="page signup">
+    <div id="center_container" class="small">
+      <div class="inner">
+        <div class="image_container target">
+          <div class="image-inner"></div>
+          <div class="image-upload-wrapper">
+            <a href="#" class="image-upload placeholder" style="background-image:url('https://djty7jcqog9qu.cloudfront.net/users/2d8b2fd1-1346-4b9e-9d56-573ce9f9b2f7/pics/200/aCiYX.jpg');"></a>
+          </div>
+        </div>
+        <h3 class="light small">Almost done, <span class="weight400">Sterling</span></h3>
+        <h3 class="small">Where should we send instructions?</h3>
+        <form class="signup-form" method="#" post="#">
+          <div class="input-wrapper">
+            <input type="text" name="email" class="form-input email" placeholder="Enter email address">
+            <div id="signup-email" class="error"></div>
+          </div>
+
+          <button id="signup-complete-btn" class="btn-authentication btn-done" type="submit">Done</button>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+@scripts = {
+  <script src="/assets/ml/js/authentication.js"></script>
+}
+
+@minimal.layout(content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join")
+
+

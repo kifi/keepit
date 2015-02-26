@@ -1,5 +1,8 @@
 @()
 
+@headHtml = {
+  <link rel="stylesheet" type="text/css" href="/assets/ml/css/authentication.css">
+}
 @content = {
 <div class="page signup">
   <div id="photo-upload-step1">
@@ -43,5 +46,9 @@
   </div>
 </div>
 }
+@scripts = {
+  <script src="/assets/ml/js/authentication.js"></script>
+}
 
-@minimal.layout(content = content, htmlClass = "signup-page")
+@minimal.layout(content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass="join signup1")
+

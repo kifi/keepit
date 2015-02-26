@@ -606,8 +606,8 @@ class AuthController @Inject() (
 
   // New signup pages
 
-  def signupMinimal() = Action { implicit session =>
-    Ok(views.html.authMinimal.signup())
+  def signupMinimal() = Action { implicit request =>
+    Ok(views.html.authMinimal.signupGetEmail())
   }
 
 }

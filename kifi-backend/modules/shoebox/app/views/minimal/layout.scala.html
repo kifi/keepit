@@ -1,89 +1,97 @@
-@(  title: String = "Kifi",
+@(
+  title: String = "Kifi",
   htmlClass: String = "", // HTML class, including page-specific super classes
   dataTrack: String = "", // Required for tracking. Implemented as track-type
   trackViewEvent: String = "visitor_viewed_page", // If tracking, view event
   trackClickEvent: String = "visitor_clicked_page", // If tracking, click event
   headHtml: Html = Html(""), // HTML to include in HEAD (styles, head scripts, etc)
   bodyClass: String = "", // BODY class
+  footerClass: String = "",
   content: Html = Html(""), // Main page content
   scripts: Html = Html(""), // End of page scripts
   isLoggedIn: Boolean = false
 )
 @()
-<html lang="en" class="guest signup-page" data-track-view-event="visitor_viewed_page" data-track-click-event="visitor_clicked_page" data-track-type="signup"><!--<![endif]--><head>
+<!DOCTYPE html>
+<html class="@if(!isLoggedIn){guest }@htmlClass"@if(dataTrack!=""){ data-track-view-event="@trackViewEvent" data-track-click-event="@trackClickEvent" data-track-type="@dataTrack"}>
+  <head>
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1, minimum-scale=1, maximum-scale=1">
     <link rel="icon" type="image/x-icon" href="//d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png">
     <title>@title</title>
 
+    <link href="//fonts.googleapis.com/css?family=Lato:300,400,700" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" type="text/css" href="/assets/ml/css/normalize.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
 
-  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700" rel="stylesheet" type="text/css">
-    <link rel="stylesheet" type="text/css" href="/assets/ml/css/authentication.css">
-  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    @headHtml
 
-  <script async="" src="//www.google-analytics.com/ga.js"></script><script async="" src="//connect.facebook.net/en_US/fp.js"></script><script type="text/javascript" async="" src="//cdn.mxpnl.com/libs/mixpanel-2.2.min.js"></script><script>
-var kifiViewTracker = [];
-(function(e,b){if(!b.__SV){var a,f,i,g;window.mixpanel=b;a=e.createElement("script");a.type="text/javascript";a.async=!0;a.src='//cdn.mxpnl.com/libs/mixpanel-2.2.min.js';f=e.getElementsByTagName("script")[0];f.parentNode.insertBefore(a,f);b._i=[];b.init=function(a,e,d){function f(b,h){var a=h.split(".");2==a.length&&(b=b[a[0]],h=a[1]);b[h]=function(){b.push([h].concat(Array.prototype.slice.call(arguments,0)))}}var c=b;"undefined"!==typeof d?c=b[d]=[]:d="mixpanel";c.people=c.people||[];c.toString=function(b){var a="mixpanel";"mixpanel"!==d&&(a+="."+d);b||(a+=" (stub)");return a};c.people.toString=function(){return c.toString(1)+".people (stub)"};i="disable track track_pageview track_links track_forms register register_once alias unregister identify name_tag set_config people.set people.set_once people.increment people.append people.track_charge people.clear_charges people.delete_user".split(" ");for(g=0;g<i.length;g++)f(c,i[g]);b._i.push([a,e,d])};b.__SV=1.2}})(document,window.mixpanel||[]);
-mixpanel.init("cff752ff16ee39eda30ae01bb6fa3bd6");
-</script>
-</head>
-<body>
+    <script>
+    var kifiViewTracker = [];
+    (function(e,b){if(!b.__SV){var a,f,i,g;window.mixpanel=b;a=e.createElement("script");a.type="text/javascript";a.async=!0;a.src='//cdn.mxpnl.com/libs/mixpanel-2.2.min.js';f=e.getElementsByTagName("script")[0];f.parentNode.insertBefore(a,f);b._i=[];b.init=function(a,e,d){function f(b,h){var a=h.split(".");2==a.length&&(b=b[a[0]],h=a[1]);b[h]=function(){b.push([h].concat(Array.prototype.slice.call(arguments,0)))}}var c=b;"undefined"!==typeof d?c=b[d]=[]:d="mixpanel";c.people=c.people||[];c.toString=function(b){var a="mixpanel";"mixpanel"!==d&&(a+="."+d);b||(a+=" (stub)");return a};c.people.toString=function(){return c.toString(1)+".people (stub)"};i="disable track track_pageview track_links track_forms register register_once alias unregister identify name_tag set_config people.set people.set_once people.increment people.append people.track_charge people.clear_charges people.delete_user".split(" ");for(g=0;g<i.length;g++)f(c,i[g]);b._i.push([a,e,d])};b.__SV=1.2}})(document,window.mixpanel||[]);
+    mixpanel.init("cff752ff16ee39eda30ae01bb6fa3bd6");
+    </script>
 
-<header id="header_bar">
-  <a href="/" id="kifi_logo"></a>
-</header>
+  </head>
+  <body class="@bodyClass">
+
+    <header id="header_bar">
+      <a href="/" id="kifi_logo"></a>
+    </header>
 
 @content
 
-<footer id="footer" class="join signup1">
-  <div class="wrap">
-    <div class="border">
-      <div class="copy">FortyTwo Inc 2014
-        <span id="footer_links">
-          <a href="mailto:support@@kifi.com" onclick="window.open('https://mail.google.com/mail/?view=cm&amp;tf=1&amp;to=support@@kifi.com&amp;cc=&amp;bcc=&amp;su=&amp;body=','_blank');return false;">Contact Us</a>
-          <a href="http://support.kifi.com/">Support</a>
-          <a href="https://www.kifi.com/terms">Terms</a>
-          <a href="https://www.kifi.com/privacy">Privacy</a>
-          <a href="https://www.kifi.com/about/join_us" data-track-action="clickJobsFooter">Careers</a>
-          <a href="http://blog.kifi.com/" target="_blank">Blog</a>
-          <a href="http://eng.kifi.com/" target="_blank">EngBlog</a>
-        </span>
+    <footer id="footer" class="@footerClass">
+      <div class="wrap">
+        <div class="border">
+          <div class="copy">FortyTwo Inc 2014
+            <span id="footer_links">
+              <a href="mailto:support@@kifi.com">Contact Us</a>
+              <a href="http://support.kifi.com/">Support</a>
+              <a href="https://www.kifi.com/terms" >Terms</a>
+              <a href="https://www.kifi.com/privacy" >Privacy</a>
+              <a href="https://www.kifi.com/about/join_us" data-track-action="clickJobsFooter">Careers</a>
+              <a href="http://blog.kifi.com/" target="_blank">Blog</a>
+              <a href="http://eng.kifi.com/" target="_blank">EngBlog</a>
+            </span>
+          </div>
+          <div class="social">
+            <a href="https://www.facebook.com/pages/Kifi/534872986523643?ref=br_tf" target="_blank"><i class="i-f"></i></a>
+            <a href="http://www.linkedin.com/company/2759913" target="_blank"><i class="i-l"></i></a>
+            <a href="https://twitter.com/kifi" target="_blank"><i class="i-t"></i></a>
+          </div>
+        </div>
       </div>
-      <div class="social">
-        <a href="https://www.facebook.com/pages/Kifi/534872986523643?ref=br_tf" target="_blank"><i class="i-f"></i></a>
-        <a href="http://www.linkedin.com/company/2759913" target="_blank"><i class="i-l"></i></a>
-        <a href="https://twitter.com/kifi" target="_blank"><i class="i-t"></i></a>
-      </div>
-    </div>
-  </div>
-</footer>
+    </footer>
 
 
 
-<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="//d120ofs0tant1t.cloudfront.net/assets/authentication.min.5e5f7.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript" src="/assets/js/track-ext.js"></script>
+    <script>
+    var fb_param = {pixel_id: '6012675509696', value: '0.00', currency: 'USD'};
+    (function(){
+    var fpw = document.createElement('script');
+    fpw.async = true;
+    fpw.src = '//connect.facebook.net/en_US/fp.js';
+    var ref = document.getElementsByTagName('script')[0];
+    ref.parentNode.insertBefore(fpw, ref);
+    })();
+    </script>
+    <noscript><img height="1" width="1" alt="" style="display:none" src="https://www.facebook.com/offsite_event.php?id=6012675509696&amp;value=0&amp;currency=USD" /></noscript>
 
-<script type="text/javascript" src="/assets/js/track-ext.js"></script>
-<script>
-var fb_param = {pixel_id: '6012675509696', value: '0.00', currency: 'USD'};
-(function(){
-var fpw = document.createElement('script');
-fpw.async = true;
-fpw.src = '//connect.facebook.net/en_US/fp.js';
-var ref = document.getElementsByTagName('script')[0];
-ref.parentNode.insertBefore(fpw, ref);
-})();
-</script>
-<noscript>&lt;img height="1" width="1" alt="" style="display:none" src="https://www.facebook.com/offsite_event.php?id=6012675509696&amp;amp;value=0&amp;amp;currency=USD" /&gt;</noscript>
+    <script>
+    var _gaq = [['_setAccount', 'UA-39789396-1'], ['_setDomainName', 'kifi.com'], ['_trackPageview']];
+    !function(d, t) {
+    var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
+    g.async = true;
+    g.src = ('https:' == location.protocol ? '//ssl' : '//www') + '.google-analytics.com/ga.js';
+    s.parentNode.insertBefore(g, s);
+    }(document, 'script');
+    </script>
 
-<script>
-var _gaq = [['_setAccount', 'UA-39789396-1'], ['_setDomainName', 'kifi.com'], ['_trackPageview']];
-!function(d, t) {
-var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
-g.async = true;
-g.src = ('https:' == location.protocol ? '//ssl' : '//www') + '.google-analytics.com/ga.js';
-s.parentNode.insertBefore(g, s);
-}(document, 'script');
-</script>
+    @scripts
 
+  </body>
 
-</body></html>
+</html>
