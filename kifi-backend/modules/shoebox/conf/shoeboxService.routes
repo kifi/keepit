@@ -17,6 +17,12 @@ POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controlle
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
+# New signup pages
+
+GET     /signupMinimal              @com.keepit.controllers.core.AuthController.signupMinimal()
+
+# End new signup pages
+
 POST    /auth/sign-up               @com.keepit.controllers.core.AuthController.userPasswordSignup()
 POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.userPassFinalizeAccountAction()
 POST    /auth/social-finalize       @com.keepit.controllers.core.AuthController.socialFinalizeAccountAction()

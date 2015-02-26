@@ -604,4 +604,10 @@ class AuthController @Inject() (
       DiscardingCookie(Authenticator.cookieName, Authenticator.cookiePath, Authenticator.cookieDomain, Authenticator.cookieSecure))
   }
 
+  // New signup pages
+
+  def signupMinimal() = Action { implicit request =>
+    Ok(views.html.authMinimal.signupGetEmail())
+  }
+
 }
