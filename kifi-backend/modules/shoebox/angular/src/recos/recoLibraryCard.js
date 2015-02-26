@@ -55,10 +55,10 @@ angular.module('kifi')
               clipLastIndex = lastSpaceIndex + 1;  // Grab the space too.
             }
 
-            scope.library.shortDescription = util.processUrls(scope.library.description.substr(0, clipLastIndex));
+            scope.library.shortDescription = util.linkify(scope.library.description.substr(0, clipLastIndex));
             scope.clippedDescription = true;
           }
-          scope.library.formattedDescription = '<p>' + util.processUrls(scope.library.description).replace(/\n+/g, '<p>');
+          scope.library.formattedDescription = '<p>' + util.linkify(scope.library.description).replace(/\n+/g, '<p>');
 
           scope.library.shareUrl = env.origin + scope.library.url;
           scope.library.shareFbUrl = scope.library.shareUrl +
