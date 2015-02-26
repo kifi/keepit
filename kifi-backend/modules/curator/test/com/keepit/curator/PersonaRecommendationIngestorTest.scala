@@ -38,6 +38,36 @@ class PersonaRecommendationIngestorTest extends Specification with CuratorTestIn
         }
       }
     }
+
+    "batch works and dedup" in {
+      withDb() { implicit injector =>
+        val uriRecRepo = inject[UriRecommendationRepo]
+        val libRecRepo = inject[LibraryRecommendationRepo]
+
+        val uriPool = new URIFixedSetPersonaRecoPool {
+          override val fixedRecos = Map(Id[Persona](1) -> List(Id[NormalizedURI](1)))
+        }
+        val libPool = new LibraryFixedSetPersonaRecoPool {
+          override val fixedRecos = Map(Id[Persona](1) -> List(Id[Library](1)), Id[Persona](2) -> List(Id[Library](1), Id[Library](2)))
+        }
+
+        val ingestor = new PersonaRecommendationIngestor(db, uriPool, libPool, uriRecRepo, libRecRepo)
+        ingestor.ingestUserRecosByPersonas(Id[User](1), Seq(Id[Persona](1), Id[Persona](2)))
+
+        db.readOnlyReplica { implicit s =>
+          val recos = uriRecRepo.getByUserId(Id[User](1))
+          recos.size === 1
+          recos.head.uriId.id === 1
+          (math.abs(recos.head.masterScore - FixedSetURIReco.fakeMasterScore) <= 1.0) === true
+        }
+
+        db.readOnlyReplica { implicit s =>
+          val recos = libRecRepo.getByUserId(Id[User](1))
+          recos.size === 2
+          recos.map(_.libraryId).map { _.id }.toSet === Set(1, 2)
+        }
+      }
+    }
   }
 
 }

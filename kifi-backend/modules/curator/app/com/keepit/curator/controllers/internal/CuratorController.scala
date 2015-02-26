@@ -207,7 +207,7 @@ class CuratorController @Inject() (
   def ingestPersonaRecos(userId: Id[User]) = Action(parse.tolerantJson) { request =>
     val js = request.body
     val pids = (js \ "personaIds").as[Seq[Id[Persona]]]
-    pids.foreach { pid => personaRecoIngestor.ingestUserRecosByPersona(userId, pid) }
+    personaRecoIngestor.ingestUserRecosByPersonas(userId, pids)
     Ok
   }
 }
