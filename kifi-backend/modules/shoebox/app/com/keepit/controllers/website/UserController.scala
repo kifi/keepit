@@ -12,6 +12,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.{ EmailAddress, _ }
+import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.controllers.core.NetworkInfoLoader
@@ -64,7 +65,27 @@ class UserController @Inject() (
     emailSender: EmailSenderProvider,
     libraryCommander: LibraryCommander,
     libraryInviteRepo: LibraryInviteRepo,
+    basicUserRepo: BasicUserRepo,
     fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
+
+  def fullConnectionsByViewer(owner: Id[User], limit: Int) = MaybeUserAction.async { request =>
+    val viewer = request.userIdOpt.getOrElse(owner)
+    userConnectionsCommander.getConnectionsSortedByRelationship(viewer, owner) map { connections =>
+      val head = connections.take(limit)
+      val userMap = db.readOnlyMaster { implicit s => basicUserRepo.loadAll(head.toSet) }
+      val users = head.map(u => userMap(u))
+      Ok(Json.obj("users" -> users, "count" -> connections.size))
+    }
+  }
+
+  def connectionsByViewer(owner: Id[User]) = MaybeUserAction.async { request =>
+    val viewer = request.userIdOpt.getOrElse(owner)
+    userConnectionsCommander.getConnectionsSortedByRelationship(viewer, owner) map { connections =>
+      val userMap = db.readOnlyMaster { implicit s => basicUserRepo.loadAll(connections.toSet) }
+      val ids = connections.flatMap(u => userMap.get(u)).map(_.externalId)
+      Ok(Json.obj("ids" -> ids))
+    }
+  }
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
     val (connectionsPage, total) = userConnectionsCommander.getConnectionsPage(request.userId, page, pageSize)
