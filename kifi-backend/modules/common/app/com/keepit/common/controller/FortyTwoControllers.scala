@@ -56,3 +56,7 @@ trait CuratorServiceController extends ServiceController {
 trait GraphServiceController extends ServiceController {
   val serviceType: ServiceType = ServiceType.GRAPH
 }
+
+trait RoverServiceController extends ServiceController {
+  val serviceType: ServiceType = ServiceType.ROVER
+}

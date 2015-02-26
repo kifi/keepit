@@ -73,6 +73,12 @@ object ApplicationBuild extends Build {
 
   lazy val curatorDependencies = Seq()
 
+  lazy val roverDependencies = Seq(
+    "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2",
+    "org.apache.httpcomponents" % "httpclient" % "4.3.1",
+    "org.apache.tika" % "tika-parsers" % "1.5"
+  )
+
   lazy val commonSettings =
     Global.settings ++
     PlayGlobal.settings ++
@@ -179,6 +185,13 @@ object ApplicationBuild extends Build {
     javaOptions in Test += "-Dconfig.resource=application-curator.conf"
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
+  lazy val rover = Project("rover", file("modules/rover")).enablePlugins(play.PlayScala).settings(
+    commonSettings: _*
+  ).settings(
+      libraryDependencies ++= roverDependencies,
+      javaOptions in Test += "-Dconfig.resource=application-rover.conf"
+    ).dependsOn(common % "test->test;compile->compile")
+
   lazy val kifiBackend = Project(appName, file(".")).enablePlugins(play.PlayScala).settings(commonSettings: _*).settings(
     version := "0.42",
     aggregate in update := false,
@@ -198,12 +211,13 @@ object ApplicationBuild extends Build {
     scraper % "test->test;compile->compile",
     cortex % "test->test;compile->compile",
     graph % "test->test;compile->compile",
-    curator % "test->test;compile->compile"
-  ).aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph, curator)
+    curator % "test->test;compile->compile",
+    rover % "test->test;compile->compile"
+  ).aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph, curator, rover)
 
   lazy val distProject = Project(id = "dist", base = file("./.dist")).settings(
       aggregate in update := false
-  ).aggregate(search, shoebox, eliza, heimdal, abook, scraper, cortex, graph, curator)
+  ).aggregate(search, shoebox, eliza, heimdal, abook, scraper, cortex, graph, curator, rover)
 
   override def rootProject = Some(kifiBackend)
 }
