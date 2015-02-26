@@ -152,6 +152,7 @@ angular.module('kifi')
           recoStateService.populate(recos);
           $scope.recosState = 'hasRecos';
           $scope.loading = false;
+          $scope.noMoreRecos = false;
         } else {
           // If the user has no recommendations, show some popular
           // keeps/libraries as recommendations.
@@ -162,6 +163,7 @@ angular.module('kifi')
             recoStateService.populate(recos);
             $scope.recosState = 'noRecos';
             $scope.loading = false;
+            $scope.noMoreRecos = false;
           });
         }
       });

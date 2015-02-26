@@ -28,6 +28,7 @@ angular.module('kifi')
 
       empty: function () {
         savedRecos.length = 0;
+        recoUrls = {};
       }
     };
 

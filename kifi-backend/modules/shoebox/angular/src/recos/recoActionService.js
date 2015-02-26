@@ -60,7 +60,13 @@ angular.module('kifi')
 
     var api = {
       get: function (invalidate) {
-        return (invalidate || rawRecos.length === 0) ? kifiRecommendationService.get() : $q.when(rawRecos);
+        if (invalidate || rawRecos.length === 0) {
+          uriContext = '';
+          libContext = '';
+          return kifiRecommendationService.get();
+        } else {
+          return $q.when(rawRecos);
+        }
       },
 
       getMore: function (opt_recency) {
