@@ -49,7 +49,7 @@ class SendFriendConnectionMadeNotificationHelper @Inject() (
       imageUrl = respondingUserImage,
       sticky = false,
       category = category,
-      extra = Some(Json.obj("connection" -> BasicUser.fromUser(respondingUser)))
+      extra = Some(Json.obj("friend" -> BasicUser.fromUser(respondingUser)))
     )
 
     emailF flatMap (_ => notificationF)
