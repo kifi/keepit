@@ -234,9 +234,14 @@ trait LibraryRecoSelectionStrategy {
   def sort(recosByTopScore: Seq[LibraryRecoScore]): Seq[LibraryRecoScore]
 }
 
-class TopScoreLibraryRecoSelectionStrategy(val minScore: Float = 0f) extends LibraryRecoSelectionStrategy {
-  def sort(recosByTopScore: Seq[LibraryRecoScore]) =
-    recosByTopScore filter (_.score > minScore) sortBy (-_.score)
+class TopScoreLibraryRecoSelectionStrategy(val minScore: Float = 0f) extends LibraryRecoSelectionStrategy with Logging {
+  def sort(recosByTopScore: Seq[LibraryRecoScore]) = {
+    val ret = recosByTopScore filter (_.score > minScore) sortBy (-_.score)
+    if (ret.size < recosByTopScore.size) {
+      log.info(s"[lrgc] sorting strategy: before sorting ${recosByTopScore.size} libraries. after sorting: ${ret.size} libraris. threshold = ${minScore}")
+    }
+    ret
+  }
 }
 
 trait LibraryRecoScoringStrategy {
