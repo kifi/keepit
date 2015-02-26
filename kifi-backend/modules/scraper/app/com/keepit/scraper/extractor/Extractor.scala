@@ -28,10 +28,10 @@ trait Extractor {
             if (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?'))))) {
               None
               // A common site error is copying the page URL directly into a canoncial URL tag, escaped an extra time.
-            } else if (url.length > destinationUrl.length && unescapeHtml4(url) == destinationUrl) {
+            } else if (absoluteUrl.length > destinationUrl.length && unescapeHtml4(absoluteUrl) == destinationUrl) {
               None
             } else {
-              Some(url)
+              Some(absoluteUrl)
             }
           case Failure(_) =>
             None
