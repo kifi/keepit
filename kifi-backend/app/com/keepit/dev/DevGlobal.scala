@@ -22,6 +22,7 @@ import com.keepit.abook.ABookServices
 import com.keepit.cortex.CortexServices
 import com.keepit.graph.GraphServices
 import com.keepit.rover.RoverServices
+import com.keepit.rover.dev.RoverDevModule
 
 import scala.concurrent.Future
 
