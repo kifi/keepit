@@ -1,5 +1,7 @@
 package com.keepit.common.mail
 
+import com.keepit.graph.FakeGraphServiceModule
+
 import scala.collection.mutable.MutableList
 
 import net.codingwell.scalaguice.ScalaModule
@@ -29,6 +31,7 @@ class FakeMailProvider(emails: FakeOutbox) extends MailProvider {
 case class FakeMailModule() extends MailModule {
 
   override def configure(): Unit = {
+    install(FakeGraphServiceModule())
     bind[FakeOutbox].toInstance(new FakeOutbox())
   }
 
