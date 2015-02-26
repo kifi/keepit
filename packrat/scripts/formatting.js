@@ -8,7 +8,7 @@ var formatMessage = (function () {
   var kifiSelMarkdownToTextRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)/;
   var escapedBackslashOrRightParenRe = /\\([\)\\])/g;
   var escapedBackslashOrRightBracketRe = /\\([\]\\])/g;
-  var emailAddrRe = /(?:\b|^)([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)(?:\b|$)/;
+  var emailAddrRe = /(?:\b|^)([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+)(?:\b|$)/;
   var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;
   var imageUrlRe = /^[^?#]*\.(?:gif|jpg|jpeg|png)$/i;
   var lineBreaksRe = /\n([ \t\r]*\n)?(?:[ \t\r]*\n)*/g;
@@ -97,10 +97,10 @@ var formatMessage = (function () {
     for (var i = 1; i < parts.length; i += 3) {
       var uri = parts[i];
       var scheme = parts[i+1];
-      if (!scheme && uri.indexOf('/') < 0 || parts[i-1].lastIndexOf('@', parts[i-1].length - 1) > 0) {
+      if (!scheme && uri.indexOf('/') < 0 || parts[i-1].slice(-1) === '@') {
         var ambiguous = parts[i-1] + uri;
         var ambiguousProcessed = process(ambiguous);
-        if (ambiguousProcessed.lastIndexOf('</a>', ambiguousProcessed.length - 4) > 0) {
+        if (ambiguousProcessed.indexOf('</a>', ambiguousProcessed.length - 4) > 0) {
           parts[i] = ambiguousProcessed;
           parts[i-1] = parts[i+1] = '';
           continue;

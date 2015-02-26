@@ -30,7 +30,7 @@ import com.keepit.common.service.ServiceType
 
 case class ShoeboxServiceTypeModule() extends ServiceTypeModule {
   val serviceType = ServiceType.SHOEBOX
-  val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.CURATOR :: Nil
+  val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.CURATOR :: ServiceType.ROVER :: Nil
 }
 
 abstract class ShoeboxModule(
