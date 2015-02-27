@@ -54,7 +54,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
   }
 
   def getFakeWaitlistLength(): Long = {
-    db.readOnlyMaster { implicit session =>
+    db.readOnlyReplica { implicit session =>
       twitterWaitlistRepo.countActiveEntriesBeforeDateTime(currentDateTime)
     } * WAITLIST_MULTIPLIER + WAITLIST_LENGTH_SHIFT
   }

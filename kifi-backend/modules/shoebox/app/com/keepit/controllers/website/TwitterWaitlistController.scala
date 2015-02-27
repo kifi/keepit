@@ -22,7 +22,6 @@ class TwitterWaitlistController @Inject() (
     }
   }
 
-
   //DO NOT USE THE WORD *FAKE* IN THE ROUTE FOR THIS!!!
   def getFakeWaitlistLength(handle: String) = UserAction { request =>
     Ok(Json.obj(
