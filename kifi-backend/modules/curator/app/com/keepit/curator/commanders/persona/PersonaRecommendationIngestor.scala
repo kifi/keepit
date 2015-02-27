@@ -1,11 +1,14 @@
 package com.keepit.curator.commanders.persona
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.model.{ UriRecommendation, LibraryRecommendation, LibraryRecommendationRepo, UriRecommendationRepo }
-import com.keepit.model.{ Library, Persona, User }
+import com.keepit.model.{ Persona, User }
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.Future
 
 @Singleton
 class PersonaRecommendationIngestor @Inject() (
@@ -23,12 +26,18 @@ class PersonaRecommendationIngestor @Inject() (
     ingestLibraryRecos(userId, libRecos)
   }
 
-  def ingestUserRecosByPersonas(userId: Id[User], pids: Seq[Id[Persona]]): Unit = {
+  def ingestUserRecosByPersonas(userId: Id[User], pids: Seq[Id[Persona]]): Future[Unit] = {
     val uriRecos = pids.map { pid => uriPersonaRecoPool.getUserRecosByPersona(userId, pid) }.flatten.distinct
-    ingestURIRecos(userId, uriRecos)
+    val uriIngested = SafeFuture { ingestURIRecos(userId, uriRecos) }
 
     val libRecos = pids.map { pid => libPersonaRecoPool.getUserRecosByPersona(userId, pid) }.flatten.distinct
-    ingestLibraryRecos(userId, libRecos)
+    val libIngested = SafeFuture { ingestLibraryRecos(userId, libRecos) }
+
+    for {
+      uri <- uriIngested
+      lib <- libIngested
+    } yield ()
+
   }
 
   private def ingestLibraryReco(libReco: LibraryRecommendation)(implicit session: RWSession): Unit = {
