@@ -16,7 +16,7 @@
           <!-- Kifi friend -->
           <div ng-if="result.id" class="library-share-contact-container library-share-kifi">
             <a href="{{result.userProfileUrl}}" ng-click="close()" kf-track-origin="{{currentPageOrigin}}/invitationDropdown">
-              <img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="library-share-contact-image">
+              <img ng-src="{{result | pic:100}}" class="library-share-contact-image">
             </a>
             <div class="library-share-contact-summary">
               <div class="library-share-contact-name" ng-bind-html="result.name"></div>

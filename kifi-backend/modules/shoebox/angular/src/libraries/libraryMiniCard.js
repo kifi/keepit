@@ -77,7 +77,6 @@ angular.module('kifi')
 
         libraryService.getLibraryInfoById(scope.library.id).then(function (data) {
           _.assign(scope.library, data.library);
-          scope.library.owner.image = friendService.getPictureUrlForUser(scope.library.owner);
           scope.library.owner.profileUrl = routeService.getProfileUrl(scope.library.owner.username);
           scope.isFollowing = data.membership === 'read_only';
         })['catch'](function () {

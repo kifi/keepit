@@ -180,7 +180,6 @@ angular.module('kifi')
                 scope.moreMembers = true;
                 scope.offset += 1;
                 members.forEach(function (member) {
-                  member.picUrl = friendService.getPictureUrlForUser(member);
                   member.profileUrl = routeService.getProfileUrl(member.username);
                   member.status = setMemberStatus(member);
                 });

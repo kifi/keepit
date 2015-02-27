@@ -33,7 +33,6 @@ angular.module('kifi')
           var mutualFriendsPairs = [];
           var mutualFriendPair = [];
           person.mutualFriends.forEach(function (mutualFriend, index) {
-            mutualFriend.pictureUrl = friendService.getPictureUrlForUser(mutualFriend);
             mutualFriend.profileUrl = routeService.getProfileUrl(mutualFriend.username);
             mutualFriendPair.push(mutualFriend);
 
