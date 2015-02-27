@@ -204,10 +204,9 @@ class CuratorController @Inject() (
     Ok
   }
 
-  def ingestPersonaRecos(userId: Id[User]) = Action(parse.tolerantJson) { request =>
+  def ingestPersonaRecos(userId: Id[User]) = Action.async(parse.tolerantJson) { request =>
     val js = request.body
     val pids = (js \ "personaIds").as[Seq[Id[Persona]]]
-    personaRecoIngestor.ingestUserRecosByPersonas(userId, pids)
-    Ok
+    personaRecoIngestor.ingestUserRecosByPersonas(userId, pids).collect { case _ => Ok }
   }
 }

@@ -5,6 +5,8 @@ import com.keepit.curator.commanders.persona._
 import com.keepit.curator.model.{ LibraryRecommendationRepo, UriRecommendationRepo }
 import com.keepit.model.{ User, Library, Persona, NormalizedURI }
 import org.specs2.mutable.Specification
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class PersonaRecommendationIngestorTest extends Specification with CuratorTestInjector {
   "persona recommendation ingestor" should {
@@ -52,7 +54,7 @@ class PersonaRecommendationIngestorTest extends Specification with CuratorTestIn
         }
 
         val ingestor = new PersonaRecommendationIngestor(db, uriPool, libPool, uriRecRepo, libRecRepo)
-        ingestor.ingestUserRecosByPersonas(Id[User](1), Seq(Id[Persona](1), Id[Persona](2)))
+        Await.result(ingestor.ingestUserRecosByPersonas(Id[User](1), Seq(Id[Persona](1), Id[Persona](2))), FiniteDuration(1, SECONDS))
 
         db.readOnlyReplica { implicit s =>
           val recos = uriRecRepo.getByUserId(Id[User](1))
