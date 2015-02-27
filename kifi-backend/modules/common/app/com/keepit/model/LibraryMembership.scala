@@ -115,6 +115,15 @@ case class FollowersCountKey(userId: Id[User]) extends Key[Int] {
 class FollowersCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[FollowersCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
+case class MutualFollowersCountKey(ownerId: Id[User], friendId: Id[User]) extends Key[Int] {
+  override val version = 1
+  val namespace = "mutual_followers_count"
+  def toKey(): String = s"$ownerId:$friendId"
+}
+
+class MutualFollowersCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[MutualFollowersCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 case class LibrariesWithWriteAccessUserKey(userId: Id[User]) extends Key[Set[Id[Library]]] {
   override val version = 1
   val namespace = "libraries_with_write_access_by_user"
