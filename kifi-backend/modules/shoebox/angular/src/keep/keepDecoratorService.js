@@ -9,6 +9,7 @@ angular.module('kifi')
         var cleanedLibraries = [];
         var usersWithLibs = {};
         item.libraries.forEach( function (lib) {
+          lib[0].keeper = lib[1];
           lib[0].keeperProfileUrl = routeService.getProfileUrl(lib[1].username);
           lib[0].keeperName = lib[1].firstName + ' ' + lib[1].lastName;
           if (lib[1].id !== profileService.me.id) {
