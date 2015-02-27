@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.model.{ UriRecommendation, LibraryRecommendation, LibraryRecommendationRepo, UriRecommendationRepo }
-import com.keepit.model.{ Persona, User }
+import com.keepit.model.{ Library, Persona, User }
 
 @Singleton
 class PersonaRecommendationIngestor @Inject() (
@@ -17,10 +17,18 @@ class PersonaRecommendationIngestor @Inject() (
 
   def ingestUserRecosByPersona(userId: Id[User], pid: Id[Persona]): Unit = {
     val uriRecos = uriPersonaRecoPool.getUserRecosByPersona(userId, pid)
-    db.readWrite { implicit s => uriRecos.foreach(ingestURIReco(_)) }
+    ingestURIRecos(userId, uriRecos)
 
     val libRecos = libPersonaRecoPool.getUserRecosByPersona(userId, pid)
-    db.readWrite { implicit s => libRecos.foreach { ingestLibraryReco(_) } }
+    ingestLibraryRecos(userId, libRecos)
+  }
+
+  def ingestUserRecosByPersonas(userId: Id[User], pids: Seq[Id[Persona]]): Unit = {
+    val uriRecos = pids.map { pid => uriPersonaRecoPool.getUserRecosByPersona(userId, pid) }.flatten.distinct
+    ingestURIRecos(userId, uriRecos)
+
+    val libRecos = pids.map { pid => libPersonaRecoPool.getUserRecosByPersona(userId, pid) }.flatten.distinct
+    ingestLibraryRecos(userId, libRecos)
   }
 
   private def ingestLibraryReco(libReco: LibraryRecommendation)(implicit session: RWSession): Unit = {
@@ -41,6 +49,28 @@ class PersonaRecommendationIngestor @Inject() (
       }
     }
     uriRecRepo.save(toSave)
+  }
+
+  // optimized for new user
+  private def ingestLibraryRecos(userId: Id[User], libRecos: Seq[LibraryRecommendation]): Unit = {
+    val uniqueLibRecos = libRecos.groupBy(_.libraryId).map { case (id, recos) => recos.head }
+    val existing = db.readOnlyMaster { implicit s => libRecRepo.getLibraryIdsForUser(userId) }
+    if (existing.isEmpty) {
+      db.readWrite { implicit s => uniqueLibRecos.foreach { libRecRepo.save(_) } }
+    } else {
+      db.readWrite { implicit s => uniqueLibRecos.foreach { ingestLibraryReco(_) } }
+    }
+  }
+
+  // optimized for new user
+  private def ingestURIRecos(userId: Id[User], uriRecos: Seq[UriRecommendation]): Unit = {
+    val uniqueUriRecos = uriRecos.groupBy(_.uriId).map { case (id, recos) => recos.head }
+    val existing = db.readOnlyMaster { implicit s => uriRecRepo.getUriIdsForUser(userId) }
+    if (existing.isEmpty) {
+      db.readWrite { implicit s => uniqueUriRecos.foreach { uriRecRepo.save(_) } }
+    } else {
+      db.readWrite { implicit s => uniqueUriRecos.foreach(ingestURIReco(_)) }
+    }
   }
 
 }

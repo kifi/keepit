@@ -76,7 +76,7 @@ object Persona {
     PersonaName.ENTREPRENEUR -> PersonaKeep(
       title = "11 Famous Entrepreneurs Share How They Overcame Their Biggest Failure",
       url = "http://www.fastcompany.com/3029883/bottom-line/11-famous-entrepreneurs-share-how-they-overcame-their-biggest-failure",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/moving_cultures.542973a.jpg", 480, 372),
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/entrepreneur_biggest_failures.6be9b5b.jpg", 480, 372),
       noun = "blog post",
       query = "entrepreneurship",
       matches = createMatchJson(Seq((10, 13)), Seq((57, 13))),

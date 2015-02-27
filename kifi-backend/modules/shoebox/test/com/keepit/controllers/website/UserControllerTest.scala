@@ -439,8 +439,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
             case None => inject[FakeUserActionsHelper].unsetUser()
             case Some(user) => inject[FakeUserActionsHelper].setUser(user)
           }
-          val request = FakeRequest("GET", routes.UserController.profile(viewing.value).url)
-          userController.profile(viewing.value)(request)
+          val request = FakeRequest("GET", routes.UserController.profile(viewing).url)
+          userController.profile(viewing)(request)
         }
         //non existing username
         status(call(Some(user1), Username("foo"))) must equalTo(NOT_FOUND)

@@ -61,7 +61,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): (Int, Int)
 
-  def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int
+  def getUnreadUnmutedThreadCount(userId: Id[User], filterByReplyable: Option[Boolean] = None)(implicit session: RSession): Int
 
   def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): (Int, Int)
 
@@ -340,8 +340,15 @@ class UserThreadRepoImpl @Inject() (
     StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(notification_pending and not muted) from user_thread where user_id = $userId and uri_id = $uriId").first
   }
 
-  def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int = {
-    StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending and not muted").first
+  def getUnreadUnmutedThreadCount(userId: Id[User], filterByReplyable: Option[Boolean] = None)(implicit session: RSession): Int = {
+    filterByReplyable match {
+      case Some(true) =>
+        StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending and not muted and replyable").first
+      case Some(false) =>
+        StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending and not muted and not replyable").first
+      case None =>
+        StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending and not muted").first
+    }
   }
 
   def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): (Int, Int) = {

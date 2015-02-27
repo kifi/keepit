@@ -76,7 +76,7 @@ class TwitterWaitlistCommanderTest extends TestKitSupport with ShoeboxTestInject
         }
 
         db.readOnlyMaster { implicit s =>
-          twitterWaitlistRepo.countActiveEntriesBeforeDateTime(t1.plusMinutes(5)) === 3 // 4 total, 1 inactive
+          twitterWaitlistRepo.countActiveEntriesBeforeDateTime(t1.plusMinutes(5)) === 2 // 4 total, 1 accepted, 1 inactive
         }
       }
     }

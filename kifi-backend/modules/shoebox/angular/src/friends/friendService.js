@@ -135,10 +135,6 @@ angular.module('kifi')
         });
       },
 
-      getPictureUrlForUser: function (user) {
-        return routeService.formatPicUrl(user.id, user.pictureName, 200);
-      },
-
       getPeopleYouMayKnow: function (offset, limit) {
         var deferred = $q.defer();
 

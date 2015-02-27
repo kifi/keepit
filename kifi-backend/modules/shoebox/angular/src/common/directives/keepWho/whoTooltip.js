@@ -3,17 +3,15 @@
 angular.module('kifi')
 
 .directive('kfWhoTooltip', [
-  '$window', '$timeout', '$rootElement', '$compile', '$templateCache', 'keepWhoService', 'platformService',
-  function ($window, $timeout, $rootElement, $compile, $templateCache, keepWhoService, platformService) {
+  '$window', '$timeout', '$rootElement', '$compile', '$templateCache', 'platformService',
+  function ($window, $timeout, $rootElement, $compile, $templateCache, platformService) {
     return {
       restrict: 'A',
       link: function (scope, element) {
-        var tooltip = null;
-        var timeout = null;
+        var tooltip;
+        var timeout;
 
         scope.tooltipEnabled = false;
-        scope.getPicUrl = keepWhoService.getPicUrl;
-        scope.getName = keepWhoService.getName;
         scope.youText = '';
 
         // The following is messy. It accounts for the case where we're using

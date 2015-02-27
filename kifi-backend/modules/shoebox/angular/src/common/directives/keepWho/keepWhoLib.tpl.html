@@ -2,7 +2,7 @@
   <span ng-if="!isBot">
     <span class="kf-keep-who-pic-box" ng-class="{ 'secret': library.visibility === 'secret' }">
       <a href="{{library.keeperProfileUrl}}" kf-track-origin="{{currentPageOrigin}}/alsoKeptInLibraryBy">
-        <span class="kf-keep-who-pic" ng-attr-style="background-image: url({{library.keeperPic}})"></span>
+        <span class="kf-keep-who-pic" ng-attr-style="background-image:url({{library.keeper || library.owner | pic:100}})"></span>
       </a>
       <a href="{{library.absPath}}" ng-click="onLibraryAttributionClicked()" kf-track-origin="libraryAttributionChip">
         <span class="kf-keep-who-lib">{{library.name}}</span>
