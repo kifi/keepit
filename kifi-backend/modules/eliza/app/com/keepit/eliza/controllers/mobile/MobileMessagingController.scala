@@ -286,4 +286,16 @@ class MobileMessagingController @Inject() (
     val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
     Ok(numUnreadUnmuted.toString)
   }
+
+  def markUnreadNotifications(kind: Option[String] = None) = UserAction { request =>
+    kind match {
+      case Some("system") =>
+        notificationCommander.setSystemNotificationsRead(request.userId) // mark system notifs as read
+      case Some("message") =>
+        notificationCommander.setMessageNotificationsRead(request.userId) // mark message notifs as read
+      case _ =>
+        notificationCommander.setAllNotificationsRead(request.userId) // mark all as read
+    }
+    NoContent
+  }
 }

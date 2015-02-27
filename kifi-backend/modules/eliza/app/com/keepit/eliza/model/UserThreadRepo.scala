@@ -29,7 +29,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getThreadIds(user: Id[User], uriId: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]]
 
-  def markAllRead(user: Id[User])(implicit session: RWSession): Unit
+  def markAllRead(user: Id[User], filterByReplyable: Option[Boolean] = None)(implicit session: RWSession): Unit
 
   def markAllReadAtOrBefore(user: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit
 
@@ -176,8 +176,16 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  def markAllRead(user: Id[User])(implicit session: RWSession): Unit = {
-    (for (row <- rows if row.user === user) yield (row.unread, row.updatedAt)).update((false, clock.now()))
+  def markAllRead(user: Id[User], filterByReplyable: Option[Boolean] = None)(implicit session: RWSession): Unit = {
+    var q = filterByReplyable match {
+      case Some(true) =>
+        (for (row <- rows if row.user === user && !row.replyable) yield (row.unread, row.updatedAt))
+      case Some(false) =>
+        (for (row <- rows if row.user === user && row.replyable) yield (row.unread, row.updatedAt))
+      case _ =>
+        (for (row <- rows if row.user === user) yield (row.unread, row.updatedAt))
+    }
+    q.update((false, clock.now()))
   }
 
   def markAllReadAtOrBefore(userId: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit = {

@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfRecoLibraryCard', [
   '$FB', '$q', '$rootScope', '$timeout', '$twitter', 'env', 'libraryService',
-  'modalService','profileService', 'routeService', 'util',
+  'modalService','profileService', 'util',
   function ($FB, $q, $rootScope, $timeout, $twitter, env, libraryService,
-    modalService, profileService, routeService, util) {
+    modalService, profileService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -38,13 +38,6 @@ angular.module('kifi')
             scope.library.description = '';
           }
 
-          if (scope.library.owner) {
-            scope.library.owner.profileUrl = routeService.getProfileUrl(scope.library.owner.username);
-          }
-
-          scope.library.followers = scope.library.followers || [];
-          scope.library.followers.forEach(augmentFollower);
-
           var maxLength = 150;
           if (scope.library.description.length > maxLength) {
             // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
@@ -73,11 +66,6 @@ angular.module('kifi')
           if (image) {
             scope.coverImageUrl = env.picBase + '/' + image.path;
           }
-        }
-
-        function augmentFollower(follower) {
-          follower.profileUrl = routeService.getProfileUrl(follower.username);
-          return follower;
         }
 
         function preloadSocial() {
@@ -156,7 +144,7 @@ angular.module('kifi')
               lib.numFollowers++;
               var me = profileService.me;
               if (!_.contains(lib.followers, {id: me.id})) {
-                lib.followers.push(augmentFollower(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username')));
+                lib.followers.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));
               }
             }
           }),

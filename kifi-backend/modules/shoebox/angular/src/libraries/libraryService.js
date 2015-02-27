@@ -86,7 +86,6 @@ angular.module('kifi')
       this.owner = library.owner;
       this.numFollowers = library.numFollowers;
       this.numKeeps = library.numKeeps;
-      this.ownerProfileUrl = routeService.getProfileUrl(library.owner.username);
       this.name = library.name;
       this.description = library.description;
       this.color = library.color;
@@ -94,11 +93,7 @@ angular.module('kifi')
       this.imageUrl = library.image ? routeService.libraryImageUrl(library.image.path) : null;
       this.path = '/' + library.owner.username + '/' + library.slug;
       this.reason = reason;
-      this.followers = library.followers.map(function (user) {
-        return _.merge(user, {
-          profileUrl: routeService.getProfileUrl(user.username)
-        });
-      });
+      this.followers = library.followers;
     }
 
 

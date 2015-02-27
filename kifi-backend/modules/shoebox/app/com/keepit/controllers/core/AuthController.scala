@@ -606,8 +606,24 @@ class AuthController @Inject() (
 
   // New signup pages
 
-  def signupMinimal() = Action { implicit request =>
+  def signupPageMinimal() = Action { implicit request =>
+    Ok(views.html.authMinimal.signup())
+  }
+
+  def signupPageGetEmailMinimal() = Action { implicit request =>
     Ok(views.html.authMinimal.signupGetEmail())
+  }
+
+  def signupPageGetName() = Action { implicit request =>
+    Ok(views.html.authMinimal.signupGetName())
+  }
+
+  def loginPageMinimal() = Action { implicit request =>
+    Ok(views.html.authMinimal.loginToKifi())
+  }
+
+  def loginPageNoTwitterMinimal() = Action { implicit request =>
+    Ok(views.html.authMinimal.loginToKifiNoTwitter())
   }
 
 }

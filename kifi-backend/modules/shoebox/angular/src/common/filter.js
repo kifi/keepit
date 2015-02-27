@@ -17,4 +17,10 @@ angular.module('kifi')
         '//www.kifi.com/assets/img/ghost.200.png';
     };
   }
-]);
+])
+
+.filter('profileUrl', function () {
+  return function (user) {
+    return user ? '/' + user.username : '';
+  };
+});

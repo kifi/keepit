@@ -138,17 +138,11 @@ angular.module('kifi')
       owner = lib.owner || owner;
       lib.path = '/' + owner.username + '/' + lib.slug;
       lib.owner = owner;
-      lib.ownerProfileUrl = routeService.getProfileUrl(owner.username);
       lib.imageUrl = lib.image ? routeService.libraryImageUrl(lib.image.path) : null;
-      lib.followers.forEach(augmentFollower);
       if (lib.following == null && following != null) {
         lib.following = following;
       }
       return lib;
-    }
-
-    function augmentFollower(user) {
-      user.profileUrl = routeService.getProfileUrl(user.username);
     }
 
     function resetFetchState() {
@@ -176,7 +170,6 @@ angular.module('kifi')
           lib.numFollowers++;
           if (lib.followers.length < 3 && profileService.me.pictureName !== '0.jpg') {
             var me = _.pick(profileService.me, 'id', 'firstName', 'lastName', 'pictureName', 'username');
-            augmentFollower(me);
             lib.followers.push(me);
           }
         }
