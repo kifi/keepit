@@ -43,14 +43,12 @@ angular.module('kifi')
 
         if (idxUser !== -1) {
           user = users[idxUser];
-          lib.keeperProfileUrl = routeService.getProfileUrl(user.username);
           lib.keeperName = user.firstName + ' ' + user.lastName;
           lib.owner = user;
           decompressedLibraries.push(lib);
           libUsers[idxUser] = true;
         } else if (userLoggedIn) {
           user = profileService.me;
-          lib.keeperProfileUrl = routeService.getProfileUrl(user.username);
           lib.keeperName = user.firstName + ' ' + user.lastName;
           lib.owner = user;
 

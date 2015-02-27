@@ -63,13 +63,6 @@ angular.module('kifi')
             scope.library.owner = profileService.me;
           }
 
-          if (scope.library.owner) {
-            scope.library.owner.profileUrl = routeService.getProfileUrl(scope.library.owner.username);
-          }
-
-          scope.library.followers = scope.library.followers || [];
-          scope.library.followers.forEach(augmentFollower);
-
           var maxLength = 150;
           if (scope.library.description.length > maxLength && $rootScope.userLoggedIn) {
             // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
@@ -99,11 +92,6 @@ angular.module('kifi')
             scope.coverImageUrl = env.picBase + '/' + image.path;
             scope.coverImagePos = formatCoverImagePos(image);
           }
-        }
-
-        function augmentFollower(follower) {
-          follower.profileUrl = routeService.getProfileUrl(follower.username);
-          return follower;
         }
 
         function updateInvite() {
@@ -716,7 +704,7 @@ angular.module('kifi')
               lib.numFollowers++;
               var me = profileService.me;
               if (!_.contains(lib.followers, {id: me.id})) {
-                lib.followers.push(augmentFollower(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username')));
+                lib.followers.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));
               }
             }
           }),

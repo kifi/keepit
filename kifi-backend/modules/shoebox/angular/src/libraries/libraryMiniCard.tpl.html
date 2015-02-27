@@ -2,7 +2,7 @@
 
   <div class="kf-library-mini-card-header" ng-style="{'border-bottom-color': library.color}">
     <div class="kf-library-mini-card-curator">
-      <a href="{{library.owner.profileUrl}}">
+      <a href="{{library.owner|profileUrl}}">
         <img class="kf-library-mini-card-curator-img" ng-src="{{library.owner | pic:100}}">
       </a>
       <span class="kf-library-mini-card-curator-info">

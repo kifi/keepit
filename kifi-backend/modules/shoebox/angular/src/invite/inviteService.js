@@ -49,7 +49,7 @@ angular.module('kifi')
         result.image = routeService.formatPicUrl(result.socialId, result.image);
 
         userService.getBasicUserInfo(result.socialId, false).then(function (res) {
-          result.userProfileUrl = routeService.getProfileUrl(res.data.username);
+          result.username = res.data.username;
         });
       }
       if (result.status === 'invited') {
