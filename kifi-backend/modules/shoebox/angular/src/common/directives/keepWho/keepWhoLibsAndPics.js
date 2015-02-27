@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfKeepWhoLibsAndPics', [
-  '$rootScope', 'friendService', 'profileService', 'libraryService', 'env',
-  function ($rootScope, friendService, profileService, libraryService, env) {
+  '$rootScope', 'profileService', 'libraryService', 'env',
+  function ($rootScope, profileService, libraryService, env) {
     return {
       restrict: 'A',
       replace: true,
@@ -30,16 +30,14 @@ angular.module('kifi')
           }
         }});
 
-        // For keep cards that search results on the search page, add and remove user library attribution
-        // on the client side when the user keeps or unkeeps.
+        // Add/remove library attribution on reco or search result when the user keeps/unkeeps.
         var deregisterKeepAddedListener = $rootScope.$on('keepAdded', function (e, keeps, library) {
           var visibleLibraryIds = _.pluck(scope.visibleKeepLibraries, 'id');
           _.each(keeps, function (keep) {
-            if (!scope.keep.id &&                      // No scope.keep.id if the keep is not on a library page.
+            if (!scope.keep.id &&                      // No scope.keep.id if the keep is not on a library page
                 scope.keep.url === keep.url &&
-                !libraryService.isLibraryMainOrSecret(library) &&     // Do not show system libraries as attributions.
+                !libraryService.isLibraryMainOrSecret(library) &&     // Do not show system libraries
                 !_.contains(visibleLibraryIds, library.id)) {
-              library.keeperPic = friendService.getPictureUrlForUser(profileService.me);
               scope.visibleKeepLibraries.push(library);
             }
           });
