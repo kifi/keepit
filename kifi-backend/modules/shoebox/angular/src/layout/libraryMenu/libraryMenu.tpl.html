@@ -121,7 +121,7 @@
                 </div>
               </div>
             </a>
-            <a href="{{getLibraryOwnerProfileUrl(library)}}" kf-track-origin="libraryList/followed">
+            <a href="{{library.owner|profileUrl}}" kf-track-origin="libraryList/followed">
               <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner | pic:100}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></img>
             </a>
           </li>
@@ -138,7 +138,7 @@
                 <div class="kf-nav-lib-text">invitation pending</div>
               </div>
             </a>
-            <a href="{{getLibraryOwnerProfileUrl(library)}}" kf-track-origin="libraryList/invited">
+            <a href="{{library.owner|profileUrl}}" kf-track-origin="libraryList/invited">
               <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner | pic:100}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></img>
             </a>
           </li>

@@ -2,7 +2,7 @@
   <div class="kf-pymk-top clearfix">
     <h2 class="kf-pymk-title">People you might find interesting</h2>
     <div class="kf-pymk-person" ng-repeat="person in people | limitTo: 3">
-      <a class="kf-pymk-image-a" href="{{person.profileUrl}}" kf-track-origin="pymk/pymk">
+      <a class="kf-pymk-image-a" href="{{person|profileUrl}}" kf-track-origin="pymk/pymk">
         <img class="kf-pymk-image" ng-src="{{person.pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
       </a>
       <div class="kf-pymk-name">{{person.fullName}}</div>

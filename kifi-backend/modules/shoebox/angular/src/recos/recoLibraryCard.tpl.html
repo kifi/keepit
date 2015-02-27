@@ -11,7 +11,7 @@
           style="background-image:url({{coverImageUrl}});background-position:{{library.image.x}}% {{library.image.y}}%"></a>
         <div class="kf-rcl-info">
           <div class="kf-rcl-owner">
-            <a href="{{library.owner.profileUrl}}" kf-track-origin="recommendationsPage/curator">
+            <a href="{{library.owner|profileUrl}}" kf-track-origin="recommendationsPage/curator">
               <img ng-src="{{library.owner | pic:100}}"
                 class="kf-rcl-owner-image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
             </a>
