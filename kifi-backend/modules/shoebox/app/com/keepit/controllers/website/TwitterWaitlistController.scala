@@ -11,6 +11,7 @@ class TwitterWaitlistController @Inject() (
     commander: TwitterWaitlistCommander,
     val userActionsHelper: UserActionsHelper) extends UserActions with ShoeboxServiceController {
 
+  //DO NOT USE THE WORD *FAKE* IN THE ROUTE FOR THIS!!!
   def getFakeWaitlistPoition(handle: String) = UserAction { request =>
     commander.getFakeWaitlistPosition(request.userId, handle).map { pos =>
       Ok(Json.obj(
@@ -21,6 +22,8 @@ class TwitterWaitlistController @Inject() (
     }
   }
 
+
+  //DO NOT USE THE WORD *FAKE* IN THE ROUTE FOR THIS!!!
   def getFakeWaitlistLength(handle: String) = UserAction { request =>
     Ok(Json.obj(
       "length" -> commander.getFakeWaitlistLength()
