@@ -102,7 +102,8 @@ case class LibraryInfo(
   numFollowers: Int,
   kind: LibraryKind,
   lastKept: Option[DateTime],
-  inviter: Option[BasicUser])
+  inviter: Option[BasicUser],
+  image: Option[LibraryImageInfo])
 
 object LibraryInfo {
   implicit val format = (
@@ -117,10 +118,11 @@ object LibraryInfo {
     (__ \ 'numFollowers).format[Int] and
     (__ \ 'kind).format[LibraryKind] and
     (__ \ 'lastKept).formatNullable[DateTime] and
-    (__ \ 'inviter).formatNullable[BasicUser]
+    (__ \ 'inviter).formatNullable[BasicUser] and
+    (__ \ 'image).formatNullable[LibraryImageInfo]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int, inviter: Option[BasicUser])(implicit config: PublicIdConfiguration): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int, inviter: Option[BasicUser] = None, image: Option[LibraryImage] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -133,7 +135,8 @@ object LibraryInfo {
       numFollowers = lib.memberCount - 1, // remove owner from count
       kind = lib.kind,
       lastKept = lib.lastKept,
-      inviter = inviter
+      inviter = inviter,
+      image = image.map(LibraryImageInfo.createInfo(_))
     )
   }
 }
@@ -202,11 +205,13 @@ case class LibraryNotificationInfo(
   id: PublicId[Library],
   name: String,
   slug: LibrarySlug,
-  owner: BasicUser)
+  color: Option[LibraryColor],
+  owner: BasicUser,
+  image: Option[LibraryImageInfo])
 
 object LibraryNotificationInfo {
-  def fromLibraryAndOwner(lib: Library, owner: BasicUser)(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
-    LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, lib.slug, owner)
+  def fromLibraryAndOwner(lib: Library, owner: BasicUser, image: Option[LibraryImage])(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
+    LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, lib.slug, lib.color, owner, image.map(LibraryImageInfo.createInfo(_)))
   }
 }
 

@@ -91,7 +91,7 @@ class LibraryController @Inject() (
           val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
           (basicUser, numKeeps, membership)
         }
-        val libInfo = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None))
+        val libInfo = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps))
         Ok(Json.obj("library" -> libInfo, "listed" -> membership.map(_.listed)))
     }
   }
@@ -156,7 +156,7 @@ class LibraryController @Inject() (
       val libInfosWithMemberships = for ((mem, library) <- libsWithMemberships) yield {
         val owner = basicUsers(library.ownerId)
         val numKeeps = keepRepo.getCountByLibrary(library.id.get)
-        (LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps, None), mem)
+        (LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps), mem)
       }
       val libInfosWithInvites = for ((invite, lib) <- libsWithInvites) yield {
         val owner = basicUsers(lib.ownerId)
@@ -233,7 +233,7 @@ class LibraryController @Inject() (
                 Status(fail.status)(Json.obj("error" -> fail.message))
               case Right(lib) =>
                 val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
-                Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)))
+                Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)))
             }
           case Some(membership) =>
             log.info(s"user ${request.userId} is already following library $libId, possible race condition")
@@ -241,7 +241,7 @@ class LibraryController @Inject() (
               val lib = libraryRepo.get(libId)
               (lib, basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId))
             }
-            val res = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None))
+            val res = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps))
             Ok(res.as[JsObject] + ("alreadyJoined" -> JsBoolean(true)))
         }
     }
