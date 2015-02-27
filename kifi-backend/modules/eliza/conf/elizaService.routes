@@ -22,6 +22,7 @@ GET     /m/1/eliza/ws                     @com.keepit.eliza.controllers.shared.S
 GET     /m/1/eliza/notifications          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getNotifications(n: Int, before: Option[String] ?= None)
 GET     /m/1/eliza/notifications/unread          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getUnreadNotifications(n: Int, before: Option[String] ?= None)
 GET     /m/1/eliza/notifications/sent          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getSentNotifications(n: Int, before: Option[String] ?= None)
+POST    /m/1/eliza/notifications/markAsRead @com.keepit.eliza.controllers.mobile.MobileMessagingController.markUnreadNotifications(kind: Option[String] ?= None)
 POST    /m/1/eliza/messages               @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageAction()
 GET     /m/1/eliza/messages/unreadNotificationsCount @com.keepit.eliza.controllers.mobile.MobileMessagingController.getUnreadNotificationsCount()
 POST    /m/1/eliza/messages/:parentId     @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageReplyAction(parentId: ExternalId[MessageThread])
