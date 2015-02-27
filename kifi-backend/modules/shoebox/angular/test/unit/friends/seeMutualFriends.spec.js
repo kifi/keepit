@@ -55,8 +55,6 @@ describe('kifi.friends.seeMutualFriends', function () {
       // Compile also the parent 'kfModal' directive because 'kfSeeMutualFriends' depends
       // on the controller in 'kfModal'.
       elem = $compile('<div kf-modal><div kf-see-mutual-friends></div></div>')(scope);
-
-      spyOn(friendService, 'getPictureUrlForUser').and.returnValue('fake picture URL');
     });
 
     it('should have the correct pymk header', function () {

@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .directive('kfRecoLibraryCard', [
-  '$FB', '$q', '$rootScope', '$timeout', '$twitter', 'env', 'friendService', 'libraryService',
+  '$FB', '$q', '$rootScope', '$timeout', '$twitter', 'env', 'libraryService',
   'modalService','profileService', 'routeService', 'util',
-  function ($FB, $q, $rootScope, $timeout, $twitter, env, friendService, libraryService,
+  function ($FB, $q, $rootScope, $timeout, $twitter, env, libraryService,
     modalService, profileService, routeService, util) {
     return {
       restrict: 'A',
@@ -39,7 +39,6 @@ angular.module('kifi')
           }
 
           if (scope.library.owner) {
-            scope.library.owner.picUrl = friendService.getPictureUrlForUser(scope.library.owner);
             scope.library.owner.profileUrl = routeService.getProfileUrl(scope.library.owner.username);
           }
 
@@ -77,7 +76,6 @@ angular.module('kifi')
         }
 
         function augmentFollower(follower) {
-          follower.picUrl = friendService.getPictureUrlForUser(follower);
           follower.profileUrl = routeService.getProfileUrl(follower.username);
           return follower;
         }

@@ -52,4 +52,5 @@ class TwitterWaitlistRepoImpl @Inject() (
     val query = sql"select count(*) from twitter_waitlist tw where tw.state = 'active' and tw.created_at < ${time}"
     query.as[Int].first
   }
+
 }

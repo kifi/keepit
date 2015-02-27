@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .directive('kfLibraryHeader', [
   '$FB', '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$twitter', '$window',
-  'env', 'friendService', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
+  'env', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
   'routeService', 'util',
   function ($FB, $http, $location, $q, $rootScope, $state, $stateParams, $timeout, $twitter, $window,
-            env, friendService, libraryService, modalService, profileService, platformService, signupService,
+            env, libraryService, modalService, profileService, platformService, signupService,
             routeService, util) {
     return {
       restrict: 'A',
@@ -64,7 +64,6 @@ angular.module('kifi')
           }
 
           if (scope.library.owner) {
-            scope.library.owner.picUrl = friendService.getPictureUrlForUser(scope.library.owner);
             scope.library.owner.profileUrl = routeService.getProfileUrl(scope.library.owner.username);
           }
 
@@ -103,7 +102,6 @@ angular.module('kifi')
         }
 
         function augmentFollower(follower) {
-          follower.picUrl = friendService.getPictureUrlForUser(follower);
           follower.profileUrl = routeService.getProfileUrl(follower.username);
           return follower;
         }
