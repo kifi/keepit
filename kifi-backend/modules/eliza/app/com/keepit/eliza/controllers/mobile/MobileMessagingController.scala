@@ -48,7 +48,7 @@ class MobileMessagingController @Inject() (
         notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true, filterByReplyable = Some(false))
     }
     noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
-      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId, filterByReplyable = Some(false))
       Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
     }
   }
@@ -61,7 +61,7 @@ class MobileMessagingController @Inject() (
         notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true, filterByReplyable = Some(true))
     }
     noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
-      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId, filterByReplyable = Some(true))
       Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
     }
   }
