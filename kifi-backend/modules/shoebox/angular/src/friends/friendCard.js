@@ -24,15 +24,15 @@ angular.module('kifi')
         };
 
         scope.reallyUnfriend = function () {
-          friendService.unfriend(friend.id);
+          friendService.unfriend(scope.friend.id);
         };
 
         scope.unsearchfriend = function () {
-          friendService.unSearchFriend(friend.id);
+          friendService.unSearchFriend(scope.friend.id);
         };
 
         scope.researchfriend = function () {
-          friendService.reSearchFriend(friend.id);
+          friendService.reSearchFriend(scope.friend.id);
         };
 
       }
