@@ -18,11 +18,11 @@
         <form class="login-form login-email-pass" method="POST" action="@authRoutes.logInWithUserPass()">
           <div class="input-wrapper">
             <input type="email" name="email" class="form-input login-email" placeholder="Your email address">
-            <div id="login-email" class="error"></div>
+            <div id="error-login-email" class="error"></div>
           </div>
           <div class="input-wrapper">
             <input type="password" name="password" class="form-input login-password" placeholder="Your password">
-            <div id="login-password" class="error"></div>
+            <div id="error-login-password" class="error"></div>
           </div>
           <a href="#" class="forgot-password">Forgot your password?</a>
           <button id="login-btn" class="btn-authentication btn-login" type="submit">Log In</button>
