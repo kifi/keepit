@@ -101,3 +101,54 @@ trait NormalizationInfo { self: Article =>
   def alternateUrls: Set[String]
   def shortUrl: Option[String]
 }
+
+case class YoutubeArticle(
+    // Default Info
+    createdAt: DateTime,
+    url: String,
+    destinationUrl: String,
+    title: Option[String],
+    description: Option[String],
+    keywords: Seq[String],
+    authors: Seq[PageAuthor],
+    publishedAt: Option[DateTime],
+    // Normalization Info
+    redirects: Seq[HttpRedirect],
+    canonicalUrl: Option[String],
+    openGraphUrl: Option[String],
+    alternateUrls: Set[String],
+    shortUrl: Option[String],
+    // Video Info
+    videoTitle: Option[String],
+    videoDescription: String,
+    videoKeywords: Seq[String],
+    channel: String,
+    tracks: Seq[YoutubeTrack],
+    viewCount: Int) extends Article with NormalizationInfo {
+  type A = YoutubeArticle
+  def kind = YoutubeArticle
+
+  def content = Some(Seq(
+    videoTitle.getOrElse(""),
+    videoDescription,
+    channel,
+    preferredTrack.map(_.content).getOrElse("")
+  ).filter(_.nonEmpty).mkString("\n")).filter(_.nonEmpty)
+
+  private def preferredTrack: Option[YoutubeTrack] = {
+    tracks.find(_.info.isDefault) orElse {
+      tracks.find(_.info.isAutomatic).map(asr =>
+        tracks.find(t => t.info.langCode == asr.info.langCode && !t.info.isAutomatic).getOrElse(asr)
+      )
+    } orElse tracks.find(_.info.langCode.lang == "en")
+  }
+}
+
+case object YoutubeArticle extends ArticleKind[YoutubeArticle] {
+  val typeCode = "youtube"
+  val version = 1
+  def formatByVersion(thatVersion: Int) = thatVersion match {
+    case `version` => Json.format[YoutubeArticle]
+    case _ => throw new UnknownArticleVersionException(this, version, thatVersion)
+  }
+}
