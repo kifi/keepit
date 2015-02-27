@@ -17,10 +17,6 @@ angular.module('kifi')
       return env.navBase + path + (params ? queryStr(params) : '');
     }
 
-    function formatPicUrl(userId, pictureName, size) {
-      return env.picBase + '/users/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
-    }
-
     var queryStr = util.formatQueryString;
 
     return {
@@ -47,7 +43,9 @@ angular.module('kifi')
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),
       userPasswordUrl: route('/user/password'),
-      formatPicUrl: formatPicUrl,
+      formatPicUrl: function (userId, pictureName, size) {
+        return env.picBase + '/users/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
+      },
       libraryImageUrl: function (path) {
         return env.picBase + '/' + path;
       },

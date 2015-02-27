@@ -38,7 +38,6 @@ angular.module('kifi')
     [
       $rootScope.$on('libraryOnPage', function (e, library) {
         $scope.library = library;
-        $scope.libOwnerPicUrl = library && routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 100);
         $scope.libOwnerProfileUrl = library && routeService.getProfileUrl(library.owner.username);
         $scope.search.libraryChip = !!library;
       }),
@@ -143,7 +142,6 @@ angular.module('kifi')
     };
 
     $scope.me = profileService.me;
-    $scope.me.picUrl = $scope.me.picUrl || '//www.kifi.com/assets/img/ghost.200.png';
 
     $scope.addKeeps = function (library) {
       modalService.open({

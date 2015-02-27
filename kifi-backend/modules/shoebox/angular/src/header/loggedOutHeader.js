@@ -31,7 +31,6 @@ angular.module('kifi')
     [
       $rootScope.$on('libraryOnPage', function (e, library) {
         $scope.library = library;
-        $scope.libOwnerPicUrl = library && routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 100);
         $scope.libOwnerProfileUrl = library && routeService.getProfileUrl(library.owner.username);
 
         if ($state.params && $state.params.q && util.startsWith($state.params.q, 'tag:')) {
