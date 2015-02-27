@@ -37,7 +37,7 @@ class CuratorController @Inject() (
     feedEmailSender: FeedDigestEmailSender,
     userExperimentCommander: RemoteUserExperimentCommander,
     personaRecoIngestor: PersonaRecommendationIngestor,
-    protected val airbrake: AirbrakeNotifier) extends CuratorServiceController {
+    protected val airbrake: AirbrakeNotifier) extends CuratorServiceController with Logging{
 
   val topScoreRecoStrategy = new TopScoreRecoSelectionStrategy()
   val diverseRecoStrategy = new DiverseRecoSelectionStrategy()
@@ -207,6 +207,12 @@ class CuratorController @Inject() (
   def ingestPersonaRecos(userId: Id[User]) = Action.async(parse.tolerantJson) { request =>
     val js = request.body
     val pids = (js \ "personaIds").as[Seq[Id[Persona]]]
-    personaRecoIngestor.ingestUserRecosByPersonas(userId, pids).collect { case _ => Ok }
+    val t1 = System.currentTimeMillis()
+    personaRecoIngestor.ingestUserRecosByPersonas(userId, pids).collect { case _ =>
+      val t2 = System.currentTimeMillis()
+      log.info(s"persona reco ingestion: ${(t2 - t1)/1000f} seconds")
+      statsd.time("curatorController.ingestPersonaRecos", (t2 - t1))
+      Ok
+    }
   }
 }
