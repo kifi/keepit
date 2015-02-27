@@ -152,6 +152,8 @@ POST    /m/1/events                         @com.keepit.controllers.tracking.Eve
 
 GET     /m/1/whatismyip                     @com.keepit.controllers.mobile.MobileAuthController.whatIsMyIp()
 
+POST    /m/1/reportData                     @com.keepit.controllers.mobile.MobileUserController.reportData()
+
 GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.MobileUserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
