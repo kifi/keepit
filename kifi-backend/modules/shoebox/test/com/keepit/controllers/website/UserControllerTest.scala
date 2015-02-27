@@ -321,6 +321,75 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           val user1lib = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
           user1lib.visibility === LibraryVisibility.PUBLISHED
 
+          val user3lib = library().withUser(user3).published().saved.savedFollowerMembership(user2)
+          val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
+          membership().withLibraryFollower(library().withUser(user5).published().saved, user1).unlisted().saved
+
+          invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved
+          invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved // duplicate library invite
+          invite().fromLibraryOwner(user5lib).toUser(user1.id.get).withState(LibraryInviteStates.ACCEPTED).saved
+
+          keeps(2).map(_.withLibrary(user1secretLib)).saved
+          keeps(3).map(_.withLibrary(user1lib)).saved
+          keep().withLibrary(user3lib).saved
+
+          (user1, user2, user3, user4, user5, user1lib)
+        }
+        val controller = inject[UserController]
+        controller.loadFullConnectionUser(user1.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }, None, Some(user2.id.get)) === Json.obj(
+          "id" -> user1.externalId,
+          "firstName" -> user1.firstName,
+          "lastName" -> user1.lastName,
+          "pictureName" -> "pic1.jpg",
+          "username" -> user1.username.value,
+          "libs" -> 2, "followers" -> 4, "connections" -> 3, "connected" -> true, "mFollowers" -> 1, "mlibs" -> 0, "mConnections" -> 1
+        )
+        controller.loadFullConnectionUser(user1.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }, None, None) === Json.obj(
+          "id" -> user1.externalId,
+          "firstName" -> user1.firstName,
+          "lastName" -> user1.lastName,
+          "pictureName" -> "pic1.jpg",
+          "username" -> user1.username.value,
+          "libs" -> 1, "followers" -> 4, "connections" -> 3
+        )
+        controller.loadFullConnectionUser(user2.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }, None, Some(user3.id.get)) === Json.obj(
+          "id" -> user2.externalId,
+          "firstName" -> user2.firstName,
+          "lastName" -> user2.lastName,
+          "pictureName" -> "0.jpg",
+          "username" -> user2.username.value,
+          "libs" -> 0, "followers" -> 0, "connections" -> 2, "connected" -> true, "mFollowers" -> 0, "mlibs" -> 1, "mConnections" -> 1
+        )
+        controller.loadFullConnectionUser(user2.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }, None, None) === Json.obj(
+          "id" -> user2.externalId,
+          "firstName" -> user2.firstName,
+          "lastName" -> user2.lastName,
+          "pictureName" -> "0.jpg",
+          "username" -> user2.username.value,
+          "libs" -> 0, "followers" -> 0, "connections" -> 2
+        )
+      }
+    }
+
+    "get profile for self" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
+          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
+          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          connect(user1 -> user2,
+            user1 -> user3,
+            user4 -> user1,
+            user2 -> user3).saved
+
+          val user1secretLib = libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2)
+
+          val user1lib = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
+          user1lib.visibility === LibraryVisibility.PUBLISHED
+
           val user3lib = library().withUser(user3).published().saved
           val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
           membership().withLibraryFollower(library().withUser(user5).published().saved, user1).unlisted().saved

@@ -65,8 +65,69 @@ class UserController @Inject() (
     emailSender: EmailSenderProvider,
     libraryCommander: LibraryCommander,
     libraryInviteRepo: LibraryInviteRepo,
+    libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
+
+  //todo(eishay): caching work!
+  def loadFullConnectionUser(ownerId: Id[User], owner: BasicUser, connectedOpt: Option[Boolean], viewer: Option[Id[User]]): JsValue = {
+    val json = Json.toJson(owner).as[JsObject]
+    db.readOnlyMaster { implicit t =>
+      //global or mutual
+      val libCount = viewer.map(u => libraryRepo.countLibrariesForOtherUser(ownerId, u)).getOrElse(libraryRepo.countLibrariesOfUserFromAnonymous(ownerId)) //not cached
+      //global
+      val followersCount = libraryMembershipRepo.countFollowersWithOwnerId(ownerId) //cached
+      val connectionCount = userConnectionRepo.getConnectionCount(ownerId) //cached
+      val jsonWithGlobalCounts = json +
+        ("libs" -> JsNumber(libCount)) +
+        ("followers" -> JsNumber(followersCount)) +
+        ("connections" -> JsNumber(connectionCount))
+      //mutual
+      viewer.map { u =>
+        val connected = connectedOpt.getOrElse(userConnectionRepo.getConnectionOpt(ownerId, u).exists(_.state == UserConnectionStates.ACTIVE)) //not cached
+        val followingLibCount = libraryRepo.countLibrariesOfOwnerUserFollow(ownerId, u) //not cached
+        val mutualFollowersCount = libraryMembershipRepo.countMutualFollowersWithOwnerId(ownerId, u) //cached
+        val mutualConnectionCount = userConnectionRepo.getMutualConnectionCount(ownerId, u) //cached
+        jsonWithGlobalCounts +
+          ("connected" -> JsBoolean(connected)) +
+          ("mFollowers" -> JsNumber(mutualFollowersCount)) +
+          ("mlibs" -> JsNumber(followingLibCount)) +
+          ("mConnections" -> JsNumber(mutualConnectionCount))
+      }.getOrElse(jsonWithGlobalCounts)
+    }
+  }
+
+  def fullConnectionsByViewer(ownerExternalId: ExternalId[User]) = MaybeUserAction { request =>
+    val owner = db.readOnlyReplica { implicit s => userRepo.get(ownerExternalId) }
+    val ownerId = owner.id.get
+    val viewer = request.userIdOpt
+    Ok(loadFullConnectionUser(ownerId, BasicUser.fromUser(owner), None, viewer))
+  }
+
+  def fullConnectionsByViewer(ownerExternalId: ExternalId[User], limit: Int) = MaybeUserAction.async { request =>
+    val owner = db.readOnlyReplica { implicit s => userRepo.get(ownerExternalId) }
+    val ownerId = owner.id.get
+    val viewer = request.userIdOpt.getOrElse(ownerId)
+    userConnectionsCommander.getConnectionsSortedByRelationship(viewer, ownerId) map { connections =>
+      val head = connections.take(limit)
+      val userMap = db.readOnlyMaster { implicit s => basicUserRepo.loadAll(head.map(_.userId).toSet) }
+      val users = head.map(u => userMap(u.userId) -> u.connected)
+      val usersJson = users.map(u => loadFullConnectionUser(ownerId, u._1, Some(u._2), request.userIdOpt))
+      Ok(Json.obj("users" -> usersJson, "count" -> connections.size))
+    }
+  }
+
+  def connectionsByViewer(ownerExternalId: ExternalId[User]) = MaybeUserAction.async { request =>
+    val owner = db.readOnlyReplica { implicit s => userRepo.get(ownerExternalId) }
+    val ownerId = owner.id.get
+    val viewer = request.userIdOpt.getOrElse(ownerId)
+    userConnectionsCommander.getConnectionsSortedByRelationship(viewer, ownerId) map { connections =>
+      val userMap = db.readOnlyMaster { implicit s => basicUserRepo.loadAll(connections.map(_.userId).toSet) }
+      val ids = connections.flatMap(u => userMap.get(u.userId)).map(_.externalId)
+      Ok(Json.obj("ids" -> ids))
+    }
+  }
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
     val (connectionsPage, total) = userConnectionsCommander.getConnectionsPage(request.userId, page, pageSize)
