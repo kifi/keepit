@@ -19,7 +19,11 @@ GET     /signup                     @com.keepit.controllers.core.AuthController.
 
 # New signup pages
 
-GET     /signupMinimal              @com.keepit.controllers.core.AuthController.signupMinimal()
+GET     /new/signup                 @com.keepit.controllers.core.AuthController.signupPageMinimal()
+GET     /new/signupEmail            @com.keepit.controllers.core.AuthController.signupPageGetEmailMinimal()
+GET     /new/signupName             @com.keepit.controllers.core.AuthController.signupPageGetName()
+GET     /new/login                  @com.keepit.controllers.core.AuthController.loginPageMinimal()
+GET     /new/loginNoTwitter         @com.keepit.controllers.core.AuthController.loginPageNoTwitterMinimal()
 
 # End new signup pages
 
