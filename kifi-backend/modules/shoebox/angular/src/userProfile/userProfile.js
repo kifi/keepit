@@ -280,8 +280,7 @@ angular.module('kifi')
           currentPageOrigin: $scope.currentPageOrigin,
           returnAction: function () {
             libraryService.getLibraryById(library.id, true).then(function (data) {
-              var followersList = library.followers; // contains picUrl for each follower
-              _.assign(library, data.library, {followers: followersList}); // replaces all new data (but data.library.followers does not have picUrl)
+              _.assign(library, data.library);
               library.listed = data.listed;
               library.path = data.library.url;
             })['catch'](modalService.openGenericErrorModal);

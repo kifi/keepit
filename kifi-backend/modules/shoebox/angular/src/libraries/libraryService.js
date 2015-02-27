@@ -96,7 +96,6 @@ angular.module('kifi')
       this.reason = reason;
       this.followers = library.followers.map(function (user) {
         return _.merge(user, {
-          picUrl: routeService.formatPicUrl(user.id, user.pictureName, 200),
           profileUrl: routeService.getProfileUrl(user.username)
         });
       });
