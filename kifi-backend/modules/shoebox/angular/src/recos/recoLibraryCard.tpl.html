@@ -12,7 +12,7 @@
         <div class="kf-rcl-info">
           <div class="kf-rcl-owner">
             <a href="{{library.owner.profileUrl}}" kf-track-origin="recommendationsPage/curator">
-              <img src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
+              <img ng-src="{{library.owner | pic:100}}"
                 class="kf-rcl-owner-image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
             </a>
             <div class="kf-rcl-owner-text">

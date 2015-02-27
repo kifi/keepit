@@ -17,7 +17,7 @@
       <div ng-repeat="mutualFriend in mutualFriendPair" class="kf-mutual-friend-card">
         <a href="{{mutualFriend.profileUrl}}" ng-click="close()"
           kf-track-origin="pymk/mutualFriends">
-          <img class="kf-mutual-friends-image" title="{{mutualFriend.firstName}} {{mutualFriend.lastName}}" ng-src="{{mutualFriend.pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
+          <img class="kf-mutual-friends-image" title="{{mutualFriend.firstName}} {{mutualFriend.lastName}}" ng-src="{{mutualFriend | pic:200}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
         </a>
         <div class="kf-mutual-friend-card-info">
           <div class="kf-mutual-friend-card-name">{{mutualFriend.firstName}} {{mutualFriend.lastName}}</div>
