@@ -1,6 +1,7 @@
 package com.keepit.rover.article
 
 import com.keepit.model.PageAuthor
+import com.keepit.scraper.HttpRedirect
 import com.keepit.scraper.embedly.{ EmbedlyEntity, EmbedlyKeyword, EmbedlyImage }
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -91,4 +92,12 @@ case object EmbedlyArticle extends ArticleKind[EmbedlyArticle] {
     case `version` => Json.format[EmbedlyArticle]
     case _ => throw new UnknownArticleVersionException(this, version, thatVersion)
   }
+}
+
+trait NormalizationInfo { self: Article =>
+  def redirects: Seq[HttpRedirect]
+  def canonicalUrl: Option[String]
+  def openGraphUrl: Option[String]
+  def alternateUrls: Set[String]
+  def shortUrl: Option[String]
 }
