@@ -728,7 +728,7 @@ class LibraryCommander @Inject() (
             category = NotificationCategory.User.LIBRARY_INVITATION,
             extra = Some(Json.obj(
               "inviter" -> inviter,
-              "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libOwner, libImageOpt))
+              "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
             ))
           )
 
@@ -893,7 +893,7 @@ class LibraryCommander @Inject() (
       category = NotificationCategory.User.LIBRARY_FOLLOWED,
       extra = Some(Json.obj(
         "follower" -> BasicUser.fromUser(follower),
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, owner, libImageOpt))
+        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
       ))
     )
   }
@@ -925,7 +925,7 @@ class LibraryCommander @Inject() (
           category = NotificationCategory.User.NEW_KEEP,
           extra = Some(Json.obj(
             "keeper" -> basicKeeper,
-            "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, basicKeeper, libImageOpt)),
+            "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, libImageOpt, basicKeeper)),
             "keep" -> Json.obj(
               "id" -> newKeep.externalId,
               "url" -> newKeep.url

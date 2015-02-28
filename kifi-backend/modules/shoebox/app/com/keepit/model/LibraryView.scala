@@ -210,7 +210,7 @@ case class LibraryNotificationInfo(
   image: Option[LibraryImageInfo])
 
 object LibraryNotificationInfo {
-  def fromLibraryAndOwner(lib: Library, owner: BasicUser, image: Option[LibraryImage])(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
+  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser)(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
     LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, lib.slug, lib.color, owner, image.map(LibraryImageInfo.createInfo(_)))
   }
 }
