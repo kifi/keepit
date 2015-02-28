@@ -132,3 +132,13 @@ case class LibrariesWithWriteAccessUserKey(userId: Id[User]) extends Key[Set[Id[
 
 class LibrariesWithWriteAccessCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LibrariesWithWriteAccessUserKey, Set[Id[Library]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class LibraryMembershipCountByLibIdAndAccessKey(libraryId: Id[Library], access: LibraryAccess) extends Key[Int] {
+  override val version = 1
+  val namespace = "library_membership_count_by_lib_id_and_access"
+  def toKey(): String = s"$libraryId:$access"
+}
+
+class LibraryMembershipCountByLibIdAndAccessCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[LibraryMembershipCountByLibIdAndAccessKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
