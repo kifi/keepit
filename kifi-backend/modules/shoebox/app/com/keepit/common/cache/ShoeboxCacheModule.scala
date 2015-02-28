@@ -1,6 +1,6 @@
 package com.keepit.common.cache
 
-import com.keepit.commanders.{ RelatedLibrariesCache, LibraryMetadataCache, UserMetadataCache, BasicCollectionByIdCache }
+import com.keepit.commanders._
 import com.keepit.common.seo.SiteMapCache
 import com.keepit.controllers.core.StateTokenCache
 import com.keepit.model.cache.UserSessionViewExternalIdCache
@@ -9,7 +9,7 @@ import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
-import com.keepit.social.BasicUserUserIdCache
+import com.keepit.social.{ BasicUserUserIdCache }
 import com.keepit.classify.DomainCache
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
@@ -230,6 +230,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def userMutualConnectionCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserMutualConnectionCountCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
   def searchFriendsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SearchFriendsCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
 
@@ -330,6 +335,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def followersCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new FollowersCountCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
+  def mutualFollowersCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new MutualFollowersCountCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides

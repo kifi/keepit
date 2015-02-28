@@ -39,6 +39,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
   def getAllUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
+  def getAllUsersByExternalId(ids: Seq[ExternalId[User]])(implicit session: RSession): Map[ExternalId[User], User]
   def getByUsername(username: Username)(implicit session: RSession): Option[User]
   def getRecentActiveUsers(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Seq[Id[User]]
 }
@@ -156,14 +157,13 @@ class UserRepoImpl @Inject() (
   }
 
   override def invalidateCache(user: User)(implicit session: RSession) = {
+    val basicUser = BasicUser.fromUser(user)
     for (id <- user.id) {
       idCache.set(UserIdKey(id), user)
-      val basicUser = BasicUser.fromUser(user)
       basicUserCache.set(BasicUserUserIdKey(id), basicUser)
       usernameCache.set(UsernameKey(user.username), user)
       userMetadataCache.remove(UserMetadataKey(id))
     }
-
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
     session.onTransactionSuccess {
       invalidateMixpanel(user)
@@ -226,6 +226,7 @@ class UserRepoImpl @Inject() (
       valueMap.map { case (k, v) => (k.id -> v) }
     }
   }
+
   def getAllUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User] = {
     if (ids.isEmpty) {
       Map.empty
@@ -239,6 +240,22 @@ class UserRepoImpl @Inject() (
         users.map { u => (UserIdKey(u.id.get) -> u) }.toMap
       }
       valueMap.map { case (k, v) => (k.id -> v) }
+    }
+  }
+
+  def getAllUsersByExternalId(ids: Seq[ExternalId[User]])(implicit session: RSession): Map[ExternalId[User], User] = {
+    if (ids.isEmpty) {
+      Map.empty
+    } else if (ids.size == 1) {
+      val id = ids.head
+      Map(id -> get(id))
+    } else {
+      val valueMap = externalIdCache.bulkGetOrElse(ids.map(UserExternalIdKey(_)).toSet) { keys =>
+        val missing = keys.map(_.externalId)
+        val users = (for (f <- rows if f.externalId.inSet(missing)) yield f).list
+        users.map { u => (UserExternalIdKey(u.externalId) -> u) }.toMap
+      }
+      valueMap.map { case (k, v) => (k.externalId -> v) }
     }
   }
 
