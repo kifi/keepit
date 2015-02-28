@@ -201,6 +201,7 @@ class ShoeboxScraperController @Inject() (
   }
 
   def saveScrapeInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
+    statsd.gauge("saveScrapeInfo", 1)
     val ts = System.currentTimeMillis
     val json = request.body
     val info = json.as[ScrapeInfo]
