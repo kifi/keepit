@@ -216,7 +216,7 @@ class ShoeboxScraperController @Inject() (
         }
       }
     }
-    log.debug(s"[saveScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
+    log.info(s"[saveScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
     Ok
   }
 
