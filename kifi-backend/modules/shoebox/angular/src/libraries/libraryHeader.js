@@ -102,15 +102,6 @@ angular.module('kifi')
           };
         }
 
-        function preloadSocial() {
-          if (!$FB.failedToLoad && !$FB.loaded) {
-            $FB.init();
-          }
-          if (!$twitter.failedToLoad && !$twitter.loaded) {
-            $twitter.load();
-          }
-        }
-
 
         //
         // Scope methods.
@@ -562,12 +553,20 @@ angular.module('kifi')
           return scope.library.visibility === 'published';
         };
 
+        scope.preloadFB = function () {
+          $FB.init();
+        };
+
         scope.shareFB = function () {
           trackShareEvent('clickedShareFacebook');
           $FB.ui({
             method: 'share',
             href: scope.library.shareFbUrl
           });
+        };
+
+        scope.preloadTwitter = function () {
+          $twitter.load();
         };
 
         scope.shareTwitter = function () {
@@ -732,8 +731,6 @@ angular.module('kifi')
         augmentData();
 
         updateInvite();
-
-        scope.$evalAsync(preloadSocial);
 
         $timeout(function () {
           element.addClass('kf-loaded');  // enables transitions/animations
