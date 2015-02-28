@@ -120,7 +120,7 @@ class LibraryCommander @Inject() (
         val library = librariesById(libId)
         val owner = ownersById(library.ownerId)
         val keepCount = keepCountsByLibraryId(libId)
-        LibraryInfo.fromLibraryAndOwner(library, owner, keepCount)
+        LibraryInfo.fromLibraryAndOwner(library, None, owner, keepCount) // library images are not used, so no need to include
       }
     }
   }

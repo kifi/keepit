@@ -60,7 +60,8 @@ class MobileLibraryController @Inject() (
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
         val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
-        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)))
+        val libImage = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize)
+        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, libImage, owner, numKeeps)))
     }
   }
 
@@ -82,7 +83,8 @@ class MobileLibraryController @Inject() (
         Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
         val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
-        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)))
+        val libImage = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize)
+        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, libImage, owner, numKeeps)))
     }
   }
 
@@ -140,7 +142,7 @@ class MobileLibraryController @Inject() (
           (basicUserRepo.load(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
         }
         val libImage = libraryImages.get(library.id.get)
-        val info = LibraryInfo.fromLibraryAndOwner(lib = library, owner = owner, keepCount = numKeeps, image = libImage)
+        val info = LibraryInfo.fromLibraryAndOwner(lib = library, image = libImage, owner = owner, keepCount = numKeeps)
         var memInfo = Json.obj("access" -> mem.access)
         if (mem.lastViewed.nonEmpty) {
           memInfo = memInfo ++ Json.obj("lastViewed" -> mem.lastViewed)
@@ -182,7 +184,7 @@ class MobileLibraryController @Inject() (
         (basicUserRepo.load(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
       }
       val libImage = libImages.get(library.id.get)
-      val info = LibraryInfo.fromLibraryAndOwner(lib = library, owner = owner, keepCount = numKeeps, image = libImage)
+      val info = LibraryInfo.fromLibraryAndOwner(lib = library, image = libImage, owner = owner, keepCount = numKeeps)
       val memInfo = if (mem.lastViewed.nonEmpty) Json.obj("access" -> mem.access, "lastViewed" -> mem.lastViewed) else Json.obj("access" -> mem.access)
       Json.toJson(info).as[JsObject] ++ memInfo
     }
@@ -195,7 +197,7 @@ class MobileLibraryController @Inject() (
           keepRepo.getCountByLibrary(lib.id.get))
       }
       val libImage = libImages.get(lib.id.get)
-      val info = LibraryInfo.fromLibraryAndOwner(lib = lib, owner = libOwner, keepCount = numKeeps, inviter = Some(inviter), image = libImage)
+      val info = LibraryInfo.fromLibraryAndOwner(lib = lib, image = libImage, owner = libOwner, keepCount = numKeeps, inviter = Some(inviter))
       Json.toJson(info).as[JsObject] ++ Json.obj("access" -> invite.access)
     }
     Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
@@ -248,7 +250,7 @@ class MobileLibraryController @Inject() (
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(lib) =>
             val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
-            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)))
+            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, numKeeps)))
         }
     }
   }

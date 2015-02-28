@@ -1,6 +1,7 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.Inject
+import com.keepit.commanders.{ ProcessedImageSize, LibraryImageCommander }
 import com.keepit.model.LibraryInfo
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -24,6 +25,7 @@ class LibraryInviteEmailSender @Inject() (
     keepRepo: KeepRepo,
     userEmailRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
+    libraryImageCommander: LibraryImageCommander,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   def sendInvite(invite: LibraryInvite)(implicit publicIdConfig: PublicIdConfiguration): Future[Option[ElectronicMail]] = {
@@ -38,7 +40,8 @@ class LibraryInviteEmailSender @Inject() (
         val libOwner = basicUserRepo.load(library.ownerId)
         val inviter = basicUserRepo.load(invite.inviterId)
         val numKeeps = keepRepo.getCountByLibrary(library.id.get)
-        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libOwner, numKeeps, Some(inviter))
+        val libImage = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Large.idealSize)
+        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, numKeeps, Some(inviter))
         (library, libraryInfo)
       }
 

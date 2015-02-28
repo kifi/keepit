@@ -97,13 +97,13 @@ case class LibraryInfo(
   shortDescription: Option[String],
   url: String,
   color: Option[LibraryColor], // system libraries have no color
+  image: Option[LibraryImageInfo],
   owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
   kind: LibraryKind,
   lastKept: Option[DateTime],
-  inviter: Option[BasicUser],
-  image: Option[LibraryImageInfo])
+  inviter: Option[BasicUser])
 
 object LibraryInfo {
   implicit val format = (
@@ -113,16 +113,16 @@ object LibraryInfo {
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'color).formatNullable[LibraryColor] and
+    (__ \ 'image).formatNullable[LibraryImageInfo] and
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
     (__ \ 'kind).format[LibraryKind] and
     (__ \ 'lastKept).formatNullable[DateTime] and
-    (__ \ 'inviter).formatNullable[BasicUser] and
-    (__ \ 'image).formatNullable[LibraryImageInfo]
+    (__ \ 'inviter).formatNullable[BasicUser]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int, inviter: Option[BasicUser] = None, image: Option[LibraryImage] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser, keepCount: Int, inviter: Option[BasicUser] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -130,13 +130,13 @@ object LibraryInfo {
       shortDescription = lib.description,
       url = Library.formatLibraryPath(owner.username, lib.slug),
       color = lib.color,
+      image = image.map(LibraryImageInfo.createInfo(_)),
       owner = owner,
       numKeeps = keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
       kind = lib.kind,
       lastKept = lib.lastKept,
-      inviter = inviter,
-      image = image.map(LibraryImageInfo.createInfo(_))
+      inviter = inviter
     )
   }
 }
