@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('InviteCtrl', [
-  '$scope', '$http', '$window', 'modalService', 'profileService', 'routeService', 'socialService', 'wtiService',
-  function ($scope, $http, $window, modalService, profileService, routeService, socialService, wtiService) {
+  '$scope', '$http', '$window', 'modalService', 'profileService', 'socialService', 'wtiService',
+  function ($scope, $http, $window, modalService, profileService, socialService, wtiService) {
     $window.document.title = 'Kifi • Invite your connections';
 
     $scope.$watch(socialService.checkIfRefreshingSocialGraph, function (v) {
@@ -274,9 +274,9 @@ angular.module('kifi')
 
 .directive('kfFriendRequestBanner', [
   '$analytics', '$timeout', 'initParams',
-  'profileService', 'routeService', 'userService',
+  'profileService', 'userService',
   function ($analytics, $timeout, initParams,
-    profileService, routeService, userService) {
+    profileService, userService) {
 
     function setupShowFriendRequestBanner(scope, externalId, eventSubtype) {
       function closeBanner() {
@@ -289,7 +289,6 @@ angular.module('kifi')
         var user = res.data;
         scope.user = user;
         scope.mainLabel = user.firstName + ' ' + user.lastName;
-        scope.userProfileUrl = routeService.getProfileUrl(user.username);
         scope.hidden = false;
         scope.actionText = 'Add';
         scope.result = {

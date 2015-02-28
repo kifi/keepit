@@ -683,8 +683,15 @@ api.port.on({
   keeps_and_libraries: function (_, respond, tab) {
     var d = pageData[tab.nUri];
     loadLibraries(function (libraries) {
+      var recentLibIds = loadRecentLibs();
+      if (guideData && guideData.library && recentLibIds.indexOf(guideData.library.id) < 0) {
+        var i = libraries.findIndex(idIs(guideData.library.id));
+        if (i >= 0) {
+          libraries = libraries.splice(i, 1).concat(libraries);  // list guided library first
+        }
+      }
       libraries.filter(idIsIn(mySysLibIds)).forEach(setProp('system', true));
-      libraries.filter(idIsIn(loadRecentLibs())).forEach(setProp('recent', true));
+      libraries.filter(idIsIn(recentLibIds)).forEach(setProp('recent', true));
       var keeps = d ? d.keeps : [];
       respond({keeps: keeps, libraries: libraries, posting: experiments.indexOf('explicit_social_posting') >= 0});
       // preload keep details

@@ -77,20 +77,14 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepWhoPic', ['routeService',
-  function (routeService) {
-    return {
-      restrict: 'A',
-      replace: true,
-      templateUrl: 'common/directives/keepWho/keepWhoPic.tpl.html',
-      scope: {
-        keeper: '=',
-        currentPageOrigin: '@'
-      },
-      link: function (scope) {
-        scope.keeper.profileUrl = routeService.getProfileUrl(scope.keeper.username);
-      }
-    };
-  }
-]);
-
+.directive('kfKeepWhoPic', function () {
+  return {
+    restrict: 'A',
+    replace: true,
+    templateUrl: 'common/directives/keepWho/keepWhoPic.tpl.html',
+    scope: {
+      keeper: '=',
+      currentPageOrigin: '@'
+    }
+  };
+});
