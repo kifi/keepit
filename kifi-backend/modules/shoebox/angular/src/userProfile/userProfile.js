@@ -29,9 +29,8 @@ angular.module('kifi')
       });
     }
 
-    function getCurrentPageOrigin() {
-      var originContext = $scope.libraryTypesToNames[$state.current.data.libraryType];
-      return 'profilePage' +  (originContext ? '.' + originContext : '');
+    function setCurrentPageOrigin() {
+      $scope.currentPageOrigin = 'profilePage' + $scope.stateSuffixToTrackingName[$state.current.name.split('.').pop()];
     }
 
     function trackPageView() {
@@ -59,11 +58,11 @@ angular.module('kifi')
     // Scope methods and data.
     //
 
-    // Mapping of library type to library names for tracking.
-    $scope.libraryTypesToNames = {
-      'own': 'OwnedLibraries',
-      'following': 'FollowedLibraries',
-      'invited': 'InvitedLibraries'
+    $scope.stateSuffixToTrackingName = {
+      own: 'OwnedLibraries',
+      following: 'FollowedLibraries',
+      invited: 'InvitedLibraries',
+      connections: 'Connections'
     };
 
 
@@ -71,40 +70,39 @@ angular.module('kifi')
     // Watches and listeners.
     //
 
-    var deregister$stateChangeSuccess = $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
+    [
+    $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
       // When routing among the nested states, track page view again.
-      if ((/^userProfile/.test(toState.name)) && (/^userProfile/.test(fromState.name)) && (toParams.username === fromParams.username)) {
+      if (/^userProfile/.test(toState.name) && /^userProfile/.test(fromState.name) && toParams.username === fromParams.username) {
         trackPageView();
-        $scope.currentPageOrigin = getCurrentPageOrigin();
+        setCurrentPageOrigin();
       }
-    });
-    $scope.$on('$destroy', deregister$stateChangeSuccess);
-
-    var deregisterCurrentLibrary = $rootScope.$on('getCurrentLibrary', function (e, args) {
+    }),
+    $rootScope.$on('getCurrentLibrary', function (e, args) {
       args.callback({});
-    });
-    $scope.$on('$destroy', deregisterCurrentLibrary);
-
-    var deregisterTrackUserProfile = $rootScope.$on('trackUserProfileEvent', function (e, eventType, attributes) {
+    }),
+    $rootScope.$on('trackUserProfileEvent', function (e, eventType, attributes) {
       if (eventType === 'click') {
         trackPageClick(attributes);
       } else if (eventType === 'view') {
         trackPageView(attributes);
       }
+    })
+    ].forEach(function (deregister) {
+      $scope.$on('$destroy', deregister);
     });
-    $scope.$on('$destroy', deregisterTrackUserProfile);
 
     //
     // Initialize controller.
     //
 
     $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi';
-    $scope.currentPageOrigin = getCurrentPageOrigin();
     $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
     $scope.profile = _.cloneDeep(profile);
     $scope.viewingOwnProfile = profile.id === profileService.me.id;
 
     trackPageView();
+    setCurrentPageOrigin();
 
     if (initParams.install === '1' && !installService.installedVersion) {
       showInstallModal();
@@ -125,7 +123,7 @@ angular.module('kifi')
     var loading = false;
     var newLibraryIds = [];
 
-    $scope.libraryType = $state.current.data.libraryType;
+    $scope.libraryType = $state.current.name.split('.').pop();
     $scope.libraries = null;
     $scope.me = profileService.me;
 
@@ -156,7 +154,7 @@ angular.module('kifi')
     [
       $rootScope.$on('$stateChangeSuccess', function (event, toState) {
         if (/^userProfile\.libraries\./.test(toState.name)) {
-          $scope.libraryType = toState.data.libraryType;
+          $scope.libraryType = toState.name.split('.').pop();
           refetchLibraries();
         }
       }),
@@ -318,7 +316,7 @@ angular.module('kifi')
 
     $scope.trackLibraryNav = function (toLibraryType) {
       $rootScope.$emit('trackUserProfileEvent', 'click', {
-        'action': 'clicked' + $scope.libraryTypesToNames[toLibraryType]
+        'action': 'clicked' + $scope.stateSuffixToTrackingName[toLibraryType]
       });
     };
 
@@ -330,7 +328,7 @@ angular.module('kifi')
         libraryOwnerUserName: lib.owner.username,
         libraryId: lib.id,
         libraryOwnerUserId: lib.owner.id,
-        profileTab: $scope.libraryTypesToNames[$scope.libraryType]
+        profileTab: $scope.stateSuffixToTrackingName[$scope.libraryType]
       });
     };
   }

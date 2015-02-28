@@ -13,20 +13,30 @@ angular.module('kifi')
       return res.data;
     }
 
-    var userProfileService = new Clutch(function (username) {
+    var profileClutch = new Clutch(function (username) {
       return $http.get(routeService.getUserProfile(username)).then(getData);
     }, clutchParams);
-    var userLibrariesService = new Clutch(function (username, filter, page, size) {
+
+    var librariesClutch = new Clutch(function (username, filter, page, size) {
       return $http.get(routeService.getUserLibraries(username, filter, page, size)).then(getData);
     }, clutchParams);
 
+    var connectionsClutch = new Clutch(function (username, limit) {
+      return $http.get(routeService.getUserConnections(username, limit)).then(getData);
+    }, clutchParams);
+
+    var connectionIdsClutch = new Clutch(function (username, limit) {
+      return $http.get(routeService.getUserConnectionIds(username, limit)).then(getData);
+    }, clutchParams);
+
     var api = {
-      getProfile: function (username) {
-        return userProfileService.get(username);
+      getProfile: angular.bind(profileClutch, profileClutch.get),
+      getLibraries: angular.bind(librariesClutch, librariesClutch.get),
+      getConnections: angular.bind(connectionsClutch, connectionsClutch.get),
+      getConnectionsById: function (username, ids) {
+        return $http.get(routeService.getUserConnectionsById(username, ids)).then(getData);
       },
-      getLibraries: function (username, filter, page, size) {
-        return userLibrariesService.get(username, filter, page, size);
-      }
+      getConnectionIds: angular.bind(connectionIdsClutch, connectionIdsClutch.get)
     };
 
     return api;
