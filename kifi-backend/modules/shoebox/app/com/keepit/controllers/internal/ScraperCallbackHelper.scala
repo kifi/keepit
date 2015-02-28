@@ -82,6 +82,7 @@ class ScraperCallbackHelper @Inject() (
 
   def saveNormalizedURI(normalizedUri: NormalizedURI): NormalizedURI = {
     log.info(s"scraper callback: save uri: ${normalizedUri.id.get}")
+    statsd.gauge("scraper.saveNormalizedURI", 1)
     db.readWrite(attempts = 1) { implicit s =>
       normUriRepo.save(normalizedUri) tap integrityHelpers.improveKeepsSafely
     }

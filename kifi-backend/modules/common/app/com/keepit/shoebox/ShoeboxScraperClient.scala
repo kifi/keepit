@@ -46,6 +46,7 @@ class ShoeboxScraperClientImpl @Inject() (
   val longTimeout = CallTimeouts(responseTimeout = Some(60000), maxWaitTime = Some(60000), maxJsonParseTime = Some(30000))
 
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = {
+    statsd.gauge("getUriImage", 1)
     call(Shoebox.internal.getUriImage(nUriId)).map { r =>
       Json.fromJson[Option[String]](r.json).get
     }
@@ -60,23 +61,27 @@ class ShoeboxScraperClientImpl @Inject() (
   }
 
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
+    statsd.gauge("assignScrapeTasks", 1)
     call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
       r.json.as[Seq[ScrapeRequest]]
     }
   }
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = {
+    statsd.gauge(s"saveScrapeInfo.${info.state}", 1)
     call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r => Unit }
   }
 
   @deprecated("Dangerous call. Use updateNormalizedURI instead.", "2014-01-30")
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = {
+    statsd.gauge("saveNormalizedURI", 1)
     call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = longTimeout).map { r =>
       r.json.as[NormalizedURI]
     }
   }
 
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = {
+    statsd.gauge("updateNormalizedURIState", 1)
     val json = Json.obj("state" -> state)
     call(Shoebox.internal.updateNormalizedURI(uriId), json, callTimeouts = longTimeout).imap(_ => {})
   }
@@ -120,12 +125,14 @@ class ShoeboxScraperClientImpl @Inject() (
   }
 
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = {
+    statsd.gauge("recordPermanentRedirect", 1)
     call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect))), callTimeouts = longTimeout).map { r =>
       r.json.as[NormalizedURI]
     }
   }
 
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = {
+    statsd.gauge("recordScrapedNormalization", 1)
     val payload = Json.obj(
       "id" -> uriId.id,
       "signature" -> uriSignature.toBase64(),
@@ -149,6 +156,7 @@ class ShoeboxScraperClientImpl @Inject() (
   }
 
   def getLatestKeep(url: String): Future[Option[Keep]] = {
+    statsd.gauge("getLatestKeep", 1)
     call(Shoebox.internal.getLatestKeep(), callTimeouts = longTimeout, body = JsString(url)).map { r =>
       Json.fromJson[Option[Keep]](r.json).get
     }
