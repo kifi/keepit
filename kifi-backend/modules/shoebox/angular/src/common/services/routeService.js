@@ -241,6 +241,15 @@ angular.module('kifi')
           page: _.isUndefined(opt_page) ? [] : opt_page,
           size: _.isUndefined(opt_size) ? [] : opt_size
         });
+      },
+      getUserConnections: function (username, limit) {
+        return route('/user/' + username + '/connections', {n: limit || []});
+      },
+      getUserConnectionsById: function (username, ids) {
+        return route('/user/' + username + '/connections', {ids: ids.join(',')});
+      },
+      getUserConnectionIds: function (username, limit) {
+        return route('/user/' + username + '/connections/ids', {n: limit || []});
       }
     };
   }
