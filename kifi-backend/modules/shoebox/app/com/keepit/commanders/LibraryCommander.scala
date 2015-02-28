@@ -120,7 +120,7 @@ class LibraryCommander @Inject() (
         val library = librariesById(libId)
         val owner = ownersById(library.ownerId)
         val keepCount = keepCountsByLibraryId(libId)
-        LibraryInfo.fromLibraryAndOwner(library, owner, keepCount, None)
+        LibraryInfo.fromLibraryAndOwner(library, None, owner, keepCount) // library images are not used, so no need to include
       }
     }
   }
@@ -713,6 +713,7 @@ class LibraryCommander @Inject() (
           val imgUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName, Some("https"))
           val inviterImage = if (imgUrl.endsWith(".jpg.jpg")) imgUrl.dropRight(4) else imgUrl // basicUser appends ".jpg" which causes an extra .jpg in this case
           val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
+          val libImageOpt = libraryImageCommander.getBestImageForLibrary(libId, ProcessedImageSize.Medium.idealSize)
 
           // send notifications to kifi users only
           val inviteeIdSet = invitesToPersist.map(_.userId).flatten.toSet
@@ -727,7 +728,7 @@ class LibraryCommander @Inject() (
             category = NotificationCategory.User.LIBRARY_INVITATION,
             extra = Some(Json.obj(
               "inviter" -> inviter,
-              "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libOwner))
+              "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
             ))
           )
 
@@ -880,6 +881,7 @@ class LibraryCommander @Inject() (
     val (follower, owner) = db.readOnlyReplica { implicit session =>
       userRepo.get(newFollowerId) -> basicUserRepo.load(lib.ownerId)
     }
+    val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     elizaClient.sendGlobalNotification(
       userIds = Set(lib.ownerId),
       title = "New Library Follower",
@@ -891,7 +893,7 @@ class LibraryCommander @Inject() (
       category = NotificationCategory.User.LIBRARY_FOLLOWED,
       extra = Some(Json.obj(
         "follower" -> BasicUser.fromUser(follower),
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, owner))
+        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
       ))
     )
   }
@@ -905,6 +907,7 @@ class LibraryCommander @Inject() (
       val usersById = userRepo.getUsers(newKeeps.map(_.userId) :+ library.ownerId)
       (relevantFollowers, usersById)
     }
+    val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
     val owner = usersById(library.ownerId)
     newKeeps.foreach { newKeep =>
       val toBeNotified = relevantFollowers - newKeep.userId
@@ -922,7 +925,7 @@ class LibraryCommander @Inject() (
           category = NotificationCategory.User.NEW_KEEP,
           extra = Some(Json.obj(
             "keeper" -> basicKeeper,
-            "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, basicKeeper)),
+            "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, libImageOpt, basicKeeper)),
             "keep" -> Json.obj(
               "id" -> newKeep.externalId,
               "url" -> newKeep.url

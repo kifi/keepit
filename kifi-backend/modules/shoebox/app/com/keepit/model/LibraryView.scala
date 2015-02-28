@@ -97,6 +97,7 @@ case class LibraryInfo(
   shortDescription: Option[String],
   url: String,
   color: Option[LibraryColor], // system libraries have no color
+  image: Option[LibraryImageInfo],
   owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
@@ -112,6 +113,7 @@ object LibraryInfo {
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'color).formatNullable[LibraryColor] and
+    (__ \ 'image).formatNullable[LibraryImageInfo] and
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
@@ -120,7 +122,7 @@ object LibraryInfo {
     (__ \ 'inviter).formatNullable[BasicUser]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int, inviter: Option[BasicUser])(implicit config: PublicIdConfiguration): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser, keepCount: Int, inviter: Option[BasicUser] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -128,6 +130,7 @@ object LibraryInfo {
       shortDescription = lib.description,
       url = Library.formatLibraryPath(owner.username, lib.slug),
       color = lib.color,
+      image = image.map(LibraryImageInfo.createInfo(_)),
       owner = owner,
       numKeeps = keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
@@ -202,11 +205,14 @@ case class LibraryNotificationInfo(
   id: PublicId[Library],
   name: String,
   slug: LibrarySlug,
-  owner: BasicUser)
+  color: Option[LibraryColor],
+  image: Option[LibraryImageInfo],
+  owner: BasicUser
+  )
 
 object LibraryNotificationInfo {
-  def fromLibraryAndOwner(lib: Library, owner: BasicUser)(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
-    LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, lib.slug, owner)
+  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser)(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
+    LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, lib.slug, lib.color, image.map(LibraryImageInfo.createInfo(_)), owner)
   }
 }
 
