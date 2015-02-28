@@ -1,8 +1,5 @@
 package com.keepit.rover.article
 
-import com.keepit.model.PageAuthor
-import com.keepit.scraper.HttpRedirect
-import com.keepit.scraper.embedly.{ EmbedlyEntity, EmbedlyKeyword, EmbedlyImage }
 import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.reflection.CompanionTypeSystem
@@ -12,16 +9,10 @@ sealed trait Article { self =>
   protected def kind: ArticleKind[A]
   protected def instance: A = self
 
-  def createdAt: DateTime
   def url: String
-  def destinationUrl: String
-
-  def title: Option[String]
-  def description: Option[String]
-  def content: Option[String]
-  def keywords: Seq[String]
-  def authors: Seq[PageAuthor]
-  def publishedAt(): Option[DateTime]
+  def createdAt: DateTime
+  def context: ArticleContext
+  def content: ArticleContent
 }
 
 sealed trait ArticleKind[A <: Article] {
@@ -62,27 +53,11 @@ object ArticleKind {
 case class UnknownArticleVersionException[A <: Article](kind: ArticleKind[A], currentVersion: Int, unknownVersion: Int)
   extends Throwable(s"[$kind] Unknown version: $unknownVersion (Latest version: $currentVersion)")
 
-case class EmbedlyArticle(createdAt: DateTime, json: JsValue) extends Article {
+case class EmbedlyArticle(url: String, createdAt: DateTime, json: JsValue) extends Article {
   type A = EmbedlyArticle
   def kind = EmbedlyArticle
-
-  def url = (json \ "original_url").as[String]
-  def destinationUrl = (json \ "url").as[String]
-
-  def title = (json \ "title").asOpt[String]
-  def description = (json \ "description").asOpt[String]
-  def rawContent = (json \ "content").asOpt[String]
-  def content = rawContent // todo(Léo): needs post-processing
-
-  def authors = (json \ "authors").asOpt[Seq[PageAuthor]] getOrElse Seq.empty[PageAuthor]
-  def publishedAt = (json \ "published").asOpt[DateTime]
-  def isSafe = (json \ "safe").asOpt[Boolean]
-  def language = (json \ "language").asOpt[String]
-  def images = (json \ "images").as[Seq[EmbedlyImage]]
-  def embedlyKeywords = (json \ "keywords").as[Seq[EmbedlyKeyword]]
-  def keywords = embedlyKeywords.map(_.name)
-  def entities = (json \ "entities").as[Seq[EmbedlyEntity]]
-  def faviconUrl = (json \ "favicon_url").asOpt[String]
+  lazy val content = new EmbedlyContent(json)
+  lazy val context = new EmbedlyContext(json)
 }
 
 case object EmbedlyArticle extends ArticleKind[EmbedlyArticle] {
@@ -94,54 +69,31 @@ case object EmbedlyArticle extends ArticleKind[EmbedlyArticle] {
   }
 }
 
-trait NormalizationInfo { self: Article =>
-  def redirects: Seq[HttpRedirect]
-  def canonicalUrl: Option[String]
-  def openGraphUrl: Option[String]
-  def alternateUrls: Set[String]
-  def shortUrl: Option[String]
+case class DefaultArticle(
+    createdAt: DateTime,
+    url: String,
+    content: DefaultContent,
+    context: DefaultContext) extends Article {
+  type A = DefaultArticle
+  def kind = DefaultArticle
+}
+
+case object DefaultArticle extends ArticleKind[DefaultArticle] {
+  val typeCode = "default"
+  val version = 1
+  def formatByVersion(thatVersion: Int) = thatVersion match {
+    case `version` => Json.format[DefaultArticle]
+    case _ => throw new UnknownArticleVersionException(this, version, thatVersion)
+  }
 }
 
 case class YoutubeArticle(
-    // Default Info
     createdAt: DateTime,
     url: String,
-    destinationUrl: String,
-    title: Option[String],
-    description: Option[String],
-    keywords: Seq[String],
-    authors: Seq[PageAuthor],
-    publishedAt: Option[DateTime],
-    // Normalization Info
-    redirects: Seq[HttpRedirect],
-    canonicalUrl: Option[String],
-    openGraphUrl: Option[String],
-    alternateUrls: Set[String],
-    shortUrl: Option[String],
-    // Video Info
-    videoTitle: Option[String],
-    videoDescription: String,
-    videoKeywords: Seq[String],
-    channel: String,
-    tracks: Seq[YoutubeTrack],
-    viewCount: Int) extends Article with NormalizationInfo {
+    content: YoutubeContent,
+    context: DefaultContext) extends Article {
   type A = YoutubeArticle
   def kind = YoutubeArticle
-
-  def content = Some(Seq(
-    videoTitle.getOrElse(""),
-    videoDescription,
-    channel,
-    preferredTrack.map(_.content).getOrElse("")
-  ).filter(_.nonEmpty).mkString("\n")).filter(_.nonEmpty)
-
-  private def preferredTrack: Option[YoutubeTrack] = {
-    tracks.find(_.info.isDefault) orElse {
-      tracks.find(_.info.isAutomatic).map(asr =>
-        tracks.find(t => t.info.langCode == asr.info.langCode && !t.info.isAutomatic).getOrElse(asr)
-      )
-    } orElse tracks.find(_.info.langCode.lang == "en")
-  }
 }
 
 case object YoutubeArticle extends ArticleKind[YoutubeArticle] {
@@ -152,3 +104,4 @@ case object YoutubeArticle extends ArticleKind[YoutubeArticle] {
     case _ => throw new UnknownArticleVersionException(this, version, thatVersion)
   }
 }
+
