@@ -52,7 +52,8 @@ class LibraryMembershipRepoImpl @Inject() (
   libraryMembershipCountCache: LibraryMembershipCountCache,
   followersCountCache: FollowersCountCache,
   memberIdCache: LibraryMembershipIdCache,
-  librariesWithWriteAccessCache: LibrariesWithWriteAccessCache)
+  librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
+  countByLibIdAndAccessCache: LibraryMembershipCountByLibIdAndAccessCache)
     extends DbRepo[LibraryMembership] with DbRepoWithDelete[LibraryMembership] with LibraryMembershipRepo with SeqNumberDbFunction[LibraryMembership] with Logging {
 
   import DBSession._
@@ -208,10 +209,12 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   private val countWithLibraryIdAndAccessCompiled = Compiled { (libraryId: Column[Id[Library]], access: Column[LibraryAccess]) =>
-    (for (row <- rows if row.libraryId === libraryId && row.access === access && row.state =!= LibraryMembershipStates.INACTIVE) yield row).length
+    (for (row <- rows if row.libraryId === libraryId && row.access === access && row.state =!= LibraryMembershipStates.INACTIVE) yield row.id).length
   }
   def countWithLibraryIdAndAccess(libraryId: Id[Library], access: LibraryAccess)(implicit session: RSession): Int = {
-    countWithLibraryIdAndAccessCompiled(libraryId, access).run
+    countByLibIdAndAccessCache.getOrElse(LibraryMembershipCountByLibIdAndAccessKey(libraryId, access)) {
+      countWithLibraryIdAndAccessCompiled(libraryId, access).run
+    }
   }
 
   def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): Map[LibraryAccess, Int] = {
@@ -266,6 +269,7 @@ class LibraryMembershipRepoImpl @Inject() (
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
     libMem.id.map { id =>
       memberIdCache.remove(LibraryMembershipIdKey(id))
+      countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
       libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
       if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
       // ugly! but the library is in an in memory cache so the cost is low
@@ -278,6 +282,7 @@ class LibraryMembershipRepoImpl @Inject() (
       if (libMem.state == LibraryMembershipStates.INACTIVE) {
         deleteCache(libMem)
       } else {
+        countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
         memberIdCache.set(LibraryMembershipIdKey(id), libMem)
         libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
         if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
