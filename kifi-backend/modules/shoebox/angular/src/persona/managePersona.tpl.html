@@ -15,7 +15,10 @@
       </div>
 
       <div class="dialog-button">
-        <button class="kf-mp-exit-button" ng-class="{active: selectedPersonaIds.length > 0}" ng-click="close()">{{closeText}}</button>
+        <button class="kf-mp-exit-button" ng-class="{active: selectedPersonaIds.length > 0}" ng-click="close()" ng-if="!loading">{{closeText}}</button>
+        <div class="kf-mp-logo-overlay" ng-if="loading">
+          <div class="kf-mp-loading-logo svg-small-new-logo"></div>
+        </div>
       </div>
 
     </div>

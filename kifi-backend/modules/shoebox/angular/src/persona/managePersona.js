@@ -17,6 +17,7 @@ angular.module('kifi')
         scope.selectedPersonaIds = [];
         scope.isModal = element.is('#kf-modal *');
         scope.closeText = scope.isModal ? 'Update interests' : 'Done';
+        scope.loading = false;
 
         //
         // Scope methods.
@@ -62,10 +63,13 @@ angular.module('kifi')
         scope.close = function() {
           if (scope.selectedPersonaIds.length > 0) {
             if (_.isFunction(scope.closeAction)) {
+              scope.loading = true;
               userPersonaActionService.selectPersonas(scope.selectedPersonaIds).then(function() {
                 scope.closeAction();
                 libraryService.fetchLibraryInfos(true);
+                scope.loading = false;
               });
+
             } else if (scope.isModal) {
               $rootScope.$emit('refreshRecos');
               modalService.close();
