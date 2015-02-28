@@ -60,13 +60,13 @@ class ShoeboxScraperClientImpl @Inject() (
   }
 
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
-    call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout).map { r =>
+    call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
       r.json.as[Seq[ScrapeRequest]]
     }
   }
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = {
-    call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout).map { r => Unit }
+    call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r => Unit }
   }
 
   @deprecated("Dangerous call. Use updateNormalizedURI instead.", "2014-01-30")
