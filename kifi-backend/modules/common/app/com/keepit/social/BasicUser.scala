@@ -92,15 +92,6 @@ case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
 class BasicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends ImmutableJsonCacheImpl[BasicUserUserIdKey, BasicUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class BasicUserUserExternalIdKey(userId: ExternalId[User]) extends Key[BasicUser] {
-  override val version = 1
-  val namespace = "basic_user_ext_id"
-  def toKey(): String = userId.id
-}
-
-class BasicUserUserExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends ImmutableJsonCacheImpl[BasicUserUserExternalIdKey, BasicUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
 // todo: Move to shared project between shoebox and search. This is a very specialized class that doesn't need to be in common
 case class TypeaheadUserHit(
   userId: Id[User],

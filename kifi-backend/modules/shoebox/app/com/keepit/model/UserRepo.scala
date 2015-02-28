@@ -52,7 +52,6 @@ class UserRepoImpl @Inject() (
   val idCache: UserIdCache,
   airbrake: AirbrakeNotifier,
   basicUserCache: BasicUserUserIdCache,
-  basicUserExternalIdCache: BasicUserUserExternalIdCache,
   userMetadataCache: UserMetadataCache,
   usernameCache: UsernameCache,
   heimdal: HeimdalServiceClient,
@@ -154,7 +153,6 @@ class UserRepoImpl @Inject() (
       usernameCache.remove(UsernameKey(user.username))
       externalIdCache.remove(UserExternalIdKey(user.externalId))
     }
-    basicUserExternalIdCache.remove(BasicUserUserExternalIdKey(user.externalId))
     invalidateMixpanel(user.withState(UserStates.INACTIVE))
   }
 
@@ -166,8 +164,6 @@ class UserRepoImpl @Inject() (
       usernameCache.set(UsernameKey(user.username), user)
       userMetadataCache.remove(UserMetadataKey(id))
     }
-    basicUserExternalIdCache.set(BasicUserUserExternalIdKey(user.externalId), basicUser)
-
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
     session.onTransactionSuccess {
       invalidateMixpanel(user)

@@ -98,34 +98,60 @@ class UserController @Inject() (
     }
   }
 
-  def fullConnectionsByViewer(ownerExternalId: ExternalId[User]) = MaybeUserAction { request =>
+  def fullConnectionByViewer(ownerExternalId: ExternalId[User]) = MaybeUserAction { request =>
     val owner = db.readOnlyReplica { implicit s => userRepo.get(ownerExternalId) }
     val ownerId = owner.id.get
     val viewer = request.userIdOpt
     Ok(loadFullConnectionUser(ownerId, BasicUser.fromUser(owner), None, viewer))
   }
 
-  def fullConnectionsByViewer(ownerExternalId: ExternalId[User], limit: Int) = MaybeUserAction.async { request =>
-    val owner = db.readOnlyReplica { implicit s => userRepo.get(ownerExternalId) }
-    val ownerId = owner.id.get
-    val viewer = request.userIdOpt.getOrElse(ownerId)
-    userConnectionsCommander.getConnectionsSortedByRelationship(viewer, ownerId) map { connections =>
-      val head = connections.take(limit)
-      val userMap = db.readOnlyMaster { implicit s => basicUserRepo.loadAll(head.map(_.userId).toSet) }
-      val users = head.map(u => userMap(u.userId) -> u.connected)
-      val usersJson = users.map(u => loadFullConnectionUser(ownerId, u._1, Some(u._2), request.userIdOpt))
-      Ok(Json.obj("users" -> usersJson, "count" -> connections.size))
+  def profileConnections(username: Username, limit: Int, userExtIds: String) = MaybeUserAction.async { request =>
+    userCommander.userFromUsername(username) match {
+      case None =>
+        log.warn(s"can't find username ${username.value}")
+        Future.successful(NotFound(s"username ${username.value}"))
+      case Some(owner) =>
+        val ownerId = owner.id.get
+        val viewer = request.userIdOpt.getOrElse(ownerId)
+        if (userExtIds.isEmpty) {
+          userConnectionsCommander.getConnectionsSortedByRelationship(viewer, ownerId) map { connections =>
+            val head = connections.take(limit)
+            val userMap = db.readOnlyMaster { implicit s => basicUserRepo.loadAll(head.map(_.userId).toSet) }
+            val users = head.map(u => userMap(u.userId) -> u.connected)
+            val usersJson = users.map(u => loadFullConnectionUser(ownerId, u._1, Some(u._2), request.userIdOpt))
+            Ok(Json.obj("users" -> usersJson, "count" -> connections.size))
+          }
+        } else {
+          Try(userExtIds.split(',').map(ExternalId[User])) match {
+            case Success(userIds) =>
+              val users = db.readOnlyMaster { implicit s =>
+                userIds.map(userRepo.getOpt).flatten
+              }
+              val jsons = users.map { user =>
+                loadFullConnectionUser(ownerId, BasicUser.fromUser(user), None, request.userIdOpt)
+              }
+              Future.successful(Ok(Json.obj("users" -> JsArray(jsons))))
+            case _ =>
+              Future.successful(BadRequest("ids invalid"))
+          }
+        }
     }
   }
 
-  def connectionsByViewer(ownerExternalId: ExternalId[User]) = MaybeUserAction.async { request =>
-    val owner = db.readOnlyReplica { implicit s => userRepo.get(ownerExternalId) }
-    val ownerId = owner.id.get
-    val viewer = request.userIdOpt.getOrElse(ownerId)
-    userConnectionsCommander.getConnectionsSortedByRelationship(viewer, ownerId) map { connections =>
-      val userMap = db.readOnlyMaster { implicit s => basicUserRepo.loadAll(connections.map(_.userId).toSet) }
-      val ids = connections.flatMap(u => userMap.get(u.userId)).map(_.externalId)
-      Ok(Json.obj("ids" -> ids))
+  def profileConnectionIds(username: Username, limit: Int) = MaybeUserAction.async { request =>
+    userCommander.userFromUsername(username) match {
+      case None =>
+        log.warn(s"can't find username ${username.value}")
+        Future.successful(NotFound(s"username ${username.value}"))
+      case Some(user) =>
+        val viewerId = request.userIdOpt.getOrElse(user.id.get)
+        userConnectionsCommander.getConnectionsSortedByRelationship(viewerId, user.id.get) map { connections =>
+          val userMap = db.readOnlyMaster { implicit s =>
+            basicUserRepo.loadAll(connections.take(limit).map(_.userId).toSet)
+          }
+          val ids = connections.flatMap(u => userMap.get(u.userId)).map(_.externalId)
+          Ok(Json.obj("ids" -> ids))
+        }
     }
   }
 
@@ -671,53 +697,6 @@ class UserController @Inject() (
             Ok(json ++ Json.obj("numInvitedLibraries" -> numInvited))
           case _ =>
             Ok(json)
-        }
-    }
-  }
-
-  def profileConnections(username: Username, limit: Int, userExtIds: String) = MaybeUserAction.async { request =>
-    userCommander.userFromUsername(username) match {
-      case None =>
-        log.warn(s"can't find username ${username.value}")
-        Future.successful(NotFound(s"username ${username.value}"))
-      case Some(user) =>
-        val viewerId = request.userIdOpt.getOrElse(user.id.get)
-        if (userExtIds.isEmpty) {
-          userConnectionsCommander.getConnectionsSortedByRelationship(viewerId, user.id.get) map { connections =>
-            val head = connections.take(limit)
-            val userMap = db.readOnlyMaster { implicit s =>
-              basicUserRepo.loadAll(head.toSet)
-            }
-            val users = head.map(u => userMap(u))
-            Ok(Json.obj("users" -> users, "count" -> connections.size))
-          }
-        } else {
-          Try(userExtIds.split(',').map(ExternalId[User])) match {
-            case Success(userIds) =>
-              val users = db.readOnlyMaster { implicit s =>
-                userIds.map(userRepo.getOpt).flatten
-              }
-              Future.successful(Ok(Json.obj("users" -> users.map(BasicUser.fromUser))))
-            case _ =>
-              Future.successful(BadRequest("ids invalid"))
-          }
-        }
-    }
-  }
-
-  def profileConnectionIds(username: Username, limit: Int) = MaybeUserAction.async { request =>
-    userCommander.userFromUsername(username) match {
-      case None =>
-        log.warn(s"can't find username ${username.value}")
-        Future.successful(NotFound(s"username ${username.value}"))
-      case Some(user) =>
-        val viewerId = request.userIdOpt.getOrElse(user.id.get)
-        userConnectionsCommander.getConnectionsSortedByRelationship(viewerId, user.id.get) map { connections =>
-          val userMap = db.readOnlyMaster { implicit s =>
-            basicUserRepo.loadAll(connections.take(limit).toSet)
-          }
-          val ids = connections.flatMap(u => userMap.get(u)).map(_.externalId)
-          Ok(Json.obj("ids" -> ids))
         }
     }
   }
