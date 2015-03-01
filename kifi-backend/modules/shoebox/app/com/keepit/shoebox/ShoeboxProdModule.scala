@@ -4,6 +4,7 @@ import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.cache.{ EhCacheCacheModule, MemcachedCacheModule, ShoeboxCacheModule }
 import com.keepit.common.controller.ProdShoeboxUserActionsModule
 import com.keepit.common.seo.{ ProdSiteMapGeneratorModule }
+import com.keepit.controllers.internal.ProdDataPipelineExecutorModule
 import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.graph.ProdGraphServiceClientModule
@@ -38,6 +39,7 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   scraperHealthMonitorModule = ProdScraperHealthMonitorModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),
   twilioCredentialsModule = ProdTwilioCredentialsModule(),
+  dataPipelineExecutorModule = ProdDataPipelineExecutorModule(),
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
 ) with CommonProdModule {
   // Service clients
