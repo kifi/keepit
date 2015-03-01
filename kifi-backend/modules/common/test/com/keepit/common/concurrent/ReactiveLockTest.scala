@@ -73,6 +73,66 @@ class ReactiveLockTest extends Specification {
       output === Seq(1, 1, 2, 2, 3, 3, 4, 4)
     }
 
+    "not allow more then max queue size tasks to be in the queue" in {
+      val testLock = new ReentrantLock()
+      val rLock = new ReactiveLock(1, Some(2))
+
+      var output: Seq[Int] = Seq.empty
+
+      val fut1 = rLock.withLockFuture {
+        Future {
+          output = output :+ 1
+          val held = testLock.tryLock()
+          if (!held) throw new IllegalStateException(s"There should be no concurrent access!")
+          Thread.sleep(40) //making sure this task takes a bit of time to provoke races if there are any
+          // println("I'm async task number one") // can be removed?
+          testLock.unlock()
+          output = output :+ 1
+          true
+        }
+      }
+
+      val fut2 = rLock.withLockFuture {
+        Future {
+          output = output :+ 2
+          val held = testLock.tryLock()
+          Thread.sleep(40) //making sure this task takes a bit of time to provoke races if there are any
+          if (!held) throw new IllegalStateException(s"There should be no concurrent access!")
+          // println("I'm async task number two") // can be removed?
+          testLock.unlock()
+          output = output :+ 2
+        }
+      }
+
+      val fut3 = rLock.withLockFuture {
+        Future {
+          output = output :+ 3
+          val held = testLock.tryLock()
+          Thread.sleep(40) //making sure this task takes a bit of time to provoke races if there are any
+          if (!held) throw new IllegalStateException(s"There should be no concurrent access!")
+          // println("I'm async task number two") // can be removed?
+          testLock.unlock()
+          output = output :+ 3
+        }
+      }
+
+      try {
+        rLock.withLockFuture {
+          Future {
+            output = output :+ 4
+          }
+        }
+        failure("task should have not been executed!")
+      } catch {
+        case e: Exception => //good!
+      }
+
+      val allFuture = Future.sequence(Seq(fut1, fut2, fut3))
+      Await.result(allFuture, Duration(50, "seconds"))
+      allFuture.value.get.isSuccess === true
+      output === Seq(1, 1, 2, 2, 3, 3)
+    }
+
     "obey concurrency limit 1 for asynchronous tasks" in {
       val testLock = new ReentrantLock()
       val rLock = new ReactiveLock()
