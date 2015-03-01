@@ -191,7 +191,8 @@ class ShoeboxDataPipeController @Inject() (
       val librariesWithMembersChanged = db.readOnlyReplica { implicit session =>
         val changedLibraries = libraryRepo.getBySequenceNumber(seqNum, fetchSize)
         changedLibraries.map { library =>
-          val memberships = libraryMembershipRepo.getWithLibraryId(library.id.get)
+          //using a limit this is a temp fix to make the data flow, it creates a proble for people who follow a lib with more then 1000 members
+          val memberships = libraryMembershipRepo.getWithLibraryIdAndLimit(library.id.get, 1000)
           LibraryAndMemberships(library, memberships.map(_.toLibraryMembershipView))
         }
       }
