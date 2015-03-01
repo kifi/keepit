@@ -2,6 +2,7 @@ package com.keepit.shoebox
 
 import com.keepit.common.controller.UserActionsModule
 import com.keepit.common.seo.SiteMapGeneratorModule
+import com.keepit.controllers.internal.DataPipelineExecutorModule
 import com.keepit.reports._
 import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.shoebox.cron.ActivityEmailCronModule
@@ -51,6 +52,7 @@ abstract class ShoeboxModule(
     val scraperHealthMonitorModule: ScraperHealthMonitorModule,
     val fjMonitorModule: ForkJoinContextMonitorModule,
     val twilioCredentialsModule: TwilioCredentialsModule,
+    val dataPipelineExecutorModule: DataPipelineExecutorModule,
     val shoeboxTasksModule: ShoeboxTasksPluginModule = ShoeboxTasksPluginModule()) extends ConfigurationModule with CommonServiceModule {
   //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients

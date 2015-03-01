@@ -1,5 +1,6 @@
 package com.keepit.dev
 
+import com.keepit.controllers.internal.DevDataPipelineExecutorModule
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.controller.ProdShoeboxUserActionsModule
 import com.keepit.common.mail._
@@ -41,6 +42,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   scraperHealthMonitorModule = DevScraperHealthMonitorModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),
   twilioCredentialsModule = DevTwilioCredentialsModule(),
+  dataPipelineExecutorModule = DevDataPipelineExecutorModule(),
   cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule())
 ) with CommonDevModule {
   // Service clients

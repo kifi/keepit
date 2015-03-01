@@ -31,6 +31,7 @@ import com.keepit.common.crypto.FakeCryptoModule
 class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
 
   val shoeboxControllerTestModules = Seq(
+    DevDataPipelineExecutorModule(),
     FakeShoeboxServiceModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
