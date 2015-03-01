@@ -200,6 +200,28 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
+  def getLibraryMembership(id: Id[LibraryMembership]) = Action.async { request =>
+    SafeFuture {
+      val membership = db.readOnlyMaster { implicit session =>
+        libraryMembershipRepo.get(id)
+      }
+      Ok(Json.toJson(membership))
+    }
+  }
+
+  def getLibrariesAndMembershipIdsChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val librariesWithMembersChanged = db.readOnlyReplica { implicit session =>
+        val changedLibraries = libraryRepo.getBySequenceNumber(seqNum, fetchSize)
+        changedLibraries.map { library =>
+          val memberships = libraryMembershipRepo.getIdsWithLibraryId(library.id.get)
+          LibraryAndMembershipsIds(library, memberships)
+        }
+      }
+      Ok(Json.toJson(librariesWithMembersChanged))
+    }
+  }
+
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val keepAndTagsChanged = db.readOnlyReplica { implicit session =>

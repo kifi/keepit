@@ -107,6 +107,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]]
+  def getLibrariesAndMembershipIdsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMembershipsIds]]
+  def getLibraryMembership(id: Id[LibraryMembership]): Future[LibraryMembership]
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]]
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]]
   def getAllFakeUsers(): Future[Set[Id[User]]]
@@ -156,6 +158,7 @@ class ShoeboxServiceClientImpl @Inject() (
   override val httpClient: HttpClient,
   val airbrakeNotifier: AirbrakeNotifier,
   cacheProvider: ShoeboxCacheProvider,
+  libraryMembershipCache: LibraryMembershipIdCache,
   implicit val executionContext: ScalaExecutionContext)
     extends ShoeboxServiceClient with Logging {
 
@@ -685,6 +688,18 @@ class ShoeboxServiceClientImpl @Inject() (
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = {
     call(Shoebox.internal.getLibrariesAndMembershipsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
       r.json.as[Seq[LibraryAndMemberships]]
+    }
+  }
+
+  def getLibrariesAndMembershipIdsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMembershipsIds]] = {
+    call(Shoebox.internal.getLibrariesAndMembershipIdsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+      r.json.as[Seq[LibraryAndMembershipsIds]]
+    }
+  }
+
+  def getLibraryMembership(id: Id[LibraryMembership]): Future[LibraryMembership] = libraryMembershipCache.getOrElseFuture(LibraryMembershipIdKey(id)) {
+    call(Shoebox.internal.getLibraryMembership(id), callTimeouts = extraLongTimeout).map { r =>
+      r.json.as[LibraryMembership]
     }
   }
 
