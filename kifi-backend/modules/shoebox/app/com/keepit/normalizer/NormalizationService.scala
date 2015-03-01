@@ -30,7 +30,7 @@ class NormalizationServiceImpl @Inject() (
     priorKnowledge: PriorNormalizationKnowledge,
     airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
-  private val tmpDisable = """https:\/\/twitter\.com\/.*""".r
+  private val tmpDisable = """https:\/\/twitter\.com\/.*\/status\/.*""".r
 
   def prenormalize(uriString: String): Try[String] = priorKnowledge.prenormalize(uriString)
 
