@@ -21,7 +21,7 @@ import scala.concurrent.duration.FiniteDuration
 
 @ImplementedBy(classOf[LibraryMembershipRepoImpl])
 trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[LibraryMembership] with SeqNumberFunction[LibraryMembership] {
-  def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
+  def getWithLibraryId(libraryId: Id[Library], limit: Int, excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getLibrariesWithWriteAccess(userId: Id[User])(implicit session: RSession): Set[Id[Library]]
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Option[LibraryMembership]
@@ -96,16 +96,16 @@ class LibraryMembershipRepoImpl @Inject() (
     (for (b <- rows if b.libraryId === libraryId && b.access.inSet(accessSet) && b.state =!= excludeState.orNull) yield b).sortBy(r => (r.access, r.createdAt)).drop(offset).take(limit).list
   }
 
-  private val getWithLibraryIdCompiled = Compiled { (libraryId: Column[Id[Library]]) =>
-    (for (row <- rows if row.libraryId === libraryId) yield row).sortBy(_.createdAt)
+  private val getWithLibraryIdCompiled = Compiled { (libraryId: Column[Id[Library]], limit: Int) =>
+    (for (row <- rows if row.libraryId === libraryId) yield row).sortBy(_.createdAt).take(limit)
   }
-  private val getWithLibraryIdWithExcludeCompiled = Compiled { (libraryId: Column[Id[Library]], excludeState: Column[State[LibraryMembership]]) =>
-    (for (row <- rows if row.libraryId === libraryId && row.state =!= excludeState) yield row).sortBy(_.createdAt)
+  private val getWithLibraryIdWithExcludeCompiled = Compiled { (libraryId: Column[Id[Library]], limit: Int, excludeState: Column[State[LibraryMembership]]) =>
+    (for (row <- rows if row.libraryId === libraryId && row.state =!= excludeState) yield row).sortBy(_.createdAt).take(limit)
   }
-  def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership] = {
+  def getWithLibraryId(libraryId: Id[Library], limit: Int, excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership] = {
     excludeState match {
-      case None => getWithLibraryIdCompiled(libraryId).list
-      case Some(exclude) => getWithLibraryIdWithExcludeCompiled(libraryId, exclude).list
+      case None => getWithLibraryIdCompiled(libraryId, limit).list
+      case Some(exclude) => getWithLibraryIdWithExcludeCompiled(libraryId, limit, exclude).list
     }
   }
 
