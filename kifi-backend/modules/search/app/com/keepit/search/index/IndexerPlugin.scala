@@ -93,7 +93,7 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
   override def onStart() {
     val rnd = new Random
 
-    scheduleTaskOnAllMachines(actor.system, (20 + rnd.nextInt(20)) seconds, indexingInterval, actor.ref, UpdateIndex)
+    scheduleTaskOnAllMachines(actor.system, (60 + rnd.nextInt(60)) seconds, indexingInterval, actor.ref, UpdateIndex)
 
     if (serviceDiscovery.hasBackupCapability) scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackUpIndex)
     else {
