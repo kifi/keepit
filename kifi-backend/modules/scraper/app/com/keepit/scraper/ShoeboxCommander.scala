@@ -21,8 +21,8 @@ class ShoeboxCommander @Inject() (
   implicit val serviceCallTimeout = config.serviceCallTimeout
   implicit val fjCtx = ExecutionContext.fj
 
-  val uriUpdateLock = new ReactiveLock(1)
-  val saveScrapeLock = new ReactiveLock(1)
+  val uriUpdateLock = new ReactiveLock(1, Some(10))
+  val saveScrapeLock = new ReactiveLock(1, Some(10))
 
   def assignTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = shoeboxScraperClient.assignScrapeTasks(zkId, max)
 
