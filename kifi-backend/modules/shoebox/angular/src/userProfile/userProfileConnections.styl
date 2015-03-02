@@ -6,13 +6,14 @@
   vertical-align: top
   width: 210px
   height: 350px
+  margin: 0 9px 15px
   box-sizing: border-box
   border: defaultBorder
   border-radius: 16px
-  padding: 20px 16px
+  padding: 22px 16px
   background: #fff
   text-align: center
-  margin: 0 9px 15px
+  color: #505459
 
 .kf-upc-pic-a
   display: block
@@ -27,19 +28,24 @@
   border-radius: '%s' % inherit
 
 .kf-upc-name
+  display: inline-block
+  max-width: 176px
   color: inherit
+  line-height: 19px
   font-size: 18px
   font-weight: bold
   letter-spacing: -.2px
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
 
   &:hover
     color: linkColor
-    text-decoration: underline
 
 .kf-upc-stats
   display: table
   width: 100%
-  margin: 10px 0 20px
+  margin: 16px 0 20px
 
 accentGreen = #5ab166
 
@@ -48,35 +54,48 @@ accentGreen = #5ab166
   text-align: center
   font-size: 11px
   font-smoothing: antialiased
-  color: #333
 
-  &::after
-    content: attr(data-n)
-    display: block
-    margin-top: 2px
-    font-size: 18px
-    font-weight: bold
-    font-smoothing: none
-    color: accentGreen
+.kf-upc-stat-a
+  display: block
+  color: inherit
+
+  &:hover
+    color: linkColor
+
+.kf-upc-stat-n
+  content: attr(data-n)
+  display: block
+  margin-top: 2px
+  font-size: 16px
+  font-weight: bold
+  color: accentGreen
 
 .kf-upc-count
+  border: none
+  padding: 0
+  background: transparent
   font-size: 13px
   font-smoothing: antialiased
-  color: #333
+  cursor: pointer
+
+  &:hover
+    color: linkColor
 
   &::before
     content: attr(data-n)
-    margin-right: 3px
+    margin-right: 4px
     font-weight: bold
-    font-size: 15px
+    font-size: 14px
     color: accentGreen
 
 .kf-upc-connect
+  borderWidth = 1px
+  lineHeight = 36px
   margin-top: 26px
-  border-radius: 16px
-  border: 1px solid accentGreen
+  border-radius: (lineHeight / 2) + borderWidth
+  border: borderWidth solid accentGreen
   background: #fff
   padding: 0 22px
-  line-height: 36px
+  line-height: lineHeight
+  font-size: 13px
   color: accentGreen
-  font-size: 14px

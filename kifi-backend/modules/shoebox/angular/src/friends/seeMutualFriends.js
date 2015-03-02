@@ -14,18 +14,14 @@ angular.module('kifi')
         scope.actionText = 'Connect';
         scope.clickable = true;
 
-        var person = scope.modalData.savedPymk;
-        scope.id = person.id;
-        scope.name = person.fullName;
-        scope.numMutualFriends = person.numMutualFriends;
-        scope.pictureName = person.pictureName;
-        scope.username = person.username;
+        var user = scope.modalData;
+        _.assign(scope, _.pick(user, 'id', 'fullName', 'numMutualFriends', 'pictureName', 'username'));
 
         // Divide up list of mutual friends into list of pairs of mutual
         // friends for two-column display in modal.
         var mutualFriendsPairs = [];
         var mutualFriendPair = [];
-        person.mutualFriends.forEach(function (mutualFriend, index) {
+        user.mutualFriends.forEach(function (mutualFriend, index) {
           mutualFriendPair.push(mutualFriend);
 
           if (index % 2 !== 0) {
@@ -34,7 +30,7 @@ angular.module('kifi')
           }
 
           // Flush last pair even if it has only one mutual friend.
-          if ((index === person.mutualFriends.length - 1) && (mutualFriendPair.length > 0)) {
+          if ((index === user.mutualFriends.length - 1) && (mutualFriendPair.length > 0)) {
             mutualFriendsPairs.push(mutualFriendPair);
           }
         });

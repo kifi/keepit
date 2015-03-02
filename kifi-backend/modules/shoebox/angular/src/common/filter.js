@@ -20,7 +20,19 @@ angular.module('kifi')
 ])
 
 .filter('profileUrl', function () {
-  return function (user) {
-    return user ? '/' + user.username : '';
+  return function (user, sub) {
+    if (user) {
+      return '/' + user.username + (sub && sub !== 'libraries' ? '/' + sub : '');
+    }
+  };
+})
+
+.filter('num', function () {
+  return function (n) {
+    if (n < 1000) {
+      return n == null ? '' : String(n);
+    }
+    var hundreds = String(n).slice(0, -2);
+    return hundreds.slice(-1) === '0' ? hundreds.slice(0, -1) + 'K' : hundreds.replace(/(\d)$/, '.$1') + 'K';
   };
 });

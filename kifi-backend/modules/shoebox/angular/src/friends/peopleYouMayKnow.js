@@ -108,7 +108,7 @@ angular.module('kifi')
         scope.showMutualFriends = function (person) {
           modalService.open({
             template: 'friends/seeMutualFriendsModal.tpl.html',
-            modalData: { savedPymk: person }
+            modalData: person
           });
         };
 
