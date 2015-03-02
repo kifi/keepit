@@ -1370,7 +1370,7 @@ class LibraryCommander @Inject() (
       case None =>
         libraryMembershipRepo.countFollowersFromAnonymous(userId)
       case Some(id) if id == userId =>
-        libraryMembershipRepo.countFollowersWithOwnerId(userId)
+        libraryMembershipRepo.countFollowersForOwner(userId)
       case Some(viewerId) =>
         libraryMembershipRepo.countFollowersForOtherUser(userId, viewerId)
     }
@@ -1452,6 +1452,17 @@ class LibraryCommander @Inject() (
       }
     } else {
       ParSeq.empty
+    }
+  }
+
+  def getFollowersByViewer(userId: Id[User], viewer: Option[Id[User]]): Seq[Id[User]] = db.readOnlyMaster { implicit s =>
+    viewer match {
+      case None =>
+        libraryMembershipRepo.getFollowersFromAnonymous(userId)
+      case Some(id) if id == userId =>
+        libraryMembershipRepo.getFollowersForOwner(userId)
+      case Some(viewerId) =>
+        libraryMembershipRepo.getFollowersForOtherUser(userId, viewerId)
     }
   }
 
