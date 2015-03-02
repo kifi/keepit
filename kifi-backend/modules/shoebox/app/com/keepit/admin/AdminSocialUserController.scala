@@ -26,6 +26,17 @@ class AdminSocialUserController @Inject() (
   clock: Clock)
     extends AdminUserActions {
 
+  def migrateHashColumn(page: Int, iters: Int) = AdminUserPage { implicit request =>
+    val pages = (0 until iters).map { i => page + i }
+    pages.foreach { page =>
+      db.readWrite { implicit s =>
+        val socialUsers = socialUserInfoRepo.page(page, 100)
+        // batch save them with new method
+      }
+    }
+    Ok
+  }
+
   def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminUserPage { implicit request =>
     val socialUserInfo = db.readWrite { implicit s =>
       socialUserInfoRepo.save(socialUserInfoRepo.get(socialUserId).reset())
