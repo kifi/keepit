@@ -4,6 +4,7 @@ import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ InMemoryCachePlugin, FortyTwoCachePlugin }
 import com.keepit.common.healthcheck._
 import com.keepit.search.index.graph.keep.KeepIndexerPlugin
+import com.keepit.search.index.graph.library.membership.LibraryMembershipIndexerPlugin
 import com.keepit.search.index.message.MessageIndexerPlugin
 import com.keepit.search.index.article.ArticleIndexerPlugin
 import play.api.Mode._
@@ -40,6 +41,7 @@ trait SearchServices { self: FortyTwoGlobal =>
     require(injector.instance[SearchFriendGraphPlugin] != null)
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[LibraryIndexerPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[LibraryMembershipIndexerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[KeepIndexerPlugin] != null) //make sure its not lazy loaded
   }
 }
