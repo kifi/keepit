@@ -141,7 +141,7 @@ class SocialUserInfoRepoImpl @Inject() (
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo = try {
     networkCache.getOrElse(SocialUserInfoNetworkKey(networkType, id)) {
       val hashed = socialIdToSocialHash(id)
-      (for (f <- rows if f.socialHash === hashed && f.socialId === id && f.networkType === networkType && f.state =!= SocialUserInfoStates.INACTIVE) yield f).first
+      (for (f <- rows if (f.socialHash === hashed || f.socialHash.isNull) && f.socialId === id && f.networkType === networkType && f.state =!= SocialUserInfoStates.INACTIVE) yield f).first
     }
   } catch {
     case e: Throwable => throw new Exception(s"Can't get social user info for social id [$id] on network [$networkType]", e)
@@ -174,13 +174,13 @@ class SocialUserInfoRepoImpl @Inject() (
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo] =
     networkCache.getOrElseOpt(SocialUserInfoNetworkKey(networkType, id)) {
       val hashed = socialIdToSocialHash(id)
-      (for (f <- rows if f.socialHash === hashed && f.socialId === id && f.networkType === networkType) yield f).firstOption
+      (for (f <- rows if (f.socialHash === hashed || f.socialHash.isNull) && f.socialId === id && f.networkType === networkType) yield f).firstOption
     }
 
   def getSocialUserOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUser] =
     socialUserNetworkCache.getOrElseOpt(SocialUserNetworkKey(networkType, id)) {
       val hashed = socialIdToSocialHash(id)
-      (for (f <- rows if f.socialHash === hashed && f.socialId === id && f.networkType === networkType) yield f).firstOption.map(_.credentials).flatten
+      (for (f <- rows if (f.socialHash === hashed || f.socialHash.isNull) && f.socialId === id && f.networkType === networkType) yield f).firstOption.map(_.credentials).flatten
     }
 
   def getSocialUserBasicInfos(ids: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], SocialUserBasicInfo] = {
