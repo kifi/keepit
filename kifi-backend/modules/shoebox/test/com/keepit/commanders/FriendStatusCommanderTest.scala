@@ -22,12 +22,12 @@ class FriendStatusCommanderTest extends Specification with ShoeboxTestInjector {
         val commander = inject[FriendStatusCommander]
 
         db.readOnlyMaster { implicit s =>
-          val u2 = commander.augmentWithFriendStatus(user1.id.get, user2.id.get, BasicUser.fromUser(user2))
+          val u2 = commander.augmentUser(user1.id.get, user2.id.get, BasicUser.fromUser(user2))
           u2.isFriend === Some(true)
           u2.friendRequestSentAt === None
           u2.friendRequestReceivedAt === None
 
-          val u4 = commander.augmentWithFriendStatus(user1.id.get, user4.id.get, BasicUser.fromUser(user4))
+          val u4 = commander.augmentUser(user1.id.get, user4.id.get, BasicUser.fromUser(user4))
           u4.isFriend === Some(false)
           u4.friendRequestSentAt === None
           u4.friendRequestReceivedAt === None
@@ -37,7 +37,7 @@ class FriendStatusCommanderTest extends Specification with ShoeboxTestInjector {
           inject[FriendRequestRepo].save(FriendRequest(senderId = user1.id.get, recipientId = user4.id.get, messageHandle = None))
         }
         db.readOnlyMaster { implicit s =>
-          val u4 = commander.augmentWithFriendStatus(user1.id.get, user4.id.get, BasicUser.fromUser(user4))
+          val u4 = commander.augmentUser(user1.id.get, user4.id.get, BasicUser.fromUser(user4))
           u4.isFriend === Some(false)
           u4.friendRequestSentAt === Some(req1to4.createdAt)
           u4.friendRequestReceivedAt === None
@@ -58,7 +58,7 @@ class FriendStatusCommanderTest extends Specification with ShoeboxTestInjector {
           frRepo.save(FriendRequest(senderId = user4.id.get, recipientId = user1.id.get, messageHandle = None))
         }
         db.readOnlyMaster { implicit s =>
-          val map = commander.augmentWithFriendStatus(user1.id.get, Map(
+          val map = commander.augmentUsers(user1.id.get, Map(
             user2.id.get -> BasicUser.fromUser(user2),
             user3.id.get -> BasicUser.fromUser(user3),
             user4.id.get -> BasicUser.fromUser(user4)))
