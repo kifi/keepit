@@ -31,8 +31,8 @@ class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClie
   }
 
   private def fetchIndexables(seq: SequenceNumber[Library], fetchSize: Int): Future[(Seq[LibraryIndexable], Boolean)] = {
-    shoebox.getLibrariesAndMembershipsChanged(seq, fetchSize).map { updates =>
-      val indexables = updates.map { case LibraryAndMemberships(library, memberships) => new LibraryIndexable(library, memberships) }
+    shoebox.getDetailedLibrariesChanged(seq, fetchSize).map { updates =>
+      val indexables = updates.map { library => new LibraryIndexable(library) }
       val exhausted = updates.length < fetchSize
       (indexables, exhausted)
     }

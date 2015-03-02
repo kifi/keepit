@@ -1,14 +1,14 @@
 package com.keepit.search.index.graph.library
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ LibraryColor, LibrarySlug, User, Library }
+import com.keepit.model._
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
 
 case class LibraryRecord(id: Id[Library], name: String, description: Option[String], color: Option[LibraryColor], ownerId: Id[User], slug: LibrarySlug)
 
 object LibraryRecord {
-  def apply(library: Library): LibraryRecord = LibraryRecord(library.id.get, library.name, library.description, library.color, library.ownerId, library.slug)
+  def apply(library: DetailedLibraryView): LibraryRecord = LibraryRecord(library.id.get, library.name, library.description, library.color, library.ownerId, library.slug)
 
   implicit def toByteArray(record: LibraryRecord): Array[Byte] = {
     val baos = new ByteArrayOutputStream()
