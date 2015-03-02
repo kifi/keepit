@@ -96,13 +96,6 @@ class UserController @Inject() (
     }
   }
 
-  def fullConnectionByViewer(ownerExternalId: ExternalId[User]) = MaybeUserAction { request =>
-    val owner = db.readOnlyReplica { implicit s => userRepo.get(ownerExternalId) }
-    val ownerId = owner.id.get
-    val viewer = request.userIdOpt
-    Ok(loadFullConnectionUser(ownerId, BasicUser.fromUser(owner), None, viewer))
-  }
-
   def profileConnections(username: Username, limit: Int, userExtIds: String) = MaybeUserAction.async { request =>
     userCommander.userFromUsername(username) match {
       case None =>

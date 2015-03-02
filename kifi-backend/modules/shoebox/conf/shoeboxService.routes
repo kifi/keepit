@@ -354,7 +354,6 @@ GET     /site/user/:name/profile    @com.keepit.controllers.website.UserControll
 GET     /site/user/:name/libraries  @com.keepit.controllers.website.LibraryController.getProfileLibraries(name: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET     /site/user/:name/connections @com.keepit.controllers.website.UserController.profileConnections(name: Username, n: Int ?= 12, ids: String ?= "")
 GET     /site/user/:name/connections/ids @com.keepit.controllers.website.UserController.profileConnectionIds(name: Username, n: Int ?= 480)
-GET     /site/user/connection       @com.keepit.controllers.website.UserController.fullConnectionByViewer(owner: ExternalId[User])
 
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
