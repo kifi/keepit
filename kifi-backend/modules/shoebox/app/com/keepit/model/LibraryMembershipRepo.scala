@@ -345,7 +345,7 @@ trait LibraryMembershipSequencingPlugin extends SequencingPlugin
 
 class LibraryMembershipSequencingPluginImpl @Inject() (
     override val actor: ActorInstance[LibraryMembershipSequencingActor],
-    override val scheduling: SchedulingPropertiess) extends LibraryMembershipSequencingPlugin {
+    override val scheduling: SchedulingProperties) extends LibraryMembershipSequencingPlugin {
 
   override val interval: FiniteDuration = 20.seconds
 }

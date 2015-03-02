@@ -107,7 +107,7 @@ class LibraryMembershipCountCache(stats: CacheStatistics, accessLog: AccessLog, 
   extends PrimitiveCacheImpl[LibraryMembershipCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class FollowersCountKey(userId: Id[User]) extends Key[Int] {
-  override val version = 1
+  override val version = 2
   val namespace = "followers_count"
   def toKey(): String = s"$userId"
 }
