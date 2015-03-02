@@ -172,15 +172,6 @@ class UserController @Inject() (
     ))
   }
 
-  def friendCount() = UserAction { request =>
-    db.readOnlyMaster { implicit s =>
-      Ok(Json.obj(
-        "friends" -> userConnectionRepo.getConnectionCount(request.userId),
-        "requests" -> friendRequestRepo.getCountByRecipient(request.userId)
-      ))
-    }
-  }
-
   def socialNetworkInfo() = UserAction { request =>
     Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
   }
