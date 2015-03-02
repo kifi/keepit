@@ -342,7 +342,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "lastName" -> user1.lastName,
           "pictureName" -> "pic1.jpg",
           "username" -> user1.username.value,
-          "libs" -> 2, "followers" -> 4, "connections" -> 3, "connected" -> true, "mlibs" -> 0, "mConnections" -> 1
+          "libs" -> 2, "followers" -> 3, "connections" -> 3, "connected" -> true, "mlibs" -> 0, "mConnections" -> 1
         )
         controller.loadFullConnectionUser(user1.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }, None, None) === Json.obj(
           "id" -> user1.externalId,
@@ -350,7 +350,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "lastName" -> user1.lastName,
           "pictureName" -> "pic1.jpg",
           "username" -> user1.username.value,
-          "libs" -> 1, "followers" -> 4, "connections" -> 3
+          "libs" -> 1, "followers" -> 3, "connections" -> 3
         )
         controller.loadFullConnectionUser(user2.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }, None, Some(user3.id.get)) === Json.obj(
           "id" -> user2.externalId,
@@ -458,7 +458,9 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "pictureName":"pic1.jpg",
               "username": "GDubs",
               "numLibraries": 1,
-              "numKeeps": 5
+              "numKeeps": 5,
+              "numConnections": 3,
+              "numFollowers": 2
             }
           """)
 
@@ -477,6 +479,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "username": "GDubs",
               "numLibraries": 4,
               "numKeeps": 5,
+              "numConnections": 3,
+              "numFollowers": 3,
               "numInvitedLibraries": 1
             }
           """)
@@ -494,9 +498,11 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
               "username": "GDubs",
+              "isFriend": true,
               "numLibraries": 2,
               "numKeeps": 5,
-              "isFriend": true
+              "numConnections": 3,
+              "numFollowers": 3
             }
           """)
       }
