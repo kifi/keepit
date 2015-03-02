@@ -10,7 +10,7 @@ import com.keepit.model._
 import com.keepit.social.{ SocialGraphPlugin, SocialUserRawInfoStore }
 import org.joda.time.DateTimeZone
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.JsString
+import play.api.libs.json._
 import views.html
 
 import scala.util.Random
@@ -34,7 +34,7 @@ class AdminSocialUserController @Inject() (
         socialUsers.foreach(socialUserInfoRepo.doNotUseSave(_))
       }
     }
-    Ok(pages.last)
+    Ok(JsNumber(pages.last))
   }
 
   def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminUserPage { implicit request =>
