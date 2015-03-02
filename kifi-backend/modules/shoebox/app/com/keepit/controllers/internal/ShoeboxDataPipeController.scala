@@ -186,39 +186,12 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
-  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = Action.async { request =>
-    SafeFuture {
-      val librariesWithMembersChanged = db.readOnlyReplica { implicit session =>
-        val changedLibraries = libraryRepo.getBySequenceNumber(seqNum, fetchSize)
-        changedLibraries.map { library =>
-          //using a limit this is a temp fix to make the data flow, it creates a proble for people who follow a lib with more then 1000 members
-          val memberships = libraryMembershipRepo.getWithLibraryIdAndLimit(library.id.get, 1000)
-          LibraryAndMemberships(library, memberships.map(_.toLibraryMembershipView))
-        }
-      }
-      Ok(Json.toJson(librariesWithMembersChanged))
-    }
-  }
-
   def getLibraryMembership(id: Id[LibraryMembership]) = Action.async { request =>
     SafeFuture {
       val membership = db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.get(id)
       }
       Ok(Json.toJson(membership))
-    }
-  }
-
-  def getLibrariesAndMembershipIdsChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = Action.async { request =>
-    SafeFuture {
-      val librariesWithMembersChanged = db.readOnlyReplica { implicit session =>
-        val changedLibraries = libraryRepo.getBySequenceNumber(seqNum, fetchSize)
-        changedLibraries.map { library =>
-          val memberships = libraryMembershipRepo.getIdsWithLibraryId(library.id.get)
-          LibraryAndMembershipsIds(library, memberships)
-        }
-      }
-      Ok(Json.toJson(librariesWithMembersChanged))
     }
   }
 
