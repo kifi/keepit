@@ -73,7 +73,6 @@ class LibraryCommander @Inject() (
     libraryImageCommander: LibraryImageCommander,
     uriSummaryCommander: URISummaryCommander,
     experimentCommander: LocalUserExperimentCommander,
-    friendStatusCommander: FriendStatusCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -1443,12 +1442,6 @@ class LibraryCommander @Inject() (
   }
 
   private def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewer: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
-    val ownersWFS = if (viewer.isDefined && owners.keySet.exists(_ != viewer.get.id.get)) {
-      friendStatusCommander.augmentWithFriendStatus(viewer.get.id.get, owners)
-    } else {
-      owners mapValues BasicUserWithFriendStatus.fromWithoutFriendStatus
-    }
-
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), false)
       val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
@@ -1461,17 +1454,17 @@ class LibraryCommander @Inject() (
         (0, Seq.empty)
       }
 
-      val ownerWFS = ownersWFS(lib.ownerId)
-      val isFollowing = if (withFollowing && viewer.isDefined && viewer.get.externalId != ownerWFS.externalId) {
+      val owner = owners(lib.ownerId)
+      val isFollowing = if (withFollowing && viewer.isDefined && viewer.get.externalId != owner.externalId) {
         Some(libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, viewer.get.id.get).isDefined)
       } else {
         None
       }
-      createLibraryCardInfo(lib, image, ownerWFS, numKeeps, numFollowers, followersSample, isFollowing)
+      createLibraryCardInfo(lib, image, owner, numKeeps, numFollowers, followersSample, isFollowing)
     }
   }
 
-  private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUserWithFriendStatus, numKeeps: Int, numFollowers: Int,
+  private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numKeeps: Int, numFollowers: Int,
     followers: Seq[BasicUser], isFollowing: Option[Boolean]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),

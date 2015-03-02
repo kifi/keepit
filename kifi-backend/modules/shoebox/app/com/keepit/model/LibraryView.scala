@@ -51,6 +51,7 @@ case class LibraryModifyRequest(
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None)
 
+// TODO: move to BasicUser.scala or something
 case class BasicUserWithFriendStatus(
   externalId: ExternalId[User],
   firstName: String,
@@ -181,7 +182,7 @@ case class LibraryCardInfo(
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
   visibility: LibraryVisibility,
-  owner: BasicUserWithFriendStatus,
+  owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],

@@ -584,7 +584,7 @@ class LibraryController @Inject() (
               image = info.image,
               slug = info.slug,
               visibility = info.visibility,
-              owner = BasicUserWithFriendStatus.fromWithoutFriendStatus(info.owner),
+              owner = info.owner,
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
               followers = LibraryCardInfo.showable(info.followers),
