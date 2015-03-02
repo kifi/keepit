@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.concurrent.PimpMyFuture._
 import com.google.inject.Inject
 
 import com.keepit.classify.{ Domain, DomainRepo }
@@ -77,12 +78,14 @@ class PageCommander @Inject() (
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
       val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
         (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
-          userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW))
+          userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW).exists(_.state == UserToDomainStates.ACTIVE))
       }.getOrElse((None, false))
       (nUriStr, nUri, getKeepersFutureOpt, keep, tags, position, neverOnSite, host)
     }
 
-    val shown = nUri map { uri => historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id) } getOrElse false
+    val shown = nUri exists { uri =>
+      historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id)
+    }
 
     val (keepers, keeps) = keepersFutureOpt.map { future => Await.result(future, 10 seconds) } getOrElse (Seq[BasicUser](), 0)
 
@@ -96,34 +99,38 @@ class PageCommander @Inject() (
 
   def getPageInfo(uri: URI, userId: Id[User], experiments: Set[ExperimentType]): Future[KeeperPageInfo] = {
     val host: Option[String] = uri.host.map(_.name)
-    val (nUriOpt, nUriStr, domain) = db.readOnlyMaster { implicit session =>
-      val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
+    val domainF = db.readOnlyMasterAsync { implicit session =>
+      val domainOpt = host.flatMap(domainRepo.get(_))
+      domainOpt.map { dom =>
+        (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
+          userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW).exists(_.state == UserToDomainStates.ACTIVE))
+      }.getOrElse((None, false))
+    }
+    val uriInfoF = db.readOnlyMasterAsync { implicit session =>
       val (nUriStr, nUri) = normalizedURIInterner.getByUriOrPrenormalize(uri.raw.get) match {
         case Success(Left(nUri)) => (nUri.url, Some(nUri))
         case Success(Right(pUri)) => (pUri, None)
         case Failure(ex) => (uri.raw.get, None)
       }
-      (nUri, nUriStr, domain)
+      (nUri, nUriStr)
     }
-
-    val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
-      db.readOnlyReplica { implicit session =>
-        (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
-          userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW))
+    val infoF = for {
+      (position, neverOnSite) <- domainF
+      (nUriOpt, nUriStr) <- uriInfoF
+    } yield {
+      val shown = nUriOpt.exists { normUri =>
+        historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id)
       }
-    }.getOrElse((None, false))
 
-    val shown = nUriOpt.exists { normUri =>
-      historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id)
-    }
-
-    nUriOpt.map { normUri =>
-      augmentUriInfo(normUri, userId).map { info =>
-        KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.keeps)
+      nUriOpt.map { normUri =>
+        augmentUriInfo(normUri, userId).map { info =>
+          KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.keeps)
+        }
+      }.getOrElse {
+        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[KeepData]))
       }
-    }.getOrElse {
-      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[KeepData]))
     }
+    infoF.flatten
   }
 
   private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User])], userId: Id[User])(implicit session: RSession): Seq[Library] = {
