@@ -30,6 +30,7 @@ class AdminSocialUserController @Inject() (
     val pages = (0 until iters).map { i => page + i }
     db.readWriteBatch(pages) {
       case (session, p) =>
+        implicit val s = session
         val socialUsers = socialUserInfoRepo.page(p, 1000)
         socialUsers.foreach(socialUserInfoRepo.doNotUseSave)
         if (p % 10 == 0) {
