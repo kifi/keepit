@@ -634,6 +634,7 @@ POST    /admin/sendActivityEmailToAll    @com.keepit.controllers.admin.AdminUser
 GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
 
+POST    /admin/social_users/migrateHashColumn               @com.keepit.controllers.admin.AdminSocialUserController.migrateHashColumn(page: Int, iters: Int)
 POST    /admin/social_users/smoothLastGraphRefreshTimes     @com.keepit.controllers.admin.AdminSocialUserController.smoothLastGraphRefreshTimes(minutesFromNow: Int)
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])

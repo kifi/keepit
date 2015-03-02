@@ -18,6 +18,7 @@ import scala.util.Try
 trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[SocialUserInfo] with SeqNumberFunction[SocialUserInfo] {
   def getByUser(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getByUsers(userIds: Seq[Id[User]])(implicit session: RSession): Seq[SocialUserInfo]
+  def doNotUseSave(socialUserInfo: SocialUserInfo)(implicit session: RWSession): SocialUserInfo
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialUserByUser(id: Id[User])(implicit session: RSession): Seq[SocialUser]
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
