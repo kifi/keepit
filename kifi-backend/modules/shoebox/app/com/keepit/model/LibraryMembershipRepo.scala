@@ -12,7 +12,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.performance.timing
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time._
-import com.keepit.common.util.Paginator
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
@@ -32,7 +31,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def pageWithLibraryIdAndAccess(libraryId: Id[Library], offset: Int, limit: Int, accessSet: Set[LibraryAccess],
     excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def countWithLibraryIdAndAccess(libraryId: Id[Library], access: LibraryAccess)(implicit session: RSession): Int
-  def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): Map[LibraryAccess, Int]
+  def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): CountWithLibraryIdByAccess
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
   def countWithAccessByLibraryId(libraryIds: Set[Id[Library]], access: LibraryAccess)(implicit session: RSession): Map[Id[Library], Int]
   def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
@@ -56,6 +55,7 @@ class LibraryMembershipRepoImpl @Inject() (
   libraryMembershipCountCache: LibraryMembershipCountCache,
   followersCountCache: FollowersCountCache,
   memberIdCache: LibraryMembershipIdCache,
+  countWithLibraryIdByAccessCache: CountWithLibraryIdByAccessCache,
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
   countByLibIdAndAccessCache: LibraryMembershipCountByLibIdAndAccessCache)
     extends DbRepo[LibraryMembership] with DbRepoWithDelete[LibraryMembership] with LibraryMembershipRepo with SeqNumberDbFunction[LibraryMembership] with Logging {
@@ -229,12 +229,15 @@ class LibraryMembershipRepoImpl @Inject() (
     }
   }
 
-  def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): Map[LibraryAccess, Int] = {
-    import StaticQuery.interpolation
-    val existingAccessMap = sql"""select access, count(*) from library_membership where library_id=$libraryId and state='active' group by access""".as[(String, Int)].list
-      .map(t => (LibraryAccess(t._1), t._2))
-      .toMap
-    LibraryAccess.getAll.map(access => (access -> existingAccessMap.getOrElse(access, 0))).toMap
+  def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): CountWithLibraryIdByAccess = {
+    countWithLibraryIdByAccessCache.getOrElse(CountWithLibraryIdByAccessKey(libraryId)) {
+      import StaticQuery.interpolation
+      val existingAccessMap = sql"""select access, count(*) from library_membership where library_id=$libraryId and state='active' group by access""".as[(String, Int)].list
+        .map(t => (LibraryAccess(t._1), t._2))
+        .toMap
+      val counts: Map[LibraryAccess, Int] = LibraryAccess.getAll.map(access => access -> existingAccessMap.getOrElse(access, 0)).toMap
+      CountWithLibraryIdByAccess.fromMap(counts)
+    }
   }
 
   def countWithAccessByLibraryId(libraryIds: Set[Id[Library]], access: LibraryAccess)(implicit session: RSession): Map[Id[Library], Int] = {
@@ -280,6 +283,7 @@ class LibraryMembershipRepoImpl @Inject() (
 
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
     libMem.id.map { id =>
+      countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
       memberIdCache.remove(LibraryMembershipIdKey(id))
       countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
       libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
@@ -301,7 +305,7 @@ class LibraryMembershipRepoImpl @Inject() (
         if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
         // ugly! but the library is in an in memory cache so the cost is low
         followersCountCache.remove(FollowersCountKey(libraryRepo.get(libMem.libraryId).ownerId))
-        val ownerId = libraryRepo.get(libMem.libraryId).ownerId
+        countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
       }
     }
   }
