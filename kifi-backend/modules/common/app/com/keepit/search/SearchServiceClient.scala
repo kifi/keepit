@@ -8,7 +8,7 @@ import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceTy
 import com.keepit.common.db.Id
 import com.keepit.common.net.{ ClientResponse, HttpClient }
 import com.keepit.common.routes.{ ServiceRoute, Search, Common }
-import com.keepit.model.{ LibraryAndMemberships, Library, NormalizedURI, User }
+import com.keepit.model._
 import com.keepit.search.index.{ IndexInfo }
 import com.keepit.search.user.DeprecatedUserSearchResult
 import com.keepit.search.user.DeprecatedUserSearchRequest
@@ -58,7 +58,7 @@ trait SearchServiceClient extends ServiceClient {
   def getSearchDefaultConfig: Future[SearchConfig]
 
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
-  def getLibraryDocument(libraryAndMemberships: LibraryAndMemberships): Future[Html]
+  def getLibraryDocument(library: DetailedLibraryView): Future[Html]
 
   def benchmarks(): Future[BenchmarkResults]
   def version(): Future[String]
@@ -206,8 +206,8 @@ class SearchServiceClientImpl(
     call(Search.internal.searchDumpLuceneDocument(id)).map(r => Html(r.body))
   }
 
-  def getLibraryDocument(libraryAndMemberships: LibraryAndMemberships): Future[Html] = {
-    val payload = Json.toJson(libraryAndMemberships)
+  def getLibraryDocument(library: DetailedLibraryView): Future[Html] = {
+    val payload = Json.toJson(library)
     call(Search.internal.getLibraryDocument(), payload).map(r => Html(r.body))
   }
 
