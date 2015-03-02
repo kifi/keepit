@@ -6,6 +6,8 @@ import com.keepit.common.service.{ ServiceUri, ServiceType, ServiceStatus, Servi
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.routes.Common
 import com.keepit.common.net.HttpClient
+import com.keepit.model.SystemValueRepo
+import com.keepit.common.db.slick.Database
 import com.google.inject.{ Inject, Singleton }
 import play.api.libs.json.{ JsNull, JsValue, Json }
 import views.html
@@ -14,35 +16,38 @@ import scala.collection.mutable.WeakHashMap
 import com.keepit.common.core._
 
 case class ClusterMemberInfo(serviceType: ServiceType, zkid: ServiceInstanceId, isLeader: Boolean, instanceInfo: AmazonInstanceInfo,
-  localHostName: String, state: ServiceStatus, version: ServiceVersion, name: String)
+  localHostName: String, state: ServiceStatus, version: ServiceVersion, numDbConnections: Option[String])
 
 class AdminClusterController @Inject() (
     val userActionsHelper: UserActionsHelper,
     serviceVersionMap: ServiceVersionMap,
     serviceDiscovery: ServiceDiscovery,
-    zooKeeperClient: ZooKeeperClient) extends AdminUserActions {
-
-  val machineNames = Map[String, String](
-    "50.18.183.73" -> "b01",
-    "184.169.164.108" -> "b02",
-    "50.18.123.43" -> "b04",
-    "54.241.10.138" -> "b05",
-    "184.169.163.57" -> "b06",
-    "184.169.149.248" -> "b07",
-    "184.169.206.118" -> "b08",
-    "54.215.103.202" -> "b09",
-    "54.215.113.116" -> "b10",
-    "54.219.29.184" -> "b11"
-  )
+    zooKeeperClient: ZooKeeperClient,
+    systemValueRepo: SystemValueRepo,
+    db: Database) extends AdminUserActions {
 
   def clustersInfo: Seq[ClusterMemberInfo] = ServiceType.inProduction.flatMap { serviceType =>
+    val dbConnections: Map[String, String] = if (serviceType == ServiceType.SHOEBOX) {
+      val masterConnections = db.readOnlyMaster { implicit session =>
+        systemValueRepo.getDbConnectionStats()
+      }
+      val slaveConnections = db.readOnlyReplica { implicit session =>
+        systemValueRepo.getDbConnectionStats()
+      }
+      val hosts = slaveConnections.keys.toSet & masterConnections.keys.toSet
+
+      hosts.map { host =>
+        (host, s"${masterConnections.get(host).getOrElse(0) / slaveConnections.get(host).getOrElse(0)}")
+      }.toMap
+    } else Map.empty
+
     val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
     serviceCluster.allMembers.map { serviceInstance =>
       val isLeader = serviceCluster.leader.exists(_ == serviceInstance)
       val serviceVersion = serviceVersionMap(serviceInstance)
       val publicHostName = InetAddress.getByName(serviceInstance.instanceInfo.localIp.ip).getHostName
-      val name = machineNames.get(serviceInstance.instanceInfo.publicIp.toString()).getOrElse("NA")
-      ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, serviceVersion, name)
+      val dbConnectionCount = dbConnections.get(serviceInstance.instanceInfo.localHostname)
+      ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, serviceVersion, dbConnectionCount)
     }
   }
 
