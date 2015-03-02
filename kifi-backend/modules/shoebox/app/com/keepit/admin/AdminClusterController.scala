@@ -37,7 +37,7 @@ class AdminClusterController @Inject() (
       val hosts = slaveConnections.keys.toSet & masterConnections.keys.toSet
 
       hosts.map { host =>
-        (host, s"${masterConnections.get(host).getOrElse(0) / slaveConnections.get(host).getOrElse(0)}")
+        (host, s"${masterConnections.get(host).getOrElse(0)} / ${slaveConnections.get(host).getOrElse(0)}")
       }.toMap
     } else Map.empty
 
