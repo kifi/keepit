@@ -936,7 +936,7 @@ class LibraryCommander @Inject() (
   }
 
   def joinLibrary(userId: Id[User], libraryId: Id[Library])(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
-    db.readWrite { implicit s =>
+    db.readWrite(attempts = 3) { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
 

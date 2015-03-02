@@ -11,6 +11,8 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.util.regex.Pattern
 
+import scala.util.Try
+
 abstract class JsoupBasedExtractor(url: URI, maxContentChars: Int) extends Extractor with Logging {
   protected var doc: Document = null
 
@@ -45,7 +47,12 @@ abstract class JsoupBasedExtractor(url: URI, maxContentChars: Int) extends Extra
     urls filterNot { str => str == null || str.isEmpty } toSet
   }
 
-  private def toOption(str: String): Option[String] = if (str == null || str.isEmpty) None else Some(str)
+  private def toOption(unsafe: => String): Option[String] = {
+    Try(Option(unsafe)).toOption.flatten.map {
+      case o if o.isEmpty => None
+      case o => Some(o)
+    }.flatten
+  }
 
   def getKeywords(): Option[String] = getMetadata("keywords")
 
