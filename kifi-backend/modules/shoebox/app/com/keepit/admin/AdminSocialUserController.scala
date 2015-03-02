@@ -31,7 +31,7 @@ class AdminSocialUserController @Inject() (
     pages.foreach { page =>
       db.readWrite { implicit s =>
         val socialUsers = socialUserInfoRepo.page(page, 100)
-        // batch save them with new method
+        socialUsers.foreach(socialUserInfoRepo.doNotUseSave(_))
       }
     }
     Ok
