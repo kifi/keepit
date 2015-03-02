@@ -342,7 +342,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "lastName" -> user1.lastName,
           "pictureName" -> "pic1.jpg",
           "username" -> user1.username.value,
-          "libs" -> 2, "followers" -> 4, "connections" -> 3, "connected" -> true, "mFollowers" -> 1, "mlibs" -> 0, "mConnections" -> 1
+          "libs" -> 2, "followers" -> 4, "connections" -> 3, "connected" -> true, "mlibs" -> 0, "mConnections" -> 1
         )
         controller.loadFullConnectionUser(user1.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }, None, None) === Json.obj(
           "id" -> user1.externalId,
@@ -358,7 +358,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "lastName" -> user2.lastName,
           "pictureName" -> "0.jpg",
           "username" -> user2.username.value,
-          "libs" -> 0, "followers" -> 0, "connections" -> 2, "connected" -> true, "mFollowers" -> 0, "mlibs" -> 1, "mConnections" -> 1
+          "libs" -> 0, "followers" -> 0, "connections" -> 2, "connected" -> true, "mlibs" -> 1, "mConnections" -> 1
         )
         controller.loadFullConnectionUser(user2.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }, None, None) === Json.obj(
           "id" -> user2.externalId,

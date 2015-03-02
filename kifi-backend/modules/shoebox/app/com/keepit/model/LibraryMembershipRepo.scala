@@ -44,7 +44,6 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
   def countFollowersWithOwnerId(ownerId: Id[User])(implicit session: RSession): Int
-  def countMutualFollowersWithOwnerId(ownerId: Id[User], friendId: Id[User])(implicit session: RSession): Int
 }
 
 @Singleton
@@ -54,7 +53,6 @@ class LibraryMembershipRepoImpl @Inject() (
   libraryRepo: LibraryRepo,
   libraryMembershipCountCache: LibraryMembershipCountCache,
   followersCountCache: FollowersCountCache,
-  mutualFollowersCountCache: MutualFollowersCountCache,
   memberIdCache: LibraryMembershipIdCache,
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
   countByLibIdAndAccessCache: LibraryMembershipCountByLibIdAndAccessCache)
@@ -287,7 +285,6 @@ class LibraryMembershipRepoImpl @Inject() (
       // ugly! but the library is in an in memory cache so the cost is low
       val ownerId = libraryRepo.get(libMem.libraryId).ownerId
       followersCountCache.remove(FollowersCountKey(ownerId))
-      mutualFollowersCountCache.remove(MutualFollowersCountKey(ownerId, libMem.userId))
     }
   }
 
@@ -303,7 +300,6 @@ class LibraryMembershipRepoImpl @Inject() (
         // ugly! but the library is in an in memory cache so the cost is low
         followersCountCache.remove(FollowersCountKey(libraryRepo.get(libMem.libraryId).ownerId))
         val ownerId = libraryRepo.get(libMem.libraryId).ownerId
-        mutualFollowersCountCache.remove(MutualFollowersCountKey(ownerId, libMem.userId))
       }
     }
   }
@@ -327,13 +323,6 @@ class LibraryMembershipRepoImpl @Inject() (
     followersCountCache.getOrElse(FollowersCountKey(ownerId)) {
       import StaticQuery.interpolation
       sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.state = 'active'".as[Int].firstOption.getOrElse(0)
-    }
-  }
-
-  def countMutualFollowersWithOwnerId(ownerId: Id[User], friendId: Id[User])(implicit session: RSession): Int = {
-    mutualFollowersCountCache.getOrElse(MutualFollowersCountKey(ownerId, friendId)) {
-      import StaticQuery.interpolation
-      sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $friendId and lib.owner_id = $ownerId and lib.state = 'active' and lm.state = 'active'".as[Int].firstOption.getOrElse(0)
     }
   }
 
