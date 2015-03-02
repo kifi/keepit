@@ -352,7 +352,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "pictureName" -> "pic1.jpg",
           "username" -> user1.username.value,
           "isFriend" -> true,
-          "libraries" -> 2, "connections" -> 3, "followers" -> 4,
+          "libraries" -> 2, "connections" -> 3, "followers" -> 3,
           "mLibraries" -> 0, "mConnections" -> 1
         )
         controller.loadFullConnectionUser(user1.id.get, basicUserWFS(user1, None), None) === Json.obj(
@@ -361,7 +361,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "lastName" -> user1.lastName,
           "pictureName" -> "pic1.jpg",
           "username" -> user1.username.value,
-          "libraries" -> 1, "connections" -> 3, "followers" -> 4
+          "libraries" -> 1, "connections" -> 3, "followers" -> 3
         )
         controller.loadFullConnectionUser(user2.id.get, basicUserWFS(user2, user3.id), user3.id) === Json.obj(
           "id" -> user2.externalId,
