@@ -361,7 +361,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "lastName" -> user1.lastName,
           "pictureName" -> "pic1.jpg",
           "username" -> user1.username.value,
-          "libraries" -> 1, "connections" -> 3, "followers" -> 3
+          "libraries" -> 1,
+          "connections" -> 3, "followers" -> 2
         )
         controller.loadFullConnectionUser(user2.id.get, basicUserWFS(user2, user3.id), user3.id) === Json.obj(
           "id" -> user2.externalId,
@@ -565,7 +566,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result2) must beSome("application/json")
         val resultJson2 = contentAsJson(result2)
         (resultJson2 \\ "count").map(_.as[Int] === 2)
-        (resultJson2 \\ "id").map(_.as[ExternalId[User]]) === Seq(user4.externalId, user5.externalId)
+        (resultJson2 \\ "id").map(_.as[ExternalId[User]]) === Seq(user5.externalId, user4.externalId)
 
         // view as follower (to a secret library)
         inject[FakeUserActionsHelper].setUser(user2)
@@ -574,7 +575,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result3) must beSome("application/json")
         val resultJson3 = contentAsJson(result3)
         (resultJson3 \\ "count").map(_.as[Int] === 3)
-        (resultJson3 \\ "id").map(_.as[ExternalId[User]]) === Seq(user2.externalId, user4.externalId, user5.externalId)
+        (resultJson3 \\ "id").map(_.as[ExternalId[User]]) === Seq(user4.externalId, user5.externalId, user2.externalId)
 
       }
     }
