@@ -93,7 +93,7 @@ class SocialUserInfoRepoImpl @Inject() (
   }
 
   private def socialIdToSocialHash(socialId: SocialId) = {
-    Try(socialId.id.toLong).getOrElse(socialId.hashCode.toLong)
+    Try(socialId.id.toLong).getOrElse(socialId.id.trim.toLowerCase.hashCode.toLong)
   }
 
   override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = deleteCache(socialUser)
