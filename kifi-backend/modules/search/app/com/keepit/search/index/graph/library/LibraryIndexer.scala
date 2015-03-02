@@ -1,12 +1,11 @@
 package com.keepit.search.index.graph.library
 
-import com.keepit.model.{ LibraryAndMembershipsIds, LibraryAndMemberships, Library }
+import com.keepit.model.{ LibraryAndMemberships, Library }
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.search.index.IndexInfo
 import com.keepit.search.index._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.Future
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
@@ -32,17 +31,8 @@ class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClie
   }
 
   private def fetchIndexables(seq: SequenceNumber[Library], fetchSize: Int): Future[(Seq[LibraryIndexable], Boolean)] = {
-    shoebox.getLibrariesAndMembershipIdsChanged(seq, fetchSize).map { updates =>
-      val indexables = updates.map {
-        case LibraryAndMembershipsIds(library, membershipIds) =>
-          val membershipsF = membershipIds map { id =>
-            shoebox.getLibraryMembership(id).map(_.toLibraryMembershipView)
-          }
-          //bad bad bad, todo: No Await
-          // also, this calls for a bulk get from the cache. so something like getLibraryMembership(ids)
-          val memberships = Await.result(Future.sequence(membershipsF), 1 minutes)
-          new LibraryIndexable(library, memberships)
-      }
+    shoebox.getDetailedLibrariesChanged(seq, fetchSize).map { updates =>
+      val indexables = updates.map { library => new LibraryIndexable(library) }
       val exhausted = updates.length < fetchSize
       (indexables, exhausted)
     }

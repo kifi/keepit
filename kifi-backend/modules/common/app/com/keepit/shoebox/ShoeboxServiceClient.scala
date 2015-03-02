@@ -106,8 +106,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
-  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]]
-  def getLibrariesAndMembershipIdsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMembershipsIds]]
   def getLibraryMembership(id: Id[LibraryMembership]): Future[LibraryMembership]
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]]
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]]
@@ -682,18 +680,6 @@ class ShoeboxServiceClientImpl @Inject() (
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = {
     call(Shoebox.internal.getEmailAccountUpdates(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[EmailAccountUpdate]]
-    }
-  }
-
-  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = {
-    call(Shoebox.internal.getLibrariesAndMembershipsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
-      r.json.as[Seq[LibraryAndMemberships]]
-    }
-  }
-
-  def getLibrariesAndMembershipIdsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMembershipsIds]] = {
-    call(Shoebox.internal.getLibrariesAndMembershipIdsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
-      r.json.as[Seq[LibraryAndMembershipsIds]]
     }
   }
 

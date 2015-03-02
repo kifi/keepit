@@ -354,7 +354,6 @@ GET     /site/user/:name/profile    @com.keepit.controllers.website.UserControll
 GET     /site/user/:name/libraries  @com.keepit.controllers.website.LibraryController.getProfileLibraries(name: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET     /site/user/:name/connections @com.keepit.controllers.website.UserController.profileConnections(name: Username, n: Int ?= 12, ids: String ?= "")
 GET     /site/user/:name/connections/ids @com.keepit.controllers.website.UserController.profileConnectionIds(name: Username, n: Int ?= 480)
-GET     /site/user/connection       @com.keepit.controllers.website.UserController.fullConnectionByViewer(owner: ExternalId[User])
 
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
@@ -438,7 +437,6 @@ GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
-GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 GET     /site/user/friends/recommended   @com.keepit.controllers.website.PeopleRecommendationController.getFriendRecommendations(offset: Int ?= 0, limit: Int ?= 5)
 GET     /site/user/invite/recommended    @com.keepit.controllers.website.PeopleRecommendationController.getInviteRecommendations(offset: Int ?= 0, limit: Int ?= 5)
 POST    /site/user/invite/hide           @com.keepit.controllers.website.PeopleRecommendationController.hideInviteRecommendation()
@@ -634,6 +632,7 @@ POST    /admin/sendActivityEmailToAll    @com.keepit.controllers.admin.AdminUser
 GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
 
+POST    /admin/social_users/migrateHashColumn               @com.keepit.controllers.admin.AdminSocialUserController.migrateHashColumn(page: Int, iters: Int)
 POST    /admin/social_users/smoothLastGraphRefreshTimes     @com.keepit.controllers.admin.AdminSocialUserController.smoothLastGraphRefreshTimes(minutesFromNow: Int)
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
@@ -826,9 +825,7 @@ GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.contr
 GET     /internal/shoebox/database/getIndexableSocialConnections   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableSocialUserInfos   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int)
 GET     /internal/shoebox/database/getEmailAccountUpdates       @com.keepit.controllers.internal.ShoeboxDataPipeController.getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int)
-GET     /internal/shoebox/database/getLibrariesAndMembershipsChanged       @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 GET     /internal/shoebox/database/getLibraryMembership                    @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibraryMembership(id: Id[LibraryMembership])
-GET     /internal/shoebox/database/getLibrariesAndMembershipIdsChanged     @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibrariesAndMembershipIdsChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 GET     /internal/shoebox/database/getKeepsAndTagsChanged                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 GET     /internal/shoebox/database/getLibrariesChanged                     @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 GET     /internal/shoebox/database/getDetailedLibrariesChanged             @com.keepit.controllers.internal.ShoeboxDataPipeController.getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int)

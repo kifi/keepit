@@ -5,6 +5,7 @@ import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.search.engine.SearchFactory
 import com.keepit.search.engine.uri.UriSearchResult
 import com.keepit.search.index.Searcher
+import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexer, LibraryMembershipIndexable }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
 import com.keepit.common.controller._
@@ -36,6 +37,7 @@ class WebsiteSearchController @Inject() (
     val shoeboxClient: ShoeboxServiceClient,
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
+    libraryMembershipIndexer: LibraryMembershipIndexer,
     uriSearchCommander: UriSearchCommander,
     librarySearchCommander: LibrarySearchCommander,
     userSearchCommander: UserSearchCommander,
@@ -300,7 +302,8 @@ class WebsiteSearchController @Inject() (
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
         val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
         val librarySearcher = libraryIndexer.getSearcher
-        val publishedLibrariesCountByMember = userSearchResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByMember(librarySearcher, hit.id) }.toMap
+        val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
+        val publishedLibrariesCountByMember = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByMember(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
         val publishedLibrariesCountByOwner = userSearchResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByOwner(librarySearcher, hit.id) }.toMap
         val relevantLibraryRecordsAndVisibity = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
         for {

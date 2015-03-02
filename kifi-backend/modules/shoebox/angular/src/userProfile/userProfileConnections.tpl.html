@@ -5,12 +5,20 @@
       <a class="kf-upc-pic-a" href="{{user|profileUrl}}"><img class="kf-upc-pic" ng-src="{{user|pic:200}}"></a>
       <a class="kf-upc-name" href="{{user|profileUrl}}">{{user.firstName}} {{user.lastName}}</a>
       <ul class="kf-upc-stats">
-        <li class="kf-upc-stat" data-n="{{user.libs|number}}">Libraries
-        <li class="kf-upc-stat" data-n="{{user.connections|number}}">Connections
-        <li class="kf-upc-stat" data-n="{{user.followers|number}}">Followers
+        <li class="kf-upc-stat"><a class="kf-upc-stat-a" href="{{user|profileUrl:'libraries'}}">Libraries<div class="kf-upc-stat-n">{{user.libs|num}}</div></a>
+        <li class="kf-upc-stat"><a class="kf-upc-stat-a" href="{{user|profileUrl:'connections'}}">Connections<div class="kf-upc-stat-n">{{user.connections|num}}</div></a>
+        <li class="kf-upc-stat"><a class="kf-upc-stat-a" href="{{user|profileUrl:'followers'}}">Followers<div class="kf-upc-stat-n">{{user.followers|num}}</div></a>
       </ul>
-      <div class="kf-upc-count" data-n="{{user.mConnections}}"><ng-pluralize count="user.mConnections" when="{'one': 'mutual connection', 'other': 'mutual connections'}"></ng-pluralize></div>
-      <div class="kf-upc-count" data-n="{{user.mlibs}}"><ng-pluralize count="user.mlibs" when="{'one': 'library ', 'other': 'libraries '}"></ng-pluralize>in common</div>
+      <div>
+        <button class="kf-upc-count" data-n="{{user.mConnections|num}}" ng-click="showMutualConnections(user)">
+          <ng-pluralize count="user.mConnections" when="{'one': 'mutual connection', 'other': 'mutual connections'}"></ng-pluralize>
+        </button>
+      </div>
+      <div>
+        <button class="kf-upc-count" data-n="{{user.mLibraries|num}}">
+          <ng-pluralize count="user.mLibraries" when="{'one': 'library in common', 'other': 'libraries in common'}"></ng-pluralize>
+        </button>
+      </div>
       <button class="kf-upc-connect">Connect</button>
     </li>
   </ul>
