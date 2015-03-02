@@ -127,15 +127,32 @@ class ServiceDiscoveryImpl(
     }
   }
 
+  private def isRunningFor(taskName: String, members: Vector[ServiceInstance]): Boolean = {
+    myInstance.exists { thisInst =>
+      val index = (taskName.hashCode() & 0x7FFFFFFF) % members.size
+      myCluster.allMembers(index) == thisInst
+    }
+  }
+
   def isRunnerFor(taskName: String): Boolean = if (isCanary) false else zkClient.session { zk =>
     if (!stillRegistered()) {
       log.warn(s"service did not register itself yet!")
       return false
     }
 
-    myInstance.exists { thisInst =>
-      val index = (taskName.hashCode() & 0x7FFFFFFF) % myCluster.allMembers.size
-      myCluster.allMembers(index) == thisInst
+    val all = myCluster.allMembers
+    val offline = all.filter(_.remoteService.status == ServiceStatus.OFFLINE)
+    if (offline.isEmpty) {
+      //if there's no offline service, consider all cluster
+      isRunningFor(taskName, all)
+    } else {
+      if (thisInstance.exists(me => offline.contains(me))) {
+        //if there's at least one offline service and I'm offline as well, use only offline services for the check
+        isRunningFor(taskName, offline)
+      } else {
+        //if i'm not an offline services and at least one like this exist in my cluster, don't even consider me
+        false
+      }
     }
   }
 
