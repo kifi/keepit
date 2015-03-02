@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ DbSequenceAssigner, Id }
+import com.keepit.common.db.{ SequenceNumber, State, DbSequenceAssigner, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.time._
 import securesocial.core.SocialUser
@@ -12,6 +12,7 @@ import scala.reflect.ClassTag
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.util.Try
 
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
 trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[SocialUserInfo] with SeqNumberFunction[SocialUserInfo] {
@@ -50,13 +51,28 @@ class SocialUserInfoRepoImpl @Inject() (
     def userId = column[Id[User]]("user_id", O.Nullable)
     def fullName = column[String]("full_name", O.NotNull)
     def socialId = column[SocialId]("social_id", O.NotNull)
+    def socialHash = column[Long]("social_hash", O.Nullable)
     def networkType = column[SocialNetworkType]("network_type", O.NotNull)
     def credentials = column[SocialUser]("credentials", O.Nullable)
     def lastGraphRefresh = column[DateTime]("last_graph_refresh", O.Nullable)
     def pictureUrl = column[String]("picture_url", O.Nullable)
     def profileUrl = column[String]("profile_url", O.Nullable)
     def * = (id.?, createdAt, updatedAt, userId.?, fullName, pictureUrl.?, profileUrl.?, state, socialId,
-      networkType, credentials.?, lastGraphRefresh.?, seq) <> ((SocialUserInfo.apply _).tupled, SocialUserInfo.unapply _)
+      networkType, credentials.?, lastGraphRefresh.?, seq, socialHash) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+  }
+
+  private def applyFromDbRow(id: Option[Id[SocialUserInfo]], createdAt: DateTime, updatedAt: DateTime,
+    userId: Option[Id[User]], fullName: String, pictureUrl: Option[String],
+    profileUrl: Option[String], state: State[SocialUserInfo], socialId: SocialId,
+    networkType: SocialNetworkType, credentials: Option[SocialUser],
+    lastGraphRefresh: Option[DateTime], seq: SequenceNumber[SocialUserInfo], socialHash: Long) = {
+    SocialUserInfo(id, createdAt, updatedAt, userId, fullName, pictureUrl, profileUrl, state, socialId,
+      networkType, credentials, lastGraphRefresh, seq)
+  }
+
+  private def unapplyToDbRow(s: SocialUserInfo) = {
+    Some((s.id, s.createdAt, s.updatedAt, s.userId, s.fullName, s.pictureUrl, s.profileUrl, s.state, s.socialId,
+      s.networkType, s.credentials, s.lastGraphRefresh, s.seq, socialIdToSocialHash(s.socialId)))
   }
 
   def table(tag: Tag) = new SocialUserInfoTable(tag)
@@ -69,6 +85,14 @@ class SocialUserInfoRepoImpl @Inject() (
   override def save(socialUserInfo: SocialUserInfo)(implicit session: RWSession): SocialUserInfo = {
     val toSave = socialUserInfo.copy(seq = deferredSeqNum())
     super.save(toSave)
+  }
+
+  def doNotUseSave(socialUserInfo: SocialUserInfo)(implicit session: RWSession): SocialUserInfo = {
+    super.save(socialUserInfo)
+  }
+
+  private def socialIdToSocialHash(socialId: SocialId) = {
+    Try(socialId.id.toLong).getOrElse(socialId.hashCode.toLong)
   }
 
   override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = deleteCache(socialUser)
