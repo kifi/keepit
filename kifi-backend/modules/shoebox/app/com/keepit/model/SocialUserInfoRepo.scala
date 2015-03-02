@@ -58,21 +58,21 @@ class SocialUserInfoRepoImpl @Inject() (
     def pictureUrl = column[String]("picture_url", O.Nullable)
     def profileUrl = column[String]("profile_url", O.Nullable)
     def * = (id.?, createdAt, updatedAt, userId.?, fullName, pictureUrl.?, profileUrl.?, state, socialId,
-      networkType, credentials.?, lastGraphRefresh.?, seq, socialHash) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+      networkType, credentials.?, lastGraphRefresh.?, seq, socialHash.?) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   private def applyFromDbRow(id: Option[Id[SocialUserInfo]], createdAt: DateTime, updatedAt: DateTime,
     userId: Option[Id[User]], fullName: String, pictureUrl: Option[String],
     profileUrl: Option[String], state: State[SocialUserInfo], socialId: SocialId,
     networkType: SocialNetworkType, credentials: Option[SocialUser],
-    lastGraphRefresh: Option[DateTime], seq: SequenceNumber[SocialUserInfo], socialHash: Long) = {
+    lastGraphRefresh: Option[DateTime], seq: SequenceNumber[SocialUserInfo], socialHash: Option[Long]) = {
     SocialUserInfo(id, createdAt, updatedAt, userId, fullName, pictureUrl, profileUrl, state, socialId,
       networkType, credentials, lastGraphRefresh, seq)
   }
 
   private def unapplyToDbRow(s: SocialUserInfo) = {
     Some((s.id, s.createdAt, s.updatedAt, s.userId, s.fullName, s.pictureUrl, s.profileUrl, s.state, s.socialId,
-      s.networkType, s.credentials, s.lastGraphRefresh, s.seq, socialIdToSocialHash(s.socialId)))
+      s.networkType, s.credentials, s.lastGraphRefresh, s.seq, Option(socialIdToSocialHash(s.socialId))))
   }
 
   def table(tag: Tag) = new SocialUserInfoTable(tag)
@@ -139,7 +139,8 @@ class SocialUserInfoRepoImpl @Inject() (
 
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo = try {
     networkCache.getOrElse(SocialUserInfoNetworkKey(networkType, id)) {
-      (for (f <- rows if f.socialId === id && f.networkType === networkType && f.state =!= SocialUserInfoStates.INACTIVE) yield f).first
+      val hashed = socialIdToSocialHash(id)
+      (for (f <- rows if f.socialHash === hashed && f.socialId === id && f.networkType === networkType && f.state =!= SocialUserInfoStates.INACTIVE) yield f).first
     }
   } catch {
     case e: Throwable => throw new Exception(s"Can't get social user info for social id [$id] on network [$networkType]", e)
@@ -171,12 +172,14 @@ class SocialUserInfoRepoImpl @Inject() (
 
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo] =
     networkCache.getOrElseOpt(SocialUserInfoNetworkKey(networkType, id)) {
-      (for (f <- rows if f.socialId === id && f.networkType === networkType) yield f).firstOption
+      val hashed = socialIdToSocialHash(id)
+      (for (f <- rows if f.socialHash === hashed && f.socialId === id && f.networkType === networkType) yield f).firstOption
     }
 
   def getSocialUserOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUser] =
     socialUserNetworkCache.getOrElseOpt(SocialUserNetworkKey(networkType, id)) {
-      (for (f <- rows if f.socialId === id && f.networkType === networkType) yield f).firstOption.map(_.credentials).flatten
+      val hashed = socialIdToSocialHash(id)
+      (for (f <- rows if f.socialHash === hashed && f.socialId === id && f.networkType === networkType) yield f).firstOption.map(_.credentials).flatten
     }
 
   def getSocialUserBasicInfos(ids: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], SocialUserBasicInfo] = {
