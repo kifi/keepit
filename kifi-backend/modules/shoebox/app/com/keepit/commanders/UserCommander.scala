@@ -114,7 +114,7 @@ class UserCommander @Inject() (
     userFromUsername(username) map { user =>
       val basicUserWithFriendStatus = viewer.filter(_.id != user.id) map { viewer =>
         db.readOnlyMaster { implicit session =>
-          friendStatusCommander.augmentWithFriendStatus(viewer.id.get, user.id.get, BasicUser.fromUser(user))
+          friendStatusCommander.augmentUser(viewer.id.get, user.id.get, BasicUser.fromUser(user))
         }
       } getOrElse BasicUserWithFriendStatus.fromWithoutFriendStatus(user)
       db.readOnlyReplica { implicit session =>

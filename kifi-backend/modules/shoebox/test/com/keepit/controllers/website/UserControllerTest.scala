@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.commanders.UserConnectionsCommander
+import com.keepit.commanders.{ FriendStatusCommander, UserConnectionsCommander }
 import com.keepit.common.time._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
@@ -16,7 +16,7 @@ import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller._
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
@@ -30,6 +30,7 @@ import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -336,37 +337,49 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           (user1, user2, user3, user4, user5, user1lib)
         }
         val controller = inject[UserController]
-        controller.loadFullConnectionUser(user1.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }, None, Some(user2.id.get)) === Json.obj(
+        def basicUserWFS(user: User, viewerIdOpt: Option[Id[User]]): BasicUserWithFriendStatus = {
+          val basicUser = BasicUser.fromUser(user)
+          viewerIdOpt map { viewerId =>
+            db.readOnlyMaster { implicit s =>
+              inject[FriendStatusCommander].augmentUser(viewerId, user.id.get, basicUser)
+            }
+          } getOrElse BasicUserWithFriendStatus.fromWithoutFriendStatus(basicUser)
+        }
+        controller.loadFullConnectionUser(user1.id.get, basicUserWFS(user1, user2.id), user2.id) === Json.obj(
           "id" -> user1.externalId,
           "firstName" -> user1.firstName,
           "lastName" -> user1.lastName,
           "pictureName" -> "pic1.jpg",
           "username" -> user1.username.value,
-          "libs" -> 2, "followers" -> 4, "connections" -> 3, "connected" -> true, "mlibs" -> 0, "mConnections" -> 1
+          "isFriend" -> true,
+          "libraries" -> 2, "connections" -> 3, "followers" -> 3,
+          "mLibraries" -> 0, "mConnections" -> 1
         )
-        controller.loadFullConnectionUser(user1.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }, None, None) === Json.obj(
+        controller.loadFullConnectionUser(user1.id.get, basicUserWFS(user1, None), None) === Json.obj(
           "id" -> user1.externalId,
           "firstName" -> user1.firstName,
           "lastName" -> user1.lastName,
           "pictureName" -> "pic1.jpg",
           "username" -> user1.username.value,
-          "libs" -> 1, "followers" -> 4, "connections" -> 3
+          "libraries" -> 1, "connections" -> 3, "followers" -> 3
         )
-        controller.loadFullConnectionUser(user2.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }, None, Some(user3.id.get)) === Json.obj(
+        controller.loadFullConnectionUser(user2.id.get, basicUserWFS(user2, user3.id), user3.id) === Json.obj(
           "id" -> user2.externalId,
           "firstName" -> user2.firstName,
           "lastName" -> user2.lastName,
           "pictureName" -> "0.jpg",
           "username" -> user2.username.value,
-          "libs" -> 0, "followers" -> 0, "connections" -> 2, "connected" -> true, "mlibs" -> 1, "mConnections" -> 1
+          "isFriend" -> true,
+          "libraries" -> 0, "connections" -> 2, "followers" -> 0,
+          "mLibraries" -> 1, "mConnections" -> 1
         )
-        controller.loadFullConnectionUser(user2.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }, None, None) === Json.obj(
+        controller.loadFullConnectionUser(user2.id.get, basicUserWFS(user2, None), None) === Json.obj(
           "id" -> user2.externalId,
           "firstName" -> user2.firstName,
           "lastName" -> user2.lastName,
           "pictureName" -> "0.jpg",
           "username" -> user2.username.value,
-          "libs" -> 0, "followers" -> 0, "connections" -> 2
+          "libraries" -> 0, "connections" -> 2, "followers" -> 0
         )
       }
     }
@@ -458,7 +471,9 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "pictureName":"pic1.jpg",
               "username": "GDubs",
               "numLibraries": 1,
-              "numKeeps": 5
+              "numKeeps": 5,
+              "numConnections": 3,
+              "numFollowers": 2
             }
           """)
 
@@ -477,6 +492,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "username": "GDubs",
               "numLibraries": 4,
               "numKeeps": 5,
+              "numConnections": 3,
+              "numFollowers": 3,
               "numInvitedLibraries": 1
             }
           """)
@@ -494,9 +511,11 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
               "username": "GDubs",
+              "isFriend": true,
               "numLibraries": 2,
               "numKeeps": 5,
-              "isFriend": true
+              "numConnections": 3,
+              "numFollowers": 3
             }
           """)
       }
