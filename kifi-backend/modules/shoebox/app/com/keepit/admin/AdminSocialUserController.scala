@@ -34,7 +34,7 @@ class AdminSocialUserController @Inject() (
         socialUsers.foreach(socialUserInfoRepo.doNotUseSave(_))
       }
     }
-    Ok
+    Ok(pages.last)
   }
 
   def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminUserPage { implicit request =>
