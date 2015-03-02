@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('UserProfileConnectionsCtrl', [
-  '$scope', '$stateParams', '$q', 'userProfileActionService',
-  function ($scope, $stateParams, $q, userProfileActionService) {
+  '$scope', '$stateParams', '$q', 'userProfileActionService', 'modalService',
+  function ($scope, $stateParams, $q, userProfileActionService, modalService) {
     var users;
     var remainingUserIds;
     var fetchPageSize = 6;
@@ -30,6 +30,16 @@ angular.module('kifi')
 
     $scope.hasMoreConnections = function () {
       return !users || !remainingUserIds || remainingUserIds.length;
+    };
+
+    $scope.showMutualConnections = function (user) {
+      var person = _.assign(user, 'id', 'username', 'pictureName');
+      person.fullName = user.firstName + ' ' + user.lastName;
+      person.mutualFriends = [];  // TODO
+      modalService.open({
+        template: 'friends/seeMutualFriendsModal.tpl.html',
+        modalData: person
+      });
     };
 
     userProfileActionService.getConnections($stateParams.username, fetchPageSize).then(function (data) {
