@@ -43,7 +43,9 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
   def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
+  def countFollowersFromAnonymous(userId: Id[User])(implicit session: RSession): Int
   def countFollowersWithOwnerId(ownerId: Id[User])(implicit session: RSession): Int
+  def countFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Int
 }
 
 @Singleton
@@ -322,17 +324,28 @@ class LibraryMembershipRepoImpl @Inject() (
   def countFollowersWithOwnerId(ownerId: Id[User])(implicit session: RSession): Int = {
     followersCountCache.getOrElse(FollowersCountKey(ownerId)) {
       import StaticQuery.interpolation
-      sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.state = 'active'".as[Int].firstOption.getOrElse(0)
+      sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active'".as[Int].firstOption.getOrElse(0)
     }
   }
 
+  def countFollowersFromAnonymous(ownerId: Id[User])(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+    sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and lib.visibility = 'published'".as[Int].firstOption.getOrElse(0)
+
+  }
+
+  def countFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+    sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and (lib.visibility = 'published' or (lib.visibility='secret' and lm.user_id = $viewerId))".as[Int].firstOption.getOrElse(0)
+
+  }
 }
 
 trait LibraryMembershipSequencingPlugin extends SequencingPlugin
 
 class LibraryMembershipSequencingPluginImpl @Inject() (
     override val actor: ActorInstance[LibraryMembershipSequencingActor],
-    override val scheduling: SchedulingProperties) extends LibraryMembershipSequencingPlugin {
+    override val scheduling: SchedulingPropertiess) extends LibraryMembershipSequencingPlugin {
 
   override val interval: FiniteDuration = 20.seconds
 }

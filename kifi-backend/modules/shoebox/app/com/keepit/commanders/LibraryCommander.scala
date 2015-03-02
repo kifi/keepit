@@ -1362,6 +1362,17 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def countFollowers(userId: Id[User], viewer: Option[Id[User]]): Int = db.readOnlyReplica { implicit s =>
+    viewer match {
+      case None =>
+        libraryMembershipRepo.countFollowersFromAnonymous(userId)
+      case Some(id) if id == userId =>
+        libraryMembershipRepo.countFollowersWithOwnerId(userId)
+      case Some(viewerId) =>
+        libraryMembershipRepo.countFollowersForOtherUser(userId, viewerId)
+    }
+  }
+
   private def getUserValueSetting(userId: Id[User], userVal: UserValueName)(implicit rs: RSession): Boolean = {
     val settingsJs = userValueRepo.getValue(userId, UserValues.userProfileSettings)
     UserValueSettings.retrieveSetting(userVal, settingsJs)
