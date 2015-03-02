@@ -262,6 +262,7 @@ class ServiceDiscoveryImpl(
   def timeSinceLastStatusChange: Long = System.currentTimeMillis - lastStatusChangeTime
 
   def hasBackupCapability: Boolean = amazonInstanceInfo.tags.get("Capabilities").map { _.trim } == Some("backup")
+  def hasOfflineCapability: Boolean = amazonInstanceInfo.tags.get("Capabilities").map { _.trim } == Some("offline")
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]
   implicit val serviceStatusFormat = ServiceStatus.format
