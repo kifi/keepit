@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryFollowerPics', [
-  '$window', 'platformService', 'util',
-  function ($window, platformService, util) {
+  '$window', '$filter', 'platformService', 'util',
+  function ($window, $filter, platformService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -30,17 +30,9 @@ angular.module('kifi')
           var numToShow = Math.min(scope.followers.length, numCanFit);
 
           scope.followersToShow = scope.followers.slice(0, numToShow);
-          scope.moreCountText = formatMoreCountText(n - numToShow);
+          scope.moreCountText = $filter('num')(n - numToShow);
 
           element.find('.kf-lfp-pics').width(numToShow * picWidth);
-        }
-
-        function formatMoreCountText(n) {
-          if (n < 1000) {
-            return n ? String(n) : '';
-          }
-          var hundreds = String(n).slice(0, -2);
-          return hundreds.slice(-1) === '0' ? hundreds.slice(0, -1) + 'K' : hundreds.replace(/(\d)$/, '.$1') + 'K';
         }
 
         //
