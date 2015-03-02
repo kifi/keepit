@@ -190,6 +190,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def myStatus: Option[ServiceStatus] = state
       def myVersion: ServiceVersion = services.currentVersion
       def hasBackupCapability: Boolean = false
+      def hasOfflineCapability: Boolean = false
       def isCanary = false
     }
 

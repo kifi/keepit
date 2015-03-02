@@ -1,9 +1,8 @@
 package com.keepit.common.social
 
 import akka.actor.Scheduler
-import com.google.inject.{ Singleton, Inject }
+import com.google.inject.Inject
 import com.keepit.commanders.SendFriendConnectionMadeNotificationHelper
-import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database

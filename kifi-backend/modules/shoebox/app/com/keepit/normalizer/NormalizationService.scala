@@ -30,18 +30,26 @@ class NormalizationServiceImpl @Inject() (
     priorKnowledge: PriorNormalizationKnowledge,
     airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
+  private val tmpDisable = """https:\/\/twitter\.com\/.*\/status\/.*""".r
+
   def prenormalize(uriString: String): Try[String] = priorKnowledge.prenormalize(uriString)
 
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = timing(s"NormalizationService.update.${currentReference.url}") {
-    val relevantCandidates = getRelevantCandidates(currentReference, candidates)
-    log.info(s"[update($currentReference,${candidates.mkString(",")})] relevantCandidates=${relevantCandidates.mkString(",")}")
-    val futureResult = for {
-      betterReferenceOption <- processUpdate(currentReference, relevantCandidates: _*)
-      betterReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(currentReference, betterReferenceOption)
-    } yield betterReferenceOptionAfterAdditionalUpdates.map(_.uriId)
-    futureResult tap (_.onFailure {
-      case e => airbrake.notify(s"Normalization update failed for ${currentReference.url}. Supplied candidates: ${candidates mkString ", "} - Relevant candidates: ${relevantCandidates mkString ", "}", e)
-    })
+
+    val iter = tmpDisable.findAllMatchIn(currentReference.url)
+    if (iter.hasNext) {
+      Future.successful(None) // no update
+    } else {
+      val relevantCandidates = getRelevantCandidates(currentReference, candidates)
+      log.info(s"[update($currentReference,${candidates.mkString(",")})] relevantCandidates=${relevantCandidates.mkString(",")}")
+      val futureResult = for {
+        betterReferenceOption <- processUpdate(currentReference, relevantCandidates: _*)
+        betterReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(currentReference, betterReferenceOption)
+      } yield betterReferenceOptionAfterAdditionalUpdates.map(_.uriId)
+      futureResult tap (_.onFailure {
+        case e => airbrake.notify(s"Normalization update failed for ${currentReference.url}. Supplied candidates: ${candidates mkString ", "} - Relevant candidates: ${relevantCandidates mkString ", "}", e)
+      })
+    }
   }
 
   private def processUpdate(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[NormalizationReference]] = timing(s"NormalizationService.processUpdate.${currentReference.url}") {

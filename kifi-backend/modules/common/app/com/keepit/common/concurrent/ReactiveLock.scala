@@ -5,7 +5,7 @@ import scala.concurrent.{ Future, Promise, ExecutionContext => EC, Lock }
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
-class ReactiveLock(numConcurrent: Int = 1) {
+class ReactiveLock(numConcurrent: Int = 1, maxQueueSize: Option[Int] = None) {
   require(numConcurrent > 0, "Concurrency degree must be strictly positive!")
 
   private case class QueuedItem[T](runner: () => Future[T], promise: Promise[T], ec: EC)
@@ -50,6 +50,12 @@ class ReactiveLock(numConcurrent: Int = 1) {
   }
 
   private def withLock0[T](runner: () => Future[T])(implicit ec: EC): Future[T] = {
+    maxQueueSize foreach { max =>
+      val taskQueueSize = taskQueue.size()
+      if (taskQueueSize >= max) {
+        throw new Exception(s"Lock's queue size $taskQueueSize is at or more then max queue size $max. Rejecting task!")
+      }
+    }
     val p = Promise[T]
     taskQueue.add(QueuedItem[T](runner, p, ec))
     waitingCount.incrementAndGet()

@@ -143,7 +143,7 @@ class URISummaryCommander @Inject() (
   /**
    * Retrieves URI summary data from external services (Embedly, PagePeeker)
    */
-  val fetchPreviewLock = new ReactiveLock(5)
+  val fetchPreviewLock = new ReactiveLock(5, Some(50))
   private def fetchSummaryForRequest(nUri: NormalizedURIRef): Future[Option[URISummary]] = {
     log.info(s"fetchSummaryForRequest for ${nUri.id} -> ${nUri.url}")
     val stopper = Stopwatch(s"fetching from scraper embedly info for ${nUri.id} -> ${nUri.url}")

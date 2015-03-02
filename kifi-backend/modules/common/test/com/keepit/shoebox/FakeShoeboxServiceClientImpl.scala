@@ -676,6 +676,19 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(changedLibrariesAndMemberships)
   }
 
+  def getLibrariesAndMembershipIdsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMembershipsIds]] = {
+    val changedLibraries = allLibraries.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
+    val changedLibrariesAndMemberships = changedLibraries.map { library =>
+      val memberships = allLibraryMemberships.values.filter(_.libraryId == library.id.get)
+      LibraryAndMembershipsIds(library, memberships.toSeq.map(_.id.get))
+    }
+    Future.successful(changedLibrariesAndMemberships)
+  }
+
+  def getLibrarieMembership(id: Id[LibraryMembership]): Future[LibraryMembership] = {
+    Future.successful(allLibraryMemberships(id))
+  }
+
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]] = {
     val changedKeeps = allBookmarks.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     val changedKeepIds = changedKeeps.map(_.id.get).toSet
@@ -724,6 +737,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[DetailedLibraryView]] = {
     val changed = allLibraries.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize).map(lib => Library.toDetailedLibraryView(lib))
     Future.successful(changed)
+  }
+
+  def getLibraryMembership(id: Id[LibraryMembership]): Future[LibraryMembership] = {
+    Future.successful(allLibraryMemberships(id))
   }
 
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]] = {

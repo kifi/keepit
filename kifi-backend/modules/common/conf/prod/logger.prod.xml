@@ -166,6 +166,7 @@
 
   <logger name="com.mysql" level="ERROR"/>
   <logger name="com.ning.http" level="INFO"/>
+  <logger name="com.mchange" level="INFO"/>
   <!--logger name="securesocial.core" level="DEBUG"/-->
 
   <root level="INFO">
