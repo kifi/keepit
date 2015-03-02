@@ -217,7 +217,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[Keep]] = {
-    call(Shoebox.internal.getBookmarksChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getBookmarksChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[JsArray].value.map(js => Json.fromJson[Keep](js).get)
     }
   }
@@ -384,13 +384,13 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]] = {
-    call(Shoebox.internal.getPhrasesChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getPhrasesChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       Json.fromJson[Seq[Phrase]](r.json).get
     }
   }
 
   def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int): Future[Seq[Collection]] = {
-    call(Shoebox.internal.getCollectionsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout) map { r =>
+    call(Shoebox.internal.getCollectionsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority) map { r =>
       Json.fromJson[Seq[Collection]](r.json).get
     }
   }
@@ -467,31 +467,31 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]] = {
-    call(Shoebox.internal.getIndexable(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getIndexable(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       Json.fromJson[Seq[NormalizedURI]](r.json).get
     }
   }
 
   def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]] = {
-    call(Shoebox.internal.getIndexableUris(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getIndexableUris(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       Json.fromJson[Seq[IndexableUri]](r.json).get
     }
   }
 
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]] = {
-    call(Shoebox.internal.getScrapedUris(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getScrapedUris(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       Json.fromJson[Seq[IndexableUri]](r.json).get
     }
   }
 
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int): Future[Seq[User]] = {
-    call(Shoebox.internal.getUserIndexable(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getUserIndexable(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[JsArray].value.map { x => Json.fromJson[User](x).get }
     }
   }
 
   def getHighestUriSeq(): Future[SequenceNumber[NormalizedURI]] = {
-    call(Shoebox.internal.getHighestUriSeq(), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getHighestUriSeq(), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as(SequenceNumber.format[NormalizedURI])
     }
   }
@@ -538,7 +538,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = {
-    call(Shoebox.internal.getNormalizedUriUpdates(lowSeq, highSeq), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getNormalizedUriUpdates(lowSeq, highSeq), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       var m = Vector.empty[(Id[NormalizedURI], NormalizedURI)]
       r.json match {
         case jso: JsValue => {
@@ -605,13 +605,13 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]] = {
-    call(Shoebox.internal.getUserConnectionsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getUserConnectionsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       Json.fromJson[Seq[UserConnection]](r.json).get
     }
   }
 
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]] = {
-    call(Shoebox.internal.getSearchFriendsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getSearchFriendsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       Json.fromJson[Seq[SearchFriend]](r.json).get
     }
   }
@@ -669,42 +669,42 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]] = {
-    call(Shoebox.internal.getIndexableSocialConnections(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getIndexableSocialConnections(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[IndexableSocialConnection]]
     }
   }
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = {
-    call(Shoebox.internal.getIndexableSocialUserInfos(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getIndexableSocialUserInfos(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[SocialUserInfo]]
     }
   }
 
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = {
-    call(Shoebox.internal.getEmailAccountUpdates(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getEmailAccountUpdates(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[EmailAccountUpdate]]
     }
   }
 
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = {
-    call(Shoebox.internal.getLibrariesAndMembershipsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getLibrariesAndMembershipsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[LibraryAndMemberships]]
     }
   }
 
   def getLibrariesAndMembershipIdsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMembershipsIds]] = {
-    call(Shoebox.internal.getLibrariesAndMembershipIdsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getLibrariesAndMembershipIdsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[LibraryAndMembershipsIds]]
     }
   }
 
   def getLibraryMembership(id: Id[LibraryMembership]): Future[LibraryMembership] = libraryMembershipCache.getOrElseFuture(LibraryMembershipIdKey(id)) {
-    call(Shoebox.internal.getLibraryMembership(id), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getLibraryMembership(id), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[LibraryMembership]
     }
   }
 
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]] = {
-    call(Shoebox.internal.getKeepsAndTagsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r =>
+    call(Shoebox.internal.getKeepsAndTagsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[KeepAndTags]]
     }
   }
@@ -736,15 +736,15 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]] = {
-    call(Shoebox.internal.getLibrariesChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r => (r.json).as[Seq[LibraryView]] }
+    call(Shoebox.internal.getLibrariesChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r => (r.json).as[Seq[LibraryView]] }
   }
 
   def getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[DetailedLibraryView]] = {
-    call(Shoebox.internal.getDetailedLibrariesChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r => (r.json).as[Seq[DetailedLibraryView]] }
+    call(Shoebox.internal.getDetailedLibrariesChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r => (r.json).as[Seq[DetailedLibraryView]] }
   }
 
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]] = {
-    call(Shoebox.internal.getLibraryMembershipsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout).map { r => (r.json).as[Seq[LibraryMembershipView]] }
+    call(Shoebox.internal.getLibraryMembershipsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r => (r.json).as[Seq[LibraryMembershipView]] }
   }
 
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean] = {

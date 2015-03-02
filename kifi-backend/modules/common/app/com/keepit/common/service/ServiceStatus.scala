@@ -8,6 +8,7 @@ object ServiceStatus {
   case object UP extends ServiceStatus("up")
   case object STARTING extends ServiceStatus("starting")
   case object STOPPING extends ServiceStatus("stopping")
+  case object OFFLINE extends ServiceStatus("offline")
   case object SICK extends ServiceStatus("sick")
   case object SELFCHECK_FAIL extends ServiceStatus("helthcheck_fail")
   case object BACKING_UP extends ServiceStatus("backing_up")
@@ -16,6 +17,7 @@ object ServiceStatus {
     case UP.name => UP
     case STARTING.name => STARTING
     case STOPPING.name => STOPPING
+    case OFFLINE.name => OFFLINE
     case SICK.name => SICK
     case SELFCHECK_FAIL.name => SELFCHECK_FAIL
     case BACKING_UP.name => BACKING_UP
