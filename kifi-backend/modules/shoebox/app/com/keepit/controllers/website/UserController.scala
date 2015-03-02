@@ -87,11 +87,9 @@ class UserController @Inject() (
       viewer.map { u =>
         val connected = connectedOpt.getOrElse(userConnectionRepo.getConnectionOpt(ownerId, u).exists(_.state == UserConnectionStates.ACTIVE)) //not cached
         val followingLibCount = libraryRepo.countLibrariesOfOwnerUserFollow(ownerId, u) //not cached
-        val mutualFollowersCount = libraryMembershipRepo.countMutualFollowersWithOwnerId(ownerId, u) //cached
         val mutualConnectionCount = userConnectionRepo.getMutualConnectionCount(ownerId, u) //cached
         jsonWithGlobalCounts +
           ("connected" -> JsBoolean(connected)) +
-          ("mFollowers" -> JsNumber(mutualFollowersCount)) +
           ("mlibs" -> JsNumber(followingLibCount)) +
           ("mConnections" -> JsNumber(mutualConnectionCount))
       }.getOrElse(jsonWithGlobalCounts)
