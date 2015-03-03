@@ -245,7 +245,7 @@ angular.module('kifi')
       getProfileConnections: function (username, limit) {
         return route('/users/' + username + '/connections', {n: limit || []});
       },
-      getProfileUsers: function (username, ids) {
+      getProfileUsers: function (ids) {
         return route('/users/' + ids.join('.'));
       }
     };

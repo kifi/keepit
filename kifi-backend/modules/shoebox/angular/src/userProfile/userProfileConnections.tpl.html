@@ -5,7 +5,7 @@
       <a class="kf-upc-pic-a" href="{{user|profileUrl}}"><img class="kf-upc-pic" ng-src="{{user|pic:200}}"></a>
       <a class="kf-upc-name" href="{{user|profileUrl}}">{{user.firstName}} {{user.lastName}}</a>
       <ul class="kf-upc-stats">
-        <li class="kf-upc-stat"><a class="kf-upc-stat-a" href="{{user|profileUrl:'libraries'}}">Libraries<div class="kf-upc-stat-n">{{user.libs|num}}</div></a>
+        <li class="kf-upc-stat"><a class="kf-upc-stat-a" href="{{user|profileUrl:'libraries'}}">Libraries<div class="kf-upc-stat-n">{{user.libraries|num}}</div></a>
         <li class="kf-upc-stat"><a class="kf-upc-stat-a" href="{{user|profileUrl:'connections'}}">Connections<div class="kf-upc-stat-n">{{user.connections|num}}</div></a>
         <li class="kf-upc-stat"><a class="kf-upc-stat-a" href="{{user|profileUrl:'followers'}}">Followers<div class="kf-upc-stat-n">{{user.followers|num}}</div></a>
       </ul>
